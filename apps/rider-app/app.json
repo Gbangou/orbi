@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Mobilis Passager",
+    "slug": "mobilis-passager",
+    "scheme": "mobilis-passager",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "platforms": ["ios", "android", "web"],
+    "assetBundlePatterns": ["**/*"],
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Mobilis Chauffeur",
+    "slug": "mobilis-chauffeur",
+    "scheme": "mobilis-chauffeur",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "platforms": ["ios", "android", "web"],
+    "assetBundlePatterns": ["**/*"],
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mobilis Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct."
+        }
+      ]
+    ],
+    "ios": {
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Mobilis Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct."
+      }
+    },
+    "android": {
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

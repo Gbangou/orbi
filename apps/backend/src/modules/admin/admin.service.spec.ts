@@ -1,0 +1,1258 @@
+import { AdminService } from './admin.service';
+
+describe('AdminService', () => {
+  function createService() {
+    const prisma = {
+      user: { count: jest.fn() },
+      riderProfile: { count: jest.fn() },
+      driverProfile: {
+        count: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      vehicle: { count: jest.fn() },
+      rideRequest: { count: jest.fn(), findMany: jest.fn() },
+      paymentAttempt: { findMany: jest.fn().mockResolvedValue([]) },
+      paymentWebhookEvent: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+      trip: { count: jest.fn(), findMany: jest.fn() },
+      supportTicket: {
+        count: jest.fn(),
+        findMany: jest.fn(),
+        findFirst: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        create: jest.fn(),
+      },
+      auditLog: {
+        create: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      driverDocument: { update: jest.fn(), findFirst: jest.fn() },
+      driverOnboardingReview: { create: jest.fn() },
+    };
+    const realtimeService = {
+      publish: jest.fn(),
+      snapshot: jest.fn().mockReturnValue({
+        adapter: 'in-memory',
+        sharedBackplane: false,
+        degraded: false,
+        degradeReason: null,
+        activeStreams: 0,
+        publishedEvents: 0,
+        featureFlagMode: 'on',
+        featureFlagEnabled: true,
+      }),
+    };
+    const documentLinksService = {
+      createViewLink: jest.fn(),
+    };
+    const featureFlagsService = {
+      snapshot: jest.fn().mockReturnValue([
+        { flag: 'payments', mode: 'on', allowlist: [] },
+        { flag: 'pricing', mode: 'on', allowlist: [] },
+        { flag: 'realtime', mode: 'on', allowlist: [] },
+        { flag: 'driverOnboarding', mode: 'on', allowlist: [] },
+        { flag: 'voice', mode: 'on', allowlist: [] },
+      ]),
+    };
+    const healthIncidentJournalService = {
+      acknowledge: jest.fn(),
+      mute: jest.fn(),
+    };
+    const driversService = {
+      getDispatchLearningSettings: jest.fn().mockResolvedValue({
+        lookbackHours: 72,
+        halfLifeHours: 18,
+        declineCooldownMinutes: 20,
+        historyLimit: 48,
+        source: 'DEFAULT',
+        updatedAt: null,
+        updatedBy: null,
+      }),
+      updateDispatchLearningSettings: jest.fn().mockResolvedValue({
+        lookbackHours: 96,
+        halfLifeHours: 24,
+        declineCooldownMinutes: 30,
+        historyLimit: 60,
+        source: 'DATABASE_OVERRIDE',
+        updatedAt: '2026-04-23T18:00:00.000Z',
+        updatedBy: {
+          id: 'admin-1',
+          name: 'Admin Mobilis',
+          role: 'ADMIN',
+        },
+      }),
+    };
+
+    return {
+      prisma,
+      realtimeService,
+      documentLinksService,
+      featureFlagsService,
+      healthIncidentJournalService,
+      driversService,
+      service: new AdminService(
+        prisma as never,
+        realtimeService as never,
+        documentLinksService as never,
+        featureFlagsService as never,
+        healthIncidentJournalService as never,
+        driversService as never,
+      ),
+    };
+  }
+
+  it('builds a live ops payload from active trips and events', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValue([
+      {
+        id: 'trip-1',
+        status: 'DRIVER_ARRIVING',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        actualFare: 1600,
+        currency: 'XOF',
+        rider: { user: { fullName: 'Awa Rider' } },
+        driver: { user: { fullName: 'Issa Driver' } },
+        vehicle: { make: 'Yamaha', model: 'Crypton' },
+        events: [
+          {
+            id: 'event-1',
+            eventType: 'TRIP_ACCEPTED',
+            createdAt: new Date('2026-04-17T08:01:00.000Z'),
+          },
+          {
+            id: 'event-2',
+            eventType: 'PICKUP_CODE_ISSUED',
+            createdAt: new Date('2026-04-17T08:02:00.000Z'),
+          },
+          {
+            id: 'event-3',
+            eventType: 'INCIDENT_REPORTED',
+            createdAt: new Date('2026-04-17T08:03:00.000Z'),
+          },
+        ],
+      },
+    ]);
+    prisma.supportTicket.count.mockResolvedValue(1);
+    prisma.rideRequest.count.mockResolvedValue(3);
+
+    const result = await service.liveOps();
+
+    expect(result.summary.activeTrips).toBe(1);
+    expect(result.summary.openRequests).toBe(3);
+    expect(result.trips[0]).toEqual(
+      expect.objectContaining({
+        riderName: 'Awa Rider',
+        driverName: 'Issa Driver',
+        pickupCodeIssued: true,
+        hasIncident: true,
+        incidentCount: 1,
+      }),
+    );
+    expect(result.trips[0].lastEvent?.label).toBe('Incident signale');
+    expect(result.alerts[0]).toContain('1 trajets actifs');
+  });
+
+  it('returns a support queue with extracted trip ids', async () => {
+    const { prisma, service } = createService();
+
+    prisma.supportTicket.findMany.mockResolvedValue([
+      {
+        id: 'ticket-1',
+        subject: 'Incident trajet tripabc123',
+        description: 'Type: SAFETY_ALERT',
+        status: 'OPEN',
+        priority: 3,
+        createdAt: new Date('2026-04-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-04-17T09:05:00.000Z'),
+        user: {
+          fullName: 'Awa Rider',
+          role: 'RIDER',
+        },
+      },
+    ]);
+
+    prisma.supportTicket.count.mockResolvedValue(1);
+
+    const result = await service.supportTickets({
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(result.tickets[0]).toEqual(
+      expect.objectContaining({
+        id: 'ticket-1',
+        requesterName: 'Awa Rider',
+        tripId: 'tripabc123',
+      }),
+    );
+    expect(result.meta).toEqual({
+      page: 1,
+      pageSize: 10,
+      total: 1,
+      pageCount: 1,
+    });
+  });
+
+  it('returns the current dispatch learning settings snapshot', async () => {
+    const { driversService, prisma, service } = createService();
+
+    prisma.auditLog.findMany.mockResolvedValue([
+      {
+        id: 'audit-dispatch-1',
+        createdAt: new Date('2026-04-23T18:00:00.000Z'),
+        metadata: {
+          resetToDefaults: false,
+          source: 'DATABASE_OVERRIDE',
+          previous: {
+            lookbackHours: 72,
+            halfLifeHours: 18,
+            declineCooldownMinutes: 20,
+            historyLimit: 48,
+          },
+          next: {
+            lookbackHours: 96,
+            halfLifeHours: 24,
+            declineCooldownMinutes: 30,
+            historyLimit: 60,
+          },
+        },
+        user: {
+          id: 'admin-1',
+          fullName: 'Admin Mobilis',
+          role: 'ADMIN',
+        },
+      },
+    ]);
+
+    const result = await service.dispatchSettings();
+
+    expect(driversService.getDispatchLearningSettings).toHaveBeenCalled();
+    expect(result.settings.source).toBe('DEFAULT');
+    expect(result.history[0]).toEqual(
+      expect.objectContaining({
+        id: 'audit-dispatch-1',
+        source: 'DATABASE_OVERRIDE',
+        resetToDefaults: false,
+        actor: expect.objectContaining({
+          id: 'admin-1',
+        }),
+        before: expect.objectContaining({
+          lookbackHours: 72,
+        }),
+        after: expect.objectContaining({
+          lookbackHours: 96,
+        }),
+      }),
+    );
+  });
+
+  it('builds pricing calibration metrics from recent requests and trips', async () => {
+    const { prisma, service } = createService();
+
+    prisma.rideRequest.findMany.mockResolvedValue([
+      {
+        id: 'request-1',
+        status: 'MATCHED',
+        requestedVehicleType: 'MOTORCYCLE',
+        requestedServiceTier: 'MOTO_STANDARD',
+        pricingCity: 'OUAGADOUGOU',
+        districtProfile: 'UNIVERSITY',
+        estimatedFare: 1500,
+        estimatedDistanceKm: 5,
+        createdAt: new Date('2026-04-25T08:00:00.000Z'),
+        trip: {
+          status: 'COMPLETED',
+          actualFare: 1600,
+          distanceKm: 5,
+          createdAt: new Date('2026-04-25T08:04:00.000Z'),
+        },
+      },
+      {
+        id: 'request-2',
+        status: 'CANCELLED',
+        requestedVehicleType: 'CAR',
+        requestedServiceTier: 'CAR_STANDARD',
+        pricingCity: 'OUAGADOUGOU',
+        districtProfile: 'UNIVERSITY',
+        estimatedFare: 3200,
+        estimatedDistanceKm: 7,
+        createdAt: new Date('2026-04-25T08:10:00.000Z'),
+        trip: null,
+      },
+      {
+        id: 'request-3',
+        status: 'EXPIRED',
+        requestedVehicleType: 'MOTORCYCLE',
+        requestedServiceTier: 'MOTO_STANDARD',
+        pricingCity: 'OUAGADOUGOU',
+        districtProfile: 'UNIVERSITY',
+        estimatedFare: 1400,
+        estimatedDistanceKm: 4,
+        createdAt: new Date('2026-04-25T08:20:00.000Z'),
+        trip: null,
+      },
+    ]);
+    prisma.paymentAttempt.findMany.mockResolvedValue([
+      {
+        rideRequestId: 'request-1',
+        status: 'SUCCEEDED',
+        amount: 1600,
+      },
+      {
+        rideRequestId: 'request-2',
+        status: 'FAILED',
+        amount: 3200,
+      },
+    ]);
+
+    const result = await service.pricingCalibration();
+
+    expect(prisma.rideRequest.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: {
+          trip: true,
+        },
+      }),
+    );
+    expect(result.summary).toEqual(
+      expect.objectContaining({
+        totalRequests: 3,
+        matchedRequests: 1,
+        completedTrips: 1,
+        cancelledRequests: 1,
+        expiredRequests: 1,
+        paidRequests: 1,
+        acceptanceRate: 33.3,
+        completionRate: 33.3,
+        cancellationRate: 66.7,
+        averageFare: 1600,
+        averageDriverPayout: 1312,
+        averagePickupWaitMinutes: 4,
+      }),
+    );
+    expect(result.segments[0]).toEqual(
+      expect.objectContaining({
+        vehicleType: 'MOTORCYCLE',
+        serviceTier: 'MOTO_STANDARD',
+        requests: 2,
+      }),
+    );
+    expect(result.timeWindows[0]).toEqual(
+      expect.objectContaining({
+        key: 'MORNING_PEAK',
+        label: 'Pic matin',
+        requests: 3,
+        targetAcceptanceRate: 70,
+      }),
+    );
+    expect(result.geographySegments[0]).toEqual(
+      expect.objectContaining({
+        city: 'OUAGADOUGOU',
+        districtProfile: 'UNIVERSITY',
+        requests: 3,
+      }),
+    );
+    expect(result.recommendations[0]).toEqual(
+      expect.objectContaining({
+        scope: 'Global',
+        priority: 'HIGH',
+      }),
+    );
+    expect(result.alerts[0]).toContain('Acceptation sous le seuil cible');
+  });
+
+  it('updates dispatch learning settings and writes an audit event', async () => {
+    const { prisma, driversService, service } = createService();
+
+    prisma.auditLog.create.mockResolvedValue(undefined);
+    prisma.auditLog.findMany.mockResolvedValue([]);
+    driversService.getDispatchLearningSettings
+      .mockResolvedValueOnce({
+        lookbackHours: 72,
+        halfLifeHours: 18,
+        declineCooldownMinutes: 20,
+        historyLimit: 48,
+        source: 'DEFAULT',
+        updatedAt: null,
+        updatedBy: null,
+      })
+      .mockResolvedValueOnce({
+        lookbackHours: 96,
+        halfLifeHours: 24,
+        declineCooldownMinutes: 30,
+        historyLimit: 60,
+        source: 'DATABASE_OVERRIDE',
+        updatedAt: '2026-04-23T18:00:00.000Z',
+        updatedBy: {
+          id: 'admin-1',
+          name: 'Admin Mobilis',
+          role: 'ADMIN',
+        },
+      });
+
+    const result = await service.updateDispatchSettings(
+      {
+        lookbackHours: 96,
+        halfLifeHours: 24,
+      },
+      {
+        user: {
+          id: 'admin-1',
+          role: 'ADMIN',
+          fullName: 'Admin Mobilis',
+        },
+      } as never,
+    );
+
+    expect(driversService.updateDispatchLearningSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lookbackHours: 96,
+        halfLifeHours: 24,
+        actor: {
+          id: 'admin-1',
+          name: 'Admin Mobilis',
+          role: 'ADMIN',
+        },
+      }),
+    );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'admin-1',
+        action: 'DISPATCH_SETTINGS_UPDATED',
+        entityType: 'SYSTEM_CONFIGURATION',
+        entityId: 'dispatch-learning',
+        metadata: expect.objectContaining({
+          previous: expect.objectContaining({
+            lookbackHours: 72,
+          }),
+          next: expect.objectContaining({
+            lookbackHours: 96,
+          }),
+        }),
+      }),
+    });
+    expect(result.settings.source).toBe('DATABASE_OVERRIDE');
+    expect(result.history).toEqual([]);
+  });
+
+  it('returns a paginated payment webhook event journal', async () => {
+    const { prisma, service } = createService();
+
+    prisma.paymentWebhookEvent.findMany.mockResolvedValue([
+      {
+        id: 'webhook-event-1',
+        provider: 'FLUTTERWAVE',
+        eventType: 'payment.completed',
+        transactionRef: 'mobilis_123_ride-request-1',
+        providerReference: 'fw_ref_123',
+        action: 'persisted_and_reconciled',
+        reconciledAttemptCount: 1,
+        signatureVerified: true,
+        rawBodyHash: 'raw_hash_123',
+        paymentAttemptId: 'payment-1',
+        userId: 'user-1',
+        payload: {
+          event: 'payment.completed',
+          customerPhoneNumber: '+22670000000',
+          transactionRef: 'mobilis_123_ride-request-1',
+        },
+        createdAt: new Date('2026-04-27T09:30:00.000Z'),
+      },
+    ]);
+    prisma.paymentWebhookEvent.count.mockResolvedValue(1);
+
+    const result = await service.paymentWebhookEvents({
+      page: 1,
+      pageSize: 10,
+      provider: 'FLUTTERWAVE',
+      action: 'persisted_and_reconciled',
+    });
+
+    expect(prisma.paymentWebhookEvent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          provider: 'FLUTTERWAVE',
+          action: 'persisted_and_reconciled',
+        }),
+      }),
+    );
+    expect(result.events[0]).toEqual(
+      expect.objectContaining({
+        id: 'webhook-event-1',
+        signatureVerified: true,
+        payloadPreview: {
+          event: 'payment.completed',
+          transactionRef: 'mobilis_123_ride-request-1',
+        },
+        createdAt: '2026-04-27T09:30:00.000Z',
+      }),
+    );
+    expect(result.meta.total).toBe(1);
+  });
+
+  it('returns a redacted payment webhook event detail', async () => {
+    const { prisma, service } = createService();
+
+    prisma.paymentWebhookEvent.findUnique.mockResolvedValue({
+      id: 'webhook-event-1',
+      provider: 'CINETPAY',
+      eventType: 'transaction.successful',
+      transactionRef: 'mobilis_123_ride-request-1',
+      providerReference: 'cinetpay_ref_123',
+      action: 'persisted_and_reconciled',
+      reconciledAttemptCount: 1,
+      signatureVerified: true,
+      rawBodyHash: 'raw_hash_123',
+      payload: {
+        cpm_trans_id: 'mobilis_123_ride-request-1',
+        cel_phone_num: '+22670000000',
+        signature: 'provider-signature',
+        cpm_amount: '2400',
+      },
+      paymentAttemptId: 'payment-1',
+      userId: 'user-1',
+      createdAt: new Date('2026-04-27T09:30:00.000Z'),
+      paymentAttempt: {
+        status: 'SUCCEEDED',
+        amount: 2400,
+        currency: 'XOF',
+        rideRequestId: 'ride-request-1',
+        failureReason: null,
+        updatedAt: new Date('2026-04-27T09:31:00.000Z'),
+      },
+    });
+
+    const result = await service.paymentWebhookEventDetail('webhook-event-1');
+
+    expect(result.event.payload).toEqual(
+      expect.objectContaining({
+        cel_phone_num: '[redacted]',
+        signature: '[redacted]',
+        cpm_amount: '2400',
+      }),
+    );
+    expect(result.event.paymentAttempt).toEqual(
+      expect.objectContaining({
+        status: 'SUCCEEDED',
+        amount: 2400,
+        updatedAt: '2026-04-27T09:31:00.000Z',
+      }),
+    );
+  });
+
+  it('starts a payment webhook investigation and creates a support ticket when a user is known', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.paymentWebhookEvent.findUnique.mockResolvedValue({
+      id: 'webhook-event-1',
+      provider: 'FLUTTERWAVE',
+      eventType: 'payment.completed',
+      transactionRef: 'mobilis_123_ride-request-1',
+      providerReference: 'fw_ref_123',
+      action: 'ignored_conflicting_provider_reference',
+      userId: 'user-1',
+      paymentAttemptId: 'payment-1',
+      paymentAttempt: {
+        userId: 'user-1',
+        rideRequestId: 'ride-request-1',
+        status: 'SUCCEEDED',
+        failureReason: null,
+      },
+    });
+    prisma.supportTicket.findFirst.mockResolvedValue(null);
+    prisma.supportTicket.create.mockResolvedValue({
+      id: 'ticket-1',
+      status: 'OPEN',
+      priority: 3,
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.startPaymentWebhookInvestigation(
+      'webhook-event-1',
+      {
+        user: {
+          id: 'ops-1',
+          role: 'OPS',
+        },
+      } as never,
+    );
+
+    expect(prisma.supportTicket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-1',
+        subject: 'Investigation paiement webhook webhook-event-1',
+        priority: 3,
+        status: 'OPEN',
+      }),
+      select: {
+        id: true,
+        status: true,
+        priority: true,
+      },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'ops-1',
+        action: 'PAYMENT_WEBHOOK_INVESTIGATION_STARTED',
+        entityType: 'PAYMENT_WEBHOOK_EVENT',
+        entityId: 'webhook-event-1',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'payment-webhook.investigation-started',
+        entityId: 'webhook-event-1',
+      }),
+    );
+    expect(result.investigation.supportTicket?.id).toBe('ticket-1');
+  });
+
+  it('starts a payment webhook investigation without a ticket for orphan events', async () => {
+    const { prisma, service } = createService();
+
+    prisma.paymentWebhookEvent.findUnique.mockResolvedValue({
+      id: 'webhook-event-2',
+      provider: 'CINETPAY',
+      eventType: 'transaction.failed',
+      transactionRef: 'mobilis_unknown',
+      providerReference: 'cinetpay_ref_404',
+      action: 'ignored_unknown_reference',
+      userId: null,
+      paymentAttemptId: null,
+      paymentAttempt: null,
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.startPaymentWebhookInvestigation(
+      'webhook-event-2',
+      {
+        user: {
+          id: 'support-1',
+          role: 'SUPPORT',
+        },
+      } as never,
+    );
+
+    expect(prisma.supportTicket.create).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).toHaveBeenCalled();
+    expect(result.investigation.supportTicket).toBeNull();
+  });
+
+  it('updates a support ticket and writes an audit log', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.supportTicket.findUnique.mockResolvedValue({
+      id: 'ticket-1',
+      status: 'OPEN',
+      priority: 3,
+    });
+    prisma.supportTicket.update.mockResolvedValue({
+      id: 'ticket-1',
+      status: 'IN_REVIEW',
+      priority: 2,
+      updatedAt: new Date('2026-04-17T09:10:00.000Z'),
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.updateSupportTicket(
+      'ticket-1',
+      { status: 'IN_REVIEW', priority: 2 },
+      { user: { id: 'admin-1', role: 'ADMIN' } } as never,
+    );
+
+    expect(prisma.supportTicket.update).toHaveBeenCalledWith({
+      where: { id: 'ticket-1' },
+      data: { status: 'IN_REVIEW', priority: 2 },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'admin-1',
+        action: 'SUPPORT_TICKET_UPDATED',
+        entityType: 'SUPPORT_TICKET',
+        entityId: 'ticket-1',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith({
+      channel: 'admin',
+      type: 'support-ticket.updated',
+      entityId: 'ticket-1',
+      actorRole: 'ADMIN',
+      payload: {
+        status: 'IN_REVIEW',
+        priority: 2,
+      },
+    });
+    expect(result.ticket.status).toBe('IN_REVIEW');
+  });
+
+  it('returns a driver onboarding queue for pending review', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findMany.mockResolvedValue([
+      {
+        id: 'driver-1',
+        verificationStatus: 'PENDING',
+        serviceRadiusKm: 8,
+        user: {
+          fullName: 'Issa Driver',
+          email: 'driver@mobilis.app',
+          phoneNumber: '+22670000000',
+        },
+        vehicles: [{ id: 'vehicle-1' }],
+        onboardingDocuments: [
+          {
+            id: 'doc-1',
+            type: 'IDENTITY_DOCUMENT',
+            status: 'PENDING',
+            fileName: 'id-card.pdf',
+            uploadedAt: new Date('2026-04-18T08:00:00.000Z'),
+            expiresAt: null,
+            rejectionReason: null,
+          },
+        ],
+        onboardingReviews: [
+          {
+            id: 'review-1',
+            status: 'SUBMITTED',
+            decisionReason: null,
+            createdAt: new Date('2026-04-18T08:10:00.000Z'),
+            actor: {
+              fullName: 'Issa Driver',
+            },
+          },
+        ],
+      },
+    ]);
+    prisma.driverProfile.count.mockResolvedValue(1);
+
+    const result = await service.driverOnboardingQueue({
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(result.drivers[0]).toEqual(
+      expect.objectContaining({
+        id: 'driver-1',
+        driverName: 'Issa Driver',
+        reviewStatus: 'SUBMITTED',
+      }),
+    );
+    expect(result.drivers[0].documentSummary.pending).toBe(1);
+    expect(result.meta.total).toBe(1);
+  });
+
+  it('surfaces expired driver documents in the onboarding queue', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findMany.mockResolvedValue([
+      {
+        id: 'driver-1',
+        verificationStatus: 'PENDING',
+        serviceRadiusKm: 8,
+        user: {
+          fullName: 'Issa Driver',
+          email: 'driver@mobilis.app',
+          phoneNumber: '+22670000000',
+        },
+        vehicles: [{ id: 'vehicle-1' }],
+        onboardingDocuments: [
+          {
+            id: 'doc-1',
+            type: 'DRIVER_LICENSE',
+            status: 'APPROVED',
+            fileName: 'license.pdf',
+            uploadedAt: new Date('2026-04-18T08:00:00.000Z'),
+            expiresAt: new Date('2026-04-01T00:00:00.000Z'),
+            rejectionReason: null,
+          },
+        ],
+        onboardingReviews: [],
+      },
+    ]);
+    prisma.driverProfile.count.mockResolvedValue(1);
+
+    const result = await service.driverOnboardingQueue({
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(result.drivers[0].documents[0].status).toBe('EXPIRED');
+    expect(result.drivers[0].documentSummary.rejected).toBe(1);
+  });
+
+  it('records an onboarding review decision and updates documents', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      userId: 'user-driver-1',
+      licenseNumber: 'BF-12345',
+      status: 'OFFLINE',
+      user: {
+        fullName: 'Issa Driver',
+        isPhoneVerified: true,
+      },
+      vehicles: [{ id: 'vehicle-1' }],
+      onboardingDocuments: [
+        {
+          id: 'doc-1',
+          type: 'IDENTITY_DOCUMENT',
+          status: 'PENDING',
+          expiresAt: null,
+        },
+        {
+          id: 'doc-2',
+          type: 'DRIVER_LICENSE',
+          status: 'APPROVED',
+          expiresAt: new Date('2027-04-18T00:00:00.000Z'),
+        },
+        {
+          id: 'doc-3',
+          type: 'VEHICLE_REGISTRATION',
+          status: 'APPROVED',
+          expiresAt: new Date('2027-04-18T00:00:00.000Z'),
+        },
+        {
+          id: 'doc-4',
+          type: 'INSURANCE_PROOF',
+          status: 'APPROVED',
+          expiresAt: new Date('2027-04-18T00:00:00.000Z'),
+        },
+        {
+          id: 'doc-5',
+          type: 'SELFIE_VERIFICATION',
+          status: 'APPROVED',
+          expiresAt: null,
+        },
+      ],
+    });
+    prisma.driverDocument.update.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.supportTicket.findFirst.mockResolvedValue(null);
+    prisma.driverOnboardingReview.create.mockResolvedValue({
+      id: 'review-2',
+      status: 'APPROVED',
+      decisionReason: 'Dossier conforme.',
+      createdAt: new Date('2026-04-18T09:00:00.000Z'),
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.updateDriverOnboardingReview(
+      'driver-1',
+      {
+        status: 'APPROVED',
+        decisionReason: 'Dossier conforme.',
+        documentDecisions: [
+          {
+            documentId: 'doc-1',
+            status: 'APPROVED',
+            expiresAt: '2027-04-18T00:00:00.000Z',
+          },
+        ],
+      },
+      { user: { id: 'ops-1', role: 'OPS' } } as never,
+    );
+
+    expect(prisma.driverDocument.update).toHaveBeenCalledWith({
+      where: { id: 'doc-1' },
+      data: expect.objectContaining({
+        status: 'APPROVED',
+        reviewedByUserId: 'ops-1',
+      }),
+    });
+    expect(prisma.driverProfile.update).toHaveBeenCalledWith({
+      where: { id: 'driver-1' },
+      data: {
+        verificationStatus: 'APPROVED',
+        status: 'OFFLINE',
+      },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'ops-1',
+        action: 'DRIVER_ONBOARDING_REVIEW_UPDATED',
+        entityId: 'driver-1',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'driver-onboarding.review-updated',
+        entityId: 'driver-1',
+      }),
+    );
+    expect(result.review.status).toBe('APPROVED');
+  });
+
+  it('creates an ops support ticket when onboarding changes are requested with priority', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      userId: 'user-driver-1',
+      licenseNumber: 'BF-12345',
+      status: 'OFFLINE',
+      user: {
+        fullName: 'Issa Driver',
+        isPhoneVerified: true,
+      },
+      vehicles: [{ id: 'vehicle-1' }],
+      onboardingDocuments: [],
+    });
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.driverOnboardingReview.create.mockResolvedValue({
+      id: 'review-3',
+      status: 'CHANGES_REQUESTED',
+      decisionReason: 'Justificatifs a completer.',
+      createdAt: new Date('2026-04-18T09:30:00.000Z'),
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+    prisma.supportTicket.findFirst.mockResolvedValue(null);
+    prisma.supportTicket.create.mockResolvedValue({
+      id: 'ticket-new-1',
+    });
+
+    const result = await service.updateDriverOnboardingReview(
+      'driver-1',
+      {
+        status: 'CHANGES_REQUESTED',
+        decisionReason: 'Justificatifs a completer.',
+        supportPriority: 2,
+      },
+      { user: { id: 'ops-1', role: 'OPS' } } as never,
+    );
+
+    expect(prisma.supportTicket.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'user-driver-1',
+        subject: 'Revue onboarding chauffeur driver-1',
+        description: 'Justificatifs a completer.',
+        priority: 2,
+        status: 'OPEN',
+      },
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith({
+      channel: 'admin',
+      type: 'driver-onboarding.review-updated',
+      entityId: 'driver-1',
+      actorRole: 'OPS',
+      payload: {
+        status: 'CHANGES_REQUESTED',
+        decisionReason: 'Justificatifs a completer.',
+      },
+    });
+    expect(result.review.status).toBe('CHANGES_REQUESTED');
+  });
+
+  it('does not create a duplicate support ticket for repeated onboarding escalation', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      userId: 'user-driver-1',
+      licenseNumber: 'BF-12345',
+      status: 'OFFLINE',
+      user: {
+        fullName: 'Issa Driver',
+        isPhoneVerified: true,
+      },
+      vehicles: [{ id: 'vehicle-1' }],
+      onboardingDocuments: [],
+    });
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.driverOnboardingReview.create.mockResolvedValue({
+      id: 'review-3',
+      status: 'CHANGES_REQUESTED',
+      decisionReason: 'Justificatifs a completer.',
+      createdAt: new Date('2026-04-18T09:30:00.000Z'),
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+    prisma.supportTicket.findFirst.mockResolvedValue({
+      id: 'ticket-existing-1',
+    });
+
+    await service.updateDriverOnboardingReview(
+      'driver-1',
+      {
+        status: 'CHANGES_REQUESTED',
+        decisionReason: 'Justificatifs a completer.',
+        supportPriority: 2,
+      },
+      { user: { id: 'ops-1', role: 'OPS' } } as never,
+    );
+
+    expect(prisma.supportTicket.findFirst).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-driver-1',
+        subject: 'Revue onboarding chauffeur driver-1',
+        status: {
+          in: ['OPEN', 'IN_REVIEW'],
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+    expect(prisma.supportTicket.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects approval when required readiness checks are not met', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      userId: 'user-driver-1',
+      licenseNumber: null,
+      status: 'OFFLINE',
+      user: {
+        fullName: 'Issa Driver',
+        isPhoneVerified: false,
+      },
+      vehicles: [],
+      onboardingDocuments: [
+        {
+          id: 'doc-1',
+          type: 'IDENTITY_DOCUMENT',
+          status: 'APPROVED',
+          expiresAt: null,
+        },
+      ],
+    });
+
+    await expect(
+      service.updateDriverOnboardingReview(
+        'driver-1',
+        {
+          status: 'APPROVED',
+          decisionReason: 'Tentative prematuree.',
+        },
+        { user: { id: 'support-1', role: 'SUPPORT' } } as never,
+      ),
+    ).rejects.toThrow(
+      'Only admin or ops can approve, reject, or request onboarding changes.',
+    );
+  });
+
+  it('requires a decision reason when changes are requested', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      userId: 'user-driver-1',
+      licenseNumber: 'BF-12345',
+      status: 'OFFLINE',
+      user: {
+        fullName: 'Issa Driver',
+        isPhoneVerified: true,
+      },
+      vehicles: [{ id: 'vehicle-1' }],
+      onboardingDocuments: [],
+    });
+
+    await expect(
+      service.updateDriverOnboardingReview(
+        'driver-1',
+        {
+          status: 'CHANGES_REQUESTED',
+        },
+        { user: { id: 'ops-1', role: 'OPS' } } as never,
+      ),
+    ).rejects.toThrow(
+      'A decision reason is required for rejected or changes requested reviews.',
+    );
+  });
+
+  it('exposes feature flags with realtime infrastructure health', () => {
+    const { featureFlagsService, realtimeService, service } = createService();
+
+    featureFlagsService.snapshot.mockReturnValue([
+      { flag: 'payments', mode: 'allowlist', allowlist: ['ops-1'] },
+      { flag: 'pricing', mode: 'off', allowlist: [] },
+      { flag: 'voice', mode: 'off', allowlist: [] },
+    ]);
+    realtimeService.snapshot.mockReturnValue({
+      adapter: 'redis',
+      sharedBackplane: true,
+      degraded: true,
+      degradeReason: 'redis unavailable',
+      activeStreams: 4,
+      publishedEvents: 19,
+      featureFlagMode: 'allowlist',
+      featureFlagEnabled: false,
+    });
+
+    const result = service.featureFlags();
+
+    expect(result.flags).toEqual([
+      {
+        flag: 'payments',
+        mode: 'allowlist',
+        allowlist: ['ops-1'],
+        effectiveForAnonymous: false,
+      },
+      {
+        flag: 'pricing',
+        mode: 'off',
+        allowlist: [],
+        effectiveForAnonymous: true,
+      },
+      {
+        flag: 'voice',
+        mode: 'off',
+        allowlist: [],
+        effectiveForAnonymous: true,
+      },
+    ]);
+    expect(result.infrastructure.realtime).toEqual({
+      adapter: 'redis',
+      sharedBackplane: true,
+      degraded: true,
+      degradeReason: 'redis unavailable',
+      activeStreams: 4,
+      publishedEvents: 19,
+      featureFlagMode: 'allowlist',
+      featureFlagEnabled: false,
+    });
+  });
+
+  it('creates a signed view link for an onboarding document', async () => {
+    const { prisma, documentLinksService, service } = createService();
+
+    prisma.driverDocument.findFirst.mockResolvedValue({
+      id: 'doc-1',
+      driverProfileId: 'driver-1',
+      type: 'IDENTITY_DOCUMENT',
+      storageKey: 'driver-1/identity/doc-1.pdf',
+    });
+    documentLinksService.createViewLink.mockReturnValue({
+      expiresAt: '2026-04-18T10:00:00.000Z',
+      signedUrl: 'https://storage.mobilis.local/view/doc-1',
+    });
+
+    const result = await service.getDriverDocumentViewLink(
+      'driver-1',
+      'doc-1',
+      { user: { role: 'OPS' } } as never,
+    );
+
+    expect(documentLinksService.createViewLink).toHaveBeenCalledWith({
+      documentId: 'doc-1',
+      driverProfileId: 'driver-1',
+      storageKey: 'driver-1/identity/doc-1.pdf',
+      actorRole: 'OPS',
+    });
+    expect(result.documentId).toBe('doc-1');
+    expect(result.signedUrl).toContain('storage.mobilis.local/view');
+  });
+
+  it('acknowledges a health incident and publishes a realtime resync event', async () => {
+    const { healthIncidentJournalService, realtimeService, service } =
+      createService();
+
+    healthIncidentJournalService.acknowledge.mockReturnValue({
+      id: 'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
+      tone: 'alert',
+      status: 'degraded',
+      createdAt: '2026-04-19T03:00:00.000Z',
+      title: 'Alerte systeme publiee',
+      detail: 'redis unavailable',
+      acknowledgedAt: '2026-04-19T03:05:00.000Z',
+      acknowledgedBy: {
+        id: 'ops-1',
+        fullName: 'Ops Mobilis',
+        role: 'OPS',
+      },
+      mutedAt: null,
+      mutedBy: null,
+    });
+
+    const result = service.acknowledgeHealthIncident(
+      'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
+      { user: { id: 'ops-1', fullName: 'Ops Mobilis', role: 'OPS' } } as never,
+    );
+
+    expect(healthIncidentJournalService.acknowledge).toHaveBeenCalledWith(
+      'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
+      {
+        id: 'ops-1',
+        fullName: 'Ops Mobilis',
+        role: 'OPS',
+      },
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith({
+      channel: 'admin',
+      type: 'system.health-incident-acknowledged',
+      entityId: 'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
+      actorRole: 'OPS',
+      payload: {
+        acknowledgedAt: '2026-04-19T03:05:00.000Z',
+        acknowledgedBy: {
+          id: 'ops-1',
+          fullName: 'Ops Mobilis',
+          role: 'OPS',
+        },
+      },
+    });
+    expect(result.incident.acknowledgedBy?.id).toBe('ops-1');
+  });
+
+  it('mutes a health incident and publishes a realtime resync event', async () => {
+    const { healthIncidentJournalService, realtimeService, service } =
+      createService();
+
+    healthIncidentJournalService.mute.mockReturnValue({
+      id: 'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
+      tone: 'alert',
+      status: 'degraded',
+      createdAt: '2026-04-19T03:00:00.000Z',
+      title: 'Alerte systeme publiee',
+      detail: 'redis unavailable',
+      acknowledgedAt: null,
+      acknowledgedBy: null,
+      mutedAt: '2026-04-19T03:06:00.000Z',
+      mutedBy: {
+        id: 'admin-1',
+        fullName: 'Admin Mobilis',
+        role: 'ADMIN',
+      },
+    });
+
+    const result = service.muteHealthIncident(
+      'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
+      {
+        user: { id: 'admin-1', fullName: 'Admin Mobilis', role: 'ADMIN' },
+      } as never,
+    );
+
+    expect(healthIncidentJournalService.mute).toHaveBeenCalledWith(
+      'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
+      {
+        id: 'admin-1',
+        fullName: 'Admin Mobilis',
+        role: 'ADMIN',
+      },
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith({
+      channel: 'admin',
+      type: 'system.health-incident-muted',
+      entityId: 'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
+      actorRole: 'ADMIN',
+      payload: {
+        mutedAt: '2026-04-19T03:06:00.000Z',
+        mutedBy: {
+          id: 'admin-1',
+          fullName: 'Admin Mobilis',
+          role: 'ADMIN',
+        },
+      },
+    });
+    expect(result.incident.mutedBy?.id).toBe('admin-1');
+  });
+});

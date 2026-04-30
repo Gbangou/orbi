@@ -1,0 +1,304 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  authenticateAndFetchCurrentUser,
+  createMobilisApiClient,
+  fetchAdminLiveOps,
+  type AdminLiveOpsResponse,
+} from '@mobilis/api';
+import { describeRealtimeConnection, formatOperationalStatus } from '@mobilis/ui';
+import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
+import {
+  adminSyncHighlightDurationMs,
+  resolveCollectionDelta,
+  resolveStringFeedDelta,
+} from './admin-ops-kernel';
+import { subscribeToAdminRealtime } from './admin-realtime';
+
+type LiveOpsBoardProps = {
+  initialLiveOps: AdminLiveOpsResponse;
+};
+
+export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
+  const [liveOps, setLiveOps] = useState(initialLiveOps);
+  const [status, setStatus] = useState(
+    'Console live connectee au dernier snapshot backend.',
+  );
+  const [transitionLabel, setTransitionLabel] = useState<string | null>(null);
+  const [freshTripIds, setFreshTripIds] = useState<string[]>([]);
+  const [freshAlerts, setFreshAlerts] = useState<string[]>([]);
+  const previousTripsRef = useRef<AdminLiveOpsResponse['trips'] | null>(null);
+  const previousAlertsRef = useRef<string[] | null>(null);
+
+  const client = useMemo(
+    () =>
+      createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
+        version: mobilisRuntimeConfig.apiVersion,
+      }),
+    [],
+  );
+
+  const refreshLiveOps = useCallback(async () => {
+    try {
+      const { authClient } = await authenticateAndFetchCurrentUser(
+        client,
+        mobilisDemoAccounts.admin,
+      );
+      const response = await fetchAdminLiveOps(authClient);
+      setLiveOps(response);
+      setStatus(describeRealtimeConnection('admin-live-ops', 'connected'));
+    } catch {
+      setStatus("Le flux live ops n'a pas pu etre rafraichi.");
+    }
+  }, [client]);
+
+  useEffect(() => {
+    const stream = subscribeToAdminRealtime({
+      'trip.created': () => void refreshLiveOps(),
+      'trip.updated': () => void refreshLiveOps(),
+      'trip.pickup-code-verified': () => void refreshLiveOps(),
+      'trip.incident-reported': () => void refreshLiveOps(),
+      'driver-onboarding.review-updated': () => void refreshLiveOps(),
+      'ride-request.created': () => void refreshLiveOps(),
+      'ride-request.cancelled': () => void refreshLiveOps(),
+      heartbeat: () =>
+        setStatus(describeRealtimeConnection('admin-live-ops', 'active')),
+    });
+
+    stream.onopen = () => {
+      setStatus(describeRealtimeConnection('admin-live-ops', 'connected'));
+    };
+
+    stream.onerror = () => {
+      setStatus(describeRealtimeConnection('admin-live-ops', 'reconnecting'));
+    };
+
+    return () => {
+      stream.close();
+    };
+  }, [refreshLiveOps]);
+
+  useEffect(() => {
+    const previousTrips = previousTripsRef.current;
+
+    if (previousTrips) {
+      const delta = resolveCollectionDelta(previousTrips, liveOps.trips, {
+        getId: (trip) => trip.id,
+        hasChanged: (previousTrip, nextTrip) =>
+          previousTrip.status !== nextTrip.status
+          || previousTrip.lastEvent?.label !== nextTrip.lastEvent?.label
+          || previousTrip.lastEvent?.createdAt !== nextTrip.lastEvent?.createdAt
+          || previousTrip.incidentCount !== nextTrip.incidentCount,
+      });
+      const updatedTrip = liveOps.trips.find((trip) =>
+        delta.updatedIds.includes(trip.id),
+      );
+
+      if (delta.freshIds.length > 0) {
+        setFreshTripIds(delta.freshIds);
+        setTransitionLabel(
+          delta.freshIds.length > 1
+            ? `${delta.freshIds.length} nouveaux trajets viennent d entrer dans la console live.`
+            : 'Un nouveau trajet vient d entrer dans la console live.',
+        );
+      } else if (updatedTrip) {
+        setFreshTripIds([updatedTrip.id]);
+        setTransitionLabel(
+          `Trajet critique resynchronise: ${formatOperationalStatus(updatedTrip.status)}.`,
+        );
+      } else if (delta.removedIds.length > 0) {
+        setTransitionLabel(
+          delta.removedIds.length > 1
+            ? `${delta.removedIds.length} trajets ont quitte la vue active.`
+            : 'Un trajet a quitte la vue active.',
+        );
+      }
+    }
+
+    previousTripsRef.current = liveOps.trips;
+  }, [liveOps.trips]);
+
+  useEffect(() => {
+    const nextFreshAlerts = resolveStringFeedDelta(
+      previousAlertsRef.current,
+      liveOps.alerts,
+    );
+
+    if (nextFreshAlerts.length > 0) {
+      setFreshAlerts(nextFreshAlerts);
+    }
+
+    previousAlertsRef.current = liveOps.alerts;
+  }, [liveOps.alerts]);
+
+  useEffect(() => {
+    if (!transitionLabel) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setTransitionLabel(null);
+    }, adminSyncHighlightDurationMs);
+
+    return () => window.clearTimeout(timeout);
+  }, [transitionLabel]);
+
+  useEffect(() => {
+    if (!freshTripIds.length) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setFreshTripIds([]);
+    }, adminSyncHighlightDurationMs);
+
+    return () => window.clearTimeout(timeout);
+  }, [freshTripIds]);
+
+  useEffect(() => {
+    if (!freshAlerts.length) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setFreshAlerts([]);
+    }, adminSyncHighlightDurationMs);
+
+    return () => window.clearTimeout(timeout);
+  }, [freshAlerts]);
+
+  return (
+    <section className="panel">
+      <div className="roadmap-heading">
+        <div>
+          <p className="eyebrow">Live Ops</p>
+          <h2>Trajets actifs et timeline terrain</h2>
+        </div>
+        <div className="queue-meta">
+          <p className="lede">
+            Les courses en direct remontent maintenant les etapes clefs du cycle
+            de trajet pour l equipe operations.
+          </p>
+          <span className="queue-status">{status}</span>
+          {transitionLabel ? (
+            <span className="queue-transition">{transitionLabel}</span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="grid">
+        <article className="card">
+          <span>En attente pickup</span>
+          <strong>{liveOps.summary.tripsByStatus.matched}</strong>
+          <p>Trajets en statut MATCHED</p>
+        </article>
+        <article className="card">
+          <span>Chauffeurs arrives</span>
+          <strong>{liveOps.summary.tripsByStatus.arriving}</strong>
+          <p>Trajets en statut DRIVER_ARRIVING</p>
+        </article>
+        <article className="card">
+          <span>Courses en direct</span>
+          <strong>{liveOps.summary.tripsByStatus.inProgress}</strong>
+          <p>Trajets en statut IN_PROGRESS</p>
+        </article>
+        <article className="card">
+          <span>Paiements 24h</span>
+          <strong>{liveOps.summary.payments.reconciliationRate}%</strong>
+          <p>
+            {liveOps.summary.payments.reconciled}/
+            {liveOps.summary.payments.attempts} reconciles
+          </p>
+        </article>
+        <article className="card">
+          <span>Webhooks paiement</span>
+          <strong>{liveOps.summary.payments.webhookEvents}</strong>
+          <p>
+            {liveOps.summary.payments.webhookConflicts} conflits,{' '}
+            {liveOps.summary.payments.webhookUnknownReferences} inconnus
+          </p>
+        </article>
+      </div>
+
+      {liveOps.alerts.length ? (
+        <div className="ops-alert-strip">
+          {liveOps.alerts.map((alert) => (
+            <span
+              className={`ops-alert-pill ${
+                freshAlerts.includes(alert) ? 'ops-alert-pill-fresh' : ''
+              }`}
+              key={alert}
+            >
+              {alert}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="roadmap-grid live-ops-grid">
+        {liveOps.trips.map((trip) => (
+          <article
+            className={`phase-card live-trip-card ${
+              freshTripIds.includes(trip.id) ? 'phase-card-fresh' : ''
+            }`}
+            key={trip.id}
+          >
+            {freshTripIds.includes(trip.id) ? (
+              <span className="entity-transition-badge">Resync live</span>
+            ) : null}
+            <div className="ticket-topline">
+              <span className="phase-status phase-status-next">
+                {formatOperationalStatus(trip.status)}
+              </span>
+              <span className="live-trip-fare">
+                {trip.currency} {trip.fare}
+              </span>
+            </div>
+            <h3>{trip.route}</h3>
+            <p>
+              {trip.riderName} avec {trip.driverName} - {trip.vehicleLabel}
+            </p>
+            <p>
+              Dernier evenement:{' '}
+              {trip.lastEvent
+                ? `${trip.lastEvent.label} a ${new Date(
+                    trip.lastEvent.createdAt,
+                  ).toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}`
+                : 'Aucun evenement'}
+            </p>
+            <div className="trip-meta-grid">
+              <div className="trip-meta-card">
+                <span>Pickup code</span>
+                <strong>
+                  {trip.pickupCodeIssued ? 'Emis' : 'Non emis'}
+                </strong>
+              </div>
+              <div className="trip-meta-card">
+                <span>Incidents</span>
+                <strong>
+                  {trip.hasIncident
+                    ? `${trip.incidentCount} signalement(s)`
+                    : 'Aucun'}
+                </strong>
+              </div>
+            </div>
+          </article>
+        ))}
+        {!liveOps.trips.length ? (
+          <article className="phase-card">
+            <span className="phase-status phase-status-planned">stable</span>
+            <h3>Aucun trajet actif</h3>
+            <p>
+              La console operations ne detecte pas de course active pour le
+              moment.
+            </p>
+          </article>
+        ) : null}
+      </div>
+    </section>
+  );
+}

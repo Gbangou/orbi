@@ -1,0 +1,75 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  UseGuards,
+  Version,
+} from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import type { Request } from 'express';
+import { RateLimit } from '../../common/rate-limit/rate-limit.decorator';
+import { RateLimitGuard } from '../../common/rate-limit/rate-limit.guard';
+import { AuthService } from './auth.service';
+import { extractAuthRequestMetadata } from './auth.metadata';
+import { CurrentAuth } from './current-auth.decorator';
+import { SignInDto } from './dto/sign-in.dto';
+import { SignOutDto } from './dto/sign-out.dto';
+import { SignUpDto } from './dto/sign-up.dto';
+import { SessionAuthGuard } from './session-auth.guard';
+import type { RequestAuthContext } from './auth.types';
+
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Post('sign-up')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 5, windowMs: 60_000 })
+  signUp(@Body() payload: SignUpDto, @Req() request: Request) {
+    return this.authService.signUp(
+      payload,
+      extractAuthRequestMetadata(request),
+    );
+  }
+
+  @Post('sign-in')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 8, windowMs: 60_000 })
+  signIn(@Body() payload: SignInDto, @Req() request: Request) {
+    return this.authService.signIn(
+      payload,
+      extractAuthRequestMetadata(request),
+    );
+  }
+
+  @Get('me')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard)
+  me(@CurrentAuth() auth: RequestAuthContext) {
+    return this.authService.me(auth);
+  }
+
+  @Get('sessions')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard)
+  sessions(@CurrentAuth() auth: RequestAuthContext) {
+    return this.authService.listSessions(auth);
+  }
+
+  @Post('sign-out')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard)
+  signOut(
+    @CurrentAuth() auth: RequestAuthContext,
+    @Body() payload?: SignOutDto,
+  ) {
+    return this.authService.signOut(auth, payload);
+  }
+}

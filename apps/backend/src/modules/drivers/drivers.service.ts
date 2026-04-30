@@ -1,0 +1,879 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import {
+  DriverStatus,
+  DriverDocumentStatus,
+  DriverDocumentType,
+  DriverOnboardingReviewStatus,
+  Prisma,
+  ServiceTier,
+  VerificationStatus,
+  VehicleType,
+} from '@prisma/client';
+import { PrismaService } from '../../core/prisma/prisma.service';
+import { FeatureFlagsService } from '../../core/runtime/feature-flags.service';
+import type { RequestAuthContext } from '../auth/auth.types';
+import { DocumentLinksService } from '../../common/document-links/document-links.service';
+import { RequestDriverDocumentUploadLinksDto } from './dto/request-driver-document-upload-links.dto';
+import { UpsertDriverOnboardingDto } from './dto/upsert-driver-onboarding.dto';
+import { ACTIVE_TRIP_STATUSES } from '../trips/trips.constants';
+import { DispatchCoordinator } from './dispatch-coordinator.service';
+
+function toNumber(value: unknown) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return Number(value);
+}
+
+function normalizePlateNumber(value: string) {
+  return value.trim().toUpperCase();
+}
+
+function summarizeReviewStatus(
+  reviewStatus: DriverOnboardingReviewStatus | null,
+) {
+  switch (reviewStatus) {
+    case DriverOnboardingReviewStatus.APPROVED:
+      return 'Profil approuve et pret pour les courses.';
+    case DriverOnboardingReviewStatus.REJECTED:
+      return 'Le dossier a ete rejete. Une nouvelle soumission complete est necessaire.';
+    case DriverOnboardingReviewStatus.CHANGES_REQUESTED:
+      return 'Des corrections ou justificatifs complementaires sont demandes par les operations.';
+    case DriverOnboardingReviewStatus.UNDER_REVIEW:
+      return 'Le dossier est en cours de revue operations.';
+    case DriverOnboardingReviewStatus.SUBMITTED:
+    default:
+      return 'Le dossier reste en revue operations tant que tous les justificatifs ne sont pas valides.';
+  }
+}
+
+function resolveEffectiveDocumentStatus(document: {
+  status: DriverDocumentStatus;
+  expiresAt?: Date | null;
+}) {
+  if (
+    document.expiresAt &&
+    document.expiresAt.getTime() <= Date.now() &&
+    document.status !== DriverDocumentStatus.APPROVED
+  ) {
+    return DriverDocumentStatus.EXPIRED;
+  }
+
+  if (
+    document.expiresAt &&
+    document.expiresAt.getTime() <= Date.now() &&
+    document.status === DriverDocumentStatus.APPROVED
+  ) {
+    return DriverDocumentStatus.EXPIRED;
+  }
+
+  return document.status;
+}
+
+@Injectable()
+export class DriversService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly documentLinksService: DocumentLinksService,
+    private readonly featureFlagsService: FeatureFlagsService,
+    private readonly dispatchCoordinator: DispatchCoordinator,
+  ) {}
+
+  async getDispatchLearningSettings() {
+    return this.dispatchCoordinator.getDispatchLearningSettings();
+  }
+
+  async updateDispatchLearningSettings(input: {
+    lookbackHours?: number;
+    halfLifeHours?: number;
+    declineCooldownMinutes?: number;
+    historyLimit?: number;
+    resetToDefaults?: boolean;
+    actor: {
+      id: string;
+      name?: string | null;
+      role?: string | null;
+    };
+  }) {
+    return this.dispatchCoordinator.updateDispatchLearningSettings(input);
+  }
+
+  async overview() {
+    const drivers = await this.prisma.driverProfile.findMany({
+      include: {
+        user: true,
+        vehicles: true,
+      },
+      take: 25,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return {
+      total: drivers.length,
+      drivers,
+    };
+  }
+
+  async previewOffers() {
+    const requests = await this.prisma.rideRequest.findMany({
+      where: {
+        status: {
+          in: ['REQUESTED', 'MATCHED'],
+        },
+      },
+      include: {
+        rider: {
+          include: {
+            user: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 8,
+    });
+
+    return requests.map((request, index) => {
+      const fare = Number(request.estimatedFare ?? 0);
+
+      return {
+        id: request.id,
+        riderName: request.rider.user.fullName,
+        pickup: request.pickupAddress,
+        destination: request.destinationAddress,
+        category:
+          request.requestedVehicleType === 'MOTORCYCLE' ? 'motorcycle' : 'car',
+        fare,
+        distanceKm: Number(request.estimatedDistanceKm ?? 0),
+        etaToPickupMinutes: 3 + index,
+        driverPayout: Math.round(fare * 0.82),
+        pickupCodeRequired: true,
+      };
+    });
+  }
+
+  async getMe(auth: RequestAuthContext) {
+    this.assertDriverOnboardingEnabled(auth);
+    const profile = await this.loadDriverProfile(auth);
+    const onboardingSummary = await this.buildOnboardingSummary(profile.id);
+
+    return {
+      profile: {
+        id: profile.id,
+        fullName: profile.user.fullName,
+        email: profile.user.email,
+        phoneNumber: profile.user.phoneNumber,
+        status: profile.status,
+        verificationStatus: profile.verificationStatus,
+        serviceRadiusKm: toNumber(profile.serviceRadiusKm),
+        currentLatitude: toNumber(profile.currentLatitude),
+        currentLongitude: toNumber(profile.currentLongitude),
+        averageRating: toNumber(profile.averageRating),
+        completedTripsCount: profile.completedTripsCount,
+        onboarding: onboardingSummary,
+        vehicles: profile.vehicles.map((vehicle) => ({
+          id: vehicle.id,
+          plateNumber: vehicle.plateNumber,
+          make: vehicle.make,
+          model: vehicle.model,
+          color: vehicle.color,
+          type: vehicle.type,
+          tier: vehicle.tier,
+          isActive: vehicle.isActive,
+        })),
+      },
+    };
+  }
+
+  async getOnboarding(auth: RequestAuthContext) {
+    this.assertDriverOnboardingEnabled(auth);
+    const profile = await this.loadDriverProfile(auth);
+
+    return {
+      onboarding: await this.buildOnboardingSummary(profile.id),
+    };
+  }
+
+  async upsertOnboarding(
+    auth: RequestAuthContext,
+    payload: UpsertDriverOnboardingDto,
+  ) {
+    this.assertDriverOnboardingEnabled(auth);
+    const profile = await this.loadDriverProfile(auth);
+
+    await this.prisma.user.update({
+      where: {
+        id: auth.user.id,
+      },
+      data: {
+        phoneNumber: payload.phoneNumber?.trim() || auth.user.phoneNumber,
+      },
+    });
+
+    await this.prisma.driverProfile.update({
+      where: {
+        id: profile.id,
+      },
+      data: {
+        licenseNumber: payload.licenseNumber.trim(),
+        serviceRadiusKm: payload.serviceRadiusKm,
+        verificationStatus: VerificationStatus.PENDING,
+        status:
+          profile.status === DriverStatus.SUSPENDED
+            ? DriverStatus.SUSPENDED
+            : DriverStatus.OFFLINE,
+      },
+    });
+
+    for (const vehicle of payload.vehicles) {
+      const normalizedPlateNumber = normalizePlateNumber(vehicle.plateNumber);
+      const existingVehicle = await this.prisma.vehicle.findUnique({
+        where: {
+          plateNumber: normalizedPlateNumber,
+        },
+      });
+
+      if (existingVehicle && existingVehicle.driverId !== profile.id) {
+        throw new ConflictException(
+          `Vehicle ${normalizedPlateNumber} is already assigned to another driver profile.`,
+        );
+      }
+
+      if (existingVehicle) {
+        await this.prisma.vehicle.update({
+          where: {
+            id: existingVehicle.id,
+          },
+          data: {
+            make: vehicle.make.trim(),
+            model: vehicle.model.trim(),
+            color: vehicle.color.trim(),
+            year: vehicle.year,
+            type: vehicle.type as VehicleType,
+            tier: vehicle.tier as ServiceTier,
+            seats: vehicle.seats,
+            isActive: true,
+          },
+        });
+
+        continue;
+      }
+
+      await this.prisma.vehicle.create({
+        data: {
+          driverId: profile.id,
+          plateNumber: normalizedPlateNumber,
+          make: vehicle.make.trim(),
+          model: vehicle.model.trim(),
+          color: vehicle.color.trim(),
+          year: vehicle.year,
+          type: vehicle.type as VehicleType,
+          tier: vehicle.tier as ServiceTier,
+          seats: vehicle.seats,
+          isActive: true,
+        },
+      });
+    }
+
+    if (payload.documentArtifacts?.length) {
+      for (const artifact of payload.documentArtifacts) {
+        const normalizedStorageKey = artifact.storageKey.trim();
+        const existingDocument = await this.prisma.driverDocument.findUnique({
+          where: {
+            storageKey: normalizedStorageKey,
+          },
+        });
+
+        if (
+          existingDocument &&
+          existingDocument.driverProfileId !== profile.id
+        ) {
+          throw new ConflictException(
+            `Driver document ${normalizedStorageKey} is already linked to another driver profile.`,
+          );
+        }
+
+        if (existingDocument) {
+          await this.prisma.driverDocument.update({
+            where: {
+              id: existingDocument.id,
+            },
+            data: {
+              type: artifact.type as DriverDocumentType,
+              fileName: artifact.fileName.trim(),
+              mimeType: artifact.mimeType?.trim(),
+              expiresAt: artifact.expiresAt
+                ? new Date(artifact.expiresAt)
+                : null,
+              status: DriverDocumentStatus.PENDING,
+              rejectionReason: null,
+              reviewedAt: null,
+              reviewedByUserId: null,
+            },
+          });
+
+          continue;
+        }
+
+        await this.prisma.driverDocument.create({
+          data: {
+            driverProfileId: profile.id,
+            type: artifact.type as DriverDocumentType,
+            fileName: artifact.fileName.trim(),
+            storageKey: normalizedStorageKey,
+            mimeType: artifact.mimeType?.trim(),
+            expiresAt: artifact.expiresAt ? new Date(artifact.expiresAt) : null,
+            status: DriverDocumentStatus.PENDING,
+          },
+        });
+      }
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_ONBOARDING_SUBMITTED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: profile.id,
+        metadata: {
+          city: payload.city,
+          documents: {
+            identityDocumentProvided:
+              payload.documents.identityDocumentProvided,
+            driverLicenseProvided: payload.documents.driverLicenseProvided,
+            vehicleRegistrationProvided:
+              payload.documents.vehicleRegistrationProvided,
+            insuranceProofProvided: payload.documents.insuranceProofProvided,
+            selfieMatchProvided: payload.documents.selfieMatchProvided,
+          },
+          vehicleCount: payload.vehicles.length,
+          serviceRadiusKm: payload.serviceRadiusKm,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    await this.prisma.driverOnboardingReview.create({
+      data: {
+        driverProfileId: profile.id,
+        status: DriverOnboardingReviewStatus.SUBMITTED,
+        actorUserId: auth.user.id,
+        metadata: {
+          city: payload.city,
+          serviceRadiusKm: payload.serviceRadiusKm,
+          checklist: payload.documents,
+          documentArtifactCount: payload.documentArtifacts?.length ?? 0,
+          vehicleCount: payload.vehicles.length,
+        } as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      onboarding: await this.buildOnboardingSummary(profile.id),
+    };
+  }
+
+  async createDocumentUploadLinks(
+    auth: RequestAuthContext,
+    payload: RequestDriverDocumentUploadLinksDto,
+  ) {
+    this.assertDriverOnboardingEnabled(auth);
+    const profile = await this.loadDriverProfile(auth);
+
+    return {
+      links: payload.documents.map((document) =>
+        this.documentLinksService.createUploadLink({
+          driverProfileId: profile.id,
+          documentType: document.type,
+          fileName: document.fileName,
+          mimeType: document.mimeType,
+          expiresAt: document.expiresAt,
+        }),
+      ),
+    };
+  }
+
+  async getEarnings(auth: RequestAuthContext) {
+    const driverProfileId = auth.user.driverProfile?.id;
+
+    if (!driverProfileId) {
+      throw new NotFoundException(
+        'No driver profile found for the authenticated user.',
+      );
+    }
+
+    const trips = await this.prisma.trip.findMany({
+      where: {
+        driverId: driverProfileId,
+        status: 'COMPLETED',
+      },
+      orderBy: {
+        completedAt: 'desc',
+      },
+      take: 25,
+    });
+
+    const now = Date.now();
+    const oneDayAgo = now - 1000 * 60 * 60 * 24;
+    const oneWeekAgo = now - 1000 * 60 * 60 * 24 * 7;
+    const oneMonthAgo = now - 1000 * 60 * 60 * 24 * 30;
+
+    const payouts = trips.map((trip) => ({
+      ...trip,
+      payout: Math.round(Number(trip.actualFare ?? 0) * 0.82),
+      effectiveDate: trip.completedAt ?? trip.createdAt,
+    }));
+
+    const today = payouts
+      .filter((trip) => trip.effectiveDate.getTime() >= oneDayAgo)
+      .reduce((sum, trip) => sum + trip.payout, 0);
+    const week = payouts
+      .filter((trip) => trip.effectiveDate.getTime() >= oneWeekAgo)
+      .reduce((sum, trip) => sum + trip.payout, 0);
+    const month = payouts
+      .filter((trip) => trip.effectiveDate.getTime() >= oneMonthAgo)
+      .reduce((sum, trip) => sum + trip.payout, 0);
+    const totalPayout = payouts.reduce((sum, trip) => sum + trip.payout, 0);
+
+    return {
+      summary: {
+        currency: 'XOF',
+        today,
+        week,
+        month,
+        completedTrips: payouts.length,
+        averagePayout: payouts.length
+          ? Math.round(totalPayout / payouts.length)
+          : 0,
+      },
+      recentTrips: payouts.slice(0, 8).map((trip) => ({
+        id: trip.id,
+        route: `${trip.pickupAddress} vers ${trip.destinationAddress}`,
+        payout: trip.payout,
+        status: trip.status,
+        completedAt: trip.completedAt?.toISOString() ?? null,
+      })),
+    };
+  }
+
+  async getOffers(auth: RequestAuthContext) {
+    return this.dispatchCoordinator.getOffers(auth);
+  }
+
+  async declineOffer(auth: RequestAuthContext, rideRequestId: string) {
+    return this.dispatchCoordinator.declineOffer(auth, rideRequestId);
+  }
+
+  async updatePresence(
+    auth: RequestAuthContext,
+    payload: { latitude: number; longitude: number },
+  ) {
+    const driverProfileId = auth.user.driverProfile?.id;
+
+    if (!driverProfileId) {
+      throw new NotFoundException(
+        'No driver profile found for the authenticated user.',
+      );
+    }
+
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: {
+        id: driverProfileId,
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Driver profile could not be loaded.');
+    }
+
+    const updatedProfile = await this.prisma.driverProfile.update({
+      where: {
+        id: driverProfileId,
+      },
+      data: {
+        currentLatitude: payload.latitude,
+        currentLongitude: payload.longitude,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_PRESENCE_UPDATED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: driverProfileId,
+        metadata: {
+          latitude: payload.latitude,
+          longitude: payload.longitude,
+          status: profile.status,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      presence: {
+        driverId: updatedProfile.id,
+        status: updatedProfile.status,
+        latitude: toNumber(updatedProfile.currentLatitude),
+        longitude: toNumber(updatedProfile.currentLongitude),
+      },
+    };
+  }
+
+  async updateAvailability(
+    auth: RequestAuthContext,
+    nextStatus: 'ONLINE' | 'OFFLINE',
+  ) {
+    const driverProfileId = auth.user.driverProfile?.id;
+
+    if (!driverProfileId) {
+      throw new NotFoundException(
+        'No driver profile found for the authenticated user.',
+      );
+    }
+
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: {
+        id: driverProfileId,
+      },
+      include: {
+        vehicles: {
+          where: {
+            isActive: true,
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Driver profile could not be loaded.');
+    }
+
+    if (profile.status === DriverStatus.SUSPENDED) {
+      throw new BadRequestException(
+        'A suspended driver cannot change availability.',
+      );
+    }
+
+    if (
+      nextStatus === DriverStatus.ONLINE &&
+      profile.verificationStatus !== VerificationStatus.APPROVED
+    ) {
+      throw new BadRequestException('Only approved drivers can go online.');
+    }
+
+    if (
+      nextStatus === DriverStatus.ONLINE &&
+      !profile.vehicles.some((vehicle) => vehicle.isActive)
+    ) {
+      throw new BadRequestException(
+        'An active vehicle is required before going online.',
+      );
+    }
+
+    const activeTrip = await this.prisma.trip.findFirst({
+      where: {
+        driverId: driverProfileId,
+        status: {
+          in: ACTIVE_TRIP_STATUSES,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (nextStatus === DriverStatus.OFFLINE && activeTrip) {
+      throw new BadRequestException(
+        'The driver cannot go offline during an active trip.',
+      );
+    }
+
+    if (nextStatus === DriverStatus.OFFLINE) {
+      await this.releaseDriverReservations(driverProfileId);
+    }
+
+    const updatedProfile = await this.prisma.driverProfile.update({
+      where: {
+        id: driverProfileId,
+      },
+      data: {
+        status: nextStatus,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_AVAILABILITY_UPDATED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: driverProfileId,
+        metadata: {
+          status: nextStatus,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      availability: {
+        driverId: updatedProfile.id,
+        status: updatedProfile.status,
+      },
+    };
+  }
+
+  private async loadDriverProfile(auth: RequestAuthContext) {
+    const driverProfileId = auth.user.driverProfile?.id;
+
+    if (!driverProfileId) {
+      throw new NotFoundException(
+        'No driver profile found for the authenticated user.',
+      );
+    }
+
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: {
+        id: driverProfileId,
+      },
+      include: {
+        user: true,
+        vehicles: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Driver profile could not be loaded.');
+    }
+
+    return profile;
+  }
+
+  private assertDriverOnboardingEnabled(auth: RequestAuthContext) {
+    if (
+      !this.featureFlagsService.isEnabled('driverOnboarding', {
+        actorId: auth.user.id,
+      })
+    ) {
+      throw new ServiceUnavailableException(
+        'Driver onboarding is temporarily disabled for this actor during controlled rollout.',
+      );
+    }
+  }
+
+  private async buildOnboardingSummary(driverProfileId: string) {
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: {
+        id: driverProfileId,
+      },
+      include: {
+        user: true,
+        vehicles: {
+          where: {
+            isActive: true,
+          },
+        },
+        onboardingDocuments: {
+          orderBy: {
+            uploadedAt: 'desc',
+          },
+        },
+        onboardingReviews: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 5,
+          include: {
+            actor: true,
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Driver profile could not be loaded.');
+    }
+
+    const latestSubmission = await this.prisma.auditLog.findFirst({
+      where: {
+        entityType: 'DRIVER_PROFILE',
+        entityId: driverProfileId,
+        action: 'DRIVER_ONBOARDING_SUBMITTED',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const submittedDocuments = (
+      latestSubmission?.metadata as Record<string, unknown> | null
+    )?.documents as Record<string, boolean> | undefined;
+    const latestDocumentsByType = new Map<
+      DriverDocumentType,
+      (typeof profile.onboardingDocuments)[number]
+    >();
+
+    for (const document of profile.onboardingDocuments) {
+      if (!latestDocumentsByType.has(document.type)) {
+        latestDocumentsByType.set(document.type, document);
+      }
+    }
+    const latestReview = profile.onboardingReviews[0] ?? null;
+
+    const checklist = [
+      {
+        id: 'phone',
+        label: 'Numero de telephone verifie',
+        completed: Boolean(profile.user.isPhoneVerified),
+      },
+      {
+        id: 'license',
+        label: 'Permis de conduire renseigne et securise',
+        completed:
+          Boolean(profile.licenseNumber) &&
+          this.hasOnboardingDocument(
+            latestDocumentsByType,
+            DriverDocumentType.DRIVER_LICENSE,
+            submittedDocuments?.driverLicenseProvided,
+          ),
+      },
+      {
+        id: 'identity',
+        label: 'Piece d identite securisee',
+        completed: this.hasOnboardingDocument(
+          latestDocumentsByType,
+          DriverDocumentType.IDENTITY_DOCUMENT,
+          submittedDocuments?.identityDocumentProvided,
+        ),
+      },
+      {
+        id: 'vehicle-registration',
+        label: 'Carte grise securisee',
+        completed: this.hasOnboardingDocument(
+          latestDocumentsByType,
+          DriverDocumentType.VEHICLE_REGISTRATION,
+          submittedDocuments?.vehicleRegistrationProvided,
+        ),
+      },
+      {
+        id: 'insurance',
+        label: 'Assurance securisee',
+        completed: this.hasOnboardingDocument(
+          latestDocumentsByType,
+          DriverDocumentType.INSURANCE_PROOF,
+          submittedDocuments?.insuranceProofProvided,
+        ),
+      },
+      {
+        id: 'selfie',
+        label: 'Selfie de verification securise',
+        completed: this.hasOnboardingDocument(
+          latestDocumentsByType,
+          DriverDocumentType.SELFIE_VERIFICATION,
+          submittedDocuments?.selfieMatchProvided,
+        ),
+      },
+      {
+        id: 'vehicle',
+        label: 'Vehicule actif configure',
+        completed: profile.vehicles.length > 0,
+      },
+    ];
+
+    const completedItems = checklist.filter((item) => item.completed).length;
+
+    return {
+      verificationStatus: profile.verificationStatus,
+      reviewStatus:
+        latestReview?.status ?? DriverOnboardingReviewStatus.SUBMITTED,
+      completedItems,
+      totalItems: checklist.length,
+      readinessPercent: Math.round((completedItems / checklist.length) * 100),
+      serviceRadiusKm: toNumber(profile.serviceRadiusKm),
+      city:
+        ((latestSubmission?.metadata as Record<string, unknown> | null)
+          ?.city as string | undefined) ?? null,
+      submittedAt: latestSubmission?.createdAt.toISOString() ?? null,
+      latestReviewAt: latestReview?.createdAt.toISOString() ?? null,
+      latestDecisionReason: latestReview?.decisionReason ?? null,
+      reviewActorName: latestReview?.actor.fullName ?? null,
+      notes: summarizeReviewStatus(latestReview?.status ?? null),
+      checklist,
+      documents: [
+        DriverDocumentType.IDENTITY_DOCUMENT,
+        DriverDocumentType.DRIVER_LICENSE,
+        DriverDocumentType.VEHICLE_REGISTRATION,
+        DriverDocumentType.INSURANCE_PROOF,
+        DriverDocumentType.SELFIE_VERIFICATION,
+      ].map((documentType) => {
+        const document = latestDocumentsByType.get(documentType) ?? null;
+        const effectiveStatus = document
+          ? resolveEffectiveDocumentStatus(document)
+          : DriverDocumentStatus.PENDING;
+
+        return {
+          type: documentType,
+          status: effectiveStatus,
+          fileName: document?.fileName ?? null,
+          uploadedAt: document?.uploadedAt.toISOString() ?? null,
+          expiresAt: document?.expiresAt?.toISOString() ?? null,
+          reviewedAt: document?.reviewedAt?.toISOString() ?? null,
+          rejectionReason: document?.rejectionReason ?? null,
+        };
+      }),
+      reviewTimeline: profile.onboardingReviews.map((review) => ({
+        id: review.id,
+        status: review.status,
+        actorName: review.actor.fullName,
+        decisionReason: review.decisionReason ?? null,
+        createdAt: review.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  private hasOnboardingDocument(
+    latestDocumentsByType: Map<
+      DriverDocumentType,
+      { status: DriverDocumentStatus }
+    >,
+    type: DriverDocumentType,
+    fallbackCompletion?: boolean,
+  ) {
+    const document = latestDocumentsByType.get(type);
+
+    if (!document) {
+      return Boolean(fallbackCompletion);
+    }
+
+    const effectiveStatus = resolveEffectiveDocumentStatus(document);
+
+    return (
+      effectiveStatus !== DriverDocumentStatus.REJECTED &&
+      effectiveStatus !== DriverDocumentStatus.EXPIRED
+    );
+  }
+
+  async expireStaleReservations(now = new Date()) {
+    return this.dispatchCoordinator.expireStaleReservations(now);
+  }
+
+  private async releaseDriverReservations(driverProfileId: string) {
+    await this.dispatchCoordinator.releaseDriverReservations(driverProfileId);
+  }
+}

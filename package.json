@@ -1,0 +1,50 @@
+{
+  "name": "mobilis",
+  "version": "1.0.0",
+  "description": "Mobilis monorepo for rider, driver, admin, and backend applications.",
+  "private": true,
+  "scripts": {
+    "setup:local": "powershell -ExecutionPolicy Bypass -File .\\scripts\\bootstrap-local.ps1",
+    "db:start": "powershell -ExecutionPolicy Bypass -File .\\scripts\\start-local-db.ps1",
+    "dev:backend": "pnpm --filter backend start:dev",
+    "dev:admin": "pnpm --filter @mobilis/admin-web dev",
+    "dev:rider": "pnpm --filter @mobilis/rider-app start",
+    "dev:driver": "pnpm --filter @mobilis/driver-app start",
+    "dev:rider:web": "pnpm --filter @mobilis/rider-app web",
+    "dev:driver:web": "pnpm --filter @mobilis/driver-app web",
+    "dev:stack": "concurrently -n backend,admin,rider -c blue,green,magenta \"pnpm dev:backend\" \"pnpm dev:admin\" \"pnpm dev:rider\"",
+    "dev:web-preview": "concurrently -n backend,admin,rider-web -c blue,green,magenta \"pnpm dev:backend\" \"pnpm dev:admin\" \"pnpm dev:rider:web\"",
+    "dev:web-driver-preview": "concurrently -n backend,admin,driver-web -c blue,green,yellow \"pnpm dev:backend\" \"pnpm dev:admin\" \"pnpm dev:driver:web\"",
+    "dev:full-web": "concurrently -n backend,admin,rider-web -c blue,green,magenta \"pnpm dev:backend\" \"pnpm dev:admin\" \"pnpm dev:rider:web\"",
+    "dev:full-mobile": "concurrently -n backend,admin,rider,driver -c blue,green,magenta,yellow \"pnpm dev:backend\" \"pnpm dev:admin\" \"pnpm dev:rider\" \"pnpm dev:driver\"",
+    "build": "pnpm -r --workspace-concurrency=1 build",
+    "lint": "pnpm -r --workspace-concurrency=1 lint",
+    "typecheck": "pnpm --filter @mobilis/admin-web build && pnpm --filter @mobilis/rider-app typecheck && pnpm --filter @mobilis/driver-app typecheck && pnpm --filter backend build",
+    "test:mobile:smoke": "pnpm --filter @mobilis/rider-app test:smoke && pnpm --filter @mobilis/driver-app test:smoke",
+    "test": "pnpm --filter backend test",
+    "test:e2e": "pnpm --filter backend test:e2e",
+    "prisma:generate": "pnpm --filter backend prisma:generate",
+    "prisma:migrate": "pnpm --filter backend prisma:migrate",
+    "prisma:seed": "pnpm --filter backend prisma:seed"
+  },
+  "keywords": [
+    "mobilis",
+    "ride-hailing",
+    "monorepo",
+    "nestjs",
+    "expo",
+    "nextjs"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.30.0",
+  "pnpm": {
+    "overrides": {
+      "@types/react": "18.3.28",
+      "@types/react-dom": "18.3.7"
+    }
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

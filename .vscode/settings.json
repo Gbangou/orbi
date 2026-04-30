@@ -1,0 +1,30 @@
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "eslint.workingDirectories": [
+    {
+      "directory": "apps/backend",
+      "changeProcessCWD": true
+    },
+    {
+      "directory": "apps/admin-web",
+      "changeProcessCWD": true
+    },
+    {
+      "directory": "apps/rider-app",
+      "changeProcessCWD": true
+    },
+    {
+      "directory": "apps/driver-app",
+      "changeProcessCWD": true
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "@mobilis/admin-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "eslint .",
+    "test:smoke": "jest --config ./jest.config.cjs --runInBand"
+  },
+  "dependencies": {
+    "@mobilis/api": "workspace:*",
+    "@mobilis/config": "workspace:*",
+    "@mobilis/ui": "workspace:*",
+    "next": "^15.1.6",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "15.5.15",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.3"
+  }
+}

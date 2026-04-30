@@ -1,0 +1,401 @@
+import { Prisma } from '@prisma/client';
+import { RideRequestProjector } from './ride-request.projector';
+import { RideRequestsService } from './ride-requests.service';
+
+describe('RideRequestsService', () => {
+  function createService() {
+    const prisma = {
+      $transaction: jest.fn(),
+      rideRequest: {
+        create: jest.fn(),
+        findFirst: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      trip: {
+        findFirst: jest.fn(),
+      },
+    };
+    const pricingService = {
+      quote: jest.fn(),
+      deriveOperatingContext: jest.fn(() => ({
+        demandLevel: 'HIGH',
+        trafficLevel: 'HEAVY',
+        weatherCondition: 'CLEAR',
+        roadCondition: 'CONGESTED',
+        supplyPressureLevel: 'BALANCED',
+        availabilityScore: 72,
+      })),
+    };
+    const realtimeService = {
+      publish: jest.fn(),
+    };
+    const rideRequestProjector = new RideRequestProjector();
+
+    prisma.$transaction.mockImplementation(
+      async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
+    );
+
+    return {
+      prisma,
+      pricingService,
+      realtimeService,
+      rideRequestProjector,
+      service: new RideRequestsService(
+        prisma as never,
+        pricingService as never,
+        realtimeService as never,
+        rideRequestProjector as never,
+      ),
+    };
+  }
+
+  it('recomputes estimated fare from the pricing engine before creating a request', async () => {
+    const { prisma, pricingService, realtimeService, service } =
+      createService();
+
+    pricingService.quote.mockResolvedValue({
+      estimatedFare: 2150,
+    });
+    prisma.rideRequest.findFirst.mockResolvedValue(null);
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.rideRequest.create.mockImplementation(
+      async ({ data }: { data: Record<string, unknown> }) => ({
+        id: 'request-1',
+        ...data,
+      }),
+    );
+
+    const result = await service.create({
+      riderId: 'rider-1',
+      pickupAddress: ' Universite Joseph Ki-Zerbo ',
+      pickupLatitude: 12.3714,
+      pickupLongitude: -1.5197,
+      destinationAddress: ' Ouaga 2000 ',
+      destinationLatitude: 12.3274,
+      destinationLongitude: -1.5339,
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      estimatedDistanceKm: 5.8,
+      estimatedDurationMinutes: 16,
+      paymentMethod: 'MOBILE_MONEY',
+      pickupAreaType: 'URBAN_CORE',
+      city: 'OUAGADOUGOU',
+      districtProfile: 'UNIVERSITY',
+      notes: ' test request ',
+    });
+
+    expect(pricingService.quote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        vehicleType: 'MOTORCYCLE',
+        serviceTier: 'MOTO_STANDARD',
+        distanceKm: expect.any(Number),
+        durationMinutes: expect.any(Number),
+        paymentMethod: 'MOBILE_MONEY',
+        zone: 'URBAN_CORE',
+        city: 'OUAGADOUGOU',
+        districtProfile: 'UNIVERSITY',
+        demandLevel: 'HIGH',
+        trafficLevel: 'HEAVY',
+        weatherCondition: 'CLEAR',
+        roadCondition: 'CONGESTED',
+        isPeakHour: expect.any(Boolean),
+      }),
+    );
+    expect(prisma.rideRequest.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        riderId: 'rider-1',
+        estimatedFare: 2150,
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        pickupLatitude: 12.3714,
+        pickupLongitude: -1.5197,
+        destinationAddress: 'Ouaga 2000',
+        destinationLatitude: 12.3274,
+        destinationLongitude: -1.5339,
+        pricingCity: 'OUAGADOUGOU',
+        districtProfile: 'UNIVERSITY',
+        estimatedDistanceKm: expect.any(Number),
+        estimatedDurationMinutes: expect.any(Number),
+        notes: 'test request',
+        status: 'REQUESTED',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith({
+      channel: 'ride-request',
+      type: 'ride-request.created',
+      entityId: 'request-1',
+      riderId: 'rider-1',
+      payload: {
+        status: 'REQUESTED',
+        estimatedFare: 2150,
+        operatingContext: {
+          demandLevel: 'HIGH',
+          trafficLevel: 'HEAVY',
+          weatherCondition: 'CLEAR',
+          roadCondition: 'CONGESTED',
+          supplyPressureLevel: 'BALANCED',
+          availabilityScore: 72,
+        },
+      },
+    });
+    expect(result.estimatedFare).toBe(2150);
+    expect(result.routeMetricsSource).toBe('SERVER_COORDINATES');
+    expect(result.pricingContextSummary).toBe('HIGH - HEAVY - CONGESTED');
+    expect(result.bookingReadinessSummary).toContain(
+      'Metriques consolidees depuis les coordonnees serveur.',
+    );
+  });
+
+  it('recomputes distance and duration from coordinates when available', async () => {
+    const { prisma, pricingService, service } = createService();
+
+    pricingService.quote.mockResolvedValue({
+      estimatedFare: 2150,
+    });
+    prisma.rideRequest.findFirst.mockResolvedValue(null);
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.rideRequest.create.mockImplementation(
+      async ({ data }: { data: Record<string, unknown> }) => ({
+        id: 'request-2',
+        ...data,
+      }),
+    );
+
+    await service.create({
+      riderId: 'rider-1',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      pickupLatitude: 12.3714,
+      pickupLongitude: -1.5197,
+      destinationAddress: 'Ouaga 2000',
+      destinationLatitude: 12.3274,
+      destinationLongitude: -1.5339,
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      estimatedDistanceKm: 99,
+      estimatedDurationMinutes: 99,
+      paymentMethod: 'MOBILE_MONEY',
+      pickupAreaType: 'URBAN_CORE',
+    });
+
+    expect(pricingService.quote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        distanceKm: 5.1,
+        durationMinutes: 18,
+      }),
+    );
+    expect(prisma.rideRequest.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        estimatedDistanceKm: 5.1,
+        estimatedDurationMinutes: 18,
+      }),
+    });
+  });
+
+  it('rejects ride requests when the rider already has an active one', async () => {
+    const { prisma, service } = createService();
+
+    prisma.rideRequest.findFirst.mockResolvedValue({
+      id: 'request-active-1',
+    });
+    prisma.trip.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.create({
+        riderId: 'rider-1',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        requestedVehicleType: 'MOTORCYCLE',
+        requestedServiceTier: 'MOTO_STANDARD',
+        estimatedDistanceKm: 5.8,
+        estimatedDurationMinutes: 16,
+        paymentMethod: 'MOBILE_MONEY',
+        pickupAreaType: 'URBAN_CORE',
+      }),
+    ).rejects.toThrow('The rider already has an active ride request.');
+  });
+
+  it('falls back to client route estimates when coordinates are absent', async () => {
+    const { prisma, pricingService, service } = createService();
+
+    pricingService.quote.mockResolvedValue({
+      estimatedFare: 1800,
+    });
+    prisma.rideRequest.findFirst.mockResolvedValue(null);
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.rideRequest.create.mockImplementation(
+      async ({ data }: { data: Record<string, unknown> }) => ({
+        id: 'request-client-estimate',
+        ...data,
+      }),
+    );
+
+    const result = await service.create({
+      riderId: 'rider-1',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      destinationAddress: 'Ouaga 2000',
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      estimatedDistanceKm: 5.8,
+      estimatedDurationMinutes: 16,
+      paymentMethod: 'MOBILE_MONEY',
+      pickupAreaType: 'URBAN_CORE',
+    });
+
+    expect(pricingService.quote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      }),
+    );
+    expect(result.routeMetricsSource).toBe('CLIENT_ESTIMATE');
+  });
+
+  it('rejects incompatible vehicle type and service tier combinations', async () => {
+    const { prisma, service } = createService();
+
+    prisma.rideRequest.findFirst.mockResolvedValue(null);
+    prisma.trip.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.create({
+        riderId: 'rider-1',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        requestedVehicleType: 'MOTORCYCLE',
+        requestedServiceTier: 'CAR_COMFORT',
+        estimatedDistanceKm: 5.8,
+        estimatedDurationMinutes: 16,
+        paymentMethod: 'MOBILE_MONEY',
+        pickupAreaType: 'URBAN_CORE',
+      }),
+    ).rejects.toThrow(
+      'The requested service tier is not compatible with the selected vehicle type.',
+    );
+  });
+
+  it('rejects partial pickup coordinates', async () => {
+    const { prisma, service } = createService();
+
+    prisma.rideRequest.findFirst.mockResolvedValue(null);
+    prisma.trip.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.create({
+        riderId: 'rider-1',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        pickupLatitude: 12.3714,
+        destinationAddress: 'Ouaga 2000',
+        requestedVehicleType: 'MOTORCYCLE',
+        requestedServiceTier: 'MOTO_STANDARD',
+        estimatedDistanceKm: 5.8,
+        estimatedDurationMinutes: 16,
+        paymentMethod: 'MOBILE_MONEY',
+        pickupAreaType: 'URBAN_CORE',
+      }),
+    ).rejects.toThrow(
+      'Pickup latitude and longitude must be provided together.',
+    );
+  });
+
+  it('cancels a requested ride for the authenticated rider', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.rideRequest.findUnique.mockResolvedValue({
+      id: 'request-1',
+      riderId: 'rider-1',
+      status: 'REQUESTED',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      destinationAddress: 'Ouaga 2000',
+      trip: null,
+    });
+    prisma.rideRequest.update.mockResolvedValue({
+      id: 'request-1',
+      riderId: 'rider-1',
+      status: 'CANCELLED',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      destinationAddress: 'Ouaga 2000',
+      updatedAt: new Date('2026-04-17T10:00:00.000Z'),
+    });
+
+    const result = await service.cancel(
+      {
+        user: {
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      'request-1',
+    );
+
+    expect(prisma.rideRequest.update).toHaveBeenCalledWith({
+      where: { id: 'request-1' },
+      data: { status: 'CANCELLED' },
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith({
+      channel: 'ride-request',
+      type: 'ride-request.cancelled',
+      entityId: 'request-1',
+      riderId: 'rider-1',
+      actorRole: 'RIDER',
+      payload: {
+        status: 'CANCELLED',
+      },
+    });
+    expect(result.rideRequest.status).toBe('CANCELLED');
+  });
+
+  it('rejects ride requests when the rider already has an active trip', async () => {
+    const { prisma, service } = createService();
+
+    prisma.rideRequest.findFirst.mockResolvedValue(null);
+    prisma.trip.findFirst.mockResolvedValue({
+      id: 'trip-active-1',
+    });
+
+    await expect(
+      service.create({
+        riderId: 'rider-1',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        requestedVehicleType: 'MOTORCYCLE',
+        requestedServiceTier: 'MOTO_STANDARD',
+        estimatedDistanceKm: 5.8,
+        estimatedDurationMinutes: 16,
+        paymentMethod: 'MOBILE_MONEY',
+        pickupAreaType: 'URBAN_CORE',
+      }),
+    ).rejects.toThrow('The rider already has an active trip.');
+  });
+
+  it('maps active-flow unique constraint races to a user-facing validation error', async () => {
+    const { prisma, pricingService, service } = createService();
+
+    pricingService.quote.mockResolvedValue({
+      estimatedFare: 1800,
+    });
+    prisma.rideRequest.findFirst.mockResolvedValue(null);
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.rideRequest.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+      }),
+    );
+
+    await expect(
+      service.create({
+        riderId: 'rider-1',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        requestedVehicleType: 'MOTORCYCLE',
+        requestedServiceTier: 'MOTO_STANDARD',
+        estimatedDistanceKm: 5.8,
+        estimatedDurationMinutes: 16,
+        paymentMethod: 'MOBILE_MONEY',
+        pickupAreaType: 'URBAN_CORE',
+      }),
+    ).rejects.toThrow('The rider already has an active ride request or trip.');
+  });
+});

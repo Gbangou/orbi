@@ -1,0 +1,41 @@
+{
+  "name": "@mobilis/driver-app",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "powershell -Command \"$env:EXPO_OFFLINE='1'; Remove-Item Env:HTTP_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:HTTPS_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:ALL_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:GIT_HTTP_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:GIT_HTTPS_PROXY -ErrorAction SilentlyContinue; expo start --web\"",
+    "test:smoke": "jest --config ./jest.config.cjs --runInBand",
+    "typecheck": "tsc --noEmit",
+    "build": "echo driver app build handled by Expo application services",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "^4.0.1",
+    "@mobilis/api": "workspace:*",
+    "@mobilis/config": "workspace:*",
+    "@mobilis/ui": "workspace:*",
+    "expo": "^52.0.23",
+    "expo-location": "^55.1.8",
+    "expo-router": "^4.0.17",
+    "expo-secure-store": "^55.0.13",
+    "expo-status-bar": "^2.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-native": "^0.76.6",
+    "react-native-web": "^0.19.13"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/react": "18.3.28",
+    "@types/react-dom": "18.3.7",
+    "@types/react-test-renderer": "^18.3.0",
+    "jest": "^30.0.0",
+    "react-test-renderer": "^18.3.1",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.3"
+  }
+}

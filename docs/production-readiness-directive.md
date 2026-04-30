@@ -1,0 +1,82 @@
+# Mobilis Production Readiness Directive
+
+## Truth Check
+
+Mobilis is not AI slop in its current shape. It has a monorepo, typed API
+contracts, backend modules, Prisma migrations, mobile apps, admin ops, realtime
+abstractions, rate limiting, payments, docs and tests.
+
+It is also not finished. A product that wants to serve thousands of people still
+needs proof outside the repo:
+
+- riders who repeatedly book real trips
+- drivers who complete trips without operational hand-holding
+- support workflows tested under messy incidents
+- payment provider sandbox and live payload fixtures
+- field validation on pricing, pickup wait, acceptance and cancellation
+- a documented acquisition loop
+
+## Non-Negotiable Build Rules
+
+1. No feature ships without a clear invariant, API contract and owner surface.
+2. Every external input must pass dirty-data tests.
+3. Every money operation must be idempotent, auditable and visible to ops.
+4. Every admin action touching trust, payment or dispatch must write audit logs.
+5. Every production assumption must be represented in a doc, migration, test or
+   runbook.
+6. Do not optimize for more screens before validating repeated real usage.
+
+## Dirty Data Gate
+
+Before deployment, run:
+
+```bash
+pnpm --filter backend test -- dirty-input-validation --runInBand
+pnpm --filter backend test -- --runInBand
+pnpm typecheck
+```
+
+Required dirty cases:
+
+- emojis in structured identity fields
+- HTML and script strings in free-text fields
+- invalid emails and phone numbers
+- null, empty and unknown fields
+- oversized strings
+- invalid dates
+- invalid MIME types
+- malformed provider webhook references
+- realistic Burkina names, phone numbers, plates and documents
+
+## Validation And Customer Acquisition
+
+The market signal is plausible, not proven. Burkina transport already has local
+alternatives and informal behavior. Mobile money growth is favorable, but it
+does not prove riders will switch or drivers will trust the platform.
+
+Run validation in phases:
+
+1. Recruit 20 riders and 10 drivers in one Ouagadougou zone.
+2. Complete 50 real or supervised trips with manual ops backup.
+3. Measure acceptance rate, pickup wait, cancellation, price objections and
+   payment success.
+4. Interview riders after the second trip, not just after signup.
+5. Interview drivers after cash-out or payment reconciliation.
+6. Keep only channels that create repeated rides, not vanity installs.
+
+Initial acquisition channels:
+
+- campus and work commute corridors
+- driver ambassador referrals
+- WhatsApp neighborhood groups
+- local business delivery/transport partnerships
+- airport/hotel controlled pilots
+- content showing real pickup time, price clarity and driver verification
+
+## Current Priority Order
+
+1. Harden input validation and dirty-data tests.
+2. Finish payment provider sandbox fixtures and replay tooling.
+3. Add settlement/ledger entries after successful reconciliation.
+4. Validate one real pilot zone before expanding UI scope.
+5. Add observability dashboards for latency, failures, conversion and support.

@@ -1,0 +1,117 @@
+import { Link } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
+import {
+  QuickActionCard,
+  SectionCard,
+  SectionHeading,
+} from './realtime-widgets';
+
+export type DriverJourneyStepId =
+  | 'auth'
+  | 'accueil'
+  | 'offres'
+  | 'revenus'
+  | 'profil';
+
+const driverJourneySteps: Array<{
+  id: DriverJourneyStepId;
+  href: '/auth' | '/accueil' | '/offres' | '/revenus' | '/profil';
+  eyebrow: string;
+  title: string;
+  description: string;
+}> = [
+  {
+    id: 'auth',
+    href: '/auth',
+    eyebrow: 'Acces',
+    title: 'Connexion et activation',
+    description: 'Ouvrir la session chauffeur et reprendre le cockpit.',
+  },
+  {
+    id: 'accueil',
+    href: '/accueil',
+    eyebrow: 'Cockpit',
+    title: 'Accueil chauffeur',
+    description: 'Voir le statut live, les offres et les revenus immediats.',
+  },
+  {
+    id: 'offres',
+    href: '/offres',
+    eyebrow: 'Dispatch',
+    title: 'Voir toutes les offres',
+    description: 'Piloter les reservations, transitions et actions de course.',
+  },
+  {
+    id: 'revenus',
+    href: '/revenus',
+    eyebrow: 'Finance',
+    title: 'Revenus et performance',
+    description: 'Suivre les gains live, l historique recent et la cadence du jour.',
+  },
+  {
+    id: 'profil',
+    href: '/profil',
+    eyebrow: 'Dossier',
+    title: 'Profil et vehicule',
+    description: 'Suivre le dossier ops, les documents et le vehicule actif.',
+  },
+];
+
+export function DriverJourneySection({
+  currentStep,
+  description,
+}: {
+  currentStep: DriverJourneyStepId;
+  description?: string;
+}) {
+  const currentStepIndex = driverJourneySteps.findIndex(
+    (step) => step.id === currentStep,
+  );
+
+  return (
+    <SectionCard tone="sky">
+      <SectionHeading
+        eyebrow="Parcours chauffeur"
+        title="Tunnel chauffeur continu"
+        description={
+          description ??
+          'Le meme fil conducteur relie l acces, le cockpit live, le dispatch, les revenus et le dossier operations.'
+        }
+      />
+      <View style={styles.actions}>
+        {driverJourneySteps.map((step, index) => {
+          const isCurrent = step.id === currentStep;
+          const isCompleted =
+            currentStepIndex > -1 && index < currentStepIndex;
+          const tone = isCurrent
+            ? 'amber'
+            : isCompleted
+              ? 'sky'
+              : 'teal';
+
+          return (
+            <Link key={step.id} href={step.href} asChild>
+              <QuickActionCard
+                eyebrow={step.eyebrow}
+                title={step.title}
+                description={
+                  isCurrent
+                    ? `Vous etes ici. ${step.description}`
+                    : step.description
+                }
+                tone={tone}
+                emphasis={isCurrent ? 'primary' : 'secondary'}
+              />
+            </Link>
+          );
+        })}
+      </View>
+    </SectionCard>
+  );
+}
+
+const styles = StyleSheet.create({
+  actions: {
+    gap: 10,
+  },
+});
