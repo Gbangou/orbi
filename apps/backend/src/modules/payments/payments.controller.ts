@@ -51,9 +51,7 @@ export class PaymentsController {
   // than a user session because they originate from server-to-server traffic.
   handleWebhook(
     @Headers('x-mobilis-webhook-secret') secret: string | undefined,
-    @Headers('flutterwave-signature') flutterwaveSignature:
-      | string
-      | undefined,
+    @Headers('flutterwave-signature') flutterwaveSignature: string | undefined,
     @Headers('verif-hash') flutterwaveVerificationHash: string | undefined,
     @Headers('x-token') cinetpayToken: string | undefined,
     @Req() request: Request & { rawBody?: string },

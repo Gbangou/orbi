@@ -1,10 +1,12 @@
 import {
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   Max,
   Min,
   MaxLength,
+  IsBoolean,
 } from 'class-validator';
 
 export class ReportTripIncidentDto {
@@ -22,4 +24,18 @@ export class ReportTripIncidentDto {
   @Min(1)
   @Max(3)
   priority?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  evidenceConsent?: boolean;
+
+  @IsOptional()
+  @IsIn(['AUDIO', 'PHOTO', 'VIDEO', 'TEXT_NOTE'])
+  evidenceType?: 'AUDIO' | 'PHOTO' | 'VIDEO' | 'TEXT_NOTE';
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(72)
+  evidenceRetentionHours?: number;
 }

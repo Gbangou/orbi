@@ -19,6 +19,7 @@ import { TripsModule } from './modules/trips/trips.module';
 import { UsersModule } from './modules/users/users.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { VoiceModule } from './modules/voice/voice.module';
+import { MobileObservabilityModule } from './modules/mobile-observability/mobile-observability.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { VoiceModule } from './modules/voice/voice.module';
     PaymentsModule,
     AdminModule,
     VoiceModule,
+    MobileObservabilityModule,
   ],
 })
 export class AppModule {}

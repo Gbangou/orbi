@@ -13,6 +13,6 @@ import { HealthWatchdogService } from './health-watchdog.service';
     HealthService,
     HealthWatchdogService,
   ],
-  exports: [HealthIncidentJournalService],
+  exports: [HealthIncidentJournalService, HealthService],
 })
 export class HealthModule {}

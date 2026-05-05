@@ -1,0 +1,10 @@
+{
+  "event": "refund.completed",
+  "data": {
+    "id": "fw_refund_123",
+    "transaction_id": "123456",
+    "status": "successful",
+    "amount_refunded": 2400,
+    "currency": "XOF"
+  }
+}

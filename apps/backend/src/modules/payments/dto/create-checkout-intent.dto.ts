@@ -20,10 +20,11 @@ export class CreateCheckoutIntentDto {
   @IsIn(PAYMENT_CHANNELS)
   channel!: (typeof PAYMENT_CHANNELS)[number];
 
-  @ApiProperty({ example: 2400 })
+  @ApiPropertyOptional({ example: 2400 })
+  @IsOptional()
   @IsNumber()
   @Min(100)
-  amount!: number;
+  amount?: number;
 
   @ApiPropertyOptional({ enum: MOBILE_MONEY_NETWORKS, example: 'ORANGE_MONEY' })
   @IsOptional()

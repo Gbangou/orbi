@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { createHash, randomBytes } from 'crypto';
 import { Prisma, TripStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
@@ -12,6 +13,7 @@ import {
   ACTIVE_TRIP_STATUSES,
   ALLOWED_TRIP_TRANSITIONS,
   TRIP_EVENT_BY_STATUS,
+  TRIP_EVENT_LABELS,
   resolveCancellationActor,
 } from './trips.constants';
 import {
@@ -24,6 +26,98 @@ import {
   selectCompatibleVehicle,
 } from './trip-acceptance.policy';
 import { extractPickupCode, generatePickupCode, toAmount } from './trips.utils';
+import {
+  driverFatigueWindowHours,
+  evaluateDriverFatigue,
+} from '../drivers/driver-fatigue.policy';
+
+const tripShareLinkTtlMinutes = 120;
+const routeMonitoringAlertCooldownMinutes = 15;
+const routeStopMinutesThreshold = 8;
+const routeNoProgressMinutesThreshold = 10;
+const routeDeviationKmThreshold = 0.75;
+const routeMinimumProgressKm = 0.2;
+
+function hashShareToken(token: string) {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function toNumber(value: unknown) {
+  const numeric = Number(value);
+
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function haversineKm(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number },
+) {
+  const earthRadiusKm = 6371;
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const latDelta = toRadians(to.latitude - from.latitude);
+  const lonDelta = toRadians(to.longitude - from.longitude);
+  const fromLat = toRadians(from.latitude);
+  const toLat = toRadians(to.latitude);
+  const a =
+    Math.sin(latDelta / 2) ** 2 +
+    Math.cos(fromLat) * Math.cos(toLat) * Math.sin(lonDelta / 2) ** 2;
+
+  return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
+}
+
+function distanceToRouteKm(
+  point: { latitude: number; longitude: number },
+  pickup: { latitude: number; longitude: number },
+  destination: { latitude: number; longitude: number },
+) {
+  const routeDistanceKm = haversineKm(pickup, destination);
+
+  if (routeDistanceKm < 0.05) {
+    return haversineKm(point, destination);
+  }
+
+  const latitudeKm = 111.32;
+  const longitudeKm =
+    111.32 * Math.cos(((pickup.latitude + destination.latitude) / 2) * (Math.PI / 180));
+  const ax = pickup.longitude * longitudeKm;
+  const ay = pickup.latitude * latitudeKm;
+  const bx = destination.longitude * longitudeKm;
+  const by = destination.latitude * latitudeKm;
+  const px = point.longitude * longitudeKm;
+  const py = point.latitude * latitudeKm;
+  const dx = bx - ax;
+  const dy = by - ay;
+  const projection = Math.max(
+    0,
+    Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)),
+  );
+  const closestX = ax + projection * dx;
+  const closestY = ay + projection * dy;
+
+  return Math.hypot(px - closestX, py - closestY);
+}
+
+function getRoutePositionPayload(event: { payload?: unknown; createdAt: Date }) {
+  const payload = isRecord(event.payload) ? event.payload : {};
+  const latitude = toNumber(payload.latitude);
+  const longitude = toNumber(payload.longitude);
+
+  if (latitude === null || longitude === null) {
+    return null;
+  }
+
+  return {
+    latitude,
+    longitude,
+    distanceToDestinationKm: toNumber(payload.distanceToDestinationKm),
+    speedKph: toNumber(payload.speedKph),
+    createdAt: event.createdAt,
+  };
+}
 
 @Injectable()
 export class TripsService {
@@ -38,6 +132,377 @@ export class TripsService {
     return serializeTripDetail(trip);
   }
 
+  async createShareLink(auth: RequestAuthContext, tripId: string) {
+    const token = randomBytes(24).toString('base64url');
+    const tokenHash = hashShareToken(token);
+    const expiresAt = new Date(
+      Date.now() + tripShareLinkTtlMinutes * 60 * 1000,
+    );
+
+    const trip = await this.prisma.$transaction(async (tx) => {
+      const trip = await tx.trip.findUnique({
+        where: {
+          id: tripId,
+        },
+        include: {
+          rider: true,
+          driver: true,
+        },
+      });
+
+      if (!trip) {
+        throw new NotFoundException('Trip not found.');
+      }
+
+      this.assertTripAccess(auth, trip);
+
+      if (!ACTIVE_TRIP_STATUSES.includes(trip.status)) {
+        throw new BadRequestException(
+          'Trip sharing is only available for active trips.',
+        );
+      }
+
+      await tx.trip.update({
+        where: {
+          id: tripId,
+        },
+        data: {
+          events: {
+            create: {
+              eventType: 'SHARE_LINK_CREATED',
+              payload: {
+                tokenHash,
+                expiresAt: expiresAt.toISOString(),
+                createdByRole: auth.user.role,
+                createdByUserId: auth.user.id,
+                ttlMinutes: tripShareLinkTtlMinutes,
+              },
+            },
+          },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'TRIP_SHARE_LINK_CREATED',
+          entityType: 'TRIP',
+          entityId: trip.id,
+          metadata: {
+            role: auth.user.role,
+            expiresAt: expiresAt.toISOString(),
+            ttlMinutes: tripShareLinkTtlMinutes,
+          },
+        },
+      });
+
+      return trip;
+    });
+
+    this.realtimeService.publish({
+      channel: 'trip',
+      type: 'trip.share-link-created',
+      entityId: trip.id,
+      riderId: trip.riderId,
+      driverId: trip.driverId,
+      actorRole: auth.user.role,
+      payload: {
+        expiresAt: expiresAt.toISOString(),
+        ttlMinutes: tripShareLinkTtlMinutes,
+      },
+    });
+
+    return {
+      share: {
+        tripId: trip.id,
+        token,
+        path: `/trips/shared/${token}`,
+        expiresAt: expiresAt.toISOString(),
+        ttlMinutes: tripShareLinkTtlMinutes,
+      },
+    };
+  }
+
+  async getSharedTrip(shareToken: string) {
+    const token = shareToken.trim();
+
+    if (token.length < 16 || token.length > 128) {
+      throw new NotFoundException('Shared trip not found.');
+    }
+
+    const tokenHash = hashShareToken(token);
+    const trips = await this.prisma.trip.findMany({
+      where: {
+        status: {
+          in: ACTIVE_TRIP_STATUSES,
+        },
+        events: {
+          some: {
+            eventType: 'SHARE_LINK_CREATED',
+          },
+        },
+      },
+      include: {
+        rider: {
+          include: {
+            user: true,
+          },
+        },
+        driver: {
+          include: {
+            user: true,
+          },
+        },
+        vehicle: true,
+        events: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 50,
+    });
+    const now = Date.now();
+    const matchedTrip = trips.find((trip) =>
+      trip.events.some((event) => {
+        if (event.eventType !== 'SHARE_LINK_CREATED') {
+          return false;
+        }
+
+        const payload = isRecord(event.payload) ? event.payload : {};
+        const expiresAt =
+          typeof payload.expiresAt === 'string'
+            ? Date.parse(payload.expiresAt)
+            : NaN;
+
+        return payload.tokenHash === tokenHash && expiresAt > now;
+      }),
+    );
+
+    if (!matchedTrip) {
+      throw new NotFoundException('Shared trip not found.');
+    }
+
+    const shareEvent = matchedTrip.events
+      .filter((event) => event.eventType === 'SHARE_LINK_CREATED')
+      .find((event) => {
+        const payload = isRecord(event.payload) ? event.payload : {};
+
+        return payload.tokenHash === tokenHash;
+      });
+    const sharePayload = isRecord(shareEvent?.payload)
+      ? shareEvent.payload
+      : {};
+    const lastEvent = matchedTrip.events.at(-1);
+
+    return {
+      sharedTrip: {
+        tripId: matchedTrip.id,
+        status: matchedTrip.status,
+        pickupAddress: matchedTrip.pickupAddress,
+        destinationAddress: matchedTrip.destinationAddress,
+        riderName: matchedTrip.rider.user.fullName,
+        driverName: matchedTrip.driver.user.fullName,
+        vehicleLabel: `${matchedTrip.vehicle.make} ${matchedTrip.vehicle.model}`,
+        lastEvent: lastEvent
+          ? {
+              label: TRIP_EVENT_LABELS[lastEvent.eventType] ?? lastEvent.eventType,
+              createdAt: lastEvent.createdAt.toISOString(),
+            }
+          : null,
+        expiresAt:
+          typeof sharePayload.expiresAt === 'string'
+            ? sharePayload.expiresAt
+            : null,
+        safetyNote:
+          'Lien limite aux informations utiles de securite. Aucun numero personnel n est expose.',
+      },
+    };
+  }
+
+  async recordRoutePosition(
+    auth: RequestAuthContext,
+    tripId: string,
+    payload: {
+      latitude: number;
+      longitude: number;
+      accuracyMeters?: number;
+      speedKph?: number;
+      distanceToDestinationKm?: number;
+    },
+  ) {
+    const observedAt = new Date();
+    const position = {
+      latitude: payload.latitude,
+      longitude: payload.longitude,
+      accuracyMeters: payload.accuracyMeters ?? null,
+      speedKph: payload.speedKph ?? null,
+      distanceToDestinationKm: payload.distanceToDestinationKm ?? null,
+    };
+
+    const { trip, alerts, ticketIds } = await this.prisma.$transaction(
+      async (tx) => {
+        const trip = await tx.trip.findUnique({
+          where: {
+            id: tripId,
+          },
+          include: {
+            rideRequest: true,
+            events: {
+              orderBy: {
+                createdAt: 'asc',
+              },
+            },
+          },
+        });
+
+        if (!trip) {
+          throw new NotFoundException('Trip not found.');
+        }
+
+        this.assertTripAccess(auth, trip);
+
+        if (!ACTIVE_TRIP_STATUSES.includes(trip.status)) {
+          throw new BadRequestException(
+            'Route monitoring is only available for active trips.',
+          );
+        }
+
+        await tx.trip.update({
+          where: {
+            id: tripId,
+          },
+          data: {
+            events: {
+              create: {
+                eventType: 'ROUTE_POSITION_RECORDED',
+                payload: {
+                  ...position,
+                  observedAt: observedAt.toISOString(),
+                  sourceRole: auth.user.role,
+                  sourceUserId: auth.user.id,
+                },
+              },
+            },
+          },
+        });
+
+        const alerts = this.evaluateRouteMonitoringAlerts({
+          trip,
+          position,
+          observedAt,
+        });
+        const recentAlertTypes = new Set(
+          trip.events
+            .filter((event) => {
+              if (event.eventType !== 'ROUTE_MONITORING_ALERT') {
+                return false;
+              }
+
+              return (
+                observedAt.getTime() - event.createdAt.getTime() <
+                routeMonitoringAlertCooldownMinutes * 60 * 1000
+              );
+            })
+            .map((event) => {
+              const eventPayload = isRecord(event.payload) ? event.payload : {};
+
+              return String(eventPayload.alertType ?? '');
+            }),
+        );
+        const freshAlerts = alerts.filter(
+          (alert) => !recentAlertTypes.has(alert.alertType),
+        );
+        const ticketIds: string[] = [];
+
+        for (const alert of freshAlerts) {
+          const ticket = await tx.supportTicket.create({
+            data: {
+              userId: auth.user.id,
+              subject: `Alerte route trajet ${trip.id}`,
+              description: [
+                `Type: ${alert.alertType}`,
+                `Trip: ${trip.id}`,
+                `Role: ${auth.user.role}`,
+                `Signal: ${alert.message}`,
+                `Position: ${position.latitude},${position.longitude}`,
+              ].join('\n'),
+              priority: alert.priority,
+            },
+          });
+          ticketIds.push(ticket.id);
+
+          await tx.trip.update({
+            where: {
+              id: tripId,
+            },
+            data: {
+              events: {
+                create: {
+                  eventType: 'ROUTE_MONITORING_ALERT',
+                  payload: {
+                    ...alert,
+                    supportTicketId: ticket.id,
+                    sourceRole: auth.user.role,
+                    sourceUserId: auth.user.id,
+                    position,
+                  },
+                },
+              },
+            },
+          });
+
+          await tx.auditLog.create({
+            data: {
+              userId: auth.user.id,
+              action: 'TRIP_ROUTE_MONITORING_ALERT_CREATED',
+              entityType: 'TRIP',
+              entityId: trip.id,
+              metadata: {
+                alertType: alert.alertType,
+                severity: alert.severity,
+                supportTicketId: ticket.id,
+              },
+            },
+          });
+        }
+
+        return {
+          trip,
+          alerts: freshAlerts,
+          ticketIds,
+        };
+      },
+    );
+
+    this.realtimeService.publish({
+      channel: 'trip',
+      type: alerts.length ? 'trip.route-monitor-alert' : 'trip.route-position',
+      entityId: trip.id,
+      riderId: trip.riderId,
+      driverId: trip.driverId,
+      actorRole: auth.user.role,
+      payload: {
+        alertCount: alerts.length,
+        alertTypes: alerts.map((alert) => alert.alertType),
+        ticketIds,
+      },
+    });
+
+    return {
+      routeMonitoring: {
+        tripId: trip.id,
+        state: alerts.length ? 'alert' : 'clear',
+        checkedAt: observedAt.toISOString(),
+        alerts,
+        ticketIds,
+      },
+    };
+  }
+
   async acceptRideRequest(auth: RequestAuthContext, rideRequestId: string) {
     const driverProfileId = auth.user.driverProfile?.id;
 
@@ -48,6 +513,7 @@ export class TripsService {
     }
 
     const now = new Date();
+    await this.assertDriverFatigueAllowsNewTrip(auth, driverProfileId, now);
     const { trip, pickupCode } = await this.prisma.$transaction(async (tx) => {
       const driverProfile = await tx.driverProfile.findUnique({
         where: {
@@ -357,11 +823,24 @@ export class TripsService {
       incidentType: string;
       details?: string;
       priority?: number;
+      evidenceConsent?: boolean;
+      evidenceType?: 'AUDIO' | 'PHOTO' | 'VIDEO' | 'TEXT_NOTE';
+      evidenceRetentionHours?: number;
     },
   ) {
     const priority = Math.min(3, Math.max(1, payload.priority ?? 2));
     const normalizedIncidentType = payload.incidentType.trim().toUpperCase();
     const details = payload.details?.trim() ?? '';
+    const evidence =
+      payload.evidenceConsent && payload.evidenceType
+        ? {
+            consent: true,
+            type: payload.evidenceType,
+            retentionHours: payload.evidenceRetentionHours ?? 24,
+            storagePolicy: 'LOCAL_UNTIL_EXPLICIT_SUPPORT_UPLOAD',
+            uploadRequired: false,
+          }
+        : null;
 
     const { ticket, trip } = await this.prisma.$transaction(async (tx) => {
       const trip = await tx.trip.findUnique({
@@ -391,6 +870,9 @@ export class TripsService {
             `Trip: ${trip.id}`,
             `Role: ${auth.user.role}`,
             details ? `Details: ${details}` : null,
+            evidence
+              ? `Evidence: ${evidence.type}, retention ${evidence.retentionHours}h, local only until explicit upload`
+              : null,
           ]
             .filter(Boolean)
             .join('\n'),
@@ -404,19 +886,53 @@ export class TripsService {
         },
         data: {
           events: {
-            create: {
-              eventType: 'INCIDENT_REPORTED',
-              payload: {
-                incidentType: normalizedIncidentType,
-                details: details || null,
-                priority,
-                reportedByRole: auth.user.role,
-                reportedByUserId: auth.user.id,
+            create: [
+              {
+                eventType: 'INCIDENT_REPORTED',
+                payload: {
+                  incidentType: normalizedIncidentType,
+                  details: details || null,
+                  priority,
+                  reportedByRole: auth.user.role,
+                  reportedByUserId: auth.user.id,
+                  hasVoluntaryEvidence: Boolean(evidence),
+                },
               },
-            },
+              ...(evidence
+                ? [
+                    {
+                      eventType: 'INCIDENT_EVIDENCE_DECLARED',
+                      payload: {
+                        incidentType: normalizedIncidentType,
+                        reportedByRole: auth.user.role,
+                        reportedByUserId: auth.user.id,
+                        evidence,
+                      },
+                    },
+                  ]
+                : []),
+            ],
           },
         },
       });
+
+      if (evidence) {
+        await tx.auditLog.create({
+          data: {
+            userId: auth.user.id,
+            action: 'TRIP_INCIDENT_EVIDENCE_DECLARED',
+            entityType: 'TRIP',
+            entityId: trip.id,
+            metadata: {
+              incidentType: normalizedIncidentType,
+              evidenceType: evidence.type,
+              retentionHours: evidence.retentionHours,
+              storagePolicy: evidence.storagePolicy,
+              supportTicketId: ticket.id,
+            },
+          },
+        });
+      }
 
       return {
         ticket,
@@ -435,6 +951,7 @@ export class TripsService {
         incidentType: normalizedIncidentType,
         priority,
         ticketStatus: 'OPEN',
+        hasVoluntaryEvidence: Boolean(evidence),
       },
     });
 
@@ -446,6 +963,149 @@ export class TripsService {
         incidentType: normalizedIncidentType,
         reportedByRole: auth.user.role,
         status: 'OPEN',
+        voluntaryEvidence: evidence
+          ? {
+              declared: true,
+              type: evidence.type,
+              retentionHours: evidence.retentionHours,
+              storagePolicy: evidence.storagePolicy,
+            }
+          : {
+              declared: false,
+              type: null,
+              retentionHours: null,
+              storagePolicy: null,
+            },
+      },
+    };
+  }
+
+  async triggerSafetySos(
+    auth: RequestAuthContext,
+    tripId: string,
+    payload: {
+      details?: string;
+      latitude?: number;
+      longitude?: number;
+      accuracyMeters?: number;
+    },
+  ) {
+    const details = payload.details?.trim() ?? '';
+    const location =
+      payload.latitude !== undefined && payload.longitude !== undefined
+        ? {
+            latitude: payload.latitude,
+            longitude: payload.longitude,
+            accuracyMeters: payload.accuracyMeters ?? null,
+          }
+        : null;
+
+    const { ticket, trip } = await this.prisma.$transaction(async (tx) => {
+      const trip = await tx.trip.findUnique({
+        where: {
+          id: tripId,
+        },
+      });
+
+      if (!trip) {
+        throw new NotFoundException('Trip not found.');
+      }
+
+      this.assertTripAccess(auth, trip);
+
+      if (!ACTIVE_TRIP_STATUSES.includes(trip.status)) {
+        throw new BadRequestException(
+          'SOS is only available for active trips.',
+        );
+      }
+
+      const ticket = await tx.supportTicket.create({
+        data: {
+          userId: auth.user.id,
+          subject: `SOS trajet ${trip.id}`,
+          description: [
+            'Type: SOS_TRIGGERED',
+            `Trip: ${trip.id}`,
+            `Role: ${auth.user.role}`,
+            location
+              ? `Location: ${location.latitude},${location.longitude} +/- ${location.accuracyMeters ?? 'unknown'}m`
+              : 'Location: unavailable',
+            details ? `Details: ${details}` : null,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          priority: 3,
+        },
+      });
+
+      await tx.trip.update({
+        where: {
+          id: tripId,
+        },
+        data: {
+          events: {
+            create: {
+              eventType: 'SOS_TRIGGERED',
+              payload: {
+                incidentType: 'SOS_TRIGGERED',
+                details: details || null,
+                priority: 3,
+                reportedByRole: auth.user.role,
+                reportedByUserId: auth.user.id,
+                location,
+                supportTicketId: ticket.id,
+              },
+            },
+          },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'TRIP_SOS_TRIGGERED',
+          entityType: 'TRIP',
+          entityId: trip.id,
+          metadata: {
+            role: auth.user.role,
+            supportTicketId: ticket.id,
+            location,
+          },
+        },
+      });
+
+      return {
+        ticket,
+        trip,
+      };
+    });
+
+    this.realtimeService.publish({
+      channel: 'trip',
+      type: 'trip.sos-triggered',
+      entityId: trip.id,
+      riderId: trip.riderId,
+      driverId: trip.driverId,
+      actorRole: auth.user.role,
+      payload: {
+        incidentType: 'SOS_TRIGGERED',
+        priority: 3,
+        ticketStatus: 'OPEN',
+        supportTicketId: ticket.id,
+        hasLocation: Boolean(location),
+      },
+    });
+
+    return {
+      sos: {
+        tripId: trip.id,
+        ticketId: ticket.id,
+        priority: 3,
+        incidentType: 'SOS_TRIGGERED',
+        reportedByRole: auth.user.role,
+        status: 'OPEN',
+        localEmergencyNumber: '112',
+        locationCaptured: Boolean(location),
       },
     };
   }
@@ -815,6 +1475,178 @@ export class TripsService {
     }
 
     return trip;
+  }
+
+  private async assertDriverFatigueAllowsNewTrip(
+    auth: RequestAuthContext,
+    driverProfileId: string,
+    now: Date,
+  ) {
+    const since = new Date(
+      now.getTime() - driverFatigueWindowHours * 60 * 60 * 1000,
+    );
+    const trips = await this.prisma.trip.findMany({
+      where: {
+        driverId: driverProfileId,
+        status: 'COMPLETED',
+        completedAt: {
+          gte: since,
+        },
+      },
+      select: {
+        id: true,
+        startedAt: true,
+        completedAt: true,
+      },
+      orderBy: {
+        completedAt: 'desc',
+      },
+    });
+    const fatigue = evaluateDriverFatigue({
+      now,
+      trips,
+    });
+
+    if (fatigue.state !== 'blocked') {
+      return;
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_FATIGUE_TRIP_ACCEPTANCE_BLOCKED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: driverProfileId,
+        metadata: {
+          completedTrips: fatigue.completedTrips,
+          drivingMinutes: fatigue.drivingMinutes,
+          restUntil: fatigue.restUntil?.toISOString() ?? null,
+        },
+      },
+    });
+
+    throw new BadRequestException(
+      `Pause chauffeur requise jusqu a ${fatigue.restUntil?.toISOString()}.`,
+    );
+  }
+
+  private evaluateRouteMonitoringAlerts(input: {
+    trip: {
+      distanceKm: unknown;
+      durationMinutes: number | null;
+      rideRequest: {
+        pickupLatitude: unknown;
+        pickupLongitude: unknown;
+        destinationLatitude: unknown;
+        destinationLongitude: unknown;
+      };
+      events: Array<{
+        eventType: string;
+        payload?: unknown;
+        createdAt: Date;
+      }>;
+    };
+    position: {
+      latitude: number;
+      longitude: number;
+      speedKph: number | null;
+      distanceToDestinationKm: number | null;
+    };
+    observedAt: Date;
+  }) {
+    const previousPositions = input.trip.events
+      .filter((event) => event.eventType === 'ROUTE_POSITION_RECORDED')
+      .map(getRoutePositionPayload)
+      .filter((position): position is NonNullable<typeof position> =>
+        Boolean(position),
+      );
+    const previousPosition = previousPositions.at(-1);
+    const alerts: Array<{
+      alertType: 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS';
+      severity: 'warning' | 'critical';
+      priority: 2 | 3;
+      message: string;
+      measuredValue: number;
+      threshold: number;
+    }> = [];
+
+    if (previousPosition) {
+      const elapsedMinutes =
+        (input.observedAt.getTime() - previousPosition.createdAt.getTime()) /
+        60000;
+      const movementKm = haversineKm(previousPosition, input.position);
+
+      if (
+        elapsedMinutes >= routeStopMinutesThreshold &&
+        movementKm < 0.12 &&
+        (input.position.speedKph ?? previousPosition.speedKph ?? 0) < 4
+      ) {
+        alerts.push({
+          alertType: 'LONG_STOP',
+          severity: 'warning',
+          priority: 2,
+          message: `Arret anormal detecte: ${Math.round(elapsedMinutes)} minutes sans mouvement significatif.`,
+          measuredValue: Math.round(elapsedMinutes),
+          threshold: routeStopMinutesThreshold,
+        });
+      }
+
+      if (
+        elapsedMinutes >= routeNoProgressMinutesThreshold &&
+        input.position.distanceToDestinationKm !== null &&
+        previousPosition.distanceToDestinationKm !== null
+      ) {
+        const progressKm =
+          previousPosition.distanceToDestinationKm -
+          input.position.distanceToDestinationKm;
+
+        if (progressKm < routeMinimumProgressKm) {
+          alerts.push({
+            alertType: 'NO_PROGRESS',
+            severity: 'warning',
+            priority: 2,
+            message: `Progression insuffisante vers destination: ${Math.max(0, Math.round(progressKm * 100) / 100)} km.`,
+            measuredValue: Math.round(progressKm * 100) / 100,
+            threshold: routeMinimumProgressKm,
+          });
+        }
+      }
+    }
+
+    const pickupLatitude = toNumber(input.trip.rideRequest.pickupLatitude);
+    const pickupLongitude = toNumber(input.trip.rideRequest.pickupLongitude);
+    const destinationLatitude = toNumber(
+      input.trip.rideRequest.destinationLatitude,
+    );
+    const destinationLongitude = toNumber(
+      input.trip.rideRequest.destinationLongitude,
+    );
+
+    if (
+      pickupLatitude !== null &&
+      pickupLongitude !== null &&
+      destinationLatitude !== null &&
+      destinationLongitude !== null
+    ) {
+      const deviationKm = distanceToRouteKm(
+        input.position,
+        { latitude: pickupLatitude, longitude: pickupLongitude },
+        { latitude: destinationLatitude, longitude: destinationLongitude },
+      );
+
+      if (deviationKm >= routeDeviationKmThreshold) {
+        alerts.push({
+          alertType: 'ROUTE_DEVIATION',
+          severity: 'critical',
+          priority: 3,
+          message: `Deviation route probable: ${Math.round(deviationKm * 10) / 10} km hors corridor.`,
+          measuredValue: Math.round(deviationKm * 100) / 100,
+          threshold: routeDeviationKmThreshold,
+        });
+      }
+    }
+
+    return alerts;
   }
 
   private async findRideRequestOrThrow(rideRequestId: string) {

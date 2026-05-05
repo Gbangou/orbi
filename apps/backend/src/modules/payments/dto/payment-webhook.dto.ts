@@ -96,4 +96,69 @@ export class PaymentWebhookDto {
   @IsString()
   @MaxLength(256)
   cpm_error_message?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  id?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  refund_id?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  refundId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  transaction_id?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  transactionId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  TransactionId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  tx_id?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  charge_id?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  refund_status?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  refundStatus?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  Status?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  AmountRefunded?: string;
 }

@@ -1,0 +1,7 @@
+{
+  "event": "refund.processing",
+  "refund_id": "fw_refund_123",
+  "transaction_id": "123456",
+  "status": "pending",
+  "AmountRefunded": "2400"
+}

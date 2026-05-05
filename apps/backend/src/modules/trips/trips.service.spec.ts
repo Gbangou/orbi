@@ -1,5 +1,6 @@
 import { TripsService } from './trips.service';
 import { ACTIVE_TRIP_STATUSES } from './trips.constants';
+import { createHash } from 'crypto';
 
 describe('TripsService', () => {
   function createService() {
@@ -23,7 +24,7 @@ describe('TripsService', () => {
         findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
-        findMany: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn(),
       },
       auditLog: {
@@ -296,6 +297,43 @@ describe('TripsService', () => {
         pickupCode: expect.any(String),
       }),
     );
+  });
+
+  it('blocks trip acceptance when driver fatigue limits require rest', async () => {
+    const { prisma, service } = createService();
+    const completedAt = new Date();
+    const startedAt = new Date(completedAt.getTime() - 45 * 60 * 1000);
+
+    prisma.trip.findMany.mockResolvedValue(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `trip-fatigue-${index}`,
+        startedAt,
+        completedAt,
+      })),
+    );
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    await expect(
+      service.acceptRideRequest(
+        {
+          user: {
+            id: 'user-driver-1',
+            driverProfile: {
+              id: 'driver-1',
+            },
+          },
+        } as never,
+        'request-1',
+      ),
+    ).rejects.toThrow('Pause chauffeur requise');
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'DRIVER_FATIGUE_TRIP_ACCEPTANCE_BLOCKED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: 'driver-1',
+      }),
+    });
+    expect(prisma.driverProfile.findUnique).not.toHaveBeenCalled();
   });
 
   it('rejects ride acceptance when the driver is not approved', async () => {
@@ -653,14 +691,16 @@ describe('TripsService', () => {
       where: { id: 'trip-incident-1' },
       data: {
         events: {
-          create: expect.objectContaining({
-            eventType: 'INCIDENT_REPORTED',
-            payload: expect.objectContaining({
-              incidentType: 'SAFETY_ALERT',
-              priority: 3,
-              reportedByRole: 'RIDER',
+          create: [
+            expect.objectContaining({
+              eventType: 'INCIDENT_REPORTED',
+              payload: expect.objectContaining({
+                incidentType: 'SAFETY_ALERT',
+                priority: 3,
+                reportedByRole: 'RIDER',
+              }),
             }),
-          }),
+          ],
         },
       },
     });
@@ -675,9 +715,387 @@ describe('TripsService', () => {
         incidentType: 'SAFETY_ALERT',
         priority: 3,
         ticketStatus: 'OPEN',
+        hasVoluntaryEvidence: false,
       },
     });
     expect(result.incident.ticketId).toBe('ticket-1');
+  });
+
+  it('declares voluntary incident evidence with consent and audit trail', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-evidence-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+    });
+    prisma.supportTicket.create.mockResolvedValue({
+      id: 'ticket-evidence-1',
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-evidence-1',
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.reportIncident(
+      {
+        user: {
+          id: 'user-rider-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      'trip-evidence-1',
+      {
+        incidentType: 'SAFETY_ALERT',
+        details: 'Audio conserve localement avec consentement.',
+        priority: 3,
+        evidenceConsent: true,
+        evidenceType: 'AUDIO',
+        evidenceRetentionHours: 24,
+      },
+    );
+
+    expect(prisma.trip.update).toHaveBeenCalledWith({
+      where: { id: 'trip-evidence-1' },
+      data: {
+        events: {
+          create: [
+            expect.objectContaining({
+              eventType: 'INCIDENT_REPORTED',
+              payload: expect.objectContaining({
+                hasVoluntaryEvidence: true,
+              }),
+            }),
+            expect.objectContaining({
+              eventType: 'INCIDENT_EVIDENCE_DECLARED',
+              payload: expect.objectContaining({
+                evidence: expect.objectContaining({
+                  type: 'AUDIO',
+                  retentionHours: 24,
+                  uploadRequired: false,
+                }),
+              }),
+            }),
+          ],
+        },
+      },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'TRIP_INCIDENT_EVIDENCE_DECLARED',
+        entityType: 'TRIP',
+        entityId: 'trip-evidence-1',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.incident-reported',
+        payload: expect.objectContaining({
+          hasVoluntaryEvidence: true,
+        }),
+      }),
+    );
+    expect(result.incident.voluntaryEvidence).toMatchObject({
+      declared: true,
+      type: 'AUDIO',
+      retentionHours: 24,
+    });
+  });
+
+  it('creates an audited SOS ticket for an active trip', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-sos-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+    });
+    prisma.supportTicket.create.mockResolvedValue({
+      id: 'ticket-sos-1',
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-sos-1',
+    });
+
+    const result = await service.triggerSafetySos(
+      {
+        user: {
+          id: 'user-rider-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      'trip-sos-1',
+      {
+        details: 'Besoin d aide immediate.',
+        latitude: 12.3714,
+        longitude: -1.5197,
+        accuracyMeters: 20,
+      },
+    );
+
+    expect(prisma.supportTicket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-rider-1',
+        priority: 3,
+        subject: 'SOS trajet trip-sos-1',
+        description: expect.stringContaining('Type: SOS_TRIGGERED'),
+      }),
+    });
+    expect(prisma.trip.update).toHaveBeenCalledWith({
+      where: { id: 'trip-sos-1' },
+      data: {
+        events: {
+          create: expect.objectContaining({
+            eventType: 'SOS_TRIGGERED',
+            payload: expect.objectContaining({
+              incidentType: 'SOS_TRIGGERED',
+              priority: 3,
+              reportedByRole: 'RIDER',
+              supportTicketId: 'ticket-sos-1',
+              location: expect.objectContaining({
+                latitude: 12.3714,
+                longitude: -1.5197,
+              }),
+            }),
+          }),
+        },
+      },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-rider-1',
+        action: 'TRIP_SOS_TRIGGERED',
+        entityType: 'TRIP',
+        entityId: 'trip-sos-1',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith({
+      channel: 'trip',
+      type: 'trip.sos-triggered',
+      entityId: 'trip-sos-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      actorRole: 'RIDER',
+      payload: {
+        incidentType: 'SOS_TRIGGERED',
+        priority: 3,
+        ticketStatus: 'OPEN',
+        supportTicketId: 'ticket-sos-1',
+        hasLocation: true,
+      },
+    });
+    expect(result.sos).toMatchObject({
+      ticketId: 'ticket-sos-1',
+      priority: 3,
+      localEmergencyNumber: '112',
+      locationCaptured: true,
+    });
+  });
+
+  it('creates an audited expiring share link for an active trip', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-share-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+      rider: { id: 'rider-1' },
+      driver: { id: 'driver-1' },
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-share-1',
+    });
+
+    const result = await service.createShareLink(
+      {
+        user: {
+          id: 'user-rider-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      'trip-share-1',
+    );
+
+    expect(result.share.token).toHaveLength(32);
+    expect(result.share.path).toBe(`/trips/shared/${result.share.token}`);
+    expect(result.share.ttlMinutes).toBe(120);
+    expect(prisma.trip.update).toHaveBeenCalledWith({
+      where: { id: 'trip-share-1' },
+      data: {
+        events: {
+          create: expect.objectContaining({
+            eventType: 'SHARE_LINK_CREATED',
+            payload: expect.objectContaining({
+              createdByRole: 'RIDER',
+              ttlMinutes: 120,
+              tokenHash: expect.any(String),
+            }),
+          }),
+        },
+      },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-rider-1',
+        action: 'TRIP_SHARE_LINK_CREATED',
+        entityType: 'TRIP',
+        entityId: 'trip-share-1',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'trip',
+        type: 'trip.share-link-created',
+        entityId: 'trip-share-1',
+      }),
+    );
+  });
+
+  it('returns limited public trip data for a valid share token', async () => {
+    const { prisma, service } = createService();
+    const token = 'share-token-1234567890';
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+
+    prisma.trip.findMany.mockResolvedValue([
+      {
+        id: 'trip-share-1',
+        status: 'IN_PROGRESS',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        rider: { user: { fullName: 'Awa Rider' } },
+        driver: { user: { fullName: 'Issa Driver' } },
+        vehicle: { make: 'Yamaha', model: 'Crypton' },
+        events: [
+          {
+            id: 'event-share-1',
+            eventType: 'SHARE_LINK_CREATED',
+            payload: {
+              tokenHash,
+              expiresAt: new Date(Date.now() + 60_000).toISOString(),
+            },
+            createdAt: new Date('2026-05-02T10:00:00.000Z'),
+          },
+          {
+            id: 'event-start-1',
+            eventType: 'TRIP_STARTED',
+            payload: null,
+            createdAt: new Date('2026-05-02T10:05:00.000Z'),
+          },
+        ],
+      },
+    ]);
+
+    const result = await service.getSharedTrip(token);
+
+    expect(result.sharedTrip).toMatchObject({
+      tripId: 'trip-share-1',
+      status: 'IN_PROGRESS',
+      riderName: 'Awa Rider',
+      driverName: 'Issa Driver',
+      vehicleLabel: 'Yamaha Crypton',
+      lastEvent: {
+        label: 'Course demarree',
+        createdAt: '2026-05-02T10:05:00.000Z',
+      },
+    });
+    expect(result.sharedTrip.safetyNote).toContain('Aucun numero personnel');
+  });
+
+  it('records route monitoring positions and escalates abnormal deviation', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-route-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+      distanceKm: 5,
+      durationMinutes: 12,
+      rideRequest: {
+        pickupLatitude: 12.3714,
+        pickupLongitude: -1.5197,
+        destinationLatitude: 12.359,
+        destinationLongitude: -1.536,
+      },
+      events: [],
+    });
+    prisma.trip.update.mockResolvedValue({ id: 'trip-route-1' });
+    prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-route-1' });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.recordRoutePosition(
+      {
+        user: {
+          id: 'user-driver-1',
+          role: 'DRIVER',
+          driverProfile: {
+            id: 'driver-1',
+          },
+        },
+      } as never,
+      'trip-route-1',
+      {
+        latitude: 12.39,
+        longitude: -1.58,
+        accuracyMeters: 12,
+        speedKph: 24,
+        distanceToDestinationKm: 7,
+      },
+    );
+
+    expect(result.routeMonitoring).toMatchObject({
+      tripId: 'trip-route-1',
+      state: 'alert',
+      ticketIds: ['ticket-route-1'],
+      alerts: [
+        expect.objectContaining({
+          alertType: 'ROUTE_DEVIATION',
+          severity: 'critical',
+          priority: 3,
+        }),
+      ],
+    });
+    expect(prisma.trip.update).toHaveBeenCalledWith({
+      where: { id: 'trip-route-1' },
+      data: {
+        events: {
+          create: expect.objectContaining({
+            eventType: 'ROUTE_POSITION_RECORDED',
+          }),
+        },
+      },
+    });
+    expect(prisma.supportTicket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        subject: 'Alerte route trajet trip-route-1',
+        priority: 3,
+      }),
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'TRIP_ROUTE_MONITORING_ALERT_CREATED',
+        entityType: 'TRIP',
+        entityId: 'trip-route-1',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.route-monitor-alert',
+        entityId: 'trip-route-1',
+      }),
+    );
   });
 
   it('returns a trip detail timeline for the authenticated rider', async () => {

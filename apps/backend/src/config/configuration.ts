@@ -114,6 +114,9 @@ export default () => ({
     webhookSecret: process.env.PAYMENTS_WEBHOOK_SECRET,
     defaultRedirectUrl: process.env.PAYMENTS_DEFAULT_REDIRECT_URL,
     defaultWebhookUrl: process.env.PAYMENTS_DEFAULT_WEBHOOK_URL,
+    refunds: {
+      mode: process.env.PAYMENTS_REFUND_MODE ?? 'manual',
+    },
     flutterwave: {
       publicKey: process.env.FLUTTERWAVE_PUBLIC_KEY,
       secretKey: process.env.FLUTTERWAVE_SECRET_KEY,
@@ -122,7 +125,8 @@ export default () => ({
     cinetpay: {
       siteId: process.env.CINETPAY_SITE_ID,
       apiKey: process.env.CINETPAY_API_KEY,
-      secretKey: process.env.CINETPAY_SECRET_KEY ?? process.env.CINETPAY_API_KEY,
+      secretKey:
+        process.env.CINETPAY_SECRET_KEY ?? process.env.CINETPAY_API_KEY,
     },
   },
   documents: {

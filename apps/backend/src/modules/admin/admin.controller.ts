@@ -2,12 +2,14 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   MessageEvent,
   Param,
   Patch,
   Post,
   Query,
   Sse,
+  StreamableFile,
   UseGuards,
   Version,
 } from '@nestjs/common';
@@ -23,8 +25,13 @@ import { Roles } from '../auth/roles.decorator';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { UpdateDriverOnboardingReviewDto } from './dto/update-driver-onboarding-review.dto';
 import { UpdateDispatchLearningSettingsDto } from './dto/update-dispatch-learning-settings.dto';
+import { DriverPayoutApprovalDto } from './dto/driver-payout-approval.dto';
+import { DriverWalletRecoveryAdjustmentDto } from './dto/driver-wallet-recovery-adjustment.dto';
+import { DriverPayoutSettlementQueryDto } from './dto/driver-payout-settlement-query.dto';
+import { PaymentAttemptRefundDto } from './dto/payment-attempt-refund.dto';
 import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query.dto';
 import { UpdateSupportTicketDto } from './dto/update-support-ticket.dto';
+import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-action-acknowledgement.dto';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
@@ -58,6 +65,32 @@ export class AdminController {
     return this.adminService.liveOps();
   }
 
+  @Get('launch-readiness')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  launchReadiness() {
+    return this.adminService.launchReadiness();
+  }
+
+  @Post('launch-readiness/actions/:checkId/acknowledge')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  acknowledgeLaunchReadinessAction(
+    @Param('checkId') checkId: string,
+    @Body() payload: LaunchReadinessActionAcknowledgementDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.acknowledgeLaunchReadinessAction(
+      checkId,
+      payload,
+      auth,
+    );
+  }
+
   @Sse('stream')
   @Version('1')
   @ApiBearerAuth('session-token')
@@ -88,6 +121,94 @@ export class AdminController {
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   driverOnboardingQueue(@Query() query: PageQueryDto) {
     return this.adminService.driverOnboardingQueue(query);
+  }
+
+  @Get('driver-wallets')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  driverWallets(@Query() query: PageQueryDto) {
+    return this.adminService.driverWallets(query);
+  }
+
+  @Post('driver-wallets/:walletId/payouts/prepare')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  prepareDriverWalletPayout(
+    @Param('walletId') walletId: string,
+    @Body() payload: DriverPayoutApprovalDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.prepareDriverWalletPayout(walletId, payload, auth);
+  }
+
+  @Post('driver-wallets/:walletId/recovery-adjustments')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  recordDriverWalletRecoveryAdjustment(
+    @Param('walletId') walletId: string,
+    @Body() payload: DriverWalletRecoveryAdjustmentDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.recordDriverWalletRecoveryAdjustment(
+      walletId,
+      payload,
+      auth,
+    );
+  }
+
+  @Post('driver-payouts/:payoutId/paid')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  markDriverPayoutPaid(
+    @Param('payoutId') payoutId: string,
+    @Body() payload: DriverPayoutApprovalDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.markDriverPayoutPaid(payoutId, payload, auth);
+  }
+
+  @Get('driver-payouts/settlement.csv')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header(
+    'Content-Disposition',
+    'attachment; filename="mobilis-driver-payout-settlement.csv"',
+  )
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  async driverPayoutSettlementCsv(
+    @Query() query: DriverPayoutSettlementQueryDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.driverPayoutSettlementCsv(query, auth);
+  }
+
+  @Get('driver-payouts/settlement.pdf')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @Header('Content-Type', 'application/pdf')
+  @Header(
+    'Content-Disposition',
+    'attachment; filename="mobilis-driver-payout-settlement.pdf"',
+  )
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  async driverPayoutSettlementPdf(
+    @Query() query: DriverPayoutSettlementQueryDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    const pdf = await this.adminService.driverPayoutSettlementPdf(query, auth);
+
+    return new StreamableFile(pdf);
   }
 
   @Get('feature-flags')
@@ -145,6 +266,50 @@ export class AdminController {
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.startPaymentWebhookInvestigation(eventId, auth);
+  }
+
+  @Post('payment-webhook-events/:eventId/replay')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  replayPaymentWebhookEvent(
+    @Param('eventId') eventId: string,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.replayPaymentWebhookEvent(eventId, auth);
+  }
+
+  @Post('payment-attempts/:paymentAttemptId/verify-provider')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  verifyPaymentAttemptWithProvider(
+    @Param('paymentAttemptId') paymentAttemptId: string,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.verifyPaymentAttemptWithProvider(
+      paymentAttemptId,
+      auth,
+    );
+  }
+
+  @Post('payment-attempts/:paymentAttemptId/refund')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  refundPaymentAttempt(
+    @Param('paymentAttemptId') paymentAttemptId: string,
+    @Body() payload: PaymentAttemptRefundDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.refundPaymentAttempt(
+      paymentAttemptId,
+      payload,
+      auth,
+    );
   }
 
   @Patch('dispatch-settings')

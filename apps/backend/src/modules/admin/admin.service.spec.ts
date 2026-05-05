@@ -1,27 +1,60 @@
+import { Prisma } from '@prisma/client';
 import { AdminService } from './admin.service';
 
 describe('AdminService', () => {
+  function prismaUniqueConstraintError() {
+    return new Prisma.PrismaClientKnownRequestError(
+      'Unique constraint failed',
+      {
+        code: 'P2002',
+        clientVersion: 'test',
+      },
+    );
+  }
+
   function createService() {
     const prisma = {
       user: { count: jest.fn() },
       riderProfile: { count: jest.fn() },
       driverProfile: {
-        count: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
       },
       vehicle: { count: jest.fn() },
       rideRequest: { count: jest.fn(), findMany: jest.fn() },
-      paymentAttempt: { findMany: jest.fn().mockResolvedValue([]) },
+      paymentAttempt: {
+        count: jest.fn().mockResolvedValue(0),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       paymentWebhookEvent: {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
         findUnique: jest.fn().mockResolvedValue(null),
       },
+      wallet: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { balance: 0 } }),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      walletTransaction: {
+        findUnique: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+        create: jest.fn(),
+      },
+      driverPayout: {
+        create: jest.fn(),
+        findFirst: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
       trip: { count: jest.fn(), findMany: jest.fn() },
       supportTicket: {
-        count: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn(),
         findFirst: jest.fn(),
         findUnique: jest.fn(),
@@ -32,8 +65,19 @@ describe('AdminService', () => {
         create: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
       },
-      driverDocument: { update: jest.fn(), findFirst: jest.fn() },
+      driverDocument: {
+        count: jest.fn().mockResolvedValue(0),
+        update: jest.fn(),
+        findFirst: jest.fn(),
+      },
       driverOnboardingReview: { create: jest.fn() },
+      $transaction: jest.fn(async (callback: unknown) => {
+        if (typeof callback !== 'function') {
+          throw new Error('Expected transaction callback');
+        }
+
+        return (callback as (tx: typeof prisma) => unknown)(prisma);
+      }),
     };
     const realtimeService = {
       publish: jest.fn(),
@@ -64,6 +108,27 @@ describe('AdminService', () => {
       acknowledge: jest.fn(),
       mute: jest.fn(),
     };
+    const healthService = {
+      check: jest.fn().mockResolvedValue({
+        infrastructure: {
+          realtime: {
+            degraded: false,
+            degradeReason: null,
+            activeStreams: 1,
+            publishedEvents: 4,
+          },
+        },
+        operations: {
+          productionReadiness: {
+            environment: 'production',
+            riskLevel: 'low',
+            failedChecks: 0,
+            warningChecks: 0,
+            checks: [],
+          },
+        },
+      }),
+    };
     const driversService = {
       getDispatchLearningSettings: jest.fn().mockResolvedValue({
         lookbackHours: 72,
@@ -88,6 +153,56 @@ describe('AdminService', () => {
         },
       }),
     };
+    const paymentsService = {
+      replayStoredWebhookEvent: jest.fn().mockResolvedValue({
+        replayed: true,
+        sourceEventId: 'webhook-event-1',
+        result: {
+          received: true,
+          event: 'payment.completed',
+          transactionRef: 'mobilis_123_ride-request-1',
+          provider: 'flutterwave',
+          providerReference: 'fw_ref_123',
+          reconciledAttemptCount: 1,
+          nextAction: 'persisted_idempotent_replay',
+        },
+      }),
+      verifyPaymentAttemptWithProvider: jest.fn().mockResolvedValue({
+        verified: true,
+        paymentAttemptId: 'payment-1',
+        provider: 'flutterwave',
+        transactionRef: 'mobilis_123_ride-request-1',
+        result: {
+          received: true,
+          event: 'payment.completed',
+          transactionRef: 'mobilis_123_ride-request-1',
+          provider: 'flutterwave',
+          providerReference: 'fw_ref_123',
+          reconciledAttemptCount: 1,
+          nextAction: 'persisted_and_reconciled',
+        },
+      }),
+      refundPaymentAttempt: jest.fn().mockResolvedValue({
+        action: 'refunded',
+        providerRefundReference: 'flutterwave_refund_payment-1',
+        paymentAttempt: {
+          id: 'payment-1',
+          provider: 'FLUTTERWAVE',
+          status: 'REFUNDED',
+          amount: 2400,
+          currency: 'XOF',
+          transactionRef: 'mobilis_123_ride-request-1',
+          providerReference: 'fw_ref_123',
+          updatedAt: '2026-05-01T08:05:00.000Z',
+        },
+        walletReversal: {
+          applied: true,
+          walletId: 'wallet-driver-1',
+          amount: 1968,
+          currency: 'XOF',
+        },
+      }),
+    };
 
     return {
       prisma,
@@ -95,14 +210,18 @@ describe('AdminService', () => {
       documentLinksService,
       featureFlagsService,
       healthIncidentJournalService,
+      healthService,
       driversService,
+      paymentsService,
       service: new AdminService(
         prisma as never,
         realtimeService as never,
         documentLinksService as never,
         featureFlagsService as never,
         healthIncidentJournalService as never,
+        healthService as never,
         driversService as never,
+        paymentsService as never,
       ),
     };
   }
@@ -142,6 +261,26 @@ describe('AdminService', () => {
     ]);
     prisma.supportTicket.count.mockResolvedValue(1);
     prisma.rideRequest.count.mockResolvedValue(3);
+    prisma.paymentAttempt.findMany.mockResolvedValue([
+      {
+        status: 'SUCCEEDED',
+        provider: 'FLUTTERWAVE',
+        providerReference: 'fw_ref_1',
+        failureReason: null,
+      },
+      {
+        status: 'REFUNDED',
+        provider: 'FLUTTERWAVE',
+        providerReference: 'fw_ref_2',
+        failureReason: 'Refunded: rider cancellation',
+      },
+      {
+        status: 'REFUND_PENDING',
+        provider: 'FLUTTERWAVE',
+        providerReference: 'fw_ref_3',
+        failureReason: 'Refund requested with provider.',
+      },
+    ]);
 
     const result = await service.liveOps();
 
@@ -154,10 +293,334 @@ describe('AdminService', () => {
         pickupCodeIssued: true,
         hasIncident: true,
         incidentCount: 1,
+        routeMonitoring: expect.objectContaining({
+          state: 'unknown',
+          alertCount: 0,
+        }),
       }),
     );
     expect(result.trips[0].lastEvent?.label).toBe('Incident signale');
+    expect(result.summary.payments.refunded).toBe(1);
+    expect(result.summary.payments.refundPending).toBe(1);
+    expect(result.summary.payments.reconciled).toBe(3);
+    expect(result.alerts).toContain(
+      '1 remboursement(s) provider attendent confirmation.',
+    );
     expect(result.alerts[0]).toContain('1 trajets actifs');
+  });
+
+  it('approves launch readiness when safety benchmark clears competitor threshold', async () => {
+    const { service } = createService();
+
+    const result = await service.launchReadiness();
+
+    expect(result.decision).toMatchObject({
+      state: 'approved',
+      label: 'pilot autorise',
+    });
+    expect(result.summary).toMatchObject({
+      failedChecks: 0,
+      warningChecks: 0,
+      totalChecks: 10,
+    });
+    expect(result.nextActions).toEqual([]);
+    expect(result.actionSummary).toMatchObject({
+      totalActions: 0,
+      acknowledgedActions: 0,
+      remainingActions: 0,
+      completionRate: 0,
+    });
+    expect(result.safetyBenchmark.summary).toMatchObject({
+      totalCapabilities: 8,
+      activeCapabilities: 8,
+      partialCapabilities: 0,
+      criticalGaps: 0,
+      competitorParityRate: 100,
+    });
+    expect(result.fieldQuality).toMatchObject({
+      state: 'excellent',
+      score: expect.any(Number),
+      blockedSignals: 0,
+    });
+    expect(result.fieldQuality.signals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'money-reliability',
+          state: 'excellent',
+        }),
+        expect.objectContaining({
+          id: 'safety-trust',
+          score: 100,
+        }),
+      ]),
+    );
+    expect(result.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'runtime-production-readiness',
+          state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'admin-realtime',
+          state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'safety-benchmark',
+          state: 'pass',
+        }),
+      ]),
+    );
+  });
+
+  it('blocks launch readiness when runtime production risk is high', async () => {
+    const { healthService, service } = createService();
+
+    healthService.check.mockResolvedValue({
+      infrastructure: {
+        realtime: {
+          degraded: false,
+          degradeReason: null,
+          activeStreams: 1,
+          publishedEvents: 4,
+        },
+      },
+      operations: {
+        productionReadiness: {
+          environment: 'production',
+          riskLevel: 'high',
+          failedChecks: 2,
+          warningChecks: 0,
+          checks: [],
+        },
+      },
+    });
+
+    const result = await service.launchReadiness();
+
+    expect(result.decision.state).toBe('blocked');
+    expect(result.summary.failedChecks).toBe(1);
+    expect(result.fieldQuality.state).toBe('blocked');
+    expect(result.fieldQuality.signals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'runtime-mobile-stability',
+          state: 'blocked',
+        }),
+      ]),
+    );
+    expect(result.nextActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          checkId: 'runtime-production-readiness',
+          severity: 'blocking',
+          owner: 'engineering',
+        }),
+      ]),
+    );
+    expect(result.actionSummary).toMatchObject({
+      totalActions: 1,
+      acknowledgedActions: 0,
+      remainingActions: 1,
+      blockingActions: 1,
+      remainingBlockingActions: 1,
+    });
+    expect(result.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'runtime-production-readiness',
+          state: 'fail',
+        }),
+      ]),
+    );
+  });
+
+  it('returns persistent acknowledgements for active launch readiness actions', async () => {
+    const { healthService, prisma, service } = createService();
+
+    healthService.check.mockResolvedValue({
+      infrastructure: {
+        realtime: {
+          degraded: false,
+          degradeReason: null,
+          activeStreams: 1,
+          publishedEvents: 4,
+        },
+      },
+      operations: {
+        productionReadiness: {
+          environment: 'production',
+          riskLevel: 'high',
+          failedChecks: 1,
+          warningChecks: 0,
+          checks: [],
+        },
+      },
+    });
+    prisma.auditLog.findMany.mockResolvedValue([
+      {
+        entityId: 'runtime-production-readiness',
+        createdAt: new Date('2026-05-01T12:10:00.000Z'),
+        metadata: {
+          owner: 'engineering',
+          severity: 'blocking',
+          notes: 'Redis backplane assigne.',
+        },
+        user: {
+          id: 'ops-1',
+          fullName: 'Ops Mobilis',
+          role: 'OPS',
+        },
+      },
+    ]);
+
+    const result = await service.launchReadiness();
+
+    expect(result.acknowledgements).toEqual([
+      {
+        checkId: 'runtime-production-readiness',
+        owner: 'engineering',
+        severity: 'blocking',
+        acknowledgedAt: '2026-05-01T12:10:00.000Z',
+        actor: {
+          id: 'ops-1',
+          name: 'Ops Mobilis',
+          role: 'OPS',
+        },
+        notes: 'Redis backplane assigne.',
+      },
+    ]);
+    expect(result.actionSummary).toMatchObject({
+      totalActions: 1,
+      acknowledgedActions: 1,
+      remainingActions: 0,
+      blockingActions: 1,
+      acknowledgedBlockingActions: 1,
+      remainingBlockingActions: 0,
+      completionRate: 100,
+    });
+  });
+
+  it('keeps launch readiness limited when ops signals need stabilization', async () => {
+    const { prisma, service } = createService();
+
+    prisma.supportTicket.count
+      .mockResolvedValueOnce(7)
+      .mockResolvedValueOnce(1);
+    prisma.driverProfile.count.mockResolvedValue(4);
+    prisma.driverDocument.count.mockResolvedValue(2);
+    prisma.paymentAttempt.count.mockResolvedValue(1);
+    prisma.paymentWebhookEvent.count.mockResolvedValue(1);
+    prisma.wallet.count.mockResolvedValue(1);
+
+    const result = await service.launchReadiness();
+
+    expect(result.decision.state).toBe('limited');
+    expect(result.summary.warningChecks).toBeGreaterThanOrEqual(1);
+    expect(result.nextActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          checkId: 'support-load',
+          severity: 'warning',
+          owner: 'support',
+        }),
+        expect.objectContaining({
+          checkId: 'payment-webhooks',
+          owner: 'finance',
+        }),
+      ]),
+    );
+    expect(result.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'support-load',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'payment-webhooks',
+          state: 'warn',
+        }),
+      ]),
+    );
+  });
+
+  it('audits launch readiness action acknowledgements', async () => {
+    const { healthService, prisma, realtimeService, service } = createService();
+
+    healthService.check.mockResolvedValue({
+      infrastructure: {
+        realtime: {
+          degraded: false,
+          degradeReason: null,
+          activeStreams: 1,
+          publishedEvents: 4,
+        },
+      },
+      operations: {
+        productionReadiness: {
+          environment: 'production',
+          riskLevel: 'high',
+          failedChecks: 1,
+          warningChecks: 0,
+          checks: [],
+        },
+      },
+    });
+
+    const result = await service.acknowledgeLaunchReadinessAction(
+      'runtime-production-readiness',
+      {
+        owner: 'engineering',
+        notes: 'Redis backplane assigne a engineering.',
+        idempotencyKey: 'launch-runtime-1',
+      },
+      {
+        user: { id: 'ops-1', role: 'OPS' },
+      } as never,
+    );
+
+    expect(result.acknowledgement).toMatchObject({
+      checkId: 'runtime-production-readiness',
+      owner: 'engineering',
+      severity: 'blocking',
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'ops-1',
+        action: 'LAUNCH_READINESS_ACTION_ACKNOWLEDGED',
+        entityType: 'LAUNCH_READINESS_ACTION',
+        entityId: 'runtime-production-readiness',
+        metadata: expect.objectContaining({
+          owner: 'engineering',
+          severity: 'blocking',
+          notes: 'Redis backplane assigne a engineering.',
+          idempotencyKey: 'launch-runtime-1',
+        }),
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'admin',
+        type: 'system.launch-readiness-action-acknowledged',
+        entityId: 'runtime-production-readiness',
+      }),
+    );
+  });
+
+  it('rejects acknowledgement for inactive launch readiness actions', async () => {
+    const { service } = createService();
+
+    await expect(
+      service.acknowledgeLaunchReadinessAction(
+        'runtime-production-readiness',
+        {
+          owner: 'engineering',
+          notes: 'No active blocker.',
+        },
+        {
+          user: { id: 'ops-1', role: 'OPS' },
+        } as never,
+      ),
+    ).rejects.toThrow('Launch readiness action is not currently active.');
   });
 
   it('returns a support queue with extracted trip ids', async () => {
@@ -459,6 +922,14 @@ describe('AdminService', () => {
         rawBodyHash: 'raw_hash_123',
         paymentAttemptId: 'payment-1',
         userId: 'user-1',
+        paymentAttempt: {
+          status: 'SUCCEEDED',
+          amount: 2400,
+          currency: 'XOF',
+          rideRequestId: 'ride-request-1',
+          failureReason: null,
+          updatedAt: new Date('2026-04-27T09:31:00.000Z'),
+        },
         payload: {
           event: 'payment.completed',
           customerPhoneNumber: '+22670000000',
@@ -492,10 +963,79 @@ describe('AdminService', () => {
           event: 'payment.completed',
           transactionRef: 'mobilis_123_ride-request-1',
         },
+        paymentAttempt: expect.objectContaining({
+          status: 'SUCCEEDED',
+          amount: 2400,
+          updatedAt: '2026-04-27T09:31:00.000Z',
+        }),
         createdAt: '2026-04-27T09:30:00.000Z',
       }),
     );
     expect(result.meta.total).toBe(1);
+    expect(result.summary).toEqual({
+      paymentEvents: 1,
+      refundEvents: 0,
+      ignoredEvents: 0,
+    });
+  });
+
+  it('filters payment webhook events by refund kind', async () => {
+    const { prisma, service } = createService();
+
+    prisma.paymentWebhookEvent.findMany.mockResolvedValue([
+      {
+        id: 'webhook-event-refund-1',
+        provider: 'FLUTTERWAVE',
+        eventType: 'refund.completed',
+        transactionRef: 'mobilis_123_ride-request-1',
+        providerReference: 'fw_refund_123',
+        action: 'refund_processed',
+        reconciledAttemptCount: 1,
+        signatureVerified: true,
+        rawBodyHash: 'raw_hash_123',
+        paymentAttemptId: 'payment-1',
+        userId: 'user-1',
+        paymentAttempt: {
+          status: 'REFUNDED',
+          amount: 2400,
+          currency: 'XOF',
+          rideRequestId: 'ride-request-1',
+          failureReason: 'Refunded by provider.',
+          updatedAt: new Date('2026-05-01T09:31:00.000Z'),
+        },
+        payload: {
+          event: 'refund.completed',
+          data: {
+            id: 'fw_refund_123',
+            status: 'completed',
+          },
+        },
+        createdAt: new Date('2026-05-01T09:30:00.000Z'),
+      },
+    ]);
+    prisma.paymentWebhookEvent.count.mockResolvedValue(1);
+
+    const result = await service.paymentWebhookEvents({
+      page: 1,
+      pageSize: 10,
+      kind: 'refund',
+    });
+
+    expect(prisma.paymentWebhookEvent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          action: {
+            in: ['refund_processed', 'refund_still_pending'],
+          },
+        }),
+      }),
+    );
+    expect(result.summary).toEqual({
+      paymentEvents: 0,
+      refundEvents: 1,
+      ignoredEvents: 0,
+    });
+    expect(result.events[0].action).toBe('refund_processed');
   });
 
   it('returns a redacted payment webhook event detail', async () => {
@@ -646,6 +1186,168 @@ describe('AdminService', () => {
     expect(result.investigation.supportTicket).toBeNull();
   });
 
+  it('replays a stored payment webhook event and writes an audit event', async () => {
+    const { paymentsService, prisma, realtimeService, service } =
+      createService();
+
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.replayPaymentWebhookEvent('webhook-event-1', {
+      user: {
+        id: 'ops-1',
+        role: 'OPS',
+      },
+    } as never);
+
+    expect(paymentsService.replayStoredWebhookEvent).toHaveBeenCalledWith(
+      'webhook-event-1',
+    );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'ops-1',
+        action: 'PAYMENT_WEBHOOK_REPLAYED',
+        entityType: 'PAYMENT_WEBHOOK_EVENT',
+        entityId: 'webhook-event-1',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'payment-webhook.replayed',
+        entityId: 'webhook-event-1',
+      }),
+    );
+    expect(result.replay.result.nextAction).toBe('persisted_idempotent_replay');
+  });
+
+  it('verifies a payment attempt with the provider and writes an audit event', async () => {
+    const { paymentsService, prisma, realtimeService, service } =
+      createService();
+
+    const result = await service.verifyPaymentAttemptWithProvider('payment-1', {
+      user: {
+        id: 'ops-1',
+        role: 'OPS',
+      },
+    } as never);
+
+    expect(
+      paymentsService.verifyPaymentAttemptWithProvider,
+    ).toHaveBeenCalledWith('payment-1');
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'ops-1',
+        action: 'PAYMENT_ATTEMPT_PROVIDER_VERIFIED',
+        entityType: 'PAYMENT_ATTEMPT',
+        entityId: 'payment-1',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'payment-attempt.provider-verified',
+        entityId: 'payment-1',
+      }),
+    );
+    expect(result.verification.result.nextAction).toBe(
+      'persisted_and_reconciled',
+    );
+  });
+
+  it('refunds a payment attempt and writes an audit event', async () => {
+    const { paymentsService, prisma, realtimeService, service } =
+      createService();
+
+    const result = await service.refundPaymentAttempt(
+      'payment-1',
+      {
+        reason: 'Course annulee apres debit.',
+      },
+      {
+        user: {
+          id: 'ops-1',
+          role: 'OPS',
+          fullName: 'Ops Mobilis',
+        },
+      } as never,
+    );
+
+    expect(paymentsService.refundPaymentAttempt).toHaveBeenCalledWith(
+      'payment-1',
+      {
+        actorUserId: 'ops-1',
+        actorName: 'Ops Mobilis',
+        reason: 'Course annulee apres debit.',
+      },
+    );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'ops-1',
+        action: 'PAYMENT_ATTEMPT_REFUNDED',
+        entityType: 'PAYMENT_ATTEMPT',
+        entityId: 'payment-1',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'payment-attempt.refunded',
+        entityId: 'payment-1',
+      }),
+    );
+    expect(result.refund.action).toBe('refunded');
+  });
+
+  it('records pending provider refunds without claiming they are complete', async () => {
+    const { paymentsService, prisma, realtimeService, service } =
+      createService();
+    paymentsService.refundPaymentAttempt.mockResolvedValueOnce({
+      action: 'refund_pending',
+      providerRefundReference: 'fw_refund_123',
+      paymentAttempt: {
+        id: 'payment-1',
+        provider: 'FLUTTERWAVE',
+        status: 'REFUND_PENDING',
+        amount: 2400,
+        currency: 'XOF',
+        transactionRef: 'mobilis_123_ride-request-1',
+        providerReference: 'fw_ref_123',
+        updatedAt: '2026-05-01T08:05:00.000Z',
+      },
+      walletReversal: {
+        applied: false,
+        reason: 'refund_pending',
+      },
+    });
+
+    const result = await service.refundPaymentAttempt(
+      'payment-1',
+      {
+        reason: 'Course annulee apres debit.',
+      },
+      {
+        user: {
+          id: 'ops-1',
+          role: 'OPS',
+          fullName: 'Ops Mobilis',
+        },
+      } as never,
+    );
+
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'PAYMENT_ATTEMPT_REFUND_REQUESTED',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'payment-attempt.refund-requested',
+        payload: expect.objectContaining({
+          action: 'refund_pending',
+          status: 'REFUND_PENDING',
+        }),
+      }),
+    );
+    expect(result.refund.action).toBe('refund_pending');
+  });
+
   it('updates a support ticket and writes an audit log', async () => {
     const { prisma, realtimeService, service } = createService();
 
@@ -716,6 +1418,15 @@ describe('AdminService', () => {
             uploadedAt: new Date('2026-04-18T08:00:00.000Z'),
             expiresAt: null,
             rejectionReason: null,
+            metadata: {
+              integrity: {
+                sizeBytes: 120000,
+                sha256:
+                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                uploadSource: 'driver-app',
+                capturedAt: '2026-04-18T08:00:01.000Z',
+              },
+            },
           },
         ],
         onboardingReviews: [
@@ -724,6 +1435,23 @@ describe('AdminService', () => {
             status: 'SUBMITTED',
             decisionReason: null,
             createdAt: new Date('2026-04-18T08:10:00.000Z'),
+            metadata: {
+              decisionGuidance: {
+                level: 'review',
+                recommendedStatus: 'UNDER_REVIEW',
+                label: 'Revue prudente',
+                detail: 'Verification ops requise.',
+                blockers: ['IDENTITY_DOCUMENT: verification ops requise'],
+              },
+              documentSummary: {
+                total: 1,
+                approved: 0,
+                pending: 1,
+                rejected: 0,
+                missingRequired: 4,
+                integrityWarnings: 0,
+              },
+            },
             actor: {
               fullName: 'Issa Driver',
             },
@@ -746,7 +1474,174 @@ describe('AdminService', () => {
       }),
     );
     expect(result.drivers[0].documentSummary.pending).toBe(1);
+    expect(result.drivers[0].documentSummary.missingRequired).toBe(4);
+    expect(result.drivers[0].documentSummary.averageIntegrityScore).toBe(100);
+    expect(result.drivers[0].documentSummary.integrityWarnings).toBe(0);
+    expect(result.drivers[0].decisionGuidance).toEqual(
+      expect.objectContaining({
+        level: 'resubmit',
+        recommendedStatus: 'CHANGES_REQUESTED',
+        label: 'Redemande recommandee',
+      }),
+    );
+    expect(result.drivers[0].reviewHistory[0]).toEqual(
+      expect.objectContaining({
+        id: 'review-1',
+        status: 'SUBMITTED',
+        actorName: 'Issa Driver',
+        decisionGuidance: expect.objectContaining({
+          level: 'review',
+          recommendedStatus: 'UNDER_REVIEW',
+        }),
+        documentSummary: expect.objectContaining({
+          total: 1,
+          pending: 1,
+          missingRequired: 4,
+        }),
+      }),
+    );
+    expect(result.drivers[0].documents[0].integrity).toEqual(
+      expect.objectContaining({
+        state: 'complete',
+        score: 100,
+        sizeBytes: 120000,
+        uploadSource: 'driver-app',
+        guidance: expect.objectContaining({
+          level: 'clear',
+          label: 'Preuves completes',
+        }),
+      }),
+    );
     expect(result.meta.total).toBe(1);
+  });
+
+  it('flags incomplete driver document integrity in the onboarding queue', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findMany.mockResolvedValue([
+      {
+        id: 'driver-1',
+        verificationStatus: 'PENDING',
+        serviceRadiusKm: 8,
+        user: {
+          fullName: 'Issa Driver',
+          email: 'driver@mobilis.app',
+          phoneNumber: '+22670000000',
+        },
+        vehicles: [{ id: 'vehicle-1' }],
+        onboardingDocuments: [
+          {
+            id: 'doc-1',
+            type: 'IDENTITY_DOCUMENT',
+            status: 'PENDING',
+            fileName: 'id-card.pdf',
+            uploadedAt: new Date('2026-04-18T08:00:00.000Z'),
+            expiresAt: null,
+            rejectionReason: null,
+            metadata: {
+              integrity: {
+                sizeBytes: 120000,
+                uploadSource: 'driver-app',
+              },
+            },
+          },
+        ],
+        onboardingReviews: [],
+      },
+    ]);
+    prisma.driverProfile.count.mockResolvedValue(1);
+
+    const result = await service.driverOnboardingQueue({
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(result.drivers[0].documentSummary.averageIntegrityScore).toBe(50);
+    expect(result.drivers[0].documentSummary.integrityWarnings).toBe(1);
+    expect(result.drivers[0].decisionGuidance.blockers).toEqual(
+      expect.arrayContaining(['DRIVER_LICENSE: piece absente']),
+    );
+    expect(result.drivers[0].documents[0].integrity).toEqual(
+      expect.objectContaining({
+        state: 'partial',
+        score: 50,
+        sha256: null,
+        capturedAt: null,
+        guidance: expect.objectContaining({
+          level: 'review',
+          label: 'Verifier avant decision',
+        }),
+      }),
+    );
+  });
+
+  it('marks complete approved onboarding dossiers as ready for approval', async () => {
+    const { prisma, service } = createService();
+    const documentTypes = [
+      'IDENTITY_DOCUMENT',
+      'DRIVER_LICENSE',
+      'VEHICLE_REGISTRATION',
+      'INSURANCE_PROOF',
+      'SELFIE_VERIFICATION',
+    ];
+
+    prisma.driverProfile.findMany.mockResolvedValue([
+      {
+        id: 'driver-1',
+        verificationStatus: 'PENDING',
+        serviceRadiusKm: 8,
+        user: {
+          fullName: 'Issa Driver',
+          email: 'driver@mobilis.app',
+          phoneNumber: '+22670000000',
+        },
+        vehicles: [{ id: 'vehicle-1' }],
+        onboardingDocuments: documentTypes.map((type, index) => ({
+          id: `doc-${index + 1}`,
+          type,
+          status: 'APPROVED',
+          fileName: `${type.toLowerCase()}.pdf`,
+          uploadedAt: new Date(`2026-04-18T08:0${index}:00.000Z`),
+          expiresAt: null,
+          rejectionReason: null,
+          metadata: {
+            integrity: {
+              sizeBytes: 120000 + index,
+              sha256:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              uploadSource: 'driver-app',
+              capturedAt: '2026-04-18T08:00:01.000Z',
+            },
+          },
+        })),
+        onboardingReviews: [],
+      },
+    ]);
+    prisma.driverProfile.count.mockResolvedValue(1);
+
+    const result = await service.driverOnboardingQueue({
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(result.drivers[0].documentSummary).toEqual(
+      expect.objectContaining({
+        approved: 5,
+        pending: 0,
+        rejected: 0,
+        missingRequired: 0,
+        integrityWarnings: 0,
+        averageIntegrityScore: 100,
+      }),
+    );
+    expect(result.drivers[0].decisionGuidance).toEqual({
+      level: 'approve',
+      recommendedStatus: 'APPROVED',
+      label: 'Pret pour approbation',
+      detail:
+        'Toutes les pieces requises sont approuvees et les preuves d integrite sont completes.',
+      blockers: [],
+    });
   });
 
   it('surfaces expired driver documents in the onboarding queue', async () => {
@@ -772,6 +1667,7 @@ describe('AdminService', () => {
             uploadedAt: new Date('2026-04-18T08:00:00.000Z'),
             expiresAt: new Date('2026-04-01T00:00:00.000Z'),
             rejectionReason: null,
+            metadata: null,
           },
         ],
         onboardingReviews: [],
@@ -785,7 +1681,571 @@ describe('AdminService', () => {
     });
 
     expect(result.drivers[0].documents[0].status).toBe('EXPIRED');
+    expect(result.drivers[0].decisionGuidance).toEqual(
+      expect.objectContaining({
+        level: 'resubmit',
+        recommendedStatus: 'CHANGES_REQUESTED',
+      }),
+    );
+    expect(result.drivers[0].documents[0].integrity.guidance).toEqual(
+      expect.objectContaining({
+        level: 'resubmit',
+        label: 'Redemander la piece',
+      }),
+    );
     expect(result.drivers[0].documentSummary.rejected).toBe(1);
+  });
+
+  it('returns driver wallet balances and recent payout ledger entries', async () => {
+    const { prisma, service } = createService();
+
+    prisma.wallet.findMany.mockResolvedValue([
+      {
+        id: 'wallet-1',
+        userId: 'driver-user-1',
+        currency: 'XOF',
+        balance: 1968,
+        isLocked: false,
+        updatedAt: new Date('2026-05-01T08:00:00.000Z'),
+        user: {
+          fullName: 'Issa Driver',
+          driverProfile: {
+            status: 'ONLINE',
+            verificationStatus: 'APPROVED',
+          },
+        },
+        transactions: [
+          {
+            id: 'wallet-transaction-1',
+            type: 'CREDIT',
+            amount: 1968,
+            reference: 'payment:payment-1:driver-payout',
+            description: 'Payout chauffeur paiement mobilis_123',
+            metadata: {
+              paymentAttemptId: 'payment-1',
+              provider: 'FLUTTERWAVE',
+              commissionAmount: 432,
+            },
+            createdAt: new Date('2026-05-01T08:05:00.000Z'),
+          },
+        ],
+        driverPayouts: [
+          {
+            id: 'driver-payout-1',
+            amount: 1968,
+            currency: 'XOF',
+            status: 'PREPARED',
+            reference: 'driver-payout:wallet-1:prepared',
+            preparedAt: new Date('2026-05-01T08:10:00.000Z'),
+            paidAt: null,
+          },
+        ],
+      },
+      {
+        id: 'wallet-2',
+        userId: 'driver-user-2',
+        currency: 'XOF',
+        balance: -1968,
+        isLocked: false,
+        updatedAt: new Date('2026-05-01T08:20:00.000Z'),
+        user: {
+          fullName: 'Recovery Driver',
+          driverProfile: {
+            status: 'OFFLINE',
+            verificationStatus: 'APPROVED',
+          },
+        },
+        transactions: [
+          {
+            id: 'wallet-transaction-2',
+            type: 'REFUND',
+            amount: 1968,
+            reference: 'payment:payment-1:driver-payout-refund',
+            description: 'Reversal payout chauffeur remboursement',
+            metadata: {
+              paymentAttemptId: 'payment-1',
+              provider: 'FLUTTERWAVE',
+              commissionAmount: 0,
+            },
+            createdAt: new Date('2026-05-01T08:20:00.000Z'),
+          },
+        ],
+        driverPayouts: [],
+      },
+    ]);
+    prisma.wallet.count.mockResolvedValue(2);
+    prisma.wallet.aggregate.mockResolvedValue({
+      _sum: {
+        balance: 1000,
+      },
+    });
+    prisma.walletTransaction.findMany.mockResolvedValue([
+      {
+        walletId: 'wallet-1',
+        type: 'CREDIT',
+        amount: 1968,
+        metadata: {
+          commissionAmount: 432,
+        },
+      },
+      {
+        walletId: 'wallet-1',
+        type: 'CREDIT',
+        amount: 1000,
+        metadata: {
+          commissionAmount: 220,
+        },
+      },
+    ]);
+
+    const result = await service.driverWallets({
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(prisma.wallet.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          user: {
+            role: 'DRIVER',
+          },
+        },
+        include: expect.objectContaining({
+          transactions: expect.objectContaining({
+            take: 5,
+          }),
+          driverPayouts: expect.objectContaining({
+            take: 5,
+          }),
+        }),
+      }),
+    );
+    expect(result.summary).toEqual({
+      walletCount: 2,
+      totalBalance: 1000,
+      totalPayouts: 2968,
+      totalCommission: 652,
+      recoveryWalletCount: 1,
+      totalRecoveryDue: 1968,
+    });
+    expect(result.wallets[0]).toEqual(
+      expect.objectContaining({
+        driverName: 'Issa Driver',
+        balance: 1968,
+        recoveryDue: 0,
+        payoutTotal: 2968,
+        commissionTotal: 652,
+        preparedPayout: expect.objectContaining({
+          id: 'driver-payout-1',
+          amount: 1968,
+        }),
+      }),
+    );
+    expect(result.wallets[1]).toEqual(
+      expect.objectContaining({
+        driverName: 'Recovery Driver',
+        balance: -1968,
+        recoveryDue: 1968,
+      }),
+    );
+    expect(result.wallets[0].recentTransactions[0]).toEqual(
+      expect.objectContaining({
+        paymentAttemptId: 'payment-1',
+        provider: 'FLUTTERWAVE',
+      }),
+    );
+  });
+
+  it('prepares a driver payout from a positive wallet balance', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.wallet.findUnique.mockResolvedValue({
+      id: 'wallet-1',
+      userId: 'driver-user-1',
+      currency: 'XOF',
+      balance: 1968,
+      isLocked: false,
+      user: {
+        role: 'DRIVER',
+        fullName: 'Issa Driver',
+        driverProfile: {
+          status: 'ONLINE',
+        },
+      },
+      driverPayouts: [],
+    });
+    prisma.driverPayout.create.mockResolvedValue({
+      id: 'driver-payout-1',
+      walletId: 'wallet-1',
+      amount: 1968,
+      currency: 'XOF',
+      status: 'PREPARED',
+      reference: 'driver-payout:wallet-1:123',
+      preparedAt: new Date('2026-05-01T08:10:00.000Z'),
+      paidAt: null,
+    });
+
+    const result = await service.prepareDriverWalletPayout(
+      'wallet-1',
+      {
+        notes: 'Paiement terrain valide par ops.',
+      },
+      {
+        user: { id: 'admin-1', role: 'OPS' },
+        sessionId: 'session-1',
+      },
+    );
+
+    expect(prisma.driverPayout.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          walletId: 'wallet-1',
+          amount: 1968,
+          preparedLockKey: 'wallet-1',
+          preparedByUserId: 'admin-1',
+        }),
+      }),
+    );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'DRIVER_PAYOUT_PREPARED',
+        }),
+      }),
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'driver-wallet.payout-prepared',
+      }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        action: 'prepared',
+        payout: expect.objectContaining({ id: 'driver-payout-1' }),
+      }),
+    );
+  });
+
+  it('records an idempotent recovery adjustment for a negative driver wallet', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.wallet.findUnique.mockResolvedValue({
+      id: 'wallet-1',
+      userId: 'driver-user-1',
+      currency: 'XOF',
+      balance: -1968,
+      isLocked: false,
+      user: {
+        role: 'DRIVER',
+        fullName: 'Issa Driver',
+      },
+    });
+    prisma.walletTransaction.findUnique.mockResolvedValue(null);
+    prisma.walletTransaction.create.mockResolvedValue({
+      id: 'wallet-transaction-recovery-1',
+      walletId: 'wallet-1',
+      type: 'ADJUSTMENT',
+      amount: 1000,
+      reference: 'driver-wallet-recovery:wallet-1:ops-key-1',
+      description: 'Recouvrement wallet chauffeur Issa Driver',
+      createdAt: new Date('2026-05-01T09:00:00.000Z'),
+    });
+    prisma.wallet.update.mockResolvedValue({
+      id: 'wallet-1',
+      currency: 'XOF',
+      balance: -968,
+      user: {
+        role: 'DRIVER',
+        fullName: 'Issa Driver',
+      },
+    });
+
+    const result = await service.recordDriverWalletRecoveryAdjustment(
+      'wallet-1',
+      {
+        amount: 1000,
+        notes: 'Paiement terrain recu.',
+        idempotencyKey: 'ops-key-1',
+      },
+      {
+        user: {
+          id: 'ops-1',
+          fullName: 'Ops Mobilis',
+          role: 'OPS',
+        },
+      } as never,
+    );
+
+    expect(prisma.walletTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          walletId: 'wallet-1',
+          type: 'ADJUSTMENT',
+          amount: expect.any(Prisma.Decimal),
+          reference: 'driver-wallet-recovery:wallet-1:ops-key-1',
+          metadata: expect.objectContaining({
+            recovery: true,
+            recoveryDueBefore: 1968,
+            requestedAmount: 1000,
+            appliedAmount: 1000,
+          }),
+        }),
+      }),
+    );
+    expect(prisma.wallet.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'wallet-1',
+        },
+        data: {
+          balance: {
+            increment: expect.any(Prisma.Decimal),
+          },
+        },
+      }),
+    );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'DRIVER_WALLET_RECOVERY_ADJUSTMENT_RECORDED',
+          entityType: 'WALLET',
+          entityId: 'wallet-1',
+        }),
+      }),
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'driver-wallet.recovery-adjusted',
+        entityId: 'wallet-1',
+      }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        action: 'recorded',
+        wallet: expect.objectContaining({
+          balance: -968,
+          recoveryDue: 968,
+        }),
+      }),
+    );
+  });
+
+  it('marks a prepared driver payout as paid with an idempotent wallet transaction', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.driverPayout.findUnique.mockResolvedValue({
+      id: 'driver-payout-1',
+      walletId: 'wallet-1',
+      amount: 1968,
+      currency: 'XOF',
+      status: 'PREPARED',
+      reference: 'driver-payout:wallet-1:123',
+      preparedAt: new Date('2026-05-01T08:10:00.000Z'),
+      paidAt: null,
+      wallet: {
+        id: 'wallet-1',
+        balance: 1968,
+        isLocked: false,
+      },
+    });
+    prisma.walletTransaction.findUnique.mockResolvedValue(null);
+    prisma.driverPayout.update.mockResolvedValue({
+      id: 'driver-payout-1',
+      walletId: 'wallet-1',
+      amount: 1968,
+      currency: 'XOF',
+      status: 'PAID',
+      reference: 'driver-payout:wallet-1:123',
+      preparedAt: new Date('2026-05-01T08:10:00.000Z'),
+      paidAt: new Date('2026-05-01T08:12:00.000Z'),
+    });
+
+    const result = await service.markDriverPayoutPaid(
+      'driver-payout-1',
+      {
+        notes: 'Remis en mobile money.',
+      },
+      {
+        user: { id: 'admin-1', role: 'OPS' },
+        sessionId: 'session-1',
+      },
+    );
+
+    expect(prisma.walletTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          walletId: 'wallet-1',
+          type: 'PAYOUT',
+          amount: 1968,
+          reference: 'driver-payout:driver-payout-1:paid',
+        }),
+      }),
+    );
+    expect(prisma.wallet.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          balance: {
+            decrement: 1968,
+          },
+        },
+      }),
+    );
+    expect(prisma.driverPayout.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'PAID',
+          paidByUserId: 'admin-1',
+          preparedLockKey: null,
+        }),
+      }),
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'driver-wallet.payout-paid',
+      }),
+    );
+    expect(result.action).toBe('paid');
+  });
+
+  it('treats a concurrent driver payout ledger create as already paid', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverPayout.findUnique.mockResolvedValue({
+      id: 'driver-payout-1',
+      walletId: 'wallet-1',
+      amount: 1968,
+      currency: 'XOF',
+      status: 'PREPARED',
+      reference: 'driver-payout:wallet-1:123',
+      preparedAt: new Date('2026-05-01T08:10:00.000Z'),
+      paidAt: null,
+      wallet: {
+        id: 'wallet-1',
+        balance: 1968,
+        isLocked: false,
+      },
+    });
+    prisma.walletTransaction.findUnique.mockResolvedValue(null);
+    prisma.walletTransaction.create.mockRejectedValue(
+      prismaUniqueConstraintError(),
+    );
+    prisma.driverPayout.update.mockResolvedValue({
+      id: 'driver-payout-1',
+      walletId: 'wallet-1',
+      amount: 1968,
+      currency: 'XOF',
+      status: 'PAID',
+      reference: 'driver-payout:wallet-1:123',
+      preparedAt: new Date('2026-05-01T08:10:00.000Z'),
+      paidAt: new Date('2026-05-01T08:12:00.000Z'),
+    });
+
+    const result = await service.markDriverPayoutPaid(
+      'driver-payout-1',
+      {},
+      {
+        user: { id: 'admin-1', role: 'OPS' },
+        sessionId: 'session-1',
+      },
+    );
+
+    expect(prisma.wallet.update).not.toHaveBeenCalled();
+    expect(result.action).toBe('already_paid');
+  });
+
+  it('exports prepared driver payouts as a signed CSV settlement', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverPayout.findMany.mockResolvedValue([
+      {
+        id: 'driver-payout-1',
+        walletId: 'wallet-1',
+        amount: 1968,
+        currency: 'XOF',
+        status: 'PREPARED',
+        reference: 'driver-payout:wallet-1:123',
+        notes: 'Paiement terrain valide.',
+        preparedByUserId: 'ops-1',
+        paidByUserId: null,
+        preparedAt: new Date('2026-05-01T08:10:00.000Z'),
+        paidAt: null,
+        wallet: {
+          userId: 'driver-user-1',
+          user: {
+            fullName: 'Issa Driver',
+          },
+        },
+        preparedBy: {
+          fullName: 'Ops Mobilis',
+        },
+        paidBy: null,
+      },
+    ]);
+
+    const csv = await service.driverPayoutSettlementCsv(
+      { status: 'PREPARED' as never },
+      {
+        user: { id: 'ops-1', role: 'OPS', fullName: 'Ops Mobilis' },
+        sessionId: 'session-1',
+      } as never,
+    );
+
+    expect(csv).toContain('"driver-payout-1"');
+    expect(csv).toContain('"Paiement terrain valide."');
+    expect(csv).toContain('"prepared:Ops Mobilis:ops-1; paid:pending"');
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'DRIVER_PAYOUT_SETTLEMENT_EXPORTED',
+          metadata: expect.objectContaining({
+            format: 'csv',
+            payoutCount: 1,
+            totalAmount: 1968,
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('exports prepared driver payouts as a PDF settlement buffer', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverPayout.findMany.mockResolvedValue([
+      {
+        id: 'driver-payout-1',
+        walletId: 'wallet-1',
+        amount: 1968,
+        currency: 'XOF',
+        status: 'PREPARED',
+        reference: 'driver-payout:wallet-1:123',
+        notes: null,
+        preparedByUserId: 'ops-1',
+        paidByUserId: null,
+        preparedAt: new Date('2026-05-01T08:10:00.000Z'),
+        paidAt: null,
+        wallet: {
+          userId: 'driver-user-1',
+          user: {
+            fullName: 'Issa Driver',
+          },
+        },
+        preparedBy: {
+          fullName: 'Ops Mobilis',
+        },
+        paidBy: null,
+      },
+    ]);
+
+    const pdf = await service.driverPayoutSettlementPdf(
+      { status: 'PREPARED' as never },
+      {
+        user: { id: 'ops-1', role: 'OPS', fullName: 'Ops Mobilis' },
+        sessionId: 'session-1',
+      } as never,
+    );
+
+    expect(Buffer.isBuffer(pdf)).toBe(true);
+    expect(pdf.toString('utf8', 0, 8)).toBe('%PDF-1.4');
   });
 
   it('records an onboarding review decision and updates documents', async () => {
@@ -807,30 +2267,75 @@ describe('AdminService', () => {
           type: 'IDENTITY_DOCUMENT',
           status: 'PENDING',
           expiresAt: null,
+          metadata: {
+            integrity: {
+              sizeBytes: 120000,
+              sha256:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              uploadSource: 'driver-app',
+              capturedAt: '2026-04-18T08:00:00.000Z',
+            },
+          },
         },
         {
           id: 'doc-2',
           type: 'DRIVER_LICENSE',
           status: 'APPROVED',
           expiresAt: new Date('2027-04-18T00:00:00.000Z'),
+          metadata: {
+            integrity: {
+              sizeBytes: 120000,
+              sha256:
+                'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+              uploadSource: 'driver-app',
+              capturedAt: '2026-04-18T08:00:00.000Z',
+            },
+          },
         },
         {
           id: 'doc-3',
           type: 'VEHICLE_REGISTRATION',
           status: 'APPROVED',
           expiresAt: new Date('2027-04-18T00:00:00.000Z'),
+          metadata: {
+            integrity: {
+              sizeBytes: 120000,
+              sha256:
+                'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+              uploadSource: 'driver-app',
+              capturedAt: '2026-04-18T08:00:00.000Z',
+            },
+          },
         },
         {
           id: 'doc-4',
           type: 'INSURANCE_PROOF',
           status: 'APPROVED',
           expiresAt: new Date('2027-04-18T00:00:00.000Z'),
+          metadata: {
+            integrity: {
+              sizeBytes: 120000,
+              sha256:
+                'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+              uploadSource: 'driver-app',
+              capturedAt: '2026-04-18T08:00:00.000Z',
+            },
+          },
         },
         {
           id: 'doc-5',
           type: 'SELFIE_VERIFICATION',
           status: 'APPROVED',
           expiresAt: null,
+          metadata: {
+            integrity: {
+              sizeBytes: 120000,
+              sha256:
+                'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+              uploadSource: 'driver-app',
+              capturedAt: '2026-04-18T08:00:00.000Z',
+            },
+          },
         },
       ],
     });
@@ -875,11 +2380,32 @@ describe('AdminService', () => {
         status: 'OFFLINE',
       },
     });
+    expect(prisma.driverOnboardingReview.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        metadata: expect.objectContaining({
+          decisionGuidance: expect.objectContaining({
+            level: 'approve',
+            recommendedStatus: 'APPROVED',
+          }),
+          documentSummary: expect.objectContaining({
+            approved: 5,
+            pending: 0,
+            missingRequired: 0,
+            integrityWarnings: 0,
+          }),
+        }),
+      }),
+    });
     expect(prisma.auditLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId: 'ops-1',
         action: 'DRIVER_ONBOARDING_REVIEW_UPDATED',
         entityId: 'driver-1',
+        metadata: expect.objectContaining({
+          decisionGuidance: expect.objectContaining({
+            level: 'approve',
+          }),
+        }),
       }),
     });
     expect(realtimeService.publish).toHaveBeenCalledWith(

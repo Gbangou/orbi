@@ -19,6 +19,7 @@ export type PaymentAttemptStatus =
   | 'SUCCEEDED'
   | 'FAILED'
   | 'CANCELLED'
+  | 'REFUND_PENDING'
   | 'REFUNDED';
 
 export type CreateCheckoutIntentInput = {
@@ -35,6 +36,18 @@ export type PaymentWebhookPayload = {
   transactionRef?: string;
   data?: Record<string, unknown>;
   [key: string]: unknown;
+};
+
+export type ProviderVerificationPayload = {
+  event: string;
+  transactionRef: string;
+  data: {
+    providerReference?: string;
+    status?: string;
+    amount?: number;
+    currency?: string;
+    raw: Record<string, unknown>;
+  };
 };
 
 export type PaymentWebhookSignatureContext = {
@@ -54,6 +67,9 @@ export type RideRequestPaymentOwnership = {
   rider: {
     userId: string;
   };
+  trip: {
+    status: string;
+  } | null;
 };
 
 export type PaymentAttemptCreateData = {
@@ -71,4 +87,17 @@ export type PaymentAttemptCreateData = {
   customerPhoneNumber?: string;
   redirectUrl?: string;
   providerMetadata: Prisma.InputJsonValue;
+};
+
+export type PaymentRefundInput = {
+  actorUserId: string;
+  actorName?: string | null;
+  reason?: string | null;
+};
+
+export type PaymentRefundProviderResult = {
+  providerRefundReference: string;
+  status: 'pending' | 'processed';
+  providerMode: 'manual_or_provider_console' | 'provider_api';
+  raw: Record<string, unknown>;
 };

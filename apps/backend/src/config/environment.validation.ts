@@ -39,6 +39,7 @@ type EnvironmentVariables = {
   PAYMENTS_WEBHOOK_SECRET?: string;
   PAYMENTS_DEFAULT_REDIRECT_URL?: string;
   PAYMENTS_DEFAULT_WEBHOOK_URL?: string;
+  PAYMENTS_REFUND_MODE?: string;
   FLUTTERWAVE_PUBLIC_KEY?: string;
   FLUTTERWAVE_SECRET_KEY?: string;
   FLUTTERWAVE_WEBHOOK_SECRET_HASH?: string;
@@ -53,9 +54,14 @@ type EnvironmentVariables = {
 
 export function validateEnvironment(config: EnvironmentVariables) {
   const isTestEnvironment = config.NODE_ENV === 'test';
+  const isProductionEnvironment = config.NODE_ENV === 'production';
 
   if (!config.DATABASE_URL && !isTestEnvironment) {
     throw new Error('DATABASE_URL is required to start the Mobilis backend.');
+  }
+
+  if (isProductionEnvironment) {
+    assertProductionEnvironment(config);
   }
 
   return {
@@ -118,6 +124,7 @@ export function validateEnvironment(config: EnvironmentVariables) {
     PAYMENTS_DEFAULT_WEBHOOK_URL:
       config.PAYMENTS_DEFAULT_WEBHOOK_URL ??
       'http://localhost:3000/api/v1/payments/webhooks',
+    PAYMENTS_REFUND_MODE: config.PAYMENTS_REFUND_MODE ?? 'manual',
     FLUTTERWAVE_PUBLIC_KEY: config.FLUTTERWAVE_PUBLIC_KEY ?? '',
     FLUTTERWAVE_SECRET_KEY: config.FLUTTERWAVE_SECRET_KEY ?? '',
     FLUTTERWAVE_WEBHOOK_SECRET_HASH:
@@ -133,4 +140,60 @@ export function validateEnvironment(config: EnvironmentVariables) {
       config.DOCUMENT_VIEW_BASE_URL ?? 'https://storage.mobilis.local/view',
     DOCUMENT_LINK_TTL_SECONDS: config.DOCUMENT_LINK_TTL_SECONDS ?? '900',
   };
+}
+
+function assertProductionEnvironment(config: EnvironmentVariables) {
+  const paymentsWebhookSecret = config.PAYMENTS_WEBHOOK_SECRET ?? '';
+  const documentSigningSecret = config.DOCUMENT_SIGNING_SECRET ?? '';
+  const frontendAllowedOrigins = config.FRONTEND_ALLOWED_ORIGINS ?? '';
+  const defaultRedirectUrl = config.PAYMENTS_DEFAULT_REDIRECT_URL ?? '';
+  const defaultWebhookUrl = config.PAYMENTS_DEFAULT_WEBHOOK_URL ?? '';
+
+  if (!paymentsWebhookSecret) {
+    throw new Error('PAYMENTS_WEBHOOK_SECRET is required in production.');
+  }
+
+  if (paymentsWebhookSecret === 'mobilis_dev_webhook_secret') {
+    throw new Error('PAYMENTS_WEBHOOK_SECRET must not use the dev default in production.');
+  }
+
+  if (!documentSigningSecret) {
+    throw new Error('DOCUMENT_SIGNING_SECRET is required in production.');
+  }
+
+  if (documentSigningSecret === 'mobilis_dev_document_secret') {
+    throw new Error('DOCUMENT_SIGNING_SECRET must not use the dev default in production.');
+  }
+
+  if (containsLocalhost(frontendAllowedOrigins)) {
+    throw new Error('FRONTEND_ALLOWED_ORIGINS must not include localhost in production.');
+  }
+
+  if (containsLocalhost(defaultRedirectUrl)) {
+    throw new Error('PAYMENTS_DEFAULT_REDIRECT_URL must not use localhost in production.');
+  }
+
+  if (containsLocalhost(defaultWebhookUrl)) {
+    throw new Error('PAYMENTS_DEFAULT_WEBHOOK_URL must not use localhost in production.');
+  }
+
+  if (config.RATE_LIMIT_STRICT === 'true' && !config.RATE_LIMIT_REDIS_URL) {
+    throw new Error('RATE_LIMIT_REDIS_URL is required when RATE_LIMIT_STRICT=true.');
+  }
+
+  if (config.REALTIME_STRICT === 'true' && !config.REALTIME_REDIS_URL) {
+    throw new Error('REALTIME_REDIS_URL is required when REALTIME_STRICT=true.');
+  }
+
+  if (
+    config.PAYMENTS_REFUND_MODE === 'provider' &&
+    config.PAYMENTS_PROVIDER === 'flutterwave' &&
+    !config.FLUTTERWAVE_SECRET_KEY
+  ) {
+    throw new Error('FLUTTERWAVE_SECRET_KEY is required for provider refunds in production.');
+  }
+}
+
+function containsLocalhost(value: string) {
+  return /localhost|127\.0\.0\.1|\[::1\]/i.test(value);
 }

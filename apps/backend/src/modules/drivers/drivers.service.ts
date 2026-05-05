@@ -23,6 +23,10 @@ import { RequestDriverDocumentUploadLinksDto } from './dto/request-driver-docume
 import { UpsertDriverOnboardingDto } from './dto/upsert-driver-onboarding.dto';
 import { ACTIVE_TRIP_STATUSES } from '../trips/trips.constants';
 import { DispatchCoordinator } from './dispatch-coordinator.service';
+import {
+  driverFatigueWindowHours,
+  evaluateDriverFatigue,
+} from './driver-fatigue.policy';
 
 function toNumber(value: unknown) {
   if (value === null || value === undefined) {
@@ -180,6 +184,7 @@ export class DriversService {
         currentLongitude: toNumber(profile.currentLongitude),
         averageRating: toNumber(profile.averageRating),
         completedTripsCount: profile.completedTripsCount,
+        fatigue: await this.resolveDriverFatigue(profile.id),
         onboarding: onboardingSummary,
         vehicles: profile.vehicles.map((vehicle) => ({
           id: vehicle.id,
@@ -288,6 +293,20 @@ export class DriversService {
     if (payload.documentArtifacts?.length) {
       for (const artifact of payload.documentArtifacts) {
         const normalizedStorageKey = artifact.storageKey.trim();
+        this.assertDocumentArtifactOwnedByProfile(
+          profile.id,
+          normalizedStorageKey,
+        );
+        const validatedArtifact =
+          this.documentLinksService.validateUploadedArtifact({
+            documentType: artifact.type,
+            fileName: artifact.fileName,
+            storageKey: normalizedStorageKey,
+            mimeType: artifact.mimeType,
+            sizeBytes: artifact.sizeBytes,
+            sha256: artifact.sha256,
+            uploadSource: artifact.uploadSource,
+          });
         const existingDocument = await this.prisma.driverDocument.findUnique({
           where: {
             storageKey: normalizedStorageKey,
@@ -310,8 +329,8 @@ export class DriversService {
             },
             data: {
               type: artifact.type as DriverDocumentType,
-              fileName: artifact.fileName.trim(),
-              mimeType: artifact.mimeType?.trim(),
+              fileName: validatedArtifact.fileName,
+              mimeType: validatedArtifact.mimeType,
               expiresAt: artifact.expiresAt
                 ? new Date(artifact.expiresAt)
                 : null,
@@ -319,6 +338,10 @@ export class DriversService {
               rejectionReason: null,
               reviewedAt: null,
               reviewedByUserId: null,
+              metadata: {
+                uploadPolicy: validatedArtifact.constraints,
+                integrity: validatedArtifact.integrity,
+              } as Prisma.InputJsonValue,
             },
           });
 
@@ -329,11 +352,15 @@ export class DriversService {
           data: {
             driverProfileId: profile.id,
             type: artifact.type as DriverDocumentType,
-            fileName: artifact.fileName.trim(),
+            fileName: validatedArtifact.fileName,
             storageKey: normalizedStorageKey,
-            mimeType: artifact.mimeType?.trim(),
+            mimeType: validatedArtifact.mimeType,
             expiresAt: artifact.expiresAt ? new Date(artifact.expiresAt) : null,
             status: DriverDocumentStatus.PENDING,
+            metadata: {
+              uploadPolicy: validatedArtifact.constraints,
+              integrity: validatedArtifact.integrity,
+            } as Prisma.InputJsonValue,
           },
         });
       }
@@ -388,17 +415,33 @@ export class DriversService {
   ) {
     this.assertDriverOnboardingEnabled(auth);
     const profile = await this.loadDriverProfile(auth);
+    const links = payload.documents.map((document) =>
+      this.documentLinksService.createUploadLink({
+        driverProfileId: profile.id,
+        documentType: document.type,
+        fileName: document.fileName,
+        mimeType: document.mimeType,
+        expiresAt: document.expiresAt,
+      }),
+    );
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_DOCUMENT_UPLOAD_LINKS_CREATED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: profile.id,
+        metadata: {
+          documentTypes: payload.documents.map((document) => document.type),
+          linkCount: links.length,
+          storageKeys: links.map((link) => link.storageKey),
+          expiresAt: links.map((link) => link.expiresAt),
+        } as Prisma.InputJsonValue,
+      },
+    });
 
     return {
-      links: payload.documents.map((document) =>
-        this.documentLinksService.createUploadLink({
-          driverProfileId: profile.id,
-          documentType: document.type,
-          fileName: document.fileName,
-          mimeType: document.mimeType,
-          expiresAt: document.expiresAt,
-        }),
-      ),
+      links,
     };
   }
 
@@ -584,6 +627,30 @@ export class DriversService {
       );
     }
 
+    if (nextStatus === DriverStatus.ONLINE) {
+      const fatigue = await this.resolveDriverFatigue(driverProfileId);
+
+      if (fatigue.state === 'blocked') {
+        await this.prisma.auditLog.create({
+          data: {
+            userId: auth.user.id,
+            action: 'DRIVER_FATIGUE_AVAILABILITY_BLOCKED',
+            entityType: 'DRIVER_PROFILE',
+            entityId: driverProfileId,
+            metadata: {
+              completedTrips: fatigue.completedTrips,
+              drivingMinutes: fatigue.drivingMinutes,
+              restUntil: fatigue.restUntil,
+            } as Prisma.InputJsonValue,
+          },
+        });
+
+        throw new BadRequestException(
+          `Pause chauffeur requise jusqu a ${fatigue.restUntil}.`,
+        );
+      }
+    }
+
     const activeTrip = await this.prisma.trip.findFirst({
       where: {
         driverId: driverProfileId,
@@ -631,7 +698,41 @@ export class DriversService {
       availability: {
         driverId: updatedProfile.id,
         status: updatedProfile.status,
+        fatigue: await this.resolveDriverFatigue(driverProfileId),
       },
+    };
+  }
+
+  private async resolveDriverFatigue(driverProfileId: string) {
+    const since = new Date(
+      Date.now() - driverFatigueWindowHours * 60 * 60 * 1000,
+    );
+    const trips = await this.prisma.trip.findMany({
+      where: {
+        driverId: driverProfileId,
+        status: 'COMPLETED',
+        completedAt: {
+          gte: since,
+        },
+      },
+      select: {
+        id: true,
+        startedAt: true,
+        completedAt: true,
+      },
+      orderBy: {
+        completedAt: 'desc',
+      },
+    });
+
+    const fatigue = evaluateDriverFatigue({
+      now: new Date(),
+      trips,
+    });
+
+    return {
+      ...fatigue,
+      restUntil: fatigue.restUntil?.toISOString() ?? null,
     };
   }
 
@@ -867,6 +968,24 @@ export class DriversService {
       effectiveStatus !== DriverDocumentStatus.REJECTED &&
       effectiveStatus !== DriverDocumentStatus.EXPIRED
     );
+  }
+
+  private assertDocumentArtifactOwnedByProfile(
+    driverProfileId: string,
+    storageKey: string,
+  ) {
+    const expectedPrefix = `${driverProfileId}/`;
+
+    if (
+      !storageKey.startsWith(expectedPrefix) ||
+      storageKey.includes('..') ||
+      storageKey.includes('\\') ||
+      storageKey.length > 240
+    ) {
+      throw new BadRequestException(
+        'Driver document storage key is not valid for this profile.',
+      );
+    }
   }
 
   async expireStaleReservations(now = new Date()) {

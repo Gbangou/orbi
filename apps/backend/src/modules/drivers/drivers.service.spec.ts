@@ -17,6 +17,7 @@ describe('DriversService', () => {
       },
       trip: {
         findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
       },
       user: {
         update: jest.fn(),
@@ -46,6 +47,21 @@ describe('DriversService', () => {
     };
     const documentLinksService = {
       createUploadLink: jest.fn(),
+      validateUploadedArtifact: jest.fn((artifact) => ({
+        fileName: artifact.fileName,
+        mimeType: artifact.mimeType ?? 'application/pdf',
+        constraints: {
+          allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png'],
+          allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+          maxBytes: 5_000_000,
+        },
+        integrity: {
+          sizeBytes: artifact.sizeBytes ?? null,
+          sha256: artifact.sha256 ?? null,
+          uploadSource: artifact.uploadSource ?? null,
+          capturedAt: '2026-05-03T00:00:00.000Z',
+        },
+      })),
     };
     const featureFlagsService = {
       isEnabled: jest.fn().mockReturnValue(true),
@@ -410,6 +426,52 @@ describe('DriversService', () => {
       data: { status: 'ONLINE' },
     });
     expect(result.availability.status).toBe('ONLINE');
+    expect(result.availability.fatigue.state).toBe('clear');
+  });
+
+  it('blocks going online when driver fatigue limits require rest', async () => {
+    const { prisma, service } = createService();
+    const completedAt = new Date();
+    const startedAt = new Date(completedAt.getTime() - 45 * 60 * 1000);
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'OFFLINE',
+      verificationStatus: 'APPROVED',
+      vehicles: [
+        {
+          id: 'vehicle-1',
+          isActive: true,
+        },
+      ],
+    });
+    prisma.trip.findMany.mockResolvedValue(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `trip-fatigue-${index}`,
+        startedAt,
+        completedAt,
+      })),
+    );
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    await expect(
+      service.updateAvailability(
+        {
+          user: {
+            id: 'user-1',
+            driverProfile: { id: 'driver-1' },
+          },
+        } as never,
+        'ONLINE',
+      ),
+    ).rejects.toThrow('Pause chauffeur requise');
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'DRIVER_FATIGUE_AVAILABILITY_BLOCKED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: 'driver-1',
+      }),
+    });
   });
 
   it('rejects going online when the driver is not approved yet', async () => {
@@ -614,7 +676,7 @@ describe('DriversService', () => {
   });
 
   it('submits onboarding data and writes an audit trail', async () => {
-    const { prisma, service } = createService();
+    const { prisma, documentLinksService, service } = createService();
 
     prisma.driverProfile.findUnique
       .mockResolvedValueOnce({
@@ -723,6 +785,10 @@ describe('DriversService', () => {
             type: 'IDENTITY_DOCUMENT',
             fileName: 'id-card.pdf',
             storageKey: 'driver-1/identity/id-card.pdf',
+            sizeBytes: 450_000,
+            sha256:
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            uploadSource: 'driver-app',
           },
           {
             type: 'DRIVER_LICENSE',
@@ -765,6 +831,29 @@ describe('DriversService', () => {
       }),
     });
     expect(prisma.driverDocument.create).toHaveBeenCalledTimes(2);
+    expect(documentLinksService.validateUploadedArtifact).toHaveBeenCalledWith({
+      documentType: 'IDENTITY_DOCUMENT',
+      fileName: 'id-card.pdf',
+      storageKey: 'driver-1/identity/id-card.pdf',
+      mimeType: undefined,
+      sizeBytes: 450_000,
+      sha256:
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      uploadSource: 'driver-app',
+    });
+    expect(prisma.driverDocument.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        storageKey: 'driver-1/identity/id-card.pdf',
+        metadata: expect.objectContaining({
+          integrity: expect.objectContaining({
+            sizeBytes: 450_000,
+            sha256:
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            uploadSource: 'driver-app',
+          }),
+        }),
+      }),
+    });
     expect(prisma.driverOnboardingReview.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         driverProfileId: 'driver-1',
@@ -889,7 +978,149 @@ describe('DriversService', () => {
       mimeType: 'application/pdf',
       expiresAt: undefined,
     });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'DRIVER_DOCUMENT_UPLOAD_LINKS_CREATED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: 'driver-1',
+        metadata: expect.objectContaining({
+          documentTypes: ['IDENTITY_DOCUMENT'],
+          linkCount: 1,
+          storageKeys: ['driver-1/identity/key.pdf'],
+        }),
+      }),
+    });
     expect(result.links).toHaveLength(1);
+  });
+
+  it('rejects onboarding document artifacts outside the driver storage prefix', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'OFFLINE',
+      user: {
+        id: 'user-1',
+        phoneNumber: '+22670000000',
+        isPhoneVerified: true,
+        fullName: 'Issa Driver',
+        email: 'driver@mobilis.app',
+      },
+      vehicles: [],
+    });
+    prisma.user.update.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.vehicle.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.upsertOnboarding(
+        {
+          user: {
+            id: 'user-1',
+            driverProfile: { id: 'driver-1' },
+          },
+        } as never,
+        {
+          phoneNumber: '+22670000000',
+          licenseNumber: 'BF-12345',
+          city: 'OUAGADOUGOU',
+          serviceRadiusKm: 8,
+          documents: {
+            identityDocumentProvided: true,
+            driverLicenseProvided: true,
+            vehicleRegistrationProvided: true,
+            insuranceProofProvided: true,
+            selfieMatchProvided: true,
+          },
+          documentArtifacts: [
+            {
+              type: 'IDENTITY_DOCUMENT',
+              fileName: 'identity.pdf',
+              storageKey: 'driver-2/identity/key.pdf',
+            },
+          ],
+          vehicles: [
+            {
+              plateNumber: '11 jd 9021',
+              make: 'Toyota',
+              model: 'Corolla',
+              color: 'White',
+              type: 'CAR',
+              tier: 'CAR_STANDARD',
+            },
+          ],
+        },
+      ),
+    ).rejects.toThrow(
+      'Driver document storage key is not valid for this profile.',
+    );
+    expect(prisma.driverDocument.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects onboarding document artifacts that do not match the upload policy', async () => {
+    const { prisma, documentLinksService, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'OFFLINE',
+      user: {
+        id: 'user-1',
+        phoneNumber: '+22670000000',
+        isPhoneVerified: true,
+        fullName: 'Issa Driver',
+        email: 'driver@mobilis.app',
+      },
+      vehicles: [],
+    });
+    prisma.user.update.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.vehicle.findUnique.mockResolvedValue(null);
+    documentLinksService.validateUploadedArtifact.mockImplementation(() => {
+      throw new Error('Unsupported driver document MIME type image/svg+xml.');
+    });
+
+    await expect(
+      service.upsertOnboarding(
+        {
+          user: {
+            id: 'user-1',
+            driverProfile: { id: 'driver-1' },
+          },
+        } as never,
+        {
+          phoneNumber: '+22670000000',
+          licenseNumber: 'BF-12345',
+          city: 'OUAGADOUGOU',
+          serviceRadiusKm: 8,
+          documents: {
+            identityDocumentProvided: true,
+            driverLicenseProvided: true,
+            vehicleRegistrationProvided: true,
+            insuranceProofProvided: true,
+            selfieMatchProvided: true,
+          },
+          documentArtifacts: [
+            {
+              type: 'IDENTITY_DOCUMENT',
+              fileName: 'identity.svg',
+              storageKey: 'driver-1/identity/key.svg',
+              mimeType: 'image/svg+xml',
+            },
+          ],
+          vehicles: [
+            {
+              plateNumber: '11 jd 9021',
+              make: 'Toyota',
+              model: 'Corolla',
+              color: 'White',
+              type: 'CAR',
+              tier: 'CAR_STANDARD',
+            },
+          ],
+        },
+      ),
+    ).rejects.toThrow('Unsupported driver document MIME type image/svg+xml.');
+    expect(prisma.driverDocument.create).not.toHaveBeenCalled();
   });
 
   it('keeps an existing unexpired reservation instead of extending it again', async () => {

@@ -3,8 +3,13 @@ import { RidersService } from './riders.service';
 describe('RidersService', () => {
   function createService() {
     const prisma = {
+      $transaction: jest.fn(),
       riderProfile: {
         findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      auditLog: {
+        create: jest.fn(),
       },
       savedPlace: {
         create: jest.fn(),
@@ -19,6 +24,9 @@ describe('RidersService', () => {
         count: jest.fn(),
       },
     };
+    prisma.$transaction.mockImplementation(
+      async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
+    );
 
     return {
       prisma,
@@ -60,6 +68,13 @@ describe('RidersService', () => {
     } as never);
 
     expect(result.profile.fullName).toBe('Awa Rider');
+    expect(result.profile.trustedContact).toEqual(
+      expect.objectContaining({
+        phoneNumber: '+22670000001',
+        shareMode: 'MANUAL',
+        status: 'READY',
+      }),
+    );
     expect(result.profile.stats.totalRideRequests).toBe(7);
     expect(result.profile.stats.totalTrips).toBe(5);
     expect(result.profile.stats.completedTrips).toBe(4);
@@ -67,6 +82,58 @@ describe('RidersService', () => {
       expect.objectContaining({
         label: 'Maison',
         address: 'Patte d Oie',
+      }),
+    );
+  });
+
+  it('updates and audits the rider trusted contact', async () => {
+    const { prisma, service } = createService();
+
+    prisma.riderProfile.update.mockResolvedValue({
+      id: 'rider-1',
+      emergencyPhone: '+22670000001',
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.updateTrustedContact(
+      {
+        user: {
+          id: 'user-rider-1',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      {
+        phoneNumber: '+22670000001',
+        shareMode: 'ALL_TRIPS',
+        notes: 'Mere du rider',
+      },
+    );
+
+    expect(prisma.riderProfile.update).toHaveBeenCalledWith({
+      where: { id: 'rider-1' },
+      data: {
+        emergencyPhone: '+22670000001',
+      },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-rider-1',
+        action: 'RIDER_TRUSTED_CONTACT_UPDATED',
+        entityType: 'RIDER_PROFILE',
+        entityId: 'rider-1',
+        metadata: expect.objectContaining({
+          hasTrustedContact: true,
+          shareMode: 'ALL_TRIPS',
+        }),
+      }),
+    });
+    expect(result.trustedContact).toEqual(
+      expect.objectContaining({
+        phoneNumber: '+22670000001',
+        shareMode: 'ALL_TRIPS',
+        status: 'READY',
       }),
     );
   });

@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../core/prisma/prisma.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { CreateSavedPlaceDto } from './dto/create-saved-place.dto';
+import { UpdateTrustedContactDto } from './dto/update-trusted-contact.dto';
 import { UpdateSavedPlaceDto } from './dto/update-saved-place.dto';
 
 function toNumber(value: unknown) {
@@ -74,6 +75,14 @@ export class RidersService {
         phoneNumber: profile.user.phoneNumber,
         preferredTier: profile.preferredTier,
         emergencyPhone: profile.emergencyPhone,
+        trustedContact: {
+          phoneNumber: profile.emergencyPhone,
+          shareMode: profile.emergencyPhone ? 'MANUAL' : 'DISABLED',
+          status: profile.emergencyPhone ? 'READY' : 'MISSING',
+          safetyNote: profile.emergencyPhone
+            ? 'Contact de confiance pret pour recevoir un lien trajet manuel.'
+            : 'Ajoutez un numero Burkina pour accelerer le partage en cas de trajet sensible.',
+        },
         savedPlaces: profile.savedPlaces.map((place) => ({
           id: place.id,
           label: place.label,
@@ -127,6 +136,61 @@ export class RidersService {
 
     return {
       savedPlace: this.serializeSavedPlace(createdPlace),
+    };
+  }
+
+  async updateTrustedContact(
+    auth: RequestAuthContext,
+    payload: UpdateTrustedContactDto,
+  ) {
+    const riderProfileId = this.getRiderProfileId(auth);
+    const normalizedPhone = payload.phoneNumber?.trim() || null;
+    const shareMode = normalizedPhone ? (payload.shareMode ?? 'MANUAL') : 'MANUAL';
+    const notes = payload.notes?.trim() || null;
+
+    if (!normalizedPhone && payload.shareMode && payload.shareMode !== 'MANUAL') {
+      throw new BadRequestException(
+        'A trusted contact phone number is required for automatic share modes.',
+      );
+    }
+
+    const updatedProfile = await this.prisma.$transaction(async (tx) => {
+      const updatedProfile = await tx.riderProfile.update({
+        where: {
+          id: riderProfileId,
+        },
+        data: {
+          emergencyPhone: normalizedPhone,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'RIDER_TRUSTED_CONTACT_UPDATED',
+          entityType: 'RIDER_PROFILE',
+          entityId: riderProfileId,
+          metadata: {
+            hasTrustedContact: Boolean(normalizedPhone),
+            shareMode,
+            notes,
+          },
+        },
+      });
+
+      return updatedProfile;
+    });
+
+    return {
+      trustedContact: {
+        riderProfileId: updatedProfile.id,
+        phoneNumber: updatedProfile.emergencyPhone,
+        shareMode: updatedProfile.emergencyPhone ? shareMode : 'DISABLED',
+        status: updatedProfile.emergencyPhone ? 'READY' : 'MISSING',
+        safetyNote: updatedProfile.emergencyPhone
+          ? 'Contact de confiance configure et audite.'
+          : 'Aucun contact de confiance actif.',
+      },
     };
   }
 

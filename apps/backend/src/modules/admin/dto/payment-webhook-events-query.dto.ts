@@ -9,7 +9,10 @@ const paymentWebhookActions = [
   'ignored_conflicting_provider_reference',
   'ignored_unknown_reference',
   'ignored_missing_reference',
+  'refund_processed',
+  'refund_still_pending',
 ] as const;
+const paymentWebhookKinds = ['payment', 'refund', 'ignored'] as const;
 
 export class PaymentWebhookEventsQueryDto extends PageQueryDto {
   @ApiPropertyOptional({ enum: paymentWebhookProviders })
@@ -21,6 +24,11 @@ export class PaymentWebhookEventsQueryDto extends PageQueryDto {
   @IsOptional()
   @IsIn(paymentWebhookActions)
   action?: (typeof paymentWebhookActions)[number];
+
+  @ApiPropertyOptional({ enum: paymentWebhookKinds })
+  @IsOptional()
+  @IsIn(paymentWebhookKinds)
+  kind?: (typeof paymentWebhookKinds)[number];
 
   @ApiPropertyOptional({ example: 'mobilis_123_ride-request-1' })
   @IsOptional()

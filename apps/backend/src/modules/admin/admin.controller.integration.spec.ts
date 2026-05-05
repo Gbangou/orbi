@@ -56,13 +56,23 @@ describe('AdminController (integration)', () => {
     previewOverview: jest.Mock;
     overview: jest.Mock;
     liveOps: jest.Mock;
+    launchReadiness: jest.Mock;
+    acknowledgeLaunchReadinessAction: jest.Mock;
     driverOnboardingQueue: jest.Mock;
+    driverWallets: jest.Mock;
+    prepareDriverWalletPayout: jest.Mock;
+    markDriverPayoutPaid: jest.Mock;
+    driverPayoutSettlementCsv: jest.Mock;
+    driverPayoutSettlementPdf: jest.Mock;
     featureFlags: jest.Mock;
     dispatchSettings: jest.Mock;
     pricingCalibration: jest.Mock;
     paymentWebhookEvents: jest.Mock;
     paymentWebhookEventDetail: jest.Mock;
     startPaymentWebhookInvestigation: jest.Mock;
+    replayPaymentWebhookEvent: jest.Mock;
+    verifyPaymentAttemptWithProvider: jest.Mock;
+    refundPaymentAttempt: jest.Mock;
     updateDispatchSettings: jest.Mock;
     updateSupportTicket: jest.Mock;
     updateDriverOnboardingReview: jest.Mock;
@@ -77,14 +87,24 @@ describe('AdminController (integration)', () => {
       previewOverview: jest.fn(),
       overview: jest.fn(),
       liveOps: jest.fn(),
+      launchReadiness: jest.fn(),
+      acknowledgeLaunchReadinessAction: jest.fn(),
       supportTickets: jest.fn(),
       driverOnboardingQueue: jest.fn(),
+      driverWallets: jest.fn(),
+      prepareDriverWalletPayout: jest.fn(),
+      markDriverPayoutPaid: jest.fn(),
+      driverPayoutSettlementCsv: jest.fn(),
+      driverPayoutSettlementPdf: jest.fn(),
       featureFlags: jest.fn(),
       dispatchSettings: jest.fn(),
       pricingCalibration: jest.fn(),
       paymentWebhookEvents: jest.fn(),
       paymentWebhookEventDetail: jest.fn(),
       startPaymentWebhookInvestigation: jest.fn(),
+      replayPaymentWebhookEvent: jest.fn(),
+      verifyPaymentAttemptWithProvider: jest.fn(),
+      refundPaymentAttempt: jest.fn(),
       updateDispatchSettings: jest.fn(),
       updateSupportTicket: jest.fn(),
       updateDriverOnboardingReview: jest.fn(),
@@ -161,6 +181,188 @@ describe('AdminController (integration)', () => {
       page: 1,
       pageSize: 10,
     });
+  });
+
+  it('serves launch readiness through the versioned admin endpoint', async () => {
+    adminService.launchReadiness.mockResolvedValue({
+      generatedAt: '2026-05-01T12:00:00.000Z',
+      environment: 'production',
+      decision: {
+        state: 'blocked',
+        label: 'production pilot bloque',
+        detail: '1 check critique doit etre corrige.',
+      },
+      summary: {
+        failedChecks: 1,
+        warningChecks: 0,
+        passedChecks: 8,
+        totalChecks: 9,
+      },
+      checks: [
+        {
+          id: 'runtime-production-readiness',
+          label: 'Runtime production',
+          state: 'fail',
+          detail: '1 bloquant.',
+        },
+      ],
+      nextActions: [
+        {
+          checkId: 'runtime-production-readiness',
+          severity: 'blocking',
+          owner: 'engineering',
+          action: 'Corriger le runtime.',
+          runbookAnchor: 'checklist-avant-de-deployer',
+        },
+      ],
+      productionReadiness: {
+        environment: 'production',
+        riskLevel: 'high',
+        failedChecks: 1,
+        warningChecks: 0,
+        checks: [],
+      },
+    });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/launch-readiness')
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.decision.state).toBe('blocked');
+        expect(response.body.summary.failedChecks).toBe(1);
+        expect(response.body.nextActions[0]?.owner).toBe('engineering');
+      });
+
+    expect(adminService.launchReadiness).toHaveBeenCalled();
+  });
+
+  it('acknowledges launch readiness actions through the versioned admin endpoint', async () => {
+    adminService.acknowledgeLaunchReadinessAction.mockResolvedValue({
+      acknowledgement: {
+        checkId: 'runtime-production-readiness',
+        owner: 'engineering',
+        severity: 'blocking',
+        acknowledgedAt: '2026-05-01T12:05:00.000Z',
+      },
+    });
+
+    await request(app.getHttpServer())
+      .post(
+        '/api/v1/admin/launch-readiness/actions/runtime-production-readiness/acknowledge',
+      )
+      .send({
+        owner: 'engineering',
+        notes: 'Backplane Redis assigne.',
+      })
+      .expect(201)
+      .expect((response) => {
+        expect(response.body.acknowledgement.owner).toBe('engineering');
+      });
+
+    expect(
+      adminService.acknowledgeLaunchReadinessAction,
+    ).toHaveBeenCalledWith(
+      'runtime-production-readiness',
+      {
+        owner: 'engineering',
+        notes: 'Backplane Redis assigne.',
+      },
+      expect.objectContaining({
+        user: expect.objectContaining({
+          id: 'ops-1',
+        }),
+      }),
+    );
+  });
+
+  it('serves driver wallets through the versioned admin endpoint', async () => {
+    adminService.driverWallets.mockResolvedValue({
+      summary: {
+        walletCount: 1,
+        totalBalance: 1968,
+        totalPayouts: 1968,
+        totalCommission: 432,
+      },
+      wallets: [
+        {
+          id: 'wallet-1',
+          driverName: 'Issa Driver',
+          balance: 1968,
+        },
+      ],
+      meta: {
+        page: 1,
+        pageSize: 10,
+        total: 1,
+        pageCount: 1,
+      },
+    });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/driver-wallets?page=1&pageSize=10')
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.wallets[0]?.id).toBe('wallet-1');
+        expect(response.body.summary.totalCommission).toBe(432);
+      });
+
+    expect(adminService.driverWallets).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 10,
+    });
+  });
+
+  it('exports driver payout settlements as CSV through the versioned admin endpoint', async () => {
+    adminService.driverPayoutSettlementCsv.mockResolvedValue(
+      '"payout_id"\n"driver-payout-1"',
+    );
+
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/driver-payouts/settlement.csv?status=PREPARED')
+      .expect(200)
+      .expect('content-type', /text\/csv/)
+      .expect((response) => {
+        expect(response.text).toContain('driver-payout-1');
+      });
+
+    expect(adminService.driverPayoutSettlementCsv).toHaveBeenCalledWith(
+      { status: 'PREPARED' },
+      expect.objectContaining({
+        user: expect.objectContaining({
+          id: 'ops-1',
+        }),
+      }),
+    );
+  });
+
+  it('verifies a payment attempt with the provider through the versioned admin endpoint', async () => {
+    adminService.verifyPaymentAttemptWithProvider.mockResolvedValue({
+      verification: {
+        paymentAttemptId: 'payment-1',
+        result: {
+          nextAction: 'persisted_and_reconciled',
+        },
+      },
+    });
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/payment-attempts/payment-1/verify-provider')
+      .expect(201)
+      .expect((response) => {
+        expect(response.body.verification.paymentAttemptId).toBe('payment-1');
+        expect(response.body.verification.result.nextAction).toBe(
+          'persisted_and_reconciled',
+        );
+      });
+
+    expect(adminService.verifyPaymentAttemptWithProvider).toHaveBeenCalledWith(
+      'payment-1',
+      expect.objectContaining({
+        user: expect.objectContaining({
+          id: 'ops-1',
+        }),
+      }),
+    );
   });
 
   it('streams SSE events on the admin endpoint in nominal mode', async () => {
@@ -365,7 +567,9 @@ describe('AdminController (integration)', () => {
     });
 
     await request(app.getHttpServer())
-      .post('/api/v1/admin/payment-webhook-events/webhook-event-1/investigation')
+      .post(
+        '/api/v1/admin/payment-webhook-events/webhook-event-1/investigation',
+      )
       .expect(201)
       .expect((response) => {
         expect(response.body.investigation.eventId).toBe('webhook-event-1');
@@ -374,6 +578,89 @@ describe('AdminController (integration)', () => {
 
     expect(adminService.startPaymentWebhookInvestigation).toHaveBeenCalledWith(
       'webhook-event-1',
+      expect.objectContaining({
+        user: expect.objectContaining({
+          id: 'ops-1',
+        }),
+      }),
+    );
+  });
+
+  it('replays stored payment webhook events through the versioned admin endpoint', async () => {
+    adminService.replayPaymentWebhookEvent.mockResolvedValue({
+      replay: {
+        replayed: true,
+        sourceEventId: 'webhook-event-1',
+        result: {
+          received: true,
+          event: 'payment.completed',
+          transactionRef: 'mobilis_123_ride-request-1',
+          provider: 'flutterwave',
+          providerReference: 'fw_ref_123',
+          reconciledAttemptCount: 1,
+          nextAction: 'persisted_idempotent_replay',
+        },
+      },
+    });
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/payment-webhook-events/webhook-event-1/replay')
+      .expect(201)
+      .expect((response) => {
+        expect(response.body.replay.sourceEventId).toBe('webhook-event-1');
+        expect(response.body.replay.result.reconciledAttemptCount).toBe(1);
+      });
+
+    expect(adminService.replayPaymentWebhookEvent).toHaveBeenCalledWith(
+      'webhook-event-1',
+      expect.objectContaining({
+        user: expect.objectContaining({
+          id: 'ops-1',
+        }),
+      }),
+    );
+  });
+
+  it('refunds payment attempts through the versioned admin endpoint', async () => {
+    adminService.refundPaymentAttempt.mockResolvedValue({
+      refund: {
+        action: 'refunded',
+        providerRefundReference: 'flutterwave_refund_payment-1',
+        paymentAttempt: {
+          id: 'payment-1',
+          provider: 'FLUTTERWAVE',
+          status: 'REFUNDED',
+          amount: 2400,
+          currency: 'XOF',
+          transactionRef: 'mobilis_123_ride-request-1',
+          providerReference: 'fw_ref_123',
+          updatedAt: '2026-05-01T08:05:00.000Z',
+        },
+        walletReversal: {
+          applied: true,
+          walletId: 'wallet-driver-1',
+          amount: 1968,
+          currency: 'XOF',
+        },
+      },
+    });
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/payment-attempts/payment-1/refund')
+      .send({
+        reason: 'Course annulee apres debit.',
+      })
+      .expect(201)
+      .expect((response) => {
+        expect(response.body.refund.action).toBe('refunded');
+        expect(response.body.refund.paymentAttempt.status).toBe('REFUNDED');
+      });
+
+    expect(adminService.refundPaymentAttempt).toHaveBeenCalledWith(
+      'payment-1',
+      {
+        reason: 'Course annulee apres debit.',
+      },
       expect.objectContaining({
         user: expect.objectContaining({
           id: 'ops-1',

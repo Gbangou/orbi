@@ -20,6 +20,8 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { ReportTripIncidentDto } from './dto/report-trip-incident.dto';
+import { ReportTripSosDto } from './dto/report-trip-sos.dto';
+import { RecordRoutePositionDto } from './dto/record-route-position.dto';
 import { VerifyPickupCodeDto } from './dto/verify-pickup-code.dto';
 import { UpdateTripStatusDto } from './dto/update-trip-status.dto';
 import { TripsService } from './trips.service';
@@ -69,6 +71,12 @@ export class TripsController {
     });
   }
 
+  @Get('shared/:shareToken')
+  @Version('1')
+  sharedTrip(@Param('shareToken') shareToken: string) {
+    return this.tripsService.getSharedTrip(shareToken);
+  }
+
   @Get(':tripId')
   @Version('1')
   @ApiBearerAuth('session-token')
@@ -97,6 +105,31 @@ export class TripsController {
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.tripsService.acceptRideRequest(auth, rideRequestId);
+  }
+
+  @Post(':tripId/share-link')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.RIDER, UserRole.DRIVER, UserRole.ADMIN, UserRole.OPS)
+  createShareLink(
+    @Param('tripId') tripId: string,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.tripsService.createShareLink(auth, tripId);
+  }
+
+  @Post(':tripId/route-position')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.RIDER, UserRole.DRIVER, UserRole.ADMIN, UserRole.OPS)
+  recordRoutePosition(
+    @Param('tripId') tripId: string,
+    @Body() payload: RecordRoutePositionDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.tripsService.recordRoutePosition(auth, tripId, payload);
   }
 
   @Post(':tripId/verify-pickup-code')
@@ -129,6 +162,19 @@ export class TripsController {
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.tripsService.reportIncident(auth, tripId, payload);
+  }
+
+  @Post(':tripId/sos')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.RIDER, UserRole.DRIVER, UserRole.ADMIN, UserRole.OPS)
+  triggerSafetySos(
+    @Param('tripId') tripId: string,
+    @Body() payload: ReportTripSosDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.tripsService.triggerSafetySos(auth, tripId, payload);
   }
 
   @Patch(':tripId/status')

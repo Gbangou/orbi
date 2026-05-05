@@ -1,0 +1,162 @@
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Prisma, SupportTicketStatus } from '@prisma/client';
+import { PrismaService } from '../../core/prisma/prisma.service';
+import { RealtimeService } from '../../core/realtime/realtime.service';
+import type { RequestAuthContext } from '../auth/auth.types';
+import type { SubmitMobileErrorReportsDto } from './dto/submit-mobile-error-reports.dto';
+
+@Injectable()
+export class MobileObservabilityService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtimeService: RealtimeService,
+  ) {}
+
+  async submitErrorReports(
+    auth: RequestAuthContext,
+    payload: SubmitMobileErrorReportsDto,
+  ) {
+    let acceptedReports = 0;
+    let ignoredReports = 0;
+    let duplicateReports = 0;
+    let supportTicketCount = 0;
+
+    for (const report of payload.reports ?? []) {
+      this.assertReportMatchesActor(auth, report.appRole);
+
+      if (!report.classification.reportable) {
+        ignoredReports += 1;
+        continue;
+      }
+
+      const existingAudit = await this.prisma.auditLog.findFirst({
+        where: {
+          userId: auth.user.id,
+          action: 'MOBILE_CLIENT_ERROR_REPORTED',
+          entityType: 'MOBILE_ERROR_REPORT',
+          entityId: report.id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (existingAudit) {
+        duplicateReports += 1;
+        continue;
+      }
+
+      await this.prisma.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'MOBILE_CLIENT_ERROR_REPORTED',
+          entityType: 'MOBILE_ERROR_REPORT',
+          entityId: report.id,
+          metadata: {
+            appRole: report.appRole,
+            appVersion: report.appVersion ?? null,
+            occurredAt: report.occurredAt,
+            fingerprint: report.fingerprint,
+            errorName: report.errorName,
+            errorMessage: report.errorMessage,
+            sessionId: auth.session.id,
+            classification: report.classification,
+            context: this.boundContext(report.context),
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+      acceptedReports += 1;
+
+      if (report.classification.severity === 'critical') {
+        const createdTicket = await this.ensureCriticalSupportTicket(
+          auth,
+          report,
+        );
+        if (createdTicket) {
+          supportTicketCount += 1;
+        }
+      }
+    }
+
+    if (acceptedReports > 0 || supportTicketCount > 0) {
+      this.realtimeService.publish({
+        channel: 'admin',
+        type: 'mobile.error-reports-submitted',
+        entityId: auth.user.id,
+        actorRole: auth.user.role,
+        payload: {
+          acceptedReports,
+          supportTicketCount,
+          appRole: auth.user.role,
+        },
+      });
+    }
+
+    return {
+      acceptedReports,
+      ignoredReports,
+      duplicateReports,
+      supportTicketCount,
+    };
+  }
+
+  private assertReportMatchesActor(
+    auth: RequestAuthContext,
+    appRole: 'rider' | 'driver',
+  ) {
+    if (
+      (auth.user.role === 'RIDER' && appRole !== 'rider') ||
+      (auth.user.role === 'DRIVER' && appRole !== 'driver')
+    ) {
+      throw new ForbiddenException(
+        'Mobile error report role does not match the authenticated session.',
+      );
+    }
+  }
+
+  private async ensureCriticalSupportTicket(
+    auth: RequestAuthContext,
+    report: SubmitMobileErrorReportsDto['reports'][number],
+  ) {
+    const subject = `Erreur mobile ${report.classification.code} ${report.fingerprint}`;
+    const existingTicket = await this.prisma.supportTicket.findFirst({
+      where: {
+        userId: auth.user.id,
+        subject,
+        status: {
+          in: [SupportTicketStatus.OPEN, SupportTicketStatus.IN_REVIEW],
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingTicket) {
+      return false;
+    }
+
+    await this.prisma.supportTicket.create({
+      data: {
+        userId: auth.user.id,
+        subject,
+        description: [
+          report.classification.userMessage,
+          `Surface: ${report.classification.surface}`,
+          `Owner: ${report.classification.owner}`,
+          `Retry: ${report.classification.retryPolicy}`,
+        ].join('\n'),
+        priority: 3,
+        status: SupportTicketStatus.OPEN,
+      },
+    });
+
+    return true;
+  }
+
+  private boundContext(
+    context?: Record<string, string | number | boolean | null>,
+  ) {
+    return Object.fromEntries(Object.entries(context ?? {}).slice(0, 16));
+  }
+}

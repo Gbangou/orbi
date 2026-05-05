@@ -19,6 +19,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { CreateSavedPlaceDto } from './dto/create-saved-place.dto';
+import { UpdateTrustedContactDto } from './dto/update-trusted-contact.dto';
 import { UpdateSavedPlaceDto } from './dto/update-saved-place.dto';
 import { RidersService } from './riders.service';
 
@@ -45,6 +46,17 @@ export class RidersController {
     @Body() payload: CreateSavedPlaceDto,
   ) {
     return this.ridersService.createSavedPlace(auth, payload);
+  }
+
+  @Patch('trusted-contact')
+  @Version('1')
+  @Roles(UserRole.RIDER)
+  @RequireProfile('rider')
+  updateTrustedContact(
+    @CurrentAuth() auth: RequestAuthContext,
+    @Body() payload: UpdateTrustedContactDto,
+  ) {
+    return this.ridersService.updateTrustedContact(auth, payload);
   }
 
   @Patch('saved-places/:savedPlaceId')

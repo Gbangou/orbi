@@ -105,7 +105,7 @@ describe('HealthService', () => {
     expect(result.infrastructure).toEqual({
       rateLimit: {
         configuredAdapter: 'in-memory',
-        strict: 'false',
+        strict: false,
         adapter: 'in-memory',
         sharedBackplane: false,
         degraded: false,
@@ -115,7 +115,7 @@ describe('HealthService', () => {
       realtime: {
         configuredAdapter: 'in-memory',
         adapter: 'in-memory',
-        strict: 'false',
+        strict: false,
         sharedBackplane: false,
         degraded: false,
         degradeReason: null,
@@ -123,6 +123,59 @@ describe('HealthService', () => {
         publishedEvents: 7,
       },
     });
+    expect(result.operations.productionReadiness).toEqual(
+      expect.objectContaining({
+        environment: 'test',
+        riskLevel: 'medium',
+        failedChecks: 0,
+        warningChecks: 4,
+      }),
+    );
+    expect(result.operations.productionReadiness.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'payment-webhook-secret',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'provider-refunds',
+          state: 'warn',
+        }),
+      ]),
+    );
+    expect(result.operations.serviceLevelObjectives).toEqual(
+      expect.objectContaining({
+        posture: 'healthy',
+        failingObjectives: 0,
+        warningObjectives: 0,
+      }),
+    );
+    expect(result.operations.serviceLevelObjectives.objectives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'critical-api-availability',
+          state: 'pass',
+          target: '>= 99.9%',
+        }),
+        expect.objectContaining({
+          id: 'realtime-critical-event-latency',
+          state: 'pass',
+        }),
+      ]),
+    );
+    expect(result.operations.serviceLevelObjectives.mobileErrorTaxonomy).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'MOB-PAYMENT-PROVIDER',
+          severity: 'critical',
+          owner: 'finance',
+        }),
+        expect.objectContaining({
+          code: 'MOB-SAFETY-INCIDENT',
+          owner: 'support',
+        }),
+      ]),
+    );
     expect(result.operations.driverReservationExpiry).toEqual({
       enabled: true,
       intervalMs: 5000,
@@ -149,6 +202,16 @@ describe('HealthService', () => {
 
     expect(result.status).toBe('degraded');
     expect(result.dependencies.database).toBe('down');
+    expect(result.operations.serviceLevelObjectives.posture).toBe('breached');
+    expect(result.operations.serviceLevelObjectives.objectives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'critical-api-availability',
+          state: 'fail',
+          burnRate: 'critical',
+        }),
+      ]),
+    );
   });
 
   it('reports readiness only when lifecycle and dependencies are healthy', async () => {
@@ -241,6 +304,12 @@ describe('HealthService', () => {
 
     expect(result.status).toBe('degraded');
     expect(result.dependencies.driverReservationExpiry).toBe('degraded');
+    expect(result.operations.serviceLevelObjectives).toEqual(
+      expect.objectContaining({
+        posture: 'breached',
+        failingObjectives: 1,
+      }),
+    );
   });
 
   it('reports degraded health when the reservation expiry sweeper is silent for too long', async () => {
@@ -279,5 +348,63 @@ describe('HealthService', () => {
 
     expect(result.status).toBe('degraded');
     expect(result.dependencies.driverReservationExpiry).toBe('degraded');
+  });
+
+  it('summarizes production readiness blockers without exposing secrets', async () => {
+    const { configService, prisma, rateLimitService, realtimeService, service } =
+      createService();
+
+    configService.get = jest.fn((key: string) => {
+      const values: Record<string, string | boolean> = {
+        'app.environment': 'production',
+        'infrastructure.rateLimitAdapter': 'redis',
+        'infrastructure.rateLimit.strict': true,
+        'infrastructure.realtimeAdapter': 'redis',
+        'infrastructure.realtime.strict': true,
+        'payments.provider': 'flutterwave',
+        'payments.refunds.mode': 'provider',
+        'payments.webhookSecret': 'mobilis_dev_webhook_secret',
+        'documents.signingSecret': 'mobilis_dev_document_secret',
+        'payments.defaultRedirectUrl': 'http://localhost:8081/book',
+        'payments.defaultWebhookUrl':
+          'http://localhost:3000/api/v1/payments/webhooks',
+      };
+
+      return values[key];
+    });
+    prisma.$queryRaw.mockResolvedValue([{ '?column?': 1 }]);
+    rateLimitService.snapshot.mockReturnValue({
+      adapter: 'in-memory',
+      sharedBackplane: false,
+      degraded: true,
+      degradeReason: 'redis rate limit store unavailable',
+      trackedKeys: 2,
+    });
+    realtimeService.snapshot.mockReturnValue({
+      adapter: 'in-memory',
+      sharedBackplane: false,
+      degraded: true,
+      degradeReason: 'redis transport unavailable',
+      activeStreams: 1,
+      publishedEvents: 4,
+    });
+
+    const result = await service.check();
+
+    expect(result.operations.productionReadiness.riskLevel).toBe('high');
+    expect(result.operations.productionReadiness.failedChecks).toBe(6);
+    expect(result.operations.productionReadiness.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'payment-webhook-secret',
+          state: 'fail',
+          detail: expect.not.stringContaining('mobilis_dev_webhook_secret'),
+        }),
+        expect.objectContaining({
+          id: 'provider-refunds',
+          state: 'fail',
+        }),
+      ]),
+    );
   });
 });

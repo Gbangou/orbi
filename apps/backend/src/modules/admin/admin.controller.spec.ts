@@ -8,14 +8,24 @@ describe('AdminController', () => {
       previewOverview: jest.fn(),
       overview: jest.fn(),
       liveOps: jest.fn(),
+      launchReadiness: jest.fn(),
+      acknowledgeLaunchReadinessAction: jest.fn(),
       supportTickets: jest.fn(),
       driverOnboardingQueue: jest.fn(),
+      driverWallets: jest.fn(),
+      prepareDriverWalletPayout: jest.fn(),
+      markDriverPayoutPaid: jest.fn(),
+      driverPayoutSettlementCsv: jest.fn(),
+      driverPayoutSettlementPdf: jest.fn(),
       featureFlags: jest.fn(),
       dispatchSettings: jest.fn(),
       pricingCalibration: jest.fn(),
       paymentWebhookEvents: jest.fn(),
       paymentWebhookEventDetail: jest.fn(),
       startPaymentWebhookInvestigation: jest.fn(),
+      replayPaymentWebhookEvent: jest.fn(),
+      verifyPaymentAttemptWithProvider: jest.fn(),
+      refundPaymentAttempt: jest.fn(),
       updateDispatchSettings: jest.fn(),
       updateSupportTicket: jest.fn(),
       updateDriverOnboardingReview: jest.fn(),
@@ -99,6 +109,53 @@ describe('AdminController', () => {
     );
   });
 
+  it('delegates driver wallet reads to the admin service', async () => {
+    const { adminService, controller } = createController();
+    const query = {
+      page: 1,
+      pageSize: 10,
+    };
+
+    await controller.driverWallets(query as never);
+
+    expect(adminService.driverWallets).toHaveBeenCalledWith(query);
+  });
+
+  it('delegates driver payout preparation with notes and auth', async () => {
+    const { adminService, controller } = createController();
+    const payload = { notes: 'Paiement terrain valide.' };
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.prepareDriverWalletPayout(
+      'wallet-1',
+      payload,
+      auth as never,
+    );
+
+    expect(adminService.prepareDriverWalletPayout).toHaveBeenCalledWith(
+      'wallet-1',
+      payload,
+      auth,
+    );
+  });
+
+  it('delegates driver payout CSV settlement exports with auth', async () => {
+    const { adminService, controller } = createController();
+    const query = { status: 'PREPARED' };
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.driverPayoutSettlementCsv(query as never, auth as never);
+
+    expect(adminService.driverPayoutSettlementCsv).toHaveBeenCalledWith(
+      query,
+      auth,
+    );
+  });
+
   it('delegates dispatch settings updates with the current auth context', async () => {
     const { adminService, controller } = createController();
     const auth = {
@@ -123,6 +180,35 @@ describe('AdminController', () => {
     await controller.pricingCalibration();
 
     expect(adminService.pricingCalibration).toHaveBeenCalled();
+  });
+
+  it('delegates launch readiness reads to the admin service', async () => {
+    const { adminService, controller } = createController();
+
+    await controller.launchReadiness();
+
+    expect(adminService.launchReadiness).toHaveBeenCalled();
+  });
+
+  it('delegates launch readiness action acknowledgements with auth', async () => {
+    const { adminService, controller } = createController();
+    const payload = {
+      owner: 'engineering',
+      notes: 'Redis backplane owner assigned.',
+    };
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.acknowledgeLaunchReadinessAction(
+      'runtime-production-readiness',
+      payload as never,
+      auth as never,
+    );
+
+    expect(
+      adminService.acknowledgeLaunchReadinessAction,
+    ).toHaveBeenCalledWith('runtime-production-readiness', payload, auth);
   });
 
   it('delegates payment webhook event journal reads to the admin service', async () => {
@@ -160,6 +246,58 @@ describe('AdminController', () => {
     );
 
     expect(adminService.startPaymentWebhookInvestigation).toHaveBeenCalledWith(
+      'webhook-event-1',
+      auth,
+    );
+  });
+
+  it('delegates provider payment verification with the current auth context', async () => {
+    const { adminService, controller } = createController();
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.verifyPaymentAttemptWithProvider(
+      'payment-1',
+      auth as never,
+    );
+
+    expect(adminService.verifyPaymentAttemptWithProvider).toHaveBeenCalledWith(
+      'payment-1',
+      auth,
+    );
+  });
+
+  it('delegates payment refunds with payload and auth context', async () => {
+    const { adminService, controller } = createController();
+    const payload = {
+      reason: 'Course annulee apres debit.',
+    };
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.refundPaymentAttempt('payment-1', payload, auth as never);
+
+    expect(adminService.refundPaymentAttempt).toHaveBeenCalledWith(
+      'payment-1',
+      payload,
+      auth,
+    );
+  });
+
+  it('delegates payment webhook replays with the current auth context', async () => {
+    const { adminService, controller } = createController();
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.replayPaymentWebhookEvent(
+      'webhook-event-1',
+      auth as never,
+    );
+
+    expect(adminService.replayPaymentWebhookEvent).toHaveBeenCalledWith(
       'webhook-event-1',
       auth,
     );

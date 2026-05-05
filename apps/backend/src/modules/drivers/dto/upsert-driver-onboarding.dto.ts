@@ -139,6 +139,30 @@ class DriverDocumentArtifactDto {
   @IsOptional()
   @IsDateString()
   expiresAt?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5_000_000)
+  sizeBytes?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-f0-9]{64}$/i, {
+    message: 'SHA-256 digest must be a 64 character hexadecimal string.',
+  })
+  sha256?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  @Matches(/^[a-z0-9_.:-]{2,40}$/i, {
+    message: 'Upload source must be a compact client or storage identifier.',
+  })
+  uploadSource?: string;
 }
 
 export class UpsertDriverOnboardingDto {
