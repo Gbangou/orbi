@@ -105,17 +105,26 @@ export const apiRoutes = {
     sessions: '/auth/sessions',
     signOut: '/auth/sign-out',
   },
+  mobile: {
+    errorReports: '/mobile/error-reports',
+  },
   admin: {
     preview: '/admin/preview',
     overview: '/admin/overview',
     liveOps: '/admin/live-ops',
+    launchReadiness: '/admin/launch-readiness',
     stream: '/admin/stream',
     healthIncidents: '/admin/health-incidents',
     supportTickets: '/admin/support-tickets',
+    driverWallets: '/admin/driver-wallets',
+    driverPayouts: '/admin/driver-payouts',
+    driverPayoutSettlementCsv: '/admin/driver-payouts/settlement.csv',
+    driverPayoutSettlementPdf: '/admin/driver-payouts/settlement.pdf',
     featureFlags: '/admin/feature-flags',
     dispatchSettings: '/admin/dispatch-settings',
     pricingCalibration: '/admin/pricing-calibration',
     paymentWebhookEvents: '/admin/payment-webhook-events',
+    paymentAttempts: '/admin/payment-attempts',
     driverOnboarding: '/admin/driver-onboarding',
     driverOnboardingQueue: '/admin/driver-onboarding-queue',
   },
@@ -123,6 +132,7 @@ export const apiRoutes = {
     me: '/riders/me',
     overview: '/riders/overview',
     savedPlaces: '/riders/saved-places',
+    trustedContact: '/riders/trusted-contact',
   },
   drivers: {
     root: '/drivers',
@@ -147,9 +157,12 @@ export const apiRoutes = {
     dashboard: '/trips/dashboard',
     mine: '/trips/mine',
     stream: '/trips/stream',
+    shared: '/trips/shared',
     acceptRideRequest: '/trips/accept',
     verifyPickupCode: '/trips',
+    shareLink: '/trips',
     reportIncident: '/trips',
+    safetySos: '/trips',
   },
   pricing: {
     rules: '/pricing/rules',
@@ -207,6 +220,325 @@ export function extractApiErrorMessage(
   }
 
   return fallback;
+}
+
+export type MobilisClientErrorSurface =
+  | 'auth'
+  | 'booking'
+  | 'payments'
+  | 'active-trip'
+  | 'safety'
+  | 'profile'
+  | 'driver-availability'
+  | 'network'
+  | 'unknown';
+
+export type MobilisClientErrorClassification = {
+  code:
+    | 'MOB-AUTH-SESSION'
+    | 'MOB-BOOKING-DISPATCH'
+    | 'MOB-PAYMENT-PROVIDER'
+    | 'MOB-REALTIME-DEGRADED'
+    | 'MOB-SAFETY-INCIDENT'
+    | 'MOB-NETWORK-OFFLINE'
+    | 'MOB-VALIDATION-INPUT'
+    | 'MOB-GENERIC-API';
+  surface: MobilisClientErrorSurface;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  owner: 'engineering' | 'ops' | 'support' | 'finance';
+  retryPolicy:
+    | 'silent-refresh-once-then-relogin'
+    | 'idempotent-retry-with-visible-status'
+    | 'server-reconcile-before-client-retry'
+    | 'fallback-polling-with-last-known-state'
+    | 'store-local-and-escalate-to-support'
+    | 'retry-when-network-recovers'
+    | 'fix-input-before-retry'
+    | 'manual-refresh';
+  userMessage: string;
+  shouldClearSessionToken: boolean;
+  shouldNavigateToAuth: boolean;
+  reportable: boolean;
+};
+
+export type MobilisClientAppRole = 'rider' | 'driver';
+
+export type MobilisClientErrorReport = {
+  id: string;
+  occurredAt: string;
+  appRole: MobilisClientAppRole;
+  appVersion?: string;
+  classification: MobilisClientErrorClassification;
+  fingerprint: string;
+  errorName: string;
+  errorMessage: string;
+  context: Record<string, string | number | boolean | null>;
+};
+
+export type SubmitMobileErrorReportsPayload = {
+  reports: MobilisClientErrorReport[];
+};
+
+export type SubmitMobileErrorReportsResponse = {
+  acceptedReports: number;
+  ignoredReports: number;
+  duplicateReports: number;
+  supportTicketCount: number;
+};
+
+export function classifyMobilisClientError(
+  error: unknown,
+  input: {
+    surface?: MobilisClientErrorSurface;
+    fallbackMessage?: string;
+  } = {},
+): MobilisClientErrorClassification {
+  const surface = input.surface ?? inferMobilisErrorSurface(error);
+  const normalizedMessage = normalizeMobilisErrorMessage(error);
+
+  if (isMobilisApiError(error) && [401, 403].includes(error.status)) {
+    return {
+      code: 'MOB-AUTH-SESSION',
+      surface: 'auth',
+      severity: 'high',
+      owner: 'engineering',
+      retryPolicy: 'silent-refresh-once-then-relogin',
+      userMessage:
+        'Session expiree. Reconnecte-toi pour continuer sans melanger les actions.',
+      shouldClearSessionToken: true,
+      shouldNavigateToAuth: true,
+      reportable: true,
+    };
+  }
+
+  if (isLikelyMobilisNetworkError(error)) {
+    return {
+      code: 'MOB-NETWORK-OFFLINE',
+      surface: 'network',
+      severity: 'medium',
+      owner: 'engineering',
+      retryPolicy: 'retry-when-network-recovers',
+      userMessage:
+        'Connexion instable. Mobilis garde le dernier etat connu pendant la reprise reseau.',
+      shouldClearSessionToken: false,
+      shouldNavigateToAuth: false,
+      reportable: false,
+    };
+  }
+
+  if (isMobilisApiError(error) && error.status === 400) {
+    return {
+      code: 'MOB-VALIDATION-INPUT',
+      surface,
+      severity: 'low',
+      owner: surface === 'payments' ? 'finance' : 'ops',
+      retryPolicy: 'fix-input-before-retry',
+      userMessage: extractApiErrorMessage(
+        error,
+        input.fallbackMessage ?? 'Certaines informations doivent etre corrigees.',
+      ),
+      shouldClearSessionToken: false,
+      shouldNavigateToAuth: false,
+      reportable: false,
+    };
+  }
+
+  if (surface === 'booking') {
+    return {
+      code: 'MOB-BOOKING-DISPATCH',
+      surface,
+      severity: 'critical',
+      owner: 'ops',
+      retryPolicy: 'idempotent-retry-with-visible-status',
+      userMessage:
+        input.fallbackMessage ??
+        'La demande est en verification. Aucun double trajet ne sera cree.',
+      shouldClearSessionToken: false,
+      shouldNavigateToAuth: false,
+      reportable: true,
+    };
+  }
+
+  if (surface === 'payments') {
+    return {
+      code: 'MOB-PAYMENT-PROVIDER',
+      surface,
+      severity: 'critical',
+      owner: 'finance',
+      retryPolicy: 'server-reconcile-before-client-retry',
+      userMessage:
+        input.fallbackMessage ??
+        'Paiement en verification. Le support voit deja la transaction.',
+      shouldClearSessionToken: false,
+      shouldNavigateToAuth: false,
+      reportable: true,
+    };
+  }
+
+  if (surface === 'safety' || normalizedMessage.includes('sos')) {
+    return {
+      code: 'MOB-SAFETY-INCIDENT',
+      surface: 'safety',
+      severity: 'critical',
+      owner: 'support',
+      retryPolicy: 'store-local-and-escalate-to-support',
+      userMessage:
+        input.fallbackMessage ??
+        'Alerte securite en reprise. Garde le telephone disponible et reessaie si besoin.',
+      shouldClearSessionToken: false,
+      shouldNavigateToAuth: false,
+      reportable: true,
+    };
+  }
+
+  if (surface === 'active-trip' || normalizedMessage.includes('realtime')) {
+    return {
+      code: 'MOB-REALTIME-DEGRADED',
+      surface: 'active-trip',
+      severity: 'medium',
+      owner: 'engineering',
+      retryPolicy: 'fallback-polling-with-last-known-state',
+      userMessage:
+        input.fallbackMessage ??
+        'Connexion live instable. Le trajet reste suivi par Mobilis.',
+      shouldClearSessionToken: false,
+      shouldNavigateToAuth: false,
+      reportable: true,
+    };
+  }
+
+  return {
+    code: 'MOB-GENERIC-API',
+    surface,
+    severity: 'medium',
+    owner: 'engineering',
+    retryPolicy: 'manual-refresh',
+    userMessage: extractApiErrorMessage(
+      error,
+      input.fallbackMessage ?? 'Une erreur reseau ou serveur est survenue.',
+    ),
+    shouldClearSessionToken: false,
+    shouldNavigateToAuth: false,
+    reportable: true,
+  };
+}
+
+export function createMobilisClientErrorReport(
+  error: unknown,
+  input: {
+    appRole: MobilisClientAppRole;
+    appVersion?: string;
+    surface?: MobilisClientErrorSurface;
+    fallbackMessage?: string;
+    occurredAt?: string;
+    context?: Record<string, unknown>;
+  },
+): MobilisClientErrorReport | null {
+  const classification = classifyMobilisClientError(error, {
+    surface: input.surface,
+    fallbackMessage: input.fallbackMessage,
+  });
+
+  return createMobilisClientErrorReportFromClassification(error, {
+    appRole: input.appRole,
+    appVersion: input.appVersion,
+    classification,
+    occurredAt: input.occurredAt,
+    context: input.context,
+  });
+}
+
+export function createMobilisClientErrorReportFromClassification(
+  error: unknown,
+  input: {
+    appRole: MobilisClientAppRole;
+    appVersion?: string;
+    classification: MobilisClientErrorClassification;
+    occurredAt?: string;
+    context?: Record<string, unknown>;
+  },
+): MobilisClientErrorReport | null {
+  if (!input.classification.reportable) {
+    return null;
+  }
+
+  const occurredAt = input.occurredAt ?? new Date().toISOString();
+  const errorName = error instanceof Error ? error.name : typeof error;
+  const errorMessage = sanitizeMobilisErrorReportValue(
+    extractApiErrorMessage(error, input.classification.userMessage),
+    220,
+  );
+  const fingerprint = buildMobilisClientErrorFingerprint({
+    appRole: input.appRole,
+    code: input.classification.code,
+    surface: input.classification.surface,
+    message: errorMessage,
+  });
+
+  return {
+    id: `moberr_${occurredAt.replace(/[^0-9]/g, '').slice(0, 14)}_${fingerprint}`,
+    occurredAt,
+    appRole: input.appRole,
+    appVersion: input.appVersion,
+    classification: input.classification,
+    fingerprint,
+    errorName: sanitizeMobilisErrorReportValue(errorName, 80),
+    errorMessage,
+    context: sanitizeMobilisErrorReportContext(input.context),
+  };
+}
+
+function sanitizeMobilisErrorReportContext(context?: Record<string, unknown>) {
+  const sanitized: Record<string, string | number | boolean | null> = {};
+
+  if (!context) {
+    return sanitized;
+  }
+
+  for (const [key, value] of Object.entries(context).slice(0, 16)) {
+    const cleanKey = sanitizeMobilisErrorReportValue(key, 48);
+
+    if (!cleanKey) {
+      continue;
+    }
+
+    if (typeof value === 'string') {
+      sanitized[cleanKey] = sanitizeMobilisErrorReportValue(value, 160);
+    } else if (typeof value === 'number' && Number.isFinite(value)) {
+      sanitized[cleanKey] = value;
+    } else if (typeof value === 'boolean' || value === null) {
+      sanitized[cleanKey] = value;
+    }
+  }
+
+  return sanitized;
+}
+
+function sanitizeMobilisErrorReportValue(value: string, maxLength: number) {
+  return value
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
+    .replace(/\+?\d[\d\s().-]{7,}\d/g, '[phone]')
+    .replace(/bearer\s+[a-z0-9._-]+/gi, 'Bearer [token]')
+    .replace(/session(token)?[=:]\s*[a-z0-9._-]+/gi, 'sessionToken=[token]')
+    .slice(0, maxLength);
+}
+
+function buildMobilisClientErrorFingerprint(input: {
+  appRole: MobilisClientAppRole;
+  code: MobilisClientErrorClassification['code'];
+  surface: MobilisClientErrorSurface;
+  message: string;
+}) {
+  const seed = `${input.appRole}|${input.code}|${input.surface}|${input.message
+    .toLowerCase()
+    .slice(0, 80)}`;
+  let hash = 5381;
+
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 33) ^ seed.charCodeAt(index);
+  }
+
+  return (hash >>> 0).toString(36);
 }
 
 export class MobilisApiClient {
@@ -275,6 +607,81 @@ export class MobilisApiClient {
       fetcher: this.fetcher,
     });
   }
+}
+
+function normalizeMobilisErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message.toLowerCase();
+  }
+
+  return '';
+}
+
+function isLikelyMobilisNetworkError(error: unknown) {
+  if (error instanceof TypeError) {
+    return true;
+  }
+
+  const message = normalizeMobilisErrorMessage(error);
+
+  return (
+    message.includes('network request failed') ||
+    message.includes('fetch failed') ||
+    message.includes('load failed') ||
+    message.includes('networkerror')
+  );
+}
+
+function inferMobilisErrorSurface(error: unknown): MobilisClientErrorSurface {
+  const message = normalizeMobilisErrorMessage(error);
+
+  if (
+    message.includes('session') ||
+    message.includes('token') ||
+    message.includes('unauthorized')
+  ) {
+    return 'auth';
+  }
+
+  if (
+    message.includes('payment') ||
+    message.includes('paiement') ||
+    message.includes('webhook') ||
+    message.includes('refund')
+  ) {
+    return 'payments';
+  }
+
+  if (
+    message.includes('ride request') ||
+    message.includes('reservation') ||
+    message.includes('booking') ||
+    message.includes('dispatch')
+  ) {
+    return 'booking';
+  }
+
+  if (
+    message.includes('trip') ||
+    message.includes('trajet') ||
+    message.includes('realtime')
+  ) {
+    return 'active-trip';
+  }
+
+  if (
+    message.includes('sos') ||
+    message.includes('incident') ||
+    message.includes('safety')
+  ) {
+    return 'safety';
+  }
+
+  if (isLikelyMobilisNetworkError(error)) {
+    return 'network';
+  }
+
+  return 'unknown';
 }
 
 export function createMobilisApiClient(baseUrl: string, init?: Omit<ApiClientOptions, 'baseUrl'>) {
@@ -516,6 +923,8 @@ export type AdminLiveOpsResponse = {
       attempts: number;
       succeeded: number;
       failed: number;
+      refundPending: number;
+      refunded: number;
       reconciled: number;
       webhookEvents: number;
       webhookConflicts: number;
@@ -536,6 +945,13 @@ export type AdminLiveOpsResponse = {
     pickupCodeIssued: boolean;
     hasIncident: boolean;
     incidentCount: number;
+    routeMonitoring: {
+      state: 'clear' | 'warning' | 'critical' | 'unknown';
+      alertCount: number;
+      lastAlertType: string | null;
+      lastAlertAt: string | null;
+      lastPositionAt: string | null;
+    };
     lastEvent: {
       label: string;
       createdAt: string;
@@ -547,6 +963,103 @@ export type AdminLiveOpsResponse = {
     }>;
   }>;
   alerts: string[];
+};
+
+export type AdminLaunchReadinessResponse = {
+  generatedAt: string;
+  environment: string;
+  decision: {
+    state: 'approved' | 'limited' | 'blocked';
+    label: string;
+    detail: string;
+  };
+  summary: {
+    failedChecks: number;
+    warningChecks: number;
+    passedChecks: number;
+    totalChecks: number;
+  };
+  checks: Array<{
+    id: string;
+    label: string;
+    state: 'pass' | 'warn' | 'fail';
+    detail: string;
+  }>;
+  nextActions?: Array<{
+    checkId: string;
+    severity: 'warning' | 'blocking';
+    owner: 'ops' | 'engineering' | 'support' | 'finance';
+    action: string;
+    runbookAnchor: string;
+  }>;
+  acknowledgements?: Array<{
+    checkId: string;
+    owner: 'ops' | 'engineering' | 'support' | 'finance';
+    severity: 'warning' | 'blocking';
+    acknowledgedAt: string;
+    actor: {
+      id: string;
+      name: string | null;
+      role: string | null;
+    };
+    notes: string | null;
+  }>;
+  actionSummary?: {
+    totalActions: number;
+    acknowledgedActions: number;
+    remainingActions: number;
+    blockingActions: number;
+    acknowledgedBlockingActions: number;
+    remainingBlockingActions: number;
+    completionRate: number;
+  };
+  safetyBenchmark?: {
+    summary: {
+      totalCapabilities: number;
+      activeCapabilities: number;
+      partialCapabilities: number;
+      plannedCapabilities: number;
+      criticalGaps: number;
+      competitorParityRate: number;
+    };
+    capabilities: Array<{
+      id: string;
+      label: string;
+      status: 'active' | 'partial' | 'planned';
+      priority: 'critical' | 'high' | 'medium';
+      mobilisSignal: string;
+      competitorSignal: string;
+      nextStep: string;
+    }>;
+  };
+  fieldQuality?: {
+    score: number;
+    state: 'excellent' | 'watch' | 'blocked';
+    blockedSignals: number;
+    watchSignals: number;
+    signals: Array<{
+      id: string;
+      label: string;
+      score: number;
+      state: 'excellent' | 'watch' | 'blocked';
+      owner: 'ops' | 'engineering' | 'support' | 'finance';
+      competitorReference: string;
+      mobilisSignal: string;
+      nextStep: string;
+    }>;
+  };
+  productionReadiness: NonNullable<
+    HealthCheckResponse['operations']['productionReadiness']
+  >;
+};
+
+export type AdminLaunchReadinessActionAcknowledgementResponse = {
+  acknowledgement: {
+    checkId: string;
+    owner: 'ops' | 'engineering' | 'support' | 'finance';
+    severity: 'warning' | 'blocking';
+    acknowledgedAt: string;
+  };
 };
 
 export type SupportTicketQueueResponse = {
@@ -573,6 +1086,100 @@ export type SupportTicketUpdateResponse = {
   };
 };
 
+export type AdminDriverWalletsResponse = {
+  summary: {
+    walletCount: number;
+    totalBalance: number;
+    totalPayouts: number;
+    totalCommission: number;
+    recoveryWalletCount: number;
+    totalRecoveryDue: number;
+  };
+  wallets: Array<{
+    id: string;
+    driverUserId: string;
+    driverName: string;
+    driverStatus: string | null;
+    verificationStatus: string | null;
+    currency: string;
+    balance: number;
+    recoveryDue: number;
+    isLocked: boolean;
+    payoutTotal: number;
+    commissionTotal: number;
+    lastActivityAt: string;
+    preparedPayout: {
+      id: string;
+      amount: number;
+      currency: string;
+      status: 'PREPARED' | 'PAID' | 'CANCELLED';
+      reference: string;
+      notes: string | null;
+      preparedAt: string;
+    } | null;
+    recentPayouts: Array<{
+      id: string;
+      amount: number;
+      currency: string;
+      status: 'PREPARED' | 'PAID' | 'CANCELLED';
+      reference: string;
+      notes: string | null;
+      preparedAt: string;
+      paidAt: string | null;
+    }>;
+    recentTransactions: Array<{
+      id: string;
+      type: 'CREDIT' | 'DEBIT' | 'ADJUSTMENT' | 'PAYOUT' | 'REFUND';
+      amount: number;
+      reference: string | null;
+      description: string | null;
+      createdAt: string;
+      paymentAttemptId: string | null;
+      provider: string | null;
+      commissionAmount: number;
+    }>;
+  }>;
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
+};
+
+export type AdminDriverPayoutResponse = {
+  action: 'prepared' | 'existing_prepared_payout' | 'paid' | 'already_paid' | 'already_finalized';
+  payout: {
+    id: string;
+    walletId: string;
+    amount: number;
+    currency: string;
+    status: 'PREPARED' | 'PAID' | 'CANCELLED';
+    reference: string;
+    notes: string | null;
+    preparedAt: string;
+    paidAt: string | null;
+  };
+};
+
+export type AdminDriverWalletRecoveryAdjustmentResponse = {
+  action: 'recorded' | 'already_recorded';
+  wallet: {
+    id: string;
+    balance: number;
+    currency: string;
+    recoveryDue: number;
+  };
+  transaction: {
+    id: string;
+    type: 'ADJUSTMENT';
+    amount: number;
+    reference: string | null;
+    description: string | null;
+    createdAt: string;
+  };
+};
+
 export type AdminPaymentWebhookEventsResponse = {
   events: Array<{
     id: string;
@@ -586,6 +1193,21 @@ export type AdminPaymentWebhookEventsResponse = {
     rawBodyHash: string | null;
     payloadPreview: Record<string, unknown>;
     paymentAttemptId: string | null;
+    paymentAttempt: {
+      status:
+        | 'INITIATED'
+        | 'PENDING'
+        | 'SUCCEEDED'
+        | 'FAILED'
+        | 'CANCELLED'
+        | 'REFUND_PENDING'
+        | 'REFUNDED';
+      amount: number;
+      currency: string;
+      rideRequestId: string;
+      failureReason: string | null;
+      updatedAt: string;
+    } | null;
     userId: string | null;
     createdAt: string;
   }>;
@@ -594,6 +1216,11 @@ export type AdminPaymentWebhookEventsResponse = {
     pageSize: number;
     total: number;
     pageCount: number;
+  };
+  summary: {
+    paymentEvents: number;
+    refundEvents: number;
+    ignoredEvents: number;
   };
 };
 
@@ -623,6 +1250,64 @@ export type AdminPaymentWebhookInvestigationResponse = {
   };
 };
 
+export type AdminPaymentWebhookReplayResponse = {
+  replay: {
+    replayed: true;
+    sourceEventId: string;
+    result: {
+      received: true;
+      event: string;
+      transactionRef: string | null;
+      provider: 'flutterwave' | 'cinetpay';
+      providerReference?: string;
+      reconciledAttemptCount: number;
+      nextAction: string;
+    };
+  };
+};
+
+export type AdminPaymentAttemptProviderVerificationResponse = {
+  verification: {
+    verified: true;
+    paymentAttemptId: string;
+    provider: 'flutterwave' | 'cinetpay';
+    transactionRef: string;
+    result: {
+      received: true;
+      event: string;
+      transactionRef: string | null;
+      provider: 'flutterwave' | 'cinetpay';
+      providerReference?: string;
+      reconciledAttemptCount: number;
+      nextAction: string;
+    };
+  };
+};
+
+export type AdminPaymentAttemptRefundResponse = {
+  refund: {
+    action: 'refunded' | 'refund_pending' | 'already_refunded';
+    providerRefundReference: string;
+    paymentAttempt: {
+      id: string;
+      provider: 'FLUTTERWAVE' | 'CINETPAY';
+      status: 'REFUND_PENDING' | 'REFUNDED';
+      amount: number;
+      currency: string;
+      transactionRef: string;
+      providerReference: string | null;
+      updatedAt: string;
+    };
+    walletReversal: {
+      applied: boolean;
+      reason?: string;
+      walletId?: string;
+      amount?: number;
+      currency?: string;
+    };
+  };
+};
+
 export type DriverOnboardingQueueResponse = {
   drivers: Array<{
     id: string;
@@ -646,7 +1331,44 @@ export type DriverOnboardingQueueResponse = {
       approved: number;
       pending: number;
       rejected: number;
+      integrityWarnings: number;
+      averageIntegrityScore: number;
+      missingRequired: number;
     };
+    decisionGuidance: {
+      level: 'approve' | 'review' | 'resubmit';
+      recommendedStatus: 'APPROVED' | 'UNDER_REVIEW' | 'CHANGES_REQUESTED';
+      label: string;
+      detail: string;
+      blockers: string[];
+    };
+    reviewHistory: Array<{
+      id: string;
+      status:
+        | 'SUBMITTED'
+        | 'UNDER_REVIEW'
+        | 'APPROVED'
+        | 'REJECTED'
+        | 'CHANGES_REQUESTED';
+      actorName: string;
+      decisionReason: string | null;
+      createdAt: string;
+      decisionGuidance: {
+        level: 'approve' | 'review' | 'resubmit';
+        recommendedStatus: 'APPROVED' | 'UNDER_REVIEW' | 'CHANGES_REQUESTED';
+        label: string;
+        detail: string;
+        blockers: string[];
+      } | null;
+      documentSummary: {
+        total: number;
+        approved: number;
+        pending: number;
+        rejected: number;
+        missingRequired: number;
+        integrityWarnings: number;
+      } | null;
+    }>;
     documents: Array<{
       id: string;
       type:
@@ -660,6 +1382,24 @@ export type DriverOnboardingQueueResponse = {
       uploadedAt: string;
       expiresAt: string | null;
       rejectionReason: string | null;
+      integrity: {
+        state: 'complete' | 'partial' | 'missing';
+        score: number;
+        sizeBytes: number | null;
+        sha256: string | null;
+        uploadSource: string | null;
+        capturedAt: string | null;
+        guidance: {
+          level: 'clear' | 'review' | 'resubmit';
+          label: string;
+          detail: string;
+        };
+        checks: Array<{
+          id: string;
+          label: string;
+          state: 'pass' | 'warn';
+        }>;
+      };
     }>;
   }>;
   meta: {
@@ -878,6 +1618,41 @@ export type HealthCheckResponse = {
     };
   };
   operations: {
+    productionReadiness?: {
+      environment: string;
+      riskLevel: 'low' | 'medium' | 'high';
+      failedChecks: number;
+      warningChecks: number;
+      checks: Array<{
+        id: string;
+        label: string;
+        state: 'pass' | 'warn' | 'fail';
+        detail: string;
+      }>;
+    };
+    serviceLevelObjectives?: {
+      posture: 'healthy' | 'watch' | 'breached';
+      failingObjectives: number;
+      warningObjectives: number;
+      objectives: Array<{
+        id: string;
+        label: string;
+        target: string;
+        window: string;
+        owner: 'engineering' | 'ops' | 'support' | 'finance';
+        state: 'pass' | 'warn' | 'fail';
+        currentSignal: string;
+        burnRate: 'normal' | 'elevated' | 'critical';
+      }>;
+      mobileErrorTaxonomy: Array<{
+        code: string;
+        surface: string;
+        severity: 'medium' | 'high' | 'critical';
+        owner: 'engineering' | 'ops' | 'support' | 'finance';
+        retryPolicy: string;
+        userMessage: string;
+      }>;
+    };
     driverReservationExpiry: {
       enabled: boolean;
       intervalMs: number;
@@ -924,6 +1699,11 @@ export type DriverDocumentUploadLinksResponse = {
     headers: {
       'content-type': string;
     };
+    constraints: {
+      allowedMimeTypes: string[];
+      allowedExtensions: string[];
+      maxBytes: number;
+    };
   }>;
 };
 
@@ -947,6 +1727,25 @@ export type TripIncidentResponse = {
     incidentType: string;
     reportedByRole: string;
     status: string;
+    voluntaryEvidence: {
+      declared: boolean;
+      type: 'AUDIO' | 'PHOTO' | 'VIDEO' | 'TEXT_NOTE' | null;
+      retentionHours: number | null;
+      storagePolicy: string | null;
+    };
+  };
+};
+
+export type TripSafetySosResponse = {
+  sos: {
+    tripId: string;
+    ticketId: string;
+    priority: number;
+    incidentType: 'SOS_TRIGGERED';
+    reportedByRole: string;
+    status: string;
+    localEmergencyNumber: string;
+    locationCaptured: boolean;
   };
 };
 
@@ -966,6 +1765,12 @@ export type RiderProfileResponse = {
     phoneNumber: string | null;
     preferredTier: ApiServiceTier | null;
     emergencyPhone: string | null;
+    trustedContact: {
+      phoneNumber: string | null;
+      shareMode: 'DISABLED' | 'MANUAL' | 'NIGHT' | 'ALL_TRIPS';
+      status: 'MISSING' | 'READY';
+      safetyNote: string;
+    };
     savedPlaces: Array<{
       id: string;
       label: string;
@@ -986,6 +1791,16 @@ export type SavedPlaceMutationResponse = {
   savedPlace: RiderProfileResponse['profile']['savedPlaces'][number];
 };
 
+export type TrustedContactMutationResponse = {
+  trustedContact: {
+    riderProfileId: string;
+    phoneNumber: string | null;
+    shareMode: 'DISABLED' | 'MANUAL' | 'NIGHT' | 'ALL_TRIPS';
+    status: 'MISSING' | 'READY';
+    safetyNote: string;
+  };
+};
+
 export type SavedPlaceDeleteResponse = {
   deleted: boolean;
   savedPlaceId: string;
@@ -1004,6 +1819,7 @@ export type DriverProfileResponse = {
     currentLongitude?: number | null;
     averageRating: number | null;
     completedTripsCount: number;
+    fatigue: DriverFatigueStatus;
     onboarding: {
       verificationStatus: string;
       reviewStatus:
@@ -1071,7 +1887,20 @@ export type DriverAvailabilityResponse = {
   availability: {
     driverId: string;
     status: 'ONLINE' | 'OFFLINE';
+    fatigue: DriverFatigueStatus;
   };
+};
+
+export type DriverFatigueStatus = {
+  state: 'clear' | 'warning' | 'blocked';
+  completedTrips: number;
+  drivingMinutes: number;
+  windowHours: number;
+  maxCompletedTrips: number;
+  maxDrivingMinutes: number;
+  restMinutes: number;
+  restUntil: string | null;
+  reason: string;
 };
 
 export type DriverPresenceResponse = {
@@ -1184,6 +2013,51 @@ export type TripDetailResponse = {
       label: string;
       createdAt: string;
     }>;
+  };
+};
+
+export type TripShareLinkResponse = {
+  share: {
+    tripId: string;
+    token: string;
+    path: string;
+    expiresAt: string;
+    ttlMinutes: number;
+  };
+};
+
+export type TripRoutePositionResponse = {
+  routeMonitoring: {
+    tripId: string;
+    state: 'clear' | 'alert';
+    checkedAt: string;
+    alerts: Array<{
+      alertType: 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS';
+      severity: 'warning' | 'critical';
+      priority: 2 | 3;
+      message: string;
+      measuredValue: number;
+      threshold: number;
+    }>;
+    ticketIds: string[];
+  };
+};
+
+export type SharedTripResponse = {
+  sharedTrip: {
+    tripId: string;
+    status: string;
+    pickupAddress: string;
+    destinationAddress: string;
+    riderName: string;
+    driverName: string;
+    vehicleLabel: string;
+    lastEvent: {
+      label: string;
+      createdAt: string;
+    } | null;
+    expiresAt: string | null;
+    safetyNote: string;
   };
 };
 
@@ -1482,6 +2356,19 @@ export async function signOutWithApi(
   });
 }
 
+export async function submitMobileErrorReportsWithApi(
+  client: MobilisApiClient,
+  payload: SubmitMobileErrorReportsPayload,
+) {
+  return client.request<SubmitMobileErrorReportsResponse>(
+    apiRoutes.mobile.errorReports,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  );
+}
+
 export async function fetchAdminPreview(client: MobilisApiClient) {
   return client.request<AdminPreviewResponse>(apiRoutes.admin.preview);
 }
@@ -1494,8 +2381,92 @@ export async function fetchAdminLiveOps(client: MobilisApiClient) {
   return client.request<AdminLiveOpsResponse>(apiRoutes.admin.liveOps);
 }
 
+export async function fetchAdminLaunchReadiness(client: MobilisApiClient) {
+  return client.request<AdminLaunchReadinessResponse>(
+    apiRoutes.admin.launchReadiness,
+  );
+}
+
+export async function acknowledgeAdminLaunchReadinessAction(
+  client: MobilisApiClient,
+  checkId: string,
+  payload: {
+    owner: 'ops' | 'engineering' | 'support' | 'finance';
+    notes: string;
+    idempotencyKey?: string;
+  },
+) {
+  return client.request<AdminLaunchReadinessActionAcknowledgementResponse>(
+    `${apiRoutes.admin.launchReadiness}/actions/${checkId}/acknowledge`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  );
+}
+
 export async function fetchAdminSupportTickets(client: MobilisApiClient) {
   return client.request<SupportTicketQueueResponse>(apiRoutes.admin.supportTickets);
+}
+
+export async function fetchAdminDriverWallets(client: MobilisApiClient) {
+  return client.request<AdminDriverWalletsResponse>(
+    apiRoutes.admin.driverWallets,
+  );
+}
+
+export async function prepareAdminDriverWalletPayout(
+  client: MobilisApiClient,
+  walletId: string,
+  payload: { notes?: string } = {},
+) {
+  return client.request<AdminDriverPayoutResponse>(
+    `${apiRoutes.admin.driverWallets}/${walletId}/payouts/prepare`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  );
+}
+
+export async function recordAdminDriverWalletRecoveryAdjustment(
+  client: MobilisApiClient,
+  walletId: string,
+  payload: { amount: number; notes: string; idempotencyKey: string },
+) {
+  return client.request<AdminDriverWalletRecoveryAdjustmentResponse>(
+    `${apiRoutes.admin.driverWallets}/${walletId}/recovery-adjustments`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  );
+}
+
+export async function markAdminDriverPayoutPaid(
+  client: MobilisApiClient,
+  payoutId: string,
+  payload: { notes?: string } = {},
+) {
+  return client.request<AdminDriverPayoutResponse>(
+    `${apiRoutes.admin.driverPayouts}/${payoutId}/paid`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  );
+}
+
+export function buildAdminDriverPayoutSettlementCsvUrl(
+  status: 'PREPARED' | 'PAID' | 'CANCELLED' = 'PREPARED',
+) {
+  return `${apiRoutes.admin.driverPayoutSettlementCsv}?status=${status}`;
+}
+
+export function buildAdminDriverPayoutSettlementPdfUrl(
+  status: 'PREPARED' | 'PAID' | 'CANCELLED' = 'PREPARED',
+) {
+  return `${apiRoutes.admin.driverPayoutSettlementPdf}?status=${status}`;
 }
 
 export async function updateAdminSupportTicket(
@@ -1550,6 +2521,7 @@ export async function fetchAdminPaymentWebhookEvents(
     pageSize?: number;
     provider?: 'FLUTTERWAVE' | 'CINETPAY';
     action?: string;
+    kind?: 'payment' | 'refund' | 'ignored';
     transactionRef?: string;
     providerReference?: string;
   },
@@ -1579,6 +2551,44 @@ export async function startAdminPaymentWebhookInvestigation(
     `${apiRoutes.admin.paymentWebhookEvents}/${eventId}/investigation`,
     {
       method: 'POST',
+    },
+  );
+}
+
+export async function replayAdminPaymentWebhookEvent(
+  client: MobilisApiClient,
+  eventId: string,
+) {
+  return client.request<AdminPaymentWebhookReplayResponse>(
+    `${apiRoutes.admin.paymentWebhookEvents}/${eventId}/replay`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+export async function verifyAdminPaymentAttemptWithProvider(
+  client: MobilisApiClient,
+  paymentAttemptId: string,
+) {
+  return client.request<AdminPaymentAttemptProviderVerificationResponse>(
+    `${apiRoutes.admin.paymentAttempts}/${paymentAttemptId}/verify-provider`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+export async function refundAdminPaymentAttempt(
+  client: MobilisApiClient,
+  paymentAttemptId: string,
+  payload: { reason?: string } = {},
+) {
+  return client.request<AdminPaymentAttemptRefundResponse>(
+    `${apiRoutes.admin.paymentAttempts}/${paymentAttemptId}/refund`,
+    {
+      method: 'POST',
+      body: payload,
     },
   );
 }
@@ -1682,6 +2692,23 @@ export async function createSavedPlaceWithApi(
   });
 }
 
+export async function updateTrustedContactWithApi(
+  client: MobilisApiClient,
+  payload: {
+    phoneNumber?: string;
+    shareMode?: 'MANUAL' | 'NIGHT' | 'ALL_TRIPS';
+    notes?: string;
+  },
+) {
+  return client.request<TrustedContactMutationResponse>(
+    apiRoutes.riders.trustedContact,
+    {
+      method: 'PATCH',
+      body: payload,
+    },
+  );
+}
+
 export async function updateSavedPlaceWithApi(
   client: MobilisApiClient,
   savedPlaceId: string,
@@ -1755,6 +2782,9 @@ export async function upsertDriverOnboarding(
       storageKey: string;
       mimeType?: string;
       expiresAt?: string;
+      sizeBytes?: number;
+      sha256?: string;
+      uploadSource?: string;
     }>;
     vehicles: Array<{
       plateNumber: string;
@@ -1857,6 +2887,47 @@ export async function fetchTripDetail(client: MobilisApiClient, tripId: string) 
   return client.request<TripDetailResponse>(`${apiRoutes.trips.root}/${tripId}`);
 }
 
+export async function createTripShareLinkWithApi(
+  client: MobilisApiClient,
+  tripId: string,
+) {
+  return client.request<TripShareLinkResponse>(
+    `${apiRoutes.trips.shareLink}/${tripId}/share-link`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+export async function recordTripRoutePositionWithApi(
+  client: MobilisApiClient,
+  tripId: string,
+  payload: {
+    latitude: number;
+    longitude: number;
+    accuracyMeters?: number;
+    speedKph?: number;
+    distanceToDestinationKm?: number;
+  },
+) {
+  return client.request<TripRoutePositionResponse>(
+    `${apiRoutes.trips.root}/${tripId}/route-position`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  );
+}
+
+export async function fetchSharedTripWithApi(
+  client: MobilisApiClient,
+  shareToken: string,
+) {
+  return client.request<SharedTripResponse>(
+    `${apiRoutes.trips.shared}/${shareToken}`,
+  );
+}
+
 export async function acceptRideRequestWithApi(
   client: MobilisApiClient,
   rideRequestId: string,
@@ -1902,12 +2973,34 @@ export async function reportTripIncidentWithApi(
     incidentType: string;
     details?: string;
     priority?: number;
+    evidenceConsent?: boolean;
+    evidenceType?: 'AUDIO' | 'PHOTO' | 'VIDEO' | 'TEXT_NOTE';
+    evidenceRetentionHours?: number;
   },
 ) {
   return client.request<TripIncidentResponse>(`${apiRoutes.trips.reportIncident}/${tripId}/report-incident`, {
     method: 'POST',
     body: payload,
   });
+}
+
+export async function triggerTripSafetySosWithApi(
+  client: MobilisApiClient,
+  tripId: string,
+  payload: {
+    details?: string;
+    latitude?: number;
+    longitude?: number;
+    accuracyMeters?: number;
+  } = {},
+) {
+  return client.request<TripSafetySosResponse>(
+    `${apiRoutes.trips.safetySos}/${tripId}/sos`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  );
 }
 
 export async function fetchRideOptionsPreview(
