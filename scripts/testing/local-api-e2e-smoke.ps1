@@ -1,0 +1,280 @@
+param(
+  [string]$ApiBaseUrl = "http://localhost:3000",
+  [string]$WebhookSecret = "mobilis_dev_webhook_secret"
+)
+
+$ErrorActionPreference = "Stop"
+$ApiRoot = "$ApiBaseUrl/api/v1"
+$RunId = Get-Date -Format "yyyyMMddHHmmss"
+
+function Write-Step {
+  param([string]$Message)
+  Write-Host "[e2e] $Message" -ForegroundColor Cyan
+}
+
+function Fail-E2E {
+  param([string]$Message)
+  throw "Local API E2E failed: $Message"
+}
+
+function Invoke-Json {
+  param(
+    [string]$Method,
+    [string]$Path,
+    [object]$Body = $null,
+    [string]$Token = "",
+    [hashtable]$ExtraHeaders = @{}
+  )
+
+  $headers = @{}
+  foreach ($key in $ExtraHeaders.Keys) {
+    $headers[$key] = $ExtraHeaders[$key]
+  }
+
+  if ($Token) {
+    $headers["Authorization"] = "Bearer $Token"
+  }
+
+  $parameters = @{
+    Method = $Method
+    Uri = "$ApiRoot$Path"
+    Headers = $headers
+    TimeoutSec = 15
+  }
+
+  if ($null -ne $Body) {
+    $parameters["ContentType"] = "application/json"
+    $parameters["Body"] = ($Body | ConvertTo-Json -Depth 10)
+  }
+
+  try {
+    return Invoke-RestMethod @parameters
+  } catch {
+    $message = $_.Exception.Message
+    if ($_.ErrorDetails -and $_.ErrorDetails.Message) {
+      $message = $_.ErrorDetails.Message
+    }
+
+    Fail-E2E "$Method $Path -> $message"
+  }
+}
+
+function Sign-In {
+  param([string]$Email)
+
+  $response = Invoke-Json -Method "POST" -Path "/auth/sign-in" -Body @{
+    email = $Email
+    password = "Mobilis123!"
+  }
+
+  if (!$response.sessionToken) {
+    Fail-E2E "sign-in returned no session token for $Email"
+  }
+
+  return $response.sessionToken
+}
+
+function Assert-Equals {
+  param(
+    [object]$Actual,
+    [object]$Expected,
+    [string]$Message
+  )
+
+  if ($Actual -ne $Expected) {
+    Fail-E2E "$Message. Expected '$Expected', got '$Actual'."
+  }
+}
+
+Write-Step "Checking backend health at $ApiRoot/health"
+try {
+  Invoke-Json -Method "GET" -Path "/health" | Out-Null
+} catch {
+  Write-Host ""
+  Write-Host "Backend is not reachable. Start the local stack first:" -ForegroundColor Yellow
+  Write-Host "  pnpm db:start"
+  Write-Host "  pnpm prisma:migrate"
+  Write-Host "  pnpm prisma:seed"
+  Write-Host "  pnpm dev:backend"
+  throw
+}
+
+Write-Step "Signing in demo accounts"
+$adminToken = Sign-In -Email "admin@mobilis.app"
+$riderToken = Sign-In -Email "rider@mobilis.app"
+$driverToken = Sign-In -Email "driver@mobilis.app"
+
+Write-Step "Putting driver online and updating presence"
+Invoke-Json -Method "PATCH" -Path "/drivers/availability" -Token $driverToken -Body @{
+  status = "ONLINE"
+} | Out-Null
+Invoke-Json -Method "PATCH" -Path "/drivers/presence" -Token $driverToken -Body @{
+  latitude = 12.3714
+  longitude = -1.5197
+} | Out-Null
+
+Write-Step "Creating rider request"
+$rideRequest = Invoke-Json -Method "POST" -Path "/ride-requests" -Token $riderToken -Body @{
+  pickupAddress = "Universite Joseph Ki-Zerbo, Ouagadougou"
+  pickupLatitude = 12.3783
+  pickupLongitude = -1.4994
+  destinationAddress = "Ouaga 2000"
+  destinationLatitude = 12.3032
+  destinationLongitude = -1.5241
+  requestedVehicleType = "MOTORCYCLE"
+  requestedServiceTier = "MOTO_STANDARD"
+  estimatedDistanceKm = 6.2
+  estimatedDurationMinutes = 18
+  paymentMethod = "MOBILE_MONEY"
+  pickupAreaType = "URBAN_CORE"
+  city = "OUAGADOUGOU"
+  districtProfile = "UNIVERSITY"
+  notes = "Local API E2E $RunId"
+}
+
+if (!$rideRequest.id) {
+  Fail-E2E "ride request response did not include id"
+}
+
+Write-Step "Accepting ride request as driver"
+$accepted = Invoke-Json -Method "POST" -Path "/trips/accept/$($rideRequest.id)" -Token $driverToken
+$tripId = $accepted.trip.id
+$pickupCode = $accepted.trip.pickupCode
+
+if (!$tripId -or !$pickupCode) {
+  Fail-E2E "accept response did not include trip id and pickup code"
+}
+
+Assert-Equals -Actual $accepted.trip.status -Expected "MATCHED" -Message "trip should be matched after accept"
+
+Write-Step "Advancing trip lifecycle"
+$arriving = Invoke-Json -Method "PATCH" -Path "/trips/$tripId/status" -Token $driverToken -Body @{
+  status = "DRIVER_ARRIVING"
+}
+Assert-Equals -Actual $arriving.trip.status -Expected "DRIVER_ARRIVING" -Message "trip should move to arriving"
+
+$verified = Invoke-Json -Method "POST" -Path "/trips/$tripId/verify-pickup-code" -Token $driverToken -Body @{
+  pickupCode = $pickupCode
+}
+Assert-Equals -Actual $verified.trip.status -Expected "IN_PROGRESS" -Message "pickup code should start trip"
+
+$completed = Invoke-Json -Method "PATCH" -Path "/trips/$tripId/status" -Token $driverToken -Body @{
+  status = "COMPLETED"
+}
+Assert-Equals -Actual $completed.trip.status -Expected "COMPLETED" -Message "trip should complete"
+
+Write-Step "Creating checkout intent"
+$checkout = Invoke-Json -Method "POST" -Path "/payments/checkout-intents" -Token $riderToken -Body @{
+  rideRequestId = $rideRequest.id
+  channel = "MOBILE_MONEY"
+  mobileMoneyNetwork = "ORANGE_MONEY"
+  customerPhoneNumber = "+22670000000"
+}
+
+if (!$checkout.transactionRef -or !$checkout.amount) {
+  Fail-E2E "checkout response did not include transactionRef and amount"
+}
+
+Write-Step "Posting local success webhook"
+$providerReference = "local_provider_ref_$RunId"
+$webhook = Invoke-Json -Method "POST" -Path "/payments/webhooks" -ExtraHeaders @{
+  "x-mobilis-webhook-secret" = $WebhookSecret
+} -Body @{
+  event = "payment.completed"
+  transactionRef = $checkout.transactionRef
+  data = @{
+    tx_ref = $checkout.transactionRef
+    providerReference = $providerReference
+    status = "successful"
+    amount = $checkout.amount
+    currency = $checkout.currency
+  }
+}
+
+Assert-Equals -Actual $webhook.nextAction -Expected "persisted_and_reconciled" -Message "webhook should reconcile"
+
+Write-Step "Loading webhook journal"
+$journal = Invoke-Json -Method "GET" -Path "/admin/payment-webhook-events?page=1&pageSize=10&transactionRef=$($checkout.transactionRef)" -Token $adminToken
+$event = $journal.events | Select-Object -First 1
+
+if (!$event -or !$event.paymentAttemptId) {
+  Fail-E2E "webhook journal did not expose linked payment attempt"
+}
+
+Assert-Equals -Actual $event.paymentAttempt.status -Expected "SUCCEEDED" -Message "payment attempt should be succeeded"
+
+Write-Step "Checking wallet credit"
+$wallets = Invoke-Json -Method "GET" -Path "/admin/driver-wallets?page=1&pageSize=20" -Token $adminToken
+$wallet = $wallets.wallets | Where-Object {
+  $_.recentTransactions | Where-Object { $_.paymentAttemptId -eq $event.paymentAttemptId -and $_.type -eq "CREDIT" }
+} | Select-Object -First 1
+
+if (!$wallet) {
+  Fail-E2E "driver wallet credit was not visible in admin wallets"
+}
+
+Write-Step "Preparing and marking payout paid"
+$prepared = Invoke-Json -Method "POST" -Path "/admin/driver-wallets/$($wallet.id)/payouts/prepare" -Token $adminToken -Body @{
+  notes = "Local API E2E payout $RunId"
+}
+
+if (!$prepared.payout.id) {
+  Fail-E2E "payout preparation returned no payout id"
+}
+
+$paid = Invoke-Json -Method "POST" -Path "/admin/driver-payouts/$($prepared.payout.id)/paid" -Token $adminToken -Body @{
+  notes = "Local API E2E payout paid $RunId"
+}
+
+if (@("paid", "already_paid", "already_finalized") -notcontains $paid.action) {
+  Fail-E2E "unexpected payout paid action '$($paid.action)'"
+}
+
+Write-Step "Refunding payment attempt"
+$refund = Invoke-Json -Method "POST" -Path "/admin/payment-attempts/$($event.paymentAttemptId)/refund" -Token $adminToken -Body @{
+  reason = "Local API E2E refund $RunId"
+}
+
+Assert-Equals -Actual $refund.refund.paymentAttempt.status -Expected "REFUNDED" -Message "payment attempt should be refunded"
+
+Write-Step "Checking refund reversal in wallet"
+$walletsAfterRefund = Invoke-Json -Method "GET" -Path "/admin/driver-wallets?page=1&pageSize=20" -Token $adminToken
+$refundReference = "payment:$($event.paymentAttemptId):driver-payout-refund"
+$refundTransaction = $walletsAfterRefund.wallets.recentTransactions | ForEach-Object { $_ } | Where-Object {
+  $_.reference -eq $refundReference -and $_.type -eq "REFUND"
+} | Select-Object -First 1
+
+if (!$refundTransaction) {
+  Fail-E2E "refund wallet reversal was not visible in admin wallets"
+}
+
+Write-Step "Recording recovery adjustment"
+$recoveryWallet = $walletsAfterRefund.wallets | Where-Object { $_.id -eq $wallet.id } | Select-Object -First 1
+if (!$recoveryWallet -or $recoveryWallet.recoveryDue -le 0) {
+  Fail-E2E "wallet did not expose recovery due after refund"
+}
+
+$recovery = Invoke-Json -Method "POST" -Path "/admin/driver-wallets/$($wallet.id)/recovery-adjustments" -Token $adminToken -Body @{
+  amount = $recoveryWallet.recoveryDue
+  notes = "Local API E2E recovery adjustment $RunId"
+  idempotencyKey = "local-api-e2e-$RunId"
+}
+
+Assert-Equals -Actual $recovery.wallet.recoveryDue -Expected 0 -Message "recovery adjustment should clear recovery due"
+
+Write-Step "Checking live ops refund counter"
+$liveOps = Invoke-Json -Method "GET" -Path "/admin/live-ops" -Token $adminToken
+if ($liveOps.summary.payments.refunded -lt 1) {
+  Fail-E2E "live ops refunded counter did not include the refund"
+}
+
+Write-Host ""
+Write-Host "Local API E2E smoke passed." -ForegroundColor Green
+Write-Host "RideRequest:     $($rideRequest.id)"
+Write-Host "Trip:            $tripId"
+Write-Host "PaymentAttempt:  $($event.paymentAttemptId)"
+Write-Host "TransactionRef:  $($checkout.transactionRef)"
+Write-Host "ProviderRef:     $providerReference"
+Write-Host "Wallet:          $($wallet.id)"
+Write-Host "RefundReference: $refundReference"
+Write-Host "RecoveryTx:      $($recovery.transaction.reference)"
