@@ -79,15 +79,51 @@ function describeDependencyState(state: string) {
 }
 
 function readinessTone(state: string) {
-  if (state === 'up' || state === 'ok') {
+  if (state === 'up' || state === 'ok' || state === 'pass' || state === 'low') {
     return 'good';
   }
 
-  if (state === 'disabled') {
+  if (state === 'disabled' || state === 'warn' || state === 'medium') {
     return 'warn';
   }
 
   return 'bad';
+}
+
+function describeProductionRisk(riskLevel: string) {
+  if (riskLevel === 'low') {
+    return 'faible';
+  }
+
+  if (riskLevel === 'medium') {
+    return 'moyen';
+  }
+
+  return 'eleve';
+}
+
+function describeSloPosture(posture: string) {
+  if (posture === 'healthy') {
+    return 'tenus';
+  }
+
+  if (posture === 'watch') {
+    return 'sous surveillance';
+  }
+
+  return 'breach';
+}
+
+function describeReadinessCheckState(state: string) {
+  if (state === 'pass') {
+    return 'ok';
+  }
+
+  if (state === 'warn') {
+    return 'attention';
+  }
+
+  return 'bloquant';
 }
 
 function formatTimestamp(value: string | null) {
@@ -221,6 +257,50 @@ export function SystemHealthBoard({
   const [activeIncidentId, setActiveIncidentId] = useState<string | null>(null);
   const [auditFilter, setAuditFilter] = useState<HealthAuditFilter>('all');
   const previousHealthRef = useRef<HealthCheckResponse | null>(null);
+  const productionReadiness = health.operations.productionReadiness ?? {
+    environment: 'unknown',
+    riskLevel: 'medium' as const,
+    failedChecks: 0,
+    warningChecks: 1,
+    checks: [
+      {
+        id: 'production-readiness-unavailable',
+        label: 'Readiness production',
+        state: 'warn' as const,
+        detail:
+          'Le backend courant ne fournit pas encore le resume production readiness.',
+      },
+    ],
+  };
+  const serviceLevelObjectives = health.operations.serviceLevelObjectives ?? {
+    posture: 'watch' as const,
+    failingObjectives: 0,
+    warningObjectives: 1,
+    objectives: [
+      {
+        id: 'slo-unavailable',
+        label: 'SLO runtime',
+        target: 'dashboard backend requis',
+        window: 'current',
+        owner: 'engineering' as const,
+        state: 'warn' as const,
+        currentSignal:
+          'Le backend courant ne fournit pas encore les objectifs de service.',
+        burnRate: 'elevated' as const,
+      },
+    ],
+    mobileErrorTaxonomy: [
+      {
+        code: 'MOB-RUNTIME-UNKNOWN',
+        surface: 'mobile',
+        severity: 'medium' as const,
+        owner: 'engineering' as const,
+        retryPolicy: 'refresh-health-before-triage',
+        userMessage:
+          'Etat runtime indisponible. Les ops doivent resynchroniser le backend.',
+      },
+    ],
+  };
 
   const client = useMemo(
     () =>
@@ -439,6 +519,26 @@ export function SystemHealthBoard({
           <strong>{unseenCount}</strong>
           <p>Alertes non reconnues par cette console ops</p>
         </article>
+        <article className="board-summary-card">
+          <span>Risque production</span>
+          <strong>
+            {describeProductionRisk(productionReadiness.riskLevel)}
+          </strong>
+          <p>
+            {productionReadiness.failedChecks} bloquant(s),{' '}
+            {productionReadiness.warningChecks} attention(s)
+          </p>
+        </article>
+        <article className="board-summary-card">
+          <span>SLO production</span>
+          <strong>
+            {describeSloPosture(serviceLevelObjectives.posture)}
+          </strong>
+          <p>
+            {serviceLevelObjectives.failingObjectives} breach(s),{' '}
+            {serviceLevelObjectives.warningObjectives} watch
+          </p>
+        </article>
       </div>
 
       <div className="health-grid">
@@ -513,6 +613,36 @@ export function SystemHealthBoard({
 
         <article className="feature-runtime-card health-card">
           <div className="ticket-topline">
+            <span className="priority-badge priority-1">prod readiness</span>
+            <span
+              className={`readiness-pill readiness-pill-${readinessTone(
+                productionReadiness.riskLevel,
+              )}`}
+            >
+              {describeProductionRisk(productionReadiness.riskLevel)}
+            </span>
+          </div>
+          <div className="health-dependency-list">
+            {productionReadiness.checks.map((check) => (
+              <div className="health-dependency-row" key={check.id}>
+                <div>
+                  <strong>{check.label}</strong>
+                  <p>{check.detail}</p>
+                </div>
+                <span
+                  className={`readiness-pill readiness-pill-${readinessTone(
+                    check.state,
+                  )}`}
+                >
+                  {describeReadinessCheckState(check.state)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="feature-runtime-card health-card">
+          <div className="ticket-topline">
             <span className="priority-badge priority-2">signals ops</span>
             <span className="phase-status phase-status-next">
               {health.infrastructure.realtime.adapter}
@@ -570,6 +700,90 @@ export function SystemHealthBoard({
             {describeHealthDetail(health)}
           </p>
         </article>
+      </div>
+
+      <div className="health-slo-panel">
+        <div className="ticket-topline">
+          <span className="priority-badge priority-1">SLO runtime</span>
+          <span
+            className={`readiness-pill readiness-pill-${readinessTone(
+              serviceLevelObjectives.posture === 'healthy'
+                ? 'ok'
+                : serviceLevelObjectives.posture === 'watch'
+                  ? 'warn'
+                  : 'fail',
+            )}`}
+          >
+            {describeSloPosture(serviceLevelObjectives.posture)}
+          </span>
+        </div>
+        <div className="health-slo-grid">
+          {serviceLevelObjectives.objectives.map((objective) => (
+            <article className="health-slo-card" key={objective.id}>
+              <div className="ticket-topline">
+                <span className="priority-badge priority-2">
+                  {objective.owner}
+                </span>
+                <span
+                  className={`readiness-pill readiness-pill-${readinessTone(
+                    objective.state,
+                  )}`}
+                >
+                  {describeReadinessCheckState(objective.state)}
+                </span>
+              </div>
+              <h3>{objective.label}</h3>
+              <p>{objective.currentSignal}</p>
+              <div className="pricing-row">
+                <span>Cible</span>
+                <strong>{objective.target}</strong>
+              </div>
+              <div className="pricing-row">
+                <span>Fenetre</span>
+                <strong>{objective.window}</strong>
+              </div>
+              <div className="pricing-row">
+                <span>Burn rate</span>
+                <strong>{objective.burnRate}</strong>
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="health-error-taxonomy">
+          <div>
+            <span className="priority-badge priority-3">
+              crash/error taxonomy
+            </span>
+            <h3>Routage mobile unifie</h3>
+          </div>
+          <div className="health-taxonomy-list">
+            {serviceLevelObjectives.mobileErrorTaxonomy.map((entry) => (
+              <article className="health-taxonomy-row" key={entry.code}>
+                <div>
+                  <strong>{entry.code}</strong>
+                  <p>{entry.userMessage}</p>
+                  <span className="health-inline-note">
+                    {entry.surface} · {entry.retryPolicy}
+                  </span>
+                </div>
+                <div className="health-audit-meta">
+                  <span
+                    className={`readiness-pill readiness-pill-${readinessTone(
+                      entry.severity === 'critical'
+                        ? 'fail'
+                        : entry.severity === 'high'
+                          ? 'warn'
+                          : 'ok',
+                    )}`}
+                  >
+                    {entry.severity}
+                  </span>
+                  <span className="health-inline-note">{entry.owner}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="health-history-grid">

@@ -4,7 +4,12 @@ import { useMemo, useState } from 'react';
 import {
   authenticateAndFetchCurrentUser,
   createMobilisApiClient,
+  extractApiErrorMessage,
+  fetchAdminPaymentWebhookEvents,
+  refundAdminPaymentAttempt,
+  replayAdminPaymentWebhookEvent,
   startAdminPaymentWebhookInvestigation,
+  verifyAdminPaymentAttemptWithProvider,
   type AdminPaymentWebhookEventsResponse,
 } from '@mobilis/api';
 import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
@@ -12,6 +17,10 @@ import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
 type PaymentWebhookJournalBoardProps = {
   journal: AdminPaymentWebhookEventsResponse;
 };
+
+type PaymentWebhookJournalEvent =
+  AdminPaymentWebhookEventsResponse['events'][number];
+type PaymentWebhookJournalKind = 'all' | 'payment' | 'refund' | 'ignored';
 
 function formatPayloadPreview(preview: Record<string, unknown>) {
   const entries = Object.entries(preview);
@@ -32,29 +41,64 @@ function formatAction(action: string) {
     ignored_conflicting_provider_reference: 'Conflit reference',
     ignored_unknown_reference: 'Reference inconnue',
     ignored_missing_reference: 'Reference absente',
+    refund_processed: 'Refund confirme',
+    refund_still_pending: 'Refund en attente',
   };
 
   return labels[action] ?? action;
 }
 
 function actionClass(action: string) {
-  if (action === 'persisted_and_reconciled') {
+  if (action === 'persisted_and_reconciled' || action === 'refund_processed') {
     return 'phase-status-completed';
   }
 
-  if (action === 'persisted_idempotent_replay') {
+  if (
+    action === 'persisted_idempotent_replay' ||
+    action === 'refund_still_pending'
+  ) {
     return 'phase-status-next';
   }
 
   return 'phase-status-planned';
 }
 
+function formatPaymentAttemptStatus(
+  status: NonNullable<PaymentWebhookJournalEvent['paymentAttempt']>['status'],
+) {
+  const labels: Record<
+    NonNullable<PaymentWebhookJournalEvent['paymentAttempt']>['status'],
+    string
+  > = {
+    INITIATED: 'Initie',
+    PENDING: 'En attente',
+    SUCCEEDED: 'Encaisse',
+    FAILED: 'Echoue',
+    CANCELLED: 'Annule',
+    REFUND_PENDING: 'Remboursement en attente',
+    REFUNDED: 'Rembourse',
+  };
+
+  return labels[status];
+}
+
+function canRefundPaymentAttempt(event: PaymentWebhookJournalEvent) {
+  return event.paymentAttempt?.status === 'SUCCEEDED';
+}
+
 export function PaymentWebhookJournalBoard({
   journal,
 }: PaymentWebhookJournalBoardProps) {
+  const [journalState, setJournalState] = useState(journal.events);
+  const [journalSummary, setJournalSummary] = useState(journal.summary);
+  const [activeKind, setActiveKind] =
+    useState<PaymentWebhookJournalKind>('all');
   const [statusByEventId, setStatusByEventId] = useState<
     Record<string, string>
   >({});
+  const [busyByEventId, setBusyByEventId] = useState<Record<string, boolean>>(
+    {},
+  );
   const client = useMemo(
     () =>
       createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
@@ -63,7 +107,36 @@ export function PaymentWebhookJournalBoard({
     [],
   );
 
+  async function filterJournal(kind: PaymentWebhookJournalKind) {
+    setActiveKind(kind);
+
+    try {
+      const { authClient } = await authenticateAndFetchCurrentUser(
+        client,
+        mobilisDemoAccounts.admin,
+      );
+      const response = await fetchAdminPaymentWebhookEvents(authClient, {
+        page: 1,
+        pageSize: 8,
+        kind: kind === 'all' ? undefined : kind,
+      });
+
+      setJournalState(response.events);
+      setJournalSummary(response.summary);
+      setStatusByEventId({});
+    } catch {
+      setStatusByEventId((current) => ({
+        ...current,
+        journal: "Le filtre du journal n'a pas pu etre applique.",
+      }));
+    }
+  }
+
   async function startInvestigation(eventId: string) {
+    setBusyByEventId((current) => ({
+      ...current,
+      [eventId]: true,
+    }));
     setStatusByEventId((current) => ({
       ...current,
       [eventId]: 'Investigation en cours...',
@@ -90,7 +163,205 @@ export function PaymentWebhookJournalBoard({
         ...current,
         [eventId]: "L investigation n'a pas pu etre lancee.",
       }));
+    } finally {
+      setBusyByEventId((current) => ({
+        ...current,
+        [eventId]: false,
+      }));
     }
+  }
+
+  async function replayEvent(eventId: string) {
+    setBusyByEventId((current) => ({
+      ...current,
+      [eventId]: true,
+    }));
+    setStatusByEventId((current) => ({
+      ...current,
+      [eventId]: 'Replay en cours...',
+    }));
+
+    try {
+      const { authClient } = await authenticateAndFetchCurrentUser(
+        client,
+        mobilisDemoAccounts.admin,
+      );
+      const response = await replayAdminPaymentWebhookEvent(
+        authClient,
+        eventId,
+      );
+
+      updateEventFromReconciliation(eventId, {
+        nextAction: response.replay.result.nextAction,
+        reconciledAttemptCount: response.replay.result.reconciledAttemptCount,
+        providerReference: response.replay.result.providerReference,
+        transactionRef: response.replay.result.transactionRef,
+      });
+      setStatusByEventId((current) => ({
+        ...current,
+        [eventId]: `${formatAction(
+          response.replay.result.nextAction,
+        )} - ${response.replay.result.reconciledAttemptCount} tentative(s).`,
+      }));
+    } catch {
+      setStatusByEventId((current) => ({
+        ...current,
+        [eventId]: "Le replay n'a pas pu etre execute.",
+      }));
+    } finally {
+      setBusyByEventId((current) => ({
+        ...current,
+        [eventId]: false,
+      }));
+    }
+  }
+
+  async function verifyAttempt(eventId: string, paymentAttemptId: string) {
+    setBusyByEventId((current) => ({
+      ...current,
+      [eventId]: true,
+    }));
+    setStatusByEventId((current) => ({
+      ...current,
+      [eventId]: 'Verification fournisseur...',
+    }));
+
+    try {
+      const { authClient } = await authenticateAndFetchCurrentUser(
+        client,
+        mobilisDemoAccounts.admin,
+      );
+      const response = await verifyAdminPaymentAttemptWithProvider(
+        authClient,
+        paymentAttemptId,
+      );
+
+      updateEventFromReconciliation(eventId, {
+        nextAction: response.verification.result.nextAction,
+        reconciledAttemptCount:
+          response.verification.result.reconciledAttemptCount,
+        providerReference: response.verification.result.providerReference,
+        transactionRef: response.verification.result.transactionRef,
+      });
+      setStatusByEventId((current) => ({
+        ...current,
+        [eventId]: `${formatAction(
+          response.verification.result.nextAction,
+        )} - ${response.verification.provider}.`,
+      }));
+    } catch {
+      setStatusByEventId((current) => ({
+        ...current,
+        [eventId]: "La verification fournisseur n'a pas pu aboutir.",
+      }));
+    } finally {
+      setBusyByEventId((current) => ({
+        ...current,
+        [eventId]: false,
+      }));
+    }
+  }
+
+  async function refundAttempt(eventId: string, paymentAttemptId: string) {
+    setBusyByEventId((current) => ({
+      ...current,
+      [eventId]: true,
+    }));
+    setStatusByEventId((current) => ({
+      ...current,
+      [eventId]: 'Remboursement en cours...',
+    }));
+
+    try {
+      const { authClient } = await authenticateAndFetchCurrentUser(
+        client,
+        mobilisDemoAccounts.admin,
+      );
+      const response = await refundAdminPaymentAttempt(
+        authClient,
+        paymentAttemptId,
+        {
+          reason: 'Remboursement ops depuis le journal webhooks.',
+        },
+      );
+
+      setJournalState((current) =>
+        current.map((event): PaymentWebhookJournalEvent =>
+          event.id === eventId
+            ? {
+                ...event,
+                paymentAttempt: event.paymentAttempt
+                  ? {
+                      ...event.paymentAttempt,
+                      status: response.refund.paymentAttempt.status,
+                      updatedAt: response.refund.paymentAttempt.updatedAt,
+                    }
+                  : event.paymentAttempt,
+              }
+            : event,
+        ),
+      );
+      setStatusByEventId((current) => ({
+        ...current,
+        [eventId]:
+          response.refund.action === 'already_refunded'
+            ? 'Paiement deja rembourse.'
+            : response.refund.action === 'refund_pending'
+              ? `Remboursement demande: ${response.refund.providerRefundReference}.`
+            : `Remboursement prepare: ${response.refund.providerRefundReference}.`,
+      }));
+    } catch (error) {
+      setStatusByEventId((current) => ({
+        ...current,
+        [eventId]: extractApiErrorMessage(
+          error,
+          "Le remboursement n'a pas pu etre execute.",
+        ),
+      }));
+    } finally {
+      setBusyByEventId((current) => ({
+        ...current,
+        [eventId]: false,
+      }));
+    }
+  }
+
+  function updateEventFromReconciliation(
+    eventId: string,
+    result: {
+      nextAction: string;
+      reconciledAttemptCount: number;
+      providerReference?: string;
+      transactionRef: string | null;
+    },
+  ) {
+    setJournalState((current) =>
+      current.map((event): PaymentWebhookJournalEvent =>
+        event.id === eventId
+          ? {
+              ...event,
+              action: result.nextAction,
+              reconciledAttemptCount: result.reconciledAttemptCount,
+              providerReference:
+                result.providerReference ?? event.providerReference,
+              transactionRef: result.transactionRef ?? event.transactionRef,
+              paymentAttempt:
+                event.paymentAttempt &&
+                (result.nextAction === 'refund_processed' ||
+                  result.nextAction === 'refund_still_pending')
+                  ? {
+                      ...event.paymentAttempt,
+                      status:
+                        result.nextAction === 'refund_processed'
+                          ? 'REFUNDED'
+                          : 'REFUND_PENDING',
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : event.paymentAttempt,
+            }
+          : event,
+      ),
+    );
   }
 
   return (
@@ -100,14 +371,49 @@ export function PaymentWebhookJournalBoard({
           <p className="eyebrow">Audit paiement</p>
           <h2>Journal webhooks fournisseur</h2>
         </div>
-        <p className="lede">
-          Les dernieres notifications paiement conservees pour investigation
-          ops, verification signature et suivi des references externes.
-        </p>
+        <div className="queue-meta">
+          <p className="lede">
+            Les dernieres notifications paiement conservees pour investigation
+            ops, verification signature et suivi des references externes.
+          </p>
+          <div className="ticket-actions">
+            {(
+              [
+                ['all', 'Tous'],
+                ['payment', 'Paiements'],
+                ['refund', 'Refunds'],
+                ['ignored', 'Ignores'],
+              ] as const
+            ).map(([kind, label]) => (
+              <button
+                className={`ticket-button ${
+                  activeKind === kind ? '' : 'ticket-button-neutral'
+                }`}
+                key={kind}
+                onClick={() => void filterJournal(kind)}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+            <span className="queue-status">
+              Paiement {journalSummary.paymentEvents}
+            </span>
+            <span className="queue-status">
+              Refund {journalSummary.refundEvents}
+            </span>
+            <span className="queue-status">
+              Ignores {journalSummary.ignoredEvents}
+            </span>
+          </div>
+          {statusByEventId.journal ? (
+            <span className="queue-status">{statusByEventId.journal}</span>
+          ) : null}
+        </div>
       </div>
 
       <div className="roadmap-grid live-ops-grid">
-        {journal.events.map((event) => (
+        {journalState.map((event) => (
           <article className="phase-card live-trip-card" key={event.id}>
             <div className="ticket-topline">
               <span className={`phase-status ${actionClass(event.action)}`}>
@@ -131,16 +437,79 @@ export function PaymentWebhookJournalBoard({
                 <span>Reconciliation</span>
                 <strong>{event.reconciledAttemptCount}</strong>
               </div>
+              <div className="trip-meta-card">
+                <span>Paiement</span>
+                <strong>
+                  {event.paymentAttempt
+                    ? formatPaymentAttemptStatus(event.paymentAttempt.status)
+                    : 'Non lie'}
+                </strong>
+              </div>
             </div>
+            {event.paymentAttempt ? (
+              <p>
+                Tentative: {event.paymentAttempt.currency}{' '}
+                {Math.round(event.paymentAttempt.amount).toLocaleString(
+                  'fr-FR',
+                )}{' '}
+                - MAJ{' '}
+                {new Date(event.paymentAttempt.updatedAt).toLocaleString(
+                  'fr-FR',
+                  {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                  },
+                )}
+              </p>
+            ) : null}
             <p>{formatPayloadPreview(event.payloadPreview)}</p>
             <div className="ticket-actions">
               <button
                 className="ticket-button ticket-button-neutral"
+                disabled={busyByEventId[event.id]}
                 onClick={() => void startInvestigation(event.id)}
                 type="button"
               >
                 Investiguer
               </button>
+              <button
+                className="ticket-button"
+                disabled={busyByEventId[event.id]}
+                onClick={() => void replayEvent(event.id)}
+                type="button"
+              >
+                Rejouer
+              </button>
+              {event.paymentAttemptId ? (
+                <button
+                  className="ticket-button ticket-button-neutral"
+                  disabled={busyByEventId[event.id]}
+                  onClick={() =>
+                    void verifyAttempt(event.id, event.paymentAttemptId!)
+                  }
+                  type="button"
+                >
+                  Verifier provider
+                </button>
+              ) : null}
+              {event.paymentAttemptId ? (
+                <button
+                  className="ticket-button ticket-button-neutral"
+                  disabled={
+                    busyByEventId[event.id] || !canRefundPaymentAttempt(event)
+                  }
+                  onClick={() =>
+                    void refundAttempt(event.id, event.paymentAttemptId!)
+                  }
+                  type="button"
+                >
+                  {event.paymentAttempt?.status === 'REFUNDED'
+                    ? 'Rembourse'
+                    : event.paymentAttempt?.status === 'REFUND_PENDING'
+                      ? 'En attente'
+                    : 'Rembourser'}
+                </button>
+              ) : null}
               {statusByEventId[event.id] ? (
                 <span className="queue-status">{statusByEventId[event.id]}</span>
               ) : null}
@@ -153,7 +522,7 @@ export function PaymentWebhookJournalBoard({
             </p>
           </article>
         ))}
-        {!journal.events.length ? (
+        {!journalState.length ? (
           <article className="phase-card">
             <span className="phase-status phase-status-planned">stable</span>
             <h3>Aucun webhook journalise</h3>

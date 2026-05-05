@@ -21,6 +21,8 @@ type DriverOnboardingReviewBoardProps = {
   initialQueue: DriverOnboardingQueueResponse['drivers'];
 };
 
+type GuidanceFilter = 'all' | 'approve' | 'review' | 'resubmit';
+
 const reviewActions = [
   {
     label: 'Prendre en revue',
@@ -39,6 +41,38 @@ const reviewActions = [
   },
 ];
 
+const guidanceFilters: Array<{
+  label: string;
+  value: GuidanceFilter;
+  level?: 'approve' | 'review' | 'resubmit';
+}> = [
+  {
+    label: 'Tous',
+    value: 'all',
+  },
+  {
+    label: 'Prets',
+    value: 'approve',
+    level: 'approve',
+  },
+  {
+    label: 'Revue',
+    value: 'review',
+    level: 'review',
+  },
+  {
+    label: 'Redemande',
+    value: 'resubmit',
+    level: 'resubmit',
+  },
+];
+
+const guidancePriority = {
+  resubmit: 0,
+  review: 1,
+  approve: 2,
+} as const;
+
 function getReviewToneClass(status: string) {
   if (status === 'APPROVED') {
     return 'phase-status-completed';
@@ -49,6 +83,128 @@ function getReviewToneClass(status: string) {
   }
 
   return 'phase-status-planned';
+}
+
+function getIntegrityToneClass(state: string) {
+  if (state === 'complete') {
+    return 'phase-status-completed';
+  }
+
+  if (state === 'partial') {
+    return 'phase-status-next';
+  }
+
+  return 'phase-status-planned';
+}
+
+function getGuidanceClass(level: string) {
+  if (level === 'clear') {
+    return 'document-guidance-clear';
+  }
+
+  if (level === 'resubmit') {
+    return 'document-guidance-resubmit';
+  }
+
+  return 'document-guidance-review';
+}
+
+function getDecisionGuidanceClass(level: string) {
+  if (level === 'approve') {
+    return 'decision-guidance-approve';
+  }
+
+  if (level === 'resubmit') {
+    return 'decision-guidance-resubmit';
+  }
+
+  return 'decision-guidance-review';
+}
+
+function formatDocumentSize(sizeBytes: number | null) {
+  if (!sizeBytes) {
+    return 'taille non declaree';
+  }
+
+  if (sizeBytes >= 1_000_000) {
+    return `${(sizeBytes / 1_000_000).toFixed(1)} MB`;
+  }
+
+  return `${Math.round(sizeBytes / 1_000)} KB`;
+}
+
+function formatShaPreview(sha256: string | null) {
+  return sha256 ? `${sha256.slice(0, 10)}...${sha256.slice(-6)}` : 'hash absent';
+}
+
+function formatReviewDate(value: string) {
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function normalizeSearch(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function csvCell(value: string | number | null | undefined) {
+  const normalized = String(value ?? '');
+
+  return `"${normalized.replace(/"/g, '""')}"`;
+}
+
+function buildOnboardingCsv(
+  drivers: DriverOnboardingQueueResponse['drivers'],
+) {
+  const headers = [
+    'driver_id',
+    'driver_name',
+    'email',
+    'phone',
+    'verification_status',
+    'review_status',
+    'guidance',
+    'recommended_status',
+    'approved_documents',
+    'total_documents',
+    'pending_documents',
+    'rejected_documents',
+    'missing_required',
+    'integrity_warnings',
+    'average_integrity_score',
+    'active_vehicle_count',
+    'service_radius_km',
+    'blockers',
+    'latest_decision_reason',
+  ];
+  const rows = drivers.map((driver) => [
+    driver.id,
+    driver.driverName,
+    driver.email,
+    driver.phoneNumber,
+    driver.verificationStatus,
+    driver.reviewStatus,
+    driver.decisionGuidance.level,
+    driver.decisionGuidance.recommendedStatus,
+    driver.documentSummary.approved,
+    driver.documentSummary.total,
+    driver.documentSummary.pending,
+    driver.documentSummary.rejected,
+    driver.documentSummary.missingRequired,
+    driver.documentSummary.integrityWarnings,
+    driver.documentSummary.averageIntegrityScore,
+    driver.activeVehicleCount,
+    driver.serviceRadiusKm,
+    driver.decisionGuidance.blockers.join(' | '),
+    driver.latestDecisionReason,
+  ]);
+
+  return [headers, ...rows]
+    .map((row) => row.map((value) => csvCell(value)).join(','))
+    .join('\n');
 }
 
 export function DriverOnboardingReviewBoard({
@@ -62,6 +218,8 @@ export function DriverOnboardingReviewBoard({
   const [transitionLabel, setTransitionLabel] = useState<string | null>(null);
   const [freshDriverIds, setFreshDriverIds] = useState<string[]>([]);
   const [freshDocumentIds, setFreshDocumentIds] = useState<string[]>([]);
+  const [guidanceFilter, setGuidanceFilter] = useState<GuidanceFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const previousDriversRef =
     useRef<DriverOnboardingReviewBoardProps['initialQueue'] | null>(null);
 
@@ -110,9 +268,80 @@ export function DriverOnboardingReviewBoard({
       (total, driver) => total + driver.documentSummary.pending,
       0,
     );
+    const integrityWarnings = drivers.reduce(
+      (total, driver) => total + driver.documentSummary.integrityWarnings,
+      0,
+    );
+    const readyToApprove = drivers.filter(
+      (driver) => driver.decisionGuidance.level === 'approve',
+    ).length;
+    const reviewRecommended = drivers.filter(
+      (driver) => driver.decisionGuidance.level === 'review',
+    ).length;
+    const resubmitRecommended = drivers.filter(
+      (driver) => driver.decisionGuidance.level === 'resubmit',
+    ).length;
 
-    return { approved, underReview, changesRequested, pendingDocuments };
+    return {
+      approved,
+      underReview,
+      changesRequested,
+      pendingDocuments,
+      integrityWarnings,
+      readyToApprove,
+      reviewRecommended,
+      resubmitRecommended,
+    };
   }, [drivers]);
+
+  const visibleDrivers = useMemo(() => {
+    const query = normalizeSearch(searchQuery);
+
+    return [...drivers]
+      .filter(
+        (driver) =>
+          guidanceFilter === 'all' ||
+          driver.decisionGuidance.level === guidanceFilter,
+      )
+      .filter((driver) => {
+        if (!query) {
+          return true;
+        }
+
+        const searchableText = [
+          driver.driverName,
+          driver.email,
+          driver.phoneNumber ?? '',
+          driver.verificationStatus,
+          driver.reviewStatus,
+          driver.decisionGuidance.label,
+          driver.decisionGuidance.level,
+          ...driver.decisionGuidance.blockers,
+          ...driver.documents.flatMap((document) => [
+            document.type,
+            document.status,
+            document.fileName,
+            document.integrity.uploadSource ?? '',
+          ]),
+        ]
+          .join(' ')
+          .toLowerCase();
+
+        return searchableText.includes(query);
+      })
+      .sort((left, right) => {
+        const priorityDelta =
+          guidancePriority[left.decisionGuidance.level] -
+          guidancePriority[right.decisionGuidance.level];
+
+        if (priorityDelta !== 0) {
+          return priorityDelta;
+        }
+
+        return right.documentSummary.integrityWarnings -
+          left.documentSummary.integrityWarnings;
+      });
+  }, [drivers, guidanceFilter, searchQuery]);
 
   useEffect(() => {
     const stream = subscribeToAdminRealtime({
@@ -257,6 +486,24 @@ export function DriverOnboardingReviewBoard({
     }
   }
 
+  function handleExportCsv() {
+    const csv = buildOnboardingCsv(visibleDrivers);
+    const blob = new Blob([csv], {
+      type: 'text/csv;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 10);
+
+    link.href = url;
+    link.download = `mobilis-onboarding-${guidanceFilter}-${date}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setStatus(`Export CSV genere pour ${visibleDrivers.length} dossier(s).`);
+  }
+
   return (
     <section className="panel ops-panel onboarding-panel">
       <div className="roadmap-heading">
@@ -306,10 +553,79 @@ export function DriverOnboardingReviewBoard({
           <strong>{summary.pendingDocuments}</strong>
           <p>Justificatifs encore non approuves</p>
         </article>
+        <article className="board-summary-card">
+          <span>Integrite a verifier</span>
+          <strong>{summary.integrityWarnings}</strong>
+          <p>Pieces sans preuve complete cote upload</p>
+        </article>
+        <article className="board-summary-card">
+          <span>Prets decision</span>
+          <strong>{summary.readyToApprove}</strong>
+          <p>Dossiers avec guidance claire pour approbation</p>
+        </article>
+        <article className="board-summary-card">
+          <span>Revue / redemande</span>
+          <strong>
+            {summary.reviewRecommended}/{summary.resubmitRecommended}
+          </strong>
+          <p>Guidance prudente avant decision finale</p>
+        </article>
+      </div>
+
+      <div className="onboarding-filter-bar" aria-label="Filtrer la file onboarding">
+        <div>
+          <strong>Priorisation ops</strong>
+          <span>
+            {visibleDrivers.length}/{drivers.length} dossier(s) dans la vue
+          </span>
+        </div>
+        <button
+          className="ghost-button onboarding-export-button"
+          disabled={!visibleDrivers.length}
+          onClick={handleExportCsv}
+          type="button"
+        >
+          Export CSV
+        </button>
+        <label className="onboarding-search">
+          <span>Recherche dossier</span>
+          <input
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Nom, telephone, document..."
+            type="search"
+            value={searchQuery}
+          />
+        </label>
+        <div className="segmented-control">
+          {guidanceFilters.map((filter) => {
+            const count = filter.level
+              ? drivers.filter(
+                  (driver) => driver.decisionGuidance.level === filter.level,
+                ).length
+              : drivers.length;
+
+            return (
+              <button
+                aria-pressed={guidanceFilter === filter.value}
+                className={
+                  guidanceFilter === filter.value
+                    ? 'segmented-control-button segmented-control-button-active'
+                    : 'segmented-control-button'
+                }
+                key={filter.value}
+                onClick={() => setGuidanceFilter(filter.value)}
+                type="button"
+              >
+                {filter.label}
+                <span>{count}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="ticket-grid onboarding-grid">
-        {drivers.map((driver) => (
+        {visibleDrivers.map((driver) => (
           <article
             className={`ticket-card onboarding-card ${
               busyDriverId === driver.id ? 'ticket-card-busy' : ''
@@ -344,8 +660,79 @@ export function DriverOnboardingReviewBoard({
               {driver.documentSummary.total} approuves,{' '}
               {driver.documentSummary.pending} en attente
             </p>
+            <div
+              className={`decision-guidance ${getDecisionGuidanceClass(
+                driver.decisionGuidance.level,
+              )}`}
+            >
+              <div>
+                <span>Guidance dossier</span>
+                <strong>{driver.decisionGuidance.label}</strong>
+              </div>
+              <p>{driver.decisionGuidance.detail}</p>
+              {driver.decisionGuidance.blockers.length ? (
+                <div className="decision-blockers">
+                  {driver.decisionGuidance.blockers.slice(0, 4).map((blocker) => (
+                    <span key={blocker}>{blocker}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="integrity-overview">
+              <div>
+                <span>Score preuves</span>
+                <strong>{driver.documentSummary.averageIntegrityScore}%</strong>
+              </div>
+              <div>
+                <span>Points ops</span>
+                <strong>{driver.documentSummary.integrityWarnings}</strong>
+              </div>
+              <div>
+                <span>Pieces absentes</span>
+                <strong>{driver.documentSummary.missingRequired}</strong>
+              </div>
+            </div>
             {driver.latestDecisionReason ? (
               <p>Derniere decision: {driver.latestDecisionReason}</p>
+            ) : null}
+            {driver.reviewHistory.length ? (
+              <div className="review-history">
+                <div className="review-history-heading">
+                  <strong>Historique decisionnel</strong>
+                  <span>{driver.reviewHistory.length} trace(s)</span>
+                </div>
+                {driver.reviewHistory.slice(0, 3).map((review) => (
+                  <div className="review-history-row" key={review.id}>
+                    <div>
+                      <strong>{review.status}</strong>
+                      <p>
+                        {review.actorName} - {formatReviewDate(review.createdAt)}
+                      </p>
+                      {review.decisionReason ? <p>{review.decisionReason}</p> : null}
+                    </div>
+                    <div className="review-history-snapshot">
+                      {review.decisionGuidance ? (
+                        <span
+                          className={`review-guidance-pill ${getDecisionGuidanceClass(
+                            review.decisionGuidance.level,
+                          )}`}
+                        >
+                          {review.decisionGuidance.label}
+                        </span>
+                      ) : (
+                        <span className="review-guidance-pill">Snapshot absente</span>
+                      )}
+                      {review.documentSummary ? (
+                        <span>
+                          {review.documentSummary.approved}/
+                          {review.documentSummary.total} docs,{' '}
+                          {review.documentSummary.integrityWarnings} point(s)
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : null}
 
             <div className="document-list">
@@ -366,6 +753,36 @@ export function DriverOnboardingReviewBoard({
                     <p>
                       {document.fileName} - {document.status}
                     </p>
+                    <div className="document-integrity">
+                      <span
+                        className={`phase-status ${getIntegrityToneClass(
+                          document.integrity.state,
+                        )}`}
+                      >
+                        Integrite {document.integrity.score}%
+                      </span>
+                      <span>{formatDocumentSize(document.integrity.sizeBytes)}</span>
+                      <span>{document.integrity.uploadSource ?? 'source absente'}</span>
+                      <span>{formatShaPreview(document.integrity.sha256)}</span>
+                    </div>
+                    <div className="document-checks">
+                      {document.integrity.checks.map((check) => (
+                        <span
+                          className={`document-check document-check-${check.state}`}
+                          key={check.id}
+                        >
+                          {check.label}
+                        </span>
+                      ))}
+                    </div>
+                    <div
+                      className={`document-guidance ${getGuidanceClass(
+                        document.integrity.guidance.level,
+                      )}`}
+                    >
+                      <strong>{document.integrity.guidance.label}</strong>
+                      <p>{document.integrity.guidance.detail}</p>
+                    </div>
                     {document.rejectionReason ? (
                       <p>{document.rejectionReason}</p>
                     ) : null}
@@ -403,11 +820,25 @@ export function DriverOnboardingReviewBoard({
                 <button
                   key={action.status}
                   className={action.className}
-                  disabled={busyDriverId === driver.id}
+                  disabled={
+                    busyDriverId === driver.id ||
+                    (action.status === 'APPROVED' &&
+                      driver.decisionGuidance.level !== 'approve')
+                  }
                   onClick={() => void handleReviewAction(driver.id, action.status)}
+                  title={
+                    action.status === 'APPROVED' &&
+                    driver.decisionGuidance.level !== 'approve'
+                      ? driver.decisionGuidance.detail
+                      : undefined
+                  }
                   type="button"
                 >
-                  {busyDriverId === driver.id ? 'Traitement...' : action.label}
+                  {busyDriverId === driver.id
+                    ? 'Traitement...'
+                    : action.status === driver.decisionGuidance.recommendedStatus
+                      ? `${action.label} recommande`
+                      : action.label}
                 </button>
               ))}
             </div>
@@ -422,6 +853,19 @@ export function DriverOnboardingReviewBoard({
             </div>
             <h3>Aucun dossier en attente</h3>
             <p>La file de revue onboarding est vide pour le moment.</p>
+          </article>
+        ) : null}
+
+        {drivers.length > 0 && !visibleDrivers.length ? (
+          <article className="ticket-card onboarding-card">
+            <div className="ticket-topline">
+              <span className="priority-badge priority-1">filtre</span>
+              <span className="phase-status phase-status-completed">0 dossier</span>
+            </div>
+            <h3>Aucun dossier dans ce segment</h3>
+            <p>
+              Modifiez le filtre ou la recherche pour reprendre la revue ops.
+            </p>
           </article>
         ) : null}
       </div>

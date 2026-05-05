@@ -59,7 +59,12 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
       'trip.updated': () => void refreshLiveOps(),
       'trip.pickup-code-verified': () => void refreshLiveOps(),
       'trip.incident-reported': () => void refreshLiveOps(),
+      'trip.route-monitor-alert': () => void refreshLiveOps(),
+      'mobile.error-reports-submitted': () => void refreshLiveOps(),
       'driver-onboarding.review-updated': () => void refreshLiveOps(),
+      'payment-attempt.provider-verified': () => void refreshLiveOps(),
+      'payment-attempt.refund-requested': () => void refreshLiveOps(),
+      'payment-attempt.refunded': () => void refreshLiveOps(),
       'ride-request.created': () => void refreshLiveOps(),
       'ride-request.cancelled': () => void refreshLiveOps(),
       heartbeat: () =>
@@ -89,7 +94,9 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
           previousTrip.status !== nextTrip.status
           || previousTrip.lastEvent?.label !== nextTrip.lastEvent?.label
           || previousTrip.lastEvent?.createdAt !== nextTrip.lastEvent?.createdAt
-          || previousTrip.incidentCount !== nextTrip.incidentCount,
+          || previousTrip.incidentCount !== nextTrip.incidentCount
+          || previousTrip.routeMonitoring.state !== nextTrip.routeMonitoring.state
+          || previousTrip.routeMonitoring.alertCount !== nextTrip.routeMonitoring.alertCount,
       });
       const updatedTrip = liveOps.trips.find((trip) =>
         delta.updatedIds.includes(trip.id),
@@ -210,6 +217,10 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
             {liveOps.summary.payments.reconciled}/
             {liveOps.summary.payments.attempts} reconciles
           </p>
+          <p>
+            {liveOps.summary.payments.refunded} rembourses,{' '}
+            {liveOps.summary.payments.refundPending} en attente
+          </p>
         </article>
         <article className="card">
           <span>Webhooks paiement</span>
@@ -284,6 +295,19 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
                     ? `${trip.incidentCount} signalement(s)`
                     : 'Aucun'}
                 </strong>
+              </div>
+              <div className="trip-meta-card">
+                <span>Route monitoring</span>
+                <strong>
+                  {trip.routeMonitoring.state === 'unknown'
+                    ? 'En attente'
+                    : trip.routeMonitoring.state === 'clear'
+                      ? 'Clair'
+                      : `${formatOperationalStatus(trip.routeMonitoring.state)} (${trip.routeMonitoring.alertCount})`}
+                </strong>
+                {trip.routeMonitoring.lastAlertType ? (
+                  <small>{trip.routeMonitoring.lastAlertType}</small>
+                ) : null}
               </div>
             </div>
           </article>

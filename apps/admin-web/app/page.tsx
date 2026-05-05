@@ -8,13 +8,17 @@ import {
   fetchAdminLiveOps,
   fetchAdminDispatchSettings,
   fetchAdminFeatureFlags,
+  fetchAdminLaunchReadiness,
   fetchAdminOverview,
   fetchAdminDriverOnboardingQueue,
+  fetchAdminDriverWallets,
   fetchAdminPaymentWebhookEvents,
   fetchAdminPricingCalibration,
   fetchAdminSupportTickets,
   type AdminDispatchSettingsResponse,
   type AdminFeatureFlagsResponse,
+  type AdminDriverWalletsResponse,
+  type AdminLaunchReadinessResponse,
   type AdminLiveOpsResponse,
   type AdminPaymentWebhookEventsResponse,
   type AdminPricingCalibrationResponse,
@@ -41,6 +45,7 @@ import { SystemHealthBoard } from './system-health-board';
 import { DispatchControlBoard } from './dispatch-control-board';
 import { PricingCalibrationBoard } from './pricing-calibration-board';
 import { PaymentWebhookJournalBoard } from './payment-webhook-journal-board';
+import { DriverWalletsBoard } from './driver-wallets-board';
 
 const fallbackIncidents = [
   '2 chauffeurs moto en attente de verification',
@@ -86,6 +91,8 @@ const fallbackLiveOps: AdminLiveOpsResponse = {
       attempts: 0,
       succeeded: 0,
       failed: 0,
+      refundPending: 0,
+      refunded: 0,
       reconciled: 0,
       webhookEvents: 0,
       webhookConflicts: 0,
@@ -147,6 +154,70 @@ const fallbackHealth: HealthCheckResponse = {
     },
   },
   operations: {
+    productionReadiness: {
+      environment: 'development',
+      riskLevel: 'medium',
+      failedChecks: 0,
+      warningChecks: 3,
+      checks: [
+        {
+          id: 'rate-limit-backplane',
+          label: 'Rate limit partage',
+          state: 'warn',
+          detail: 'Fallback local utilise par la preview.',
+        },
+        {
+          id: 'realtime-backplane',
+          label: 'Realtime partage',
+          state: 'warn',
+          detail: 'Fallback local utilise par la preview.',
+        },
+        {
+          id: 'provider-refunds',
+          label: 'Refunds provider',
+          state: 'warn',
+          detail: 'Refunds en mode manual/console.',
+        },
+      ],
+    },
+    serviceLevelObjectives: {
+      posture: 'watch',
+      failingObjectives: 0,
+      warningObjectives: 1,
+      objectives: [
+        {
+          id: 'critical-api-availability',
+          label: 'Disponibilite API critique',
+          target: '>= 99.9%',
+          window: 'rolling-30d',
+          owner: 'engineering',
+          state: 'pass',
+          currentSignal: 'Preview admin sans backend live.',
+          burnRate: 'normal',
+        },
+        {
+          id: 'realtime-critical-event-latency',
+          label: 'Evenement realtime critique p95',
+          target: '< 2 s',
+          window: 'rolling-15m',
+          owner: 'engineering',
+          state: 'warn',
+          currentSignal: 'Preview admin en mode fallback local.',
+          burnRate: 'elevated',
+        },
+      ],
+      mobileErrorTaxonomy: [
+        {
+          code: 'MOB-REALTIME-DEGRADED',
+          surface: 'active-trip',
+          severity: 'medium',
+          owner: 'engineering',
+          retryPolicy: 'fallback-polling-with-last-known-state',
+          userMessage:
+            'Connexion live instable. Le trajet reste suivi par Mobilis.',
+        },
+      ],
+    },
     driverReservationExpiry: {
       enabled: true,
       intervalMs: 5000,
@@ -227,6 +298,119 @@ const fallbackPaymentWebhookJournal: AdminPaymentWebhookEventsResponse = {
     total: 0,
     pageCount: 0,
   },
+  summary: {
+    paymentEvents: 0,
+    refundEvents: 0,
+    ignoredEvents: 0,
+  },
+};
+
+const fallbackDriverWallets: AdminDriverWalletsResponse = {
+  summary: {
+    walletCount: 0,
+    totalBalance: 0,
+    totalPayouts: 0,
+    totalCommission: 0,
+    recoveryWalletCount: 0,
+    totalRecoveryDue: 0,
+  },
+  wallets: [],
+  meta: {
+    page: 1,
+    pageSize: 10,
+    total: 0,
+    pageCount: 0,
+  },
+};
+
+const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
+  generatedAt: new Date('2026-04-19T00:00:00.000Z').toISOString(),
+  environment: 'development',
+  decision: {
+    state: 'limited',
+    label: 'pilote limite seulement',
+    detail:
+      'Signal fallback admin: garder le pilote en mode encadre tant que le backend local n est pas joignable.',
+  },
+  summary: {
+    failedChecks: 0,
+    warningChecks: 3,
+    passedChecks: 6,
+    totalChecks: 9,
+  },
+  checks: [
+    {
+      id: 'fallback-runtime',
+      label: 'Runtime preview',
+      state: 'warn',
+      detail: 'Donnees de readiness produites par le fallback admin.',
+    },
+  ],
+  nextActions: [
+    {
+      checkId: 'fallback-runtime',
+      severity: 'warning',
+      owner: 'engineering',
+      action:
+        'Redemarrer ou connecter le backend local pour recuperer la decision de lancement officielle.',
+      runbookAnchor: 'checklist-avant-de-deployer',
+    },
+  ],
+  acknowledgements: [],
+  actionSummary: {
+    totalActions: 1,
+    acknowledgedActions: 0,
+    remainingActions: 1,
+    blockingActions: 0,
+    acknowledgedBlockingActions: 0,
+    remainingBlockingActions: 0,
+    completionRate: 0,
+  },
+  safetyBenchmark: {
+    summary: {
+      totalCapabilities: 8,
+      activeCapabilities: 4,
+      partialCapabilities: 1,
+      plannedCapabilities: 3,
+      criticalGaps: 1,
+      competitorParityRate: 56.3,
+    },
+    capabilities: [
+      {
+        id: 'fallback-safety',
+        label: 'Benchmark securite',
+        status: 'planned',
+        priority: 'critical',
+        mobilisSignal:
+          'Fallback admin: reconnecter le backend pour obtenir la matrice officielle.',
+        competitorSignal: 'Uber, Bolt et Yango exposent SOS et partage trajet.',
+        nextStep:
+          'Restaurer le backend puis traiter les gaps critiques avant extension.',
+      },
+    ],
+  },
+  fieldQuality: {
+    score: 72,
+    state: 'watch',
+    blockedSignals: 0,
+    watchSignals: 1,
+    signals: [
+      {
+        id: 'fallback-field-quality',
+        label: 'Qualite terrain',
+        score: 72,
+        state: 'watch',
+        owner: 'engineering',
+        competitorReference:
+          'Les leaders pilotent leur qualite avec support, paiement, disponibilite et stabilite mobile.',
+        mobilisSignal:
+          'Fallback admin: reconnecter le backend pour obtenir le score terrain officiel.',
+        nextStep:
+          'Relancer le backend puis verifier launch-readiness et System Health.',
+      },
+    ],
+  },
+  productionReadiness: fallbackHealth.operations.productionReadiness!,
 };
 
 async function loadAdminData(): Promise<{
@@ -238,6 +422,8 @@ async function loadAdminData(): Promise<{
   dispatchSettings: AdminDispatchSettingsResponse;
   pricingCalibration: AdminPricingCalibrationResponse;
   paymentWebhookJournal: AdminPaymentWebhookEventsResponse;
+  driverWallets: AdminDriverWalletsResponse;
+  launchReadiness: AdminLaunchReadinessResponse;
   health: HealthCheckResponse;
   pricingScenarios: Array<{
     id: string;
@@ -273,6 +459,8 @@ async function loadAdminData(): Promise<{
       dispatchSettings,
       pricingCalibration,
       paymentWebhookJournal,
+      driverWallets,
+      launchReadiness,
       health,
       ouagaEstimate,
       boboEstimate,
@@ -289,6 +477,8 @@ async function loadAdminData(): Promise<{
           page: 1,
           pageSize: 8,
         }),
+        fetchAdminDriverWallets(authClient),
+        fetchAdminLaunchReadiness(authClient),
         fetchHealthCheck(client),
         fetchPricingEstimate(client, {
           distanceKm: ouagaPreset.estimatedDistanceKm,
@@ -385,6 +575,8 @@ async function loadAdminData(): Promise<{
       dispatchSettings,
       pricingCalibration,
       paymentWebhookJournal,
+      driverWallets,
+      launchReadiness,
       health,
       pricingScenarios: [
         {
@@ -478,6 +670,8 @@ async function loadAdminData(): Promise<{
       },
       pricingCalibration: fallbackPricingCalibration,
       paymentWebhookJournal: fallbackPaymentWebhookJournal,
+      driverWallets: fallbackDriverWallets,
+      launchReadiness: fallbackLaunchReadiness,
       onboardingQueue: {
         drivers: [],
         meta: {
@@ -503,6 +697,8 @@ export default async function AdminHomePage() {
     dispatchSettings,
     pricingCalibration,
     paymentWebhookJournal,
+    driverWallets,
+    launchReadiness,
     health,
     pricingScenarios,
   } = await loadAdminData();
@@ -553,6 +749,38 @@ export default async function AdminHomePage() {
         ))}
       </section>
 
+      <section className="panel test-access-panel">
+        <div>
+          <p className="eyebrow">Acces test local</p>
+          <h2>Comptes de demonstration</h2>
+          <p className="lede">
+            Cette console admin utilise automatiquement le compte admin demo.
+            Les identifiants rider et driver se saisissent dans les apps mobiles
+            Expo, pas sur cette page.
+          </p>
+        </div>
+        <div className="test-access-grid">
+          <article className="test-access-card">
+            <span>Admin web</span>
+            <strong>{mobilisDemoAccounts.admin.email}</strong>
+            <p>Deja connecte sur cette console.</p>
+            <code>{mobilisDemoAccounts.admin.password}</code>
+          </article>
+          <article className="test-access-card">
+            <span>Rider app</span>
+            <strong>{mobilisDemoAccounts.rider.email}</strong>
+            <p>Ouvre l app rider avec `pnpm dev:rider`.</p>
+            <code>{mobilisDemoAccounts.rider.password}</code>
+          </article>
+          <article className="test-access-card">
+            <span>Driver app</span>
+            <strong>{mobilisDemoAccounts.driver.email}</strong>
+            <p>Ouvre l app driver avec `pnpm dev:driver`.</p>
+            <code>{mobilisDemoAccounts.driver.password}</code>
+          </article>
+        </div>
+      </section>
+
       <section className="split">
         <div className="panel">
           <h2>Vue operations</h2>
@@ -595,6 +823,10 @@ export default async function AdminHomePage() {
         support={support}
         onboardingQueue={onboardingQueue}
         featureFlags={featureFlags}
+        paymentWebhookJournal={paymentWebhookJournal}
+        driverWallets={driverWallets}
+        launchReadiness={launchReadiness}
+        productionReadiness={health.operations.productionReadiness}
         pricingScenarioCount={pricingScenarios.length}
       />
 
@@ -605,6 +837,8 @@ export default async function AdminHomePage() {
       <PricingCalibrationBoard calibration={pricingCalibration} />
 
       <PaymentWebhookJournalBoard journal={paymentWebhookJournal} />
+
+      <DriverWalletsBoard wallets={driverWallets} />
 
       {pricingScenarios.length ? (
         <PricingStrategyBoard scenarios={pricingScenarios} />

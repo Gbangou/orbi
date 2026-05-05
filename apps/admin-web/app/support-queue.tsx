@@ -93,6 +93,8 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
     const stream = subscribeToAdminRealtime({
       'trip.incident-reported': () =>
         void refreshTickets(true, 'Nouvel incident remonte dans la file support.'),
+      'mobile.error-reports-submitted': () =>
+        void refreshTickets(true, 'Signal mobile critique remonte dans la file support.'),
       'support-ticket.updated': () =>
         void refreshTickets(true, 'File support synchronisee apres mise a jour.'),
       heartbeat: () =>
