@@ -14,6 +14,27 @@ jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mobilis
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mobilis"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      CI: true
+      NODE_ENV: test
+      SKIP_DB_CONNECT: true
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mobilis?schema=public
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+      NEXT_PUBLIC_API_VERSION: v1
 
     steps:
       - name: Checkout
@@ -23,12 +44,18 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 10.30.0
+          run_install: false
 
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
+
+      - name: Show tool versions
+        run: |
+          node --version
+          pnpm --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -39,11 +66,44 @@ jobs:
       - name: Validate Prisma schema
         run: pnpm --filter backend exec prisma validate
 
+      - name: Apply database migrations
+        run: pnpm --filter backend exec prisma migrate deploy
+
       - name: Backend tests
         run: pnpm --filter backend test -- --runInBand
+
+      - name: Admin web smoke tests
+        run: pnpm test:admin:smoke
 
       - name: Mobile smoke tests
         run: pnpm test:mobile:smoke
 
       - name: Typecheck and builds
         run: pnpm typecheck
+
+      - name: Seed local API smoke data
+        run: pnpm prisma:seed
+
+      - name: Start backend for local API smoke
+        env:
+          NODE_ENV: development
+          SKIP_DB_CONNECT: false
+          PORT: 3000
+          PAYMENTS_WEBHOOK_SECRET: mobilis_dev_webhook_secret
+        run: |
+          pnpm --filter backend start > backend-smoke.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://localhost:3000/api/v1/health > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat backend-smoke.log
+          exit 1
+
+      - name: Local API money-path smoke
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/testing/local-api-e2e-smoke.ps1
+
+      - name: Print backend smoke logs on failure
+        if: failure()
+        run: cat backend-smoke.log || true

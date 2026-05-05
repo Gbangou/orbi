@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "setup:local": "powershell -ExecutionPolicy Bypass -File .\\scripts\\bootstrap-local.ps1",
+    "mobile:lan": "powershell -ExecutionPolicy Bypass -File .\\scripts\\set-mobile-lan-api.ps1",
+    "mobile:check": "powershell -ExecutionPolicy Bypass -File .\\scripts\\testing\\mobile-field-readiness.ps1",
     "db:start": "powershell -ExecutionPolicy Bypass -File .\\scripts\\start-local-db.ps1",
     "dev:backend": "pnpm --filter backend start:dev",
     "dev:admin": "pnpm --filter @mobilis/admin-web dev",
@@ -19,8 +21,11 @@
     "dev:full-mobile": "concurrently -n backend,admin,rider,driver -c blue,green,magenta,yellow \"pnpm dev:backend\" \"pnpm dev:admin\" \"pnpm dev:rider\" \"pnpm dev:driver\"",
     "build": "pnpm -r --workspace-concurrency=1 build",
     "lint": "pnpm -r --workspace-concurrency=1 lint",
-    "typecheck": "pnpm --filter @mobilis/admin-web build && pnpm --filter @mobilis/rider-app typecheck && pnpm --filter @mobilis/driver-app typecheck && pnpm --filter backend build",
+    "typecheck": "pnpm --filter @mobilis/domain build && pnpm --filter @mobilis/api build && pnpm --filter @mobilis/config build && pnpm --filter @mobilis/ui build && pnpm --filter @mobilis/admin-web build && pnpm --filter @mobilis/rider-app typecheck && pnpm --filter @mobilis/driver-app typecheck && pnpm --filter backend build",
+    "test:admin:smoke": "pnpm --filter @mobilis/admin-web test:smoke",
     "test:mobile:smoke": "pnpm --filter @mobilis/rider-app test:smoke && pnpm --filter @mobilis/driver-app test:smoke",
+    "e2e:local-checklist": "powershell -ExecutionPolicy Bypass -File .\\scripts\\testing\\local-e2e-field-session.ps1",
+    "e2e:local-api": "powershell -ExecutionPolicy Bypass -File .\\scripts\\testing\\local-api-e2e-smoke.ps1",
     "test": "pnpm --filter backend test",
     "test:e2e": "pnpm --filter backend test:e2e",
     "prisma:generate": "pnpm --filter backend prisma:generate",
@@ -41,7 +46,12 @@
   "pnpm": {
     "overrides": {
       "@types/react": "18.3.28",
-      "@types/react-dom": "18.3.7"
+      "@types/react-dom": "18.3.7",
+      "lodash": "4.17.21",
+      "source-map-js": "1.0.2"
+    },
+    "patchedDependencies": {
+      "client-only@0.0.1": "patches/client-only@0.0.1.patch"
     }
   },
   "devDependencies": {

@@ -47,6 +47,7 @@ Execution rules:
 - Preserve a high-quality developer experience
 - Treat trust, payments, realtime consistency, and zero-downtime deployment as first-class requirements, not later polish
 - When auditing, identify concrete code or architecture risks before adding new features
+- Treat SLO, mobile crash/error taxonomy, admin risk posture and incident routing as part of the product surface, not invisible ops polish
 
 Technical expectations:
 - Monorepo with apps and shared packages

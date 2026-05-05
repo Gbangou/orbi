@@ -75,7 +75,19 @@ Mobilis vise une plateforme de mobilite complete, premium et francaise d'abord p
 - Backplane partage pour realtime et rate limiting
 - Feature flags et canary releases pour modules critiques
 - Queues de jobs pour webhooks, notifications, antifraude et documents
-- SLO, alerting, tracing et capacity planning
+- SLO runtime exposes dans `/health`, dashboard admin risque production,
+  taxonomie crash/error mobile et alerting actionnable
+- Score excellence terrain dans launch-readiness pour comparer runtime/mobile,
+  securite, support, flotte chauffeur, argent et realtime aux standards leaders
+- Taxonomie d erreurs mobile partagee `MOB-*` utilisee par rider et driver pour
+  messages, reprise, ownership et futur crash reporting
+- File locale rider/driver pour erreurs mobile reportables, bornee et
+  anonymisee, afin de preparer l ingestion Sentry/Crashlytics/admin sans
+  bloquer les parcours utilisateur
+- Endpoint `/mobile/error-reports` authentifie rider/driver: ingestion bornee,
+  audit idempotent par rapport et ticket support automatique pour signaux
+  critiques
+- Tracing et capacity planning branches sur les memes objectifs de service
 - Discipline `expand -> migrate traffic -> contract`
 
 ### Phase 8. Hardening and launch readiness

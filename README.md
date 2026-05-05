@@ -38,6 +38,7 @@ packages/
 - feuille de route active: `EXECUTION_PLAN.md`
 - preview live web/mobile: `LIVE_PREVIEW.md`
 - guide local pas a pas: `docs/local-development.md`
+- runbook E2E terrain local: `docs/local-e2e-field-session.md`
 - diagramme de classes: `docs/architecture/class-diagram.md`
 - diagramme de cas d'utilisation: `docs/architecture/use-case-diagram.md`
 - invariants de donnees: `docs/architecture/data-invariants.md`
@@ -59,7 +60,17 @@ pnpm prisma:migrate
 pnpm prisma:seed
 pnpm dev:full-web
 pnpm dev:web-driver-preview
+pnpm e2e:local-checklist
+pnpm e2e:local-api
 pnpm typecheck
+```
+
+Pour tester sur telephone avec Expo Go:
+
+```bash
+pnpm mobile:lan
+pnpm dev:backend
+pnpm dev:rider
 ```
 
 ## Notes locales
@@ -67,5 +78,6 @@ pnpm typecheck
 - PostgreSQL local tourne sur `localhost:5433`
 - `dev:full-web` lance backend + admin + rider web
 - `dev:web-driver-preview` lance backend + admin + driver web
+- `mobile:lan` configure les apps Expo pour appeler le backend via l IP Wi-Fi du PC
 - comptes demo seedes: `admin@mobilis.app`, `driver@mobilis.app`, `rider@mobilis.app`
 - mot de passe demo: `Mobilis123!`
