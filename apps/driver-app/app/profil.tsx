@@ -111,6 +111,17 @@ const fallbackProfile: DriverProfileResponse = {
     serviceRadiusKm: 8,
     averageRating: 4.8,
     completedTripsCount: 0,
+    fatigue: {
+      state: 'clear',
+      completedTrips: 0,
+      drivingMinutes: 0,
+      windowHours: 8,
+      maxCompletedTrips: 8,
+      maxDrivingMinutes: 300,
+      restMinutes: 30,
+      restUntil: null,
+      reason: 'Aucun signal fatigue bloquant sur la fenetre recente.',
+    },
     onboarding: {
       verificationStatus: 'APPROVED',
       reviewStatus: 'APPROVED',
@@ -233,6 +244,14 @@ function inferMimeType(fileName: string) {
   }
 
   return 'application/octet-stream';
+}
+
+function formatBytes(bytes: number) {
+  if (bytes >= 1_000_000) {
+    return `${(bytes / 1_000_000).toFixed(1)} MB`;
+  }
+
+  return `${Math.round(bytes / 1_000)} KB`;
 }
 
 function buildInitialForm(profile: DriverProfileResponse): OnboardingFormState {
@@ -540,7 +559,9 @@ export default function ProfilScreen() {
       ) as Partial<Record<DocumentType, DriverDocumentLink>>;
 
       setPreparedDocumentLinks(nextPrepared);
-      setStatus('Liens documentaires securises prets pour la soumission.');
+      setStatus(
+        'Liens documentaires securises prets avec contraintes visibles.',
+      );
 
       return nextPrepared;
     } catch (error) {
@@ -657,6 +678,7 @@ export default function ProfilScreen() {
           storageKey: preparedLinks[document.type]?.storageKey ?? '',
           mimeType: inferMimeType(form.documentFileNames[document.type]),
           expiresAt: preparedLinks[document.type]?.expiresAt,
+          uploadSource: 'driver-app',
         })),
         vehicles: [
           {
@@ -1037,6 +1059,14 @@ export default function ProfilScreen() {
                 {new Date(
                   preparedDocumentLinks[document.type]?.expiresAt ?? '',
                 ).toLocaleString('fr-FR')}
+                . Limite:{' '}
+                {formatBytes(
+                  preparedDocumentLinks[document.type]?.constraints.maxBytes ?? 0,
+                )}
+                , formats:{' '}
+                {preparedDocumentLinks[
+                  document.type
+                ]?.constraints.allowedExtensions.join(', ')}
               </Text>
             ) : (
               <Text style={styles.documentHint}>

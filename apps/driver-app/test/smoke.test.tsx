@@ -3,6 +3,7 @@ import React from 'react';
 import { router } from 'expo-router';
 import {
   acceptRideRequestWithApi,
+  createTripShareLinkWithApi,
   declineDriverOfferWithApi,
   driverOffers,
   fetchDriverEarnings,
@@ -11,6 +12,7 @@ import {
   fetchMyTrips,
   fetchTripDetail,
   reportTripIncidentWithApi,
+  triggerTripSafetySosWithApi,
   requestDriverDocumentUploadLinks,
   upsertDriverOnboarding,
   updateDriverAvailabilityWithApi,
@@ -107,6 +109,7 @@ jest.mock('@mobilis/api', () => {
     fetchMyTrips: jest.fn(),
     fetchTripDetail: jest.fn(),
     acceptRideRequestWithApi: jest.fn(),
+    createTripShareLinkWithApi: jest.fn(),
     declineDriverOfferWithApi: jest.fn(),
     requestDriverDocumentUploadLinks: jest.fn(),
     upsertDriverOnboarding: jest.fn(),
@@ -114,6 +117,7 @@ jest.mock('@mobilis/api', () => {
     updateTripStatusWithApi: jest.fn(),
     verifyPickupCodeWithApi: jest.fn(),
     reportTripIncidentWithApi: jest.fn(),
+    triggerTripSafetySosWithApi: jest.fn(),
   };
 });
 
@@ -126,8 +130,10 @@ const mockedFetchDriverEarnings = jest.mocked(fetchDriverEarnings);
 const mockedFetchDriverProfile = jest.mocked(fetchDriverProfile);
 const mockedFetchTripDetail = jest.mocked(fetchTripDetail);
 const mockedAcceptRideRequestWithApi = jest.mocked(acceptRideRequestWithApi);
+const mockedCreateTripShareLinkWithApi = jest.mocked(createTripShareLinkWithApi);
 const mockedDeclineDriverOfferWithApi = jest.mocked(declineDriverOfferWithApi);
 const mockedReportTripIncidentWithApi = jest.mocked(reportTripIncidentWithApi);
+const mockedTriggerTripSafetySosWithApi = jest.mocked(triggerTripSafetySosWithApi);
 const mockedRequestDriverDocumentUploadLinks = jest.mocked(requestDriverDocumentUploadLinks);
 const mockedUpsertDriverOnboarding = jest.mocked(upsertDriverOnboarding);
 const mockedUpdateDriverAvailabilityWithApi = jest.mocked(updateDriverAvailabilityWithApi);
@@ -178,6 +184,17 @@ function buildDriverProfile() {
       currentLongitude: null,
       averageRating: 4.8,
       completedTripsCount: 54,
+      fatigue: {
+        state: 'clear',
+        completedTrips: 2,
+        drivingMinutes: 64,
+        windowHours: 8,
+        maxCompletedTrips: 8,
+        maxDrivingMinutes: 300,
+        restMinutes: 30,
+        restUntil: null,
+        reason: 'Aucun signal fatigue bloquant sur la fenetre recente.',
+      },
       onboarding: {
         verificationStatus: 'APPROVED',
         reviewStatus: 'APPROVED',
@@ -277,8 +294,10 @@ beforeEach(() => {
   mockedFetchDriverProfile.mockReset();
   mockedFetchTripDetail.mockReset();
   mockedAcceptRideRequestWithApi.mockReset();
+  mockedCreateTripShareLinkWithApi.mockReset();
   mockedDeclineDriverOfferWithApi.mockReset();
   mockedReportTripIncidentWithApi.mockReset();
+  mockedTriggerTripSafetySosWithApi.mockReset();
   mockedRequestDriverDocumentUploadLinks.mockReset();
   mockedUpsertDriverOnboarding.mockReset();
   mockedUpdateDriverAvailabilityWithApi.mockReset();
@@ -290,6 +309,27 @@ beforeEach(() => {
     message: 'Fallback driver error.',
     shouldClearSessionToken: false,
   });
+  mockedTriggerTripSafetySosWithApi.mockResolvedValue({
+    sos: {
+      tripId: 'trip-1',
+      ticketId: 'ticket-sos-1',
+      priority: 3,
+      incidentType: 'SOS_TRIGGERED',
+      reportedByRole: 'DRIVER',
+      status: 'OPEN',
+      localEmergencyNumber: '112',
+      locationCaptured: false,
+    },
+  } as never);
+  mockedCreateTripShareLinkWithApi.mockResolvedValue({
+    share: {
+      tripId: 'trip-1',
+      token: 'share-token',
+      path: '/trips/shared/share-token',
+      expiresAt: '2026-05-02T12:00:00.000Z',
+      ttlMinutes: 120,
+    },
+  } as never);
 
   driverRealtimeState.eventHandler = null;
   driverRealtimeState.options = null;
@@ -511,6 +551,88 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Le numero de telephone est requis avant la soumission.');
   });
 
+  it('shows document upload constraints and submits driver-app integrity source', async () => {
+    const profile = buildDriverProfile();
+    profile.profile.onboarding.city = 'OUAGADOUGOU';
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverProfile.mockResolvedValue(profile as never);
+    mockedFetchMyTrips.mockResolvedValue(buildDriverTrips() as never);
+    mockedRequestDriverDocumentUploadLinks.mockResolvedValue({
+      links: [
+        'identity-document',
+        'driver-license',
+        'vehicle-registration',
+        'insurance-proof',
+        'selfie-verification',
+      ].map((key, index) => ({
+        storageKey: `driver-1/${key}.pdf`,
+        expiresAt: '2026-05-02T12:00:00.000Z',
+        uploadUrl: `https://storage.mobilis.local/upload/${key}`,
+        method: 'PUT' as const,
+        headers: {
+          'content-type': index === 4 ? 'image/jpeg' : 'application/pdf',
+        },
+        constraints: {
+          allowedMimeTypes:
+            index === 4
+              ? ['image/jpeg', 'image/png']
+              : ['application/pdf', 'image/jpeg', 'image/png'],
+          allowedExtensions:
+            index === 4 ? ['jpg', 'jpeg', 'png'] : ['pdf', 'jpg', 'jpeg', 'png'],
+          maxBytes: index === 4 ? 3_000_000 : 5_000_000,
+        },
+      })),
+    } as never);
+    mockedUpsertDriverOnboarding.mockResolvedValue({
+      onboarding: {
+        ...profile.profile.onboarding,
+        reviewStatus: 'SUBMITTED',
+      },
+    } as never);
+
+    const renderer = await renderScreen(<ProfilScreen />);
+    await flushMicrotasks();
+
+    await changeInputByPlaceholder(renderer, 'BF-12345', 'BF-99887');
+    await changeInputByPlaceholder(renderer, 'ex: carte-identite.pdf', 'carte-identite.pdf');
+    await changeInputByPlaceholder(renderer, 'ex: permis.pdf', 'permis.pdf');
+    await changeInputByPlaceholder(renderer, 'ex: carte-grise.pdf', 'carte-grise.pdf');
+    await changeInputByPlaceholder(renderer, 'ex: assurance.pdf', 'assurance.pdf');
+    await changeInputByPlaceholder(renderer, 'ex: selfie.jpg', 'selfie.jpg');
+    await pressByText(renderer, 'Preparer les liens documentaires');
+
+    expectText(
+      renderer,
+      'Liens documentaires securises prets avec contraintes visibles.',
+    );
+    expectText(
+      renderer,
+      'Lien securise pret jusqu au 02/05/2026 12:00:00. Limite: 5.0 MB, formats: pdf, jpg, jpeg, png',
+    );
+    expectText(
+      renderer,
+      'Lien securise pret jusqu au 02/05/2026 12:00:00. Limite: 3.0 MB, formats: jpg, jpeg, png',
+    );
+
+    await pressByText(renderer, 'Soumettre le dossier ops');
+
+    expect(mockedUpsertDriverOnboarding).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        documentArtifacts: expect.arrayContaining([
+          expect.objectContaining({
+            type: 'IDENTITY_DOCUMENT',
+            uploadSource: 'driver-app',
+          }),
+          expect.objectContaining({
+            type: 'SELFIE_VERIFICATION',
+            uploadSource: 'driver-app',
+          }),
+        ]),
+      }),
+    );
+  });
+
   it('signs out the driver account from profile screen', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
@@ -675,6 +797,17 @@ describe('driver smoke flows', () => {
       availability: {
         driverId: 'driver-1',
         status: 'OFFLINE',
+        fatigue: {
+          state: 'clear',
+          completedTrips: 2,
+          drivingMinutes: 64,
+          windowHours: 8,
+          maxCompletedTrips: 8,
+          maxDrivingMinutes: 300,
+          restMinutes: 30,
+          restUntil: null,
+          reason: 'Aucun signal fatigue bloquant sur la fenetre recente.',
+        },
       },
     } as never);
 

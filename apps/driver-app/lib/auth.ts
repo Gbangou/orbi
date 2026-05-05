@@ -8,6 +8,8 @@ import {
   signUpWithApi,
 } from '@mobilis/api';
 import { mobilisRuntimeConfig } from '@mobilis/config';
+import type { AuthenticatedApiContext } from '@mobilis/api';
+import { flushDriverMobileErrorReports } from './mobile-error-reporting';
 import { driverSessionStorage, driverSessionStorageKey } from './session-storage';
 
 function createDriverClient() {
@@ -17,11 +19,14 @@ function createDriverClient() {
 }
 
 export async function restoreDriverSession() {
-  return restorePersistedSession(
+  const context = await restorePersistedSession(
     createDriverClient(),
     driverSessionStorage,
     driverSessionStorageKey,
   );
+  safelyFlushDriverMobileErrorReports(context);
+
+  return context;
 }
 
 export async function signInDriverAccount(payload: {
@@ -36,11 +41,14 @@ export async function signInDriverAccount(payload: {
     session.sessionToken,
   );
 
-  return restorePersistedSession(
+  const context = await restorePersistedSession(
     client,
     driverSessionStorage,
     driverSessionStorageKey,
   );
+  safelyFlushDriverMobileErrorReports(context);
+
+  return context;
 }
 
 export async function signUpDriverAccount(payload: {
@@ -59,11 +67,14 @@ export async function signUpDriverAccount(payload: {
     session.sessionToken,
   );
 
-  return restorePersistedSession(
+  const context = await restorePersistedSession(
     client,
     driverSessionStorage,
     driverSessionStorageKey,
   );
+  safelyFlushDriverMobileErrorReports(context);
+
+  return context;
 }
 
 export async function signOutDriverAccount() {
@@ -82,4 +93,8 @@ export async function hasPersistedDriverSession() {
 
 export async function clearDriverPersistedSession() {
   await clearPersistedSession(driverSessionStorage, driverSessionStorageKey);
+}
+
+function safelyFlushDriverMobileErrorReports(context: AuthenticatedApiContext) {
+  void flushDriverMobileErrorReports(context.authClient).catch(() => undefined);
 }

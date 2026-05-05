@@ -1,14 +1,27 @@
 import {
+  classifyMobilisClientError,
   extractApiErrorMessage,
-  isMobilisApiError,
+  type MobilisClientErrorSurface,
 } from '@mobilis/api';
 import { router } from 'expo-router';
 import { clearDriverPersistedSession } from './auth';
+import { enqueueDriverMobileErrorReport } from './mobile-error-reporting';
 
 type DriverErrorCopy = {
   expiredSession: string;
   network: string;
   fallback: string;
+};
+
+export type DriverAppErrorFeedback = {
+  message: string;
+  code?: string;
+  surface?: MobilisClientErrorSurface;
+  severity?: string;
+  owner?: string;
+  retryPolicy?: string;
+  shouldClearSessionToken: boolean;
+  reportable?: boolean;
 };
 
 const defaultDriverErrorCopy: DriverErrorCopy = {
@@ -19,71 +32,75 @@ const defaultDriverErrorCopy: DriverErrorCopy = {
   fallback: 'Une erreur reseau ou serveur est survenue.',
 };
 
-function normalizeErrorMessage(error: unknown) {
-  if (error instanceof Error) {
-    return error.message.toLowerCase();
-  }
-
-  return '';
-}
-
-function isDriverSessionError(error: unknown) {
-  if (isMobilisApiError(error) && [401, 403].includes(error.status)) {
-    return true;
-  }
-
-  const message = normalizeErrorMessage(error);
-
-  return (
-    message.includes('aucune session enregistree') ||
-    message.includes('valid session token') ||
-    message.includes('currently inactive')
-  );
-}
-
-function isLikelyNetworkError(error: unknown) {
-  if (error instanceof TypeError) {
-    return true;
-  }
-
-  const message = normalizeErrorMessage(error);
-
-  return (
-    message.includes('network request failed') ||
-    message.includes('fetch failed') ||
-    message.includes('load failed') ||
-    message.includes('networkerror')
-  );
-}
-
 export async function resolveDriverAppError(
   error: unknown,
-  copy?: Partial<DriverErrorCopy>,
-) {
+  copy?: Partial<DriverErrorCopy> & { surface?: MobilisClientErrorSurface },
+): Promise<DriverAppErrorFeedback> {
   const messages = {
     ...defaultDriverErrorCopy,
     ...copy,
   };
+  const classification = classifyMobilisClientError(error, {
+    surface: copy?.surface,
+    fallbackMessage: messages.fallback,
+  });
+  await safelyQueueDriverErrorReport(error, classification);
 
-  if (isDriverSessionError(error)) {
+  if (classification.shouldClearSessionToken) {
     await clearDriverPersistedSession();
     router.replace('/auth');
 
     return {
       message: messages.expiredSession,
+      code: classification.code,
+      surface: classification.surface,
+      severity: classification.severity,
+      owner: classification.owner,
+      retryPolicy: classification.retryPolicy,
       shouldClearSessionToken: true,
+      reportable: classification.reportable,
     };
   }
 
-  if (isLikelyNetworkError(error)) {
+  if (classification.code === 'MOB-NETWORK-OFFLINE') {
     return {
       message: messages.network,
+      code: classification.code,
+      surface: classification.surface,
+      severity: classification.severity,
+      owner: classification.owner,
+      retryPolicy: classification.retryPolicy,
       shouldClearSessionToken: false,
+      reportable: classification.reportable,
     };
   }
 
   return {
-    message: extractApiErrorMessage(error, messages.fallback),
+    message:
+      classification.code === 'MOB-GENERIC-API'
+        ? extractApiErrorMessage(error, messages.fallback)
+        : classification.userMessage,
+    code: classification.code,
+    surface: classification.surface,
+    severity: classification.severity,
+    owner: classification.owner,
+    retryPolicy: classification.retryPolicy,
     shouldClearSessionToken: false,
+    reportable: classification.reportable,
   };
+}
+
+async function safelyQueueDriverErrorReport(
+  error: unknown,
+  classification: ReturnType<typeof classifyMobilisClientError>,
+) {
+  if (!classification.reportable) {
+    return;
+  }
+
+  try {
+    await enqueueDriverMobileErrorReport(error, { classification });
+  } catch {
+    // Error reporting must never block user recovery or auth cleanup.
+  }
 }

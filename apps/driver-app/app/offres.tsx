@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   acceptRideRequestWithApi,
+  createTripShareLinkWithApi,
   declineDriverOfferWithApi,
   driverOffers,
   fetchDriverOffers,
@@ -9,6 +10,8 @@ import {
   fetchMyTrips,
   fetchTripDetail,
   reportTripIncidentWithApi,
+  triggerTripSafetySosWithApi,
+  type DriverFatigueStatus,
   type DriverOffer,
   type MyTripsResponse,
   type TripDetailResponse,
@@ -68,6 +71,18 @@ const fallbackHistory: MyTripsResponse = {
   recentTrips: [],
 };
 
+const fallbackFatigue: DriverFatigueStatus = {
+  state: 'clear',
+  completedTrips: 0,
+  drivingMinutes: 0,
+  windowHours: 8,
+  maxCompletedTrips: 8,
+  maxDrivingMinutes: 300,
+  restMinutes: 30,
+  restUntil: null,
+  reason: 'Aucun signal fatigue bloquant sur la fenetre recente.',
+};
+
 export default function OffersScreen() {
   const [offers, setOffers] = useState<DriverOffer[]>(driverOffers);
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
@@ -81,6 +96,7 @@ export default function OffersScreen() {
   const [activeTripTransitionLabel, setActiveTripTransitionLabel] = useState<string | null>(null);
   const [freshTimelineEventIds, setFreshTimelineEventIds] = useState<string[]>([]);
   const [driverProfileStatus, setDriverProfileStatus] = useState<string>('OFFLINE');
+  const [driverFatigue, setDriverFatigue] = useState<DriverFatigueStatus>(fallbackFatigue);
   const [pickupCodeInput, setPickupCodeInput] = useState('');
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
@@ -103,6 +119,7 @@ export default function OffersScreen() {
       setOffers(offersResponse);
       setHistory(historyResponse);
       setDriverProfileStatus(profileResponse.profile.status);
+      setDriverFatigue(profileResponse.profile.fatigue);
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: offersResponse,
@@ -123,6 +140,7 @@ export default function OffersScreen() {
       }
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
+        surface: 'active-trip',
         network: 'Preview locale active en attendant la connexion API.',
         fallback: 'Preview locale active en attendant la connexion API.',
       });
@@ -302,6 +320,7 @@ export default function OffersScreen() {
       await loadDriverData();
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
+        surface: 'driver-availability',
         fallback: "Le changement de disponibilite a echoue.",
       });
 
@@ -326,6 +345,7 @@ export default function OffersScreen() {
       await loadDriverData();
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
+        surface: 'booking',
         fallback: "L'acceptation de l'offre a echoue.",
       });
 
@@ -352,6 +372,7 @@ export default function OffersScreen() {
       await loadDriverData();
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
+        surface: 'booking',
         fallback: "Le refus explicite de l'offre a echoue.",
       });
 
@@ -379,6 +400,7 @@ export default function OffersScreen() {
       await loadDriverData();
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
+        surface: 'active-trip',
         fallback: 'La mise a jour du trajet a echoue.',
       });
 
@@ -404,6 +426,7 @@ export default function OffersScreen() {
       await loadDriverData();
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
+        surface: 'active-trip',
         fallback: 'Code incorrect ou verification impossible.',
       });
 
@@ -432,7 +455,103 @@ export default function OffersScreen() {
       await loadDriverData();
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
+        surface: 'safety',
         fallback: "Le signalement de l'incident a echoue.",
+      });
+
+      if (feedback.shouldClearSessionToken) {
+        setSessionToken(null);
+      }
+
+      setStatus(feedback.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDeclareIncidentEvidence(tripId: string) {
+    setIsSubmitting(true);
+    setStatus('Declaration de preuve volontaire chauffeur...');
+
+    try {
+      const { authClient } = await restoreDriverSession();
+      await reportTripIncidentWithApi(authClient, tripId, {
+        incidentType: 'DRIVER_VOLUNTARY_EVIDENCE',
+        details:
+          'Preuve conservee localement par le chauffeur. Upload support uniquement sur action explicite.',
+        priority: 3,
+        evidenceConsent: true,
+        evidenceType: 'AUDIO',
+        evidenceRetentionHours: 24,
+      });
+      setStatus('Preuve volontaire declaree. Aucun fichier n a ete envoye automatiquement.');
+      await loadDriverData();
+    } catch (error) {
+      const feedback = await resolveDriverAppError(error, {
+        surface: 'safety',
+        fallback: "La preuve volontaire chauffeur n'a pas pu etre declaree.",
+      });
+
+      if (feedback.shouldClearSessionToken) {
+        setSessionToken(null);
+      }
+
+      setStatus(feedback.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleTriggerSos(tripId: string) {
+    setIsSubmitting(true);
+    setStatus('SOS chauffeur en cours: notification operations...');
+
+    try {
+      const { authClient } = await restoreDriverSession();
+      const response = await triggerTripSafetySosWithApi(authClient, tripId, {
+        details: 'SOS declenche depuis le cockpit chauffeur.',
+      });
+
+      setStatus(
+        `SOS envoye au support. Appel local ${response.sos.localEmergencyNumber} disponible.`,
+      );
+      void Linking.openURL(`tel:${response.sos.localEmergencyNumber}`);
+      await loadDriverData();
+    } catch (error) {
+      const feedback = await resolveDriverAppError(error, {
+        surface: 'safety',
+        fallback: "Le SOS chauffeur n'a pas pu etre envoye.",
+      });
+
+      if (feedback.shouldClearSessionToken) {
+        setSessionToken(null);
+      }
+
+      setStatus(feedback.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleShareTrip(tripId: string) {
+    setIsSubmitting(true);
+    setStatus('Creation du lien de partage mission...');
+
+    try {
+      const { authClient } = await restoreDriverSession();
+      const response = await createTripShareLinkWithApi(authClient, tripId);
+      const shareUrl = response.share.path;
+
+      await Share.share({
+        message: `Suivi securise de ma mission Mobilis: ${shareUrl}`,
+        url: shareUrl,
+      });
+      setStatus('Lien de partage mission pret. Expiration automatique active.');
+      await loadDriverData();
+    } catch (error) {
+      const feedback = await resolveDriverAppError(error, {
+        surface: 'safety',
+        fallback: "Le lien de partage mission n'a pas pu etre cree.",
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -530,7 +649,18 @@ export default function OffersScreen() {
           label="Profil"
           value={formatOperationalStatus(driverProfileStatus)}
         />
+        <MetricTile
+          label="Fatigue"
+          value={driverFatigue.state === 'blocked' ? 'Pause' : driverFatigue.state === 'warning' ? 'A surveiller' : 'OK'}
+        />
       </View>
+      {driverFatigue.state !== 'clear' ? (
+        <TransitionNoticeCard
+          label={driverFatigue.state === 'blocked' ? 'Pause obligatoire' : 'Pause conseillee'}
+          message={`${driverFatigue.reason} ${driverFatigue.drivingMinutes}/${driverFatigue.maxDrivingMinutes} min sur ${driverFatigue.windowHours}h.`}
+          tone={driverFatigue.state === 'blocked' ? 'rose' : 'amber'}
+        />
+      ) : null}
       {freshOfferIds.length ? (
         <TransitionNoticeCard
           label={
@@ -637,7 +767,10 @@ export default function OffersScreen() {
               tone: 'teal',
             },
           ]}
-          detailLines={[`Statut: ${activeTrip.status}`]}
+          detailLines={[
+            `Statut: ${activeTrip.status}`,
+            'Monitoring route actif cote operations pendant la mission.',
+          ]}
           note={
             activeTrip.pickupCode
               ? 'Le passager doit vous communiquer un code a 4 chiffres.'
@@ -658,8 +791,29 @@ export default function OffersScreen() {
           {renderActiveTripAction()}
           <FlowActionButton
             disabled={isSubmitting}
+            label="SOS securite"
+            onPress={() => handleTriggerSos(activeTrip.id)}
+            emphasis="primary"
+            style={isSubmitting ? styles.disabled : null}
+          />
+          <FlowActionButton
+            disabled={isSubmitting}
+            label="Partager la mission"
+            onPress={() => handleShareTrip(activeTrip.id)}
+            emphasis="secondary"
+            style={isSubmitting ? styles.disabled : null}
+          />
+          <FlowActionButton
+            disabled={isSubmitting}
             label="Signaler un incident"
             onPress={() => handleReportIncident(activeTrip.id)}
+            emphasis="secondary"
+            style={isSubmitting ? styles.disabled : null}
+          />
+          <FlowActionButton
+            disabled={isSubmitting}
+            label="Preuve volontaire"
+            onPress={() => handleDeclareIncidentEvidence(activeTrip.id)}
             emphasis="secondary"
             style={isSubmitting ? styles.disabled : null}
           />

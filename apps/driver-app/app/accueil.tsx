@@ -96,6 +96,7 @@ export default function DriverHomeScreen() {
       }
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
+        surface: 'profile',
         network: 'Preview locale active en attendant la connexion API.',
       });
 
@@ -245,6 +246,7 @@ export default function DriverHomeScreen() {
       await loadDriverHome(true);
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
+        surface: 'driver-availability',
         fallback: "Le changement de disponibilite n'a pas pu etre applique.",
       });
 
