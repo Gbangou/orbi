@@ -38,6 +38,7 @@ pnpm start:dev
 - `GET /api/v1/admin/payment-webhook-events`
 - `GET /api/v1/admin/payment-webhook-events/:eventId`
 - `POST /api/v1/admin/payment-webhook-events/:eventId/investigation`
+- `POST /api/v1/admin/payment-webhook-events/:eventId/replay`
 - `GET /api/v1/riders/overview`
 - `GET /api/v1/drivers/overview`
 - `GET /api/v1/drivers/offers`
@@ -73,7 +74,12 @@ Le backend expose maintenant une fondation paiements orientee agregateur:
 - endpoint `webhooks` pour verification signature, reconciliation idempotente et journalisation
 - endpoint admin `payment-webhook-events` pour auditer les notifications fournisseur recentes
 - endpoint detail webhook avec payload redige pour investigation sans exposer les secrets, signatures ou numeros
+- action admin `payment-webhook-events/:eventId/replay` pour rejouer un webhook deja journalise sans accepter de nouveau payload manuel
+- action admin `payment-attempts/:paymentAttemptId/verify-provider` pour verifier une tentative directement chez Flutterwave/CinetPay, puis reconcilier via le meme chemin idempotent que les webhooks
 - action admin `investigation` pour journaliser une enquete et creer un ticket support quand l evenement est rattache a un utilisateur
+- ledger chauffeur idempotent apres paiement `SUCCEEDED`: credit du wallet chauffeur avec payout net et commission Mobilis en metadata
+- endpoints admin `driver-wallets/:walletId/payouts/prepare` et `driver-payouts/:payoutId/paid` pour preparer puis marquer paye un payout chauffeur avec audit log, signal realtime et transaction ledger `PAYOUT`
+- exports admin `driver-payouts/settlement.csv` et `driver-payouts/settlement.pdf` pour les settlements terrain signes et audites
 
 Variables utiles:
 

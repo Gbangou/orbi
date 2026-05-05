@@ -786,6 +786,37 @@ Mot de passe: Mobilis123!
 5. ouvre `activity`
 6. ouvre `voice`
 
+Dans `account`, tu dois aussi voir:
+
+- `Contact de confiance`
+- un champ telephone au format `+22670000001`
+- les modes `Manuel`, `Nuit`, `Tous trajets`
+- le bouton `Enregistrer le contact`
+
+Si une course active existe dans `activity`, tu dois aussi voir:
+
+- une ligne indiquant que partage, code pickup et monitoring route sont
+  connectes aux operations
+- `SOS securite`: cree un ticket support prioritaire et propose l appel local
+  `112`
+- `Partager le trajet`: cree un lien securise temporaire a envoyer a un proche
+- `Signaler un incident`: cree un signalement support classique
+- `Preuve volontaire`: declare une preuve locale avec consentement, sans upload
+  automatique
+- Cote admin, `System Health` affiche les SLO runtime, la posture de risque et
+  la taxonomie d erreurs mobile pour savoir si un probleme vient d auth,
+  booking, paiement, realtime ou securite.
+- Les apps rider et driver utilisent une taxonomie d erreurs partagee:
+  `MOB-AUTH-SESSION`, `MOB-BOOKING-DISPATCH`, `MOB-PAYMENT-PROVIDER`,
+  `MOB-REALTIME-DEGRADED`, `MOB-SAFETY-INCIDENT`, `MOB-NETWORK-OFFLINE`,
+  `MOB-VALIDATION-INPUT` et `MOB-GENERIC-API`.
+- Les erreurs reportables sont aussi placees dans une file locale bornee et
+  anonymisee. Les erreurs offline attendues restent visibles a l utilisateur,
+  mais ne polluent pas le futur crash/error reporting production.
+- Quand une session rider/driver est restauree, la file locale est drainee vers
+  l API `/mobile/error-reports`. Le backend audite les rapports et ouvre un
+  ticket support pour les signaux critiques.
+
 ### Driver Android
 
 Ce que tu fais:
@@ -802,6 +833,22 @@ Mot de passe: Mobilis123!
 4. ouvre `offres`
 5. ouvre `revenus`
 6. ouvre `profil`
+
+Si une mission active existe dans `offres`, tu dois aussi voir:
+
+- une ligne indiquant que le monitoring route est actif cote operations pendant
+  la mission
+- `SOS securite`: alerte les operations, journalise la course et propose
+  l appel local `112`
+- `Partager la mission`: cree un lien securise temporaire pour un proche ou les
+  operations terrain
+- `Signaler un incident`: envoie un signalement chauffeur au support
+- `Preuve volontaire`: declare une preuve locale avec consentement, sans upload
+  automatique
+
+Dans `offres`, le snapshot chauffeur affiche aussi `Fatigue`. Si le seuil est
+proche ou depasse, une carte de pause conseillee ou obligatoire apparait avant
+les offres.
 
 ## 17. Si Android Ne Marche Pas
 

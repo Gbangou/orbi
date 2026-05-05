@@ -60,6 +60,82 @@ Migration importante:
 
 - `20260427102000_payment_provider_reference_idempotency`
 
+### Ecriture Ledger Chauffeur Idempotente
+
+Un paiement fournisseur `SUCCEEDED` ne peut produire qu'une seule ecriture de
+payout chauffeur par wallet. Cela protege les revenus chauffeur contre les
+replays webhook, les relances ops et les doubles notifications fournisseur.
+
+Garantie:
+
+- applicatif: `PaymentsService` ecrit une transaction wallet referencee
+  `payment:<paymentAttemptId>:driver-payout` uniquement apres reconciliation
+  reussie, et ignore l'ecriture si elle existe deja
+- base de donnees: contrainte unique composite sur `walletId` et `reference`
+  dans `WalletTransaction`
+- metadonnees: l'ecriture conserve le montant brut, la commission Mobilis, le
+  payout chauffeur, le `paymentAttemptId`, la course et la reference fournisseur
+
+Migration importante:
+
+- `20260430193000_wallet_transaction_reference_idempotency`
+
+### Payout Chauffeur Prepare Une Seule Fois
+
+Un wallet chauffeur ne peut pas avoir deux payouts `PREPARED` en meme temps.
+Cela protege les operations terrain contre deux validations de paiement sur le
+meme solde.
+
+Garantie:
+
+- applicatif: `AdminService.prepareDriverWalletPayout` refuse les wallets
+  verrouilles ou sans solde payable, et retourne le payout prepare existant si
+  une preparation est deja ouverte
+- base de donnees: `DriverPayout.preparedLockKey` est unique; il vaut l'id du
+  wallet uniquement pendant l'etat `PREPARED`, puis repasse a `null` quand le
+  payout est marque `PAID`
+- ledger: `AdminService.markDriverPayoutPaid` ecrit une transaction
+  `WalletTransaction` de type `PAYOUT` avec la reference idempotente
+  `driver-payout:<driverPayoutId>:paid`, puis decremente le solde du wallet
+- audit settlement: les exports CSV/PDF passent par
+  `AdminService.driverPayoutSettlement*`, ecrivent un audit log, et incluent la
+  signature prepare/payee plus les notes d'approbation bornees
+- verification provider: `PaymentsService.verifyPaymentAttemptWithProvider`
+  refuse de reconcilier si le montant ou la devise retournes par le provider ne
+  correspondent pas a `PaymentAttempt.amount/currency`; si tout concorde, la
+  reconciliation reutilise le chemin webhook idempotent
+
+Migration importante:
+
+- `20260430203000_driver_payouts`
+
+### Recouvrement Apres Refund
+
+Un refund apres payout chauffeur deja paye peut rendre le solde wallet negatif.
+Ce solde negatif est un signal ops de recouvrement, pas un solde payable.
+
+Garantie:
+
+- applicatif: le refund ecrit une transaction `WalletTransaction` de type
+  `REFUND` referencee `payment:<paymentAttemptId>:driver-payout-refund`
+- provider: en mode `PAYMENTS_REFUND_MODE=provider`, un refund peut rester
+  `REFUND_PENDING`; aucune reversal wallet n'est appliquee avant confirmation
+  provider `REFUNDED`
+- webhook refund: les callbacks refund sont journalises separement du paiement
+  initial; un webhook processed reutilise la meme finalisation idempotente que
+  le polling provider
+- audit ops: le journal webhook expose un filtre metier
+  `kind=payment|refund|ignored` pour eviter aux ops de manipuler directement
+  les actions internes
+- admin: `AdminService.driverWallets` expose `recoveryDue` par wallet, plus
+  `recoveryWalletCount` et `totalRecoveryDue` dans le resume
+- recouvrement: `AdminService.recordDriverWalletRecoveryAdjustment` exige une
+  note ops, un montant positif et une cle d'idempotence, puis ecrit une
+  transaction `ADJUSTMENT` referencee
+  `driver-wallet-recovery:<walletId>:<idempotencyKey>`
+- operations: les wallets avec `recoveryDue > 0` ne doivent pas generer de
+  nouveau payout prepare tant que le solde n'est pas redevenu positif
+
 ## Contrats Enum Prisma / Domaine
 
 Le backend, les apps Expo, l'admin web et le client API partagent les enums exposes par `packages/domain`. Les enums Prisma restent la source des tables et contraintes SQL. Le test `domain-prisma-contract.spec.ts` compare les deux mondes pour eviter une divergence silencieuse.

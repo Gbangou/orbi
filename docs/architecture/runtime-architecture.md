@@ -67,6 +67,33 @@ flowchart LR
 4. Une reservation temporaire protege l'offre contre les doubles acceptations.
 5. Le chauffeur accepte, refuse ou laisse expirer.
 
+### Onboarding Chauffeur
+
+1. L'app chauffeur demande des liens d'upload signes par type de justificatif.
+2. `DocumentLinksService` applique whitelist MIME/extension, taille maximale,
+   nom de fichier normalise, TTL borne et signature HMAC.
+3. La reponse d upload expose les contraintes au client chauffeur pour eviter
+   les fichiers hors politique avant soumission.
+4. Le rattachement des artefacts refuse toute cle qui ne vit pas sous le
+   prefixe du profil chauffeur.
+5. Le rattachement revalide type documentaire, extension objet et MIME avant
+   creation ou remise en attente d un `DriverDocument`.
+6. Si le client fournit `sizeBytes`, `sha256` ou `uploadSource`, ces signaux
+   sont bornes, normalises et conserves dans `DriverDocument.metadata`.
+7. La file admin calcule un score d integrite par document, une recommandation
+   ops (`clear`, `review`, `resubmit`) et une guidance dossier
+   (`approve`, `review`, `resubmit`) pour guider la revue sans bloquer
+   automatiquement les documents historiques.
+8. Chaque generation de liens ecrit un audit log sans exposer de secret.
+9. Les operations consultent les justificatifs via liens de lecture courts avant
+   decision explicite.
+10. Chaque decision de revue conserve dans ses metadonnees une snapshot de la
+    guidance dossier et du resume documentaire utilises au moment de l action,
+    afin de rendre les approbations, revues et redemandes auditables a posteriori.
+11. La file admin restitue les dernieres decisions avec cette snapshot quand
+    elle existe, ce qui permet aux operations de relire le contexte de decision
+    sans ouvrir les logs techniques.
+
 ### Cycle De Course
 
 1. `TripsService` transforme une demande en course avec transaction.
@@ -98,12 +125,19 @@ flowchart LR
 - `domain-prisma-contract.spec.ts`: compare enums Prisma et noyau domaine.
 - `prisma-migration-invariants.spec.ts`: verifie les index uniques partiels critiques dans les migrations SQL.
 - Smoke tests rider/driver: verifient les ecrans principaux et etats actifs.
-- `pnpm typecheck`: build admin, typecheck mobile, build backend.
+- Smoke tests admin: verifient les regles de synchronisation ops et la decision
+  `launch-readiness` avant pilote production.
+- `document-links.service.spec.ts`: verrouille les contraintes MIME, extension,
+  taille, TTL et normalisation de cle de stockage documentaire.
+- `pnpm typecheck`: build les packages partages, build admin, typecheck mobile,
+  build backend.
 
 ## Prochaines Extensions
 
 - Adapters fournisseur pour verification de statut, remboursements et replay de webhook stocke.
-- Observabilite runtime: latence API, latence realtime, taux d'expiration reservation, taux de conversion paiement.
+- Observabilite runtime: latence API, latence realtime, taux d'expiration
+  reservation, taux de conversion paiement et tendances des rapports mobiles
+  `MOB-*`.
 - Tests UI par parcours complet rider/driver/admin sur web preview.
 - Notifications push/SMS/email branchees sur `Notification`.
 - Gestion avancee support: escalades incident, SLA, pieces jointes, moderation.

@@ -16,6 +16,25 @@ needs proof outside the repo:
 - field validation on pricing, pickup wait, acceptance and cancellation
 - a documented acquisition loop
 
+## Production Timing
+
+As of 1 May 2026, the local MVP backend/admin money path is testable. The local
+API smoke covers demo login, rider booking, driver acceptance, completed trip,
+mobile money checkout, webhook reconciliation, driver wallet credit, payout,
+refund, recovery adjustment and live ops counters.
+
+The realistic launch window is:
+
+- Local MVP testing: now
+- Controlled field beta: 1 to 2 weeks after real-device rider/driver testing
+  and Flutterwave sandbox refund fixtures pass repeatedly
+- First production pilot: 4 to 6 weeks after observability, secrets, rollback,
+  provider live credentials, incident runbooks and CI money-path smoke are green
+
+Do not treat "production" as a binary deploy. The right first production shape is
+a controlled pilot in one Ouagadougou zone with manual ops backup, a capped rider
+and driver cohort, and a daily money reconciliation ritual.
+
 ## Non-Negotiable Build Rules
 
 1. No feature ships without a clear invariant, API contract and owner surface.
@@ -75,8 +94,18 @@ Initial acquisition channels:
 
 ## Current Priority Order
 
-1. Harden input validation and dirty-data tests.
-2. Finish payment provider sandbox fixtures and replay tooling.
-3. Add settlement/ledger entries after successful reconciliation.
-4. Validate one real pilot zone before expanding UI scope.
-5. Add observability dashboards for latency, failures, conversion and support.
+1. Run real-device rider and driver MVP sessions on the same Wi-Fi/LAN setup.
+2. Capture Flutterwave sandbox payment and refund webhooks as fixtures.
+3. Harden input validation and dirty-data tests.
+4. Add observability dashboards for latency, failures, conversion and support.
+5. Keep `/health.operations.serviceLevelObjectives` green or explicitly
+   acknowledged as a limited-pilot risk before every field session.
+6. Keep `admin/launch-readiness.fieldQuality` at `excellent` for broad launch,
+   or `watch` only for a capped field pilot with named owners.
+7. Keep mobile rider/driver errors classified with the shared `MOB-*`
+   taxonomy before adding new client-side flows, and queue reportable mobile
+   errors locally with sanitized context. The apps now drain those reports to
+   `/mobile/error-reports`; critical reports write audit logs and open support
+   tickets before any external collector is configured.
+8. Validate one real pilot zone before expanding UI scope.
+9. Keep CI green with Prisma migrations plus the local API money-path smoke.

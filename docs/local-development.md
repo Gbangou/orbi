@@ -62,17 +62,54 @@ Important:
 
 ## Voir l application sur mobile
 
-Lancer:
+Avant de lancer Expo sur un vrai telephone, configurez les apps mobiles pour
+appeler le backend du PC via l IP du reseau local:
 
 ```powershell
-pnpm dev:full-mobile
+pnpm mobile:lan
+```
+
+Le script met a jour:
+
+- `apps/rider-app/.env`
+- `apps/driver-app/.env`
+
+avec une URL du type `http://192.168.x.x:3000`.
+
+Ensuite, dans deux terminaux:
+
+```powershell
+pnpm dev:backend
+pnpm dev:rider
+```
+
+ou pour le chauffeur:
+
+```powershell
+pnpm dev:backend
+pnpm dev:driver
 ```
 
 Puis:
 
 1. Ouvrir Expo Go sur Android
-2. Scanner le QR code du rider app ou du driver app
+2. Scanner le QR code affiche par Expo
 3. Verifier que le telephone et l ordinateur sont sur le meme Wi-Fi
+4. Autoriser Node.js dans Windows Firewall si Windows le demande
+
+Pour lancer rider et driver en meme temps:
+
+```powershell
+pnpm mobile:lan
+pnpm mobile:check
+pnpm dev:full-mobile
+```
+
+Si le telephone ne joint pas l API, relancez explicitement avec l IP correcte:
+
+```powershell
+pnpm mobile:lan -- -HostIp 192.168.1.20
+```
 
 ## Comptes demo seedes
 
@@ -90,9 +127,41 @@ Puis:
 - `pnpm dev:rider:web`
 - `pnpm dev:driver:web`
 - `pnpm dev:web-driver-preview`
+- `pnpm mobile:lan`
+- `pnpm mobile:check`
+- `pnpm e2e:local-checklist`
+- `pnpm e2e:local-api`
 - `pnpm typecheck`
 - `pnpm lint`
 - `pnpm --filter backend test -- --runInBand`
+
+## Session E2E terrain locale
+
+Quand la stack compile, la verification la plus importante est le parcours
+terrain complet: rider, driver, paiement, webhook, wallet, payout et refund.
+
+Par defaut, les refunds restent en mode local/manual. Pour tester l'appel
+provider Flutterwave, definir `PAYMENTS_REFUND_MODE=provider` et fournir
+`FLUTTERWAVE_SECRET_KEY`; le bouton de verification provider finalise ensuite
+les refunds `REFUND_PENDING` quand Flutterwave les signale traites.
+
+Le runbook dedie est dans `docs/local-e2e-field-session.md`.
+
+Pour preparer la session:
+
+```powershell
+pnpm e2e:local-checklist
+```
+
+Pour automatiser le smoke backend du meme parcours argent:
+
+```powershell
+pnpm e2e:local-api
+```
+
+Ce smoke est le meilleur indicateur MVP backend local: il couvre login demo,
+booking rider, acceptation driver, trip complet, checkout mobile money, webhook,
+wallet driver, payout, refund, reversal wallet et compteur live ops.
 
 ## Ordre conseille pour suivre l evolution
 
@@ -113,9 +182,11 @@ Pour un MVP beta, le meilleur rythme local est:
 
 ## Etat verifie
 
-Au 18 avril 2026, ce setup local a ete reverifie avec succes sur:
+Au 1 mai 2026, ce setup local a ete reverifie avec succes sur:
 
-- `pnpm lint`
 - `pnpm typecheck`
-- `pnpm build`
+- `pnpm --filter backend lint`
+- `pnpm --filter backend exec prisma validate`
 - `pnpm --filter backend test -- --runInBand`
+- `pnpm --filter backend test -- admin.service.spec.ts admin.controller.spec.ts admin.controller.integration.spec.ts payments.service.spec.ts --runInBand`
+- `pnpm e2e:local-api`

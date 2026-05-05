@@ -110,6 +110,21 @@ Points deja credibles:
 - abstractions `realtime`, `rate-limit`, `health`, `runtime lifecycle`
 - runbook de deploiement prudent avec readiness, draining et expand-contract
 - admin live ops, support queue et signaux incident
+- partage trajet securise, SOS rider/driver, route monitoring initial et
+  contact de confiance rider audite
+- limites fatigue chauffeur avec blocage mise en ligne/acceptation et audit ops
+- declaration volontaire de preuve incident avec consentement, retention courte
+  et aucun upload automatique
+- SLO runtime visibles dans l admin, posture de risque production et taxonomie
+  crash/error mobile pour router auth, booking, paiement, realtime et securite
+  vers les bons owners
+- score `Excellence terrain` dans launch-readiness: stabilite runtime/mobile,
+  securite, support, flotte chauffeur, argent et temps reel compares aux
+  attentes de leaders comme Uber, Bolt et Yango
+- taxonomie d erreurs mobile partagee dans `packages/api`, consommee par rider
+  et driver pour classer auth, booking, paiement, realtime, securite, reseau et
+  validation avec message utilisateur, owner et politique de reprise
+  avec detection deviation, arret long et absence de progression
 
 Ecarts encore majeurs avant niveau world-class:
 
@@ -118,7 +133,20 @@ Ecarts encore majeurs avant niveau world-class:
 - realtime encore en transport local, pas sur backplane partage multi-instance
 - pas encore de vrai controle d idempotence sur tous les flux argent et webhooks
 - pas encore de moteur dispatch geospatial ou de matching sous contrainte a grande echelle
-- pas encore d observabilite complete orientee SLO, tracing, alerting et capacity planning
+- SLO et taxonomie incident sont maintenant exposes; il manque encore le tracing
+  distribue, les dashboards metriques long terme, l alerting externe et le
+  capacity planning
+- le score excellence terrain est un score de decision ops; il doit encore etre
+  enrichi par metriques mobiles reelles, crash-free sessions, NPS, temps de
+  premiere reponse support et conversion booking terrain
+- la taxonomie mobile est maintenant partagee, les erreurs reportables sont
+  mises en file locale bornee avec contexte anonymise puis drainees vers l API
+  pour audit/ticket support critique; il faut encore brancher Crashlytics/Sentry
+  ou equivalent, compteurs crash-free sessions et exports anonymises vers
+  l admin
+- route monitoring, fatigue et preuve incident encore dependants de seuils et
+  workflows initiaux; il faut calibrer avec donnees terrain, chaleur, nuit,
+  type vehicule et doctrine support
 
 ## Direction produit pour etre meilleur que les concurrents
 
@@ -133,9 +161,10 @@ Ecarts encore majeurs avant niveau world-class:
 ### 2. Gagner par la securite active
 
 - Pickup code obligatoire sur toute course sensible et par defaut sur les nouvelles courses.
-- Trusted contacts simples avec partage quasi automatique la nuit ou sur trajets sensibles.
+- Trusted contacts simples avec modes manuel, nuit ou tous trajets.
 - Bouton SOS visible mais sobre.
-- Detection de deviation, arret anormal, pickup suspect, arret communication et pattern fraude.
+- Detection de deviation, arret anormal et absence de progression deja amorcee;
+  ajouter pickup suspect, arret communication et pattern fraude.
 - Revue ops chauffeur avec notes internes, decisions explicites, re-expiration et audit trail.
 
 ### 3. Gagner par la localisation Burkina Faso

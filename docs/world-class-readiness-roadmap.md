@@ -1,6 +1,6 @@
 # Mobilis World-Class Readiness Roadmap
 
-Date de reference: 17 avril 2026
+Date de reference: 3 mai 2026
 
 Ce document traduit l ambition produit en feuille de route technique et operationnelle realiste pour une plateforme VTC capable de supporter la production, la croissance et les mises a jour sans interruption brutale.
 
@@ -15,7 +15,14 @@ Le repo contient deja des fondations saines:
 - abstraction `rate-limit` avec mode strict possible
 - pricing localise Burkina
 - admin live ops et queue support
-- onboarding chauffeur structure
+- onboarding chauffeur structure avec decisions ops, documents, audit trail et
+  revue explicite
+- generation de liens documentaires avec contraintes MIME/extension/taille,
+  TTL borne, cles objet normalisees, audit, revalidation au rattachement et
+  signaux d integrite declares
+- launch-readiness, SLO runtime et score terrain exposes dans l admin
+- taxonomie mobile `MOB-*`, file locale rider/driver et ingestion backend
+  `/mobile/error-reports` avec audit et tickets support critiques
 
 Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suffisamment bien structure pour y aller sans refonte totale.
 
@@ -32,10 +39,16 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
 
 - Le realtime est encore base sur un transport non partage.
 - Le rate limit partage n est pas encore branche pour du multi-instance reel.
-- Les justificatifs chauffeur ne sont pas encore stockes et geres comme des actifs securises.
-- Le workflow ops d approbation chauffeur n existe pas encore sous forme explicite.
-- Les flux argent exigent encore plus d idempotence, de reconciliation et de resilience.
-- La future montee en charge n est pas encore encadree par des SLO, budgets d erreur, queues et backpressure.
+- Les justificatifs chauffeur ont maintenant des liens HMAC courts et des
+  contraintes d upload revalidees au rattachement; le backend objet reel, la
+  confirmation d existence/hash post-upload et la rotation restent a brancher.
+- Le workflow ops d approbation chauffeur existe; il doit maintenant etre durci
+  par preuves terrain, re-verification periodique et SLA support.
+- Les flux argent ont deja des protections d idempotence/reconciliation; il
+  reste a les pousser vers queue, dead-letter et monitoring financier long terme.
+- La montee en charge commence a etre encadree par des SLO runtime exposes dans
+  `/health`; il reste a brancher les metriques longues, alertes externes,
+  queues et backpressure.
 
 ## Decoupage des priorites
 
@@ -45,18 +58,21 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
 - exiger une verification telephone reelle pour afficher "numero verifie"
 - journaliser toutes les soumissions sensibles avec versionning des decisions ops
 - refuser toute activation chauffeur sans decision ops explicite
+- garder `launch-readiness` et `/health.operations.productionReadiness` comme
+  porte obligatoire avant tout pilote terrain
 
 ### Priorite 1. Finaliser l onboarding chauffeur securise
 
 - stockage objet securise pour permis, piece d identite, carte grise, assurance et selfie
 - URLs signees courtes durees pour upload et consultation
-- table de documents chauffeur avec type, statut, dates d expiration, hash et metadata
-- workflow ops:
-  - `SUBMITTED`
-  - `UNDER_REVIEW`
-  - `APPROVED`
-  - `REJECTED`
-  - `CHANGES_REQUESTED`
+  - etat actuel: HMAC applicatif, TTL borne, whitelist MIME/extension/taille
+    et revalidation au rattachement avec taille, SHA-256 declare et provenance
+  - reste: pre-signature provider objet, confirmation d existence, hash calcule,
+    scan post-upload et rotation de cle
+- renforcer la table de documents chauffeur avec hash de contenu, empreinte
+  antivirus, provenance et retention
+- workflow ops existant a calibrer terrain:
+  `SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, `REJECTED`, `CHANGES_REQUESTED`
 - notes internes ops et historique de decision
 - re-verification documentaire periodique
 
@@ -75,6 +91,8 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
 - reconciliation asynchrone entre provider, wallet et etat de course
 - retries avec backoff et dead-letter queue
 - separation claire entre etat metier et etat provider
+- exporter les indicateurs refund, wallet recovery et payout vers un dashboard
+  finance quotidien
 
 ### Priorite 4. Passer a une architecture de charge serieuse
 
@@ -160,11 +178,13 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
 
 ## Prochaines etapes recommandees dans ce repo
 
-1. Ajouter le modele de document chauffeur et le workflow ops de revue.
-2. Brancher `realtime` et `rate-limit` sur un backend partage.
-3. Introduire idempotency keys et journal financier plus strict.
+1. Brancher `realtime` et `rate-limit` sur un backend partage.
+2. Ajouter validation objet post-upload des documents: existence, comparaison
+   hash declare/hash calcule, scan, provenance et quarantaine.
+3. Introduire queues/dead-letter pour webhooks, documents et notifications.
 4. Ajouter feature flags et canary strategy pour pricing, payments et onboarding.
-5. Instrumenter SLO, alertes et dashboards de capacite.
+5. Brancher les SLO runtime sur tracing, alertes externes et dashboards de
+   capacite.
 
 ## Conclusion
 
