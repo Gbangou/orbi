@@ -101,6 +101,12 @@ enum WalletTransactionType {
   REFUND
 }
 
+enum DriverPayoutStatus {
+  PREPARED
+  PAID
+  CANCELLED
+}
+
 enum PaymentProvider {
   FLUTTERWAVE
   CINETPAY
@@ -118,6 +124,7 @@ enum PaymentAttemptStatus {
   SUCCEEDED
   FAILED
   CANCELLED
+  REFUND_PENDING
   REFUNDED
 }
 
@@ -177,6 +184,8 @@ model User {
   paymentWebhookEvents PaymentWebhookEvent[]
   supportTickets   SupportTicket[]
   auditLogs        AuditLog[]
+  preparedDriverPayouts DriverPayout[] @relation("driverPayoutPreparedBy")
+  paidDriverPayouts DriverPayout[] @relation("driverPayoutPaidBy")
   reviewedDriverDocuments DriverDocument[] @relation("reviewedDriverDocuments")
   driverOnboardingReviewEvents DriverOnboardingReview[] @relation("driverOnboardingReviewActor")
 
@@ -482,6 +491,7 @@ model Wallet {
   updatedAt    DateTime            @updatedAt @map("updated_at")
   user         User                @relation(fields: [userId], references: [id])
   transactions WalletTransaction[]
+  driverPayouts DriverPayout[]
 
   @@unique([userId, currency])
   @@map("wallets")
@@ -499,7 +509,33 @@ model WalletTransaction {
   wallet      Wallet                @relation(fields: [walletId], references: [id])
 
   @@index([walletId, createdAt])
+  @@unique([walletId, reference])
   @@map("wallet_transactions")
+}
+
+model DriverPayout {
+  id               String             @id @default(cuid())
+  walletId         String             @map("wallet_id")
+  amount           Decimal            @db.Decimal(12, 2)
+  currency         String             @default("XOF")
+  status           DriverPayoutStatus @default(PREPARED)
+  reference        String             @unique
+  preparedLockKey  String?            @unique @map("prepared_lock_key")
+  notes            String?
+  metadata         Json?
+  preparedByUserId String             @map("prepared_by_user_id")
+  paidByUserId     String?            @map("paid_by_user_id")
+  preparedAt       DateTime           @default(now()) @map("prepared_at")
+  paidAt           DateTime?          @map("paid_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  wallet           Wallet             @relation(fields: [walletId], references: [id])
+  preparedBy       User               @relation("driverPayoutPreparedBy", fields: [preparedByUserId], references: [id])
+  paidBy           User?              @relation("driverPayoutPaidBy", fields: [paidByUserId], references: [id])
+
+  @@index([walletId, status, createdAt])
+  @@index([status, createdAt])
+  @@map("driver_payouts")
 }
 
 model Rating {

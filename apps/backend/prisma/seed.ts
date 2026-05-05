@@ -1,6 +1,13 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient, DriverStatus, ServiceTier, UserRole, VehicleType } from '@prisma/client';
+import {
+  PrismaClient,
+  DriverStatus,
+  ServiceTier,
+  UserRole,
+  VehicleType,
+  VerificationStatus,
+} from '@prisma/client';
 import { Pool } from 'pg';
 import { hashPassword } from '../src/modules/auth/auth-crypto';
 
@@ -91,6 +98,7 @@ async function main() {
       driverProfile: {
         create: {
           licenseNumber: 'DRV-BF-001',
+          verificationStatus: VerificationStatus.APPROVED,
           status: DriverStatus.ONLINE,
           serviceRadiusKm: 8,
           vehicles: {
@@ -130,6 +138,19 @@ async function main() {
       },
     },
   });
+
+  if (driverUser.driverProfile) {
+    await prisma.driverProfile.update({
+      where: {
+        id: driverUser.driverProfile.id,
+      },
+      data: {
+        verificationStatus: VerificationStatus.APPROVED,
+        status: DriverStatus.OFFLINE,
+        serviceRadiusKm: 8,
+      },
+    });
+  }
 
   const motoStandardRule = await prisma.pricingRule.findFirst({
     where: {
@@ -205,31 +226,18 @@ async function main() {
     });
   }
 
-  if (riderUser.riderProfile && driverUser.driverProfile?.vehicles[0]) {
-    const existingSeedRequest = await prisma.rideRequest.findFirst({
+  if (riderUser.riderProfile) {
+    await prisma.rideRequest.updateMany({
       where: {
         riderId: riderUser.riderProfile.id,
-        pickupAddress: 'Universite Joseph Ki-Zerbo, Ouagadougou',
-        destinationAddress: 'Ouaga 2000, Ouagadougou',
-        requestedVehicleType: VehicleType.MOTORCYCLE,
-        requestedServiceTier: ServiceTier.MOTO_STANDARD,
+        status: {
+          in: ['REQUESTED', 'MATCHED', 'DRIVER_ARRIVING'],
+        },
+      },
+      data: {
+        status: 'CANCELLED',
       },
     });
-
-    if (!existingSeedRequest) {
-      await prisma.rideRequest.create({
-        data: {
-          riderId: riderUser.riderProfile.id,
-          pickupAddress: 'Universite Joseph Ki-Zerbo, Ouagadougou',
-          destinationAddress: 'Ouaga 2000, Ouagadougou',
-          requestedVehicleType: VehicleType.MOTORCYCLE,
-          requestedServiceTier: ServiceTier.MOTO_STANDARD,
-          estimatedFare: 1600,
-          estimatedDistanceKm: 5.8,
-          estimatedDurationMinutes: 16,
-        },
-      });
-    }
   }
 
   console.log(`Seeded Mobilis foundation data for admin ${admin.email} with demo password Mobilis123!`);
