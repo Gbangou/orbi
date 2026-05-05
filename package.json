@@ -47,8 +47,14 @@
     "overrides": {
       "@types/react": "18.3.28",
       "@types/react-dom": "18.3.7",
-      "lodash": "4.17.21",
-      "source-map-js": "1.0.2"
+      "lodash": ">=4.17.21",
+      "source-map-js": "1.0.2",
+      "handlebars": ">=4.7.9",
+      "tar": ">=7.5.7",
+      "serialize-javascript": ">=7.0.5",
+      "minimatch": ">=9.0.7",
+      "picomatch": ">=2.3.2",
+      "path-to-regexp": ">=8.4.0"
     },
     "patchedDependencies": {
       "client-only@0.0.1": "patches/client-only@0.0.1.patch"
