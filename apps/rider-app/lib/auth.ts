@@ -8,6 +8,8 @@ import {
   signUpWithApi,
 } from '@mobilis/api';
 import { mobilisRuntimeConfig } from '@mobilis/config';
+import type { AuthenticatedApiContext } from '@mobilis/api';
+import { flushRiderMobileErrorReports } from './mobile-error-reporting';
 import { riderSessionStorage, riderSessionStorageKey } from './session-storage';
 
 function createRiderClient() {
@@ -17,11 +19,14 @@ function createRiderClient() {
 }
 
 export async function restoreRiderSession() {
-  return restorePersistedSession(
+  const context = await restorePersistedSession(
     createRiderClient(),
     riderSessionStorage,
     riderSessionStorageKey,
   );
+  safelyFlushRiderMobileErrorReports(context);
+
+  return context;
 }
 
 export async function signInRiderAccount(payload: {
@@ -36,11 +41,14 @@ export async function signInRiderAccount(payload: {
     session.sessionToken,
   );
 
-  return restorePersistedSession(
+  const context = await restorePersistedSession(
     client,
     riderSessionStorage,
     riderSessionStorageKey,
   );
+  safelyFlushRiderMobileErrorReports(context);
+
+  return context;
 }
 
 export async function signUpRiderAccount(payload: {
@@ -59,11 +67,14 @@ export async function signUpRiderAccount(payload: {
     session.sessionToken,
   );
 
-  return restorePersistedSession(
+  const context = await restorePersistedSession(
     client,
     riderSessionStorage,
     riderSessionStorageKey,
   );
+  safelyFlushRiderMobileErrorReports(context);
+
+  return context;
 }
 
 export async function signOutRiderAccount() {
@@ -82,4 +93,8 @@ export async function hasPersistedRiderSession() {
 
 export async function clearRiderPersistedSession() {
   await clearPersistedSession(riderSessionStorage, riderSessionStorageKey);
+}
+
+function safelyFlushRiderMobileErrorReports(context: AuthenticatedApiContext) {
+  void flushRiderMobileErrorReports(context.authClient).catch(() => undefined);
 }

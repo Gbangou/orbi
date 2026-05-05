@@ -6,6 +6,7 @@ import {
   cancelRideRequestWithApi,
   createCheckoutIntentWithApi,
   createRideRequestWithApi,
+  createTripShareLinkWithApi,
   fetchMyTrips,
   fetchRideOptionsPreview,
   fetchRiderProfile,
@@ -13,6 +14,8 @@ import {
   reportTripIncidentWithApi,
   resolveVoiceLocationIntentWithApi,
   riderRideOptions,
+  triggerTripSafetySosWithApi,
+  updateTrustedContactWithApi,
   updateTripStatusWithApi,
 } from '@mobilis/api';
 import {
@@ -30,6 +33,7 @@ import VoiceScreen from '../app/voice';
 import {
   expectText,
   flushMicrotasks,
+  changeInputByPlaceholder,
   invokeInAct,
   pressByText,
   renderScreen,
@@ -93,9 +97,12 @@ jest.mock('@mobilis/api', () => {
     fetchRiderProfile: jest.fn(),
     fetchTripDetail: jest.fn(),
     reportTripIncidentWithApi: jest.fn(),
+    triggerTripSafetySosWithApi: jest.fn(),
     resolveVoiceLocationIntentWithApi: jest.fn(),
     createRideRequestWithApi: jest.fn(),
+    createTripShareLinkWithApi: jest.fn(),
     createCheckoutIntentWithApi: jest.fn(),
+    updateTrustedContactWithApi: jest.fn(),
     updateTripStatusWithApi: jest.fn(),
   };
 });
@@ -109,9 +116,12 @@ const mockedFetchMyTrips = jest.mocked(fetchMyTrips);
 const mockedFetchRiderProfile = jest.mocked(fetchRiderProfile);
 const mockedFetchTripDetail = jest.mocked(fetchTripDetail);
 const mockedReportTripIncidentWithApi = jest.mocked(reportTripIncidentWithApi);
+const mockedTriggerTripSafetySosWithApi = jest.mocked(triggerTripSafetySosWithApi);
 const mockedResolveVoiceLocationIntentWithApi = jest.mocked(resolveVoiceLocationIntentWithApi);
 const mockedCreateRideRequestWithApi = jest.mocked(createRideRequestWithApi);
+const mockedCreateTripShareLinkWithApi = jest.mocked(createTripShareLinkWithApi);
 const mockedCreateCheckoutIntentWithApi = jest.mocked(createCheckoutIntentWithApi);
+const mockedUpdateTrustedContactWithApi = jest.mocked(updateTrustedContactWithApi);
 const mockedUpdateTripStatusWithApi = jest.mocked(updateTripStatusWithApi);
 const mockedResolveRiderAppError = jest.mocked(resolveRiderAppError);
 
@@ -234,6 +244,12 @@ function buildRiderProfile() {
       phoneNumber: '+22670000000',
       preferredTier: 'MOTO_STANDARD',
       emergencyPhone: null,
+      trustedContact: {
+        phoneNumber: null,
+        shareMode: 'DISABLED',
+        status: 'MISSING',
+        safetyNote: 'Ajoutez un numero Burkina pour accelerer le partage en cas de trajet sensible.',
+      },
       savedPlaces: [
         {
           id: 'saved-home',
@@ -263,9 +279,12 @@ beforeEach(() => {
   mockedFetchRiderProfile.mockReset();
   mockedFetchTripDetail.mockReset();
   mockedReportTripIncidentWithApi.mockReset();
+  mockedTriggerTripSafetySosWithApi.mockReset();
   mockedResolveVoiceLocationIntentWithApi.mockReset();
   mockedCreateRideRequestWithApi.mockReset();
+  mockedCreateTripShareLinkWithApi.mockReset();
   mockedCreateCheckoutIntentWithApi.mockReset();
+  mockedUpdateTrustedContactWithApi.mockReset();
   mockedUpdateTripStatusWithApi.mockReset();
   mockedResolveRiderAppError.mockReset();
 
@@ -295,6 +314,36 @@ beforeEach(() => {
     message: 'Fallback rider error.',
     shouldClearSessionToken: false,
   });
+  mockedTriggerTripSafetySosWithApi.mockResolvedValue({
+    sos: {
+      tripId: 'trip-1',
+      ticketId: 'ticket-sos-1',
+      priority: 3,
+      incidentType: 'SOS_TRIGGERED',
+      reportedByRole: 'RIDER',
+      status: 'OPEN',
+      localEmergencyNumber: '112',
+      locationCaptured: false,
+    },
+  } as never);
+  mockedCreateTripShareLinkWithApi.mockResolvedValue({
+    share: {
+      tripId: 'trip-1',
+      token: 'share-token',
+      path: '/trips/shared/share-token',
+      expiresAt: '2026-05-02T12:00:00.000Z',
+      ttlMinutes: 120,
+    },
+  } as never);
+  mockedUpdateTrustedContactWithApi.mockResolvedValue({
+    trustedContact: {
+      riderProfileId: 'rider-1',
+      phoneNumber: '+22670000001',
+      shareMode: 'ALL_TRIPS',
+      status: 'READY',
+      safetyNote: 'Contact de confiance configure et audite.',
+    },
+  } as never);
 
   riderRealtimeState.eventHandler = null;
   riderRealtimeState.options = null;
@@ -482,6 +531,27 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Flux actif');
     expectText(renderer, 'Matched');
     expectText(renderer, 'Reservation active: Matched - Universite Joseph Ki-Zerbo vers Ouaga 2000');
+  });
+
+  it('updates the rider trusted contact from account', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+
+    const renderer = await renderScreen(<AccountScreen />);
+    await flushMicrotasks();
+    await changeInputByPlaceholder(renderer, '+22670000001', '+22670000001');
+    await pressByText(renderer, 'Tous trajets');
+    await pressByText(renderer, 'Enregistrer le contact');
+
+    expect(mockedUpdateTrustedContactWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      expect.objectContaining({
+        phoneNumber: '+22670000001',
+        shareMode: 'ALL_TRIPS',
+      }),
+    );
+    expectText(renderer, 'Contact de confiance configure et audite.');
   });
 
   it('shows the active rider flow inside voice', async () => {

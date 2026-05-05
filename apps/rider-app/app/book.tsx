@@ -63,6 +63,12 @@ const fallbackRiderProfile: RiderProfileResponse = {
     phoneNumber: null,
     preferredTier: 'MOTO_STANDARD',
     emergencyPhone: null,
+    trustedContact: {
+      phoneNumber: null,
+      shareMode: 'DISABLED',
+      status: 'MISSING',
+      safetyNote: 'Ajoutez un numero Burkina pour accelerer le partage en cas de trajet sensible.',
+    },
     savedPlaces: [
       {
         id: 'saved-home',
@@ -303,6 +309,7 @@ export default function BookingScreen() {
       );
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
+        surface: 'profile',
         network: 'Mode local actif, impossible de joindre la session reelle.',
         fallback: 'Mode local actif, impossible de joindre la session reelle.',
       });
@@ -367,6 +374,7 @@ export default function BookingScreen() {
       );
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
+        surface: 'booking',
         fallback: 'La suggestion vocale du lieu est indisponible.',
       });
 
@@ -439,6 +447,7 @@ export default function BookingScreen() {
       setStatus('Lieu ajoute a vos favoris pour les prochaines reservations.');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
+        surface: 'profile',
         fallback: "Le lieu n'a pas pu etre ajoute aux favoris.",
       });
 
@@ -552,6 +561,7 @@ export default function BookingScreen() {
       await loadBookingContext();
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
+        surface: selectedPaymentMethod === 'cash' ? 'booking' : 'payments',
         fallback:
           'La creation de demande a echoue. Verifiez le backend ou la base locale.',
       });

@@ -10,6 +10,7 @@ const RIDER_REALTIME_EVENTS = [
   'trip.updated',
   'trip.pickup-code-verified',
   'trip.incident-reported',
+  'trip.route-monitor-alert',
   'ride-request.created',
   'ride-request.cancelled',
   'ride-request.reservation-assigned',

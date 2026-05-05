@@ -5,6 +5,7 @@ import {
   deleteSavedPlaceWithApi,
   fetchMyTrips,
   fetchRiderProfile,
+  updateTrustedContactWithApi,
   updateSavedPlaceWithApi,
   type MyTripsResponse,
   type RiderProfileResponse,
@@ -36,6 +37,12 @@ const fallbackProfile: RiderProfileResponse = {
     phoneNumber: null,
     preferredTier: 'MOTO_STANDARD',
     emergencyPhone: null,
+    trustedContact: {
+      phoneNumber: null,
+      shareMode: 'DISABLED',
+      status: 'MISSING',
+      safetyNote: 'Ajoutez un numero Burkina pour accelerer le partage en cas de trajet sensible.',
+    },
     savedPlaces: [
       { id: 'home', label: 'Maison', address: 'Ouagadougou, Patte d Oie', latitude: 12.3412, longitude: -1.5601 },
       { id: 'work', label: 'Bureau', address: 'Ouaga 2000', latitude: 12.3274, longitude: -1.5339 },
@@ -56,6 +63,7 @@ export default function AccountScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSavingPlace, setIsSavingPlace] = useState(false);
+  const [isSavingTrustedContact, setIsSavingTrustedContact] = useState(false);
   const [accountTransitionLabel, setAccountTransitionLabel] = useState<string | null>(null);
   const [freshPlaceIds, setFreshPlaceIds] = useState<string[]>([]);
   const [editingPlaceId, setEditingPlaceId] = useState<string | null>(null);
@@ -64,6 +72,11 @@ export default function AccountScreen() {
     address: '',
     latitude: '',
     longitude: '',
+  });
+  const [trustedContactForm, setTrustedContactForm] = useState({
+    phoneNumber: '',
+    shareMode: 'MANUAL' as 'MANUAL' | 'NIGHT' | 'ALL_TRIPS',
+    notes: '',
   });
   const previousSavedPlacesRef = useRef<RiderProfileResponse['profile']['savedPlaces'] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
@@ -177,6 +190,14 @@ export default function AccountScreen() {
         fetchMyTrips(authClient),
       ]);
       setProfile(profileResponse);
+      setTrustedContactForm({
+        phoneNumber: profileResponse.profile.trustedContact.phoneNumber ?? '',
+        shareMode:
+          profileResponse.profile.trustedContact.shareMode === 'DISABLED'
+            ? 'MANUAL'
+            : profileResponse.profile.trustedContact.shareMode,
+        notes: '',
+      });
       setHistory(historyResponse);
       if (!silent) {
         const nextFlow = resolveRiderActiveFlow(historyResponse);
@@ -310,6 +331,70 @@ export default function AccountScreen() {
     }
   }
 
+  async function handleSaveTrustedContact() {
+    const phoneNumber = trustedContactForm.phoneNumber.trim();
+
+    if (phoneNumber && !/^\+226[0-9]{8}$/.test(phoneNumber)) {
+      setStatus('Le contact de confiance doit etre un numero Burkina au format +226XXXXXXXX.');
+      return;
+    }
+
+    setIsSavingTrustedContact(true);
+    setStatus(
+      phoneNumber
+        ? 'Synchronisation du contact de confiance...'
+        : 'Desactivation du contact de confiance...',
+    );
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      await updateTrustedContactWithApi(authClient, {
+        phoneNumber: phoneNumber || undefined,
+        shareMode: trustedContactForm.shareMode,
+        notes: trustedContactForm.notes.trim() || undefined,
+      });
+      await loadProfile();
+      setStatus(
+        phoneNumber
+          ? 'Contact de confiance configure et audite.'
+          : 'Contact de confiance desactive.',
+      );
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        fallback: "La mise a jour du contact de confiance a echoue.",
+      });
+      setStatus(feedback.message);
+    } finally {
+      setIsSavingTrustedContact(false);
+    }
+  }
+
+  async function handleDisableTrustedContact() {
+    setTrustedContactForm({
+      phoneNumber: '',
+      shareMode: 'MANUAL',
+      notes: 'Desactivation demandee depuis le compte rider.',
+    });
+    setIsSavingTrustedContact(true);
+    setStatus('Desactivation du contact de confiance...');
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      await updateTrustedContactWithApi(authClient, {
+        notes: 'Desactivation demandee depuis le compte rider.',
+      });
+      await loadProfile();
+      setStatus('Contact de confiance desactive.');
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        fallback: "La desactivation du contact de confiance a echoue.",
+      });
+      setStatus(feedback.message);
+    } finally {
+      setIsSavingTrustedContact(false);
+    }
+  }
+
   async function handleDeletePlace(savedPlaceId: string) {
     setIsSavingPlace(true);
     setStatus('Suppression du lieu enregistre...');
@@ -394,8 +479,8 @@ export default function AccountScreen() {
           />
           <InsightBadge
             label="Urgence"
-            value={profile.profile.emergencyPhone ? 'Configure' : 'A definir'}
-            tone={profile.profile.emergencyPhone ? 'teal' : 'amber'}
+            value={profile.profile.trustedContact.status === 'READY' ? 'Configure' : 'A definir'}
+            tone={profile.profile.trustedContact.status === 'READY' ? 'teal' : 'amber'}
           />
         </View>
         <View style={styles.metricsRow}>
@@ -421,6 +506,94 @@ export default function AccountScreen() {
         currentStep="account"
         description="Le compte partage maintenant le meme tunnel rider que l accueil, la reservation, la voix et le suivi."
       />
+
+      <View style={styles.card}>
+        <Text style={styles.heading}>Contact de confiance</Text>
+        <Text style={styles.meta}>{profile.profile.trustedContact.safetyNote}</Text>
+        <View style={styles.trustedStatusRow}>
+          <InsightBadge
+            label="Etat"
+            value={profile.profile.trustedContact.status === 'READY' ? 'Pret' : 'A definir'}
+            tone={profile.profile.trustedContact.status === 'READY' ? 'teal' : 'amber'}
+          />
+          <InsightBadge
+            label="Partage"
+            value={
+              profile.profile.trustedContact.shareMode === 'ALL_TRIPS'
+                ? 'Tous trajets'
+                : profile.profile.trustedContact.shareMode === 'NIGHT'
+                  ? 'Nuit'
+                  : profile.profile.trustedContact.shareMode === 'MANUAL'
+                    ? 'Manuel'
+                    : 'Desactive'
+            }
+            tone="sky"
+          />
+        </View>
+        <TextInput
+          value={trustedContactForm.phoneNumber}
+          onChangeText={(value) =>
+            setTrustedContactForm((current) => ({ ...current, phoneNumber: value }))
+          }
+          placeholder="+22670000001"
+          placeholderTextColor={mobilisTheme.colors.muted}
+          keyboardType="phone-pad"
+          style={styles.input}
+        />
+        <View style={styles.modeRow}>
+          {(['MANUAL', 'NIGHT', 'ALL_TRIPS'] as const).map((mode) => (
+            <Pressable
+              key={mode}
+              onPress={() =>
+                setTrustedContactForm((current) => ({ ...current, shareMode: mode }))
+              }
+              style={[
+                styles.modeChip,
+                trustedContactForm.shareMode === mode ? styles.modeChipActive : null,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.modeChipLabel,
+                  trustedContactForm.shareMode === mode ? styles.modeChipLabelActive : null,
+                ]}
+              >
+                {mode === 'ALL_TRIPS' ? 'Tous trajets' : mode === 'NIGHT' ? 'Nuit' : 'Manuel'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <TextInput
+          value={trustedContactForm.notes}
+          onChangeText={(value) =>
+            setTrustedContactForm((current) => ({ ...current, notes: value }))
+          }
+          placeholder="Note ops courte, facultative"
+          placeholderTextColor={mobilisTheme.colors.muted}
+          maxLength={120}
+          style={styles.input}
+        />
+        <View style={styles.actionsRow}>
+          <Pressable
+            onPress={() => void handleSaveTrustedContact()}
+            disabled={isSavingTrustedContact}
+            style={[styles.primaryAction, isSavingTrustedContact ? styles.refreshButtonDisabled : null]}
+          >
+            <Text style={styles.primaryActionLabel}>
+              {isSavingTrustedContact ? 'Synchronisation...' : 'Enregistrer le contact'}
+            </Text>
+          </Pressable>
+          {profile.profile.trustedContact.status === 'READY' ? (
+            <Pressable
+              onPress={() => void handleDisableTrustedContact()}
+              disabled={isSavingTrustedContact}
+              style={[styles.secondaryAction, isSavingTrustedContact ? styles.refreshButtonDisabled : null]}
+            >
+              <Text style={styles.secondaryActionLabel}>Desactiver</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
 
       <View style={[styles.card, accountTransitionLabel ? styles.cardHighlight : null]}>
         <Text style={styles.heading}>Lieux enregistres</Text>
@@ -595,6 +768,11 @@ const styles = StyleSheet.create({
     gap: 12,
     flexWrap: 'wrap',
   },
+  trustedStatusRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
   heading: {
     color: mobilisTheme.colors.text,
     fontWeight: '800',
@@ -625,6 +803,31 @@ const styles = StyleSheet.create({
   coordInput: {
     flexGrow: 1,
     minWidth: 140,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  modeChip: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: mobilisTheme.colors.border,
+    backgroundColor: mobilisTheme.colors.backgroundAlt,
+  },
+  modeChipActive: {
+    borderColor: mobilisTheme.colors.sky,
+    backgroundColor: 'rgba(56, 189, 248, 0.14)',
+  },
+  modeChipLabel: {
+    color: mobilisTheme.colors.muted,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  modeChipLabelActive: {
+    color: mobilisTheme.colors.text,
   },
   placeRow: {
     paddingTop: 10,

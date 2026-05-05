@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, StyleSheet } from 'react-native';
+import { Linking, Pressable, ScrollView, Share, Text, StyleSheet } from 'react-native';
 import {
   cancelRideRequestWithApi,
+  createTripShareLinkWithApi,
   fetchMyTrips,
   fetchTripDetail,
   isActiveTripLifecycleStatus,
   reportTripIncidentWithApi,
+  triggerTripSafetySosWithApi,
   type MyTripsResponse,
   type TripDetailResponse,
   updateTripStatusWithApi,
@@ -89,6 +91,7 @@ export default function ActivityScreen() {
       }
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
+        surface: 'active-trip',
         network: 'Historique vide de secours en attendant la connexion API.',
         fallback: 'Historique vide de secours en attendant la connexion API.',
       });
@@ -226,6 +229,7 @@ export default function ActivityScreen() {
       await loadHistory();
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
+        surface: 'booking',
         fallback: "L'annulation de la demande a echoue.",
       });
 
@@ -250,6 +254,7 @@ export default function ActivityScreen() {
       await loadHistory();
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
+        surface: 'active-trip',
         fallback: "L'annulation de la course a echoue.",
       });
 
@@ -278,7 +283,103 @@ export default function ActivityScreen() {
       await loadHistory();
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
+        surface: 'safety',
         fallback: "Le signalement n'a pas pu etre envoye.",
+      });
+
+      if (feedback.shouldClearSessionToken) {
+        setSessionToken(null);
+      }
+
+      setStatus(feedback.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDeclareIncidentEvidence(tripId: string) {
+    setIsSubmitting(true);
+    setStatus('Declaration de preuve volontaire avec consentement...');
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      await reportTripIncidentWithApi(authClient, tripId, {
+        incidentType: 'VOLUNTARY_EVIDENCE',
+        details:
+          'Preuve conservee localement par le passager. Upload support uniquement sur action explicite.',
+        priority: 3,
+        evidenceConsent: true,
+        evidenceType: 'AUDIO',
+        evidenceRetentionHours: 24,
+      });
+      setStatus('Preuve volontaire declaree. Aucun fichier n a ete envoye automatiquement.');
+      await loadHistory();
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        surface: 'safety',
+        fallback: "La preuve volontaire n'a pas pu etre declaree.",
+      });
+
+      if (feedback.shouldClearSessionToken) {
+        setSessionToken(null);
+      }
+
+      setStatus(feedback.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleTriggerSos(tripId: string) {
+    setIsSubmitting(true);
+    setStatus('SOS en cours: creation du ticket prioritaire...');
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      const response = await triggerTripSafetySosWithApi(authClient, tripId, {
+        details: 'SOS declenche depuis le cockpit passager.',
+      });
+
+      setStatus(
+        `SOS envoye aux operations. Appel local ${response.sos.localEmergencyNumber} disponible.`,
+      );
+      void Linking.openURL(`tel:${response.sos.localEmergencyNumber}`);
+      await loadHistory();
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        surface: 'safety',
+        fallback: "Le SOS n'a pas pu etre envoye.",
+      });
+
+      if (feedback.shouldClearSessionToken) {
+        setSessionToken(null);
+      }
+
+      setStatus(feedback.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleShareTrip(tripId: string) {
+    setIsSubmitting(true);
+    setStatus('Creation du lien de partage securise...');
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      const response = await createTripShareLinkWithApi(authClient, tripId);
+      const shareUrl = response.share.path;
+
+      await Share.share({
+        message: `Suivi securise de ma course Mobilis: ${shareUrl}`,
+        url: shareUrl,
+      });
+      setStatus('Lien de partage pret. Il expire automatiquement.');
+      await loadHistory();
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        surface: 'safety',
+        fallback: "Le lien de partage n'a pas pu etre cree.",
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -396,7 +497,7 @@ export default function ActivityScreen() {
             },
           ]}
           detailLines={[
-            'Partage de trajet et code de prise en charge actifs.',
+            'Partage, code pickup et monitoring route connectes aux operations.',
             activeTrip.status,
             `Etat principal: ${primaryStatusLabel}`,
           ]}
@@ -428,8 +529,29 @@ export default function ActivityScreen() {
           ) : null}
           <FlowActionButton
             disabled={isSubmitting}
+            label="SOS securite"
+            onPress={() => handleTriggerSos(activeTrip.id)}
+            emphasis="primary"
+            style={isSubmitting ? styles.actionButtonDisabled : null}
+          />
+          <FlowActionButton
+            disabled={isSubmitting}
+            label="Partager le trajet"
+            onPress={() => handleShareTrip(activeTrip.id)}
+            emphasis="secondary"
+            style={isSubmitting ? styles.actionButtonDisabled : null}
+          />
+          <FlowActionButton
+            disabled={isSubmitting}
             label="Signaler un incident"
             onPress={() => handleReportIncident(activeTrip.id)}
+            emphasis="secondary"
+            style={isSubmitting ? styles.actionButtonDisabled : null}
+          />
+          <FlowActionButton
+            disabled={isSubmitting}
+            label="Preuve volontaire"
+            onPress={() => handleDeclareIncidentEvidence(activeTrip.id)}
             emphasis="secondary"
             style={isSubmitting ? styles.actionButtonDisabled : null}
           />
