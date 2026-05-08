@@ -26,12 +26,17 @@ export class SignUpDto {
 
   @ApiProperty()
   @IsEmail()
+  @MaxLength(254)
   email!: string;
 
   @ApiProperty()
   @IsString()
   @MinLength(8)
   @MaxLength(128)
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/, {
+    message:
+      'Password must include uppercase, lowercase, number, and special character.',
+  })
   password!: string;
 
   @ApiProperty({ enum: SignUpRole, enumName: 'SignUpRole' })

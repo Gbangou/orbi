@@ -11,6 +11,7 @@ import {
   type Response,
 } from 'express';
 import { AppModule } from './app.module';
+import { applyApiSecurityHeaders } from './common/security/security-headers';
 import { PrismaService } from './core/prisma/prisma.service';
 import { AppLifecycleService } from './core/runtime/app-lifecycle.service';
 
@@ -70,22 +71,7 @@ async function bootstrap() {
       return;
     }
 
-    response.setHeader('X-Content-Type-Options', 'nosniff');
-    response.setHeader('X-Frame-Options', 'DENY');
-    response.setHeader('Referrer-Policy', 'no-referrer');
-    response.setHeader('Cross-Origin-Resource-Policy', 'same-site');
-    response.setHeader(
-      'Permissions-Policy',
-      'camera=(), microphone=(), geolocation=()',
-    );
-
-    if (request.secure || request.headers['x-forwarded-proto'] === 'https') {
-      response.setHeader(
-        'Strict-Transport-Security',
-        'max-age=31536000; includeSubDomains',
-      );
-    }
-
+    applyApiSecurityHeaders(request, response);
     next();
   });
 

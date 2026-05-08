@@ -53,6 +53,10 @@ OK Implemented:
 - Timing-safe comparison for token verification
 - Session TTL enforcement
 - Account active status check
+- Auth DTOs bound email length and require mixed-case, numeric and special
+  character passwords before account creation or sign-in attempts are accepted.
+- Auth, admin and payment API responses are marked `no-store` to avoid cached
+  session or money data in browsers and proxies.
 
 Planned Next Phase:
 - 2FA support (TOTP)
@@ -92,6 +96,12 @@ OK Implemented:
 - Rate limiting per IP/user
 - Input validation & sanitization
 - No raw SQL queries (Prisma parameterized)
+- Backend security headers are centralized and include CSP for API responses,
+  frame denial, referrer suppression, no-sniff, cross-origin opener policy and
+  HSTS on HTTPS requests.
+- Admin web ships browser security headers from Next.js, including CSP,
+  frame denial, no-sniff, no-referrer, cross-origin opener policy and disabled
+  camera/microphone/geolocation permissions.
 
 Planned Next Phase:
 - API rate limiting tiers

@@ -54,6 +54,9 @@ paiement provider, observabilite et runbooks verts.
   dead-letter sans sortir du poste operations.
 - Les operations peuvent maintenant lister les jobs, filtrer les dead-letters
   et remettre un job en file via endpoint admin audite avec evenement realtime.
+- Durcissement navigateur ajoute: headers de securite centralises cote backend,
+  CSP API, cache interdit sur auth/admin/paiements, headers admin Next.js et
+  validation auth plus stricte sur email/password.
 
 ## Architecture active
 
@@ -74,6 +77,9 @@ paiement provider, observabilite et runbooks verts.
 3. Brancher un scan antivirus/anti-fraude documentaire externe sur `safetyScan`.
 4. Adapter S3/GCS production pour objets documentaires.
 5. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
+6. Prepararer la migration production vers cookies HttpOnly/SameSite pour
+   l'admin web si l'admin sort du mode demo/local, tout en gardant Bearer token
+   adapte aux clients mobiles Expo.
 
 ## Verification standard
 
@@ -109,3 +115,6 @@ git diff --check
 - La production ne doit pas etre declaree "large" sans CI verte, observabilite,
   rollback pratique, secrets production, URLs externes HTTPS et validation
   terrain repetee.
+- Les clients mobiles conservent le modele Bearer token pour Expo; l'admin web
+  est maintenant mieux protegee par headers/cache, mais un stockage session
+  HttpOnly dedie reste a concevoir avant exposition publique large.

@@ -40,6 +40,8 @@ describe('dirty input validation', () => {
     ['numeric name', { fullName: 'Awa 123' }],
     ['oversized name', { fullName: 'A'.repeat(10_000) }],
     ['email with spaces', { email: 'awa @mobilis.app' }],
+    ['oversized email', { email: `${'a'.repeat(245)}@mobilis.app` }],
+    ['weak password', { password: 'mobilis123' }],
     ['oversized password', { password: 'A'.repeat(10_000) }],
     ['unknown field', { admin: true }],
   ])('rejects dirty sign-up payload: %s', async (_label, override) => {
@@ -62,7 +64,9 @@ describe('dirty input validation', () => {
 
   it.each([
     ['email with spaces', { email: 'driver @mobilis.app' }],
+    ['oversized email', { email: `${'d'.repeat(245)}@mobilis.app` }],
     ['short password', { password: '123' }],
+    ['weak password', { password: 'mobilis123' }],
     ['oversized password', { password: 'P'.repeat(10_000) }],
   ])('rejects dirty sign-in payload: %s', async (_label, override) => {
     const errors = await validateDto(SignInDto, {
