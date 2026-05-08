@@ -6,6 +6,8 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -42,10 +44,12 @@ export class CreateRideRequestDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  @MaxLength(80)
   riderId!: string;
 
   @ApiProperty()
   @IsString()
+  @MaxLength(160)
   pickupAddress!: string;
 
   @ApiProperty({ required: false })
@@ -60,6 +64,7 @@ export class CreateRideRequestDto {
 
   @ApiProperty()
   @IsString()
+  @MaxLength(160)
   destinationAddress!: string;
 
   @ApiProperty({ required: false })
@@ -84,11 +89,13 @@ export class CreateRideRequestDto {
   @ApiProperty()
   @IsNumber()
   @Min(0.1)
+  @Max(500)
   estimatedDistanceKm!: number;
 
   @ApiProperty()
   @IsNumber()
   @Min(1)
+  @Max(1440)
   estimatedDurationMinutes!: number;
 
   @ApiProperty({ enum: paymentMethods, required: false })
@@ -114,5 +121,6 @@ export class CreateRideRequestDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   notes?: string;
 }

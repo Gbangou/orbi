@@ -10,6 +10,10 @@ import { UpsertDriverOnboardingDto } from '../modules/drivers/dto/upsert-driver-
 import { UpdateTrustedContactDto } from '../modules/riders/dto/update-trusted-contact.dto';
 import { ReportTripIncidentDto } from '../modules/trips/dto/report-trip-incident.dto';
 import { SubmitMobileErrorReportsDto } from '../modules/mobile-observability/dto/submit-mobile-error-reports.dto';
+import { CreateRideRequestDto } from '../modules/ride-requests/dto/create-ride-request.dto';
+import { RecordRoutePositionDto } from '../modules/trips/dto/record-route-position.dto';
+import { ReportTripSosDto } from '../modules/trips/dto/report-trip-sos.dto';
+import { VoiceLocationIntentDto } from '../modules/voice/dto/voice-location-intent.dto';
 
 async function validateDto<T extends object>(
   dtoClass: new () => T,
@@ -94,6 +98,82 @@ describe('dirty input validation', () => {
     expect(invalidEvidence.length).toBeGreaterThan(0);
   });
 
+  it('bounds ride booking inputs while accepting realistic Burkina trip details', async () => {
+    const validRide = await validateDto(CreateRideRequestDto, {
+      pickupAddress: 'Patte d Oie, Ouagadougou',
+      pickupLatitude: 12.3346,
+      pickupLongitude: -1.5462,
+      destinationAddress: 'Universite Joseph Ki-Zerbo',
+      destinationLatitude: 12.3714,
+      destinationLongitude: -1.4991,
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      estimatedDistanceKm: 7.4,
+      estimatedDurationMinutes: 24,
+      paymentMethod: 'MOBILE_MONEY',
+      city: 'OUAGADOUGOU',
+      districtProfile: 'UNIVERSITY',
+      notes: 'Client avec petit bagage, paiement Orange Money.',
+    });
+    const dirtyRide = await validateDto(CreateRideRequestDto, {
+      riderId: '../admin/'.repeat(40),
+      pickupAddress: '<script>alert(1)</script>'.repeat(100),
+      pickupLatitude: 999,
+      pickupLongitude: -999,
+      destinationAddress: 'x'.repeat(10_000),
+      destinationLatitude: 'not-a-coordinate',
+      destinationLongitude: {},
+      requestedVehicleType: 'HELICOPTER',
+      requestedServiceTier: 'CAR_VIP<script>',
+      estimatedDistanceKm: 1_000_000,
+      estimatedDurationMinutes: 99_999,
+      paymentMethod: 'FREE',
+      city: 'OUAGA<script>',
+      districtProfile: 'ROOT',
+      notes: '<img src=x onerror=alert(1)>'.repeat(1_000),
+      forceFare: 1,
+    });
+
+    expect(validRide).toEqual([]);
+    expect(dirtyRide.length).toBeGreaterThan(0);
+  });
+
+  it('bounds live route and SOS coordinates without rejecting useful emergency text', async () => {
+    const validSos = await validateDto(ReportTripSosDto, {
+      details: "<script>alert('copied')</script> Accident pres de Koulouba.",
+      latitude: 12.371,
+      longitude: -1.519,
+      accuracyMeters: 35,
+    });
+    const dirtySos = await validateDto(ReportTripSosDto, {
+      details: 'urgence '.repeat(1_000),
+      latitude: 120,
+      longitude: -220,
+      accuracyMeters: 999_999,
+      notifyPoliceDirectly: true,
+    });
+    const validRoutePosition = await validateDto(RecordRoutePositionDto, {
+      latitude: '12.371',
+      longitude: '-1.519',
+      accuracyMeters: '30',
+      speedKph: '42',
+      distanceToDestinationKm: '3.5',
+    });
+    const dirtyRoutePosition = await validateDto(RecordRoutePositionDto, {
+      latitude: 'Infinity',
+      longitude: '<script>',
+      accuracyMeters: -5,
+      speedKph: 999,
+      distanceToDestinationKm: 9_999,
+      tripId: '../other-trip',
+    });
+
+    expect(validSos).toEqual([]);
+    expect(dirtySos.length).toBeGreaterThan(0);
+    expect(validRoutePosition).toEqual([]);
+    expect(dirtyRoutePosition.length).toBeGreaterThan(0);
+  });
+
   it('bounds mobile error report ingestion and rejects unknown payload fields', async () => {
     const validReport = {
       id: 'moberr_20260503120000_abc123',
@@ -137,6 +217,19 @@ describe('dirty input validation', () => {
     expect(validErrors).toEqual([]);
     expect(oversizedErrors.length).toBeGreaterThan(0);
     expect(dirtyErrors.length).toBeGreaterThan(0);
+  });
+
+  it('bounds voice transcripts while accepting real local phrasing', async () => {
+    const validVoice = await validateDto(VoiceLocationIntentDto, {
+      transcript: 'Je suis a Tampouy, je vais au grand marche de Rood Woko',
+    });
+    const dirtyVoice = await validateDto(VoiceLocationIntentDto, {
+      transcript: '<script>alert(1)</script>'.repeat(1_000),
+      localeOverride: 'root',
+    });
+
+    expect(validVoice).toEqual([]);
+    expect(dirtyVoice.length).toBeGreaterThan(0);
   });
 
   it('rejects dirty driver onboarding structured fields', async () => {
