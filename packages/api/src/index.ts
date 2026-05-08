@@ -127,6 +127,7 @@ export const apiRoutes = {
     paymentAttempts: '/admin/payment-attempts',
     driverOnboarding: '/admin/driver-onboarding',
     driverOnboardingQueue: '/admin/driver-onboarding-queue',
+    driverOnboardingExportCsv: '/admin/driver-onboarding/export.csv',
   },
   riders: {
     me: '/riders/me',
@@ -594,6 +595,36 @@ export class MobilisApiClient {
     }
 
     return (await response.json()) as T;
+  }
+
+  async requestText(path: string, options: RequestOptions = {}) {
+    const response = await this.fetcher(this.endpoint(path, options.query), {
+      method: options.method ?? 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.headers,
+        ...options.headers,
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+
+    if (!response.ok) {
+      let errorPayload: unknown;
+
+      try {
+        errorPayload = await response.json();
+      } catch {
+        errorPayload = undefined;
+      }
+
+      const message =
+        resolveApiErrorMessage(errorPayload) ??
+        `Mobilis API request failed with status ${response.status}`;
+
+      throw new MobilisApiError(message, response.status, errorPayload);
+    }
+
+    return response.text();
   }
 
   withAuthToken(token: string) {
@@ -2496,6 +2527,19 @@ export async function fetchAdminDriverOnboardingQueue(
       query,
     },
   );
+}
+
+export async function fetchAdminDriverOnboardingExportCsv(
+  client: MobilisApiClient,
+  query?: {
+    guidanceFilter?: 'all' | 'approve' | 'review' | 'resubmit';
+    searchQuery?: string;
+    limit?: number;
+  },
+) {
+  return client.requestText(apiRoutes.admin.driverOnboardingExportCsv, {
+    query,
+  });
 }
 
 export async function fetchAdminFeatureFlags(client: MobilisApiClient) {

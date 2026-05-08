@@ -2,6 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { SignInDto } from '../modules/auth/dto/sign-in.dto';
 import { SignUpDto, SignUpRole } from '../modules/auth/dto/sign-up.dto';
+import { DriverOnboardingExportQueryDto } from '../modules/admin/dto/driver-onboarding-export-query.dto';
 import { PaymentAttemptRefundDto } from '../modules/admin/dto/payment-attempt-refund.dto';
 import { CreateCheckoutIntentDto } from '../modules/payments/dto/create-checkout-intent.dto';
 import { PaymentWebhookDto } from '../modules/payments/dto/payment-webhook.dto';
@@ -224,6 +225,23 @@ describe('dirty input validation', () => {
     });
 
     expect(errors).toEqual([]);
+  });
+
+  it('bounds admin driver onboarding export filters', async () => {
+    const validExportQuery = await validateDto(DriverOnboardingExportQueryDto, {
+      guidanceFilter: 'review',
+      searchQuery: 'permis Ouaga',
+      limit: 50,
+    });
+    const dirtyExportQuery = await validateDto(DriverOnboardingExportQueryDto, {
+      guidanceFilter: 'approve<script>',
+      searchQuery: '<script>alert(1)</script>'.repeat(20),
+      limit: 1000,
+      admin: true,
+    });
+
+    expect(validExportQuery).toEqual([]);
+    expect(dirtyExportQuery.length).toBeGreaterThan(0);
   });
 
   it('keeps provider webhook payloads bounded and rejects unknown top-level fields', async () => {

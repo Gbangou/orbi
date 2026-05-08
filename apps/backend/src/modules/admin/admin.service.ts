@@ -33,6 +33,7 @@ import { ACTIVE_TRIP_STATUSES } from '../trips/trips.constants';
 import { DriverPayoutApprovalDto } from './dto/driver-payout-approval.dto';
 import { DriverWalletRecoveryAdjustmentDto } from './dto/driver-wallet-recovery-adjustment.dto';
 import { DriverPayoutSettlementQueryDto } from './dto/driver-payout-settlement-query.dto';
+import { DriverOnboardingExportQueryDto } from './dto/driver-onboarding-export-query.dto';
 import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-action-acknowledgement.dto';
 import { PaymentAttemptRefundDto } from './dto/payment-attempt-refund.dto';
 import { UpdateDriverOnboardingReviewDto } from './dto/update-driver-onboarding-review.dto';
@@ -41,6 +42,7 @@ import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query
 const reviewDecisionRoles = new Set(['ADMIN', 'OPS']);
 const pricingCalibrationLookbackDays = 14;
 const platformCommissionRate = 0.18;
+const csvFormulaPrefixPattern = /^[=+\-@\t\r]/;
 const requiredOnboardingDocumentTypes = [
   'IDENTITY_DOCUMENT',
   'DRIVER_LICENSE',
@@ -553,9 +555,13 @@ function normalizeIdempotencyKey(key: string | undefined) {
 }
 
 function csvCell(value: string | number | null | undefined) {
-  const text = value === null || value === undefined ? '' : String(value);
+  const text = (value === null || value === undefined ? '' : String(value))
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const sanitized = csvFormulaPrefixPattern.test(text) ? `'${text}` : text;
 
-  return `"${text.replaceAll('"', '""')}"`;
+  return `"${sanitized.replaceAll('"', '""')}"`;
 }
 
 function pdfText(value: string) {
@@ -3028,6 +3034,117 @@ export class AdminService {
         pageCount: Math.ceil(total / pageSize),
       },
     };
+  }
+
+  async driverOnboardingExportCsv(
+    query: DriverOnboardingExportQueryDto,
+    auth: RequestAuthContext,
+  ) {
+    const guidanceFilter = query.guidanceFilter ?? 'all';
+    const searchQuery = query.searchQuery?.trim() ?? '';
+    const limit = query.limit ?? 100;
+    const queue = await this.driverOnboardingQueue({
+      page: 1,
+      pageSize: limit,
+    });
+    const normalizedSearch = searchQuery.toLowerCase();
+    const filteredDrivers = queue.drivers.filter((driver) => {
+      if (
+        guidanceFilter !== 'all' &&
+        driver.decisionGuidance.level !== guidanceFilter
+      ) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const searchableText = [
+        driver.driverName,
+        driver.email,
+        driver.phoneNumber ?? '',
+        driver.verificationStatus,
+        driver.reviewStatus,
+        driver.decisionGuidance.level,
+        driver.decisionGuidance.label,
+        ...driver.decisionGuidance.blockers,
+        ...driver.documents.flatMap((document) => [
+          document.type,
+          document.status,
+          document.fileName,
+          document.integrity.uploadSource ?? '',
+        ]),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchableText.includes(normalizedSearch);
+    });
+    const headers = [
+      'driver_id',
+      'driver_name',
+      'email',
+      'phone',
+      'verification_status',
+      'review_status',
+      'guidance',
+      'recommended_status',
+      'approved_documents',
+      'total_documents',
+      'pending_documents',
+      'rejected_documents',
+      'missing_required',
+      'integrity_warnings',
+      'average_integrity_score',
+      'active_vehicle_count',
+      'service_radius_km',
+      'blockers',
+      'latest_decision_reason',
+    ];
+    const rows = filteredDrivers.map((driver) => [
+      driver.id,
+      driver.driverName,
+      driver.email,
+      driver.phoneNumber,
+      driver.verificationStatus,
+      driver.reviewStatus,
+      driver.decisionGuidance.level,
+      driver.decisionGuidance.recommendedStatus,
+      driver.documentSummary.approved,
+      driver.documentSummary.total,
+      driver.documentSummary.pending,
+      driver.documentSummary.rejected,
+      driver.documentSummary.missingRequired,
+      driver.documentSummary.integrityWarnings,
+      driver.documentSummary.averageIntegrityScore,
+      driver.activeVehicleCount,
+      driver.serviceRadiusKm,
+      driver.decisionGuidance.blockers.join(' | '),
+      driver.latestDecisionReason,
+    ]);
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_ONBOARDING_QUEUE_EXPORTED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: guidanceFilter,
+        metadata: {
+          format: 'csv',
+          guidanceFilter,
+          searchQuery: searchQuery || null,
+          exportedCount: filteredDrivers.length,
+          scannedCount: queue.drivers.length,
+          limit,
+        } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    return [
+      headers.map(csvCell).join(','),
+      ...rows.map((row) => row.map(csvCell).join(',')),
+    ].join('\n');
   }
 
   async driverWallets(query: PageQueryDto = new PageQueryDto()) {

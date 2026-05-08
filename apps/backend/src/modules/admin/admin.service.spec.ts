@@ -1696,6 +1696,91 @@ describe('AdminService', () => {
     expect(result.drivers[0].documentSummary.rejected).toBe(1);
   });
 
+  it('exports the filtered onboarding queue as audited safe CSV', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findMany.mockResolvedValue([
+      {
+        id: 'driver-1',
+        verificationStatus: 'PENDING',
+        serviceRadiusKm: 8,
+        user: {
+          fullName: '=IMPORTXML("https://example.test")',
+          email: 'driver@mobilis.app',
+          phoneNumber: '+22670000000',
+        },
+        vehicles: [{ id: 'vehicle-1' }],
+        onboardingDocuments: [
+          {
+            id: 'doc-1',
+            type: 'INSURANCE_PROOF',
+            status: 'PENDING',
+            fileName: 'insurance.pdf',
+            uploadedAt: new Date('2026-04-18T08:00:00.000Z'),
+            expiresAt: null,
+            rejectionReason: null,
+            metadata: {
+              integrity: {
+                sizeBytes: 120000,
+                uploadSource: 'driver-app',
+              },
+            },
+          },
+        ],
+        onboardingReviews: [
+          {
+            id: 'review-1',
+            status: 'CHANGES_REQUESTED',
+            decisionReason: 'ligne 1\nligne 2 "quote"',
+            createdAt: new Date('2026-04-18T08:10:00.000Z'),
+            metadata: null,
+            actor: {
+              fullName: 'Ops Mobilis',
+            },
+          },
+        ],
+      },
+    ]);
+    prisma.driverProfile.count.mockResolvedValue(1);
+
+    const csv = await service.driverOnboardingExportCsv(
+      {
+        guidanceFilter: 'resubmit',
+        searchQuery: 'insurance',
+        limit: 25,
+      },
+      {
+        user: {
+          id: 'ops-1',
+          role: 'OPS',
+          fullName: 'Ops Mobilis',
+          email: 'ops@mobilis.app',
+        },
+      } as never,
+    );
+
+    expect(csv).toContain(
+      '"driver-1","\'=IMPORTXML(""https://example.test"")"',
+    );
+    expect(csv).toContain('"ligne 1 ligne 2 ""quote"""');
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'ops-1',
+        action: 'DRIVER_ONBOARDING_QUEUE_EXPORTED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: 'resubmit',
+        metadata: expect.objectContaining({
+          format: 'csv',
+          guidanceFilter: 'resubmit',
+          searchQuery: 'insurance',
+          exportedCount: 1,
+          scannedCount: 1,
+          limit: 25,
+        }),
+      }),
+    });
+  });
+
   it('returns driver wallet balances and recent payout ledger entries', async () => {
     const { prisma, service } = createService();
 

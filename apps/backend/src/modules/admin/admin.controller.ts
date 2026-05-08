@@ -28,6 +28,7 @@ import { UpdateDispatchLearningSettingsDto } from './dto/update-dispatch-learnin
 import { DriverPayoutApprovalDto } from './dto/driver-payout-approval.dto';
 import { DriverWalletRecoveryAdjustmentDto } from './dto/driver-wallet-recovery-adjustment.dto';
 import { DriverPayoutSettlementQueryDto } from './dto/driver-payout-settlement-query.dto';
+import { DriverOnboardingExportQueryDto } from './dto/driver-onboarding-export-query.dto';
 import { PaymentAttemptRefundDto } from './dto/payment-attempt-refund.dto';
 import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query.dto';
 import { UpdateSupportTicketDto } from './dto/update-support-ticket.dto';
@@ -121,6 +122,23 @@ export class AdminController {
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   driverOnboardingQueue(@Query() query: PageQueryDto) {
     return this.adminService.driverOnboardingQueue(query);
+  }
+
+  @Get('driver-onboarding/export.csv')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header(
+    'Content-Disposition',
+    'attachment; filename="mobilis-driver-onboarding-export.csv"',
+  )
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  driverOnboardingExportCsv(
+    @Query() query: DriverOnboardingExportQueryDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.driverOnboardingExportCsv(query, auth);
   }
 
   @Get('driver-wallets')

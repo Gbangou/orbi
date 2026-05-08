@@ -29,6 +29,7 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
 - endpoint `GET /api/v1/drivers/onboarding`
 - endpoint `PATCH /api/v1/drivers/onboarding`
 - endpoint `GET /api/v1/admin/driver-onboarding-queue`
+- endpoint `GET /api/v1/admin/driver-onboarding/export.csv`
 - endpoint `PATCH /api/v1/admin/driver-onboarding/:driverId/review`
 - endpoint `PATCH /api/v1/drivers/onboarding/document-upload-links`
 - endpoint `GET /api/v1/admin/driver-onboarding/:driverId/documents/:documentId/view-link`
@@ -69,9 +70,11 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
   profils prets, les dossiers a verifier et les redemandes documentaires
 - recherche rapide admin par chauffeur, telephone, email, statut, type ou nom de
   justificatif pour retrouver un dossier sans sortir de la file de revue
-- export CSV local de la vue onboarding filtree/recherchee pour partager une
+- export CSV de la vue onboarding filtree/recherchee pour partager une
   liste courte de dossiers a rappeler, approuver ou recontroler, avec
   neutralisation des valeurs pouvant etre interpretees comme formules tableur
+- export CSV backend reserve aux roles `ADMIN` et `OPS`, audite dans
+  `AuditLog` avec filtre, recherche, limite et volume exporte
 - verification explicite que la meme plaque ne peut pas etre reattribuee silencieusement a un autre chauffeur
 - calcul d un resume de readiness et d une checklist exploitable
 - file ops pour dossiers `PENDING` ou `REJECTED`

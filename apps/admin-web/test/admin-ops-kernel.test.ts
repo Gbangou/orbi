@@ -6,7 +6,6 @@ import type {
 } from '@mobilis/api';
 
 import {
-  buildDriverOnboardingCsv,
   resolveCollectionDelta,
   resolveDriverOnboardingDelta,
   resolveHealthTransitionLabel,
@@ -284,32 +283,6 @@ describe('admin-ops-kernel', () => {
         searchQuery: '',
       }).map((driver) => driver.id),
     ).toEqual(['driver-resubmit', 'driver-ready']);
-  });
-
-  it('exports onboarding CSV with dirty spreadsheet input neutralized', () => {
-    const csv = buildDriverOnboardingCsv([
-      createDriver({
-        id: 'driver-dirty',
-        driverName: '=IMPORTXML("https://example.test")',
-        email: 'ops@example.com',
-        latestDecisionReason: 'ligne 1\nligne 2 "quote"',
-        decisionGuidance: {
-          level: 'review',
-          recommendedStatus: 'UNDER_REVIEW',
-          label: 'Revue prudente',
-          detail: 'Verification ops requise.',
-          blockers: ['+FORMULA', 'DRIVER_LICENSE: verification ops requise'],
-        },
-      }),
-    ]);
-
-    expect(csv).toContain(
-      '"\'=IMPORTXML(""https://example.test"")","ops@example.com"',
-    );
-    expect(csv).toContain(
-      '"\'+FORMULA | DRIVER_LICENSE: verification ops requise"',
-    );
-    expect(csv).toContain('"ligne 1 ligne 2 ""quote"""');
   });
 
   it('describes health transitions from status degradation and recovery signals', () => {

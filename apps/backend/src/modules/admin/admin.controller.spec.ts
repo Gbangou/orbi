@@ -12,6 +12,7 @@ describe('AdminController', () => {
       acknowledgeLaunchReadinessAction: jest.fn(),
       supportTickets: jest.fn(),
       driverOnboardingQueue: jest.fn(),
+      driverOnboardingExportCsv: jest.fn(),
       driverWallets: jest.fn(),
       prepareDriverWalletPayout: jest.fn(),
       markDriverPayoutPaid: jest.fn(),
@@ -151,6 +152,25 @@ describe('AdminController', () => {
     await controller.driverPayoutSettlementCsv(query as never, auth as never);
 
     expect(adminService.driverPayoutSettlementCsv).toHaveBeenCalledWith(
+      query,
+      auth,
+    );
+  });
+
+  it('delegates driver onboarding CSV exports with auth', async () => {
+    const { adminService, controller } = createController();
+    const query = {
+      guidanceFilter: 'review',
+      searchQuery: 'permis',
+      limit: 50,
+    };
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.driverOnboardingExportCsv(query as never, auth as never);
+
+    expect(adminService.driverOnboardingExportCsv).toHaveBeenCalledWith(
       query,
       auth,
     );

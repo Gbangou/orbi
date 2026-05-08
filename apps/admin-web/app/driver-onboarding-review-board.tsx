@@ -5,6 +5,7 @@ import {
   authenticateAndFetchCurrentUser,
   createMobilisApiClient,
   fetchAdminDriverDocumentViewLink,
+  fetchAdminDriverOnboardingExportCsv,
   fetchAdminDriverOnboardingQueue,
   updateAdminDriverOnboardingReview,
   type DriverOnboardingQueueResponse,
@@ -12,7 +13,6 @@ import {
 import { describeRealtimeConnection } from '@mobilis/ui';
 import {
   adminSyncHighlightDurationMs,
-  buildDriverOnboardingCsv,
   resolveDriverOnboardingDelta,
   resolveVisibleDriverOnboardingQueue,
   type DriverOnboardingGuidanceFilter,
@@ -379,22 +379,37 @@ export function DriverOnboardingReviewBoard({
     }
   }
 
-  function handleExportCsv() {
-    const csv = buildDriverOnboardingCsv(visibleDrivers);
-    const blob = new Blob([`\uFEFF${csv}`], {
-      type: 'text/csv;charset=utf-8',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const date = new Date().toISOString().slice(0, 10);
+  async function handleExportCsv() {
+    setStatus('Generation export CSV audite...');
 
-    link.href = url;
-    link.download = `mobilis-onboarding-${guidanceFilter}-${date}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    setStatus(`Export CSV genere pour ${visibleDrivers.length} dossier(s).`);
+    try {
+      const authClient = await withAdminClient();
+      const csv = await fetchAdminDriverOnboardingExportCsv(authClient, {
+        guidanceFilter,
+        searchQuery: searchQuery.trim() || undefined,
+        limit: 100,
+      });
+      const exportedRows = Math.max(
+        csv.split('\n').filter(Boolean).length - 1,
+        0,
+      );
+      const blob = new Blob([`\uFEFF${csv}`], {
+        type: 'text/csv;charset=utf-8',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const date = new Date().toISOString().slice(0, 10);
+
+      link.href = url;
+      link.download = `mobilis-onboarding-${guidanceFilter}-${date}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setStatus(`Export CSV genere pour ${exportedRows} dossier(s).`);
+    } catch {
+      setStatus("L export CSV onboarding n a pas pu etre genere.");
+    }
   }
 
   return (
@@ -475,7 +490,7 @@ export function DriverOnboardingReviewBoard({
         <button
           className="ghost-button onboarding-export-button"
           disabled={!visibleDrivers.length}
-          onClick={handleExportCsv}
+          onClick={() => void handleExportCsv()}
           type="button"
         >
           Export CSV
