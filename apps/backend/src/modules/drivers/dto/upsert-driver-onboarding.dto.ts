@@ -39,6 +39,10 @@ const supportedDriverDocumentTypes = [
   'INSURANCE_PROOF',
   'SELFIE_VERIFICATION',
 ] as const;
+const safeLeafFileNamePattern = /^[^<>:"/\\|?*\x00-\x1F\x7F]+$/;
+const safeVehicleTextPattern = /^[^<>{}[\]\\\x00-\x1F\x7F]+$/;
+const safeStorageKeyPattern =
+  /^[A-Za-z0-9][A-Za-z0-9_.:-]*(\/[A-Za-z0-9][A-Za-z0-9_.:-]*)+$/;
 
 class DriverDocumentChecklistDto {
   @ApiProperty()
@@ -67,23 +71,36 @@ class DriverVehicleOnboardingDto {
   @IsString()
   @MinLength(3)
   @MaxLength(32)
+  @Matches(/^[A-Z0-9][A-Z0-9 -]{2,31}$/i, {
+    message:
+      'Plate number must contain only letters, numbers, spaces or hyphens.',
+  })
   plateNumber!: string;
 
   @ApiProperty()
   @IsString()
   @MinLength(2)
   @MaxLength(64)
+  @Matches(safeVehicleTextPattern, {
+    message: 'Vehicle make contains unsafe characters.',
+  })
   make!: string;
 
   @ApiProperty()
   @IsString()
   @MinLength(1)
   @MaxLength(64)
+  @Matches(safeVehicleTextPattern, {
+    message: 'Vehicle model contains unsafe characters.',
+  })
   model!: string;
 
   @ApiProperty()
   @IsString()
   @MaxLength(32)
+  @Matches(safeVehicleTextPattern, {
+    message: 'Vehicle color contains unsafe characters.',
+  })
   color!: string;
 
   @ApiProperty({ required: false })
@@ -118,12 +135,19 @@ class DriverDocumentArtifactDto {
   @IsString()
   @MinLength(3)
   @MaxLength(160)
+  @Matches(safeLeafFileNamePattern, {
+    message:
+      'File name must be a safe leaf name without path separators or control characters.',
+  })
   fileName!: string;
 
   @ApiProperty()
   @IsString()
   @MinLength(8)
   @MaxLength(256)
+  @Matches(safeStorageKeyPattern, {
+    message: 'Storage key must be a normalized provider object key.',
+  })
   storageKey!: string;
 
   @ApiProperty({ required: false })
@@ -179,6 +203,9 @@ export class UpsertDriverOnboardingDto {
   @IsString()
   @MinLength(4)
   @MaxLength(32)
+  @Matches(/^[A-Za-z0-9][A-Za-z0-9 ._-]{3,31}$/, {
+    message: 'License number contains unsafe characters.',
+  })
   licenseNumber!: string;
 
   @ApiProperty({ enum: supportedCities })

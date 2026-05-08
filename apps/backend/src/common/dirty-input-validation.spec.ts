@@ -7,8 +7,11 @@ import { PaymentAttemptRefundDto } from '../modules/admin/dto/payment-attempt-re
 import { CreateCheckoutIntentDto } from '../modules/payments/dto/create-checkout-intent.dto';
 import { PaymentWebhookDto } from '../modules/payments/dto/payment-webhook.dto';
 import { UpsertDriverOnboardingDto } from '../modules/drivers/dto/upsert-driver-onboarding.dto';
+import { RequestDriverDocumentUploadLinksDto } from '../modules/drivers/dto/request-driver-document-upload-links.dto';
+import { CreateSavedPlaceDto } from '../modules/riders/dto/create-saved-place.dto';
 import { UpdateTrustedContactDto } from '../modules/riders/dto/update-trusted-contact.dto';
 import { ReportTripIncidentDto } from '../modules/trips/dto/report-trip-incident.dto';
+import { VerifyPickupCodeDto } from '../modules/trips/dto/verify-pickup-code.dto';
 import { SubmitMobileErrorReportsDto } from '../modules/mobile-observability/dto/submit-mobile-error-reports.dto';
 import { CreateRideRequestDto } from '../modules/ride-requests/dto/create-ride-request.dto';
 import { RecordRoutePositionDto } from '../modules/trips/dto/record-route-position.dto';
@@ -137,9 +140,52 @@ describe('dirty input validation', () => {
       notes: '<img src=x onerror=alert(1)>'.repeat(1_000),
       forceFare: 1,
     });
+    const shortScriptRide = await validateDto(CreateRideRequestDto, {
+      pickupAddress: '<script>alert(1)</script>',
+      pickupLatitude: 12.3346,
+      pickupLongitude: -1.5462,
+      destinationAddress: 'Universite Joseph Ki-Zerbo',
+      destinationLatitude: 12.3714,
+      destinationLongitude: -1.4991,
+      requestedVehicleType: 'MOTORCYCLE',
+      estimatedDistanceKm: 7.4,
+      estimatedDurationMinutes: 24,
+    });
+    const traversalRider = await validateDto(CreateRideRequestDto, {
+      riderId: '../rider-1',
+      pickupAddress: 'Patte d Oie, Ouagadougou',
+      pickupLatitude: 12.3346,
+      pickupLongitude: -1.5462,
+      destinationAddress: 'Universite Joseph Ki-Zerbo',
+      destinationLatitude: 12.3714,
+      destinationLongitude: -1.4991,
+      requestedVehicleType: 'MOTORCYCLE',
+      estimatedDistanceKm: 7.4,
+      estimatedDurationMinutes: 24,
+    });
 
     expect(validRide).toEqual([]);
     expect(dirtyRide.length).toBeGreaterThan(0);
+    expect(shortScriptRide.length).toBeGreaterThan(0);
+    expect(traversalRider.length).toBeGreaterThan(0);
+  });
+
+  it('rejects dirty saved places while accepting realistic local labels', async () => {
+    const validPlace = await validateDto(CreateSavedPlaceDto, {
+      label: 'Maison Tampouy',
+      address: 'Avenue de la Nation, Ouagadougou',
+      latitude: 12.371,
+      longitude: -1.519,
+    });
+    const dirtyPlace = await validateDto(CreateSavedPlaceDto, {
+      label: '<img src=x onerror=alert(1)>',
+      address: '..\\secrets',
+      latitude: 12.371,
+      longitude: -1.519,
+    });
+
+    expect(validPlace).toEqual([]);
+    expect(dirtyPlace.length).toBeGreaterThan(0);
   });
 
   it('bounds live route and SOS coordinates without rejecting useful emergency text', async () => {
@@ -176,6 +222,18 @@ describe('dirty input validation', () => {
     expect(dirtySos.length).toBeGreaterThan(0);
     expect(validRoutePosition).toEqual([]);
     expect(dirtyRoutePosition.length).toBeGreaterThan(0);
+  });
+
+  it('requires pickup codes to be exactly four digits', async () => {
+    const validCode = await validateDto(VerifyPickupCodeDto, {
+      pickupCode: '1234',
+    });
+    const dirtyCode = await validateDto(VerifyPickupCodeDto, {
+      pickupCode: '<123',
+    });
+
+    expect(validCode).toEqual([]);
+    expect(dirtyCode.length).toBeGreaterThan(0);
   });
 
   it('bounds mobile error report ingestion and rejects unknown payload fields', async () => {
@@ -252,7 +310,7 @@ describe('dirty input validation', () => {
       documentArtifacts: [
         {
           type: 'IDENTITY_DOCUMENT',
-          fileName: 'id-card.pdf',
+          fileName: '../id-card.pdf',
           storageKey: '../secrets/'.repeat(50),
           mimeType: 'text/html<script>',
           expiresAt: 'not-a-date',
@@ -273,6 +331,36 @@ describe('dirty input validation', () => {
     });
 
     expect(errors.length).toBeGreaterThan(0);
+  });
+
+  it('rejects dirty document upload link requests before signed URLs are created', async () => {
+    const validUploadRequest = await validateDto(
+      RequestDriverDocumentUploadLinksDto,
+      {
+        documents: [
+          {
+            type: 'DRIVER_LICENSE',
+            fileName: 'permis-conducteur.pdf',
+            mimeType: 'application/pdf',
+          },
+        ],
+      },
+    );
+    const dirtyUploadRequest = await validateDto(
+      RequestDriverDocumentUploadLinksDto,
+      {
+        documents: [
+          {
+            type: 'DRIVER_LICENSE',
+            fileName: '../permis<script>.svg',
+            mimeType: 'image/svg+xml',
+          },
+        ],
+      },
+    );
+
+    expect(validUploadRequest).toEqual([]);
+    expect(dirtyUploadRequest.length).toBeGreaterThan(0);
   });
 
   it('rejects dirty trusted contact structured fields', async () => {

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { OpaqueIdPipe } from '../../common/pipes/opaque-id.pipe';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { ProfileAccessGuard } from '../auth/profile-access.guard';
@@ -65,7 +66,8 @@ export class RidersController {
   @RequireProfile('rider')
   updateSavedPlace(
     @CurrentAuth() auth: RequestAuthContext,
-    @Param('savedPlaceId') savedPlaceId: string,
+    @Param('savedPlaceId', new OpaqueIdPipe('savedPlaceId'))
+    savedPlaceId: string,
     @Body() payload: UpdateSavedPlaceDto,
   ) {
     return this.ridersService.updateSavedPlace(auth, savedPlaceId, payload);
@@ -77,7 +79,8 @@ export class RidersController {
   @RequireProfile('rider')
   deleteSavedPlace(
     @CurrentAuth() auth: RequestAuthContext,
-    @Param('savedPlaceId') savedPlaceId: string,
+    @Param('savedPlaceId', new OpaqueIdPipe('savedPlaceId'))
+    savedPlaceId: string,
   ) {
     return this.ridersService.deleteSavedPlace(auth, savedPlaceId);
   }

@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -39,17 +40,25 @@ const districtProfiles = [
   'INDUSTRIAL',
   'INTERCITY_GATE',
 ] as const;
+const safeStructuredTextPattern = /^[^<>{}[\]\\\x00-\x1F\x7F]+$/;
+const safeOpaqueIdPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{2,96}$/;
 
 export class CreateRideRequestDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   @MaxLength(80)
+  @Matches(safeOpaqueIdPattern, {
+    message: 'Rider ID must be a safe opaque identifier.',
+  })
   riderId!: string;
 
   @ApiProperty()
   @IsString()
   @MaxLength(160)
+  @Matches(safeStructuredTextPattern, {
+    message: 'Pickup address contains unsafe characters.',
+  })
   pickupAddress!: string;
 
   @ApiProperty({ required: false })
@@ -65,6 +74,9 @@ export class CreateRideRequestDto {
   @ApiProperty()
   @IsString()
   @MaxLength(160)
+  @Matches(safeStructuredTextPattern, {
+    message: 'Destination address contains unsafe characters.',
+  })
   destinationAddress!: string;
 
   @ApiProperty({ required: false })

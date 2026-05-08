@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { OpaqueIdPipe } from '../../common/pipes/opaque-id.pipe';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -60,7 +61,8 @@ export class RideRequestsController {
   @Version('1')
   @Roles(UserRole.RIDER, UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   cancel(
-    @Param('rideRequestId') rideRequestId: string,
+    @Param('rideRequestId', new OpaqueIdPipe('rideRequestId'))
+    rideRequestId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.rideRequestsService.cancel(auth, rideRequestId);

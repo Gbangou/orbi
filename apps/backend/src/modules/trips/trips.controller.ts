@@ -13,6 +13,7 @@ import {
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Observable } from 'rxjs';
+import { OpaqueIdPipe } from '../../common/pipes/opaque-id.pipe';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuthContext } from '../auth/auth.types';
@@ -73,7 +74,9 @@ export class TripsController {
 
   @Get('shared/:shareToken')
   @Version('1')
-  sharedTrip(@Param('shareToken') shareToken: string) {
+  sharedTrip(
+    @Param('shareToken', new OpaqueIdPipe('shareToken')) shareToken: string,
+  ) {
     return this.tripsService.getSharedTrip(shareToken);
   }
 
@@ -89,7 +92,7 @@ export class TripsController {
     UserRole.SUPPORT,
   )
   detail(
-    @Param('tripId') tripId: string,
+    @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.tripsService.getTripDetail(auth, tripId);
@@ -101,7 +104,8 @@ export class TripsController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.DRIVER)
   acceptRideRequest(
-    @Param('rideRequestId') rideRequestId: string,
+    @Param('rideRequestId', new OpaqueIdPipe('rideRequestId'))
+    rideRequestId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.tripsService.acceptRideRequest(auth, rideRequestId);
@@ -113,7 +117,7 @@ export class TripsController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.RIDER, UserRole.DRIVER, UserRole.ADMIN, UserRole.OPS)
   createShareLink(
-    @Param('tripId') tripId: string,
+    @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.tripsService.createShareLink(auth, tripId);
@@ -125,7 +129,7 @@ export class TripsController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.RIDER, UserRole.DRIVER, UserRole.ADMIN, UserRole.OPS)
   recordRoutePosition(
-    @Param('tripId') tripId: string,
+    @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
     @Body() payload: RecordRoutePositionDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -138,7 +142,7 @@ export class TripsController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.DRIVER)
   verifyPickupCode(
-    @Param('tripId') tripId: string,
+    @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
     @Body() payload: VerifyPickupCodeDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -157,7 +161,7 @@ export class TripsController {
     UserRole.SUPPORT,
   )
   reportIncident(
-    @Param('tripId') tripId: string,
+    @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
     @Body() payload: ReportTripIncidentDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -170,7 +174,7 @@ export class TripsController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.RIDER, UserRole.DRIVER, UserRole.ADMIN, UserRole.OPS)
   triggerSafetySos(
-    @Param('tripId') tripId: string,
+    @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
     @Body() payload: ReportTripSosDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -183,7 +187,7 @@ export class TripsController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.DRIVER, UserRole.RIDER, UserRole.ADMIN, UserRole.OPS)
   updateStatus(
-    @Param('tripId') tripId: string,
+    @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
     @Body() payload: UpdateTripStatusDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {

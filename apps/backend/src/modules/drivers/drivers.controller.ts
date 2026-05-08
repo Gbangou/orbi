@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { OpaqueIdPipe } from '../../common/pipes/opaque-id.pipe';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { ProfileAccessGuard } from '../auth/profile-access.guard';
@@ -80,7 +81,8 @@ export class DriversController {
   @RequireProfile('driver')
   declineOffer(
     @CurrentAuth() auth: RequestAuthContext,
-    @Param('rideRequestId') rideRequestId: string,
+    @Param('rideRequestId', new OpaqueIdPipe('rideRequestId'))
+    rideRequestId: string,
   ) {
     return this.driversService.declineOffer(auth, rideRequestId);
   }

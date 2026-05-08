@@ -114,6 +114,13 @@ OK Implemented:
 - Admin backend route parameters use an opaque ID pipe on sensitive operations
   to fail closed on traversal strings, script payloads, oversized identifiers
   and malformed parameter tampering before service logic or Prisma queries run.
+- Rider, driver, ride-request and trip route identifiers now use the same
+  opaque ID guard on mobile-facing protected routes.
+- Structured mobile DTO fields reject short malicious strings, not only
+  oversized payloads: saved-place labels/addresses, ride pickup/destination
+  addresses, rider IDs, pickup codes and driver document filenames/storage keys
+  are bounded and checked for traversal, control characters and markup-shaped
+  input before service logic runs.
 
 Planned Next Phase:
 - API rate limiting tiers
