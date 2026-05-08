@@ -1430,6 +1430,13 @@ export type DriverOnboardingQueueResponse = {
           sha256: string | null;
           failureReason: string | null;
         };
+        safetyScan: {
+          state: 'clear' | 'pending' | 'quarantined';
+          engine: string | null;
+          scannedAt: string | null;
+          findings: string[];
+          quarantineReason: string | null;
+        };
         guidance: {
           level: 'clear' | 'review' | 'resubmit';
           label: string;
@@ -1806,6 +1813,13 @@ export type DriverDocumentObjectVerificationResponse = {
         id: string;
         role: string;
       };
+    };
+    safetyScan: {
+      state: 'clear' | 'pending' | 'quarantined';
+      engine: string | null;
+      scannedAt: string | null;
+      findings: string[];
+      quarantineReason: string | null;
     };
   };
 };

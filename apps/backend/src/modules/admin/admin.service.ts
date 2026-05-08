@@ -55,6 +55,34 @@ const requiredOnboardingDocumentTypes = [
   'INSURANCE_PROOF',
   'SELFIE_VERIFICATION',
 ] as const;
+const documentSafetyPolicies: Record<
+  string,
+  {
+    allowedExtensions: string[];
+    maxBytes: number;
+  }
+> = {
+  IDENTITY_DOCUMENT: {
+    allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    maxBytes: 5_000_000,
+  },
+  DRIVER_LICENSE: {
+    allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    maxBytes: 5_000_000,
+  },
+  VEHICLE_REGISTRATION: {
+    allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    maxBytes: 5_000_000,
+  },
+  INSURANCE_PROOF: {
+    allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    maxBytes: 5_000_000,
+  },
+  SELFIE_VERIFICATION: {
+    allowedExtensions: ['jpg', 'jpeg', 'png'],
+    maxBytes: 3_000_000,
+  },
+};
 
 type LaunchReadinessCheck = {
   id: string;
@@ -120,6 +148,13 @@ type DriverDocumentIntegritySignal = {
     sizeBytes: number | null;
     sha256: string | null;
     failureReason: string | null;
+  };
+  safetyScan: {
+    state: 'clear' | 'pending' | 'quarantined';
+    engine: string | null;
+    scannedAt: string | null;
+    findings: string[];
+    quarantineReason: string | null;
   };
   guidance: {
     level: 'clear' | 'review' | 'resubmit';
@@ -200,6 +235,15 @@ function nullablePositiveInteger(value: Prisma.JsonValue | undefined) {
     : null;
 }
 
+function nullableStringArray(value: Prisma.JsonValue | undefined) {
+  return Array.isArray(value)
+    ? value.filter(
+        (item): item is string =>
+          typeof item === 'string' && Boolean(item.trim()),
+      )
+    : [];
+}
+
 function normalizeOnboardingExportGuidanceFilter(
   value: Prisma.JsonValue | undefined,
 ) {
@@ -260,6 +304,29 @@ function resolveDriverDocumentIntegrity(
   const objectFailureReason = objectVerification
     ? nullableString(objectVerification.failureReason)
     : null;
+  const safetyScan =
+    metadata && isJsonRecord(metadata) && isJsonRecord(metadata.safetyScan)
+      ? metadata.safetyScan
+      : null;
+  const safetyScanState =
+    safetyScan?.state === 'clear'
+      ? 'clear'
+      : safetyScan?.state === 'quarantined' ||
+          objectVerificationState === 'failed'
+        ? 'quarantined'
+        : 'pending';
+  const safetyScanEngine = safetyScan ? nullableString(safetyScan.engine) : null;
+  const safetyScannedAt = safetyScan ? nullableString(safetyScan.scannedAt) : null;
+  const safetyFindings = safetyScan
+    ? nullableStringArray(safetyScan.findings)
+    : objectVerificationState === 'failed'
+      ? ['object-verification-failed']
+      : [];
+  const quarantineReason = safetyScan
+    ? nullableString(safetyScan.quarantineReason)
+    : objectVerificationState === 'failed'
+      ? objectFailureReason ?? 'Provider object verification failed.'
+      : null;
   const checks = [
     {
       id: 'size-bytes',
@@ -296,6 +363,16 @@ function resolveDriverDocumentIntegrity(
           ? ('pass' as const)
           : ('warn' as const),
     },
+    {
+      id: 'safety-scan',
+      label:
+        safetyScanState === 'clear'
+          ? 'Scan documentaire clair'
+          : safetyScanState === 'quarantined'
+            ? 'Document en quarantaine'
+            : 'Scan documentaire en attente',
+      state: safetyScanState === 'clear' ? ('pass' as const) : ('warn' as const),
+    },
   ];
   const passedChecks = checks.filter((check) => check.state === 'pass').length;
   const score = Math.round((passedChecks / checks.length) * 100);
@@ -307,7 +384,7 @@ function resolveDriverDocumentIntegrity(
           level: 'clear' as const,
           label: 'Preuves completes',
           detail:
-            'La taille, la source, le hash, l horodatage backend et la confirmation objet provider sont presents.',
+            'La taille, la source, le hash, l horodatage backend, la confirmation objet provider et le scan documentaire sont clairs.',
         }
       : state === 'missing'
         ? {
@@ -338,6 +415,13 @@ function resolveDriverDocumentIntegrity(
       sizeBytes: objectSizeBytes,
       sha256: objectSha256,
       failureReason: objectFailureReason,
+    },
+    safetyScan: {
+      state: safetyScanState,
+      engine: safetyScanEngine,
+      scannedAt: safetyScannedAt,
+      findings: safetyFindings,
+      quarantineReason,
     },
     guidance,
     checks,
@@ -4759,8 +4843,11 @@ export class AdminService {
       document.metadata && isJsonRecord(document.metadata)
         ? document.metadata
         : {};
-    const integrity = isJsonRecord(previousMetadata.integrity)
-      ? previousMetadata.integrity
+    const previousIntegrity = previousMetadata.integrity as
+      | Prisma.JsonValue
+      | undefined;
+    const integrity = isJsonRecord(previousIntegrity)
+      ? previousIntegrity
       : {};
     const providerVerification =
       await this.documentObjectStorageService.verifyStoredDocument({
@@ -4790,6 +4877,7 @@ export class AdminService {
     document: {
       id: string;
       type: string;
+      fileName?: string | null;
       storageKey: string;
     },
     driverId: string,
@@ -4802,6 +4890,11 @@ export class AdminService {
     },
     auth: RequestAuthContext,
   ) {
+    const safetyScan = this.resolveDriverDocumentSafetyScan(
+      document,
+      previousMetadata,
+      objectVerification,
+    );
     const updated = await this.prisma.driverDocument.update({
       where: {
         id: document.id,
@@ -4810,6 +4903,7 @@ export class AdminService {
         metadata: {
           ...previousMetadata,
           objectVerification,
+          safetyScan,
         } as Prisma.InputJsonValue,
       },
     });
@@ -4825,6 +4919,7 @@ export class AdminService {
           documentType: document.type,
           storageKey: document.storageKey,
           objectVerification,
+          safetyScan,
         } as Prisma.InputJsonValue,
       },
     });
@@ -4835,7 +4930,92 @@ export class AdminService {
         driverId,
         type: updated.type,
         objectVerification,
+        safetyScan,
       },
     };
+  }
+
+  private resolveDriverDocumentSafetyScan(
+    document: {
+      type: string;
+      fileName?: string | null;
+      storageKey: string;
+    },
+    previousMetadata: Record<string, unknown>,
+    objectVerification: StoredDocumentObjectVerification,
+  ) {
+    const scannedAt = new Date().toISOString();
+
+    if (objectVerification.state !== 'confirmed') {
+      return {
+        state: 'quarantined',
+        engine: 'local-policy',
+        scannedAt,
+        findings: ['object-verification-failed'],
+        quarantineReason:
+          objectVerification.failureReason ??
+          'Provider object verification failed.',
+      };
+    }
+
+    const policy = documentSafetyPolicies[document.type];
+    const extension = this.resolveDocumentExtension(
+      document.storageKey || document.fileName || '',
+    );
+    const previousIntegrity = previousMetadata.integrity as
+      | Prisma.JsonValue
+      | undefined;
+    const integrity = isJsonRecord(previousIntegrity)
+      ? previousIntegrity
+      : {};
+    const capturedSha256 = nullableString(integrity.sha256);
+    const capturedSizeBytes = nullablePositiveInteger(integrity.sizeBytes);
+    const findings = [
+      !policy ? 'unsupported-document-type' : null,
+      !extension || !policy?.allowedExtensions.includes(extension)
+        ? 'unsupported-file-extension'
+        : null,
+      policy && objectVerification.sizeBytes && objectVerification.sizeBytes > policy.maxBytes
+        ? 'object-size-exceeds-policy'
+        : null,
+      capturedSizeBytes && objectVerification.sizeBytes !== capturedSizeBytes
+        ? 'captured-size-mismatch'
+        : null,
+      capturedSha256 && objectVerification.sha256 !== capturedSha256
+        ? 'captured-sha256-mismatch'
+        : null,
+      !/^[a-f0-9]{64}$/.test(objectVerification.sha256 ?? '')
+        ? 'invalid-provider-sha256'
+        : null,
+    ].filter((finding): finding is string => Boolean(finding));
+
+    if (findings.length > 0) {
+      return {
+        state: 'quarantined',
+        engine: 'local-policy',
+        scannedAt,
+        findings,
+        quarantineReason:
+          'Document kept in quarantine because local safety policy found one or more anomalies.',
+      };
+    }
+
+    return {
+      state: 'clear',
+      engine: 'local-policy',
+      scannedAt,
+      findings: [],
+      quarantineReason: null,
+    };
+  }
+
+  private resolveDocumentExtension(value: string) {
+    const leafName = value.trim().split(/[\\/]/).pop()?.trim() ?? '';
+
+    if (!leafName.includes('.')) {
+      return null;
+    }
+
+    return leafName.split('.').pop()?.toLowerCase() ?? null;
   }
 }

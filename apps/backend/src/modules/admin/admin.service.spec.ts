@@ -69,6 +69,17 @@ describe('AdminService', () => {
     };
   }
 
+  function clearSafetyScan(overrides: Record<string, unknown> = {}) {
+    return {
+      state: 'clear',
+      engine: 'local-policy',
+      scannedAt: '2026-04-18T08:00:03.000Z',
+      findings: [],
+      quarantineReason: null,
+      ...overrides,
+    };
+  }
+
   function createService() {
     const prisma = {
       user: { count: jest.fn() },
@@ -1486,6 +1497,7 @@ describe('AdminService', () => {
                 capturedAt: '2026-04-18T08:00:01.000Z',
               },
               objectVerification: confirmedObjectVerification(),
+              safetyScan: clearSafetyScan(),
             },
           },
         ],
@@ -1616,7 +1628,7 @@ describe('AdminService', () => {
       pageSize: 10,
     });
 
-    expect(result.drivers[0].documentSummary.averageIntegrityScore).toBe(40);
+    expect(result.drivers[0].documentSummary.averageIntegrityScore).toBe(33);
     expect(result.drivers[0].documentSummary.integrityWarnings).toBe(1);
     expect(result.drivers[0].decisionGuidance.blockers).toEqual(
       expect.arrayContaining(['DRIVER_LICENSE: piece absente']),
@@ -1624,9 +1636,12 @@ describe('AdminService', () => {
     expect(result.drivers[0].documents[0].integrity).toEqual(
       expect.objectContaining({
         state: 'partial',
-        score: 40,
+        score: 33,
         sha256: null,
         capturedAt: null,
+        safetyScan: expect.objectContaining({
+          state: 'pending',
+        }),
         guidance: expect.objectContaining({
           level: 'review',
           label: 'Verifier avant decision',
@@ -1677,6 +1692,7 @@ describe('AdminService', () => {
               sha256:
                 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             }),
+            safetyScan: clearSafetyScan(),
           },
         })),
         onboardingReviews: [],
@@ -2509,6 +2525,7 @@ describe('AdminService', () => {
               sha256:
                 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             }),
+            safetyScan: clearSafetyScan(),
           },
         },
         {
@@ -2528,6 +2545,7 @@ describe('AdminService', () => {
               sha256:
                 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
             }),
+            safetyScan: clearSafetyScan(),
           },
         },
         {
@@ -2547,6 +2565,7 @@ describe('AdminService', () => {
               sha256:
                 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
             }),
+            safetyScan: clearSafetyScan(),
           },
         },
         {
@@ -2566,6 +2585,7 @@ describe('AdminService', () => {
               sha256:
                 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
             }),
+            safetyScan: clearSafetyScan(),
           },
         },
         {
@@ -2585,6 +2605,7 @@ describe('AdminService', () => {
               sha256:
                 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
             }),
+            safetyScan: clearSafetyScan(),
           },
         },
       ],
@@ -2961,7 +2982,7 @@ describe('AdminService', () => {
         objectId: 'drivers/driver-1/doc-1.pdf',
         sizeBytes: 120000,
         sha256:
-          'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+          'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
       },
       authContext(),
     );
@@ -2979,11 +3000,17 @@ describe('AdminService', () => {
             objectId: 'drivers/driver-1/doc-1.pdf',
             sizeBytes: 120000,
             sha256:
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             actor: {
               id: 'ops-1',
               role: 'OPS',
             },
+          }),
+          safetyScan: expect.objectContaining({
+            state: 'clear',
+            engine: 'local-policy',
+            findings: [],
+            quarantineReason: null,
           }),
         }),
       },
@@ -2997,6 +3024,7 @@ describe('AdminService', () => {
       }),
     });
     expect(result.document.objectVerification.state).toBe('confirmed');
+    expect(result.document.safetyScan.state).toBe('clear');
   });
 
   it('rejects incomplete provider object verification confirmations', async () => {
@@ -3084,6 +3112,10 @@ describe('AdminService', () => {
               role: 'OPS',
             },
           }),
+          safetyScan: expect.objectContaining({
+            state: 'clear',
+            engine: 'local-policy',
+          }),
         }),
       },
     });
@@ -3095,6 +3127,70 @@ describe('AdminService', () => {
       }),
     });
     expect(result.document.objectVerification.state).toBe('confirmed');
+    expect(result.document.safetyScan.state).toBe('clear');
+  });
+
+  it('quarantines a driver document when provider object verification fails', async () => {
+    const { documentObjectStorageService, prisma, service } = createService();
+
+    prisma.driverDocument.findFirst.mockResolvedValue({
+      id: 'doc-1',
+      driverProfileId: 'driver-1',
+      type: 'IDENTITY_DOCUMENT',
+      storageKey: 'driver-1/identity_document/doc-1.pdf',
+      metadata: {
+        integrity: {
+          sizeBytes: 120000,
+          sha256:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        },
+      },
+    });
+    documentObjectStorageService.verifyStoredDocument.mockResolvedValue({
+      state: 'failed',
+      provider: 'local-provider',
+      objectId: 'driver-1/identity_document/doc-1.pdf',
+      verifiedAt: '2026-04-18T08:02:00.000Z',
+      sizeBytes: null,
+      sha256: null,
+      failureReason: 'Document object SHA-256 does not match captured upload integrity.',
+    });
+    prisma.driverDocument.update.mockResolvedValue({
+      id: 'doc-1',
+      type: 'IDENTITY_DOCUMENT',
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.verifyDriverDocumentObjectFromProvider(
+      'driver-1',
+      'doc-1',
+      authContext(),
+    );
+
+    expect(prisma.driverDocument.update).toHaveBeenCalledWith({
+      where: { id: 'doc-1' },
+      data: {
+        metadata: expect.objectContaining({
+          objectVerification: expect.objectContaining({
+            state: 'failed',
+            failureReason:
+              'Document object SHA-256 does not match captured upload integrity.',
+          }),
+          safetyScan: expect.objectContaining({
+            state: 'quarantined',
+            engine: 'local-policy',
+            findings: ['object-verification-failed'],
+          }),
+        }),
+      },
+    });
+    expect(result.document.safetyScan).toEqual(
+      expect.objectContaining({
+        state: 'quarantined',
+        quarantineReason:
+          'Document object SHA-256 does not match captured upload integrity.',
+      }),
+    );
   });
 
   it('acknowledges a health incident and publishes a realtime resync event', async () => {

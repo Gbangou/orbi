@@ -782,7 +782,18 @@ export function DriverOnboardingReviewBoard({
                       <span>
                         Objet {document.integrity.objectVerification.state}
                       </span>
+                      <span>
+                        Scan {document.integrity.safetyScan.state}
+                      </span>
                     </div>
+                    {document.integrity.safetyScan.state === 'quarantined' ? (
+                      <p className="document-quarantine-note">
+                        Quarantaine:{' '}
+                        {document.integrity.safetyScan.quarantineReason ||
+                          document.integrity.safetyScan.findings.join(', ') ||
+                          'verification documentaire requise'}
+                      </p>
+                    ) : null}
                     <div className="document-checks">
                       {document.integrity.checks.map((check) => (
                         <span

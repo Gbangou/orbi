@@ -30,6 +30,12 @@ paiement provider, observabilite et runbooks verts.
 - Verification provider locale branchee:
   `POST /api/v1/admin/driver-onboarding/:driverId/documents/:documentId/object-verification/verify-provider`
   confirme existence, taille et SHA-256 depuis le stockage configure.
+- Scan/quarantaine documentaire local apres verification objet provider:
+  `safetyScan.clear` pour pieces conformes, `safetyScan.quarantined` pour
+  mismatch provider, extension/taille suspecte ou verification echouee.
+- Garde-fous production backend renforces: demarrage refuse si Swagger reste
+  active, si CORS accepte `*`, si la base pointe localhost, ou si les URLs
+  documents publiques ne sont pas HTTPS/exterieures.
 
 ## Architecture active
 
@@ -44,10 +50,10 @@ paiement provider, observabilite et runbooks verts.
 
 ## Priorite d'execution
 
-1. Ajouter quarantaine/scan documentaire apres verification objet provider.
-2. Brancher realtime et rate-limit sur un backend partage pour multi-instance.
-3. Ajouter queues/dead-letter pour webhooks, documents et notifications.
-4. Capturer fixtures provider paiement sandbox, surtout refund/reconciliation.
+1. Brancher realtime et rate-limit sur un backend partage pour multi-instance.
+2. Ajouter queues/dead-letter pour webhooks, documents et notifications.
+3. Capturer fixtures provider paiement sandbox, surtout refund/reconciliation.
+4. Brancher un scan antivirus/anti-fraude documentaire externe sur `safetyScan`.
 5. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
 
 ## Verification standard
@@ -74,10 +80,11 @@ git diff --check
 
 - Les transports realtime/rate-limit doivent devenir partages avant une montee
   multi-instance.
-- Les justificatifs chauffeur ont des politiques, liens bornes et preuve objet
-  provider locale; il faut encore quarantaine, scan documentaire et adapter
-  S3/GCS production.
+- Les justificatifs chauffeur ont des politiques, liens bornes, preuve objet
+  provider locale et quarantaine locale; il faut encore adapter S3/GCS
+  production et brancher un scan documentaire externe.
 - Les flux argent sont audites et idempotents sur les fondations, mais les
   webhooks/retries/dead-letter doivent etre prouves avec fixtures provider.
 - La production ne doit pas etre declaree "large" sans CI verte, observabilite,
-  rollback pratique, secrets production et validation terrain repetee.
+  rollback pratique, secrets production, URLs externes HTTPS et validation
+  terrain repetee.

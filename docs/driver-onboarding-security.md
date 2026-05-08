@@ -64,6 +64,12 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
 - endpoint admin `PATCH /api/v1/admin/driver-onboarding/:driverId/documents/:documentId/object-verification`
   reserve `ADMIN/OPS`, pour confirmer ou echouer la verification objet provider
   avec audit `DRIVER_DOCUMENT_OBJECT_VERIFICATION_UPDATED`
+- scan documentaire local `safetyScan` apres verification objet provider:
+  `clear` si la politique locale est respectee, `quarantined` si la
+  verification provider echoue ou si extension, taille ou empreinte divergent
+- exposition admin du statut de scan et de la raison de quarantaine par
+  justificatif, afin d empecher une approbation implicite d une piece presente
+  mais suspecte
 - declaration automatique de `uploadSource=driver-app` par le flux mobile
   chauffeur lors du rattachement
 - rejet des tailles superieures a la politique du document et des empreintes
@@ -106,10 +112,16 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
   document passe en `objectVerification.state=failed`
 - chaque verification ecrit `DRIVER_DOCUMENT_OBJECT_VERIFICATION_UPDATED`
   dans `AuditLog`
+- chaque verification alimente aussi `safetyScan`:
+  - `clear` quand l objet confirme respecte type, extension, taille et SHA-256
+  - `quarantined` quand la verification objet echoue ou qu un signal local
+    diverge
 
 ## Ce qui viendra ensuite
 
 - brancher un adapter S3/GCS production sur le meme contrat provider
+- brancher un moteur antivirus/anti-fraude documentaire externe sur
+  `safetyScan`
 - empreinte perceptuelle anti-duplication
 - controle anti-fraude documentaire
 - selfie match automatise
