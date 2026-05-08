@@ -61,6 +61,9 @@ paiement provider, observabilite et runbooks verts.
   routes Next.js locales avec cookie HttpOnly/SameSite pour consulter les
   dead-letters, accuser/masquer les incidents et remettre un job en file sans
   exposer le Bearer token backend sur cette surface navigateur.
+- Barriere CSRF explicite ajoutee sur les mutations admin locales et validation
+  des identifiants opaques sur les routes admin backend sensibles pour fermer
+  plus tot les tentatives traversal, XSS en parametre et ID tampering.
 
 ## Architecture active
 
@@ -83,6 +86,8 @@ paiement provider, observabilite et runbooks verts.
 5. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
 6. Etendre le proxy serveur admin HttpOnly aux autres actions sensibles:
    wallet/payout, refund/replay paiement, onboarding documents et dispatch.
+7. Generaliser progressivement la validation d'identifiants opaques aux routes
+   rider/driver/trip exposees hors admin, avec tests IDOR par role.
 
 ## Verification standard
 
@@ -121,3 +126,6 @@ git diff --check
 - Les clients mobiles conservent le modele Bearer token pour Expo; l'admin web
   commence sa migration vers routes serveur + cookie HttpOnly, mais toutes les
   actions sensibles doivent suivre ce modele avant exposition publique large.
+- Le backend refuse maintenant les identifiants admin malformes avant Prisma;
+  les controles IDOR metier restent assures par les requetes scoping
+  existantes, et doivent continuer a etre testes pour les surfaces mobiles.

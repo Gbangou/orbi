@@ -17,6 +17,7 @@ import { UserRole } from '@prisma/client';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { Observable } from 'rxjs';
 import { PageQueryDto } from '../../common/dto/page-query.dto';
+import { OpaqueIdPipe } from '../../common/pipes/opaque-id.pipe';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuthContext } from '../auth/auth.types';
@@ -83,7 +84,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   requeueJob(
-    @Param('jobId') jobId: string,
+    @Param('jobId', new OpaqueIdPipe('jobId')) jobId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.requeueJob(jobId, auth);
@@ -104,7 +105,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   acknowledgeLaunchReadinessAction(
-    @Param('checkId') checkId: string,
+    @Param('checkId', new OpaqueIdPipe('checkId')) checkId: string,
     @Body() payload: LaunchReadinessActionAcknowledgementDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -188,7 +189,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   prepareDriverWalletPayout(
-    @Param('walletId') walletId: string,
+    @Param('walletId', new OpaqueIdPipe('walletId')) walletId: string,
     @Body() payload: DriverPayoutApprovalDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -201,7 +202,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   recordDriverWalletRecoveryAdjustment(
-    @Param('walletId') walletId: string,
+    @Param('walletId', new OpaqueIdPipe('walletId')) walletId: string,
     @Body() payload: DriverWalletRecoveryAdjustmentDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -218,7 +219,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   markDriverPayoutPaid(
-    @Param('payoutId') payoutId: string,
+    @Param('payoutId', new OpaqueIdPipe('payoutId')) payoutId: string,
     @Body() payload: DriverPayoutApprovalDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -302,7 +303,9 @@ export class AdminController {
   @ApiBearerAuth('session-token')
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
-  paymentWebhookEventDetail(@Param('eventId') eventId: string) {
+  paymentWebhookEventDetail(
+    @Param('eventId', new OpaqueIdPipe('eventId')) eventId: string,
+  ) {
     return this.adminService.paymentWebhookEventDetail(eventId);
   }
 
@@ -312,7 +315,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   startPaymentWebhookInvestigation(
-    @Param('eventId') eventId: string,
+    @Param('eventId', new OpaqueIdPipe('eventId')) eventId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.startPaymentWebhookInvestigation(eventId, auth);
@@ -324,7 +327,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   replayPaymentWebhookEvent(
-    @Param('eventId') eventId: string,
+    @Param('eventId', new OpaqueIdPipe('eventId')) eventId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.replayPaymentWebhookEvent(eventId, auth);
@@ -336,7 +339,8 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   verifyPaymentAttemptWithProvider(
-    @Param('paymentAttemptId') paymentAttemptId: string,
+    @Param('paymentAttemptId', new OpaqueIdPipe('paymentAttemptId'))
+    paymentAttemptId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.verifyPaymentAttemptWithProvider(
@@ -351,7 +355,8 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   refundPaymentAttempt(
-    @Param('paymentAttemptId') paymentAttemptId: string,
+    @Param('paymentAttemptId', new OpaqueIdPipe('paymentAttemptId'))
+    paymentAttemptId: string,
     @Body() payload: PaymentAttemptRefundDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -380,7 +385,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   updateSupportTicket(
-    @Param('ticketId') ticketId: string,
+    @Param('ticketId', new OpaqueIdPipe('ticketId')) ticketId: string,
     @Body() payload: UpdateSupportTicketDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -393,7 +398,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   updateDriverOnboardingReview(
-    @Param('driverId') driverId: string,
+    @Param('driverId', new OpaqueIdPipe('driverId')) driverId: string,
     @Body() payload: UpdateDriverOnboardingReviewDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -410,7 +415,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   acknowledgeHealthIncident(
-    @Param('incidentId') incidentId: string,
+    @Param('incidentId', new OpaqueIdPipe('incidentId')) incidentId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.acknowledgeHealthIncident(incidentId, auth);
@@ -422,7 +427,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   muteHealthIncident(
-    @Param('incidentId') incidentId: string,
+    @Param('incidentId', new OpaqueIdPipe('incidentId')) incidentId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.muteHealthIncident(incidentId, auth);
@@ -434,8 +439,8 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   driverOnboardingDocumentViewLink(
-    @Param('driverId') driverId: string,
-    @Param('documentId') documentId: string,
+    @Param('driverId', new OpaqueIdPipe('driverId')) driverId: string,
+    @Param('documentId', new OpaqueIdPipe('documentId')) documentId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.getDriverDocumentViewLink(
@@ -453,8 +458,8 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   updateDriverDocumentObjectVerification(
-    @Param('driverId') driverId: string,
-    @Param('documentId') documentId: string,
+    @Param('driverId', new OpaqueIdPipe('driverId')) driverId: string,
+    @Param('documentId', new OpaqueIdPipe('documentId')) documentId: string,
     @Body() payload: UpdateDriverDocumentObjectVerificationDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
@@ -474,8 +479,8 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   verifyDriverDocumentObjectFromProvider(
-    @Param('driverId') driverId: string,
-    @Param('documentId') documentId: string,
+    @Param('driverId', new OpaqueIdPipe('driverId')) driverId: string,
+    @Param('documentId', new OpaqueIdPipe('documentId')) documentId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.verifyDriverDocumentObjectFromProvider(

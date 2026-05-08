@@ -61,6 +61,9 @@ OK Implemented:
   HttpOnly, SameSite=strict admin session cookie, so incident and dead-letter
   actions no longer require exposing the backend Bearer token to that browser
   surface.
+- Local admin server mutations require a same-origin request plus an explicit
+  `x-mobilis-admin-action: true` header, which gives the HttpOnly admin cookie
+  a concrete CSRF gate instead of relying on cookie attributes alone.
 
 Planned Next Phase:
 - 2FA support (TOTP)
@@ -108,6 +111,9 @@ OK Implemented:
 - Admin web ships browser security headers from Next.js, including CSP,
   frame denial, no-sniff, no-referrer, cross-origin opener policy and disabled
   camera/microphone/geolocation permissions.
+- Admin backend route parameters use an opaque ID pipe on sensitive operations
+  to fail closed on traversal strings, script payloads, oversized identifiers
+  and malformed parameter tampering before service logic or Prisma queries run.
 
 Planned Next Phase:
 - API rate limiting tiers

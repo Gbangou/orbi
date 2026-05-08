@@ -14,6 +14,10 @@ import {
 } from './admin-ops-kernel';
 import { mobilisRuntimeConfig } from '@mobilis/config';
 import { subscribeToAdminRealtime } from './admin-realtime';
+import {
+  adminMutationHeaderName,
+  adminMutationHeaderValue,
+} from './admin-server-security';
 
 type SystemHealthBoardProps = {
   initialHealth: HealthCheckResponse;
@@ -300,6 +304,12 @@ async function fetchAdminJson<TResponse>(path: string, init?: RequestInit) {
   return (await response.json()) as TResponse;
 }
 
+function adminMutationHeaders() {
+  return {
+    [adminMutationHeaderName]: adminMutationHeaderValue,
+  };
+}
+
 async function fetchAdminJobQueueFromServer() {
   const params = new URLSearchParams({
     page: '1',
@@ -505,7 +515,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
           `/api/admin/health-incidents/${encodeURIComponent(
             incidentId,
           )}/acknowledge`,
-          { method: 'PATCH' },
+          { method: 'PATCH', headers: adminMutationHeaders() },
         );
         await refreshHealth('Incident health reconnu par les operations.');
       } catch {
@@ -524,7 +534,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
 
         await fetchAdminJson(
           `/api/admin/health-incidents/${encodeURIComponent(incidentId)}/mute`,
-          { method: 'PATCH' },
+          { method: 'PATCH', headers: adminMutationHeaders() },
         );
         await refreshHealth(
           'Incident health masque pour toutes les consoles ops.',
@@ -545,7 +555,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
 
         await fetchAdminJson(
           `/api/admin/job-queue/${encodeURIComponent(jobId)}/requeue`,
-          { method: 'POST' },
+          { method: 'POST', headers: adminMutationHeaders() },
         );
         await refreshHealth('Job dead-letter remis en file.');
         await refreshJobQueue();
