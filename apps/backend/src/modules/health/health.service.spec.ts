@@ -64,6 +64,19 @@ describe('HealthService', () => {
     const healthIncidentJournalService = {
       list: jest.fn().mockReturnValue([]),
     };
+    const jobQueueService = {
+      snapshot: jest.fn().mockResolvedValue({
+        durable: true,
+        families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'],
+        counts: [
+          {
+            kind: 'PAYMENT_WEBHOOK',
+            status: 'PENDING',
+            count: 2,
+          },
+        ],
+      }),
+    };
 
     return {
       configService,
@@ -73,6 +86,7 @@ describe('HealthService', () => {
       appLifecycleService,
       driverReservationExpiryService,
       healthIncidentJournalService,
+      jobQueueService,
       service: new HealthService(
         configService as never,
         prisma as never,
@@ -81,6 +95,7 @@ describe('HealthService', () => {
         appLifecycleService as never,
         driverReservationExpiryService as never,
         healthIncidentJournalService as never,
+        jobQueueService as never,
       ),
     };
   }
@@ -121,6 +136,17 @@ describe('HealthService', () => {
         degradeReason: null,
         activeStreams: 2,
         publishedEvents: 7,
+      },
+      jobQueue: {
+        durable: true,
+        families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'],
+        counts: [
+          {
+            kind: 'PAYMENT_WEBHOOK',
+            status: 'PENDING',
+            count: 2,
+          },
+        ],
       },
     });
     expect(result.operations.productionReadiness).toEqual(

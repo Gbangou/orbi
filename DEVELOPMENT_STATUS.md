@@ -47,6 +47,8 @@ paiement provider, observabilite et runbooks verts.
   journalise cree un job `PAYMENT_WEBHOOK`, chaque verification objet document
   chauffeur cree un job `DRIVER_DOCUMENT`, et le nouveau service notifications
   persiste la notification avant de creer un job `NOTIFICATION`.
+- `/health` expose maintenant l'etat durable de la file, les familles suivies
+  et les compteurs par statut pour faciliter la surveillance ops/dead-letter.
 
 ## Architecture active
 

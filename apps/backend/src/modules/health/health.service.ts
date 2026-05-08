@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RateLimitService } from '../../common/rate-limit/rate-limit.service';
+import { JobQueueService } from '../../common/job-queue/job-queue.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { AppLifecycleService } from '../../core/runtime/app-lifecycle.service';
 import { DriverReservationExpiryService } from '../drivers/driver-reservation-expiry.service';
@@ -17,6 +18,7 @@ export class HealthService {
     private readonly appLifecycleService: AppLifecycleService,
     private readonly driverReservationExpiryService: DriverReservationExpiryService,
     private readonly healthIncidentJournalService: HealthIncidentJournalService,
+    private readonly jobQueueService: JobQueueService,
   ) {}
 
   async check() {
@@ -41,6 +43,7 @@ export class HealthService {
       !realtimeSnapshot.degraded || !realtimeStrict ? 'up' : 'degraded';
     const driverReservationExpirySnapshot =
       this.driverReservationExpiryService.snapshot();
+    const jobQueueSnapshot = await this.jobQueueService.snapshot();
     const driverReservationExpiryStatus =
       this.resolveDriverReservationExpiryStatus(
         driverReservationExpirySnapshot,
@@ -88,6 +91,7 @@ export class HealthService {
           strict: realtimeStrict,
           ...realtimeSnapshot,
         },
+        jobQueue: jobQueueSnapshot,
       },
       operations: {
         productionReadiness: this.buildProductionReadiness({
