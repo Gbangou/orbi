@@ -21,6 +21,7 @@ import { UsersModule } from './modules/users/users.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { VoiceModule } from './modules/voice/voice.module';
 import { MobileObservabilityModule } from './modules/mobile-observability/mobile-observability.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { MobileObservabilityModule } from './modules/mobile-observability/mobile
     AdminModule,
     VoiceModule,
     MobileObservabilityModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

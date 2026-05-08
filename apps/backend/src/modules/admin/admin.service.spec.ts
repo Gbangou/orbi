@@ -167,6 +167,11 @@ describe('AdminService', () => {
     const documentObjectStorageService = {
       verifyStoredDocument: jest.fn(),
     };
+    const jobQueueService = {
+      enqueue: jest.fn().mockResolvedValue({
+        id: 'job-1',
+      }),
+    };
     const featureFlagsService = {
       snapshot: jest.fn().mockReturnValue([
         { flag: 'payments', mode: 'on', allowlist: [] },
@@ -281,6 +286,7 @@ describe('AdminService', () => {
       realtimeService,
       documentLinksService,
       documentObjectStorageService,
+      jobQueueService,
       featureFlagsService,
       healthIncidentJournalService,
       healthService,
@@ -296,6 +302,7 @@ describe('AdminService', () => {
         healthService as never,
         driversService as never,
         paymentsService as never,
+        jobQueueService as never,
       ),
     };
   }
@@ -2950,7 +2957,7 @@ describe('AdminService', () => {
   });
 
   it('records provider object verification for a driver document', async () => {
-    const { prisma, service } = createService();
+    const { prisma, service, jobQueueService } = createService();
 
     prisma.driverDocument.findFirst.mockResolvedValue({
       id: 'doc-1',
@@ -3021,6 +3028,20 @@ describe('AdminService', () => {
         action: 'DRIVER_DOCUMENT_OBJECT_VERIFICATION_UPDATED',
         entityType: 'DRIVER_DOCUMENT',
         entityId: 'doc-1',
+      }),
+    });
+    expect(jobQueueService.enqueue).toHaveBeenCalledWith({
+      kind: 'DRIVER_DOCUMENT',
+      dedupeKey: 'driver-document:doc-1:object-verification',
+      entityType: 'driver_document',
+      entityId: 'doc-1',
+      payload: expect.objectContaining({
+        driverProfileId: 'driver-1',
+        documentId: 'doc-1',
+        documentType: 'IDENTITY_DOCUMENT',
+        storageKey: 'driver-1/identity_document/doc-1.pdf',
+        objectVerificationState: 'confirmed',
+        safetyScanState: 'clear',
       }),
     });
     expect(result.document.objectVerification.state).toBe('confirmed');

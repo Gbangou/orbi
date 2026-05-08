@@ -43,6 +43,10 @@ paiement provider, observabilite et runbooks verts.
   `PAYMENT_WEBHOOK`, `DRIVER_DOCUMENT` et `NOTIFICATION`, avec retry borne,
   verrouillage `FOR UPDATE SKIP LOCKED`, deduplication et passage en
   dead-letter apres epuisement des tentatives.
+- Producteurs critiques branches sur cette file: chaque webhook paiement
+  journalise cree un job `PAYMENT_WEBHOOK`, chaque verification objet document
+  chauffeur cree un job `DRIVER_DOCUMENT`, et le nouveau service notifications
+  persiste la notification avant de creer un job `NOTIFICATION`.
 
 ## Architecture active
 
@@ -58,7 +62,7 @@ paiement provider, observabilite et runbooks verts.
 ## Priorite d'execution
 
 1. Brancher les workers de consommation sur la queue durable: replay webhooks,
-   verification documentaire provider et notifications.
+   scan documentaire externe et envoi provider notifications.
 2. Capturer fixtures provider paiement sandbox, surtout refund/reconciliation.
 3. Brancher un scan antivirus/anti-fraude documentaire externe sur `safetyScan`.
 4. Adapter S3/GCS production pour objets documentaires.

@@ -28,6 +28,7 @@ import {
   DocumentObjectStorageService,
   type StoredDocumentObjectVerification,
 } from '../../common/document-links/document-object-storage.service';
+import { JobQueueService } from '../../common/job-queue/job-queue.service';
 import { FeatureFlagsService } from '../../core/runtime/feature-flags.service';
 import { HealthIncidentJournalService } from '../health/health-incident-journal.service';
 import { HealthService } from '../health/health.service';
@@ -1525,6 +1526,7 @@ export class AdminService {
     private readonly healthService: HealthService,
     private readonly driversService: DriversService,
     private readonly paymentsService: PaymentsService,
+    private readonly jobQueueService: JobQueueService,
   ) {}
 
   async previewOverview() {
@@ -4937,6 +4939,21 @@ export class AdminService {
           objectVerification,
           safetyScan,
         } as Prisma.InputJsonValue,
+      },
+    });
+
+    await this.jobQueueService.enqueue({
+      kind: 'DRIVER_DOCUMENT',
+      dedupeKey: `driver-document:${document.id}:object-verification`,
+      entityType: 'driver_document',
+      entityId: document.id,
+      payload: {
+        driverProfileId: driverId,
+        documentId: document.id,
+        documentType: document.type,
+        storageKey: document.storageKey,
+        objectVerificationState: objectVerification.state,
+        safetyScanState: safetyScan.state,
       },
     });
 

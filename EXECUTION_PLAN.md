@@ -77,6 +77,8 @@ Mobilis vise une plateforme de mobilite complete, premium et francaise d'abord p
 - Queues de jobs pour webhooks, notifications, antifraude et documents
 - File durable PostgreSQL avec deduplication, retry borne et dead-letter pour
   webhooks paiement, documents chauffeur et notifications
+- Producteurs backend branches sur la file durable pour webhooks paiement,
+  verification objet document chauffeur et notifications persistantes
 - SLO runtime exposes dans `/health`, dashboard admin risque production,
   taxonomie crash/error mobile et alerting actionnable
 - Score excellence terrain dans launch-readiness pour comparer runtime/mobile,

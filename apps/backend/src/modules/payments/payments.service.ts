@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
@@ -8,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { FeatureFlagsService } from '../../core/runtime/feature-flags.service';
+import { JobQueueService } from '../../common/job-queue/job-queue.service';
 import {
   DEFAULT_PAYMENT_CURRENCY,
   DEFAULT_PAYMENT_PROVIDER,
@@ -49,6 +51,8 @@ export class PaymentsService {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly featureFlagsService: FeatureFlagsService,
+    @Optional()
+    private readonly jobQueueService?: JobQueueService,
   ) {}
 
   async createCheckoutIntent(
@@ -1885,7 +1889,7 @@ export class PaymentsService {
     paymentAttemptId: string | null;
     userId: string | null;
   }) {
-    await this.prisma.paymentWebhookEvent.create({
+    const webhookEvent = await this.prisma.paymentWebhookEvent.create({
       data: {
         provider: input.provider,
         eventType: input.event,
@@ -1900,6 +1904,22 @@ export class PaymentsService {
               .digest('hex')
           : undefined,
         payload: input.payload as unknown as Prisma.InputJsonValue,
+        paymentAttemptId: input.paymentAttemptId,
+        userId: input.userId,
+      },
+    });
+
+    await this.jobQueueService?.enqueue({
+      kind: 'PAYMENT_WEBHOOK',
+      dedupeKey: `payment-webhook:${webhookEvent.id}`,
+      entityType: 'payment_webhook_event',
+      entityId: webhookEvent.id,
+      payload: {
+        eventId: webhookEvent.id,
+        action: input.nextAction,
+        provider: input.provider,
+        transactionRef: input.transactionRef,
+        providerReference: input.providerReference ?? null,
         paymentAttemptId: input.paymentAttemptId,
         userId: input.userId,
       },

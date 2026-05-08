@@ -124,15 +124,22 @@ describe('PaymentsService', () => {
     const featureFlagsService = {
       isEnabled: jest.fn().mockReturnValue(true),
     };
+    const jobQueueService = {
+      enqueue: jest.fn().mockResolvedValue({
+        id: 'job-1',
+      }),
+    };
 
     return {
       configService,
       prisma,
       featureFlagsService,
+      jobQueueService,
       service: new PaymentsService(
         configService as never,
         prisma as never,
         featureFlagsService as never,
+        jobQueueService as never,
       ),
     };
   }
@@ -294,7 +301,7 @@ describe('PaymentsService', () => {
   });
 
   it('persists webhook reconciliation for a successful payment', async () => {
-    const { service, prisma } = createService();
+    const { service, prisma, jobQueueService } = createService();
 
     const result = await service.handleWebhook('secret_123', {
       event: 'payment.completed',
@@ -312,6 +319,19 @@ describe('PaymentsService', () => {
         action: 'persisted_and_reconciled',
         eventType: 'payment.completed',
         provider: 'FLUTTERWAVE',
+        providerReference: 'fw_ref_123',
+      }),
+    });
+    expect(jobQueueService.enqueue).toHaveBeenCalledWith({
+      kind: 'PAYMENT_WEBHOOK',
+      dedupeKey: 'payment-webhook:webhook-event-1',
+      entityType: 'payment_webhook_event',
+      entityId: 'webhook-event-1',
+      payload: expect.objectContaining({
+        eventId: 'webhook-event-1',
+        action: 'persisted_and_reconciled',
+        provider: 'FLUTTERWAVE',
+        transactionRef: 'mobilis_123_ride-request-1',
         providerReference: 'fw_ref_123',
       }),
     });
