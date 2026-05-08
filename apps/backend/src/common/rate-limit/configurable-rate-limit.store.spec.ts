@@ -2,7 +2,7 @@ import { ConfigurableRateLimitStore } from './configurable-rate-limit.store';
 import { InMemoryRateLimitStore } from './in-memory-rate-limit.store';
 
 describe('ConfigurableRateLimitStore', () => {
-  it('stays healthy when the in-memory adapter is configured intentionally', () => {
+  it('stays healthy when the in-memory adapter is configured intentionally', async () => {
     const configService = {
       get: jest.fn((key: string) => {
         const values: Record<string, string> = {
@@ -18,7 +18,7 @@ describe('ConfigurableRateLimitStore', () => {
       new InMemoryRateLimitStore(),
     );
 
-    expect(store.snapshot()).toEqual({
+    await expect(store.snapshot()).resolves.toEqual({
       adapter: 'in-memory',
       sharedBackplane: false,
       degraded: false,
@@ -27,7 +27,7 @@ describe('ConfigurableRateLimitStore', () => {
     });
   });
 
-  it('reports degradation when redis is configured but not yet wired', () => {
+  it('reports degradation when redis is configured but not yet wired', async () => {
     const configService = {
       get: jest.fn((key: string) => {
         const values: Record<string, string> = {
@@ -43,7 +43,7 @@ describe('ConfigurableRateLimitStore', () => {
       new InMemoryRateLimitStore(),
     );
 
-    expect(store.snapshot()).toEqual(
+    await expect(store.snapshot()).resolves.toEqual(
       expect.objectContaining({
         adapter: 'in-memory',
         sharedBackplane: false,
@@ -51,5 +51,40 @@ describe('ConfigurableRateLimitStore', () => {
         trackedKeys: 0,
       }),
     );
+  });
+
+  it('uses the postgres store as a shared backplane when configured', async () => {
+    const configService = {
+      get: jest.fn((key: string) => {
+        const values: Record<string, string> = {
+          'infrastructure.rateLimit.adapter': 'postgres',
+        };
+
+        return values[key];
+      }),
+    };
+    const postgresStore = {
+      consume: jest.fn(),
+      snapshot: jest.fn().mockResolvedValue({
+        adapter: 'postgres',
+        sharedBackplane: true,
+        degraded: false,
+        degradeReason: null,
+        trackedKeys: 4,
+      }),
+    };
+    const store = new ConfigurableRateLimitStore(
+      configService as never,
+      new InMemoryRateLimitStore(),
+      postgresStore as never,
+    );
+
+    await expect(store.snapshot()).resolves.toEqual({
+      adapter: 'postgres',
+      sharedBackplane: true,
+      degraded: false,
+      degradeReason: null,
+      trackedKeys: 4,
+    });
   });
 });

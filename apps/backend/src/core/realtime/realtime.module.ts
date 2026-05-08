@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigurableRealtimeTransport } from './configurable-realtime.transport';
 import { InMemoryRealtimeTransport } from './in-memory-realtime.transport';
+import { PostgresRealtimeTransport } from './postgres-realtime.transport';
 import { RealtimeService } from './realtime.service';
 import { REALTIME_TRANSPORT } from './realtime.types';
 
@@ -8,6 +9,7 @@ import { REALTIME_TRANSPORT } from './realtime.types';
 @Module({
   providers: [
     InMemoryRealtimeTransport,
+    PostgresRealtimeTransport,
     ConfigurableRealtimeTransport,
     {
       provide: REALTIME_TRANSPORT,

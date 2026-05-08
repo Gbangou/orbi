@@ -129,8 +129,29 @@ Important:
 
 Important:
 
-- tant que le store Redis partage n est pas branche, `RATE_LIMIT_ADAPTER=redis` remontera un etat degrade dans `health`
-- activer `RATE_LIMIT_STRICT=true` en preproduction/production pour bloquer un deploy multi-instance qui tomberait en fallback local
+- `RATE_LIMIT_ADAPTER=postgres` utilise la base PostgreSQL configuree comme
+  backplane partage multi-instance
+- `RATE_LIMIT_ADAPTER=redis` reste signale degrade tant que l adapter Redis
+  n est pas branche
+- activer `RATE_LIMIT_STRICT=true` en preproduction/production pour bloquer un
+  deploy multi-instance qui tomberait en fallback local
+
+## Realtime partage
+
+`REALTIME_ADAPTER=in-memory` garde le flux SSE local, utile en developpement
+mono-instance. Pour preproduction/production multi-instance, utiliser
+`REALTIME_ADAPTER=postgres`: le backend publie les evenements via
+PostgreSQL `LISTEN/NOTIFY` et `health.infrastructure.realtime.sharedBackplane`
+doit passer a `true`.
+
+Important:
+
+- `REALTIME_ADAPTER=postgres` reutilise `DATABASE_URL` et ne demande pas de
+  dependance externe additionnelle
+- `REALTIME_ADAPTER=redis` reste signale degrade tant que l adapter Redis
+  n est pas branche
+- activer `REALTIME_STRICT=true` en preproduction/production pour faire remonter
+  une degradation si le backplane partage tombe en fallback local
 
 ## Garde-fous de demarrage production
 

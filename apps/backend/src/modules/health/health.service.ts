@@ -29,7 +29,7 @@ export class HealthService {
     }
 
     const memoryUsage = process.memoryUsage();
-    const rateLimitSnapshot = this.rateLimitService.snapshot();
+    const rateLimitSnapshot = await this.rateLimitService.snapshot();
     const realtimeSnapshot = this.realtimeService.snapshot();
     const rateLimitStrict = this.configBoolean(
       'infrastructure.rateLimit.strict',

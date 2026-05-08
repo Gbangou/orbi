@@ -30,12 +30,14 @@ export default () => ({
     rateLimit: {
       adapter: process.env.RATE_LIMIT_ADAPTER ?? 'in-memory',
       redisUrl: process.env.RATE_LIMIT_REDIS_URL,
+      postgresUrl: process.env.DATABASE_URL,
       strict: process.env.RATE_LIMIT_STRICT === 'true',
     },
     realtimeAdapter: process.env.REALTIME_ADAPTER ?? 'in-memory',
     realtime: {
       adapter: process.env.REALTIME_ADAPTER ?? 'in-memory',
       redisUrl: process.env.REALTIME_REDIS_URL,
+      postgresUrl: process.env.DATABASE_URL,
       strict: process.env.REALTIME_STRICT === 'true',
     },
   },

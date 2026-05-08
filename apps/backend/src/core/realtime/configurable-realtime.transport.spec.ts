@@ -71,6 +71,77 @@ describe('ConfigurableRealtimeTransport', () => {
     );
   });
 
+  it('uses the postgres transport as a shared backplane when configured', () => {
+    const configService = {
+      get: jest.fn((key: string) => {
+        const values: Record<string, string> = {
+          'infrastructure.realtime.adapter': 'postgres',
+        };
+
+        return values[key];
+      }),
+    };
+    const postgresTransport = {
+      publish: jest.fn(),
+      stream: jest.fn(),
+      snapshot: jest.fn(() => ({
+        adapter: 'postgres',
+        sharedBackplane: true,
+        degraded: false,
+        degradeReason: null,
+        activeStreams: 2,
+        publishedEvents: 8,
+      })),
+    };
+    const transport = new ConfigurableRealtimeTransport(
+      configService as never,
+      new InMemoryRealtimeTransport(),
+      postgresTransport as never,
+    );
+
+    expect(transport.snapshot()).toEqual({
+      adapter: 'postgres',
+      sharedBackplane: true,
+      degraded: false,
+      degradeReason: null,
+      activeStreams: 2,
+      publishedEvents: 8,
+    });
+  });
+
+  it('delegates postgres publish and stream when configured', () => {
+    const configService = {
+      get: jest.fn((key: string) => {
+        const values: Record<string, string> = {
+          'infrastructure.realtime.adapter': 'postgres',
+        };
+
+        return values[key];
+      }),
+    };
+    const postgresTransport = new InMemoryRealtimeTransport();
+    const transport = new ConfigurableRealtimeTransport(
+      configService as never,
+      new InMemoryRealtimeTransport(),
+      postgresTransport as never,
+    );
+
+    transport.publish({
+      id: 'admin:health.updated:health:2026-04-19T10:00:00.000Z:0',
+      channel: 'admin',
+      type: 'health.updated',
+      entityId: 'health',
+      createdAt: '2026-04-19T10:00:00.000Z',
+    });
+
+    expect(transport.snapshot()).toEqual(
+      expect.objectContaining({
+        adapter: 'in-memory',
+        publishedEvents: 1,
+      }),
+    );
+  });
+
   it('delegates publish and stream to the in-memory fallback transport', async () => {
     const configService = {
       get: jest.fn((key: string) => {

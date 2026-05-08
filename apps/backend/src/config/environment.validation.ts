@@ -230,13 +230,21 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
     );
   }
 
-  if (config.RATE_LIMIT_STRICT === 'true' && !config.RATE_LIMIT_REDIS_URL) {
+  if (
+    config.RATE_LIMIT_STRICT === 'true' &&
+    config.RATE_LIMIT_ADAPTER === 'redis' &&
+    !config.RATE_LIMIT_REDIS_URL
+  ) {
     throw new Error(
       'RATE_LIMIT_REDIS_URL is required when RATE_LIMIT_STRICT=true.',
     );
   }
 
-  if (config.REALTIME_STRICT === 'true' && !config.REALTIME_REDIS_URL) {
+  if (
+    config.REALTIME_STRICT === 'true' &&
+    config.REALTIME_ADAPTER === 'redis' &&
+    !config.REALTIME_REDIS_URL
+  ) {
     throw new Error(
       'REALTIME_REDIS_URL is required when REALTIME_STRICT=true.',
     );

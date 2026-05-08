@@ -36,6 +36,9 @@ paiement provider, observabilite et runbooks verts.
 - Garde-fous production backend renforces: demarrage refuse si Swagger reste
   active, si CORS accepte `*`, si la base pointe localhost, ou si les URLs
   documents publiques ne sont pas HTTPS/exterieures.
+- Backplane PostgreSQL partage ajoute pour rate-limit et realtime:
+  `RATE_LIMIT_ADAPTER=postgres` et `REALTIME_ADAPTER=postgres` sortent du
+  fallback memoire et exposent `sharedBackplane=true` dans `health`.
 
 ## Architecture active
 
@@ -50,10 +53,10 @@ paiement provider, observabilite et runbooks verts.
 
 ## Priorite d'execution
 
-1. Brancher realtime et rate-limit sur un backend partage pour multi-instance.
-2. Ajouter queues/dead-letter pour webhooks, documents et notifications.
-3. Capturer fixtures provider paiement sandbox, surtout refund/reconciliation.
-4. Brancher un scan antivirus/anti-fraude documentaire externe sur `safetyScan`.
+1. Ajouter queues/dead-letter pour webhooks, documents et notifications.
+2. Capturer fixtures provider paiement sandbox, surtout refund/reconciliation.
+3. Brancher un scan antivirus/anti-fraude documentaire externe sur `safetyScan`.
+4. Adapter S3/GCS production pour objets documentaires.
 5. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
 
 ## Verification standard
@@ -78,8 +81,9 @@ git diff --check
 
 ## Risques restants
 
-- Les transports realtime/rate-limit doivent devenir partages avant une montee
-  multi-instance.
+- Les transports realtime/rate-limit peuvent utiliser PostgreSQL comme
+  backplane partage multi-instance; il faut encore valider le comportement en
+  preproduction avec `*_STRICT=true`.
 - Les justificatifs chauffeur ont des politiques, liens bornes, preuve objet
   provider locale et quarantaine locale; il faut encore adapter S3/GCS
   production et brancher un scan documentaire externe.

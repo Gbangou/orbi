@@ -25,12 +25,29 @@ describe('validateEnvironment', () => {
     expect(env.DOCUMENT_SIGNING_SECRET).toBe('mobilis_dev_document_secret');
   });
 
-  it('accepts a production configuration with explicit external secrets and URLs', () => {
-    const env = validateEnvironment(productionBase);
+  it.each([
+    ['default adapters', {}],
+    [
+      'postgres shared backplanes',
+      {
+        RATE_LIMIT_ADAPTER: 'postgres',
+        RATE_LIMIT_STRICT: 'true',
+        REALTIME_ADAPTER: 'postgres',
+        REALTIME_STRICT: 'true',
+      },
+    ],
+  ])(
+    'accepts a production configuration with %s',
+    (_label, adapterOverrides) => {
+      const env = validateEnvironment({
+        ...productionBase,
+        ...adapterOverrides,
+      });
 
-    expect(env.NODE_ENV).toBe('production');
-    expect(env.PAYMENTS_WEBHOOK_SECRET).toBe('prod_webhook_secret');
-  });
+      expect(env.NODE_ENV).toBe('production');
+      expect(env.PAYMENTS_WEBHOOK_SECRET).toBe('prod_webhook_secret');
+    },
+  );
 
   it.each([
     [
@@ -100,12 +117,12 @@ describe('validateEnvironment', () => {
     ],
     [
       'missing rate limit Redis URL',
-      { RATE_LIMIT_STRICT: 'true' },
+      { RATE_LIMIT_ADAPTER: 'redis', RATE_LIMIT_STRICT: 'true' },
       'RATE_LIMIT_REDIS_URL is required when RATE_LIMIT_STRICT=true.',
     ],
     [
       'missing realtime Redis URL',
-      { REALTIME_STRICT: 'true' },
+      { REALTIME_ADAPTER: 'redis', REALTIME_STRICT: 'true' },
       'REALTIME_REDIS_URL is required when REALTIME_STRICT=true.',
     ],
     [

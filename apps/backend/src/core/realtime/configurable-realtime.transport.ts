@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { MessageEvent } from '@nestjs/common';
 import type { Observable } from 'rxjs';
 import { InMemoryRealtimeTransport } from './in-memory-realtime.transport';
+import { PostgresRealtimeTransport } from './postgres-realtime.transport';
 import type {
   RealtimeEvent,
   RealtimeEventFilter,
@@ -18,6 +19,8 @@ export class ConfigurableRealtimeTransport implements RealtimeTransport {
   constructor(
     private readonly configService: ConfigService,
     private readonly inMemoryTransport: InMemoryRealtimeTransport,
+    @Optional()
+    private readonly postgresTransport?: PostgresRealtimeTransport,
   ) {}
 
   publish(event: RealtimeEvent) {
@@ -84,6 +87,14 @@ export class ConfigurableRealtimeTransport implements RealtimeTransport {
   }
 
   protected resolveDelegate(): RealtimeTransport {
+    const configuredAdapter =
+      this.configService.get<string>('infrastructure.realtime.adapter') ??
+      'in-memory';
+
+    if (configuredAdapter === 'postgres' || configuredAdapter === 'postgresql') {
+      return this.postgresTransport ?? this.inMemoryTransport;
+    }
+
     return this.inMemoryTransport;
   }
 
@@ -103,8 +114,10 @@ export class ConfigurableRealtimeTransport implements RealtimeTransport {
   ) {
     const configuredReason =
       configuredAdapter === 'redis'
-        ? 'REALTIME_ADAPTER=redis est configure, mais le transport partage Redis n est pas encore branche. Le backend fonctionne en fallback in-memory pour le dev local uniquement.'
-        : null;
+        ? 'REALTIME_ADAPTER=redis est configure, mais le transport Redis n est pas encore branche. Utiliser REALTIME_ADAPTER=postgres pour un backplane partage sans nouvelle dependance.'
+        : configuredAdapter.startsWith('postgres') && !this.postgresTransport
+          ? 'REALTIME_ADAPTER=postgres est configure, mais le transport PostgreSQL n est pas disponible.'
+          : null;
 
     const degradeReason = this.combineReasons(
       snapshot.degradeReason,
