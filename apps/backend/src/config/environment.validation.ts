@@ -154,6 +154,13 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   const frontendAllowedOrigins = config.FRONTEND_ALLOWED_ORIGINS ?? '';
   const defaultRedirectUrl = config.PAYMENTS_DEFAULT_REDIRECT_URL ?? '';
   const defaultWebhookUrl = config.PAYMENTS_DEFAULT_WEBHOOK_URL ?? '';
+  const documentUploadBaseUrl = config.DOCUMENT_UPLOAD_BASE_URL ?? '';
+  const documentViewBaseUrl = config.DOCUMENT_VIEW_BASE_URL ?? '';
+  const databaseUrl = config.DATABASE_URL ?? '';
+
+  if (config.ENABLE_SWAGGER !== 'false') {
+    throw new Error('ENABLE_SWAGGER must be false in production.');
+  }
 
   if (!paymentsWebhookSecret) {
     throw new Error('PAYMENTS_WEBHOOK_SECRET is required in production.');
@@ -181,6 +188,16 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
     );
   }
 
+  if (containsWildcardOrigin(frontendAllowedOrigins)) {
+    throw new Error(
+      'FRONTEND_ALLOWED_ORIGINS must not include wildcard origins in production.',
+    );
+  }
+
+  if (containsLocalhost(databaseUrl)) {
+    throw new Error('DATABASE_URL must not use localhost in production.');
+  }
+
   if (containsLocalhost(defaultRedirectUrl)) {
     throw new Error(
       'PAYMENTS_DEFAULT_REDIRECT_URL must not use localhost in production.',
@@ -190,6 +207,26 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   if (containsLocalhost(defaultWebhookUrl)) {
     throw new Error(
       'PAYMENTS_DEFAULT_WEBHOOK_URL must not use localhost in production.',
+    );
+  }
+
+  if (!isHttpsUrl(documentUploadBaseUrl)) {
+    throw new Error('DOCUMENT_UPLOAD_BASE_URL must be HTTPS in production.');
+  }
+
+  if (containsLocalhost(documentUploadBaseUrl)) {
+    throw new Error(
+      'DOCUMENT_UPLOAD_BASE_URL must not use localhost in production.',
+    );
+  }
+
+  if (!isHttpsUrl(documentViewBaseUrl)) {
+    throw new Error('DOCUMENT_VIEW_BASE_URL must be HTTPS in production.');
+  }
+
+  if (containsLocalhost(documentViewBaseUrl)) {
+    throw new Error(
+      'DOCUMENT_VIEW_BASE_URL must not use localhost in production.',
     );
   }
 
@@ -218,4 +255,19 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
 
 function containsLocalhost(value: string) {
   return /localhost|127\.0\.0\.1|\[::1\]/i.test(value);
+}
+
+function containsWildcardOrigin(value: string) {
+  return value
+    .split(',')
+    .map((origin) => origin.trim())
+    .some((origin) => origin === '*' || origin.endsWith('://*'));
+}
+
+function isHttpsUrl(value: string) {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
 }

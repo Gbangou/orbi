@@ -10,6 +10,9 @@ describe('validateEnvironment', () => {
     PAYMENTS_DEFAULT_WEBHOOK_URL:
       'https://api.mobilis.app/api/v1/payments/webhooks',
     DOCUMENT_SIGNING_SECRET: 'prod_document_secret',
+    DOCUMENT_UPLOAD_BASE_URL: 'https://storage.mobilis.app/upload',
+    DOCUMENT_VIEW_BASE_URL: 'https://storage.mobilis.app/view',
+    ENABLE_SWAGGER: 'false',
   };
 
   it('keeps development defaults available outside production', () => {
@@ -31,6 +34,11 @@ describe('validateEnvironment', () => {
 
   it.each([
     [
+      'Swagger enabled',
+      { ENABLE_SWAGGER: 'true' },
+      'ENABLE_SWAGGER must be false in production.',
+    ],
+    [
       'dev payment webhook secret',
       { PAYMENTS_WEBHOOK_SECRET: 'mobilis_dev_webhook_secret' },
       'PAYMENTS_WEBHOOK_SECRET must not use the dev default in production.',
@@ -51,6 +59,16 @@ describe('validateEnvironment', () => {
       'FRONTEND_ALLOWED_ORIGINS must not include localhost in production.',
     ],
     [
+      'wildcard frontend origin',
+      { FRONTEND_ALLOWED_ORIGINS: 'https://admin.mobilis.app,*' },
+      'FRONTEND_ALLOWED_ORIGINS must not include wildcard origins in production.',
+    ],
+    [
+      'localhost database URL',
+      { DATABASE_URL: 'postgresql://mobilis:secret@localhost:5432/mobilis' },
+      'DATABASE_URL must not use localhost in production.',
+    ],
+    [
       'localhost redirect URL',
       { PAYMENTS_DEFAULT_REDIRECT_URL: 'http://localhost:8081/book' },
       'PAYMENTS_DEFAULT_REDIRECT_URL must not use localhost in production.',
@@ -59,6 +77,26 @@ describe('validateEnvironment', () => {
       'localhost webhook URL',
       { PAYMENTS_DEFAULT_WEBHOOK_URL: 'http://localhost:3000/api/v1/payments/webhooks' },
       'PAYMENTS_DEFAULT_WEBHOOK_URL must not use localhost in production.',
+    ],
+    [
+      'non-HTTPS document upload URL',
+      { DOCUMENT_UPLOAD_BASE_URL: 'http://storage.mobilis.app/upload' },
+      'DOCUMENT_UPLOAD_BASE_URL must be HTTPS in production.',
+    ],
+    [
+      'localhost document upload URL',
+      { DOCUMENT_UPLOAD_BASE_URL: 'https://localhost:9000/upload' },
+      'DOCUMENT_UPLOAD_BASE_URL must not use localhost in production.',
+    ],
+    [
+      'non-HTTPS document view URL',
+      { DOCUMENT_VIEW_BASE_URL: 'http://storage.mobilis.app/view' },
+      'DOCUMENT_VIEW_BASE_URL must be HTTPS in production.',
+    ],
+    [
+      'localhost document view URL',
+      { DOCUMENT_VIEW_BASE_URL: 'https://127.0.0.1:9000/view' },
+      'DOCUMENT_VIEW_BASE_URL must not use localhost in production.',
     ],
     [
       'missing rate limit Redis URL',

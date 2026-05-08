@@ -87,6 +87,7 @@ Planned Next Phase:
 
 OK Implemented:
 - CORS whitelist
+- Production startup rejects wildcard CORS origins
 - CSRF protection (via session tokens)
 - Rate limiting per IP/user
 - Input validation & sanitization
@@ -105,6 +106,8 @@ OK Implemented:
 - Health check endpoints (liveness/readiness)
 - Trusted proxy configuration
 - Environment variable validation
+- Production startup refuses Swagger, localhost database URLs, localhost public
+  URLs and non-HTTPS document storage links
 
 Planned Next Phase:
 - Centralized logging (ELK stack)
@@ -203,6 +206,8 @@ Before deploying to production:
 - [ ] All tests pass (300+ tests required)
 - [ ] TypeScript no errors
 - [ ] Environment variables validated
+- [ ] `NODE_ENV=production` boots only with `ENABLE_SWAGGER=false`,
+      explicit CORS origins, external database URL and HTTPS document URLs
 - [ ] Database migrations tested
 - [ ] Rollback plan documented
 - [ ] Monitoring/alerting configured

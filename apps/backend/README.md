@@ -131,3 +131,15 @@ Important:
 
 - tant que le store Redis partage n est pas branche, `RATE_LIMIT_ADAPTER=redis` remontera un etat degrade dans `health`
 - activer `RATE_LIMIT_STRICT=true` en preproduction/production pour bloquer un deploy multi-instance qui tomberait en fallback local
+
+## Garde-fous de demarrage production
+
+Avec `NODE_ENV=production`, le backend refuse de demarrer si une configuration
+de developpement est encore exposee:
+
+- `ENABLE_SWAGGER` doit etre `false`
+- `FRONTEND_ALLOWED_ORIGINS` doit lister des origines explicites, sans `*` ni localhost
+- `DATABASE_URL` ne doit pas pointer vers localhost
+- `PAYMENTS_DEFAULT_REDIRECT_URL` et `PAYMENTS_DEFAULT_WEBHOOK_URL` ne doivent pas pointer localhost
+- `DOCUMENT_UPLOAD_BASE_URL` et `DOCUMENT_VIEW_BASE_URL` doivent etre HTTPS et non locales
+- les secrets paiement/document ne doivent pas utiliser les valeurs de dev
