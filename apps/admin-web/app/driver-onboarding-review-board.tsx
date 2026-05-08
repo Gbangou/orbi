@@ -12,7 +12,10 @@ import {
 import { describeRealtimeConnection } from '@mobilis/ui';
 import {
   adminSyncHighlightDurationMs,
+  buildDriverOnboardingCsv,
   resolveDriverOnboardingDelta,
+  resolveVisibleDriverOnboardingQueue,
+  type DriverOnboardingGuidanceFilter,
 } from './admin-ops-kernel';
 import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
 import { subscribeToAdminRealtime } from './admin-realtime';
@@ -20,8 +23,6 @@ import { subscribeToAdminRealtime } from './admin-realtime';
 type DriverOnboardingReviewBoardProps = {
   initialQueue: DriverOnboardingQueueResponse['drivers'];
 };
-
-type GuidanceFilter = 'all' | 'approve' | 'review' | 'resubmit';
 
 const reviewActions = [
   {
@@ -43,7 +44,7 @@ const reviewActions = [
 
 const guidanceFilters: Array<{
   label: string;
-  value: GuidanceFilter;
+  value: DriverOnboardingGuidanceFilter;
   level?: 'approve' | 'review' | 'resubmit';
 }> = [
   {
@@ -66,12 +67,6 @@ const guidanceFilters: Array<{
     level: 'resubmit',
   },
 ];
-
-const guidancePriority = {
-  resubmit: 0,
-  review: 1,
-  approve: 2,
-} as const;
 
 function getReviewToneClass(status: string) {
   if (status === 'APPROVED') {
@@ -146,67 +141,6 @@ function formatReviewDate(value: string) {
   }).format(new Date(value));
 }
 
-function normalizeSearch(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function csvCell(value: string | number | null | undefined) {
-  const normalized = String(value ?? '');
-
-  return `"${normalized.replace(/"/g, '""')}"`;
-}
-
-function buildOnboardingCsv(
-  drivers: DriverOnboardingQueueResponse['drivers'],
-) {
-  const headers = [
-    'driver_id',
-    'driver_name',
-    'email',
-    'phone',
-    'verification_status',
-    'review_status',
-    'guidance',
-    'recommended_status',
-    'approved_documents',
-    'total_documents',
-    'pending_documents',
-    'rejected_documents',
-    'missing_required',
-    'integrity_warnings',
-    'average_integrity_score',
-    'active_vehicle_count',
-    'service_radius_km',
-    'blockers',
-    'latest_decision_reason',
-  ];
-  const rows = drivers.map((driver) => [
-    driver.id,
-    driver.driverName,
-    driver.email,
-    driver.phoneNumber,
-    driver.verificationStatus,
-    driver.reviewStatus,
-    driver.decisionGuidance.level,
-    driver.decisionGuidance.recommendedStatus,
-    driver.documentSummary.approved,
-    driver.documentSummary.total,
-    driver.documentSummary.pending,
-    driver.documentSummary.rejected,
-    driver.documentSummary.missingRequired,
-    driver.documentSummary.integrityWarnings,
-    driver.documentSummary.averageIntegrityScore,
-    driver.activeVehicleCount,
-    driver.serviceRadiusKm,
-    driver.decisionGuidance.blockers.join(' | '),
-    driver.latestDecisionReason,
-  ]);
-
-  return [headers, ...rows]
-    .map((row) => row.map((value) => csvCell(value)).join(','))
-    .join('\n');
-}
-
 export function DriverOnboardingReviewBoard({
   initialQueue,
 }: DriverOnboardingReviewBoardProps) {
@@ -218,7 +152,8 @@ export function DriverOnboardingReviewBoard({
   const [transitionLabel, setTransitionLabel] = useState<string | null>(null);
   const [freshDriverIds, setFreshDriverIds] = useState<string[]>([]);
   const [freshDocumentIds, setFreshDocumentIds] = useState<string[]>([]);
-  const [guidanceFilter, setGuidanceFilter] = useState<GuidanceFilter>('all');
+  const [guidanceFilter, setGuidanceFilter] =
+    useState<DriverOnboardingGuidanceFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const previousDriversRef =
     useRef<DriverOnboardingReviewBoardProps['initialQueue'] | null>(null);
@@ -295,52 +230,10 @@ export function DriverOnboardingReviewBoard({
   }, [drivers]);
 
   const visibleDrivers = useMemo(() => {
-    const query = normalizeSearch(searchQuery);
-
-    return [...drivers]
-      .filter(
-        (driver) =>
-          guidanceFilter === 'all' ||
-          driver.decisionGuidance.level === guidanceFilter,
-      )
-      .filter((driver) => {
-        if (!query) {
-          return true;
-        }
-
-        const searchableText = [
-          driver.driverName,
-          driver.email,
-          driver.phoneNumber ?? '',
-          driver.verificationStatus,
-          driver.reviewStatus,
-          driver.decisionGuidance.label,
-          driver.decisionGuidance.level,
-          ...driver.decisionGuidance.blockers,
-          ...driver.documents.flatMap((document) => [
-            document.type,
-            document.status,
-            document.fileName,
-            document.integrity.uploadSource ?? '',
-          ]),
-        ]
-          .join(' ')
-          .toLowerCase();
-
-        return searchableText.includes(query);
-      })
-      .sort((left, right) => {
-        const priorityDelta =
-          guidancePriority[left.decisionGuidance.level] -
-          guidancePriority[right.decisionGuidance.level];
-
-        if (priorityDelta !== 0) {
-          return priorityDelta;
-        }
-
-        return right.documentSummary.integrityWarnings -
-          left.documentSummary.integrityWarnings;
-      });
+    return resolveVisibleDriverOnboardingQueue(drivers, {
+      guidanceFilter,
+      searchQuery,
+    });
   }, [drivers, guidanceFilter, searchQuery]);
 
   useEffect(() => {
@@ -487,8 +380,8 @@ export function DriverOnboardingReviewBoard({
   }
 
   function handleExportCsv() {
-    const csv = buildOnboardingCsv(visibleDrivers);
-    const blob = new Blob([csv], {
+    const csv = buildDriverOnboardingCsv(visibleDrivers);
+    const blob = new Blob([`\uFEFF${csv}`], {
       type: 'text/csv;charset=utf-8',
     });
     const url = URL.createObjectURL(blob);

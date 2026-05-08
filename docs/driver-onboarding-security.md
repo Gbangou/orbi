@@ -70,7 +70,8 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
 - recherche rapide admin par chauffeur, telephone, email, statut, type ou nom de
   justificatif pour retrouver un dossier sans sortir de la file de revue
 - export CSV local de la vue onboarding filtree/recherchee pour partager une
-  liste courte de dossiers a rappeler, approuver ou recontroler
+  liste courte de dossiers a rappeler, approuver ou recontroler, avec
+  neutralisation des valeurs pouvant etre interpretees comme formules tableur
 - verification explicite que la meme plaque ne peut pas etre reattribuee silencieusement a un autre chauffeur
 - calcul d un resume de readiness et d une checklist exploitable
 - file ops pour dossiers `PENDING` ou `REJECTED`

@@ -66,6 +66,145 @@ export function resolveStringFeedDelta(
 }
 
 type DriverOnboardingQueueItem = DriverOnboardingQueueResponse['drivers'][number];
+export type DriverOnboardingGuidanceFilter =
+  | 'all'
+  | DriverOnboardingQueueItem['decisionGuidance']['level'];
+
+const csvFormulaPrefixPattern = /^[=+\-@\t\r]/;
+
+export function normalizeAdminSearch(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function sanitizeCsvValue(value: string | number | null | undefined) {
+  const normalized = String(value ?? '')
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (csvFormulaPrefixPattern.test(normalized)) {
+    return `'${normalized}`;
+  }
+
+  return normalized;
+}
+
+function csvCell(value: string | number | null | undefined) {
+  return `"${sanitizeCsvValue(value).replace(/"/g, '""')}"`;
+}
+
+export function resolveVisibleDriverOnboardingQueue(
+  drivers: DriverOnboardingQueueItem[],
+  options: {
+    guidanceFilter: DriverOnboardingGuidanceFilter;
+    searchQuery: string;
+  },
+) {
+  const query = normalizeAdminSearch(options.searchQuery);
+
+  return [...drivers]
+    .filter(
+      (driver) =>
+        options.guidanceFilter === 'all' ||
+        driver.decisionGuidance.level === options.guidanceFilter,
+    )
+    .filter((driver) => {
+      if (!query) {
+        return true;
+      }
+
+      const searchableText = [
+        driver.driverName,
+        driver.email,
+        driver.phoneNumber ?? '',
+        driver.verificationStatus,
+        driver.reviewStatus,
+        driver.decisionGuidance.label,
+        driver.decisionGuidance.level,
+        ...driver.decisionGuidance.blockers,
+        ...driver.documents.flatMap((document) => [
+          document.type,
+          document.status,
+          document.fileName,
+          document.integrity.uploadSource ?? '',
+        ]),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchableText.includes(query);
+    })
+    .sort((left, right) => {
+      const guidancePriority = {
+        resubmit: 0,
+        review: 1,
+        approve: 2,
+      } as const;
+      const priorityDelta =
+        guidancePriority[left.decisionGuidance.level] -
+        guidancePriority[right.decisionGuidance.level];
+
+      if (priorityDelta !== 0) {
+        return priorityDelta;
+      }
+
+      return (
+        right.documentSummary.integrityWarnings -
+        left.documentSummary.integrityWarnings
+      );
+    });
+}
+
+export function buildDriverOnboardingCsv(
+  drivers: DriverOnboardingQueueItem[],
+) {
+  const headers = [
+    'driver_id',
+    'driver_name',
+    'email',
+    'phone',
+    'verification_status',
+    'review_status',
+    'guidance',
+    'recommended_status',
+    'approved_documents',
+    'total_documents',
+    'pending_documents',
+    'rejected_documents',
+    'missing_required',
+    'integrity_warnings',
+    'average_integrity_score',
+    'active_vehicle_count',
+    'service_radius_km',
+    'blockers',
+    'latest_decision_reason',
+  ];
+  const rows = drivers.map((driver) => [
+    driver.id,
+    driver.driverName,
+    driver.email,
+    driver.phoneNumber,
+    driver.verificationStatus,
+    driver.reviewStatus,
+    driver.decisionGuidance.level,
+    driver.decisionGuidance.recommendedStatus,
+    driver.documentSummary.approved,
+    driver.documentSummary.total,
+    driver.documentSummary.pending,
+    driver.documentSummary.rejected,
+    driver.documentSummary.missingRequired,
+    driver.documentSummary.integrityWarnings,
+    driver.documentSummary.averageIntegrityScore,
+    driver.activeVehicleCount,
+    driver.serviceRadiusKm,
+    driver.decisionGuidance.blockers.join(' | '),
+    driver.latestDecisionReason,
+  ]);
+
+  return [headers, ...rows]
+    .map((row) => row.map((value) => csvCell(value)).join(','))
+    .join('\n');
+}
 
 export function resolveDriverOnboardingDelta(
   previousDrivers: DriverOnboardingQueueItem[] | null,

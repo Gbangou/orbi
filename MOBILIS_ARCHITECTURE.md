@@ -1,6 +1,6 @@
 # Mobilis Architecture & Development Standards
 
-*Last updated: May 5, 2026*  
+*Last updated: May 5, 2026*
 *Stability: PRODUCTION-GRADE | Coverage: 300 tests (100% pass rate)*
 
 ## Executive Summary
@@ -165,22 +165,22 @@ app.enableCors({
 
 ### Current Status
 
-✅ **300 tests** across 39 test suites  
-✅ **100% pass rate**  
-✅ **Prisma migration invariants** protected
+OK **300 tests** across 39 test suites
+OK **100% pass rate**
+OK **Prisma migration invariants** protected
 
 ### Writing Tests
 
 ```typescript
 describe('AuthService', () => {
   it('signs up a new user with hashed password', async () => {
-    const result = await authService.signUp({ 
+    const result = await authService.signUp({
       email: 'test@mobilis.app',
       password: 'SecurePassword123!',
       fullName: 'Test User',
       role: SignUpRole.RIDER
     });
-    
+
     expect(result.sessionToken).toBeDefined();
     expect(result.user.id).toBeDefined();
   });
@@ -307,7 +307,7 @@ export class RideRequestService {
     private readonly dispatchEngine: DispatchEngineService,
     private readonly auditLog: AuditLogService
   ) {}
-  
+
   async createRideRequest(payload: CreateRideRequestDto, user: AuthenticatedUser) {
     // Validate, create, log
   }
@@ -342,33 +342,33 @@ export function serializeAuthenticatedUser(user: User) {
 
 ## Known Limitations & Roadmap
 
-### Phase 1 (Complete ✅)
-- ✅ Core authentication & RBAC
-- ✅ User profiles (Rider + Driver)
-- ✅ Session management
-- ✅ 300 unit/integration tests
+### Phase 1 (Complete OK)
+- OK Core authentication & RBAC
+- OK User profiles (Rider + Driver)
+- OK Session management
+- OK 300 unit/integration tests
 
-### Phase 2 (In Progress 🚀)
-- 🚀 Real-time dispatch (WebSocket layer)
-- 🚀 Voice intent capture & NLU
-- 🚀 Payment webhooks (Stripe/Mobile Money)
+### Phase 2 (In Progress)
+- Real-time dispatch (WebSocket layer)
+- Voice intent capture & NLU
+- Payment webhooks (Stripe/Mobile Money)
 
-### Phase 3 (Planned 📋)
-- 📋 Mobile error reporting
-- 📋 Admin audit dashboard
-- 📋 Driver performance scoring
-- 📋 Multi-city operations
+### Phase 3 (Planned)
+- Mobile error reporting
+- Admin audit dashboard
+- Driver performance scoring
+- Multi-city operations
 
 ## Critical Security Notes
 
-⚠️ **DO NOT:**
+Warning **DO NOT:**
 - Drop `ride_requests_single_active_per_rider_idx` or `trips_single_active_per_rider_idx`
 - Store raw passwords anywhere
 - Expose error stack traces to clients
 - Trust client-provided user IDs (always validate against session)
 - Enable Swagger docs in production
 
-✅ **DO:**
+OK **DO:**
 - Use class-validator for all DTOs
 - Hash passwords with scrypt (never bcrypt for new projects)
 - Log all admin/ops actions to audit trail
