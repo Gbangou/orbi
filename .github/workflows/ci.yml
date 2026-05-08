@@ -70,7 +70,7 @@ jobs:
         run: pnpm --filter backend exec prisma migrate deploy
 
       - name: Backend tests
-        run: pnpm --filter backend test -- --runInBand
+        run: pnpm --filter backend exec jest --runInBand
 
       - name: Admin web smoke tests
         run: pnpm test:admin:smoke
