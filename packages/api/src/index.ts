@@ -1688,6 +1688,15 @@ export type HealthCheckResponse = {
       featureFlagMode?: string;
       featureFlagEnabled?: boolean;
     };
+    jobQueue?: {
+      durable: boolean;
+      families: Array<'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION'>;
+      counts: Array<{
+        kind: 'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION';
+        status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
+        count: number;
+      }>;
+    };
   };
   operations: {
     productionReadiness?: {

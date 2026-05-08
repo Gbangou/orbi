@@ -49,6 +49,9 @@ paiement provider, observabilite et runbooks verts.
   persiste la notification avant de creer un job `NOTIFICATION`.
 - `/health` expose maintenant l'etat durable de la file, les familles suivies
   et les compteurs par statut pour faciliter la surveillance ops/dead-letter.
+- La console admin affiche ces signaux dans System Health avec une lecture par
+  famille critique, afin de voir rapidement pending/running/succeeded et
+  dead-letter sans sortir du poste operations.
 
 ## Architecture active
 

@@ -152,6 +152,11 @@ const fallbackHealth: HealthCheckResponse = {
       featureFlagMode: 'on',
       featureFlagEnabled: true,
     },
+    jobQueue: {
+      durable: true,
+      families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'],
+      counts: [],
+    },
   },
   operations: {
     productionReadiness: {

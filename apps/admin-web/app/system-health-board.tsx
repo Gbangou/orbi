@@ -114,6 +114,46 @@ function describeSloPosture(posture: string) {
   return 'breach';
 }
 
+function describeJobKind(kind: string) {
+  if (kind === 'PAYMENT_WEBHOOK') {
+    return 'Webhooks paiement';
+  }
+
+  if (kind === 'DRIVER_DOCUMENT') {
+    return 'Documents chauffeur';
+  }
+
+  return 'Notifications';
+}
+
+function describeJobStatus(status: string) {
+  if (status === 'PENDING') {
+    return 'en attente';
+  }
+
+  if (status === 'RUNNING') {
+    return 'en cours';
+  }
+
+  if (status === 'SUCCEEDED') {
+    return 'traites';
+  }
+
+  return 'dead-letter';
+}
+
+function resolveJobStatusTone(status: string) {
+  if (status === 'DEAD_LETTER') {
+    return 'bad';
+  }
+
+  if (status === 'PENDING' || status === 'RUNNING') {
+    return 'warn';
+  }
+
+  return 'good';
+}
+
 function describeReadinessCheckState(state: string) {
   if (state === 'pass') {
     return 'ok';
@@ -301,6 +341,11 @@ export function SystemHealthBoard({
       },
     ],
   };
+  const jobQueue = health.infrastructure.jobQueue ?? {
+    durable: false,
+    families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'] as const,
+    counts: [],
+  };
 
   const client = useMemo(
     () =>
@@ -362,6 +407,47 @@ export function SystemHealthBoard({
       healthAuditFilters.find((filter) => filter.id === auditFilter) ??
       healthAuditFilters[0],
     [auditFilter],
+  );
+  const jobQueueTotals = useMemo(() => {
+    const total = jobQueue.counts.reduce((sum, entry) => sum + entry.count, 0);
+    const deadLetter = jobQueue.counts
+      .filter((entry) => entry.status === 'DEAD_LETTER')
+      .reduce((sum, entry) => sum + entry.count, 0);
+    const active = jobQueue.counts
+      .filter((entry) => entry.status === 'PENDING' || entry.status === 'RUNNING')
+      .reduce((sum, entry) => sum + entry.count, 0);
+
+    return {
+      total,
+      active,
+      deadLetter,
+    };
+  }, [jobQueue.counts]);
+  const jobQueueRows = useMemo(
+    () =>
+      jobQueue.families.map((family) => {
+        const counts = jobQueue.counts.filter((entry) => entry.kind === family);
+        const total = counts.reduce((sum, entry) => sum + entry.count, 0);
+        const deadLetter = counts
+          .filter((entry) => entry.status === 'DEAD_LETTER')
+          .reduce((sum, entry) => sum + entry.count, 0);
+        const pending = counts
+          .filter((entry) => entry.status === 'PENDING')
+          .reduce((sum, entry) => sum + entry.count, 0);
+        const running = counts
+          .filter((entry) => entry.status === 'RUNNING')
+          .reduce((sum, entry) => sum + entry.count, 0);
+
+        return {
+          family,
+          counts,
+          total,
+          deadLetter,
+          pending,
+          running,
+        };
+      }),
+    [jobQueue.counts, jobQueue.families],
   );
 
   const acknowledgeIncident = useCallback(
@@ -539,6 +625,14 @@ export function SystemHealthBoard({
             {serviceLevelObjectives.warningObjectives} watch
           </p>
         </article>
+        <article className="board-summary-card">
+          <span>Queue durable</span>
+          <strong>{jobQueueTotals.active}</strong>
+          <p>
+            {jobQueueTotals.deadLetter} dead-letter, {jobQueueTotals.total}{' '}
+            job(s) suivis
+          </p>
+        </article>
       </div>
 
       <div className="health-grid">
@@ -700,6 +794,85 @@ export function SystemHealthBoard({
             {describeHealthDetail(health)}
           </p>
         </article>
+      </div>
+
+      <div className="health-slo-panel">
+        <div className="ticket-topline">
+          <span className="priority-badge priority-1">job queue</span>
+          <span
+            className={`readiness-pill readiness-pill-${readinessTone(
+              jobQueueTotals.deadLetter > 0
+                ? 'fail'
+                : jobQueue.durable
+                  ? 'ok'
+                  : 'warn',
+            )}`}
+          >
+            {jobQueue.durable ? 'durable' : 'fallback'}
+          </span>
+        </div>
+        <div className="health-slo-grid">
+          {jobQueueRows.map((row) => (
+            <article className="health-slo-card" key={row.family}>
+              <div className="ticket-topline">
+                <span className="priority-badge priority-2">
+                  {describeJobKind(row.family)}
+                </span>
+                <span
+                  className={`readiness-pill readiness-pill-${readinessTone(
+                    row.deadLetter > 0
+                      ? 'fail'
+                      : row.pending + row.running > 0
+                        ? 'warn'
+                        : 'ok',
+                  )}`}
+                >
+                  {row.deadLetter > 0
+                    ? 'a traiter'
+                    : row.pending + row.running > 0
+                      ? 'actif'
+                      : 'calme'}
+                </span>
+              </div>
+              <h3>{row.total} job(s)</h3>
+              <p>
+                File critique pour reprise automatique, retries bornes et
+                isolation des dead-letters avant impact utilisateur.
+              </p>
+              <div className="feature-flag-rows">
+                {['PENDING', 'RUNNING', 'SUCCEEDED', 'DEAD_LETTER'].map(
+                  (status) => {
+                    const count =
+                      row.counts.find((entry) => entry.status === status)
+                        ?.count ?? 0;
+
+                    return (
+                      <div className="pricing-row" key={status}>
+                        <span>{describeJobStatus(status)}</span>
+                        <strong
+                          className={`readiness-pill readiness-pill-${resolveJobStatusTone(
+                            status,
+                          )}`}
+                        >
+                          {count}
+                        </strong>
+                      </div>
+                    );
+                  },
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+        <p
+          className={
+            jobQueueTotals.deadLetter > 0 ? 'feature-warning' : 'feature-ok'
+          }
+        >
+          {jobQueueTotals.deadLetter > 0
+            ? 'Des jobs sont en dead-letter: les operations doivent ouvrir le journal avant tout pilote elargi.'
+            : 'Aucun dead-letter signale par le backend; les familles critiques restent observables depuis la console.'}
+        </p>
       </div>
 
       <div className="health-slo-panel">
