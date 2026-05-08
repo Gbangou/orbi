@@ -5,8 +5,11 @@ import {
   acknowledgeAdminHealthIncident,
   authenticateAndFetchCurrentUser,
   createMobilisApiClient,
+  fetchAdminJobQueue,
   fetchHealthCheck,
   muteAdminHealthIncident,
+  requeueAdminJobQueueEntry,
+  type AdminJobQueueResponse,
   type HealthCheckResponse,
 } from '@mobilis/api';
 import { describeRealtimeConnection } from '@mobilis/ui';
@@ -295,6 +298,12 @@ export function SystemHealthBoard({
     initialHealth.operations.healthHistory,
   );
   const [activeIncidentId, setActiveIncidentId] = useState<string | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [jobQueueDetails, setJobQueueDetails] =
+    useState<AdminJobQueueResponse | null>(null);
+  const [jobQueueStatus, setJobQueueStatus] = useState(
+    'Journal dead-letter en attente.',
+  );
   const [auditFilter, setAuditFilter] = useState<HealthAuditFilter>('all');
   const previousHealthRef = useRef<HealthCheckResponse | null>(null);
   const productionReadiness = health.operations.productionReadiness ?? {
@@ -370,6 +379,29 @@ export function SystemHealthBoard({
     },
     [client],
   );
+
+  const refreshJobQueue = useCallback(async () => {
+    try {
+      const { authClient } = await authenticateAndFetchCurrentUser(
+        client,
+        mobilisDemoAccounts.admin,
+      );
+      const response = await fetchAdminJobQueue(authClient, {
+        page: 1,
+        pageSize: 6,
+        status: 'DEAD_LETTER',
+      });
+
+      setJobQueueDetails(response);
+      setJobQueueStatus(
+        response.jobs.length
+          ? `${response.jobs.length} dead-letter(s) a qualifier.`
+          : 'Aucun dead-letter dans le journal operations.',
+      );
+    } catch {
+      setJobQueueStatus("Impossible d'actualiser les dead-letters.");
+    }
+  }, [client]);
 
   const visibleHistory = useMemo(
     () => history.filter((entry) => !entry.mutedAt),
@@ -490,6 +522,27 @@ export function SystemHealthBoard({
     [client, refreshHealth],
   );
 
+  const requeueJob = useCallback(
+    async (jobId: string) => {
+      try {
+        setActiveJobId(jobId);
+        const { authClient } = await authenticateAndFetchCurrentUser(
+          client,
+          mobilisDemoAccounts.admin,
+        );
+
+        await requeueAdminJobQueueEntry(authClient, jobId);
+        await refreshHealth('Job dead-letter remis en file.');
+        await refreshJobQueue();
+      } catch {
+        setJobQueueStatus('Impossible de remettre ce job en file.');
+      } finally {
+        setActiveJobId(null);
+      }
+    },
+    [client, refreshHealth, refreshJobQueue],
+  );
+
   useEffect(() => {
     const stream = subscribeToAdminRealtime({
       'system.health-alert': () =>
@@ -500,6 +553,10 @@ export function SystemHealthBoard({
         void refreshHealth('Un incident health vient d etre reconnu par une autre console.'),
       'system.health-incident-muted': () =>
         void refreshHealth('Un incident health vient d etre masque par une autre console.'),
+      'job-queue.requeued': () => {
+        void refreshHealth('Job queue resynchronisee.');
+        void refreshJobQueue();
+      },
       heartbeat: () =>
         setStatus(describeRealtimeConnection('admin-health', 'active')),
     });
@@ -513,7 +570,11 @@ export function SystemHealthBoard({
     };
 
     return () => stream.close();
-  }, [refreshHealth]);
+  }, [refreshHealth, refreshJobQueue]);
+
+  useEffect(() => {
+    void refreshJobQueue();
+  }, [refreshJobQueue]);
 
   useEffect(() => {
     const previousHealth = previousHealthRef.current;
@@ -873,6 +934,67 @@ export function SystemHealthBoard({
             ? 'Des jobs sont en dead-letter: les operations doivent ouvrir le journal avant tout pilote elargi.'
             : 'Aucun dead-letter signale par le backend; les familles critiques restent observables depuis la console.'}
         </p>
+        <div className="health-audit-panel">
+          <div className="ticket-topline">
+            <span className="priority-badge priority-2">
+              dead-letter journal
+            </span>
+            <div className="queue-actions">
+              <button
+                className="ghost-button"
+                onClick={() => void refreshJobQueue()}
+                type="button"
+              >
+                Resynchroniser
+              </button>
+              <span className="queue-status">{jobQueueStatus}</span>
+            </div>
+          </div>
+          <div className="health-audit-list">
+            {jobQueueDetails?.jobs.length ? (
+              jobQueueDetails.jobs.map((job) => (
+                <article className="health-audit-row" key={job.id}>
+                  <div>
+                    <strong>{describeJobKind(job.kind)}</strong>
+                    <p>
+                      {job.deadLetterReason ??
+                        job.lastError ??
+                        'Aucune erreur detaillee fournie.'}
+                    </p>
+                    <span className="health-inline-note">
+                      {job.entityType ?? 'entity'}:{' '}
+                      {job.entityId ?? 'non-reference'} · {job.attempts}/
+                      {job.maxAttempts} tentative(s)
+                    </span>
+                  </div>
+                  <div className="health-audit-meta">
+                    <span className="readiness-pill readiness-pill-bad">
+                      {describeJobStatus(job.status)}
+                    </span>
+                    <button
+                      className="ticket-button ticket-button-neutral"
+                      disabled={activeJobId === job.id}
+                      onClick={() => void requeueJob(job.id)}
+                      type="button"
+                    >
+                      Remettre en file
+                    </button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <article className="health-audit-row">
+                <div>
+                  <strong>Aucun dead-letter actif</strong>
+                  <p>
+                    La console reste prete a afficher les jobs epuises avec
+                    leur famille, leur entite et l action de remise en file.
+                  </p>
+                </div>
+              </article>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="health-slo-panel">

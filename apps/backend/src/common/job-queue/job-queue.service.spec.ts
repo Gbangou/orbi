@@ -114,6 +114,61 @@ describe('JobQueueService', () => {
     );
   });
 
+  it('lists jobs with pagination metadata for admin operations', async () => {
+    const { prisma, service } = createService();
+    prisma.$queryRaw
+      .mockResolvedValueOnce([
+        row({
+          id: 'job-dead-1',
+          status: 'DEAD_LETTER',
+          dead_letter_reason: 'provider unavailable',
+        }),
+      ])
+      .mockResolvedValueOnce([{ count: '1' }]);
+
+    const result = await service.list({
+      page: 1,
+      pageSize: 10,
+      kind: 'PAYMENT_WEBHOOK',
+      status: 'DEAD_LETTER',
+    });
+
+    expect(result.jobs[0]).toEqual(
+      expect.objectContaining({
+        id: 'job-dead-1',
+        status: 'DEAD_LETTER',
+        deadLetterReason: 'provider unavailable',
+      }),
+    );
+    expect(result.meta).toEqual({
+      page: 1,
+      pageSize: 10,
+      total: 1,
+      pageCount: 1,
+    });
+  });
+
+  it('requeues dead-letter jobs for another worker attempt', async () => {
+    const { prisma, service } = createService();
+    prisma.$queryRaw.mockResolvedValue([
+      row({
+        status: 'PENDING',
+        attempts: 5,
+        dead_letter_reason: null,
+      }),
+    ]);
+
+    const result = await service.requeueDeadLetter('job-1');
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: 'job-1',
+        status: 'PENDING',
+        deadLetterReason: null,
+      }),
+    );
+  });
+
   it('rejects unknown job families and unsafe retry bounds', async () => {
     const { service } = createService();
 

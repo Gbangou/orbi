@@ -198,6 +198,69 @@ export class JobQueueService {
     return rows[0] ? this.mapRow(rows[0]) : null;
   }
 
+  async list(input: {
+    page: number;
+    pageSize: number;
+    kind?: JobQueueKind;
+    status?: JobQueueStatus;
+  }) {
+    if (input.kind) {
+      this.assertKnownKind(input.kind);
+    }
+
+    if (input.status) {
+      this.assertKnownStatus(input.status);
+    }
+
+    const rows = await this.prisma.$queryRaw<JobQueueRow[]>`
+      SELECT *
+      FROM job_queue_entries
+      WHERE (${input.kind ?? null}::"JobQueueKind" IS NULL OR kind = ${input.kind ?? null}::"JobQueueKind")
+        AND (${input.status ?? null}::"JobQueueStatus" IS NULL OR status = ${input.status ?? null}::"JobQueueStatus")
+      ORDER BY
+        CASE WHEN status = 'DEAD_LETTER'::"JobQueueStatus" THEN 0 ELSE 1 END,
+        updated_at DESC,
+        created_at DESC
+      LIMIT ${input.pageSize}
+      OFFSET ${(input.page - 1) * input.pageSize}
+    `;
+    const totalRows = await this.prisma.$queryRaw<Array<{ count: string }>>`
+      SELECT COUNT(*) AS count
+      FROM job_queue_entries
+      WHERE (${input.kind ?? null}::"JobQueueKind" IS NULL OR kind = ${input.kind ?? null}::"JobQueueKind")
+        AND (${input.status ?? null}::"JobQueueStatus" IS NULL OR status = ${input.status ?? null}::"JobQueueStatus")
+    `;
+    const total = Number(totalRows[0]?.count ?? 0);
+
+    return {
+      jobs: rows.map((row) => this.mapRow(row)),
+      meta: {
+        page: input.page,
+        pageSize: input.pageSize,
+        total,
+        pageCount: Math.ceil(total / input.pageSize),
+      },
+    };
+  }
+
+  async requeueDeadLetter(jobId: string) {
+    const rows = await this.prisma.$queryRaw<JobQueueRow[]>`
+      UPDATE job_queue_entries
+      SET
+        status = 'PENDING'::"JobQueueStatus",
+        next_run_at = NOW(),
+        locked_at = NULL,
+        completed_at = NULL,
+        dead_letter_reason = NULL,
+        updated_at = NOW()
+      WHERE id = ${jobId}
+        AND status = 'DEAD_LETTER'::"JobQueueStatus"
+      RETURNING *
+    `;
+
+    return rows[0] ? this.mapRow(rows[0]) : null;
+  }
+
   async snapshot() {
     const rows = await this.prisma.$queryRaw<
       Array<{ kind: JobQueueKind; status: JobQueueStatus; count: string }>
@@ -246,6 +309,12 @@ export class JobQueueService {
       !['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'].includes(kind)
     ) {
       throw new BadRequestException(`Unsupported job kind ${kind}.`);
+    }
+  }
+
+  private assertKnownStatus(status: string) {
+    if (!['PENDING', 'RUNNING', 'SUCCEEDED', 'DEAD_LETTER'].includes(status)) {
+      throw new BadRequestException(`Unsupported job status ${status}.`);
     }
   }
 }

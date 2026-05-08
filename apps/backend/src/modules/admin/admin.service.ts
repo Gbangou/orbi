@@ -43,6 +43,7 @@ import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-
 import { PaymentAttemptRefundDto } from './dto/payment-attempt-refund.dto';
 import { UpdateDriverOnboardingReviewDto } from './dto/update-driver-onboarding-review.dto';
 import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query.dto';
+import { JobQueueQueryDto } from './dto/job-queue-query.dto';
 import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-document-object-verification.dto';
 
 const reviewDecisionRoles = new Set(['ADMIN', 'OPS']);
@@ -1589,6 +1590,88 @@ export class AdminService {
           ? 'Pression de demande a surveiller sur les heures de pointe'
           : 'Niveau de demande stable sur la zone de lancement',
       ],
+    };
+  }
+
+  async jobQueue(query: JobQueueQueryDto) {
+    const page = resolvePageQuery(query);
+    const result = await this.jobQueueService.list({
+      page: page.page,
+      pageSize: page.pageSize,
+      kind: query.kind,
+      status: query.status,
+    });
+    const snapshot = await this.jobQueueService.snapshot();
+
+    return {
+      ...result,
+      snapshot,
+      jobs: result.jobs.map((job) => ({
+        id: job.id,
+        kind: job.kind,
+        status: job.status,
+        dedupeKey: job.dedupeKey,
+        entityType: job.entityType,
+        entityId: job.entityId,
+        attempts: job.attempts,
+        maxAttempts: job.maxAttempts,
+        nextRunAt: job.nextRunAt.toISOString(),
+        lockedAt: job.lockedAt?.toISOString() ?? null,
+        completedAt: job.completedAt?.toISOString() ?? null,
+        failedAt: job.failedAt?.toISOString() ?? null,
+        lastError: job.lastError,
+        deadLetterReason: job.deadLetterReason,
+        createdAt: job.createdAt.toISOString(),
+        updatedAt: job.updatedAt.toISOString(),
+      })),
+    };
+  }
+
+  async requeueJob(jobId: string, auth: RequestAuthContext) {
+    const job = await this.jobQueueService.requeueDeadLetter(jobId);
+
+    if (!job) {
+      throw new BadRequestException(
+        'Only dead-letter jobs can be requeued from admin operations.',
+      );
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'JOB_QUEUE_DEAD_LETTER_REQUEUED',
+        entityType: 'JOB_QUEUE_ENTRY',
+        entityId: job.id,
+        metadata: {
+          kind: job.kind,
+          entityType: job.entityType,
+          entityId: job.entityId,
+          attempts: job.attempts,
+          actorRole: auth.user.role,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    this.realtimeService.publish({
+      channel: 'admin',
+      type: 'job-queue.requeued',
+      entityId: job.id,
+      actorRole: auth.user.role,
+      payload: {
+        kind: job.kind,
+        entityType: job.entityType,
+        entityId: job.entityId,
+      },
+    });
+
+    return {
+      job: {
+        id: job.id,
+        kind: job.kind,
+        status: job.status,
+        attempts: job.attempts,
+        nextRunAt: job.nextRunAt.toISOString(),
+      },
     };
   }
 

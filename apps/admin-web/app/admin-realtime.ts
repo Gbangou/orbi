@@ -22,6 +22,7 @@ export const adminRealtimeEventTypes = [
   'system.health-incident-acknowledged',
   'system.health-incident-muted',
   'system.launch-readiness-action-acknowledged',
+  'job-queue.requeued',
   'heartbeat',
 ] as const;
 

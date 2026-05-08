@@ -171,6 +171,54 @@ describe('AdminService', () => {
       enqueue: jest.fn().mockResolvedValue({
         id: 'job-1',
       }),
+      list: jest.fn().mockResolvedValue({
+        jobs: [
+          {
+            id: 'job-dead-1',
+            kind: 'PAYMENT_WEBHOOK',
+            status: 'DEAD_LETTER',
+            dedupeKey: 'payment-webhook:event-1',
+            entityType: 'payment_webhook_event',
+            entityId: 'event-1',
+            attempts: 5,
+            maxAttempts: 5,
+            nextRunAt: new Date('2026-05-08T10:00:00.000Z'),
+            lockedAt: null,
+            completedAt: null,
+            failedAt: new Date('2026-05-08T10:05:00.000Z'),
+            lastError: 'provider unavailable',
+            deadLetterReason: 'provider unavailable',
+            createdAt: new Date('2026-05-08T09:55:00.000Z'),
+            updatedAt: new Date('2026-05-08T10:05:00.000Z'),
+          },
+        ],
+        meta: {
+          page: 1,
+          pageSize: 10,
+          total: 1,
+          pageCount: 1,
+        },
+      }),
+      snapshot: jest.fn().mockResolvedValue({
+        durable: true,
+        families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'],
+        counts: [
+          {
+            kind: 'PAYMENT_WEBHOOK',
+            status: 'DEAD_LETTER',
+            count: 1,
+          },
+        ],
+      }),
+      requeueDeadLetter: jest.fn().mockResolvedValue({
+        id: 'job-dead-1',
+        kind: 'PAYMENT_WEBHOOK',
+        status: 'PENDING',
+        attempts: 5,
+        nextRunAt: new Date('2026-05-08T10:10:00.000Z'),
+        entityType: 'payment_webhook_event',
+        entityId: 'event-1',
+      }),
     };
     const featureFlagsService = {
       snapshot: jest.fn().mockReturnValue([
@@ -388,6 +436,59 @@ describe('AdminService', () => {
       '1 remboursement(s) provider attendent confirmation.',
     );
     expect(result.alerts[0]).toContain('1 trajets actifs');
+  });
+
+  it('lists job queue entries for operations triage', async () => {
+    const { jobQueueService, service } = createService();
+
+    const result = await service.jobQueue({
+      page: 1,
+      pageSize: 10,
+      kind: 'PAYMENT_WEBHOOK',
+      status: 'DEAD_LETTER',
+    });
+
+    expect(jobQueueService.list).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 10,
+      kind: 'PAYMENT_WEBHOOK',
+      status: 'DEAD_LETTER',
+    });
+    expect(result.jobs[0]).toEqual(
+      expect.objectContaining({
+        id: 'job-dead-1',
+        status: 'DEAD_LETTER',
+        failedAt: '2026-05-08T10:05:00.000Z',
+      }),
+    );
+    expect(result.snapshot.counts[0].count).toBe(1);
+  });
+
+  it('requeues dead-letter jobs with audit and realtime signals', async () => {
+    const { jobQueueService, prisma, realtimeService, service } =
+      createService();
+
+    const result = await service.requeueJob('job-dead-1', authContext());
+
+    expect(jobQueueService.requeueDeadLetter).toHaveBeenCalledWith(
+      'job-dead-1',
+    );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'ops-1',
+        action: 'JOB_QUEUE_DEAD_LETTER_REQUEUED',
+        entityType: 'JOB_QUEUE_ENTRY',
+        entityId: 'job-dead-1',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'admin',
+        type: 'job-queue.requeued',
+        entityId: 'job-dead-1',
+      }),
+    );
+    expect(result.job.status).toBe('PENDING');
   });
 
   it('approves launch readiness when safety benchmark clears competitor threshold', async () => {

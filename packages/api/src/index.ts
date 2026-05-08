@@ -113,6 +113,7 @@ export const apiRoutes = {
     overview: '/admin/overview',
     liveOps: '/admin/live-ops',
     launchReadiness: '/admin/launch-readiness',
+    jobQueue: '/admin/job-queue',
     stream: '/admin/stream',
     healthIncidents: '/admin/health-incidents',
     supportTickets: '/admin/support-tickets',
@@ -1771,6 +1772,44 @@ export type HealthCheckResponse = {
   };
 };
 
+export type AdminJobQueueResponse = {
+  jobs: Array<{
+    id: string;
+    kind: 'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION';
+    status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
+    dedupeKey: string | null;
+    entityType: string | null;
+    entityId: string | null;
+    attempts: number;
+    maxAttempts: number;
+    nextRunAt: string;
+    lockedAt: string | null;
+    completedAt: string | null;
+    failedAt: string | null;
+    lastError: string | null;
+    deadLetterReason: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
+  snapshot: NonNullable<HealthCheckResponse['infrastructure']['jobQueue']>;
+};
+
+export type AdminJobQueueRequeueResponse = {
+  job: {
+    id: string;
+    kind: 'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION';
+    status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
+    attempts: number;
+    nextRunAt: string;
+  };
+};
+
 export type DriverDocumentUploadLinksResponse = {
   links: Array<{
     storageKey: string;
@@ -2493,6 +2532,32 @@ export async function fetchAdminOverview(client: MobilisApiClient) {
 
 export async function fetchAdminLiveOps(client: MobilisApiClient) {
   return client.request<AdminLiveOpsResponse>(apiRoutes.admin.liveOps);
+}
+
+export async function fetchAdminJobQueue(
+  client: MobilisApiClient,
+  query?: {
+    page?: number;
+    pageSize?: number;
+    kind?: 'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION';
+    status?: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
+  },
+) {
+  return client.request<AdminJobQueueResponse>(apiRoutes.admin.jobQueue, {
+    query,
+  });
+}
+
+export async function requeueAdminJobQueueEntry(
+  client: MobilisApiClient,
+  jobId: string,
+) {
+  return client.request<AdminJobQueueRequeueResponse>(
+    `${apiRoutes.admin.jobQueue}/${jobId}/requeue`,
+    {
+      method: 'POST',
+    },
+  );
 }
 
 export async function fetchAdminLaunchReadiness(client: MobilisApiClient) {

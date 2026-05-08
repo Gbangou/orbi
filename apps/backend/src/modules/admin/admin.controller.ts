@@ -31,6 +31,7 @@ import { DriverPayoutSettlementQueryDto } from './dto/driver-payout-settlement-q
 import { DriverOnboardingExportQueryDto } from './dto/driver-onboarding-export-query.dto';
 import { PaymentAttemptRefundDto } from './dto/payment-attempt-refund.dto';
 import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query.dto';
+import { JobQueueQueryDto } from './dto/job-queue-query.dto';
 import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-document-object-verification.dto';
 import { UpdateSupportTicketDto } from './dto/update-support-ticket.dto';
 import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-action-acknowledgement.dto';
@@ -65,6 +66,27 @@ export class AdminController {
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   liveOps() {
     return this.adminService.liveOps();
+  }
+
+  @Get('job-queue')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  jobQueue(@Query() query: JobQueueQueryDto) {
+    return this.adminService.jobQueue(query);
+  }
+
+  @Post('job-queue/:jobId/requeue')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  requeueJob(
+    @Param('jobId') jobId: string,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.requeueJob(jobId, auth);
   }
 
   @Get('launch-readiness')

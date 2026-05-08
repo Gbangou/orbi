@@ -52,6 +52,8 @@ paiement provider, observabilite et runbooks verts.
 - La console admin affiche ces signaux dans System Health avec une lecture par
   famille critique, afin de voir rapidement pending/running/succeeded et
   dead-letter sans sortir du poste operations.
+- Les operations peuvent maintenant lister les jobs, filtrer les dead-letters
+  et remettre un job en file via endpoint admin audite avec evenement realtime.
 
 ## Architecture active
 
