@@ -1,7 +1,50 @@
 import { Prisma } from '@prisma/client';
+import type { RequestAuthContext } from '../auth/auth.types';
 import { AdminService } from './admin.service';
 
 describe('AdminService', () => {
+  function authContext(
+    overrides: Partial<{
+      id: string;
+      role: RequestAuthContext['user']['role'];
+      fullName: string;
+      email: string;
+    }> = {},
+  ): RequestAuthContext {
+    const id = overrides.id ?? 'ops-1';
+    const now = new Date('2026-05-01T08:00:00.000Z');
+
+    return {
+      user: {
+        id,
+        email: overrides.email ?? `${id}@mobilis.test`,
+        phoneNumber: null,
+        passwordHash: null,
+        fullName: overrides.fullName ?? 'Ops Mobilis',
+        role: overrides.role ?? 'OPS',
+        provider: 'EMAIL',
+        isActive: true,
+        isPhoneVerified: true,
+        lastLoginAt: now,
+        createdAt: now,
+        updatedAt: now,
+        riderProfile: null,
+        driverProfile: null,
+      },
+      session: {
+        id: `session-${id}`,
+        userId: id,
+        createdAt: now,
+        lastSeenAt: now,
+        expiresAt: new Date('2026-05-01T12:00:00.000Z'),
+        revokedAt: null,
+        userAgent: 'jest',
+        ipAddress: '127.0.0.1',
+      },
+      token: `test-token-${id}`,
+    };
+  }
+
   function prismaUniqueConstraintError() {
     return new Prisma.PrismaClientKnownRequestError(
       'Unique constraint failed',
@@ -573,9 +616,7 @@ describe('AdminService', () => {
         notes: 'Redis backplane assigne a engineering.',
         idempotencyKey: 'launch-runtime-1',
       },
-      {
-        user: { id: 'ops-1', role: 'OPS' },
-      } as never,
+      authContext(),
     );
 
     expect(result.acknowledgement).toMatchObject({
@@ -616,9 +657,7 @@ describe('AdminService', () => {
           owner: 'engineering',
           notes: 'No active blocker.',
         },
-        {
-          user: { id: 'ops-1', role: 'OPS' },
-        } as never,
+        authContext(),
       ),
     ).rejects.toThrow('Launch readiness action is not currently active.');
   });
@@ -1367,7 +1406,7 @@ describe('AdminService', () => {
     const result = await service.updateSupportTicket(
       'ticket-1',
       { status: 'IN_REVIEW', priority: 2 },
-      { user: { id: 'admin-1', role: 'ADMIN' } } as never,
+      authContext({ id: 'admin-1', role: 'ADMIN' }),
     );
 
     expect(prisma.supportTicket.update).toHaveBeenCalledWith({
@@ -1975,10 +2014,7 @@ describe('AdminService', () => {
       {
         notes: 'Paiement terrain valide par ops.',
       },
-      {
-        user: { id: 'admin-1', role: 'OPS' },
-        sessionId: 'session-1',
-      },
+      authContext({ id: 'admin-1' }),
     );
 
     expect(prisma.driverPayout.create).toHaveBeenCalledWith(
@@ -2150,10 +2186,7 @@ describe('AdminService', () => {
       {
         notes: 'Remis en mobile money.',
       },
-      {
-        user: { id: 'admin-1', role: 'OPS' },
-        sessionId: 'session-1',
-      },
+      authContext({ id: 'admin-1' }),
     );
 
     expect(prisma.walletTransaction.create).toHaveBeenCalledWith(
@@ -2228,10 +2261,7 @@ describe('AdminService', () => {
     const result = await service.markDriverPayoutPaid(
       'driver-payout-1',
       {},
-      {
-        user: { id: 'admin-1', role: 'OPS' },
-        sessionId: 'session-1',
-      },
+      authContext({ id: 'admin-1' }),
     );
 
     expect(prisma.wallet.update).not.toHaveBeenCalled();
@@ -2269,10 +2299,7 @@ describe('AdminService', () => {
 
     const csv = await service.driverPayoutSettlementCsv(
       { status: 'PREPARED' as never },
-      {
-        user: { id: 'ops-1', role: 'OPS', fullName: 'Ops Mobilis' },
-        sessionId: 'session-1',
-      } as never,
+      authContext({ fullName: 'Ops Mobilis' }),
     );
 
     expect(csv).toContain('"driver-payout-1"');
@@ -2323,10 +2350,7 @@ describe('AdminService', () => {
 
     const pdf = await service.driverPayoutSettlementPdf(
       { status: 'PREPARED' as never },
-      {
-        user: { id: 'ops-1', role: 'OPS', fullName: 'Ops Mobilis' },
-        sessionId: 'session-1',
-      } as never,
+      authContext({ fullName: 'Ops Mobilis' }),
     );
 
     expect(Buffer.isBuffer(pdf)).toBe(true);
@@ -2448,7 +2472,7 @@ describe('AdminService', () => {
           },
         ],
       },
-      { user: { id: 'ops-1', role: 'OPS' } } as never,
+      authContext(),
     );
 
     expect(prisma.driverDocument.update).toHaveBeenCalledWith({
@@ -2537,7 +2561,7 @@ describe('AdminService', () => {
         decisionReason: 'Justificatifs a completer.',
         supportPriority: 2,
       },
-      { user: { id: 'ops-1', role: 'OPS' } } as never,
+      authContext(),
     );
 
     expect(prisma.supportTicket.create).toHaveBeenCalledWith({
@@ -2596,7 +2620,7 @@ describe('AdminService', () => {
         decisionReason: 'Justificatifs a completer.',
         supportPriority: 2,
       },
-      { user: { id: 'ops-1', role: 'OPS' } } as never,
+      authContext(),
     );
 
     expect(prisma.supportTicket.findFirst).toHaveBeenCalledWith({
@@ -2644,7 +2668,7 @@ describe('AdminService', () => {
           status: 'APPROVED',
           decisionReason: 'Tentative prematuree.',
         },
-        { user: { id: 'support-1', role: 'SUPPORT' } } as never,
+        authContext({ id: 'support-1', role: 'SUPPORT' }),
       ),
     ).rejects.toThrow(
       'Only admin or ops can approve, reject, or request onboarding changes.',
@@ -2673,7 +2697,7 @@ describe('AdminService', () => {
         {
           status: 'CHANGES_REQUESTED',
         },
-        { user: { id: 'ops-1', role: 'OPS' } } as never,
+        authContext(),
       ),
     ).rejects.toThrow(
       'A decision reason is required for rejected or changes requested reviews.',
@@ -2750,7 +2774,7 @@ describe('AdminService', () => {
     const result = await service.getDriverDocumentViewLink(
       'driver-1',
       'doc-1',
-      { user: { role: 'OPS' } } as never,
+      authContext(),
     );
 
     expect(documentLinksService.createViewLink).toHaveBeenCalledWith({
@@ -2786,7 +2810,7 @@ describe('AdminService', () => {
 
     const result = service.acknowledgeHealthIncident(
       'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
-      { user: { id: 'ops-1', fullName: 'Ops Mobilis', role: 'OPS' } } as never,
+      authContext({ fullName: 'Ops Mobilis' }),
     );
 
     expect(healthIncidentJournalService.acknowledge).toHaveBeenCalledWith(
@@ -2837,9 +2861,11 @@ describe('AdminService', () => {
 
     const result = service.muteHealthIncident(
       'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
-      {
-        user: { id: 'admin-1', fullName: 'Admin Mobilis', role: 'ADMIN' },
-      } as never,
+      authContext({
+        id: 'admin-1',
+        fullName: 'Admin Mobilis',
+        role: 'ADMIN',
+      }),
     );
 
     expect(healthIncidentJournalService.mute).toHaveBeenCalledWith(
