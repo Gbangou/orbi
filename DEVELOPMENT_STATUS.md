@@ -57,6 +57,10 @@ paiement provider, observabilite et runbooks verts.
 - Durcissement navigateur ajoute: headers de securite centralises cote backend,
   CSP API, cache interdit sur auth/admin/paiements, headers admin Next.js et
   validation auth plus stricte sur email/password.
+- Premiere migration admin vers session serveur: System Health utilise des
+  routes Next.js locales avec cookie HttpOnly/SameSite pour consulter les
+  dead-letters, accuser/masquer les incidents et remettre un job en file sans
+  exposer le Bearer token backend sur cette surface navigateur.
 
 ## Architecture active
 
@@ -77,9 +81,8 @@ paiement provider, observabilite et runbooks verts.
 3. Brancher un scan antivirus/anti-fraude documentaire externe sur `safetyScan`.
 4. Adapter S3/GCS production pour objets documentaires.
 5. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
-6. Prepararer la migration production vers cookies HttpOnly/SameSite pour
-   l'admin web si l'admin sort du mode demo/local, tout en gardant Bearer token
-   adapte aux clients mobiles Expo.
+6. Etendre le proxy serveur admin HttpOnly aux autres actions sensibles:
+   wallet/payout, refund/replay paiement, onboarding documents et dispatch.
 
 ## Verification standard
 
@@ -116,5 +119,5 @@ git diff --check
   rollback pratique, secrets production, URLs externes HTTPS et validation
   terrain repetee.
 - Les clients mobiles conservent le modele Bearer token pour Expo; l'admin web
-  est maintenant mieux protegee par headers/cache, mais un stockage session
-  HttpOnly dedie reste a concevoir avant exposition publique large.
+  commence sa migration vers routes serveur + cookie HttpOnly, mais toutes les
+  actions sensibles doivent suivre ce modele avant exposition publique large.

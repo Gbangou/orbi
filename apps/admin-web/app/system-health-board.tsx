@@ -2,13 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  acknowledgeAdminHealthIncident,
-  authenticateAndFetchCurrentUser,
   createMobilisApiClient,
-  fetchAdminJobQueue,
   fetchHealthCheck,
-  muteAdminHealthIncident,
-  requeueAdminJobQueueEntry,
   type AdminJobQueueResponse,
   type HealthCheckResponse,
 } from '@mobilis/api';
@@ -17,14 +12,15 @@ import {
   adminSyncHighlightDurationMs,
   resolveHealthTransitionLabel,
 } from './admin-ops-kernel';
-import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
+import { mobilisRuntimeConfig } from '@mobilis/config';
 import { subscribeToAdminRealtime } from './admin-realtime';
 
 type SystemHealthBoardProps = {
   initialHealth: HealthCheckResponse;
 };
 
-type HealthHistoryEntry = HealthCheckResponse['operations']['healthHistory'][number];
+type HealthHistoryEntry =
+  HealthCheckResponse['operations']['healthHistory'][number];
 type HealthAuditEvent = {
   id: string;
   tone: 'alert' | 'recovered' | 'acknowledged' | 'muted';
@@ -200,17 +196,16 @@ function describeHealthDetail(snapshot: HealthCheckResponse) {
     : 'Le backend signale un etat degrade qui demande une action ops.';
 }
 
-function buildHealthAuditTrail(history: HealthHistoryEntry[]): HealthAuditEvent[] {
+function buildHealthAuditTrail(
+  history: HealthHistoryEntry[],
+): HealthAuditEvent[] {
   return history
     .flatMap((entry) => {
       const events: HealthAuditEvent[] = [
         {
           id: `${entry.id}:created`,
           tone: entry.tone,
-          title:
-            entry.tone === 'alert'
-              ? 'Alerte publiee'
-              : 'Recovery publie',
+          title: entry.tone === 'alert' ? 'Alerte publiee' : 'Recovery publie',
           detail: entry.detail,
           createdAt: entry.createdAt,
         },
@@ -288,9 +283,36 @@ function matchesAuditFilter(
   return event.tone === 'acknowledged' || event.tone === 'muted';
 }
 
-export function SystemHealthBoard({
-  initialHealth,
-}: SystemHealthBoardProps) {
+async function fetchAdminJson<TResponse>(path: string, init?: RequestInit) {
+  const response = await fetch(path, {
+    ...init,
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Admin request failed with ${response.status}.`);
+  }
+
+  return (await response.json()) as TResponse;
+}
+
+async function fetchAdminJobQueueFromServer() {
+  const params = new URLSearchParams({
+    page: '1',
+    pageSize: '6',
+    status: 'DEAD_LETTER',
+  });
+
+  return fetchAdminJson<AdminJobQueueResponse>(
+    `/api/admin/job-queue?${params.toString()}`,
+  );
+}
+
+export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
   const [health, setHealth] = useState(initialHealth);
   const [status, setStatus] = useState('Health watchdog synchronise.');
   const [transitionLabel, setTransitionLabel] = useState<string | null>(null);
@@ -365,9 +387,7 @@ export function SystemHealthBoard({
   );
 
   const refreshHealth = useCallback(
-    async (
-      message = 'Sante systeme resynchronisee.',
-    ) => {
+    async (message = 'Sante systeme resynchronisee.') => {
       try {
         const response = await fetchHealthCheck(client);
         setHealth(response);
@@ -382,15 +402,7 @@ export function SystemHealthBoard({
 
   const refreshJobQueue = useCallback(async () => {
     try {
-      const { authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
-      );
-      const response = await fetchAdminJobQueue(authClient, {
-        page: 1,
-        pageSize: 6,
-        status: 'DEAD_LETTER',
-      });
+      const response = await fetchAdminJobQueueFromServer();
 
       setJobQueueDetails(response);
       setJobQueueStatus(
@@ -401,7 +413,7 @@ export function SystemHealthBoard({
     } catch {
       setJobQueueStatus("Impossible d'actualiser les dead-letters.");
     }
-  }, [client]);
+  }, []);
 
   const visibleHistory = useMemo(
     () => history.filter((entry) => !entry.mutedAt),
@@ -446,7 +458,9 @@ export function SystemHealthBoard({
       .filter((entry) => entry.status === 'DEAD_LETTER')
       .reduce((sum, entry) => sum + entry.count, 0);
     const active = jobQueue.counts
-      .filter((entry) => entry.status === 'PENDING' || entry.status === 'RUNNING')
+      .filter(
+        (entry) => entry.status === 'PENDING' || entry.status === 'RUNNING',
+      )
       .reduce((sum, entry) => sum + entry.count, 0);
 
     return {
@@ -486,12 +500,13 @@ export function SystemHealthBoard({
     async (incidentId: string) => {
       try {
         setActiveIncidentId(incidentId);
-        const { authClient } = await authenticateAndFetchCurrentUser(
-          client,
-          mobilisDemoAccounts.admin,
-        );
 
-        await acknowledgeAdminHealthIncident(authClient, incidentId);
+        await fetchAdminJson(
+          `/api/admin/health-incidents/${encodeURIComponent(
+            incidentId,
+          )}/acknowledge`,
+          { method: 'PATCH' },
+        );
         await refreshHealth('Incident health reconnu par les operations.');
       } catch {
         setStatus("Impossible de marquer l'incident comme vu.");
@@ -499,39 +514,39 @@ export function SystemHealthBoard({
         setActiveIncidentId(null);
       }
     },
-    [client, refreshHealth],
+    [refreshHealth],
   );
 
   const muteIncident = useCallback(
     async (incidentId: string) => {
       try {
         setActiveIncidentId(incidentId);
-        const { authClient } = await authenticateAndFetchCurrentUser(
-          client,
-          mobilisDemoAccounts.admin,
-        );
 
-        await muteAdminHealthIncident(authClient, incidentId);
-        await refreshHealth('Incident health masque pour toutes les consoles ops.');
+        await fetchAdminJson(
+          `/api/admin/health-incidents/${encodeURIComponent(incidentId)}/mute`,
+          { method: 'PATCH' },
+        );
+        await refreshHealth(
+          'Incident health masque pour toutes les consoles ops.',
+        );
       } catch {
         setStatus("Impossible de masquer l'incident.");
       } finally {
         setActiveIncidentId(null);
       }
     },
-    [client, refreshHealth],
+    [refreshHealth],
   );
 
   const requeueJob = useCallback(
     async (jobId: string) => {
       try {
         setActiveJobId(jobId);
-        const { authClient } = await authenticateAndFetchCurrentUser(
-          client,
-          mobilisDemoAccounts.admin,
-        );
 
-        await requeueAdminJobQueueEntry(authClient, jobId);
+        await fetchAdminJson(
+          `/api/admin/job-queue/${encodeURIComponent(jobId)}/requeue`,
+          { method: 'POST' },
+        );
         await refreshHealth('Job dead-letter remis en file.');
         await refreshJobQueue();
       } catch {
@@ -540,7 +555,7 @@ export function SystemHealthBoard({
         setActiveJobId(null);
       }
     },
-    [client, refreshHealth, refreshJobQueue],
+    [refreshHealth, refreshJobQueue],
   );
 
   useEffect(() => {
@@ -550,9 +565,13 @@ export function SystemHealthBoard({
       'system.health-recovered': () =>
         void refreshHealth('Sante systeme retablie en temps reel.'),
       'system.health-incident-acknowledged': () =>
-        void refreshHealth('Un incident health vient d etre reconnu par une autre console.'),
+        void refreshHealth(
+          'Un incident health vient d etre reconnu par une autre console.',
+        ),
       'system.health-incident-muted': () =>
-        void refreshHealth('Un incident health vient d etre masque par une autre console.'),
+        void refreshHealth(
+          'Un incident health vient d etre masque par une autre console.',
+        ),
       'job-queue.requeued': () => {
         void refreshHealth('Job queue resynchronisee.');
         void refreshJobQueue();
@@ -639,7 +658,9 @@ export function SystemHealthBoard({
         </article>
         <article className="board-summary-card">
           <span>Realtime</span>
-          <strong>{describeDependencyState(health.dependencies.realtime)}</strong>
+          <strong>
+            {describeDependencyState(health.dependencies.realtime)}
+          </strong>
           <p>
             {health.infrastructure.realtime.activeStreams} flux,{' '}
             {health.infrastructure.realtime.publishedEvents} evenements
@@ -648,7 +669,9 @@ export function SystemHealthBoard({
         <article className="board-summary-card">
           <span>Sweeper reservations</span>
           <strong>
-            {describeDependencyState(health.dependencies.driverReservationExpiry)}
+            {describeDependencyState(
+              health.dependencies.driverReservationExpiry,
+            )}
           </strong>
           <p>
             {health.operations.driverReservationExpiry.totalSweeps} sweeps,{' '}
@@ -678,9 +701,7 @@ export function SystemHealthBoard({
         </article>
         <article className="board-summary-card">
           <span>SLO production</span>
-          <strong>
-            {describeSloPosture(serviceLevelObjectives.posture)}
-          </strong>
+          <strong>{describeSloPosture(serviceLevelObjectives.posture)}</strong>
           <p>
             {serviceLevelObjectives.failingObjectives} breach(s),{' '}
             {serviceLevelObjectives.warningObjectives} watch
@@ -738,7 +759,9 @@ export function SystemHealthBoard({
             <div className="health-dependency-row">
               <div>
                 <strong>Realtime</strong>
-                <p>Adapter actif, backplane et degradation du transport live.</p>
+                <p>
+                  Adapter actif, backplane et degradation du transport live.
+                </p>
               </div>
               <span
                 className={`readiness-pill readiness-pill-${readinessTone(
@@ -835,7 +858,8 @@ export function SystemHealthBoard({
             <div className="pricing-row">
               <span>Duree dernier run</span>
               <strong>
-                {health.operations.driverReservationExpiry.lastDurationMs !== null
+                {health.operations.driverReservationExpiry.lastDurationMs !==
+                null
                   ? `${health.operations.driverReservationExpiry.lastDurationMs} ms`
                   : 'n/a'}
               </strong>
@@ -843,7 +867,10 @@ export function SystemHealthBoard({
             <div className="pricing-row">
               <span>Reservations expirees</span>
               <strong>
-                {health.operations.driverReservationExpiry.lastExpiredReservations}
+                {
+                  health.operations.driverReservationExpiry
+                    .lastExpiredReservations
+                }
               </strong>
             </div>
           </div>
@@ -987,8 +1014,8 @@ export function SystemHealthBoard({
                 <div>
                   <strong>Aucun dead-letter actif</strong>
                   <p>
-                    La console reste prete a afficher les jobs epuises avec
-                    leur famille, leur entite et l action de remise en file.
+                    La console reste prete a afficher les jobs epuises avec leur
+                    famille, leur entite et l action de remise en file.
                   </p>
                 </div>
               </article>
@@ -1119,7 +1146,10 @@ export function SystemHealthBoard({
                         : 'ticket-button-neutral'
                     }`}
                     onClick={() => acknowledgeIncident(entry.id)}
-                    disabled={Boolean(entry.acknowledgedAt) || activeIncidentId === entry.id}
+                    disabled={
+                      Boolean(entry.acknowledgedAt) ||
+                      activeIncidentId === entry.id
+                    }
                     type="button"
                   >
                     {entry.acknowledgedAt ? 'Incident vu' : 'Marquer comme vu'}
@@ -1141,7 +1171,9 @@ export function SystemHealthBoard({
           ))
         ) : (
           <article className="phase-card health-history-card">
-            <span className="phase-status phase-status-completed">watching</span>
+            <span className="phase-status phase-status-completed">
+              watching
+            </span>
             <h3>Aucun incident recu pendant cette session</h3>
             <p>
               Le watchdog est branche sur le flux admin et alimentera cet
@@ -1160,7 +1192,11 @@ export function SystemHealthBoard({
           </span>
         </div>
         <div className="health-audit-toolbar">
-          <div className="health-audit-filter-list" role="tablist" aria-label="Filtres du journal operations">
+          <div
+            className="health-audit-filter-list"
+            role="tablist"
+            aria-label="Filtres du journal operations"
+          >
             {healthAuditFilters.map((filter) => (
               <button
                 key={filter.id}
@@ -1208,8 +1244,8 @@ export function SystemHealthBoard({
                 <strong>Aucun evenement pour ce filtre</strong>
                 <p>
                   Le journal operations continue de tracer la sequence complete
-                  des alertes, des prises en charge et des recoveries, mais
-                  rien ne correspond au filtre actif pour le moment.
+                  des alertes, des prises en charge et des recoveries, mais rien
+                  ne correspond au filtre actif pour le moment.
                 </p>
               </div>
             </article>

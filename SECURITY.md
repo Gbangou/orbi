@@ -57,11 +57,17 @@ OK Implemented:
   character passwords before account creation or sign-in attempts are accepted.
 - Auth, admin and payment API responses are marked `no-store` to avoid cached
   session or money data in browsers and proxies.
+- Admin System Health operations now use Next.js server routes backed by an
+  HttpOnly, SameSite=strict admin session cookie, so incident and dead-letter
+  actions no longer require exposing the backend Bearer token to that browser
+  surface.
 
 Planned Next Phase:
 - 2FA support (TOTP)
 - API keys for service-to-service
 - OAuth2 integration for driver onboarding
+- Extend the same server-route + HttpOnly session pattern to the rest of the
+  admin console before public exposure.
 
 ### Authorization
 

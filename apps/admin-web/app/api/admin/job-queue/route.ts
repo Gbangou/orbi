@@ -1,0 +1,58 @@
+import { NextResponse, type NextRequest } from 'next/server';
+import { fetchAdminJobQueue } from '@mobilis/api';
+import { getAdminServerAuthClient } from '../../../admin-server-auth';
+
+export const dynamic = 'force-dynamic';
+
+const allowedKinds = new Set([
+  'PAYMENT_WEBHOOK',
+  'DRIVER_DOCUMENT',
+  'NOTIFICATION',
+]);
+const allowedStatuses = new Set([
+  'PENDING',
+  'RUNNING',
+  'SUCCEEDED',
+  'DEAD_LETTER',
+]);
+
+function parsePositiveInteger(value: string | null) {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+export async function GET(request: NextRequest) {
+  const params = request.nextUrl.searchParams;
+  const kind = params.get('kind');
+  const status = params.get('status');
+
+  try {
+    const authClient = await getAdminServerAuthClient();
+    const response = await fetchAdminJobQueue(authClient, {
+      page: parsePositiveInteger(params.get('page')),
+      pageSize: parsePositiveInteger(params.get('pageSize')),
+      kind: allowedKinds.has(kind ?? '')
+        ? (kind as 'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION')
+        : undefined,
+      status: allowedStatuses.has(status ?? '')
+        ? (status as 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER')
+        : undefined,
+    });
+
+    return NextResponse.json(response, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      },
+    });
+  } catch {
+    return NextResponse.json(
+      { message: 'Unable to fetch admin job queue.' },
+      { status: 502 },
+    );
+  }
+}
