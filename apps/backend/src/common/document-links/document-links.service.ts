@@ -188,6 +188,15 @@ export class DocumentLinksService {
         uploadSource,
         capturedAt: new Date().toISOString(),
       },
+      objectVerification: {
+        state: 'pending_provider_confirmation',
+        provider: null,
+        objectId: null,
+        verifiedAt: null,
+        sizeBytes: null,
+        sha256: null,
+        failureReason: null,
+      },
       constraints: {
         allowedMimeTypes: policy.allowedMimeTypes,
         allowedExtensions: policy.allowedExtensions,

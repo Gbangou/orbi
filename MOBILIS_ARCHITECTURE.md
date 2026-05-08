@@ -1,7 +1,7 @@
 # Mobilis Architecture & Development Standards
 
-*Last updated: May 5, 2026*
-*Stability: PRODUCTION-GRADE | Coverage: 300 tests (100% pass rate)*
+*Last updated: May 8, 2026*
+*Stability: strong local foundation | Production posture: controlled pilot, not broad launch*
 
 ## Executive Summary
 
@@ -30,10 +30,12 @@ mobilis/
 │   ├── api/              # TypeScript API contract (shared client types)
 │   ├── config/           # Environment validation & constants
 │   ├── domain/           # Business enums & pricing presets
-│   ├── ui/               # Shared design system
-│   └── mobile-shared/    # Shared Expo utilities
+│   └── ui/               # Shared design tokens and helpers
 └── docs/                 # Architecture, runbooks, strategy
 ```
+
+`apps/mobile-shared` contains Expo utilities shared by the rider and driver
+apps. See `docs/architecture/repository-map.md` for dependency rules.
 
 ### Tech Stack
 
@@ -46,7 +48,7 @@ mobilis/
 | **Frontend (Mobile)** | Expo | ^52 | iOS + Android unified codebase |
 | **Runtime** | Node.js | 22+ | Backend + build scripts |
 | **Package Manager** | pnpm | ^10.30 | Monorepo coordination |
-| **Testing** | Jest | ^30 | Unit & integration tests (300 tests, 100% pass) |
+| **Testing** | Jest | ^30 | Unit, integration and smoke tests |
 | **Validation** | class-validator | Latest | DTO validation (whitelist mode, forbid unknown) |
 
 ## Security Architecture
@@ -148,6 +150,7 @@ app.enableCors({
 - `GET /api/v1/riders/me` → Get current rider profile (auth required)
 - `POST /api/v1/ride-requests` → Create ride request (auth required, rider role)
 - `GET /api/v1/admin/live` → Live dashboard data (auth required, OPS/ADMIN role)
+- `GET /api/v1/admin/driver-onboarding/export-history` → Audited onboarding CSV export history (auth required, OPS/ADMIN role)
 
 ### Versioning
 
@@ -165,9 +168,9 @@ app.enableCors({
 
 ### Current Status
 
-OK **300 tests** across 39 test suites
-OK **100% pass rate**
-OK **Prisma migration invariants** protected
+Current verification must be read from `DEVELOPMENT_STATUS.md` and the latest
+local command output. Historical full-suite runs have covered 300+ backend tests,
+but every meaningful change still requires focused tests plus `pnpm typecheck`.
 
 ### Writing Tests
 
@@ -342,16 +345,17 @@ export function serializeAuthenticatedUser(user: User) {
 
 ## Known Limitations & Roadmap
 
-### Phase 1 (Complete OK)
-- OK Core authentication & RBAC
-- OK User profiles (Rider + Driver)
-- OK Session management
-- OK 300 unit/integration tests
+### Phase 1 (Complete)
+- Core authentication & RBAC
+- User profiles (Rider + Driver)
+- Session management
+- Focused backend and frontend smoke coverage
 
 ### Phase 2 (In Progress)
-- Real-time dispatch (WebSocket layer)
+- Real-time dispatch hardening
+- Driver onboarding security and ops review
 - Voice intent capture & NLU
-- Payment webhooks (Stripe/Mobile Money)
+- Payment webhook hardening and reconciliation
 
 ### Phase 3 (Planned)
 - Mobile error reporting
@@ -361,14 +365,14 @@ export function serializeAuthenticatedUser(user: User) {
 
 ## Critical Security Notes
 
-Warning **DO NOT:**
+**DO NOT:**
 - Drop `ride_requests_single_active_per_rider_idx` or `trips_single_active_per_rider_idx`
 - Store raw passwords anywhere
 - Expose error stack traces to clients
 - Trust client-provided user IDs (always validate against session)
 - Enable Swagger docs in production
 
-OK **DO:**
+**DO:**
 - Use class-validator for all DTOs
 - Hash passwords with scrypt (never bcrypt for new projects)
 - Log all admin/ops actions to audit trail

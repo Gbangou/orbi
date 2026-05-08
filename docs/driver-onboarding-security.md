@@ -56,6 +56,14 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
   d un artefact au dossier chauffeur
 - capture optionnelle des signaux d integrite declares au rattachement:
   `sizeBytes`, `sha256`, `uploadSource`, `capturedAt`
+- separation explicite entre preuves declarees par le client et confirmation
+  objet provider: les nouveaux rattachements commencent avec
+  `objectVerification.state=pending_provider_confirmation` dans les metadonnees,
+  afin que l admin ne confonde pas presence d artefact et preuve de stockage
+  confirmee
+- endpoint admin `PATCH /api/v1/admin/driver-onboarding/:driverId/documents/:documentId/object-verification`
+  reserve `ADMIN/OPS`, pour confirmer ou echouer la verification objet provider
+  avec audit `DRIVER_DOCUMENT_OBJECT_VERIFICATION_UPDATED`
 - declaration automatique de `uploadSource=driver-app` par le flux mobile
   chauffeur lors du rattachement
 - rejet des tailles superieures a la politique du document et des empreintes
@@ -87,10 +95,21 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
   - `REJECTED`
   - `CHANGES_REQUESTED`
 
+## Verification objet provider
+
+- endpoint ops:
+  `POST /api/v1/admin/driver-onboarding/:driverId/documents/:documentId/object-verification/verify-provider`
+- provider local par defaut: `DOCUMENT_OBJECT_PROVIDER=local-provider`
+- racine locale par defaut: `DOCUMENT_LOCAL_PROVIDER_ROOT=.mobilis-document-store`
+- la verification confirme existence fichier, taille et SHA-256 calcule
+- si les signaux declares `sizeBytes` ou `sha256` ne correspondent pas, le
+  document passe en `objectVerification.state=failed`
+- chaque verification ecrit `DRIVER_DOCUMENT_OBJECT_VERIFICATION_UPDATED`
+  dans `AuditLog`
+
 ## Ce qui viendra ensuite
 
-- backend objet reel compatible S3/GCS avec confirmation d existence post-upload
-- comparaison du hash declare avec le hash calcule par le backend objet
+- brancher un adapter S3/GCS production sur le meme contrat provider
 - empreinte perceptuelle anti-duplication
 - controle anti-fraude documentaire
 - selfie match automatise

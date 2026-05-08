@@ -1421,6 +1421,15 @@ export type DriverOnboardingQueueResponse = {
         sha256: string | null;
         uploadSource: string | null;
         capturedAt: string | null;
+        objectVerification: {
+          state: 'confirmed' | 'pending' | 'failed' | 'missing';
+          provider: string | null;
+          objectId: string | null;
+          verifiedAt: string | null;
+          sizeBytes: number | null;
+          sha256: string | null;
+          failureReason: string | null;
+        };
         guidance: {
           level: 'clear' | 'review' | 'resubmit';
           label: string;
@@ -1773,6 +1782,32 @@ export type DriverDocumentViewLinkResponse = {
     | 'SELFIE_VERIFICATION';
   expiresAt: string;
   signedUrl: string;
+};
+
+export type DriverDocumentObjectVerificationResponse = {
+  document: {
+    id: string;
+    driverId: string;
+    type:
+      | 'IDENTITY_DOCUMENT'
+      | 'DRIVER_LICENSE'
+      | 'VEHICLE_REGISTRATION'
+      | 'INSURANCE_PROOF'
+      | 'SELFIE_VERIFICATION';
+    objectVerification: {
+      state: 'confirmed' | 'failed';
+      provider: string;
+      objectId: string | null;
+      verifiedAt: string;
+      sizeBytes: number | null;
+      sha256: string | null;
+      failureReason: string | null;
+      actor: {
+        id: string;
+        role: string;
+      };
+    };
+  };
 };
 
 export type TripIncidentResponse = {
@@ -2754,6 +2789,41 @@ export async function fetchAdminDriverDocumentViewLink(
 ) {
   return client.request<DriverDocumentViewLinkResponse>(
     `${apiRoutes.admin.driverOnboarding}/${driverId}/documents/${documentId}/view-link`,
+  );
+}
+
+export async function updateAdminDriverDocumentObjectVerification(
+  client: MobilisApiClient,
+  driverId: string,
+  documentId: string,
+  payload: {
+    state: 'confirmed' | 'failed';
+    provider: string;
+    objectId?: string;
+    sizeBytes?: number;
+    sha256?: string;
+    failureReason?: string;
+  },
+) {
+  return client.request<DriverDocumentObjectVerificationResponse>(
+    `${apiRoutes.admin.driverOnboarding}/${driverId}/documents/${documentId}/object-verification`,
+    {
+      method: 'PATCH',
+      body: payload,
+    },
+  );
+}
+
+export async function verifyAdminDriverDocumentObjectWithProvider(
+  client: MobilisApiClient,
+  driverId: string,
+  documentId: string,
+) {
+  return client.request<DriverDocumentObjectVerificationResponse>(
+    `${apiRoutes.admin.driverOnboarding}/${driverId}/documents/${documentId}/object-verification/verify-provider`,
+    {
+      method: 'POST',
+    },
   );
 }
 

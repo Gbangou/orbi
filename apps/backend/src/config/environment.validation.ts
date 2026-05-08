@@ -49,6 +49,8 @@ type EnvironmentVariables = {
   DOCUMENT_SIGNING_SECRET?: string;
   DOCUMENT_UPLOAD_BASE_URL?: string;
   DOCUMENT_VIEW_BASE_URL?: string;
+  DOCUMENT_OBJECT_PROVIDER?: string;
+  DOCUMENT_LOCAL_PROVIDER_ROOT?: string;
   DOCUMENT_LINK_TTL_SECONDS?: string;
 };
 
@@ -138,6 +140,10 @@ export function validateEnvironment(config: EnvironmentVariables) {
       config.DOCUMENT_UPLOAD_BASE_URL ?? 'https://storage.mobilis.local/upload',
     DOCUMENT_VIEW_BASE_URL:
       config.DOCUMENT_VIEW_BASE_URL ?? 'https://storage.mobilis.local/view',
+    DOCUMENT_OBJECT_PROVIDER:
+      config.DOCUMENT_OBJECT_PROVIDER ?? 'local-provider',
+    DOCUMENT_LOCAL_PROVIDER_ROOT:
+      config.DOCUMENT_LOCAL_PROVIDER_ROOT ?? '.mobilis-document-store',
     DOCUMENT_LINK_TTL_SECONDS: config.DOCUMENT_LINK_TTL_SECONDS ?? '900',
   };
 }
@@ -154,7 +160,9 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   }
 
   if (paymentsWebhookSecret === 'mobilis_dev_webhook_secret') {
-    throw new Error('PAYMENTS_WEBHOOK_SECRET must not use the dev default in production.');
+    throw new Error(
+      'PAYMENTS_WEBHOOK_SECRET must not use the dev default in production.',
+    );
   }
 
   if (!documentSigningSecret) {
@@ -162,27 +170,39 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   }
 
   if (documentSigningSecret === 'mobilis_dev_document_secret') {
-    throw new Error('DOCUMENT_SIGNING_SECRET must not use the dev default in production.');
+    throw new Error(
+      'DOCUMENT_SIGNING_SECRET must not use the dev default in production.',
+    );
   }
 
   if (containsLocalhost(frontendAllowedOrigins)) {
-    throw new Error('FRONTEND_ALLOWED_ORIGINS must not include localhost in production.');
+    throw new Error(
+      'FRONTEND_ALLOWED_ORIGINS must not include localhost in production.',
+    );
   }
 
   if (containsLocalhost(defaultRedirectUrl)) {
-    throw new Error('PAYMENTS_DEFAULT_REDIRECT_URL must not use localhost in production.');
+    throw new Error(
+      'PAYMENTS_DEFAULT_REDIRECT_URL must not use localhost in production.',
+    );
   }
 
   if (containsLocalhost(defaultWebhookUrl)) {
-    throw new Error('PAYMENTS_DEFAULT_WEBHOOK_URL must not use localhost in production.');
+    throw new Error(
+      'PAYMENTS_DEFAULT_WEBHOOK_URL must not use localhost in production.',
+    );
   }
 
   if (config.RATE_LIMIT_STRICT === 'true' && !config.RATE_LIMIT_REDIS_URL) {
-    throw new Error('RATE_LIMIT_REDIS_URL is required when RATE_LIMIT_STRICT=true.');
+    throw new Error(
+      'RATE_LIMIT_REDIS_URL is required when RATE_LIMIT_STRICT=true.',
+    );
   }
 
   if (config.REALTIME_STRICT === 'true' && !config.REALTIME_REDIS_URL) {
-    throw new Error('REALTIME_REDIS_URL is required when REALTIME_STRICT=true.');
+    throw new Error(
+      'REALTIME_REDIS_URL is required when REALTIME_STRICT=true.',
+    );
   }
 
   if (
@@ -190,7 +210,9 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
     config.PAYMENTS_PROVIDER === 'flutterwave' &&
     !config.FLUTTERWAVE_SECRET_KEY
   ) {
-    throw new Error('FLUTTERWAVE_SECRET_KEY is required for provider refunds in production.');
+    throw new Error(
+      'FLUTTERWAVE_SECRET_KEY is required for provider refunds in production.',
+    );
   }
 }
 

@@ -77,6 +77,8 @@ describe('AdminController (integration)', () => {
     updateSupportTicket: jest.Mock;
     updateDriverOnboardingReview: jest.Mock;
     getDriverDocumentViewLink: jest.Mock;
+    updateDriverDocumentObjectVerification: jest.Mock;
+    verifyDriverDocumentObjectFromProvider: jest.Mock;
   };
   let realtimeService: {
     stream: jest.Mock;
@@ -109,6 +111,8 @@ describe('AdminController (integration)', () => {
       updateSupportTicket: jest.fn(),
       updateDriverOnboardingReview: jest.fn(),
       getDriverDocumentViewLink: jest.fn(),
+      updateDriverDocumentObjectVerification: jest.fn(),
+      verifyDriverDocumentObjectFromProvider: jest.fn(),
     };
     realtimeService = {
       stream: jest.fn(),
@@ -259,9 +263,7 @@ describe('AdminController (integration)', () => {
         expect(response.body.acknowledgement.owner).toBe('engineering');
       });
 
-    expect(
-      adminService.acknowledgeLaunchReadinessAction,
-    ).toHaveBeenCalledWith(
+    expect(adminService.acknowledgeLaunchReadinessAction).toHaveBeenCalledWith(
       'runtime-production-readiness',
       {
         owner: 'engineering',

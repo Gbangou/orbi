@@ -55,6 +55,20 @@ describe('AdminService', () => {
     );
   }
 
+  function confirmedObjectVerification(
+    overrides: Record<string, unknown> = {},
+  ) {
+    return {
+      state: 'confirmed',
+      provider: 'mobilis-object-store',
+      verifiedAt: '2026-04-18T08:00:02.000Z',
+      sizeBytes: 120000,
+      sha256:
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      ...overrides,
+    };
+  }
+
   function createService() {
     const prisma = {
       user: { count: jest.fn() },
@@ -138,6 +152,9 @@ describe('AdminService', () => {
     };
     const documentLinksService = {
       createViewLink: jest.fn(),
+    };
+    const documentObjectStorageService = {
+      verifyStoredDocument: jest.fn(),
     };
     const featureFlagsService = {
       snapshot: jest.fn().mockReturnValue([
@@ -252,6 +269,7 @@ describe('AdminService', () => {
       prisma,
       realtimeService,
       documentLinksService,
+      documentObjectStorageService,
       featureFlagsService,
       healthIncidentJournalService,
       healthService,
@@ -261,6 +279,7 @@ describe('AdminService', () => {
         prisma as never,
         realtimeService as never,
         documentLinksService as never,
+        documentObjectStorageService as never,
         featureFlagsService as never,
         healthIncidentJournalService as never,
         healthService as never,
@@ -1466,6 +1485,7 @@ describe('AdminService', () => {
                 uploadSource: 'driver-app',
                 capturedAt: '2026-04-18T08:00:01.000Z',
               },
+              objectVerification: confirmedObjectVerification(),
             },
           },
         ],
@@ -1596,7 +1616,7 @@ describe('AdminService', () => {
       pageSize: 10,
     });
 
-    expect(result.drivers[0].documentSummary.averageIntegrityScore).toBe(50);
+    expect(result.drivers[0].documentSummary.averageIntegrityScore).toBe(40);
     expect(result.drivers[0].documentSummary.integrityWarnings).toBe(1);
     expect(result.drivers[0].decisionGuidance.blockers).toEqual(
       expect.arrayContaining(['DRIVER_LICENSE: piece absente']),
@@ -1604,7 +1624,7 @@ describe('AdminService', () => {
     expect(result.drivers[0].documents[0].integrity).toEqual(
       expect.objectContaining({
         state: 'partial',
-        score: 50,
+        score: 40,
         sha256: null,
         capturedAt: null,
         guidance: expect.objectContaining({
@@ -1652,6 +1672,11 @@ describe('AdminService', () => {
               uploadSource: 'driver-app',
               capturedAt: '2026-04-18T08:00:01.000Z',
             },
+            objectVerification: confirmedObjectVerification({
+              sizeBytes: 120000 + index,
+              sha256:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            }),
           },
         })),
         onboardingReviews: [],
@@ -2480,6 +2505,10 @@ describe('AdminService', () => {
               uploadSource: 'driver-app',
               capturedAt: '2026-04-18T08:00:00.000Z',
             },
+            objectVerification: confirmedObjectVerification({
+              sha256:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            }),
           },
         },
         {
@@ -2495,6 +2524,10 @@ describe('AdminService', () => {
               uploadSource: 'driver-app',
               capturedAt: '2026-04-18T08:00:00.000Z',
             },
+            objectVerification: confirmedObjectVerification({
+              sha256:
+                'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            }),
           },
         },
         {
@@ -2510,6 +2543,10 @@ describe('AdminService', () => {
               uploadSource: 'driver-app',
               capturedAt: '2026-04-18T08:00:00.000Z',
             },
+            objectVerification: confirmedObjectVerification({
+              sha256:
+                'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+            }),
           },
         },
         {
@@ -2525,6 +2562,10 @@ describe('AdminService', () => {
               uploadSource: 'driver-app',
               capturedAt: '2026-04-18T08:00:00.000Z',
             },
+            objectVerification: confirmedObjectVerification({
+              sha256:
+                'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+            }),
           },
         },
         {
@@ -2540,6 +2581,10 @@ describe('AdminService', () => {
               uploadSource: 'driver-app',
               capturedAt: '2026-04-18T08:00:00.000Z',
             },
+            objectVerification: confirmedObjectVerification({
+              sha256:
+                'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+            }),
           },
         },
       ],
@@ -2881,6 +2926,175 @@ describe('AdminService', () => {
     });
     expect(result.documentId).toBe('doc-1');
     expect(result.signedUrl).toContain('storage.mobilis.local/view');
+  });
+
+  it('records provider object verification for a driver document', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverDocument.findFirst.mockResolvedValue({
+      id: 'doc-1',
+      driverProfileId: 'driver-1',
+      type: 'IDENTITY_DOCUMENT',
+      storageKey: 'driver-1/identity_document/doc-1.pdf',
+      metadata: {
+        integrity: {
+          sizeBytes: 120000,
+          sha256:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          uploadSource: 'driver-app',
+          capturedAt: '2026-04-18T08:00:00.000Z',
+        },
+      },
+    });
+    prisma.driverDocument.update.mockResolvedValue({
+      id: 'doc-1',
+      type: 'IDENTITY_DOCUMENT',
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.updateDriverDocumentObjectVerification(
+      'driver-1',
+      'doc-1',
+      {
+        state: 'confirmed',
+        provider: 'mobilis-object-store',
+        objectId: 'drivers/driver-1/doc-1.pdf',
+        sizeBytes: 120000,
+        sha256:
+          'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+      },
+      authContext(),
+    );
+
+    expect(prisma.driverDocument.update).toHaveBeenCalledWith({
+      where: { id: 'doc-1' },
+      data: {
+        metadata: expect.objectContaining({
+          integrity: expect.objectContaining({
+            uploadSource: 'driver-app',
+          }),
+          objectVerification: expect.objectContaining({
+            state: 'confirmed',
+            provider: 'mobilis-object-store',
+            objectId: 'drivers/driver-1/doc-1.pdf',
+            sizeBytes: 120000,
+            sha256:
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            actor: {
+              id: 'ops-1',
+              role: 'OPS',
+            },
+          }),
+        }),
+      },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'ops-1',
+        action: 'DRIVER_DOCUMENT_OBJECT_VERIFICATION_UPDATED',
+        entityType: 'DRIVER_DOCUMENT',
+        entityId: 'doc-1',
+      }),
+    });
+    expect(result.document.objectVerification.state).toBe('confirmed');
+  });
+
+  it('rejects incomplete provider object verification confirmations', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverDocument.findFirst.mockResolvedValue({
+      id: 'doc-1',
+      driverProfileId: 'driver-1',
+      type: 'IDENTITY_DOCUMENT',
+      storageKey: 'driver-1/identity_document/doc-1.pdf',
+      metadata: null,
+    });
+
+    await expect(
+      service.updateDriverDocumentObjectVerification(
+        'driver-1',
+        'doc-1',
+        {
+          state: 'confirmed',
+          provider: 'mobilis-object-store',
+        },
+        authContext(),
+      ),
+    ).rejects.toThrow(
+      'Confirmed driver document object verification requires provider size and SHA-256.',
+    );
+    expect(prisma.driverDocument.update).not.toHaveBeenCalled();
+  });
+
+  it('verifies a driver document object through the configured provider', async () => {
+    const { documentObjectStorageService, prisma, service } = createService();
+
+    prisma.driverDocument.findFirst.mockResolvedValue({
+      id: 'doc-1',
+      driverProfileId: 'driver-1',
+      type: 'IDENTITY_DOCUMENT',
+      storageKey: 'driver-1/identity_document/doc-1.pdf',
+      metadata: {
+        integrity: {
+          sizeBytes: 120000,
+          sha256:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        },
+      },
+    });
+    documentObjectStorageService.verifyStoredDocument.mockResolvedValue({
+      state: 'confirmed',
+      provider: 'local-provider',
+      objectId: 'driver-1/identity_document/doc-1.pdf',
+      verifiedAt: '2026-04-18T08:02:00.000Z',
+      sizeBytes: 120000,
+      sha256:
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      failureReason: null,
+    });
+    prisma.driverDocument.update.mockResolvedValue({
+      id: 'doc-1',
+      type: 'IDENTITY_DOCUMENT',
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.verifyDriverDocumentObjectFromProvider(
+      'driver-1',
+      'doc-1',
+      authContext(),
+    );
+
+    expect(
+      documentObjectStorageService.verifyStoredDocument,
+    ).toHaveBeenCalledWith({
+      storageKey: 'driver-1/identity_document/doc-1.pdf',
+      expectedSizeBytes: 120000,
+      expectedSha256:
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    });
+    expect(prisma.driverDocument.update).toHaveBeenCalledWith({
+      where: { id: 'doc-1' },
+      data: {
+        metadata: expect.objectContaining({
+          objectVerification: expect.objectContaining({
+            state: 'confirmed',
+            provider: 'local-provider',
+            actor: {
+              id: 'ops-1',
+              role: 'OPS',
+            },
+          }),
+        }),
+      },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'DRIVER_DOCUMENT_OBJECT_VERIFICATION_UPDATED',
+        entityType: 'DRIVER_DOCUMENT',
+        entityId: 'doc-1',
+      }),
+    });
+    expect(result.document.objectVerification.state).toBe('confirmed');
   });
 
   it('acknowledges a health incident and publishes a realtime resync event', async () => {

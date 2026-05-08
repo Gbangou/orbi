@@ -341,6 +341,7 @@ export class DriversService {
               metadata: {
                 uploadPolicy: validatedArtifact.constraints,
                 integrity: validatedArtifact.integrity,
+                objectVerification: validatedArtifact.objectVerification,
               } as Prisma.InputJsonValue,
             },
           });
@@ -360,6 +361,7 @@ export class DriversService {
             metadata: {
               uploadPolicy: validatedArtifact.constraints,
               integrity: validatedArtifact.integrity,
+              objectVerification: validatedArtifact.objectVerification,
             } as Prisma.InputJsonValue,
           },
         });

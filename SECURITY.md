@@ -1,16 +1,15 @@
 # Mobilis Security Policy & Vulnerability Management
 
-*Last updated: May 5, 2026*
+*Last updated: May 8, 2026*
 
 ## Current Security Status
 
-OK **Application Security**: PRODUCTION-GRADE
-OK **Authentication**: Scrypt + timing-safe comparison
-OK **Input Validation**: class-validator with whitelist mode
-OK **Authorization**: RBAC with session-based guards
-OK **Security Headers**: All critical headers present
+Application security foundation: strong for local MVP and controlled pilot.
+Authentication uses scrypt and timing-safe session-token comparison. Input
+validation uses class-validator with whitelist mode. Authorization is RBAC with
+session-based guards. Security headers are configured in the backend.
 
-Warning **Dependency Vulnerabilities**: 78 known issues
+Dependency vulnerabilities require ongoing review:
 - 1 CRITICAL (Handlebars.js)
 - Multiple HIGH (tar, minimatch, serialize-javascript, etc.)
 - Mostly in dev/test dependencies (ts-jest, @babel plugins)
@@ -130,6 +129,9 @@ await this.auditLog.create({
   userAgent: request.get('user-agent'),
 });
 ```
+
+Current sensitive admin surfaces include driver onboarding review, onboarding
+CSV export and onboarding export-history visibility through `AuditLog`.
 
 ### Payment Compliance
 

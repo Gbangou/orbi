@@ -24,6 +24,10 @@ import { RealtimeService } from '../../core/realtime/realtime.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { DocumentLinksService } from '../../common/document-links/document-links.service';
+import {
+  DocumentObjectStorageService,
+  type StoredDocumentObjectVerification,
+} from '../../common/document-links/document-object-storage.service';
 import { FeatureFlagsService } from '../../core/runtime/feature-flags.service';
 import { HealthIncidentJournalService } from '../health/health-incident-journal.service';
 import { HealthService } from '../health/health.service';
@@ -38,6 +42,7 @@ import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-
 import { PaymentAttemptRefundDto } from './dto/payment-attempt-refund.dto';
 import { UpdateDriverOnboardingReviewDto } from './dto/update-driver-onboarding-review.dto';
 import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query.dto';
+import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-document-object-verification.dto';
 
 const reviewDecisionRoles = new Set(['ADMIN', 'OPS']);
 const pricingCalibrationLookbackDays = 14;
@@ -107,6 +112,15 @@ type DriverDocumentIntegritySignal = {
   sha256: string | null;
   uploadSource: string | null;
   capturedAt: string | null;
+  objectVerification: {
+    state: 'confirmed' | 'pending' | 'failed' | 'missing';
+    provider: string | null;
+    objectId: string | null;
+    verifiedAt: string | null;
+    sizeBytes: number | null;
+    sha256: string | null;
+    failureReason: string | null;
+  };
   guidance: {
     level: 'clear' | 'review' | 'resubmit';
     label: string;
@@ -121,10 +135,7 @@ type DriverDocumentIntegritySignal = {
 
 type DriverOnboardingDecisionGuidance = {
   level: 'approve' | 'review' | 'resubmit';
-  recommendedStatus:
-    | 'APPROVED'
-    | 'UNDER_REVIEW'
-    | 'CHANGES_REQUESTED';
+  recommendedStatus: 'APPROVED' | 'UNDER_REVIEW' | 'CHANGES_REQUESTED';
   label: string;
   detail: string;
   blockers: string[];
@@ -215,6 +226,40 @@ function resolveDriverDocumentIntegrity(
     ? nullableString(integrity.uploadSource)
     : null;
   const capturedAt = integrity ? nullableString(integrity.capturedAt) : null;
+  const objectVerification =
+    metadata &&
+    isJsonRecord(metadata) &&
+    isJsonRecord(metadata.objectVerification)
+      ? metadata.objectVerification
+      : null;
+  const objectVerificationState =
+    objectVerification?.state === 'confirmed'
+      ? 'confirmed'
+      : objectVerification?.state === 'failed'
+        ? 'failed'
+        : objectVerification?.state === 'pending_provider_confirmation'
+          ? 'pending'
+          : objectVerification?.state === 'pending'
+            ? 'pending'
+            : 'missing';
+  const objectProvider = objectVerification
+    ? nullableString(objectVerification.provider)
+    : null;
+  const objectId = objectVerification
+    ? nullableString(objectVerification.objectId)
+    : null;
+  const objectVerifiedAt = objectVerification
+    ? nullableString(objectVerification.verifiedAt)
+    : null;
+  const objectSizeBytes = objectVerification
+    ? nullablePositiveInteger(objectVerification.sizeBytes)
+    : null;
+  const objectSha256 = objectVerification
+    ? nullableString(objectVerification.sha256)
+    : null;
+  const objectFailureReason = objectVerification
+    ? nullableString(objectVerification.failureReason)
+    : null;
   const checks = [
     {
       id: 'size-bytes',
@@ -236,6 +281,21 @@ function resolveDriverDocumentIntegrity(
       label: capturedAt ? 'Horodatage backend' : 'Horodatage manquant',
       state: capturedAt ? ('pass' as const) : ('warn' as const),
     },
+    {
+      id: 'object-verification',
+      label:
+        objectVerificationState === 'confirmed'
+          ? 'Objet provider confirme'
+          : objectVerificationState === 'failed'
+            ? 'Verification objet echouee'
+            : objectVerificationState === 'pending'
+              ? 'Confirmation objet en attente'
+              : 'Preuve provider manquante',
+      state:
+        objectVerificationState === 'confirmed'
+          ? ('pass' as const)
+          : ('warn' as const),
+    },
   ];
   const passedChecks = checks.filter((check) => check.state === 'pass').length;
   const score = Math.round((passedChecks / checks.length) * 100);
@@ -247,7 +307,7 @@ function resolveDriverDocumentIntegrity(
           level: 'clear' as const,
           label: 'Preuves completes',
           detail:
-            'La taille, la source, le hash et l horodatage backend sont presents.',
+            'La taille, la source, le hash, l horodatage backend et la confirmation objet provider sont presents.',
         }
       : state === 'missing'
         ? {
@@ -270,6 +330,15 @@ function resolveDriverDocumentIntegrity(
     sha256,
     uploadSource,
     capturedAt,
+    objectVerification: {
+      state: objectVerificationState,
+      provider: objectProvider,
+      objectId,
+      verifiedAt: objectVerifiedAt,
+      sizeBytes: objectSizeBytes,
+      sha256: objectSha256,
+      failureReason: objectFailureReason,
+    },
     guidance,
     checks,
   };
@@ -291,14 +360,16 @@ function resolveDriverOnboardingDecisionGuidance(input: {
 }): DriverOnboardingDecisionGuidance {
   const documentsToResubmit = input.documentsWithIntegrity.filter(
     ({ document, integrity }) =>
-      resolveEffectiveDocumentStatus(document) === DriverDocumentStatus.REJECTED ||
-      resolveEffectiveDocumentStatus(document) === DriverDocumentStatus.EXPIRED ||
+      resolveEffectiveDocumentStatus(document) ===
+        DriverDocumentStatus.REJECTED ||
+      resolveEffectiveDocumentStatus(document) ===
+        DriverDocumentStatus.EXPIRED ||
       integrity.guidance.level === 'resubmit',
   );
   const documentsToReview = input.documentsWithIntegrity.filter(
     ({ document, integrity }) =>
-      resolveEffectiveDocumentStatus(document) === DriverDocumentStatus.PENDING ||
-      integrity.guidance.level === 'review',
+      resolveEffectiveDocumentStatus(document) ===
+        DriverDocumentStatus.PENDING || integrity.guidance.level === 'review',
   );
   const blockers = [
     ...input.missingRequiredTypes.map((type) => `${type}: piece absente`),
@@ -1212,14 +1283,14 @@ function resolveLaunchFieldQuality(input: {
     },
   ];
   const score = Math.round(
-    signals.reduce((total, signal) => total + signal.score, 0) /
-      signals.length,
+    signals.reduce((total, signal) => total + signal.score, 0) / signals.length,
   );
   const blockedSignals = signals.filter(
     (signal) => signal.state === 'blocked',
   ).length;
-  const watchSignals = signals.filter((signal) => signal.state === 'watch')
-    .length;
+  const watchSignals = signals.filter(
+    (signal) => signal.state === 'watch',
+  ).length;
 
   return {
     score,
@@ -1344,6 +1415,7 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
     private readonly documentLinksService: DocumentLinksService,
+    private readonly documentObjectStorageService: DocumentObjectStorageService,
     private readonly featureFlagsService: FeatureFlagsService,
     private readonly healthIncidentJournalService: HealthIncidentJournalService,
     private readonly healthService: HealthService,
@@ -1843,8 +1915,12 @@ export class AdminService {
         detail: `${safetyBenchmark.summary.activeCapabilities}/${safetyBenchmark.summary.totalCapabilities} capacite(s) actives, ${safetyBenchmark.summary.criticalGaps} gap(s) critiques face aux leaders.`,
       },
     ];
-    const failedChecks = checks.filter((check) => check.state === 'fail').length;
-    const warningChecks = checks.filter((check) => check.state === 'warn').length;
+    const failedChecks = checks.filter(
+      (check) => check.state === 'fail',
+    ).length;
+    const warningChecks = checks.filter(
+      (check) => check.state === 'warn',
+    ).length;
     const nextActions = resolveLaunchReadinessNextActions(checks);
     const activeActionCheckIds = nextActions.map((action) => action.checkId);
     const acknowledgementLogs = activeActionCheckIds.length
@@ -3207,7 +3283,8 @@ export class AdminService {
             metadata.guidanceFilter ?? entry.entityId ?? undefined,
           ),
           searchQuery: nullableString(metadata.searchQuery),
-          exportedCount: nullableNonNegativeInteger(metadata.exportedCount) ?? 0,
+          exportedCount:
+            nullableNonNegativeInteger(metadata.exportedCount) ?? 0,
           scannedCount: nullableNonNegativeInteger(metadata.scannedCount) ?? 0,
           limit: nullablePositiveInteger(metadata.limit) ?? null,
           format: metadata.format === 'csv' ? 'csv' : 'unknown',
@@ -4438,6 +4515,7 @@ export class AdminService {
         type: string;
         status: DriverDocumentStatus;
         expiresAt: Date | null;
+        metadata?: Prisma.JsonValue | null;
       }>;
     },
     payload: UpdateDriverOnboardingReviewDto,
@@ -4473,6 +4551,7 @@ export class AdminService {
         type: string;
         status: DriverDocumentStatus;
         expiresAt: Date | null;
+        metadata?: Prisma.JsonValue | null;
       }
     >();
 
@@ -4500,6 +4579,14 @@ export class AdminService {
       if (effectiveStatus !== 'APPROVED') {
         throw new BadRequestException(
           `Document ${type} must be approved before driver approval.`,
+        );
+      }
+
+      const integrity = resolveDriverDocumentIntegrity(document.metadata);
+
+      if (integrity.state !== 'complete') {
+        throw new BadRequestException(
+          `Document ${type} must have confirmed object integrity before driver approval.`,
         );
       }
 
@@ -4590,6 +4677,165 @@ export class AdminService {
 
     return {
       incident,
+    };
+  }
+
+  async updateDriverDocumentObjectVerification(
+    driverId: string,
+    documentId: string,
+    payload: UpdateDriverDocumentObjectVerificationDto,
+    auth: RequestAuthContext,
+  ) {
+    const document = await this.prisma.driverDocument.findFirst({
+      where: {
+        id: documentId,
+        driverProfileId: driverId,
+      },
+    });
+
+    if (!document) {
+      throw new NotFoundException('Driver document not found.');
+    }
+
+    if (
+      payload.state === 'confirmed' &&
+      (!payload.sizeBytes || !payload.sha256)
+    ) {
+      throw new BadRequestException(
+        'Confirmed driver document object verification requires provider size and SHA-256.',
+      );
+    }
+
+    if (payload.state === 'failed' && !payload.failureReason?.trim()) {
+      throw new BadRequestException(
+        'Failed driver document object verification requires a failure reason.',
+      );
+    }
+
+    const previousMetadata =
+      document.metadata && isJsonRecord(document.metadata)
+        ? document.metadata
+        : {};
+    const objectVerification = {
+      state: payload.state,
+      provider: payload.provider.trim().toLowerCase(),
+      objectId: payload.objectId?.trim() || null,
+      verifiedAt: new Date().toISOString(),
+      sizeBytes: payload.sizeBytes ?? null,
+      sha256: payload.sha256?.trim().toLowerCase() ?? null,
+      failureReason: payload.failureReason?.trim() || null,
+      actor: {
+        id: auth.user.id,
+        role: auth.user.role,
+      },
+    };
+
+    return this.persistDriverDocumentObjectVerification(
+      document,
+      driverId,
+      previousMetadata,
+      objectVerification,
+      auth,
+    );
+  }
+
+  async verifyDriverDocumentObjectFromProvider(
+    driverId: string,
+    documentId: string,
+    auth: RequestAuthContext,
+  ) {
+    const document = await this.prisma.driverDocument.findFirst({
+      where: {
+        id: documentId,
+        driverProfileId: driverId,
+      },
+    });
+
+    if (!document) {
+      throw new NotFoundException('Driver document not found.');
+    }
+
+    const previousMetadata =
+      document.metadata && isJsonRecord(document.metadata)
+        ? document.metadata
+        : {};
+    const integrity = isJsonRecord(previousMetadata.integrity)
+      ? previousMetadata.integrity
+      : {};
+    const providerVerification =
+      await this.documentObjectStorageService.verifyStoredDocument({
+        storageKey: document.storageKey,
+        expectedSizeBytes: nullablePositiveInteger(integrity.sizeBytes),
+        expectedSha256: nullableString(integrity.sha256),
+      });
+
+    const objectVerification = {
+      ...providerVerification,
+      actor: {
+        id: auth.user.id,
+        role: auth.user.role,
+      },
+    };
+
+    return this.persistDriverDocumentObjectVerification(
+      document,
+      driverId,
+      previousMetadata,
+      objectVerification,
+      auth,
+    );
+  }
+
+  private async persistDriverDocumentObjectVerification(
+    document: {
+      id: string;
+      type: string;
+      storageKey: string;
+    },
+    driverId: string,
+    previousMetadata: Record<string, unknown>,
+    objectVerification: StoredDocumentObjectVerification & {
+      actor: {
+        id: string;
+        role: string;
+      };
+    },
+    auth: RequestAuthContext,
+  ) {
+    const updated = await this.prisma.driverDocument.update({
+      where: {
+        id: document.id,
+      },
+      data: {
+        metadata: {
+          ...previousMetadata,
+          objectVerification,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_DOCUMENT_OBJECT_VERIFICATION_UPDATED',
+        entityType: 'DRIVER_DOCUMENT',
+        entityId: document.id,
+        metadata: {
+          driverProfileId: driverId,
+          documentType: document.type,
+          storageKey: document.storageKey,
+          objectVerification,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      document: {
+        id: updated.id,
+        driverId,
+        type: updated.type,
+        objectVerification,
+      },
     };
   }
 }

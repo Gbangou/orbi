@@ -87,10 +87,13 @@ flowchart LR
 8. Chaque generation de liens ecrit un audit log sans exposer de secret.
 9. Les operations consultent les justificatifs via liens de lecture courts avant
    decision explicite.
-10. Chaque decision de revue conserve dans ses metadonnees une snapshot de la
+10. Les operations peuvent declencher la verification provider objet; le backend
+    local confirme existence, taille et SHA-256, ou marque la verification en
+    echec si le stockage ne prouve pas l integrite declaree.
+11. Chaque decision de revue conserve dans ses metadonnees une snapshot de la
     guidance dossier et du resume documentaire utilises au moment de l action,
     afin de rendre les approbations, revues et redemandes auditables a posteriori.
-11. La file admin restitue les dernieres decisions avec cette snapshot quand
+12. La file admin restitue les dernieres decisions avec cette snapshot quand
     elle existe, ce qui permet aux operations de relire le contexte de decision
     sans ouvrir les logs techniques.
 

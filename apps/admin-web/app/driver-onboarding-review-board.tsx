@@ -755,6 +755,9 @@ export function DriverOnboardingReviewBoard({
                       <span>{formatDocumentSize(document.integrity.sizeBytes)}</span>
                       <span>{document.integrity.uploadSource ?? 'source absente'}</span>
                       <span>{formatShaPreview(document.integrity.sha256)}</span>
+                      <span>
+                        Objet {document.integrity.objectVerification.state}
+                      </span>
                     </div>
                     <div className="document-checks">
                       {document.integrity.checks.map((check) => (

@@ -35,10 +35,12 @@ packages/
 
 ## Execution
 
+- index documentation: `docs/README.md`
 - feuille de route active: `EXECUTION_PLAN.md`
 - preview live web/mobile: `LIVE_PREVIEW.md`
 - guide local pas a pas: `docs/local-development.md`
 - runbook E2E terrain local: `docs/local-e2e-field-session.md`
+- carte du monorepo: `docs/architecture/repository-map.md`
 - diagramme de classes: `docs/architecture/class-diagram.md`
 - diagramme de cas d'utilisation: `docs/architecture/use-case-diagram.md`
 - invariants de donnees: `docs/architecture/data-invariants.md`

@@ -31,6 +31,7 @@ import { DriverPayoutSettlementQueryDto } from './dto/driver-payout-settlement-q
 import { DriverOnboardingExportQueryDto } from './dto/driver-onboarding-export-query.dto';
 import { PaymentAttemptRefundDto } from './dto/payment-attempt-refund.dto';
 import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query.dto';
+import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-document-object-verification.dto';
 import { UpdateSupportTicketDto } from './dto/update-support-ticket.dto';
 import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-action-acknowledgement.dto';
 import { AdminService } from './admin.service';
@@ -416,6 +417,46 @@ export class AdminController {
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.getDriverDocumentViewLink(
+      driverId,
+      documentId,
+      auth,
+    );
+  }
+
+  @Patch(
+    'driver-onboarding/:driverId/documents/:documentId/object-verification',
+  )
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  updateDriverDocumentObjectVerification(
+    @Param('driverId') driverId: string,
+    @Param('documentId') documentId: string,
+    @Body() payload: UpdateDriverDocumentObjectVerificationDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.updateDriverDocumentObjectVerification(
+      driverId,
+      documentId,
+      payload,
+      auth,
+    );
+  }
+
+  @Post(
+    'driver-onboarding/:driverId/documents/:documentId/object-verification/verify-provider',
+  )
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  verifyDriverDocumentObjectFromProvider(
+    @Param('driverId') driverId: string,
+    @Param('documentId') documentId: string,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.verifyDriverDocumentObjectFromProvider(
       driverId,
       documentId,
       auth,

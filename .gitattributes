@@ -1,5 +1,22 @@
 * text=auto
 
+.gitattributes text eol=lf
+
+*.css text eol=lf
+*.cjs text eol=lf
+*.env.example text eol=lf
+*.html text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.jsx text eol=lf
+*.md text eol=lf
+*.mjs text eol=lf
+*.prisma text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+
 *.sh text eol=lf
 *.ps1 text eol=crlf
 *.bat text eol=crlf

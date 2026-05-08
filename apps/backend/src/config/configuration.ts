@@ -138,6 +138,9 @@ export default () => ({
     viewBaseUrl:
       process.env.DOCUMENT_VIEW_BASE_URL ??
       'https://storage.mobilis.local/view',
+    objectProvider: process.env.DOCUMENT_OBJECT_PROVIDER ?? 'local-provider',
+    localProviderRoot:
+      process.env.DOCUMENT_LOCAL_PROVIDER_ROOT ?? '.mobilis-document-store',
     ttlSeconds: Number.parseInt(
       process.env.DOCUMENT_LINK_TTL_SECONDS ?? '900',
       10,

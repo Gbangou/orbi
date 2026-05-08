@@ -34,6 +34,8 @@ describe('AdminController', () => {
       acknowledgeHealthIncident: jest.fn(),
       muteHealthIncident: jest.fn(),
       getDriverDocumentViewLink: jest.fn(),
+      updateDriverDocumentObjectVerification: jest.fn(),
+      verifyDriverDocumentObjectFromProvider: jest.fn(),
     };
     const realtimeService = {
       stream: jest.fn(),
@@ -191,6 +193,48 @@ describe('AdminController', () => {
     );
   });
 
+  it('delegates driver document object verification updates with auth', async () => {
+    const { adminService, controller } = createController();
+    const payload = {
+      state: 'confirmed',
+      provider: 'mobilis-object-store',
+      sizeBytes: 120000,
+      sha256:
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    };
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.updateDriverDocumentObjectVerification(
+      'driver-1',
+      'doc-1',
+      payload as never,
+      auth as never,
+    );
+
+    expect(
+      adminService.updateDriverDocumentObjectVerification,
+    ).toHaveBeenCalledWith('driver-1', 'doc-1', payload, auth);
+  });
+
+  it('delegates provider driver document object verification with auth', async () => {
+    const { adminService, controller } = createController();
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.verifyDriverDocumentObjectFromProvider(
+      'driver-1',
+      'doc-1',
+      auth as never,
+    );
+
+    expect(
+      adminService.verifyDriverDocumentObjectFromProvider,
+    ).toHaveBeenCalledWith('driver-1', 'doc-1', auth);
+  });
+
   it('delegates dispatch settings updates with the current auth context', async () => {
     const { adminService, controller } = createController();
     const auth = {
@@ -241,9 +285,11 @@ describe('AdminController', () => {
       auth as never,
     );
 
-    expect(
-      adminService.acknowledgeLaunchReadinessAction,
-    ).toHaveBeenCalledWith('runtime-production-readiness', payload, auth);
+    expect(adminService.acknowledgeLaunchReadinessAction).toHaveBeenCalledWith(
+      'runtime-production-readiness',
+      payload,
+      auth,
+    );
   });
 
   it('delegates payment webhook event journal reads to the admin service', async () => {

@@ -110,6 +110,15 @@ describe('DocumentLinksService', () => {
           uploadSource: 'driver-app',
           capturedAt: expect.any(String),
         }),
+        objectVerification: {
+          state: 'pending_provider_confirmation',
+          provider: null,
+          objectId: null,
+          verifiedAt: null,
+          sizeBytes: null,
+          sha256: null,
+          failureReason: null,
+        },
         constraints: expect.objectContaining({
           maxBytes: 5_000_000,
         }),

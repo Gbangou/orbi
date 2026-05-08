@@ -89,6 +89,9 @@ Mobilis vise une plateforme de mobilite complete, premium et francaise d'abord p
   critiques
 - Tracing et capacity planning branches sur les memes objectifs de service
 - Discipline `expand -> migrate traffic -> contract`
+- Gouvernance documentaire: carte du repo, index docs et statut courant doivent
+  rester alignes avec chaque changement critique pour eviter une architecture
+  implicite ou contradictoire.
 
 ### Phase 8. Hardening and launch readiness
 
@@ -138,4 +141,6 @@ Ces delais supposent un travail continu de bout en bout dans ce repo, avec itera
 - Les flux principaux sont testables
 - Les ecrans ont etats loading/error/empty
 - La base de donnees et l'API supportent reellement le parcours
+- Les docs source de verite (`DEVELOPMENT_STATUS.md`, doc domaine, runbook si
+  applicable) refletent le comportement livre
 - La phase suivante peut s'appuyer dessus sans refonte brutale
