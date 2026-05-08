@@ -106,6 +106,7 @@ describe('AdminService', () => {
       },
       auditLog: {
         create: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn().mockResolvedValue([]),
       },
       driverDocument: {
@@ -1817,6 +1818,101 @@ describe('AdminService', () => {
           limit: 25,
         }),
       }),
+    });
+  });
+
+  it('returns a normalized driver onboarding export audit history', async () => {
+    const { prisma, service } = createService();
+
+    prisma.auditLog.findMany.mockResolvedValue([
+      {
+        id: 'audit-export-1',
+        entityId: 'resubmit',
+        createdAt: new Date('2026-05-02T09:00:00.000Z'),
+        metadata: {
+          format: 'csv',
+          guidanceFilter: 'resubmit',
+          searchQuery: 'insurance',
+          exportedCount: 3,
+          scannedCount: 24,
+          limit: 50,
+        },
+        user: {
+          id: 'ops-1',
+          fullName: 'Ops Mobilis',
+          role: 'OPS',
+        },
+      },
+      {
+        id: 'audit-export-2',
+        entityId: 'review',
+        createdAt: new Date('2026-05-01T08:00:00.000Z'),
+        metadata: {
+          format: 'xlsx',
+          guidanceFilter: '<script>',
+          exportedCount: -1,
+          scannedCount: 'all',
+        },
+        user: {
+          id: 'admin-1',
+          fullName: 'Admin Mobilis',
+          role: 'ADMIN',
+        },
+      },
+    ]);
+    prisma.auditLog.count.mockResolvedValue(2);
+
+    const result = await service.driverOnboardingExportHistory({
+      page: 1,
+      pageSize: 8,
+    });
+
+    expect(prisma.auditLog.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          action: 'DRIVER_ONBOARDING_QUEUE_EXPORTED',
+          entityType: 'DRIVER_PROFILE',
+        },
+        take: 8,
+      }),
+    );
+    expect(result.exports).toEqual([
+      {
+        id: 'audit-export-1',
+        createdAt: '2026-05-02T09:00:00.000Z',
+        actor: {
+          id: 'ops-1',
+          name: 'Ops Mobilis',
+          role: 'OPS',
+        },
+        guidanceFilter: 'resubmit',
+        searchQuery: 'insurance',
+        exportedCount: 3,
+        scannedCount: 24,
+        limit: 50,
+        format: 'csv',
+      },
+      {
+        id: 'audit-export-2',
+        createdAt: '2026-05-01T08:00:00.000Z',
+        actor: {
+          id: 'admin-1',
+          name: 'Admin Mobilis',
+          role: 'ADMIN',
+        },
+        guidanceFilter: 'all',
+        searchQuery: null,
+        exportedCount: 0,
+        scannedCount: 0,
+        limit: null,
+        format: 'unknown',
+      },
+    ]);
+    expect(result.meta).toEqual({
+      page: 1,
+      pageSize: 8,
+      total: 2,
+      pageCount: 1,
     });
   });
 

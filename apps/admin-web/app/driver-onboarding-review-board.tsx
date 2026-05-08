@@ -6,8 +6,10 @@ import {
   createMobilisApiClient,
   fetchAdminDriverDocumentViewLink,
   fetchAdminDriverOnboardingExportCsv,
+  fetchAdminDriverOnboardingExportHistory,
   fetchAdminDriverOnboardingQueue,
   updateAdminDriverOnboardingReview,
+  type DriverOnboardingExportHistoryResponse,
   type DriverOnboardingQueueResponse,
 } from '@mobilis/api';
 import { describeRealtimeConnection } from '@mobilis/ui';
@@ -141,10 +143,26 @@ function formatReviewDate(value: string) {
   }).format(new Date(value));
 }
 
+function formatExportFilterLabel(
+  value: DriverOnboardingExportHistoryResponse['exports'][number]['guidanceFilter'],
+) {
+  const labels = {
+    all: 'Tous',
+    approve: 'Prets',
+    review: 'Revue',
+    resubmit: 'Redemande',
+  } as const;
+
+  return labels[value];
+}
+
 export function DriverOnboardingReviewBoard({
   initialQueue,
 }: DriverOnboardingReviewBoardProps) {
   const [drivers, setDrivers] = useState(initialQueue);
+  const [exportHistory, setExportHistory] = useState<
+    DriverOnboardingExportHistoryResponse['exports']
+  >([]);
   const [status, setStatus] = useState('File onboarding synchronisee.');
   const [busyDriverId, setBusyDriverId] = useState<string | null>(null);
   const [busyDocumentId, setBusyDocumentId] = useState<string | null>(null);
@@ -188,6 +206,19 @@ export function DriverOnboardingReviewBoard({
     },
     [withAdminClient],
   );
+
+  const refreshExportHistory = useCallback(async () => {
+    try {
+      const authClient = await withAdminClient();
+      const response = await fetchAdminDriverOnboardingExportHistory(authClient, {
+        page: 1,
+        pageSize: 6,
+      });
+      setExportHistory(response.exports);
+    } catch {
+      setExportHistory([]);
+    }
+  }, [withAdminClient]);
 
   const summary = useMemo(() => {
     const approved = drivers.filter(
@@ -254,6 +285,10 @@ export function DriverOnboardingReviewBoard({
 
     return () => stream.close();
   }, [refreshQueue]);
+
+  useEffect(() => {
+    void refreshExportHistory();
+  }, [refreshExportHistory]);
 
   useEffect(() => {
     const delta = resolveDriverOnboardingDelta(
@@ -407,6 +442,7 @@ export function DriverOnboardingReviewBoard({
       link.remove();
       URL.revokeObjectURL(url);
       setStatus(`Export CSV genere pour ${exportedRows} dossier(s).`);
+      await refreshExportHistory();
     } catch {
       setStatus("L export CSV onboarding n a pas pu etre genere.");
     }
@@ -530,6 +566,53 @@ export function DriverOnboardingReviewBoard({
             );
           })}
         </div>
+      </div>
+
+      <div
+        className="onboarding-export-history"
+        aria-label="Historique exports onboarding"
+      >
+        <div className="review-history-heading">
+          <div>
+            <strong>Trafic exports audite</strong>
+            <p>
+              Derniers CSV generes par admin ou ops avec filtre, recherche et
+              volume.
+            </p>
+          </div>
+          <span>{exportHistory.length} trace(s)</span>
+        </div>
+        {exportHistory.length ? (
+          <div className="onboarding-export-history-list">
+            {exportHistory.map((entry) => (
+              <article className="onboarding-export-history-row" key={entry.id}>
+                <div>
+                  <strong>{entry.exportedCount} dossier(s) exporte(s)</strong>
+                  <p>
+                    {entry.actor.name} - {entry.actor.role} -{' '}
+                    {formatReviewDate(entry.createdAt)}
+                  </p>
+                </div>
+                <div className="onboarding-export-history-meta">
+                  <span>{formatExportFilterLabel(entry.guidanceFilter)}</span>
+                  <span>
+                    {entry.searchQuery
+                      ? `Recherche: ${entry.searchQuery}`
+                      : 'Sans recherche'}
+                  </span>
+                  <span>
+                    {entry.scannedCount} scanne(s)
+                    {entry.limit ? ` / limite ${entry.limit}` : ''}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="onboarding-export-empty">
+            Aucun export CSV audite sur cette page pour le moment.
+          </p>
+        )}
       </div>
 
       <div className="ticket-grid onboarding-grid">

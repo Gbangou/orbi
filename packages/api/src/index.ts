@@ -127,6 +127,7 @@ export const apiRoutes = {
     paymentAttempts: '/admin/payment-attempts',
     driverOnboarding: '/admin/driver-onboarding',
     driverOnboardingQueue: '/admin/driver-onboarding-queue',
+    driverOnboardingExportHistory: '/admin/driver-onboarding/export-history',
     driverOnboardingExportCsv: '/admin/driver-onboarding/export.csv',
   },
   riders: {
@@ -1441,6 +1442,30 @@ export type DriverOnboardingQueueResponse = {
   };
 };
 
+export type DriverOnboardingExportHistoryResponse = {
+  exports: Array<{
+    id: string;
+    createdAt: string;
+    actor: {
+      id: string;
+      name: string;
+      role: 'ADMIN' | 'OPS' | 'SUPPORT' | 'RIDER' | 'DRIVER';
+    };
+    guidanceFilter: 'all' | 'approve' | 'review' | 'resubmit';
+    searchQuery: string | null;
+    exportedCount: number;
+    scannedCount: number;
+    limit: number | null;
+    format: 'csv' | 'unknown';
+  }>;
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
+};
+
 export type DriverOnboardingReviewUpdateResponse = {
   review: {
     id: string;
@@ -2540,6 +2565,21 @@ export async function fetchAdminDriverOnboardingExportCsv(
   return client.requestText(apiRoutes.admin.driverOnboardingExportCsv, {
     query,
   });
+}
+
+export async function fetchAdminDriverOnboardingExportHistory(
+  client: MobilisApiClient,
+  query?: {
+    page?: number;
+    pageSize?: number;
+  },
+) {
+  return client.request<DriverOnboardingExportHistoryResponse>(
+    apiRoutes.admin.driverOnboardingExportHistory,
+    {
+      query,
+    },
+  );
 }
 
 export async function fetchAdminFeatureFlags(client: MobilisApiClient) {

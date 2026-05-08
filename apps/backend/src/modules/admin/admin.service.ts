@@ -189,6 +189,17 @@ function nullablePositiveInteger(value: Prisma.JsonValue | undefined) {
     : null;
 }
 
+function normalizeOnboardingExportGuidanceFilter(
+  value: Prisma.JsonValue | undefined,
+) {
+  return value === 'approve' ||
+    value === 'review' ||
+    value === 'resubmit' ||
+    value === 'all'
+    ? value
+    : 'all';
+}
+
 function resolveDriverDocumentIntegrity(
   metadata: Prisma.JsonValue | null | undefined,
 ): DriverDocumentIntegritySignal {
@@ -3145,6 +3156,70 @@ export class AdminService {
       headers.map(csvCell).join(','),
       ...rows.map((row) => row.map(csvCell).join(',')),
     ].join('\n');
+  }
+
+  async driverOnboardingExportHistory(
+    query: PageQueryDto = new PageQueryDto(),
+  ) {
+    const { page, pageSize, skip, take } = resolvePageQuery(query);
+    const where: Prisma.AuditLogWhereInput = {
+      action: 'DRIVER_ONBOARDING_QUEUE_EXPORTED',
+      entityType: 'DRIVER_PROFILE',
+    };
+    const [exports, total] = await Promise.all([
+      this.prisma.auditLog.findMany({
+        skip,
+        take,
+        where,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        select: {
+          id: true,
+          entityId: true,
+          metadata: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              role: true,
+            },
+          },
+        },
+      }),
+      this.prisma.auditLog.count({ where }),
+    ]);
+
+    return {
+      exports: exports.map((entry) => {
+        const metadata = isJsonRecord(entry.metadata) ? entry.metadata : {};
+
+        return {
+          id: entry.id,
+          createdAt: entry.createdAt.toISOString(),
+          actor: {
+            id: entry.user.id,
+            name: entry.user.fullName,
+            role: entry.user.role,
+          },
+          guidanceFilter: normalizeOnboardingExportGuidanceFilter(
+            metadata.guidanceFilter ?? entry.entityId ?? undefined,
+          ),
+          searchQuery: nullableString(metadata.searchQuery),
+          exportedCount: nullableNonNegativeInteger(metadata.exportedCount) ?? 0,
+          scannedCount: nullableNonNegativeInteger(metadata.scannedCount) ?? 0,
+          limit: nullablePositiveInteger(metadata.limit) ?? null,
+          format: metadata.format === 'csv' ? 'csv' : 'unknown',
+        };
+      }),
+      meta: {
+        page,
+        pageSize,
+        total,
+        pageCount: Math.ceil(total / pageSize),
+      },
+    };
   }
 
   async driverWallets(query: PageQueryDto = new PageQueryDto()) {

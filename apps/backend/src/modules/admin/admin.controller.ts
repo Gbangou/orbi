@@ -124,6 +124,15 @@ export class AdminController {
     return this.adminService.driverOnboardingQueue(query);
   }
 
+  @Get('driver-onboarding/export-history')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  driverOnboardingExportHistory(@Query() query: PageQueryDto) {
+    return this.adminService.driverOnboardingExportHistory(query);
+  }
+
   @Get('driver-onboarding/export.csv')
   @Version('1')
   @ApiBearerAuth('session-token')
