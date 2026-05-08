@@ -42,7 +42,8 @@ export class UpdateDriverDocumentObjectVerificationDto {
   @IsOptional()
   @IsString()
   @Matches(/^[a-f0-9]{64}$/i, {
-    message: 'Provider SHA-256 digest must be a 64 character hexadecimal string.',
+    message:
+      'Provider SHA-256 digest must be a 64 character hexadecimal string.',
   })
   sha256?: string;
 

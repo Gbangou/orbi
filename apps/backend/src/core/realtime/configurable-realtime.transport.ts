@@ -91,7 +91,10 @@ export class ConfigurableRealtimeTransport implements RealtimeTransport {
       this.configService.get<string>('infrastructure.realtime.adapter') ??
       'in-memory';
 
-    if (configuredAdapter === 'postgres' || configuredAdapter === 'postgresql') {
+    if (
+      configuredAdapter === 'postgres' ||
+      configuredAdapter === 'postgresql'
+    ) {
       return this.postgresTransport ?? this.inMemoryTransport;
     }
 

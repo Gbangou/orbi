@@ -3153,7 +3153,8 @@ describe('AdminService', () => {
       verifiedAt: '2026-04-18T08:02:00.000Z',
       sizeBytes: null,
       sha256: null,
-      failureReason: 'Document object SHA-256 does not match captured upload integrity.',
+      failureReason:
+        'Document object SHA-256 does not match captured upload integrity.',
     });
     prisma.driverDocument.update.mockResolvedValue({
       id: 'doc-1',

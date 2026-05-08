@@ -162,6 +162,19 @@ enum SupportTicketStatus {
   CLOSED
 }
 
+enum JobQueueKind {
+  PAYMENT_WEBHOOK
+  DRIVER_DOCUMENT
+  NOTIFICATION
+}
+
+enum JobQueueStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  DEAD_LETTER
+}
+
 model User {
   id               String           @id @default(cuid())
   email            String           @unique
@@ -610,4 +623,29 @@ model SystemSetting {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("system_settings")
+}
+
+model JobQueueEntry {
+  id               String         @id @default(cuid())
+  kind             JobQueueKind
+  status           JobQueueStatus @default(PENDING)
+  dedupeKey        String?        @unique @map("dedupe_key")
+  entityType       String?        @map("entity_type")
+  entityId         String?        @map("entity_id")
+  payload          Json
+  attempts         Int            @default(0)
+  maxAttempts      Int            @default(5) @map("max_attempts")
+  nextRunAt        DateTime       @default(now()) @map("next_run_at")
+  lockedAt         DateTime?      @map("locked_at")
+  completedAt      DateTime?      @map("completed_at")
+  failedAt         DateTime?      @map("failed_at")
+  lastError        String?        @map("last_error")
+  deadLetterReason String?        @map("dead_letter_reason")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@index([kind, status, nextRunAt])
+  @@index([status, failedAt])
+  @@index([entityType, entityId, createdAt])
+  @@map("job_queue_entries")
 }

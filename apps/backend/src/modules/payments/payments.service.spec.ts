@@ -228,11 +228,11 @@ describe('PaymentsService', () => {
       status: 'MATCHED',
       estimatedFare: 2400,
       currency: 'XOF',
-          rider: {
-            userId: 'user-1',
-          },
-          trip: null,
-        });
+      rider: {
+        userId: 'user-1',
+      },
+      trip: null,
+    });
 
     await expect(
       service.createCheckoutIntent(

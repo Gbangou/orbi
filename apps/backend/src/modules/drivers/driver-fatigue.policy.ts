@@ -19,15 +19,22 @@ export function evaluateDriverFatigue(input: {
       return total;
     }
 
-    return total + Math.max(0, Math.round(
-      (trip.completedAt.getTime() - trip.startedAt.getTime()) / 60000,
-    ));
+    return (
+      total +
+      Math.max(
+        0,
+        Math.round(
+          (trip.completedAt.getTime() - trip.startedAt.getTime()) / 60000,
+        ),
+      )
+    );
   }, 0);
   const completedTripCount = completedTrips.length;
-  const latestCompletedAt = completedTrips
-    .map((trip) => trip.completedAt)
-    .filter((date): date is Date => Boolean(date))
-    .sort((left, right) => right.getTime() - left.getTime())[0] ?? null;
+  const latestCompletedAt =
+    completedTrips
+      .map((trip) => trip.completedAt)
+      .filter((date): date is Date => Boolean(date))
+      .sort((left, right) => right.getTime() - left.getTime())[0] ?? null;
   const restUntil = latestCompletedAt
     ? new Date(latestCompletedAt.getTime() + driverFatigueRestMinutes * 60000)
     : null;
@@ -35,9 +42,7 @@ export function evaluateDriverFatigue(input: {
     completedTripCount >= driverFatigueMaxCompletedTrips ||
     drivingMinutes >= driverFatigueMaxDrivingMinutes;
   const blocked = Boolean(
-    hardLimitReached &&
-    restUntil &&
-    restUntil.getTime() > input.now.getTime(),
+    hardLimitReached && restUntil && restUntil.getTime() > input.now.getTime(),
   );
   const warning =
     !blocked &&
@@ -45,7 +50,11 @@ export function evaluateDriverFatigue(input: {
       drivingMinutes >= driverFatigueMaxDrivingMinutes - 45);
 
   return {
-    state: blocked ? 'blocked' as const : warning ? 'warning' as const : 'clear' as const,
+    state: blocked
+      ? ('blocked' as const)
+      : warning
+        ? ('warning' as const)
+        : ('clear' as const),
     completedTrips: completedTripCount,
     drivingMinutes,
     windowHours: driverFatigueWindowHours,

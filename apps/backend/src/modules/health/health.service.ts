@@ -105,8 +105,7 @@ export class HealthService {
             this.configService.get<string>('payments.provider') ??
             'flutterwave',
           refundMode:
-            this.configService.get<string>('payments.refunds.mode') ??
-            'manual',
+            this.configService.get<string>('payments.refunds.mode') ?? 'manual',
           lifecycleState: this.appLifecycleService.snapshot().state,
         }),
         driverReservationExpiry: driverReservationExpirySnapshot,
@@ -298,8 +297,12 @@ export class HealthService {
             : 'Refunds en mode manual/console; acceptable avant provider live.',
       },
     ];
-    const failedChecks = checks.filter((check) => check.state === 'fail').length;
-    const warningChecks = checks.filter((check) => check.state === 'warn').length;
+    const failedChecks = checks.filter(
+      (check) => check.state === 'fail',
+    ).length;
+    const warningChecks = checks.filter(
+      (check) => check.state === 'warn',
+    ).length;
 
     return {
       environment,
@@ -362,7 +365,8 @@ export class HealthService {
         target: '< 2 s',
         window: 'rolling-15m',
         owner: 'engineering' as const,
-        state: input.realtimeStatus === 'up' ? ('pass' as const) : ('fail' as const),
+        state:
+          input.realtimeStatus === 'up' ? ('pass' as const) : ('fail' as const),
         currentSignal:
           input.realtimeStatus === 'up'
             ? 'Transport realtime operationnel.'

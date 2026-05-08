@@ -47,7 +47,7 @@ export class ConfigurableRateLimitStore implements RateLimitStore {
     }
   }
 
-  async snapshot() {
+  async snapshot(): Promise<RateLimitSnapshot> {
     const configuredAdapter =
       this.configService.get<string>('infrastructure.rateLimit.adapter') ??
       'in-memory';
@@ -58,27 +58,29 @@ export class ConfigurableRateLimitStore implements RateLimitStore {
       return this.decorateSnapshot(delegateSnapshot, configuredAdapter);
     } catch (error) {
       this.activateFallback('snapshot', error);
-
       return this.decorateSnapshot(
-        await this.inMemoryStore.snapshot(),
+        this.inMemoryStore.snapshot(),
         configuredAdapter,
       );
     }
   }
 
-  private resolveDelegate() {
+  private resolveDelegate(): RateLimitStore {
     const configuredAdapter =
       this.configService.get<string>('infrastructure.rateLimit.adapter') ??
       'in-memory';
 
-    if (configuredAdapter === 'postgres' || configuredAdapter === 'postgresql') {
+    if (
+      configuredAdapter === 'postgres' ||
+      configuredAdapter === 'postgresql'
+    ) {
       return this.postgresStore ?? this.inMemoryStore;
     }
 
     return this.inMemoryStore;
   }
 
-  private resolveActiveStore() {
+  private resolveActiveStore(): RateLimitStore {
     return this.fallbackActivated ? this.inMemoryStore : this.resolveDelegate();
   }
 
@@ -117,10 +119,7 @@ export class ConfigurableRateLimitStore implements RateLimitStore {
     return uniqueReasons.length > 0 ? uniqueReasons.join(' | ') : null;
   }
 
-  private activateFallback(
-    operation: 'consume' | 'snapshot',
-    error: unknown,
-  ) {
+  private activateFallback(operation: 'consume' | 'snapshot', error: unknown) {
     const message =
       error instanceof Error ? error.message : 'Unknown rate-limit failure';
     const degradeReason = `Rate-limit store ${operation} failed: ${message}`;

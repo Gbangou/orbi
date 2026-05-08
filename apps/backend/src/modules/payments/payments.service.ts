@@ -280,7 +280,10 @@ export class PaymentsService {
         throw new BadRequestException('Payment attempt was not found.');
       }
 
-      if (attempt.status === 'REFUNDED' || attempt.status === 'REFUND_PENDING') {
+      if (
+        attempt.status === 'REFUNDED' ||
+        attempt.status === 'REFUND_PENDING'
+      ) {
         return {
           action:
             attempt.status === 'REFUNDED'
@@ -969,7 +972,9 @@ export class PaymentsService {
       paymentAttemptId = attempt.id;
       userId = attempt.userId;
 
-      if (this.isProcessedRefundStatus(this.extractWebhookRefundStatus(payload))) {
+      if (
+        this.isProcessedRefundStatus(this.extractWebhookRefundStatus(payload))
+      ) {
         reconciledAttemptCount =
           await this.finalizeProcessedRefundAttemptFromProvider(attempt.id, {
             raw: payload as unknown as Record<string, unknown>,
@@ -1440,10 +1445,7 @@ export class PaymentsService {
     return 'PENDING' as const;
   }
 
-  private isRefundWebhookEvent(
-    event: string,
-    payload: PaymentWebhookPayload,
-  ) {
+  private isRefundWebhookEvent(event: string, payload: PaymentWebhookPayload) {
     const normalizedEvent = event.toLowerCase();
 
     if (normalizedEvent.includes('refund')) {
@@ -1454,12 +1456,12 @@ export class PaymentsService {
 
     return Boolean(
       this.stringValue(data.amount_refunded) ||
-        this.stringValue(data.refund_status) ||
-        this.stringValue(data.refundStatus) ||
-        this.stringValue(data.AmountRefunded) ||
-        this.stringValue(data.TransactionId) ||
-        this.stringValue(payload.AmountRefunded) ||
-        this.stringValue(payload.TransactionId),
+      this.stringValue(data.refund_status) ||
+      this.stringValue(data.refundStatus) ||
+      this.stringValue(data.AmountRefunded) ||
+      this.stringValue(data.TransactionId) ||
+      this.stringValue(payload.AmountRefunded) ||
+      this.stringValue(payload.TransactionId),
     );
   }
 

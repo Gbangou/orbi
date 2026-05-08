@@ -72,7 +72,10 @@ describe('validateEnvironment', () => {
     ],
     [
       'localhost frontend origin',
-      { FRONTEND_ALLOWED_ORIGINS: 'https://admin.mobilis.app,http://localhost:3001' },
+      {
+        FRONTEND_ALLOWED_ORIGINS:
+          'https://admin.mobilis.app,http://localhost:3001',
+      },
       'FRONTEND_ALLOWED_ORIGINS must not include localhost in production.',
     ],
     [
@@ -92,7 +95,10 @@ describe('validateEnvironment', () => {
     ],
     [
       'localhost webhook URL',
-      { PAYMENTS_DEFAULT_WEBHOOK_URL: 'http://localhost:3000/api/v1/payments/webhooks' },
+      {
+        PAYMENTS_DEFAULT_WEBHOOK_URL:
+          'http://localhost:3000/api/v1/payments/webhooks',
+      },
       'PAYMENTS_DEFAULT_WEBHOOK_URL must not use localhost in production.',
     ],
     [

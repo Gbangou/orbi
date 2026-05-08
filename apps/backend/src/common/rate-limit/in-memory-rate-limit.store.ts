@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { RateLimitDecision, RateLimitStore } from './rate-limit.types';
+import type {
+  RateLimitDecision,
+  RateLimitSnapshot,
+  RateLimitStore,
+} from './rate-limit.types';
 
 type CounterEntry = {
   count: number;
@@ -38,7 +42,7 @@ export class InMemoryRateLimitStore implements RateLimitStore {
     };
   }
 
-  snapshot() {
+  snapshot(): RateLimitSnapshot {
     return {
       adapter: 'in-memory',
       sharedBackplane: false,

@@ -315,8 +315,12 @@ function resolveDriverDocumentIntegrity(
           objectVerificationState === 'failed'
         ? 'quarantined'
         : 'pending';
-  const safetyScanEngine = safetyScan ? nullableString(safetyScan.engine) : null;
-  const safetyScannedAt = safetyScan ? nullableString(safetyScan.scannedAt) : null;
+  const safetyScanEngine = safetyScan
+    ? nullableString(safetyScan.engine)
+    : null;
+  const safetyScannedAt = safetyScan
+    ? nullableString(safetyScan.scannedAt)
+    : null;
   const safetyFindings = safetyScan
     ? nullableStringArray(safetyScan.findings)
     : objectVerificationState === 'failed'
@@ -325,7 +329,7 @@ function resolveDriverDocumentIntegrity(
   const quarantineReason = safetyScan
     ? nullableString(safetyScan.quarantineReason)
     : objectVerificationState === 'failed'
-      ? objectFailureReason ?? 'Provider object verification failed.'
+      ? (objectFailureReason ?? 'Provider object verification failed.')
       : null;
   const checks = [
     {
@@ -371,7 +375,8 @@ function resolveDriverDocumentIntegrity(
           : safetyScanState === 'quarantined'
             ? 'Document en quarantaine'
             : 'Scan documentaire en attente',
-      state: safetyScanState === 'clear' ? ('pass' as const) : ('warn' as const),
+      state:
+        safetyScanState === 'clear' ? ('pass' as const) : ('warn' as const),
     },
   ];
   const passedChecks = checks.filter((check) => check.state === 'pass').length;
@@ -544,7 +549,7 @@ function resolveDriverOnboardingDecisionSnapshot(input: {
 
       return {
         ...document,
-        status: (override?.status ?? document.status) as DriverDocumentStatus,
+        status: override?.status ?? document.status,
         expiresAt: override?.expiresAt
           ? new Date(override.expiresAt)
           : document.expiresAt,
@@ -780,6 +785,21 @@ function isDispatchSettingsRecord(
   value: unknown,
 ): value is Record<string, unknown> {
   return Boolean(value) && !Array.isArray(value) && typeof value === 'object';
+}
+
+function isLaunchReadinessOwner(
+  value: unknown,
+): value is LaunchReadinessAcknowledgement['owner'] {
+  return (
+    typeof value === 'string' &&
+    ['ops', 'engineering', 'support', 'finance'].includes(value)
+  );
+}
+
+function isLaunchReadinessSeverity(
+  value: unknown,
+): value is LaunchReadinessAcknowledgement['severity'] {
+  return typeof value === 'string' && ['warning', 'blocking'].includes(value);
 }
 
 const sensitivePayloadKeys = new Set([
@@ -1036,16 +1056,16 @@ function serializeLaunchReadinessAcknowledgements(
     const severity = metadata.severity;
 
     if (
-      !['ops', 'engineering', 'support', 'finance'].includes(String(owner)) ||
-      !['warning', 'blocking'].includes(String(severity))
+      !isLaunchReadinessOwner(owner) ||
+      !isLaunchReadinessSeverity(severity)
     ) {
       continue;
     }
 
     latestByCheckId.set(entry.entityId, {
       checkId: entry.entityId,
-      owner: owner as LaunchReadinessAcknowledgement['owner'],
-      severity: severity as LaunchReadinessAcknowledgement['severity'],
+      owner,
+      severity,
       acknowledgedAt: entry.createdAt.toISOString(),
       actor: {
         id: entry.user.id,
@@ -4843,12 +4863,8 @@ export class AdminService {
       document.metadata && isJsonRecord(document.metadata)
         ? document.metadata
         : {};
-    const previousIntegrity = previousMetadata.integrity as
-      | Prisma.JsonValue
-      | undefined;
-    const integrity = isJsonRecord(previousIntegrity)
-      ? previousIntegrity
-      : {};
+    const previousIntegrity = previousMetadata.integrity;
+    const integrity = isJsonRecord(previousIntegrity) ? previousIntegrity : {};
     const providerVerification =
       await this.documentObjectStorageService.verifyStoredDocument({
         storageKey: document.storageKey,
@@ -4965,9 +4981,7 @@ export class AdminService {
     const previousIntegrity = previousMetadata.integrity as
       | Prisma.JsonValue
       | undefined;
-    const integrity = isJsonRecord(previousIntegrity)
-      ? previousIntegrity
-      : {};
+    const integrity = isJsonRecord(previousIntegrity) ? previousIntegrity : {};
     const capturedSha256 = nullableString(integrity.sha256);
     const capturedSizeBytes = nullablePositiveInteger(integrity.sizeBytes);
     const findings = [
@@ -4975,7 +4989,9 @@ export class AdminService {
       !extension || !policy?.allowedExtensions.includes(extension)
         ? 'unsupported-file-extension'
         : null,
-      policy && objectVerification.sizeBytes && objectVerification.sizeBytes > policy.maxBytes
+      policy &&
+      objectVerification.sizeBytes &&
+      objectVerification.sizeBytes > policy.maxBytes
         ? 'object-size-exceeds-policy'
         : null,
       capturedSizeBytes && objectVerification.sizeBytes !== capturedSizeBytes

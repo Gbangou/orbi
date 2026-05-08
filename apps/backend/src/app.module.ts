@@ -7,6 +7,7 @@ import { RealtimeModule } from './core/realtime/realtime.module';
 import { RuntimeModule } from './core/runtime/runtime.module';
 import { RateLimitModule } from './common/rate-limit/rate-limit.module';
 import { DocumentLinksModule } from './common/document-links/document-links.module';
+import { JobQueueModule } from './common/job-queue/job-queue.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DriversModule } from './modules/drivers/drivers.module';
@@ -32,6 +33,7 @@ import { MobileObservabilityModule } from './modules/mobile-observability/mobile
     RuntimeModule,
     RateLimitModule,
     DocumentLinksModule,
+    JobQueueModule,
     PrismaModule,
     RealtimeModule,
     HealthModule,

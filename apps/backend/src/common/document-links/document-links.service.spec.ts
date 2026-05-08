@@ -32,7 +32,7 @@ describe('DocumentLinksService', () => {
       Buffer.from(url.searchParams.get('payload') ?? '', 'base64url').toString(
         'utf8',
       ),
-    );
+    ) as Record<string, unknown>;
 
     expect(link.storageKey).toMatch(
       /^driver-1\/identity_document\/[a-f0-9-]+-carte-nationale-2026\.pdf$/,
@@ -49,10 +49,13 @@ describe('DocumentLinksService', () => {
         kind: 'driver-document-upload',
         fileName: 'carte-nationale-2026.pdf',
         maxBytes: 5_000_000,
+        issuedAt: expect.any(String) as string,
       }),
     );
+    const issuedAt =
+      typeof payload.issuedAt === 'string' ? payload.issuedAt : '';
     expect(
-      Date.parse(link.expiresAt) - Date.parse(payload.issuedAt),
+      Date.parse(link.expiresAt) - Date.parse(issuedAt),
     ).toBeGreaterThanOrEqual(60_000);
   });
 

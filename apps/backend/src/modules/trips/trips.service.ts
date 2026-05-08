@@ -82,7 +82,8 @@ function distanceToRouteKm(
 
   const latitudeKm = 111.32;
   const longitudeKm =
-    111.32 * Math.cos(((pickup.latitude + destination.latitude) / 2) * (Math.PI / 180));
+    111.32 *
+    Math.cos(((pickup.latitude + destination.latitude) / 2) * (Math.PI / 180));
   const ax = pickup.longitude * longitudeKm;
   const ay = pickup.latitude * latitudeKm;
   const bx = destination.longitude * longitudeKm;
@@ -101,7 +102,10 @@ function distanceToRouteKm(
   return Math.hypot(px - closestX, py - closestY);
 }
 
-function getRoutePositionPayload(event: { payload?: unknown; createdAt: Date }) {
+function getRoutePositionPayload(event: {
+  payload?: unknown;
+  createdAt: Date;
+}) {
   const payload = isRecord(event.payload) ? event.payload : {};
   const latitude = toNumber(payload.latitude);
   const longitude = toNumber(payload.longitude);
@@ -309,7 +313,8 @@ export class TripsService {
         vehicleLabel: `${matchedTrip.vehicle.make} ${matchedTrip.vehicle.model}`,
         lastEvent: lastEvent
           ? {
-              label: TRIP_EVENT_LABELS[lastEvent.eventType] ?? lastEvent.eventType,
+              label:
+                TRIP_EVENT_LABELS[lastEvent.eventType] ?? lastEvent.eventType,
               createdAt: lastEvent.createdAt.toISOString(),
             }
           : null,
@@ -410,7 +415,9 @@ export class TripsService {
             .map((event) => {
               const eventPayload = isRecord(event.payload) ? event.payload : {};
 
-              return String(eventPayload.alertType ?? '');
+              return typeof eventPayload.alertType === 'string'
+                ? eventPayload.alertType
+                : '';
             }),
         );
         const freshAlerts = alerts.filter(

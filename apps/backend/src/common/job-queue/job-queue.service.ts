@@ -1,0 +1,251 @@
+import { randomUUID } from 'crypto';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../../core/prisma/prisma.service';
+
+export type JobQueueKind =
+  | 'PAYMENT_WEBHOOK'
+  | 'DRIVER_DOCUMENT'
+  | 'NOTIFICATION';
+export type JobQueueStatus =
+  | 'PENDING'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'DEAD_LETTER';
+
+export type JobQueueEntry = {
+  id: string;
+  kind: JobQueueKind;
+  status: JobQueueStatus;
+  dedupeKey: string | null;
+  entityType: string | null;
+  entityId: string | null;
+  payload: Prisma.JsonValue;
+  attempts: number;
+  maxAttempts: number;
+  nextRunAt: Date;
+  lockedAt: Date | null;
+  completedAt: Date | null;
+  failedAt: Date | null;
+  lastError: string | null;
+  deadLetterReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type JobQueueRow = {
+  id: string;
+  kind: JobQueueKind;
+  status: JobQueueStatus;
+  dedupe_key: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  payload: Prisma.JsonValue;
+  attempts: number;
+  max_attempts: number;
+  next_run_at: Date;
+  locked_at: Date | null;
+  completed_at: Date | null;
+  failed_at: Date | null;
+  last_error: string | null;
+  dead_letter_reason: string | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
+@Injectable()
+export class JobQueueService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async enqueue(input: {
+    kind: JobQueueKind;
+    payload: Prisma.InputJsonValue;
+    dedupeKey?: string | null;
+    entityType?: string | null;
+    entityId?: string | null;
+    maxAttempts?: number;
+    nextRunAt?: Date;
+  }) {
+    this.assertKnownKind(input.kind);
+    const maxAttempts = input.maxAttempts ?? 5;
+
+    if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 25) {
+      throw new BadRequestException(
+        'Job maxAttempts must be between 1 and 25.',
+      );
+    }
+
+    const rows = await this.prisma.$queryRaw<JobQueueRow[]>`
+      INSERT INTO job_queue_entries (
+        id,
+        kind,
+        status,
+        dedupe_key,
+        entity_type,
+        entity_id,
+        payload,
+        max_attempts,
+        next_run_at,
+        updated_at
+      )
+      VALUES (
+        ${randomUUID()},
+        ${input.kind}::"JobQueueKind",
+        'PENDING'::"JobQueueStatus",
+        ${input.dedupeKey ?? null},
+        ${input.entityType ?? null},
+        ${input.entityId ?? null},
+        ${input.payload}::jsonb,
+        ${maxAttempts},
+        ${input.nextRunAt ?? new Date()},
+        NOW()
+      )
+      ON CONFLICT (dedupe_key) DO UPDATE SET
+        payload = EXCLUDED.payload,
+        entity_type = EXCLUDED.entity_type,
+        entity_id = EXCLUDED.entity_id,
+        next_run_at = LEAST(job_queue_entries.next_run_at, EXCLUDED.next_run_at),
+        updated_at = NOW()
+      RETURNING *
+    `;
+
+    return this.mapRow(rows[0]);
+  }
+
+  async claimDueJobs(input: { kinds?: JobQueueKind[]; limit?: number } = {}) {
+    const limit = input.limit ?? 10;
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new BadRequestException(
+        'Job claim limit must be between 1 and 100.',
+      );
+    }
+
+    for (const kind of input.kinds ?? []) {
+      this.assertKnownKind(kind);
+    }
+
+    const rows = await this.prisma.$queryRaw<JobQueueRow[]>`
+      UPDATE job_queue_entries
+      SET
+        status = 'RUNNING'::"JobQueueStatus",
+        attempts = attempts + 1,
+        locked_at = NOW(),
+        updated_at = NOW()
+      WHERE id IN (
+        SELECT id
+        FROM job_queue_entries
+        WHERE status = 'PENDING'::"JobQueueStatus"
+          AND next_run_at <= NOW()
+          AND (${input.kinds ?? []}::"JobQueueKind"[] = '{}' OR kind = ANY(${input.kinds ?? []}::"JobQueueKind"[]))
+        ORDER BY next_run_at ASC, created_at ASC
+        LIMIT ${limit}
+        FOR UPDATE SKIP LOCKED
+      )
+      RETURNING *
+    `;
+
+    return rows.map((row) => this.mapRow(row));
+  }
+
+  async complete(jobId: string) {
+    const rows = await this.prisma.$queryRaw<JobQueueRow[]>`
+      UPDATE job_queue_entries
+      SET
+        status = 'SUCCEEDED'::"JobQueueStatus",
+        completed_at = NOW(),
+        locked_at = NULL,
+        last_error = NULL,
+        updated_at = NOW()
+      WHERE id = ${jobId}
+      RETURNING *
+    `;
+
+    return rows[0] ? this.mapRow(rows[0]) : null;
+  }
+
+  async fail(
+    jobId: string,
+    input: { error: string; retryDelayMs?: number; deadLetterReason?: string },
+  ) {
+    const error = input.error.slice(0, 1_000);
+    const retryDelayMs = input.retryDelayMs ?? 60_000;
+
+    if (!Number.isInteger(retryDelayMs) || retryDelayMs < 0) {
+      throw new BadRequestException('Job retryDelayMs must be positive.');
+    }
+
+    const rows = await this.prisma.$queryRaw<JobQueueRow[]>`
+      UPDATE job_queue_entries
+      SET
+        status = CASE
+          WHEN attempts >= max_attempts THEN 'DEAD_LETTER'::"JobQueueStatus"
+          ELSE 'PENDING'::"JobQueueStatus"
+        END,
+        next_run_at = NOW() + (${retryDelayMs}::integer * INTERVAL '1 millisecond'),
+        locked_at = NULL,
+        failed_at = NOW(),
+        last_error = ${error},
+        dead_letter_reason = CASE
+          WHEN attempts >= max_attempts THEN ${input.deadLetterReason ?? error}
+          ELSE dead_letter_reason
+        END,
+        updated_at = NOW()
+      WHERE id = ${jobId}
+      RETURNING *
+    `;
+
+    return rows[0] ? this.mapRow(rows[0]) : null;
+  }
+
+  async snapshot() {
+    const rows = await this.prisma.$queryRaw<
+      Array<{ kind: JobQueueKind; status: JobQueueStatus; count: string }>
+    >`
+      SELECT kind, status, COUNT(*) AS count
+      FROM job_queue_entries
+      GROUP BY kind, status
+      ORDER BY kind, status
+    `;
+
+    return {
+      durable: true,
+      families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'] as const,
+      counts: rows.map((row) => ({
+        kind: row.kind,
+        status: row.status,
+        count: Number(row.count),
+      })),
+    };
+  }
+
+  private mapRow(row: JobQueueRow): JobQueueEntry {
+    return {
+      id: row.id,
+      kind: row.kind,
+      status: row.status,
+      dedupeKey: row.dedupe_key,
+      entityType: row.entity_type,
+      entityId: row.entity_id,
+      payload: row.payload,
+      attempts: row.attempts,
+      maxAttempts: row.max_attempts,
+      nextRunAt: row.next_run_at,
+      lockedAt: row.locked_at,
+      completedAt: row.completed_at,
+      failedAt: row.failed_at,
+      lastError: row.last_error,
+      deadLetterReason: row.dead_letter_reason,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private assertKnownKind(kind: string) {
+    if (
+      !['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'].includes(kind)
+    ) {
+      throw new BadRequestException(`Unsupported job kind ${kind}.`);
+    }
+  }
+}

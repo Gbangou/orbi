@@ -163,7 +163,9 @@ describe('HealthService', () => {
         }),
       ]),
     );
-    expect(result.operations.serviceLevelObjectives.mobileErrorTaxonomy).toEqual(
+    expect(
+      result.operations.serviceLevelObjectives.mobileErrorTaxonomy,
+    ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: 'MOB-PAYMENT-PROVIDER',
@@ -351,8 +353,13 @@ describe('HealthService', () => {
   });
 
   it('summarizes production readiness blockers without exposing secrets', async () => {
-    const { configService, prisma, rateLimitService, realtimeService, service } =
-      createService();
+    const {
+      configService,
+      prisma,
+      rateLimitService,
+      realtimeService,
+      service,
+    } = createService();
 
     configService.get = jest.fn((key: string) => {
       const values: Record<string, string | boolean> = {

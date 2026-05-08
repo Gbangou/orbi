@@ -4,9 +4,7 @@ import { Pool, type PoolConfig } from 'pg';
 import type { RateLimitDecision, RateLimitStore } from './rate-limit.types';
 
 @Injectable()
-export class PostgresRateLimitStore
-  implements RateLimitStore, OnModuleDestroy
-{
+export class PostgresRateLimitStore implements RateLimitStore, OnModuleDestroy {
   private readonly pool: Pool;
   private initPromise: Promise<void> | null = null;
 

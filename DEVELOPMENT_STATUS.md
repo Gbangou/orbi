@@ -39,6 +39,10 @@ paiement provider, observabilite et runbooks verts.
 - Backplane PostgreSQL partage ajoute pour rate-limit et realtime:
   `RATE_LIMIT_ADAPTER=postgres` et `REALTIME_ADAPTER=postgres` sortent du
   fallback memoire et exposent `sharedBackplane=true` dans `health`.
+- File durable PostgreSQL ajoutee pour les familles critiques
+  `PAYMENT_WEBHOOK`, `DRIVER_DOCUMENT` et `NOTIFICATION`, avec retry borne,
+  verrouillage `FOR UPDATE SKIP LOCKED`, deduplication et passage en
+  dead-letter apres epuisement des tentatives.
 
 ## Architecture active
 
@@ -53,7 +57,8 @@ paiement provider, observabilite et runbooks verts.
 
 ## Priorite d'execution
 
-1. Ajouter queues/dead-letter pour webhooks, documents et notifications.
+1. Brancher les workers de consommation sur la queue durable: replay webhooks,
+   verification documentaire provider et notifications.
 2. Capturer fixtures provider paiement sandbox, surtout refund/reconciliation.
 3. Brancher un scan antivirus/anti-fraude documentaire externe sur `safetyScan`.
 4. Adapter S3/GCS production pour objets documentaires.
@@ -88,7 +93,8 @@ git diff --check
   provider locale et quarantaine locale; il faut encore adapter S3/GCS
   production et brancher un scan documentaire externe.
 - Les flux argent sont audites et idempotents sur les fondations, mais les
-  webhooks/retries/dead-letter doivent etre prouves avec fixtures provider.
+  workers webhooks/retries/dead-letter doivent etre prouves avec fixtures
+  provider.
 - La production ne doit pas etre declaree "large" sans CI verte, observabilite,
   rollback pratique, secrets production, URLs externes HTTPS et validation
   terrain repetee.

@@ -145,10 +145,16 @@ export class RidersService {
   ) {
     const riderProfileId = this.getRiderProfileId(auth);
     const normalizedPhone = payload.phoneNumber?.trim() || null;
-    const shareMode = normalizedPhone ? (payload.shareMode ?? 'MANUAL') : 'MANUAL';
+    const shareMode = normalizedPhone
+      ? (payload.shareMode ?? 'MANUAL')
+      : 'MANUAL';
     const notes = payload.notes?.trim() || null;
 
-    if (!normalizedPhone && payload.shareMode && payload.shareMode !== 'MANUAL') {
+    if (
+      !normalizedPhone &&
+      payload.shareMode &&
+      payload.shareMode !== 'MANUAL'
+    ) {
       throw new BadRequestException(
         'A trusted contact phone number is required for automatic share modes.',
       );

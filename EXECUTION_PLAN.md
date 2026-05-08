@@ -75,6 +75,8 @@ Mobilis vise une plateforme de mobilite complete, premium et francaise d'abord p
 - Backplane partage pour realtime et rate limiting
 - Feature flags et canary releases pour modules critiques
 - Queues de jobs pour webhooks, notifications, antifraude et documents
+- File durable PostgreSQL avec deduplication, retry borne et dead-letter pour
+  webhooks paiement, documents chauffeur et notifications
 - SLO runtime exposes dans `/health`, dashboard admin risque production,
   taxonomie crash/error mobile et alerting actionnable
 - Score excellence terrain dans launch-readiness pour comparer runtime/mobile,
