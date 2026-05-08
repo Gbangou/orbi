@@ -9,6 +9,7 @@ import {
   fetchAdminDriverOnboardingExportHistory,
   fetchAdminDriverOnboardingQueue,
   updateAdminDriverOnboardingReview,
+  verifyAdminDriverDocumentObjectWithProvider,
   type DriverOnboardingExportHistoryResponse,
   type DriverOnboardingQueueResponse,
 } from '@mobilis/api';
@@ -414,6 +415,29 @@ export function DriverOnboardingReviewBoard({
     }
   }
 
+  async function handleVerifyDocumentObject(driverId: string, documentId: string) {
+    setBusyDocumentId(documentId);
+    setStatus('Verification provider du justificatif...');
+
+    try {
+      const authClient = await withAdminClient();
+      const response = await verifyAdminDriverDocumentObjectWithProvider(
+        authClient,
+        driverId,
+        documentId,
+      );
+      await refreshQueue(
+        response.document.objectVerification.state === 'confirmed'
+          ? 'Objet provider confirme pour le justificatif.'
+          : 'Verification provider echouee, dossier remis en revue.',
+      );
+    } catch {
+      setStatus('La verification provider du justificatif a echoue.');
+    } finally {
+      setBusyDocumentId(null);
+    }
+  }
+
   async function handleExportCsv() {
     setStatus('Generation export CSV audite...');
 
@@ -804,6 +828,18 @@ export function DriverOnboardingReviewBoard({
                         Ouvrir
                       </a>
                     ) : null}
+                    <button
+                      className="ghost-button"
+                      disabled={busyDocumentId === document.id}
+                      onClick={() =>
+                        void handleVerifyDocumentObject(driver.id, document.id)
+                      }
+                      type="button"
+                    >
+                      {busyDocumentId === document.id
+                        ? 'Verification...'
+                        : 'Verifier objet'}
+                    </button>
                   </div>
                 </div>
               ))}
