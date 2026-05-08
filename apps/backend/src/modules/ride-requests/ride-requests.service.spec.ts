@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { NotFoundException } from '@nestjs/common';
 import { RideRequestProjector } from './ride-request.projector';
 import { RideRequestsService } from './ride-requests.service';
 
@@ -344,6 +345,33 @@ describe('RideRequestsService', () => {
       },
     });
     expect(result.rideRequest.status).toBe('CANCELLED');
+  });
+
+  it('does not reveal or cancel another rider ride request', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.rideRequest.findUnique.mockResolvedValue({
+      id: 'request-1',
+      riderId: 'rider-2',
+      status: 'REQUESTED',
+      trip: null,
+    });
+
+    await expect(
+      service.cancel(
+        {
+          user: {
+            role: 'RIDER',
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        'request-1',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.rideRequest.update).not.toHaveBeenCalled();
+    expect(realtimeService.publish).not.toHaveBeenCalled();
   });
 
   it('rejects ride requests when the rider already has an active trip', async () => {

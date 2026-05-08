@@ -1680,18 +1680,14 @@ export class TripsService {
       auth.user.role === UserRole.RIDER &&
       trip.riderId !== auth.user.riderProfile?.id
     ) {
-      throw new BadRequestException(
-        'This trip does not belong to the authenticated rider.',
-      );
+      throw new NotFoundException('Trip not found.');
     }
 
     if (
       auth.user.role === UserRole.DRIVER &&
       trip.driverId !== auth.user.driverProfile?.id
     ) {
-      throw new BadRequestException(
-        'This trip does not belong to the authenticated driver.',
-      );
+      throw new NotFoundException('Trip not found.');
     }
   }
 

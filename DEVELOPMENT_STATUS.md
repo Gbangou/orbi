@@ -68,6 +68,9 @@ paiement provider, observabilite et runbooks verts.
   ride/trip, adresses et lieux sauvegardes sans caracteres markup/traversal,
   filenames documents chauffeur sans separateurs de chemin, storage keys
   normalisees et codes pickup strictement numeriques.
+- Tests IDOR ajoutes sur lieux sauvegardes rider, annulation ride-request et
+  acces/statut trip: un ID valide appartenant a un autre profil retourne un
+  `NotFound` generique et ne declenche ni update ni evenement realtime.
 
 ## Architecture active
 
@@ -90,8 +93,8 @@ paiement provider, observabilite et runbooks verts.
 5. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
 6. Etendre le proxy serveur admin HttpOnly aux autres actions sensibles:
    wallet/payout, refund/replay paiement, onboarding documents et dispatch.
-7. Ajouter des tests IDOR par role sur les routes rider/driver/trip maintenant
-   que les identifiants malformes sont rejetes avant la logique metier.
+7. Etendre les tests IDOR aux surfaces argent/admin restantes: wallet payouts,
+   refunds, replay webhook, onboarding documents et dispatch.
 
 ## Verification standard
 

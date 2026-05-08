@@ -121,6 +121,10 @@ OK Implemented:
   addresses, rider IDs, pickup codes and driver document filenames/storage keys
   are bounded and checked for traversal, control characters and markup-shaped
   input before service logic runs.
+- IDOR handling on rider saved places, ride request cancellation and trip access
+  now fails closed with generic `NotFound` responses for valid IDs owned by
+  another rider or driver, avoiding object-existence leaks while preventing
+  writes, realtime events and downstream side effects.
 
 Planned Next Phase:
 - API rate limiting tiers

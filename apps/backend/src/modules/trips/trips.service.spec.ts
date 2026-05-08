@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { TripsService } from './trips.service';
 import { ACTIVE_TRIP_STATUSES } from './trips.constants';
 import { createHash } from 'crypto';
@@ -1164,6 +1165,54 @@ describe('TripsService', () => {
     ]);
   });
 
+  it('does not reveal trip detail to another rider', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-detail-1',
+      rideRequestId: 'request-detail-1',
+      riderId: 'rider-2',
+      driverId: 'driver-1',
+      status: 'DRIVER_ARRIVING',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      destinationAddress: 'Ouaga 2000',
+      actualFare: 1600,
+      currency: 'XOF',
+      startedAt: null,
+      completedAt: null,
+      createdAt: new Date('2026-04-17T08:00:00.000Z'),
+      rider: {
+        user: {
+          fullName: 'Other Rider',
+        },
+      },
+      driver: {
+        user: {
+          fullName: 'Issa Driver',
+        },
+      },
+      vehicle: {
+        make: 'Yamaha',
+        model: 'Crypton',
+      },
+      events: [],
+    });
+
+    await expect(
+      service.getTripDetail(
+        {
+          user: {
+            role: 'RIDER',
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        'trip-detail-1',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it('updates trip status and returns the trip to online after completion', async () => {
     const { prisma, realtimeService, service } = createService();
 
@@ -1225,6 +1274,39 @@ describe('TripsService', () => {
       },
     });
     expect(result.trip.status).toBe('COMPLETED');
+  });
+
+  it('does not let another driver update trip status', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-1',
+      rideRequestId: 'request-1',
+      driverId: 'driver-2',
+      status: 'IN_PROGRESS',
+      startedAt: new Date('2026-04-17T09:00:00.000Z'),
+      completedAt: null,
+      actualFare: 2200,
+      currency: 'XOF',
+    });
+
+    await expect(
+      service.updateStatus(
+        {
+          user: {
+            role: 'DRIVER',
+            driverProfile: {
+              id: 'driver-1',
+            },
+          },
+        } as never,
+        'trip-1',
+        'COMPLETED',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.trip.update).not.toHaveBeenCalled();
+    expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+    expect(realtimeService.publish).not.toHaveBeenCalled();
   });
 
   it('allows a rider to cancel a matched trip before departure', async () => {

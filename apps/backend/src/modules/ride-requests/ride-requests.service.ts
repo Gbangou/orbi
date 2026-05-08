@@ -198,9 +198,7 @@ export class RideRequestsService {
       auth.user.role === UserRole.RIDER &&
       rideRequest.riderId !== auth.user.riderProfile?.id
     ) {
-      throw new BadRequestException(
-        'This ride request does not belong to the authenticated rider.',
-      );
+      throw new NotFoundException('Ride request not found.');
     }
 
     if (rideRequest.trip) {

@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { RidersService } from './riders.service';
 
 describe('RidersService', () => {
@@ -220,6 +221,32 @@ describe('RidersService', () => {
     expect(result.savedPlace.address).toBe('Patte d Oie, Ouagadougou');
   });
 
+  it('does not update a saved place owned by another rider', async () => {
+    const { prisma, service } = createService();
+
+    prisma.savedPlace.findUnique.mockResolvedValue({
+      id: 'place-1',
+      riderId: 'rider-2',
+    });
+
+    await expect(
+      service.updateSavedPlace(
+        {
+          user: {
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        'place-1',
+        {
+          label: 'Maison',
+        },
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.savedPlace.update).not.toHaveBeenCalled();
+  });
+
   it('deletes a saved place owned by the authenticated rider', async () => {
     const { prisma, service } = createService();
 
@@ -247,5 +274,28 @@ describe('RidersService', () => {
       deleted: true,
       savedPlaceId: 'place-1',
     });
+  });
+
+  it('does not delete a saved place owned by another rider', async () => {
+    const { prisma, service } = createService();
+
+    prisma.savedPlace.findUnique.mockResolvedValue({
+      id: 'place-1',
+      riderId: 'rider-2',
+    });
+
+    await expect(
+      service.deleteSavedPlace(
+        {
+          user: {
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        'place-1',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.savedPlace.delete).not.toHaveBeenCalled();
   });
 });
