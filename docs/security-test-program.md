@@ -46,6 +46,19 @@ Ces tests sont directement executables dans le repo:
 | SCA | `pnpm audit --audit-level moderate` | dependances vulnerables |
 | Workspace build | `pnpm typecheck` | packages, admin build, mobile typecheck, backend build |
 
+Le gate local agregé est:
+
+```powershell
+pnpm test:security:local
+```
+
+Sur un poste ou `next build` est bloque par `spawn EPERM`, executer le gate avec
+le build separe hors sandbox ou utiliser directement:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.ps1 -SkipTypecheck
+```
+
 ## Matrice Des Tests Demandes
 
 | Bloc | Automatisation repo | Tests manuels/lab obligatoires | Owner |
