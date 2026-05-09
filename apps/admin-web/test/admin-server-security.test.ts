@@ -4,6 +4,7 @@ import {
   createNoStoreAdminHeaders,
   isSafeAdminMutationRequest,
   isSafeOpaqueAdminId,
+  resolveDriverPayoutSettlementStatus,
 } from '../app/admin-server-security';
 
 function request(headers: Record<string, string>, method = 'POST') {
@@ -68,5 +69,12 @@ describe('admin server security', () => {
       Pragma: 'no-cache',
       Expires: '0',
     });
+  });
+
+  it('bounds driver payout settlement status before proxying exports', () => {
+    expect(resolveDriverPayoutSettlementStatus('PAID')).toBe('PAID');
+    expect(resolveDriverPayoutSettlementStatus('CANCELLED')).toBe('CANCELLED');
+    expect(resolveDriverPayoutSettlementStatus('<script>')).toBe('PREPARED');
+    expect(resolveDriverPayoutSettlementStatus(null)).toBe('PREPARED');
   });
 });

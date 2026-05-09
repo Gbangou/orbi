@@ -61,6 +61,9 @@ OK Implemented:
   HttpOnly, SameSite=strict admin session cookie, so incident and dead-letter
   actions no longer require exposing the backend Bearer token to that browser
   surface.
+- Admin driver-wallet payout, recovery and settlement export actions also proxy
+  through server routes, keeping finance mutations behind the HttpOnly admin
+  session and same-origin mutation gate.
 - Local admin server mutations require a same-origin request plus an explicit
   `x-mobilis-admin-action: true` header, which gives the HttpOnly admin cookie
   a concrete CSRF gate instead of relying on cookie attributes alone.

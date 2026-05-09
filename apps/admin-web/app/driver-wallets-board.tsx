@@ -1,17 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
-  authenticateAndFetchCurrentUser,
-  buildAdminDriverPayoutSettlementCsvUrl,
-  buildAdminDriverPayoutSettlementPdfUrl,
-  createMobilisApiClient,
-  markAdminDriverPayoutPaid,
-  prepareAdminDriverWalletPayout,
-  recordAdminDriverWalletRecoveryAdjustment,
+  type AdminDriverPayoutResponse,
+  type AdminDriverWalletRecoveryAdjustmentResponse,
   type AdminDriverWalletsResponse,
 } from '@mobilis/api';
-import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
+import {
+  adminMutationHeaderName,
+  adminMutationHeaderValue,
+} from './admin-server-security';
 
 type DriverWalletsBoardProps = {
   wallets: AdminDriverWalletsResponse;
@@ -21,6 +19,23 @@ function formatMoney(amount: number, currency = 'XOF') {
   return `${currency} ${Math.round(amount).toLocaleString('fr-FR')}`;
 }
 
+async function postAdminMutation<TResponse>(path: string, body?: unknown) {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      [adminMutationHeaderName]: adminMutationHeaderValue,
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error('Admin mutation failed');
+  }
+
+  return (await response.json()) as TResponse;
+}
+
 export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
   const [summaryState, setSummaryState] = useState(wallets.summary);
   const [walletState, setWalletState] = useState(wallets.wallets);
@@ -28,13 +43,6 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
     Record<string, string>
   >({});
   const [exportStatus, setExportStatus] = useState<string | null>(null);
-  const client = useMemo(
-    () =>
-      createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-        version: mobilisRuntimeConfig.apiVersion,
-      }),
-    [],
-  );
 
   async function preparePayout(walletId: string) {
     setStatusByWalletId((current) => ({
@@ -43,16 +51,8 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
     }));
 
     try {
-      const { authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
-      );
-      const response = await prepareAdminDriverWalletPayout(
-        authClient,
-        walletId,
-        {
-          notes: 'Preparation payout signee depuis la console ops.',
-        },
+      const response = await postAdminMutation<AdminDriverPayoutResponse>(
+        `/api/admin/driver-wallets/${walletId}/payouts/prepare`,
       );
 
       setWalletState((current) =>
@@ -101,13 +101,9 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
     }));
 
     try {
-      const { authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
+      const response = await postAdminMutation<AdminDriverPayoutResponse>(
+        `/api/admin/driver-payouts/${payoutId}/paid`,
       );
-      const response = await markAdminDriverPayoutPaid(authClient, payoutId, {
-        notes: 'Paiement terrain confirme depuis la console ops.',
-      });
 
       setWalletState((current) =>
         current.map((wallet) =>
@@ -152,18 +148,12 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
     }));
 
     try {
-      const { authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
-      );
-      const response = await recordAdminDriverWalletRecoveryAdjustment(
-        authClient,
-        walletId,
-        {
-          amount: recoveryDue,
-          notes: 'Recouvrement terrain confirme depuis la console ops.',
-          idempotencyKey: `recovery-${walletId}-${Date.now()}`,
-        },
+      const response =
+        await postAdminMutation<AdminDriverWalletRecoveryAdjustmentResponse>(
+          `/api/admin/driver-wallets/${walletId}/recovery-adjustments`,
+          {
+            amount: recoveryDue,
+          },
       );
 
       setSummaryState((current) => {
@@ -232,19 +222,9 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
     setExportStatus(`Export ${format.toUpperCase()}...`);
 
     try {
-      const { session, authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
+      const response = await fetch(
+        `/api/admin/driver-payouts/settlement.${format}?status=PREPARED`,
       );
-      const path =
-        format === 'csv'
-          ? buildAdminDriverPayoutSettlementCsvUrl('PREPARED')
-          : buildAdminDriverPayoutSettlementPdfUrl('PREPARED');
-      const response = await fetch(authClient.endpoint(path), {
-        headers: {
-          Authorization: `Bearer ${session.sessionToken}`,
-        },
-      });
 
       if (!response.ok) {
         throw new Error('Export failed');

@@ -4,6 +4,11 @@ export const adminMutationHeaderName = 'x-mobilis-admin-action';
 export const adminMutationHeaderValue = 'true';
 
 const opaqueIdPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{2,96}$/;
+const driverPayoutSettlementStatuses = new Set([
+  'PREPARED',
+  'PAID',
+  'CANCELLED',
+]);
 const adminNoStoreHeaders = {
   'Cache-Control': 'no-store, max-age=0',
   Pragma: 'no-cache',
@@ -44,6 +49,14 @@ export function isSafeAdminMutationRequest(request: AdminRequestSecurityInput) {
 
 export function isSafeOpaqueAdminId(value: string) {
   return opaqueIdPattern.test(value);
+}
+
+export function resolveDriverPayoutSettlementStatus(value: string | null) {
+  if (driverPayoutSettlementStatuses.has(value ?? '')) {
+    return value as 'PREPARED' | 'PAID' | 'CANCELLED';
+  }
+
+  return 'PREPARED';
 }
 
 export function createNoStoreAdminHeaders() {

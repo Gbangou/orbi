@@ -79,6 +79,9 @@ paiement provider, observabilite et runbooks verts.
   production, attributs `Secure`/`HttpOnly`/`SameSite=Strict`/priority,
   compatibilite locale preservee, headers no-store uniformes sur les proxys
   admin et headers navigateur Next.js renforces.
+- Actions finance wallets chauffeurs migrees derriere routes serveur admin:
+  preparation payout, marquage paye, recouvrement et exports settlement
+  utilisent la session HttpOnly et le garde same-origin, sans Bearer navigateur.
 - Pipe global Nest renforce avec rejet des valeurs racine inconnues, headers
   API completes contre prefetch DNS/ouverture de telechargement, et patches pnpm
   explicites pour garder les dependances Nest type-only executables sous Jest.
