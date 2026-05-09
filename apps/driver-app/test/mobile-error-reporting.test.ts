@@ -49,6 +49,7 @@ function buildQueuedReport(overrides: Record<string, unknown> = {}) {
     errorName: 'Error',
     errorMessage: 'sessionToken=driver-secret-token failed',
     context: {
+      authorization: 'Authorization: Bearer driver-secret-token',
       phone: '+22670000001',
       surface: 'availability',
     },
@@ -82,8 +83,9 @@ describe('driver mobile error reporting queue', () => {
     expect(reports[0]).toMatchObject({
       id: 'moberr_20260509081500_driver1',
       appRole: 'driver',
-      errorMessage: 'sessionToken=[token] failed',
+      errorMessage: 'sessionToken=[redacted] failed',
       context: {
+        authorization: 'Authorization=[redacted]',
         phone: '[phone]',
         surface: 'availability',
       },

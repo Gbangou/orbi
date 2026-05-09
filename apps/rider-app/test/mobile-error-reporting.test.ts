@@ -49,9 +49,12 @@ function buildQueuedReport(overrides: Record<string, unknown> = {}) {
     fingerprint: 'abcd123',
     errorName: 'Error',
     errorMessage:
-      'Bearer rider-secret-token failed for awa@example.com and +22670000000',
+      'Authorization: Bearer rider-secret-token failed for awa@example.com and +22670000000',
     context: {
       sessionToken: 'sessionToken=rider-secret-token',
+      callbackUrl:
+        'https://mobilis.local/callback?token=rider-secret-token&ok=true',
+      password: 'password=Mobilis123!',
       screen: 'booking',
     },
     ...overrides,
@@ -89,9 +92,11 @@ describe('rider mobile error reporting queue', () => {
     expect(reports[0]).toMatchObject({
       id: 'moberr_20260509080000_abcd123',
       appRole: 'rider',
-      errorMessage: 'Bearer [token] failed for [email] and [phone]',
+      errorMessage: 'Authorization=[redacted] failed for [email] and [phone]',
       context: {
-        sessionToken: 'sessionToken=[token]',
+        sessionToken: 'sessionToken=[redacted]',
+        callbackUrl: 'https://mobilis.local/callback?token=[redacted]&ok=true',
+        password: 'password=[redacted]',
         screen: 'booking',
       },
     });

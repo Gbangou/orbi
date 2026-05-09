@@ -598,8 +598,11 @@ function sanitizeMobilisErrorReportValue(value: string, maxLength: number) {
   return value
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
     .replace(/\+?\d[\d\s().-]{7,}\d/g, '[phone]')
-    .replace(/bearer\s+[a-z0-9._-]+/gi, 'Bearer [token]')
-    .replace(/session(token)?[=:]\s*[a-z0-9._-]+/gi, 'sessionToken=[token]')
+    .replace(
+      /\b(sessiontoken|session|token|authorization|password|secret)\s*[=:]\s*(?:bearer\s+)?["']?[^"'&\s,;)]+["']?/gi,
+      '$1=[redacted]',
+    )
+    .replace(/bearer\s+["']?[a-z0-9._~+/=-]+["']?/gi, 'Bearer [token]')
     .slice(0, maxLength);
 }
 

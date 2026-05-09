@@ -95,8 +95,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
    position impossible, un trajet circulaire suspect ou une presence manipulee.
 4. Admin: toute action finance, onboarding, support, pricing ou incident doit
    etre role-bound, no-store, auditee et visible en realtime ops.
-5. Mobile: aucun token/session ne doit apparaitre dans logs, stockage clair,
-   screenshots sensibles, clipboard ou deep links non controles.
+5. Mobile: aucun token/session, mot de passe, secret ou header Authorization ne
+   doit apparaitre dans logs, rapports d erreur, stockage clair, screenshots
+   sensibles, clipboard ou deep links non controles.
 
 ## Commandes Executees Le 9 Mai 2026
 
