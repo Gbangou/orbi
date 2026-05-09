@@ -70,6 +70,8 @@ OK Implemented:
   for filtering, investigation, replay, provider verification and refunds.
 - Admin support queue refresh and ticket status updates are also proxied through
   server routes, keeping incident triage behind the HttpOnly admin session.
+- Admin feature-flag refreshes are read through a no-store server route instead
+  of re-authenticating from the browser.
 - Local admin server mutations require a same-origin request plus an explicit
   `x-mobilis-admin-action: true` header, which gives the HttpOnly admin cookie
   a concrete CSRF gate instead of relying on cookie attributes alone.

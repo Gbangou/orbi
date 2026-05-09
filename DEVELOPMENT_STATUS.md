@@ -89,6 +89,8 @@ paiement provider, observabilite et runbooks verts.
   garde mutation same-origin.
 - File support admin migree derriere routes serveur pour refresh et mises a jour
   statut/priorite, avec session HttpOnly et validation locale du payload.
+- Rafraichissement feature flags admin migre derriere route serveur no-store afin
+  de poursuivre la reduction des authentifications admin cote navigateur.
 - Pipe global Nest renforce avec rejet des valeurs racine inconnues, headers
   API completes contre prefetch DNS/ouverture de telechargement, et patches pnpm
   explicites pour garder les dependances Nest type-only executables sous Jest.

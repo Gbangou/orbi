@@ -2,18 +2,24 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  authenticateAndFetchCurrentUser,
-  createMobilisApiClient,
-  fetchAdminFeatureFlags,
   type AdminFeatureFlagsResponse,
 } from '@mobilis/api';
 import { describeRealtimeConnection } from '@mobilis/ui';
-import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
 import { subscribeToAdminRealtime } from './admin-realtime';
 
 type FeatureFlagsBoardProps = {
   featureFlags: AdminFeatureFlagsResponse;
 };
+
+async function fetchFeatureFlags() {
+  const response = await fetch('/api/admin/feature-flags');
+
+  if (!response.ok) {
+    throw new Error('Feature flags fetch failed');
+  }
+
+  return (await response.json()) as AdminFeatureFlagsResponse;
+}
 
 export function FeatureFlagsBoard({
   featureFlags,
@@ -26,29 +32,17 @@ export function FeatureFlagsBoard({
   const previousRealtimeInfraRef =
     useRef<AdminFeatureFlagsResponse['infrastructure']['realtime'] | null>(null);
 
-  const client = useMemo(
-    () =>
-      createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-        version: mobilisRuntimeConfig.apiVersion,
-      }),
-    [],
-  );
-
   const refreshFeatureFlags = useCallback(
     async (message = 'Feature flags resynchronisees.') => {
       try {
-        const { authClient } = await authenticateAndFetchCurrentUser(
-          client,
-          mobilisDemoAccounts.admin,
-        );
-        const response = await fetchAdminFeatureFlags(authClient);
+        const response = await fetchFeatureFlags();
         setLiveFeatureFlags(response);
         setStatus(message);
       } catch {
         setStatus("Impossible d'actualiser les feature flags.");
       }
     },
-    [client],
+    [],
   );
 
   const summary = useMemo(() => {
