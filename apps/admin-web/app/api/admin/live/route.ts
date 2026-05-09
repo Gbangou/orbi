@@ -1,23 +1,15 @@
 import { NextResponse } from 'next/server';
-import {
-  apiRoutes,
-  createMobilisApiClient,
-  signInWithApi,
-} from '@mobilis/api';
-import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
+import { apiRoutes } from '@mobilis/api';
+import { getAdminServerAuthSession } from '../../../admin-server-auth';
 import { createNoStoreAdminHeaders } from '../../../admin-server-security';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const client = createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-    version: mobilisRuntimeConfig.apiVersion,
-  });
-
   try {
-    const session = await signInWithApi(client, mobilisDemoAccounts.admin);
+    const session = await getAdminServerAuthSession();
     const response = await fetch(
-      client.endpoint(apiRoutes.admin.stream, {
+      session.authClient.endpoint(apiRoutes.admin.stream, {
         sessionToken: session.sessionToken,
       }),
       {
@@ -50,7 +42,7 @@ export async function GET() {
     });
   } catch {
     return NextResponse.json(
-      { message: 'Unable to authenticate admin realtime stream.' },
+      { message: 'Unable to open admin realtime stream.' },
       { status: 502, headers: createNoStoreAdminHeaders() },
     );
   }

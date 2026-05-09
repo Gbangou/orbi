@@ -51,7 +51,7 @@ async function isUsableAdminSession(authClient: MobilisApiClient) {
   }
 }
 
-export async function getAdminServerAuthClient() {
+export async function getAdminServerAuthSession() {
   const cookieStore = await cookies();
   const baseClient = createAdminBaseClient();
   const activeCookieName = getAdminSessionCookieName();
@@ -67,7 +67,10 @@ export async function getAdminServerAuthClient() {
         cookieStore.delete(legacyAdminSessionCookieName);
       }
 
-      return authClient;
+      return {
+        authClient,
+        sessionToken: existingToken,
+      };
     }
   }
 
@@ -83,5 +86,14 @@ export async function getAdminServerAuthClient() {
     buildAdminSessionCookieOptions(),
   );
 
-  return baseClient.withAuthToken(session.sessionToken);
+  return {
+    authClient: baseClient.withAuthToken(session.sessionToken),
+    sessionToken: session.sessionToken,
+  };
+}
+
+export async function getAdminServerAuthClient() {
+  const session = await getAdminServerAuthSession();
+
+  return session.authClient;
 }
