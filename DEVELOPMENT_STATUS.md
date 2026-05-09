@@ -75,6 +75,8 @@ paiement provider, observabilite et runbooks verts.
   recovery, payment verify/refund, webhook replay et exports settlement sont
   verrouillees par metadata RBAC `ADMIN`/`OPS`; les IDs sales sont rejetes par
   les tests HTTP avant appel service sur les routes finance sensibles.
+- Retours checkout paiement bornes cote backend: `redirectUrl` doit correspondre
+  a une origine frontend Mobilis configuree avant persistance d une tentative.
 - Durcissement cookie/web admin ajoute: cookie session admin `__Host-` en
   production, attributs `Secure`/`HttpOnly`/`SameSite=Strict`/priority,
   compatibilite locale preservee, headers no-store uniformes sur les proxys

@@ -57,6 +57,8 @@ OK Implemented:
   character passwords before account creation or sign-in attempts are accepted.
 - Auth, admin and payment API responses are marked `no-store` to avoid cached
   session or money data in browsers and proxies.
+- Payment checkout return URLs are origin-bound to configured Mobilis frontend
+  origins/default redirect origin before any provider attempt is persisted.
 - Admin System Health operations now use Next.js server routes backed by an
   HttpOnly, SameSite=strict admin session cookie, so incident and dead-letter
   actions no longer require exposing the backend Bearer token to that browser

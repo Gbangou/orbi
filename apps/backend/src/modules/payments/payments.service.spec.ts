@@ -67,7 +67,12 @@ describe('PaymentsService', () => {
           'payments.cinetpay.siteId': 'site_123',
           'payments.cinetpay.apiKey': 'api_123',
           'payments.webhookSecret': 'secret_123',
+          'payments.defaultRedirectUrl': 'https://app.mobilis.bf/payments/return',
         };
+
+        if (key === 'app.frontendOrigins') {
+          return ['https://app.mobilis.bf', 'http://localhost:8081'];
+        }
 
         return values[key];
       }),
@@ -176,6 +181,57 @@ describe('PaymentsService', () => {
         currency: 'XOF',
       }),
     });
+  });
+
+  it('accepts checkout redirect URLs from configured Mobilis frontend origins', async () => {
+    const { service } = createService('flutterwave');
+
+    const result = await service.createCheckoutIntent(
+      {
+        user: {
+          id: 'user-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      {
+        rideRequestId: 'ride-request-1',
+        channel: 'MOBILE_MONEY',
+        amount: 2400,
+        redirectUrl: 'https://app.mobilis.bf/payments/return?attempt=1',
+      },
+    );
+
+    expect(result.providerMetadata.callbackUrl).toBe(
+      'https://app.mobilis.bf/payments/return?attempt=1',
+    );
+  });
+
+  it('rejects checkout redirect URLs outside configured Mobilis origins', async () => {
+    const { service, prisma } = createService('flutterwave');
+
+    await expect(
+      service.createCheckoutIntent(
+        {
+          user: {
+            id: 'user-1',
+            role: 'RIDER',
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        {
+          rideRequestId: 'ride-request-1',
+          channel: 'MOBILE_MONEY',
+          amount: 2400,
+          redirectUrl: 'https://attacker.example/payments/return',
+        },
+      ),
+    ).rejects.toThrow('Payment redirect URL origin is not allowed.');
+    expect(prisma.paymentAttempt.create).not.toHaveBeenCalled();
   });
 
   it('builds a CinetPay checkout intent when configured', async () => {

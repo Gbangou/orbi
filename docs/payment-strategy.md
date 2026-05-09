@@ -43,6 +43,12 @@ All payment providers must be mediated through:
 - webhook verification
 - internal transaction references
 
+Checkout return URLs are also mediated by the backend. A client-provided
+`redirectUrl` is accepted only when its origin matches `FRONTEND_ALLOWED_ORIGINS`
+or the configured `PAYMENTS_DEFAULT_REDIRECT_URL` origin. This keeps aggregator
+return flows from becoming an open redirect while still allowing Expo/local and
+production frontend URLs explicitly configured by ops.
+
 ## Current webhook contract
 
 Mobilis now keeps two layers of webhook protection:

@@ -634,6 +634,8 @@ export class PaymentsService {
     transactionRef: string,
     currency: string,
   ) {
+    const redirectUrl = this.resolveCheckoutRedirectUrl(payload.redirectUrl);
+
     if (provider === 'FLUTTERWAVE') {
       return serializeCheckoutIntent({
         provider,
@@ -641,10 +643,7 @@ export class PaymentsService {
         amount,
         currency,
         channel: payload.channel,
-        callbackUrl:
-          payload.redirectUrl ??
-          this.configService.get<string>('payments.defaultRedirectUrl') ??
-          null,
+        callbackUrl: redirectUrl,
         publicKeyPresent: Boolean(
           this.configService.get<string>('payments.flutterwave.publicKey'),
         ),
@@ -936,6 +935,78 @@ export class PaymentsService {
         nextAction,
       },
     };
+  }
+
+  private resolveCheckoutRedirectUrl(redirectUrl?: string) {
+    const fallbackUrl =
+      this.configService.get<string>('payments.defaultRedirectUrl') ?? null;
+
+    if (!redirectUrl) {
+      return fallbackUrl;
+    }
+
+    let parsedRedirectUrl: URL;
+
+    try {
+      parsedRedirectUrl = new URL(redirectUrl);
+    } catch {
+      throw new BadRequestException('Payment redirect URL is invalid.');
+    }
+
+    if (!['http:', 'https:'].includes(parsedRedirectUrl.protocol)) {
+      throw new BadRequestException('Payment redirect URL is invalid.');
+    }
+
+    const allowedOrigins = this.getAllowedPaymentRedirectOrigins();
+
+    if (!allowedOrigins.has(parsedRedirectUrl.origin)) {
+      throw new BadRequestException(
+        'Payment redirect URL origin is not allowed.',
+      );
+    }
+
+    return parsedRedirectUrl.toString();
+  }
+
+  private getAllowedPaymentRedirectOrigins() {
+    const configuredOrigins =
+      this.configService.get<string[] | string>('app.frontendOrigins') ?? [];
+    const origins = Array.isArray(configuredOrigins)
+      ? configuredOrigins
+      : configuredOrigins.split(',');
+    const allowedOrigins = new Set<string>();
+
+    for (const origin of origins) {
+      const normalizedOrigin = this.normalizeUrlOrigin(origin);
+
+      if (normalizedOrigin) {
+        allowedOrigins.add(normalizedOrigin);
+      }
+    }
+
+    const defaultRedirectOrigin = this.normalizeUrlOrigin(
+      this.configService.get<string>('payments.defaultRedirectUrl') ?? '',
+    );
+
+    if (defaultRedirectOrigin) {
+      allowedOrigins.add(defaultRedirectOrigin);
+    }
+
+    return allowedOrigins;
+  }
+
+  private normalizeUrlOrigin(value: string) {
+    if (!value.trim()) {
+      return null;
+    }
+
+    try {
+      const parsed = new URL(value.trim());
+
+      return parsed.origin;
+    } catch {
+      return null;
+    }
   }
 
   private async reconcileRefundWebhookPayload(
