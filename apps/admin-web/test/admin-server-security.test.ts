@@ -1,6 +1,7 @@
 import {
   adminMutationHeaderName,
   adminMutationHeaderValue,
+  createNoStoreAdminHeaders,
   isSafeAdminMutationRequest,
   isSafeOpaqueAdminId,
 } from '../app/admin-server-security';
@@ -59,5 +60,13 @@ describe('admin server security', () => {
     expect(isSafeOpaqueAdminId('../job-dead-1')).toBe(false);
     expect(isSafeOpaqueAdminId('<script>')).toBe(false);
     expect(isSafeOpaqueAdminId('a'.repeat(120))).toBe(false);
+  });
+
+  it('uses no-store headers for admin proxy responses', () => {
+    expect(createNoStoreAdminHeaders()).toEqual({
+      'Cache-Control': 'no-store, max-age=0',
+      Pragma: 'no-cache',
+      Expires: '0',
+    });
   });
 });

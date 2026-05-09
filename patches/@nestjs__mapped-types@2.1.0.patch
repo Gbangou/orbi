@@ -1,0 +1,9 @@
+diff --git a/dist/mapped-type.interface.js b/dist/mapped-type.interface.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..c5f6fa2387d71c5c7843256b35e6a97961a95e82
+--- /dev/null
++++ b/dist/mapped-type.interface.js
+@@ -0,0 +1,3 @@
++"use strict";
++Object.defineProperty(exports, "__esModule", { value: true });
++

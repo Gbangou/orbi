@@ -587,6 +587,28 @@ Si ce n est pas le meme:
 
 ## 10. Etape 21. Trouver L Adresse IP Du PC
 
+Methode conseillee:
+
+1. dans VS Code, ouvre un terminal a la racine du projet
+2. tape:
+
+```powershell
+pnpm mobile:lan
+```
+
+3. appuie sur `Entree`
+
+Ce que cette commande fait:
+
+- elle trouve l IP Wi-Fi du PC
+- elle met a jour `apps/rider-app/.env`
+- elle met a jour `apps/driver-app/.env`
+- elle garde l URL API au format `http://IP_DU_PC:3000`
+
+Si cette commande reussit, tu peux passer directement a l etape 24.
+
+Methode manuelle si tu veux verifier toi-meme:
+
 Ce que tu fais dans VS Code:
 
 1. clique sur `Terminal`

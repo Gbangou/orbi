@@ -61,6 +61,7 @@ describe('AdminController (integration)', () => {
     driverOnboardingQueue: jest.Mock;
     driverWallets: jest.Mock;
     prepareDriverWalletPayout: jest.Mock;
+    recordDriverWalletRecoveryAdjustment: jest.Mock;
     markDriverPayoutPaid: jest.Mock;
     driverPayoutSettlementCsv: jest.Mock;
     driverPayoutSettlementPdf: jest.Mock;
@@ -95,6 +96,7 @@ describe('AdminController (integration)', () => {
       driverOnboardingQueue: jest.fn(),
       driverWallets: jest.fn(),
       prepareDriverWalletPayout: jest.fn(),
+      recordDriverWalletRecoveryAdjustment: jest.fn(),
       markDriverPayoutPaid: jest.fn(),
       driverPayoutSettlementCsv: jest.fn(),
       driverPayoutSettlementPdf: jest.fn(),
@@ -148,6 +150,7 @@ describe('AdminController (integration)', () => {
         whitelist: true,
         transform: true,
         forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
       }),
     );
     await app.init();
@@ -365,6 +368,34 @@ describe('AdminController (integration)', () => {
         }),
       }),
     );
+  });
+
+  it('rejects dirty finance object identifiers before payout services run', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/driver-wallets/wallet%3Cscript%3E/payouts/prepare')
+      .send({ notes: 'Paiement terrain valide.' })
+      .expect(400)
+      .expect((response) => {
+        expect(response.body.message).toContain(
+          'walletId must be a safe opaque identifier.',
+        );
+      });
+
+    expect(adminService.prepareDriverWalletPayout).not.toHaveBeenCalled();
+  });
+
+  it('rejects dirty payment attempt identifiers before refund services run', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/payment-attempts/payment%3Cscript%3E/refund')
+      .send({ reason: 'Remboursement demande par support.' })
+      .expect(400)
+      .expect((response) => {
+        expect(response.body.message).toContain(
+          'paymentAttemptId must be a safe opaque identifier.',
+        );
+      });
+
+    expect(adminService.refundPaymentAttempt).not.toHaveBeenCalled();
   });
 
   it('streams SSE events on the admin endpoint in nominal mode', async () => {

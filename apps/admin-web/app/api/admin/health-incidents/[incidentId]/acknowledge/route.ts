@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { acknowledgeAdminHealthIncident } from '@mobilis/api';
 import { getAdminServerAuthClient } from '../../../../../admin-server-auth';
 import {
+  createNoStoreAdminHeaders,
   isSafeAdminMutationRequest,
   isSafeOpaqueAdminId,
 } from '../../../../../admin-server-security';
@@ -17,14 +18,14 @@ export async function PATCH(
   if (!isSafeAdminMutationRequest(_request)) {
     return NextResponse.json(
       { message: 'Forbidden admin mutation request.' },
-      { status: 403 },
+      { status: 403, headers: createNoStoreAdminHeaders() },
     );
   }
 
   if (!isSafeOpaqueAdminId(incidentId)) {
     return NextResponse.json(
       { message: 'Invalid health incident identifier.' },
-      { status: 400 },
+      { status: 400, headers: createNoStoreAdminHeaders() },
     );
   }
 
@@ -36,14 +37,12 @@ export async function PATCH(
     );
 
     return NextResponse.json(response, {
-      headers: {
-        'Cache-Control': 'no-store, max-age=0',
-      },
+      headers: createNoStoreAdminHeaders(),
     });
   } catch {
     return NextResponse.json(
       { message: 'Unable to acknowledge health incident.' },
-      { status: 502 },
+      { status: 502, headers: createNoStoreAdminHeaders() },
     );
   }
 }

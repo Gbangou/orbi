@@ -48,15 +48,22 @@
       "@types/react": "18.3.28",
       "@types/react-dom": "18.3.7",
       "lodash": ">=4.17.21",
-      "source-map-js": "1.0.2",
+      "source-map-js": "1.2.1",
       "handlebars": ">=4.7.9",
       "tar": ">=7.5.7",
       "serialize-javascript": ">=7.0.5",
       "picomatch": ">=2.3.2",
-      "path-to-regexp": ">=8.4.0"
+      "path-to-regexp": ">=8.4.0",
+      "@nestjs/mapped-types": "2.1.0"
     },
     "patchedDependencies": {
-      "client-only@0.0.1": "patches/client-only@0.0.1.patch"
+      "@nestjs/mapped-types@2.1.0": "patches/@nestjs__mapped-types@2.1.0.patch",
+      "@nestjs/config@4.0.2": "patches/@nestjs__config@4.0.2.patch",
+      "@nestjs/swagger@11.2.7": "patches/@nestjs__swagger@11.2.7.patch",
+      "client-only@0.0.1": "patches/client-only@0.0.1.patch",
+      "minimatch@9.0.7": "patches/minimatch@9.0.7.patch",
+      "minimatch@10.2.5": "patches/minimatch@10.2.5.patch",
+      "server-only@0.0.1": "patches/server-only@0.0.1.patch"
     }
   },
   "devDependencies": {

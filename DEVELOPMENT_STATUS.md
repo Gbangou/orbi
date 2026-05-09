@@ -1,6 +1,6 @@
 # Mobilis Development Status
 
-Date de reference: 8 mai 2026
+Date de reference: 9 mai 2026
 
 ## Etat court
 
@@ -71,6 +71,17 @@ paiement provider, observabilite et runbooks verts.
 - Tests IDOR ajoutes sur lieux sauvegardes rider, annulation ride-request et
   acces/statut trip: un ID valide appartenant a un autre profil retourne un
   `NotFound` generique et ne declenche ni update ni evenement realtime.
+- Premiere tranche OWASP API finance/admin ajoutee: les mutations wallet payout,
+  recovery, payment verify/refund, webhook replay et exports settlement sont
+  verrouillees par metadata RBAC `ADMIN`/`OPS`; les IDs sales sont rejetes par
+  les tests HTTP avant appel service sur les routes finance sensibles.
+- Durcissement cookie/web admin ajoute: cookie session admin `__Host-` en
+  production, attributs `Secure`/`HttpOnly`/`SameSite=Strict`/priority,
+  compatibilite locale preservee, headers no-store uniformes sur les proxys
+  admin et headers navigateur Next.js renforces.
+- Pipe global Nest renforce avec rejet des valeurs racine inconnues, headers
+  API completes contre prefetch DNS/ouverture de telechargement, et patches pnpm
+  explicites pour garder les dependances Nest type-only executables sous Jest.
 
 ## Architecture active
 
@@ -93,8 +104,15 @@ paiement provider, observabilite et runbooks verts.
 5. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
 6. Etendre le proxy serveur admin HttpOnly aux autres actions sensibles:
    wallet/payout, refund/replay paiement, onboarding documents et dispatch.
-7. Etendre les tests IDOR aux surfaces argent/admin restantes: wallet payouts,
-   refunds, replay webhook, onboarding documents et dispatch.
+7. Continuer le programme de tests securite iteratif:
+   - API1/API5: IDOR/BOLA et function-level authorization sur onboarding
+     documents, dispatch, support tickets et exports finance.
+   - API3/API6: mass assignment, pagination abusive et filtrage excessif sur
+     admin, payments, users et ride/trip dashboards.
+   - MASVS/MASTG: stockage token, deep links, permissions, screenshots
+     sensibles et reprise reseau sur rider/driver.
+   - SSDF: SAST/SCA/secret scanning, threat modeling et preuves de regression
+     avant chaque tranche pilote.
 
 ## Verification standard
 

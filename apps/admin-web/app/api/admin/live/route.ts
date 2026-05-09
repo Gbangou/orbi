@@ -5,6 +5,7 @@ import {
   signInWithApi,
 } from '@mobilis/api';
 import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
+import { createNoStoreAdminHeaders } from '../../../admin-server-security';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,7 @@ export async function GET() {
     if (!response.ok || !response.body) {
       return NextResponse.json(
         { message: 'Unable to open backend realtime stream.' },
-        { status: 502 },
+        { status: 502, headers: createNoStoreAdminHeaders() },
       );
     }
 
@@ -41,14 +42,16 @@ export async function GET() {
       status: 200,
       headers: {
         'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
+        'Cache-Control': 'no-store, no-cache, no-transform',
+        Pragma: 'no-cache',
+        Expires: '0',
         Connection: 'keep-alive',
       },
     });
   } catch {
     return NextResponse.json(
       { message: 'Unable to authenticate admin realtime stream.' },
-      { status: 502 },
+      { status: 502, headers: createNoStoreAdminHeaders() },
     );
   }
 }

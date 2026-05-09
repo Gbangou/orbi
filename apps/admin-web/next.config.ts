@@ -64,6 +64,18 @@ const nextConfig: NextConfig = {
             value: "same-origin",
           },
           {
+            key: "Cross-Origin-Resource-Policy",
+            value: "same-site",
+          },
+          {
+            key: "Origin-Agent-Cluster",
+            value: "?1",
+          },
+          {
+            key: "X-DNS-Prefetch-Control",
+            value: "off",
+          },
+          {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },

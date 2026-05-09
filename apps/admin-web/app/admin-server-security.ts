@@ -4,6 +4,11 @@ export const adminMutationHeaderName = 'x-mobilis-admin-action';
 export const adminMutationHeaderValue = 'true';
 
 const opaqueIdPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{2,96}$/;
+const adminNoStoreHeaders = {
+  'Cache-Control': 'no-store, max-age=0',
+  Pragma: 'no-cache',
+  Expires: '0',
+};
 
 type AdminRequestSecurityInput = Pick<NextRequest, 'headers' | 'method'> & {
   nextUrl: Pick<NextRequest['nextUrl'], 'origin'>;
@@ -39,4 +44,8 @@ export function isSafeAdminMutationRequest(request: AdminRequestSecurityInput) {
 
 export function isSafeOpaqueAdminId(value: string) {
   return opaqueIdPattern.test(value);
+}
+
+export function createNoStoreAdminHeaders() {
+  return adminNoStoreHeaders;
 }

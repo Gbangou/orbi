@@ -27,6 +27,8 @@ describe('applyApiSecurityHeaders', () => {
     );
 
     expect(headers.get('X-Content-Type-Options')).toBe('nosniff');
+    expect(headers.get('X-DNS-Prefetch-Control')).toBe('off');
+    expect(headers.get('X-Download-Options')).toBe('noopen');
     expect(headers.get('X-Frame-Options')).toBe('DENY');
     expect(headers.get('Referrer-Policy')).toBe('no-referrer');
     expect(headers.get('Content-Security-Policy')).toContain(

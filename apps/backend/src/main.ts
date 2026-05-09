@@ -89,6 +89,7 @@ async function bootstrap() {
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
+      forbidUnknownValues: true,
     }),
   );
   prismaService.enableShutdownHooks(app);

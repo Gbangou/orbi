@@ -1,5 +1,7 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { of } from 'rxjs';
+import { UserRole } from '@prisma/client';
+import { ROLES_KEY } from '../auth/roles.decorator';
 import { AdminController } from './admin.controller';
 
 describe('AdminController', () => {
@@ -16,6 +18,7 @@ describe('AdminController', () => {
       driverOnboardingExportCsv: jest.fn(),
       driverWallets: jest.fn(),
       prepareDriverWalletPayout: jest.fn(),
+      recordDriverWalletRecoveryAdjustment: jest.fn(),
       markDriverPayoutPaid: jest.fn(),
       driverPayoutSettlementCsv: jest.fn(),
       driverPayoutSettlementPdf: jest.fn(),
@@ -143,6 +146,62 @@ describe('AdminController', () => {
       payload,
       auth,
     );
+  });
+
+  it('keeps money mutation endpoints restricted to admin and ops roles', () => {
+    const { controller } = createController();
+    const moneyMutationHandlers = [
+      controller.prepareDriverWalletPayout,
+      controller.recordDriverWalletRecoveryAdjustment,
+      controller.markDriverPayoutPaid,
+      controller.replayPaymentWebhookEvent,
+      controller.verifyPaymentAttemptWithProvider,
+      controller.refundPaymentAttempt,
+      controller.driverPayoutSettlementCsv,
+      controller.driverPayoutSettlementPdf,
+    ];
+
+    for (const handler of moneyMutationHandlers) {
+      expect(Reflect.getMetadata(ROLES_KEY, handler)).toEqual([
+        UserRole.ADMIN,
+        UserRole.OPS,
+      ]);
+    }
+  });
+
+  it('allows support to read driver wallets without granting payout mutation roles', () => {
+    const { controller } = createController();
+
+    expect(Reflect.getMetadata(ROLES_KEY, controller.driverWallets)).toEqual([
+      UserRole.ADMIN,
+      UserRole.OPS,
+      UserRole.SUPPORT,
+    ]);
+    expect(
+      Reflect.getMetadata(ROLES_KEY, controller.prepareDriverWalletPayout),
+    ).not.toContain(UserRole.SUPPORT);
+  });
+
+  it('delegates recovery adjustments with required auth context', async () => {
+    const { adminService, controller } = createController();
+    const payload = {
+      amount: 1000,
+      notes: 'Recouvrement mobile money confirme.',
+      idempotencyKey: 'ops-recovery-1',
+    };
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.recordDriverWalletRecoveryAdjustment(
+      'wallet-1',
+      payload,
+      auth as never,
+    );
+
+    expect(
+      adminService.recordDriverWalletRecoveryAdjustment,
+    ).toHaveBeenCalledWith('wallet-1', payload, auth);
   });
 
   it('delegates driver payout CSV settlement exports with auth', async () => {

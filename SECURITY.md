@@ -1,6 +1,6 @@
 # Mobilis Security Policy & Vulnerability Management
 
-*Last updated: May 8, 2026*
+*Last updated: May 9, 2026*
 
 ## Current Security Status
 
@@ -64,6 +64,10 @@ OK Implemented:
 - Local admin server mutations require a same-origin request plus an explicit
   `x-mobilis-admin-action: true` header, which gives the HttpOnly admin cookie
   a concrete CSRF gate instead of relying on cookie attributes alone.
+- In production, the admin server session cookie uses a host-bound
+  `__Host-` name with `Secure`, `HttpOnly`, `SameSite=Strict`, path `/` and
+  high priority attributes. Local development keeps the legacy cookie name so
+  plain `localhost` testing remains usable.
 
 Planned Next Phase:
 - 2FA support (TOTP)
@@ -106,14 +110,19 @@ OK Implemented:
 - Input validation & sanitization
 - No raw SQL queries (Prisma parameterized)
 - Backend security headers are centralized and include CSP for API responses,
-  frame denial, referrer suppression, no-sniff, cross-origin opener policy and
-  HSTS on HTTPS requests.
+  frame denial, referrer suppression, no-sniff, DNS prefetch disablement,
+  download-open protection, cross-origin opener policy and HSTS on HTTPS
+  requests.
 - Admin web ships browser security headers from Next.js, including CSP,
-  frame denial, no-sniff, no-referrer, cross-origin opener policy and disabled
+  frame denial, no-sniff, no-referrer, cross-origin opener/resource policy,
+  origin-agent clustering, disabled DNS prefetch and disabled
   camera/microphone/geolocation permissions.
 - Admin backend route parameters use an opaque ID pipe on sensitive operations
   to fail closed on traversal strings, script payloads, oversized identifiers
   and malformed parameter tampering before service logic or Prisma queries run.
+- The global Nest validation pipe now rejects unknown root values in addition
+  to stripping/rejecting unknown object fields, reducing malformed payload and
+  prototype-shaped input risk before controllers execute.
 - Rider, driver, ride-request and trip route identifiers now use the same
   opaque ID guard on mobile-facing protected routes.
 - Structured mobile DTO fields reject short malicious strings, not only
@@ -125,11 +134,19 @@ OK Implemented:
   now fails closed with generic `NotFound` responses for valid IDs owned by
   another rider or driver, avoiding object-existence leaks while preventing
   writes, realtime events and downstream side effects.
+- Admin finance surfaces now have regression tests for RBAC metadata and dirty
+  object IDs: wallet payouts, recovery adjustments, payment verification,
+  refund and webhook replay handlers remain limited to `ADMIN`/`OPS`, while
+  support can read wallet status without gaining mutation privileges.
 
 Planned Next Phase:
-- API rate limiting tiers
-- Request signing for mobile
-- DDoS protection (Cloudflare)
+- Continue iterative OWASP API Security Top 10 coverage on money/admin objects:
+  payout ownership, refund idempotency, webhook replay authorization and export
+  abuse limits.
+- API rate limiting tiers, mobile request signing and DDoS protection
+  (Cloudflare or equivalent).
+- Mobile MASVS/MASTG lab tests for token storage, deep links, certificate
+  pinning readiness and sensitive screenshots.
 
 ### Operations Security
 
@@ -259,6 +276,10 @@ Before deploying to production:
 ## References
 
 - **OWASP Top 10**: https://owasp.org/Top10/
+- **OWASP Web Security Testing Guide**: https://owasp.org/www-project-web-security-testing-guide/
+- **OWASP API Security Top 10**: https://owasp.org/API-Security/
+- **OWASP MASVS / MASTG**: https://mas.owasp.org/
+- **NIST SSDF SP 800-218**: https://csrc.nist.gov/publications/detail/sp/800-218/final
 - **Node.js Security**: https://nodejs.org/en/docs/guides/security/
 - **Prisma Security**: https://www.prisma.io/docs/orm/more/security
 - **NestJS Security**: https://docs.nestjs.com/security/overview
