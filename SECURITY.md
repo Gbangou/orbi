@@ -70,6 +70,9 @@ OK Implemented:
   plain `localhost` testing remains usable.
 - Demo account passwords stay visible only outside production builds; the admin
   console does not render those shared test secrets in production mode.
+- Persisted mobile error-report queues are normalized before replay: rider and
+  driver apps discard malformed or cross-role reports and redact tokens,
+  emails and phone numbers from queued text/context before backend submission.
 
 Planned Next Phase:
 - 2FA support (TOTP)

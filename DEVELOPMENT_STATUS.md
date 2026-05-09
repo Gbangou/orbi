@@ -84,6 +84,9 @@ paiement provider, observabilite et runbooks verts.
   explicites pour garder les dependances Nest type-only executables sous Jest.
 - Secrets de demonstration masques dans l admin web en build production, tout
   en gardant l aide locale visible pendant les tests terrain/dev.
+- Files locales de rapports d erreur mobile durcies: rider/driver relisent
+  uniquement des rapports bien formes, du bon role, bornes a 20 entrees et
+  redaction des tokens/emails/telephones avant replay backend.
 
 ## Architecture active
 

@@ -1,5 +1,6 @@
 import {
   createMobilisClientErrorReportFromClassification,
+  normalizeMobilisClientErrorReportQueue,
   submitMobileErrorReportsWithApi,
   type MobilisClientErrorClassification,
   type MobilisClientErrorReport,
@@ -46,9 +47,10 @@ export async function readRiderMobileErrorReports() {
 
   try {
     const parsed = JSON.parse(rawReports);
-    return Array.isArray(parsed)
-      ? (parsed.filter(isMobilisClientErrorReportLike) as MobilisClientErrorReport[])
-      : [];
+    return normalizeMobilisClientErrorReportQueue(parsed, {
+      appRole: 'rider',
+      maxReports: maxQueuedReports,
+    });
   } catch {
     return [];
   }
@@ -89,13 +91,4 @@ export async function flushRiderMobileErrorReports(client: MobilisApiClient) {
   }
 
   return response;
-}
-
-function isMobilisClientErrorReportLike(value: unknown) {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as MobilisClientErrorReport).id === 'string' &&
-    typeof (value as MobilisClientErrorReport).fingerprint === 'string'
-  );
 }

@@ -266,6 +266,54 @@ export type MobilisClientErrorClassification = {
 
 export type MobilisClientAppRole = 'rider' | 'driver';
 
+const mobilisClientErrorCodes = [
+  'MOB-AUTH-SESSION',
+  'MOB-BOOKING-DISPATCH',
+  'MOB-PAYMENT-PROVIDER',
+  'MOB-REALTIME-DEGRADED',
+  'MOB-SAFETY-INCIDENT',
+  'MOB-NETWORK-OFFLINE',
+  'MOB-VALIDATION-INPUT',
+  'MOB-GENERIC-API',
+] as const;
+
+const mobilisClientErrorSurfaces = [
+  'auth',
+  'booking',
+  'payments',
+  'active-trip',
+  'safety',
+  'profile',
+  'driver-availability',
+  'network',
+  'unknown',
+] as const;
+
+const mobilisClientErrorSeverities = [
+  'low',
+  'medium',
+  'high',
+  'critical',
+] as const;
+
+const mobilisClientErrorOwners = [
+  'engineering',
+  'ops',
+  'support',
+  'finance',
+] as const;
+
+const mobilisClientErrorRetryPolicies = [
+  'silent-refresh-once-then-relogin',
+  'idempotent-retry-with-visible-status',
+  'server-reconcile-before-client-retry',
+  'fallback-polling-with-last-known-state',
+  'store-local-and-escalate-to-support',
+  'retry-when-network-recovers',
+  'fix-input-before-retry',
+  'manual-refresh',
+] as const;
+
 export type MobilisClientErrorReport = {
   id: string;
   occurredAt: string;
@@ -288,6 +336,35 @@ export type SubmitMobileErrorReportsResponse = {
   duplicateReports: number;
   supportTicketCount: number;
 };
+
+export function normalizeMobilisClientErrorReportQueue(
+  value: unknown,
+  options: {
+    appRole?: MobilisClientAppRole;
+    maxReports?: number;
+  } = {},
+): MobilisClientErrorReport[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const maxReports = options.maxReports ?? 20;
+  const reports: MobilisClientErrorReport[] = [];
+
+  for (const item of value) {
+    const report = normalizeMobilisClientErrorReport(item, options.appRole);
+
+    if (report) {
+      reports.push(report);
+    }
+
+    if (reports.length >= maxReports) {
+      break;
+    }
+  }
+
+  return reports;
+}
 
 export function classifyMobilisClientError(
   error: unknown,
@@ -524,6 +601,178 @@ function sanitizeMobilisErrorReportValue(value: string, maxLength: number) {
     .replace(/bearer\s+[a-z0-9._-]+/gi, 'Bearer [token]')
     .replace(/session(token)?[=:]\s*[a-z0-9._-]+/gi, 'sessionToken=[token]')
     .slice(0, maxLength);
+}
+
+function normalizeMobilisClientErrorReport(
+  value: unknown,
+  expectedAppRole?: MobilisClientAppRole,
+): MobilisClientErrorReport | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const appRole = parseEnumValue(value.appRole, ['rider', 'driver'] as const);
+  const classification = normalizeMobilisClientErrorClassification(
+    value.classification,
+  );
+
+  if (!appRole || !classification || classification.reportable !== true) {
+    return null;
+  }
+
+  if (expectedAppRole && appRole !== expectedAppRole) {
+    return null;
+  }
+
+  const id = normalizeErrorReportIdentifier(value.id, 96);
+  const occurredAt = normalizeIsoDate(value.occurredAt);
+  const fingerprint = normalizeErrorReportIdentifier(value.fingerprint, 80);
+  const errorName = normalizeErrorReportText(value.errorName, 80);
+  const errorMessage = normalizeErrorReportText(value.errorMessage, 220);
+
+  if (!id || !occurredAt || !fingerprint || !errorName || !errorMessage) {
+    return null;
+  }
+
+  return {
+    id,
+    occurredAt,
+    appRole,
+    appVersion: normalizeOptionalErrorReportText(value.appVersion, 48),
+    classification,
+    fingerprint,
+    errorName,
+    errorMessage,
+    context: normalizeMobilisErrorReportContext(value.context),
+  };
+}
+
+function normalizeMobilisClientErrorClassification(
+  value: unknown,
+): MobilisClientErrorClassification | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const code = parseEnumValue(value.code, mobilisClientErrorCodes);
+  const surface = parseEnumValue(value.surface, mobilisClientErrorSurfaces);
+  const severity = parseEnumValue(value.severity, mobilisClientErrorSeverities);
+  const owner = parseEnumValue(value.owner, mobilisClientErrorOwners);
+  const retryPolicy = parseEnumValue(
+    value.retryPolicy,
+    mobilisClientErrorRetryPolicies,
+  );
+
+  if (!code || !surface || !severity || !owner || !retryPolicy) {
+    return null;
+  }
+
+  if (
+    typeof value.shouldClearSessionToken !== 'boolean' ||
+    typeof value.shouldNavigateToAuth !== 'boolean' ||
+    typeof value.reportable !== 'boolean'
+  ) {
+    return null;
+  }
+
+  return {
+    code,
+    surface,
+    severity,
+    owner,
+    retryPolicy,
+    userMessage: normalizeErrorReportText(value.userMessage, 240),
+    shouldClearSessionToken: value.shouldClearSessionToken,
+    shouldNavigateToAuth: value.shouldNavigateToAuth,
+    reportable: value.reportable,
+  };
+}
+
+function normalizeMobilisErrorReportContext(value: unknown) {
+  const normalized: MobilisClientErrorReport['context'] = {};
+
+  if (!isRecord(value)) {
+    return normalized;
+  }
+
+  for (const [key, entry] of Object.entries(value).slice(0, 16)) {
+    const cleanKey = normalizeErrorReportText(key, 48);
+
+    if (!cleanKey) {
+      continue;
+    }
+
+    if (typeof entry === 'string') {
+      normalized[cleanKey] = normalizeErrorReportText(entry, 160);
+    } else if (typeof entry === 'number' && Number.isFinite(entry)) {
+      normalized[cleanKey] = entry;
+    } else if (typeof entry === 'boolean' || entry === null) {
+      normalized[cleanKey] = entry;
+    }
+  }
+
+  return normalized;
+}
+
+function normalizeIsoDate(value: unknown) {
+  if (typeof value !== 'string' || value.length > 40) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
+function normalizeOptionalErrorReportText(value: unknown, maxLength: number) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = normalizeErrorReportText(value, maxLength);
+  return normalized || undefined;
+}
+
+function normalizeErrorReportText(value: unknown, maxLength: number) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return sanitizeMobilisErrorReportValue(
+    value.replace(/[\u0000-\u001f\u007f]/g, '').trim(),
+    maxLength,
+  );
+}
+
+function normalizeErrorReportIdentifier(value: unknown, maxLength: number) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .trim()
+    .replace(/[^a-z0-9._:-]/gi, '')
+    .slice(0, maxLength);
+}
+
+function parseEnumValue<const T extends readonly string[]>(
+  value: unknown,
+  values: T,
+): T[number] | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  return values.includes(value) ? value : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function buildMobilisClientErrorFingerprint(input: {
