@@ -66,6 +66,8 @@ OK Implemented:
   session and same-origin mutation gate.
 - Admin payment webhook journal actions now use the same server-route boundary
   for filtering, investigation, replay, provider verification and refunds.
+- Admin support queue refresh and ticket status updates are also proxied through
+  server routes, keeping incident triage behind the HttpOnly admin session.
 - Local admin server mutations require a same-origin request plus an explicit
   `x-mobilis-admin-action: true` header, which gives the HttpOnly admin cookie
   a concrete CSRF gate instead of relying on cookie attributes alone.

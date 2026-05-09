@@ -2,18 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  authenticateAndFetchCurrentUser,
-  createMobilisApiClient,
-  fetchAdminSupportTickets,
-  updateAdminSupportTicket,
   type SupportTicketQueueResponse,
+  type SupportTicketUpdateResponse,
 } from '@mobilis/api';
 import { describeRealtimeConnection, formatOperationalStatus } from '@mobilis/ui';
-import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
 import {
   adminSyncHighlightDurationMs,
   resolveCollectionDelta,
 } from './admin-ops-kernel';
+import {
+  adminMutationHeaderName,
+  adminMutationHeaderValue,
+} from './admin-server-security';
 import { subscribeToAdminRealtime } from './admin-realtime';
 
 type SupportQueueProps = {
@@ -32,6 +32,39 @@ function getTicketStatusClass(status: string) {
   return 'phase-status-completed';
 }
 
+async function fetchSupportTickets() {
+  const response = await fetch('/api/admin/support-tickets');
+
+  if (!response.ok) {
+    throw new Error('Support queue fetch failed');
+  }
+
+  return (await response.json()) as SupportTicketQueueResponse;
+}
+
+async function updateSupportTicket(
+  ticketId: string,
+  payload: {
+    status?: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
+    priority?: number;
+  },
+) {
+  const response = await fetch(`/api/admin/support-tickets/${ticketId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      [adminMutationHeaderName]: adminMutationHeaderValue,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error('Support ticket update failed');
+  }
+
+  return (await response.json()) as SupportTicketUpdateResponse;
+}
+
 export function SupportQueue({ initialTickets }: SupportQueueProps) {
   const [tickets, setTickets] = useState(initialTickets);
   const [status, setStatus] = useState('File support synchronisee.');
@@ -40,28 +73,10 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
   const [freshTicketIds, setFreshTicketIds] = useState<string[]>([]);
   const previousTicketsRef = useRef<SupportQueueProps['initialTickets'] | null>(null);
 
-  const client = useMemo(
-    () =>
-      createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-        version: mobilisRuntimeConfig.apiVersion,
-      }),
-    [],
-  );
-
-  const withAdminClient = useCallback(async () => {
-    const { authClient } = await authenticateAndFetchCurrentUser(
-      client,
-      mobilisDemoAccounts.admin,
-    );
-
-    return authClient;
-  }, [client]);
-
   const refreshTickets = useCallback(
     async (showMessage = true, successMessage = 'File support actualisee.') => {
       try {
-        const authClient = await withAdminClient();
-        const response = await fetchAdminSupportTickets(authClient);
+        const response = await fetchSupportTickets();
         setTickets(response.tickets);
 
         if (showMessage) {
@@ -73,7 +88,7 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
         }
       }
     },
-    [withAdminClient],
+    [],
   );
 
   const summary = useMemo(() => {
@@ -186,8 +201,7 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
     setStatus(message);
 
     try {
-      const authClient = await withAdminClient();
-      await updateAdminSupportTicket(authClient, ticketId, payload);
+      await updateSupportTicket(ticketId, payload);
       await refreshTickets(false);
       setStatus('Ticket mis a jour avec succes.');
     } catch {
