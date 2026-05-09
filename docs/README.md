@@ -22,6 +22,7 @@ ce flux doit changer dans le meme travail.
 | Runbook deploiement | `deployment-runbook.md` |
 | Onboarding chauffeur securise | `driver-onboarding-security.md` |
 | Directive production | `production-readiness-directive.md` |
+| Programme de tests securite et fiabilite | `security-test-program.md` |
 | Roadmap world-class | `world-class-readiness-roadmap.md` |
 
 ## Organisation
@@ -48,6 +49,7 @@ Documents qui cadrent les choix marche et operationnels:
 - `payment-strategy.md`
 - `pricing-burkina-strategy.md`
 - `production-readiness-directive.md`
+- `security-test-program.md`
 - `world-class-readiness-roadmap.md`
 
 ## Regles de maintenance
@@ -62,4 +64,3 @@ Documents qui cadrent les choix marche et operationnels:
    production sans preuve terrain, runbook et verification reproductible.
 5. Les diagrams Markdown restent textuels pour etre relus et modifies sans
    outil proprietaire.
-
