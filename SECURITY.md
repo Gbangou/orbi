@@ -68,6 +68,8 @@ OK Implemented:
   `__Host-` name with `Secure`, `HttpOnly`, `SameSite=Strict`, path `/` and
   high priority attributes. Local development keeps the legacy cookie name so
   plain `localhost` testing remains usable.
+- Demo account passwords stay visible only outside production builds; the admin
+  console does not render those shared test secrets in production mode.
 
 Planned Next Phase:
 - 2FA support (TOTP)

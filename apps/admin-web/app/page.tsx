@@ -328,6 +328,10 @@ const fallbackDriverWallets: AdminDriverWalletsResponse = {
   },
 };
 
+function shouldShowDemoPasswords() {
+  return process.env.NODE_ENV !== 'production';
+}
+
 const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
   generatedAt: new Date('2026-04-19T00:00:00.000Z').toISOString(),
   environment: 'development',
@@ -707,6 +711,7 @@ export default async function AdminHomePage() {
     health,
     pricingScenarios,
   } = await loadAdminData();
+  const showDemoPasswords = shouldShowDemoPasswords();
 
   return (
     <main className="shell">
@@ -769,19 +774,25 @@ export default async function AdminHomePage() {
             <span>Admin web</span>
             <strong>{mobilisDemoAccounts.admin.email}</strong>
             <p>Deja connecte sur cette console.</p>
-            <code>{mobilisDemoAccounts.admin.password}</code>
+            {showDemoPasswords ? (
+              <code>{mobilisDemoAccounts.admin.password}</code>
+            ) : null}
           </article>
           <article className="test-access-card">
             <span>Rider app</span>
             <strong>{mobilisDemoAccounts.rider.email}</strong>
             <p>Ouvre l app rider avec `pnpm dev:rider`.</p>
-            <code>{mobilisDemoAccounts.rider.password}</code>
+            {showDemoPasswords ? (
+              <code>{mobilisDemoAccounts.rider.password}</code>
+            ) : null}
           </article>
           <article className="test-access-card">
             <span>Driver app</span>
             <strong>{mobilisDemoAccounts.driver.email}</strong>
             <p>Ouvre l app driver avec `pnpm dev:driver`.</p>
-            <code>{mobilisDemoAccounts.driver.password}</code>
+            {showDemoPasswords ? (
+              <code>{mobilisDemoAccounts.driver.password}</code>
+            ) : null}
           </article>
         </div>
       </section>

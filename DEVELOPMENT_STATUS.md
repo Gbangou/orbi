@@ -82,6 +82,8 @@ paiement provider, observabilite et runbooks verts.
 - Pipe global Nest renforce avec rejet des valeurs racine inconnues, headers
   API completes contre prefetch DNS/ouverture de telechargement, et patches pnpm
   explicites pour garder les dependances Nest type-only executables sous Jest.
+- Secrets de demonstration masques dans l admin web en build production, tout
+  en gardant l aide locale visible pendant les tests terrain/dev.
 
 ## Architecture active
 
