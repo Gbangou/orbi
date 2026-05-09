@@ -9,6 +9,11 @@ const driverPayoutSettlementStatuses = new Set([
   'PAID',
   'CANCELLED',
 ]);
+const paymentWebhookJournalKinds = new Set([
+  'payment',
+  'refund',
+  'ignored',
+]);
 const adminNoStoreHeaders = {
   'Cache-Control': 'no-store, max-age=0',
   Pragma: 'no-cache',
@@ -57,6 +62,14 @@ export function resolveDriverPayoutSettlementStatus(value: string | null) {
   }
 
   return 'PREPARED';
+}
+
+export function resolvePaymentWebhookJournalKind(value: string | null) {
+  if (paymentWebhookJournalKinds.has(value ?? '')) {
+    return value as 'payment' | 'refund' | 'ignored';
+  }
+
+  return undefined;
 }
 
 export function createNoStoreAdminHeaders() {

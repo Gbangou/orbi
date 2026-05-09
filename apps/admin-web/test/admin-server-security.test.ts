@@ -5,6 +5,7 @@ import {
   isSafeAdminMutationRequest,
   isSafeOpaqueAdminId,
   resolveDriverPayoutSettlementStatus,
+  resolvePaymentWebhookJournalKind,
 } from '../app/admin-server-security';
 
 function request(headers: Record<string, string>, method = 'POST') {
@@ -76,5 +77,13 @@ describe('admin server security', () => {
     expect(resolveDriverPayoutSettlementStatus('CANCELLED')).toBe('CANCELLED');
     expect(resolveDriverPayoutSettlementStatus('<script>')).toBe('PREPARED');
     expect(resolveDriverPayoutSettlementStatus(null)).toBe('PREPARED');
+  });
+
+  it('bounds payment webhook journal kind before proxying filters', () => {
+    expect(resolvePaymentWebhookJournalKind('payment')).toBe('payment');
+    expect(resolvePaymentWebhookJournalKind('refund')).toBe('refund');
+    expect(resolvePaymentWebhookJournalKind('ignored')).toBe('ignored');
+    expect(resolvePaymentWebhookJournalKind('all')).toBeUndefined();
+    expect(resolvePaymentWebhookJournalKind('../ignored')).toBeUndefined();
   });
 });

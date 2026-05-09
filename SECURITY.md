@@ -64,6 +64,8 @@ OK Implemented:
 - Admin driver-wallet payout, recovery and settlement export actions also proxy
   through server routes, keeping finance mutations behind the HttpOnly admin
   session and same-origin mutation gate.
+- Admin payment webhook journal actions now use the same server-route boundary
+  for filtering, investigation, replay, provider verification and refunds.
 - Local admin server mutations require a same-origin request plus an explicit
   `x-mobilis-admin-action: true` header, which gives the HttpOnly admin cookie
   a concrete CSRF gate instead of relying on cookie attributes alone.

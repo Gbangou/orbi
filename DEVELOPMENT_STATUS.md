@@ -82,6 +82,9 @@ paiement provider, observabilite et runbooks verts.
 - Actions finance wallets chauffeurs migrees derriere routes serveur admin:
   preparation payout, marquage paye, recouvrement et exports settlement
   utilisent la session HttpOnly et le garde same-origin, sans Bearer navigateur.
+- Journal webhooks paiement migre derriere routes serveur admin pour filtres,
+  investigation, replay, verification fournisseur et refunds, avec IDs bornes et
+  garde mutation same-origin.
 - Pipe global Nest renforce avec rejet des valeurs racine inconnues, headers
   API completes contre prefetch DNS/ouverture de telechargement, et patches pnpm
   explicites pour garder les dependances Nest type-only executables sous Jest.

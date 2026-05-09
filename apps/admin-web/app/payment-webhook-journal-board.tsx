@@ -1,18 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
-  authenticateAndFetchCurrentUser,
-  createMobilisApiClient,
-  extractApiErrorMessage,
-  fetchAdminPaymentWebhookEvents,
-  refundAdminPaymentAttempt,
-  replayAdminPaymentWebhookEvent,
-  startAdminPaymentWebhookInvestigation,
-  verifyAdminPaymentAttemptWithProvider,
+  type AdminPaymentAttemptProviderVerificationResponse,
+  type AdminPaymentAttemptRefundResponse,
   type AdminPaymentWebhookEventsResponse,
+  type AdminPaymentWebhookInvestigationResponse,
+  type AdminPaymentWebhookReplayResponse,
 } from '@mobilis/api';
-import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
+import {
+  adminMutationHeaderName,
+  adminMutationHeaderValue,
+} from './admin-server-security';
 
 type PaymentWebhookJournalBoardProps = {
   journal: AdminPaymentWebhookEventsResponse;
@@ -86,6 +85,31 @@ function canRefundPaymentAttempt(event: PaymentWebhookJournalEvent) {
   return event.paymentAttempt?.status === 'SUCCEEDED';
 }
 
+async function fetchAdminJson<TResponse>(path: string) {
+  const response = await fetch(path);
+
+  if (!response.ok) {
+    throw new Error('Admin request failed');
+  }
+
+  return (await response.json()) as TResponse;
+}
+
+async function postAdminMutation<TResponse>(path: string) {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: {
+      [adminMutationHeaderName]: adminMutationHeaderValue,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Admin mutation failed');
+  }
+
+  return (await response.json()) as TResponse;
+}
+
 export function PaymentWebhookJournalBoard({
   journal,
 }: PaymentWebhookJournalBoardProps) {
@@ -99,27 +123,16 @@ export function PaymentWebhookJournalBoard({
   const [busyByEventId, setBusyByEventId] = useState<Record<string, boolean>>(
     {},
   );
-  const client = useMemo(
-    () =>
-      createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-        version: mobilisRuntimeConfig.apiVersion,
-      }),
-    [],
-  );
 
   async function filterJournal(kind: PaymentWebhookJournalKind) {
     setActiveKind(kind);
 
     try {
-      const { authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
+      const response = await fetchAdminJson<AdminPaymentWebhookEventsResponse>(
+        `/api/admin/payment-webhook-events${
+          kind === 'all' ? '' : `?kind=${kind}`
+        }`,
       );
-      const response = await fetchAdminPaymentWebhookEvents(authClient, {
-        page: 1,
-        pageSize: 8,
-        kind: kind === 'all' ? undefined : kind,
-      });
 
       setJournalState(response.events);
       setJournalSummary(response.summary);
@@ -143,13 +156,9 @@ export function PaymentWebhookJournalBoard({
     }));
 
     try {
-      const { authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
-      );
-      const response = await startAdminPaymentWebhookInvestigation(
-        authClient,
-        eventId,
+      const response =
+        await postAdminMutation<AdminPaymentWebhookInvestigationResponse>(
+          `/api/admin/payment-webhook-events/${eventId}/investigation`,
       );
 
       setStatusByEventId((current) => ({
@@ -182,13 +191,9 @@ export function PaymentWebhookJournalBoard({
     }));
 
     try {
-      const { authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
-      );
-      const response = await replayAdminPaymentWebhookEvent(
-        authClient,
-        eventId,
+      const response =
+        await postAdminMutation<AdminPaymentWebhookReplayResponse>(
+          `/api/admin/payment-webhook-events/${eventId}/replay`,
       );
 
       updateEventFromReconciliation(eventId, {
@@ -227,13 +232,9 @@ export function PaymentWebhookJournalBoard({
     }));
 
     try {
-      const { authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
-      );
-      const response = await verifyAdminPaymentAttemptWithProvider(
-        authClient,
-        paymentAttemptId,
+      const response =
+        await postAdminMutation<AdminPaymentAttemptProviderVerificationResponse>(
+          `/api/admin/payment-attempts/${paymentAttemptId}/verify-provider`,
       );
 
       updateEventFromReconciliation(eventId, {
@@ -273,16 +274,8 @@ export function PaymentWebhookJournalBoard({
     }));
 
     try {
-      const { authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
-      );
-      const response = await refundAdminPaymentAttempt(
-        authClient,
-        paymentAttemptId,
-        {
-          reason: 'Remboursement ops depuis le journal webhooks.',
-        },
+      const response = await postAdminMutation<AdminPaymentAttemptRefundResponse>(
+        `/api/admin/payment-attempts/${paymentAttemptId}/refund`,
       );
 
       setJournalState((current) =>
@@ -310,13 +303,10 @@ export function PaymentWebhookJournalBoard({
               ? `Remboursement demande: ${response.refund.providerRefundReference}.`
             : `Remboursement prepare: ${response.refund.providerRefundReference}.`,
       }));
-    } catch (error) {
+    } catch {
       setStatusByEventId((current) => ({
         ...current,
-        [eventId]: extractApiErrorMessage(
-          error,
-          "Le remboursement n'a pas pu etre execute.",
-        ),
+        [eventId]: "Le remboursement n'a pas pu etre execute.",
       }));
     } finally {
       setBusyByEventId((current) => ({
