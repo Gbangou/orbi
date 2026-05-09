@@ -159,5 +159,6 @@ After this foundation, the next serious payment work should be:
 
 1. capture real Flutterwave sandbox refund webhook payloads and keep them as fixtures
 2. connect CinetPay refund automation when the supported endpoint is validated
-3. document replay, refund and provider-verification runbooks with screenshots from the
-   first sandbox incidents
+3. keep the replay, refund and provider-verification runbook in
+   `local-e2e-field-session.md` updated with screenshots and observations from
+   the first sandbox incidents

@@ -195,6 +195,91 @@ Provider-mode variant:
 - Use provider verification or the Flutterwave refund webhook to finalize
   `REFUNDED`; the wallet reversal must appear only after that confirmation.
 
+### 9. Provider Verification, Replay and Investigation
+
+Use this section when a payment or refund is stuck, when a provider callback is
+ambiguous, or when an operator needs to prove that replay is idempotent.
+
+1. List recent webhook events:
+
+```powershell
+Invoke-RestMethod `
+  -Method Get `
+  -Uri "http://localhost:3000/api/v1/admin/payment-webhook-events?kind=payment" `
+  -Headers @{ Authorization = "Bearer <adminSessionToken>" }
+```
+
+Expected:
+
+- event rows are redacted enough for admin use
+- `paymentAttemptId` is present for reconciled events
+- unknown references remain visible as ignored/orphan events
+
+2. Open one webhook detail:
+
+```powershell
+Invoke-RestMethod `
+  -Method Get `
+  -Uri "http://localhost:3000/api/v1/admin/payment-webhook-events/<eventId>" `
+  -Headers @{ Authorization = "Bearer <adminSessionToken>" }
+```
+
+Expected:
+
+- raw provider payload is redacted
+- linked ride, rider and payment attempt are visible when known
+- finance can decide between replay, provider verification or investigation
+
+3. Replay the stored webhook:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:3000/api/v1/admin/payment-webhook-events/<eventId>/replay" `
+  -Headers @{ Authorization = "Bearer <adminSessionToken>" }
+```
+
+Expected:
+
+- repeated replay does not duplicate wallet credits, refunds or webhook journal
+  effects
+- audit log action is `PAYMENT_WEBHOOK_REPLAYED`
+- admin realtime signal confirms the replay result
+
+4. Verify a payment attempt with the provider:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:3000/api/v1/admin/payment-attempts/<paymentAttemptId>/verify-provider" `
+  -Headers @{ Authorization = "Bearer <adminSessionToken>" }
+```
+
+Expected:
+
+- amount and currency must match the server payment attempt
+- provider success reconciles at most one attempt
+- `REFUND_PENDING` attempts only move to `REFUNDED` when the provider refund is
+  confirmed as processed
+- audit log action is `PAYMENT_ATTEMPT_PROVIDER_VERIFIED`
+
+5. Start an investigation when the event cannot be safely reconciled:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:3000/api/v1/admin/payment-webhook-events/<eventId>/investigation" `
+  -ContentType "application/json" `
+  -Headers @{ Authorization = "Bearer <adminSessionToken>" } `
+  -Body (@{ note = "Reference provider inconnue pendant la session terrain." } | ConvertTo-Json)
+```
+
+Expected:
+
+- audit log action is `PAYMENT_WEBHOOK_INVESTIGATION_STARTED`
+- a support ticket is created when a user/payment can be linked
+- orphan events stay visible to finance without attaching money movement
+
 ## Failure Log
 
 During the session, record every issue here before fixing it:
