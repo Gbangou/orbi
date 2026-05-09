@@ -7,6 +7,7 @@ import {
   resolveDriverPayoutSettlementStatus,
   resolvePaymentWebhookJournalKind,
 } from '../app/admin-server-security';
+import { resolveSafeDocumentUrl } from '../app/admin-url-security';
 
 function request(headers: Record<string, string>, method = 'POST') {
   return {
@@ -85,5 +86,17 @@ describe('admin server security', () => {
     expect(resolvePaymentWebhookJournalKind('ignored')).toBe('ignored');
     expect(resolvePaymentWebhookJournalKind('all')).toBeUndefined();
     expect(resolvePaymentWebhookJournalKind('../ignored')).toBeUndefined();
+  });
+
+  it('allows only safe document view URLs for admin links', () => {
+    expect(resolveSafeDocumentUrl('https://storage.mobilis.app/view/doc')).toBe(
+      'https://storage.mobilis.app/view/doc',
+    );
+    expect(resolveSafeDocumentUrl('http://localhost:9000/view/doc')).toBe(
+      'http://localhost:9000/view/doc',
+    );
+    expect(resolveSafeDocumentUrl('javascript:alert(1)')).toBeNull();
+    expect(resolveSafeDocumentUrl('data:text/html,<script>')).toBeNull();
+    expect(resolveSafeDocumentUrl('/api/admin/document')).toBeNull();
   });
 });

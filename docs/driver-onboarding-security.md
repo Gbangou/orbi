@@ -43,6 +43,8 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
 - creation d evenements `DriverOnboardingReview` pour la soumission et les decisions ops
 - fondation `DriverDocument` pour stocker les references de justificatifs et leur statut
 - liens HMAC courts pour upload et consultation
+- la console admin refuse les URLs de consultation documentaire dont le schema
+  n est pas `https` ou `http` localhost de developpement
 - retour des contraintes d upload au client chauffeur pour afficher formats et
   taille maximale avant soumission
 - politique d upload par type de document:

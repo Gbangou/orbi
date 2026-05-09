@@ -22,6 +22,7 @@ import {
 } from './admin-ops-kernel';
 import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
 import { subscribeToAdminRealtime } from './admin-realtime';
+import { resolveSafeDocumentUrl } from './admin-url-security';
 
 type DriverOnboardingReviewBoardProps = {
   initialQueue: DriverOnboardingQueueResponse['drivers'];
@@ -403,9 +404,16 @@ export function DriverOnboardingReviewBoard({
         driverId,
         documentId,
       );
+      const signedUrl = resolveSafeDocumentUrl(response.signedUrl);
+
+      if (!signedUrl) {
+        setStatus('Lien signe refuse: URL document inattendue.');
+        return;
+      }
+
       setDocumentLinks((current) => ({
         ...current,
-        [documentId]: response.signedUrl,
+        [documentId]: signedUrl,
       }));
       setStatus('Lien signe genere.');
     } catch {
