@@ -2396,6 +2396,32 @@ describe('AdminService', () => {
     );
   });
 
+  it('rejects unsafe recovery idempotency keys before touching wallet ledgers', async () => {
+    const { prisma, service } = createService();
+
+    await expect(
+      service.recordDriverWalletRecoveryAdjustment(
+        'wallet-1',
+        {
+          amount: 1000,
+          notes: 'Paiement terrain recu.',
+          idempotencyKey: 'ops key unsafe',
+        },
+        {
+          user: {
+            id: 'ops-1',
+            fullName: 'Ops Mobilis',
+            role: 'OPS',
+          },
+        } as never,
+      ),
+    ).rejects.toThrow(
+      'Idempotency key must be 8 to 128 URL-safe characters.',
+    );
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.wallet.update).not.toHaveBeenCalled();
+  });
+
   it('marks a prepared driver payout as paid with an idempotent wallet transaction', async () => {
     const { prisma, realtimeService, service } = createService();
 

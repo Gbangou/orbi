@@ -1393,6 +1393,34 @@ describe('PaymentsService', () => {
     );
   });
 
+  it('rejects unsafe checkout idempotency keys before creating an attempt', async () => {
+    const { service, prisma } = createService('flutterwave');
+
+    await expect(
+      service.createCheckoutIntent(
+        {
+          user: {
+            id: 'user-1',
+            role: 'RIDER',
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        {
+          rideRequestId: 'ride-request-1',
+          channel: 'MOBILE_MONEY',
+          amount: 2400,
+          mobileMoneyNetwork: 'ORANGE_MONEY',
+        },
+        'checkout key with spaces',
+      ),
+    ).rejects.toThrow(
+      'Idempotency key must be 8 to 128 URL-safe characters.',
+    );
+    expect(prisma.paymentAttempt.create).not.toHaveBeenCalled();
+  });
+
   it('rejects webhook calls with an invalid secret', async () => {
     const { service } = createService();
 

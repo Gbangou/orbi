@@ -700,9 +700,13 @@ export class PaymentsService {
       return undefined;
     }
 
-    if (normalized.length < 8 || normalized.length > 128) {
+    if (
+      normalized.length < 8 ||
+      normalized.length > 128 ||
+      !/^[a-z0-9._-]+$/i.test(normalized)
+    ) {
       throw new BadRequestException(
-        'Idempotency key must be between 8 and 128 characters.',
+        'Idempotency key must be 8 to 128 URL-safe characters.',
       );
     }
 

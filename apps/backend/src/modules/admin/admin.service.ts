@@ -724,6 +724,16 @@ function normalizeIdempotencyKey(key: string | undefined) {
     throw new BadRequestException('An idempotency key is required.');
   }
 
+  if (
+    normalized.length < 8 ||
+    normalized.length > 128 ||
+    !/^[a-z0-9._-]+$/i.test(normalized)
+  ) {
+    throw new BadRequestException(
+      'Idempotency key must be 8 to 128 URL-safe characters.',
+    );
+  }
+
   return normalized;
 }
 

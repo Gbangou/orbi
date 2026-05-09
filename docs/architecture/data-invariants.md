@@ -41,6 +41,22 @@ Les listes de statuts doivent rester alignees avec:
 - `activeTripLifecycleStatuses`
 - `allowedTripLifecycleTransitions`
 
+### Cles D Idempotence Argent Normalisees
+
+Les operations argent qui acceptent une cle d idempotence fournie par un client
+ou par les ops doivent refuser les cles ambigues. Mobilis limite ces cles a 8-128
+caracteres ASCII URL-safe: lettres, chiffres, point, underscore et tiret.
+
+Garantie:
+
+- checkout rider: `PaymentsService.createCheckoutIntent` valide la cle envoyee
+  dans `Idempotency-Key` avant de rechercher ou creer un `PaymentAttempt`
+- recovery wallet: `DriverWalletRecoveryAdjustmentDto` et
+  `AdminService.recordDriverWalletRecoveryAdjustment` appliquent le meme
+  contrat avant toute ecriture ledger
+- references: les cles ainsi normalisees peuvent etre integrees dans les
+  references internes sans separateur ambigu ni caractere de controle
+
 ### Reference Fournisseur Paiement Unique
 
 Une reference fournisseur de paiement ne peut etre reconciliee qu'une seule

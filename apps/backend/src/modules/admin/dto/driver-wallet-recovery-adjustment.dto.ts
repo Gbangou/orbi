@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNumber, IsString, MaxLength, Min } from 'class-validator';
+import { IsNumber, IsString, Matches, MaxLength, Min } from 'class-validator';
 
 export class DriverWalletRecoveryAdjustmentDto {
   @Type(() => Number)
@@ -13,5 +13,9 @@ export class DriverWalletRecoveryAdjustmentDto {
 
   @IsString()
   @MaxLength(128)
+  @Matches(/^[a-z0-9._-]{8,128}$/i, {
+    message:
+      'idempotencyKey must be 8 to 128 URL-safe characters.',
+  })
   idempotencyKey!: string;
 }

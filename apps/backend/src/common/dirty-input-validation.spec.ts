@@ -3,6 +3,7 @@ import { validate } from 'class-validator';
 import { SignInDto } from '../modules/auth/dto/sign-in.dto';
 import { SignUpDto, SignUpRole } from '../modules/auth/dto/sign-up.dto';
 import { DriverOnboardingExportQueryDto } from '../modules/admin/dto/driver-onboarding-export-query.dto';
+import { DriverWalletRecoveryAdjustmentDto } from '../modules/admin/dto/driver-wallet-recovery-adjustment.dto';
 import { PaymentAttemptRefundDto } from '../modules/admin/dto/payment-attempt-refund.dto';
 import { CreateCheckoutIntentDto } from '../modules/payments/dto/create-checkout-intent.dto';
 import { PaymentWebhookDto } from '../modules/payments/dto/payment-webhook.dto';
@@ -480,6 +481,23 @@ describe('dirty input validation', () => {
 
     expect(validRefund).toEqual([]);
     expect(dirtyRefund.length).toBeGreaterThan(0);
+  });
+
+  it('keeps admin wallet recovery idempotency keys bounded and URL-safe', async () => {
+    const validRecovery = await validateDto(DriverWalletRecoveryAdjustmentDto, {
+      amount: 1000,
+      notes: 'Paiement terrain recu.',
+      idempotencyKey: 'ops-key-001',
+    });
+    const dirtyRecovery = await validateDto(DriverWalletRecoveryAdjustmentDto, {
+      amount: 1000,
+      notes: 'Paiement terrain recu.',
+      idempotencyKey: 'ops key<script>',
+      forceBalance: 0,
+    });
+
+    expect(validRecovery).toEqual([]);
+    expect(dirtyRecovery.length).toBeGreaterThan(0);
   });
 
   it('bounds provider refund webhook identifiers and statuses', async () => {
