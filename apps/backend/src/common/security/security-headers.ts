@@ -8,7 +8,7 @@ const API_CONTENT_SECURITY_POLICY = [
 ].join('; ');
 
 function isHttpsRequest(request: Request) {
-  return request.secure || request.headers['x-forwarded-proto'] === 'https';
+  return request.secure;
 }
 
 function isSensitiveApiPath(path: string) {

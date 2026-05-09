@@ -62,7 +62,7 @@ describe('applyApiSecurityHeaders', () => {
     }
   });
 
-  it('honors trusted HTTPS proxy headers for HSTS', () => {
+  it('does not trust raw forwarded proto headers for HSTS', () => {
     const { headers, response } = createResponse();
 
     applyApiSecurityHeaders(
@@ -70,6 +70,21 @@ describe('applyApiSecurityHeaders', () => {
         path: '/api/v1/health',
         secure: false,
         headers: { 'x-forwarded-proto': 'https' },
+      } as never,
+      response as never,
+    );
+
+    expect(headers.has('Strict-Transport-Security')).toBe(false);
+  });
+
+  it('sets HSTS when Express marks the request as secure', () => {
+    const { headers, response } = createResponse();
+
+    applyApiSecurityHeaders(
+      {
+        path: '/api/v1/health',
+        secure: true,
+        headers: {},
       } as never,
       response as never,
     );

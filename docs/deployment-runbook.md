@@ -85,7 +85,8 @@ Cela evite un faux sentiment de securite ou une prod multi-instance tournerait p
 - `RATE_LIMIT_ADAPTER=redis` declare l intention d utiliser un comptage partage entre instances
 - `TRUST_PROXY=true` doit etre active uniquement quand l API est derriere un
   proxy/load balancer de confiance; le rate limit IP utilise `request.ip`, pas
-  un en-tete `x-forwarded-for` fourni directement par le client
+  un en-tete `x-forwarded-for` fourni directement par le client, et HSTS se
+  base sur le marqueur HTTPS fiable d Express
 - tant que le store Redis partage n est pas branche, la sante remontera un etat rate limit degrade
 - activer `RATE_LIMIT_STRICT=true` en preproduction/production pour faire echouer la readiness d une instance qui demarrerait avec un fallback non partage
 
