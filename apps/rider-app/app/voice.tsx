@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import {
   createMobilisApiClient,
   extractApiErrorMessage,
@@ -7,16 +7,16 @@ import {
   resolveVoiceLocationIntentWithApi,
   type MyTripsResponse,
   type VoiceLocationIntentResponse,
-} from '@mobilis/api';
-import { mobilisCopy, mobilisTheme } from '@mobilis/ui';
-import { mobilisRuntimeConfig } from '@mobilis/config';
-import { restoreRiderSession } from '../lib/auth';
-import { resolveRiderAppError } from '../lib/session-feedback';
+} from "@mobilis/api";
+import { mobilisCopy, mobilisTheme } from "@mobilis/ui";
+import { mobilisRuntimeConfig } from "@mobilis/config";
+import { restoreRiderSession } from "../lib/auth";
+import { resolveRiderAppError } from "../lib/session-feedback";
 import {
   buildRiderFlowTransitionLabel,
   buildRiderPeripheralStatusLabel,
   resolveRiderActiveFlow,
-} from '../lib/rider-active-flow';
+} from "../lib/rider-active-flow";
 import {
   DashboardMetricCard,
   FlowActionButton,
@@ -26,23 +26,27 @@ import {
   RouteSignalCard,
   SectionCard,
   SectionHeading,
-} from '../lib/realtime-widgets';
-import { RiderJourneySection } from '../lib/rider-journey';
-import { useLiveRefresh } from '../lib/use-live-refresh';
+} from "../lib/realtime-widgets";
+import { RiderJourneySection } from "../lib/rider-journey";
+import { useLiveRefresh } from "../lib/use-live-refresh";
 
 const SAMPLE_TRANSCRIPTS = [
-  'Je vais a Ouaga 2000',
-  'Viens me chercher a l universite de Ouaga',
-  'Je suis a la zone du bois',
+  "Je vais a Ouaga 2000",
+  "Viens me chercher a l universite de Ouaga",
+  "Je suis a la zone du bois",
 ] as const;
 
 export default function VoiceScreen() {
   const [transcript, setTranscript] = useState<string>(SAMPLE_TRANSCRIPTS[0]);
-  const [result, setResult] = useState<VoiceLocationIntentResponse | null>(null);
+  const [result, setResult] = useState<VoiceLocationIntentResponse | null>(
+    null,
+  );
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
-  const [status, setStatus] = useState('Analyse vocale en cours...');
+  const [status, setStatus] = useState("Analyse vocale en cours...");
   const [isLoading, setIsLoading] = useState(false);
-  const [voiceTransitionLabel, setVoiceTransitionLabel] = useState<string | null>(null);
+  const [voiceTransitionLabel, setVoiceTransitionLabel] = useState<
+    string | null
+  >(null);
   const previousFlowStateRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -58,7 +62,11 @@ export default function VoiceScreen() {
   useEffect(() => {
     const previousFlowState = previousFlowStateRef.current;
     setVoiceTransitionLabel(
-      buildRiderFlowTransitionLabel(previousFlowState, flow.activeFlowState, 'voice'),
+      buildRiderFlowTransitionLabel(
+        previousFlowState,
+        flow.activeFlowState,
+        "voice",
+      ),
     );
 
     previousFlowStateRef.current = flow.activeFlowState;
@@ -87,14 +95,14 @@ export default function VoiceScreen() {
         setStatus(
           buildRiderPeripheralStatusLabel({
             flow: nextFlow,
-            surface: 'voice',
+            surface: "voice",
           }),
         );
       }
     } catch (error) {
       if (!silent) {
         const feedback = await resolveRiderAppError(error, {
-          fallback: 'Le contexte rider n a pas pu etre charge pour la voix.',
+          fallback: "Le contexte rider n a pas pu etre charge pour la voix.",
         });
         setStatus(feedback.message);
       }
@@ -107,13 +115,13 @@ export default function VoiceScreen() {
     });
 
     if (!nextTranscript.trim()) {
-      setStatus('Saisissez ou dictez une commande avant de lancer l analyse.');
+      setStatus("Saisissez ou dictez une commande avant de lancer l analyse.");
       setResult(null);
       return;
     }
 
     setIsLoading(true);
-    setStatus('Analyse vocale du lieu en cours...');
+    setStatus("Analyse vocale du lieu en cours...");
 
     try {
       const response = await resolveVoiceLocationIntentWithApi(client, {
@@ -123,7 +131,7 @@ export default function VoiceScreen() {
       setResult(response);
       setStatus(
         response.needsClarification
-          ? 'La commande a besoin d une clarification avant de reserver.'
+          ? "La commande a besoin d une clarification avant de reserver."
           : flow.hasOpenFlow
             ? `Intention ${response.intentType} detectee avec succes. Flux rider ${flow.primaryStatusLabel}.`
             : `Intention ${response.intentType} detectee avec succes.`,
@@ -132,7 +140,7 @@ export default function VoiceScreen() {
       setStatus(
         extractApiErrorMessage(
           error,
-          'Le service vocal backend est indisponible. Mode local a verifier.',
+          "Le service vocal backend est indisponible. Mode local a verifier.",
         ),
       );
       setResult(null);
@@ -153,7 +161,7 @@ export default function VoiceScreen() {
             ? voiceTransitionLabel
             : flow.primaryRouteLabel
               ? `Flux actif rattache: ${flow.primaryRouteLabel}.`
-              : 'Le moteur vocal interprete une demande libre puis propose des lieux exploitables dans le contexte Burkina Faso.'
+              : "Le moteur vocal interprete une demande libre puis propose des lieux exploitables dans le contexte Burkina Faso."
         }
       />
 
@@ -164,21 +172,25 @@ export default function VoiceScreen() {
           description="Combinez une phrase libre, des exemples frequents et une interpretation structuree pour aller plus vite vers la reservation."
         />
         <View style={styles.insightRow}>
-          <InsightBadge label="Locale" value={result?.locale ?? 'fr-BF'} tone="sky" />
+          <InsightBadge
+            label="Locale"
+            value={result?.locale ?? "fr-BF"}
+            tone="sky"
+          />
           <InsightBadge
             label="Flux actif"
             value={flow.primaryStatusLabel}
-            tone={flow.hasOpenFlow ? 'amber' : 'teal'}
+            tone={flow.hasOpenFlow ? "amber" : "teal"}
           />
           <InsightBadge
             label="Confiance"
             value={`${Math.round((result?.confidence ?? 0) * 100)}%`}
-            tone={result?.needsClarification ? 'amber' : 'teal'}
+            tone={result?.needsClarification ? "amber" : "teal"}
           />
           <InsightBadge
             label="Etat"
-            value={result?.needsClarification ? 'Clarifier' : 'Exploitable'}
-            tone={result?.needsClarification ? 'amber' : 'teal'}
+            value={result?.needsClarification ? "Clarifier" : "Exploitable"}
+            tone={result?.needsClarification ? "amber" : "teal"}
           />
         </View>
       </SectionCard>
@@ -193,7 +205,7 @@ export default function VoiceScreen() {
         {flow.hasOpenFlow ? (
           <Text style={styles.flowMeta}>
             Reservation active: {flow.primaryStatusLabel}
-            {flow.primaryRouteLabel ? ` - ${flow.primaryRouteLabel}` : ''}
+            {flow.primaryRouteLabel ? ` - ${flow.primaryRouteLabel}` : ""}
           </Text>
         ) : null}
         <TextInput
@@ -220,7 +232,7 @@ export default function VoiceScreen() {
         <FlowActionButton
           onPress={() => void resolveTranscript(transcript)}
           disabled={isLoading}
-          label={isLoading ? 'Analyse...' : 'Analyser la commande'}
+          label={isLoading ? "Analyse..." : "Analyser la commande"}
           tone="teal"
           emphasis="primary"
           style={isLoading ? styles.buttonDisabled : null}
@@ -230,7 +242,7 @@ export default function VoiceScreen() {
       <View style={styles.metricsRow}>
         <DashboardMetricCard
           label="Langue"
-          value={result?.locale ?? 'fr-BF'}
+          value={result?.locale ?? "fr-BF"}
           helper="priorite MVP Burkina Faso"
           tone="sky"
         />
@@ -239,10 +251,10 @@ export default function VoiceScreen() {
           value={`${Math.round((result?.confidence ?? 0) * 100)}%`}
           helper={
             result?.needsClarification
-              ? 'clarification requise'
-              : 'intention exploitable'
+              ? "clarification requise"
+              : "intention exploitable"
           }
-          tone={result?.needsClarification ? 'amber' : 'teal'}
+          tone={result?.needsClarification ? "amber" : "teal"}
         />
         <DashboardMetricCard
           label="Suggestions"
@@ -255,20 +267,22 @@ export default function VoiceScreen() {
       {result ? (
         <RouteSignalCard
           eyebrow="Interpretation"
-          badgeLabel={result.needsClarification ? 'Clarification' : 'Exploitable'}
-          badgeTone={result.needsClarification ? 'amber' : 'teal'}
+          badgeLabel={
+            result.needsClarification ? "Clarification" : "Exploitable"
+          }
+          badgeTone={result.needsClarification ? "amber" : "teal"}
           title={result.interpretation}
           description={`Transcription normalisee: ${result.normalizedTranscript}`}
           insights={[
             {
-              label: 'Intent',
+              label: "Intent",
               value: result.intentType,
-              tone: result.needsClarification ? 'amber' : 'teal',
+              tone: result.needsClarification ? "amber" : "teal",
             },
             {
-              label: 'Confiance',
+              label: "Confiance",
               value: `${Math.round(result.confidence * 100)}%`,
-              tone: result.needsClarification ? 'amber' : 'sky',
+              tone: result.needsClarification ? "amber" : "sky",
             },
           ]}
           note={
@@ -286,15 +300,15 @@ export default function VoiceScreen() {
           key={`${item.name}-${item.district}`}
           eyebrow="Suggestion vocale"
           badgeLabel={`${Math.round(item.confidence * 100)}%`}
-          badgeTone={item.confidence >= 0.75 ? 'teal' : 'amber'}
+          badgeTone={item.confidence >= 0.75 ? "teal" : "amber"}
           title={item.name}
           description={item.address}
           insights={[
-            { label: 'Quartier', value: item.district, tone: 'sky' },
+            { label: "Quartier", value: item.district, tone: "sky" },
             {
-              label: 'Confiance',
+              label: "Confiance",
               value: `${Math.round(item.confidence * 100)}%`,
-              tone: item.confidence >= 0.75 ? 'teal' : 'amber',
+              tone: item.confidence >= 0.75 ? "teal" : "amber",
             },
           ]}
         />
@@ -314,15 +328,15 @@ const styles = StyleSheet.create({
   title: {
     color: mobilisTheme.colors.text,
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   body: {
     color: mobilisTheme.colors.muted,
     lineHeight: 22,
   },
   insightRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   voiceCard: {
@@ -335,12 +349,12 @@ const styles = StyleSheet.create({
   },
   label: {
     color: mobilisTheme.colors.teal,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     fontSize: 12,
   },
   flowMeta: {
     color: mobilisTheme.colors.text,
-    fontWeight: '700',
+    fontWeight: "700",
     lineHeight: 20,
   },
   input: {
@@ -360,13 +374,13 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   metricsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   section: {
     color: mobilisTheme.colors.text,
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });
