@@ -7,7 +7,7 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "powershell -Command \"$env:EXPO_OFFLINE='1'; Remove-Item Env:HTTP_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:HTTPS_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:ALL_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:GIT_HTTP_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:GIT_HTTPS_PROXY -ErrorAction SilentlyContinue; expo start --web\"",
+    "web": "powershell -Command \"$env:EXPO_OFFLINE='1'; Remove-Item Env:HTTP_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:HTTPS_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:ALL_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:GIT_HTTP_PROXY -ErrorAction SilentlyContinue; Remove-Item Env:GIT_HTTPS_PROXY -ErrorAction SilentlyContinue; expo start --web --clear\"",
     "test:smoke": "jest --config ./jest.config.cjs --runInBand",
     "typecheck": "tsc --noEmit",
     "build": "echo rider app build handled by Expo application services",
