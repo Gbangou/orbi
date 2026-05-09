@@ -31,6 +31,7 @@
     "test:e2e": "pnpm --filter backend test:e2e",
     "prisma:generate": "pnpm --filter backend prisma:generate",
     "prisma:migrate": "pnpm --filter backend prisma:migrate",
+    "prisma:migrate:dev": "pnpm --filter backend prisma:migrate:dev",
     "prisma:seed": "pnpm --filter backend prisma:seed"
   },
   "keywords": [

@@ -33,6 +33,10 @@ pnpm prisma:migrate
 pnpm prisma:seed
 ```
 
+`pnpm prisma:migrate` applique les migrations existantes avec `prisma migrate deploy`.
+Pour creer volontairement une nouvelle migration apres un changement de schema,
+utiliser `pnpm prisma:migrate:dev` et verifier ensuite les invariants Prisma.
+
 Si `prisma:migrate` echoue, le premier reflexe est de verifier que Docker Desktop tourne bien et que le container PostgreSQL est demarre.
 
 Mobilis utilise le port `5433` pour PostgreSQL afin d eviter les conflits avec un PostgreSQL deja installe sur la machine.

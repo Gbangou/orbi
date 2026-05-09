@@ -67,6 +67,10 @@ pnpm e2e:local-api
 pnpm typecheck
 ```
 
+`pnpm prisma:migrate` applique les migrations existantes. Utiliser
+`pnpm prisma:migrate:dev` seulement pour creer une migration apres modification
+du schema Prisma.
+
 Pour tester sur telephone avec Expo Go:
 
 ```bash
