@@ -83,6 +83,9 @@ Cela evite un faux sentiment de securite ou une prod multi-instance tournerait p
 
 - `RATE_LIMIT_ADAPTER=in-memory` reste acceptable pour le dev local et les previews mono-instance
 - `RATE_LIMIT_ADAPTER=redis` declare l intention d utiliser un comptage partage entre instances
+- `TRUST_PROXY=true` doit etre active uniquement quand l API est derriere un
+  proxy/load balancer de confiance; le rate limit IP utilise `request.ip`, pas
+  un en-tete `x-forwarded-for` fourni directement par le client
 - tant que le store Redis partage n est pas branche, la sante remontera un etat rate limit degrade
 - activer `RATE_LIMIT_STRICT=true` en preproduction/production pour faire echouer la readiness d une instance qui demarrerait avec un fallback non partage
 
@@ -100,6 +103,8 @@ Cela evite qu un cluster multi-instance expose des limites incoherentes selon le
   - `PAYMENTS_DEFAULT_REDIRECT_URL`
   - `PAYMENTS_DEFAULT_WEBHOOK_URL`
 - verifier que les URLs publiques de production ne contiennent pas `localhost`
+- verifier que `TRUST_PROXY=true` correspond a une topologie avec proxy fiable,
+  et rester a `false` si l API est exposee directement
 - si `RATE_LIMIT_STRICT=true`, `RATE_LIMIT_REDIS_URL` doit etre configure
 - si `REALTIME_STRICT=true`, `REALTIME_REDIS_URL` doit etre configure
 - si `PAYMENTS_REFUND_MODE=provider` avec Flutterwave,

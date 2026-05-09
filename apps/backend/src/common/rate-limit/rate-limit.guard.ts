@@ -69,12 +69,6 @@ export class RateLimitGuard implements CanActivate {
       return `user:${request.auth.user.id}`;
     }
 
-    const forwardedFor = request.headers['x-forwarded-for'];
-    const forwardedValue = Array.isArray(forwardedFor)
-      ? forwardedFor[0]
-      : forwardedFor;
-    const firstForwardedIp = forwardedValue?.split(',')[0]?.trim();
-
-    return `ip:${firstForwardedIp ?? request.ip ?? 'unknown'}`;
+    return `ip:${request.ip ?? 'unknown'}`;
   }
 }
