@@ -3537,10 +3537,14 @@ export async function cancelRideRequestWithApi(
 export async function createCheckoutIntentWithApi(
   client: MobilisApiClient,
   payload: CheckoutIntentPayload,
+  options: { idempotencyKey?: string } = {},
 ) {
   return client.request<CheckoutIntentResponse>(apiRoutes.payments.checkoutIntents, {
     method: 'POST',
     body: payload,
+    headers: options.idempotencyKey
+      ? { 'Idempotency-Key': options.idempotencyKey }
+      : undefined,
   });
 }
 

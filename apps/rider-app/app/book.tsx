@@ -540,6 +540,9 @@ export default function BookingScreen() {
               ? 'ORANGE_MONEY'
               : undefined,
           customerPhoneNumber: me.user.phoneNumber ?? undefined,
+          redirectUrl: mobilisRuntimeConfig.paymentRedirectUrl,
+        }, {
+          idempotencyKey: `checkout-${createdRequest.id}-${selectedPaymentMethod}`,
         });
 
         setPaymentPreview({

@@ -48,6 +48,10 @@ Checkout return URLs are also mediated by the backend. A client-provided
 or the configured `PAYMENTS_DEFAULT_REDIRECT_URL` origin. This keeps aggregator
 return flows from becoming an open redirect while still allowing Expo/local and
 production frontend URLs explicitly configured by ops.
+The rider app sends this configured redirect URL and a deterministic checkout
+idempotency key (`checkout-${rideRequestId}-${paymentMethod}`) through the shared
+API client so checkout retries reuse the same payment attempt instead of
+creating duplicate aggregator references.
 
 ## Current webhook contract
 

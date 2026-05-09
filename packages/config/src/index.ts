@@ -23,6 +23,10 @@ export const mobilisRuntimeConfig = {
     runtimeEnvironment.process?.env?.EXPO_PUBLIC_API_VERSION ??
     runtimeEnvironment.process?.env?.NEXT_PUBLIC_API_VERSION ??
     'v1',
+  paymentRedirectUrl:
+    runtimeEnvironment.process?.env?.EXPO_PUBLIC_PAYMENT_REDIRECT_URL ??
+    runtimeEnvironment.process?.env?.NEXT_PUBLIC_PAYMENT_REDIRECT_URL ??
+    'http://localhost:8081/book',
   launchLocale: 'fr-BF',
   launchMarket: 'Burkina Faso',
 } as const;

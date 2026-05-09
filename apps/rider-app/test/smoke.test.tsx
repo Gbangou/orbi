@@ -442,7 +442,11 @@ describe('rider smoke flows', () => {
         rideRequestId: 'ride-request-12345678',
         channel: 'MOBILE_MONEY',
         mobileMoneyNetwork: 'ORANGE_MONEY',
+        redirectUrl: 'http://localhost:8081/book',
       }),
+      {
+        idempotencyKey: 'checkout-ride-request-12345678-mobile-money',
+      },
     );
   });
 
