@@ -189,6 +189,8 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
           `/api/admin/driver-wallets/${walletId}/recovery-adjustments`,
           {
             amount: recoveryDue,
+            notes: 'Recouvrement terrain confirme depuis la console ops.',
+            idempotencyKey: `recovery-${walletId}-${Math.round(recoveryDue)}`,
           },
       );
 

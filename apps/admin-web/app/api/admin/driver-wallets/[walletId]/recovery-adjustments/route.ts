@@ -13,6 +13,21 @@ function isSafePositiveAmount(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
+function isSafeIdempotencyKey(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^[a-z0-9._-]{8,128}$/i.test(value.trim())
+  );
+}
+
+function isSafeNote(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.trim().length > 0 &&
+    value.trim().length <= 500
+  );
+}
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ walletId: string }> },
@@ -35,6 +50,8 @@ export async function POST(
 
   const payload = (await request.json().catch(() => null)) as {
     amount?: unknown;
+    notes?: unknown;
+    idempotencyKey?: unknown;
   } | null;
 
   const recoveryAmount = payload?.amount;
@@ -46,6 +63,15 @@ export async function POST(
     );
   }
 
+  const notes =
+    payload && isSafeNote(payload.notes)
+      ? payload.notes.trim()
+      : 'Recouvrement terrain confirme depuis la console ops.';
+  const idempotencyKey =
+    payload && isSafeIdempotencyKey(payload.idempotencyKey)
+      ? payload.idempotencyKey.trim()
+      : `recovery-${walletId}-${Math.round(recoveryAmount)}`;
+
   try {
     const authClient = await getAdminServerAuthClient();
     const response = await recordAdminDriverWalletRecoveryAdjustment(
@@ -53,8 +79,8 @@ export async function POST(
       walletId,
       {
         amount: recoveryAmount,
-        notes: 'Recouvrement terrain confirme depuis la console ops.',
-        idempotencyKey: `recovery-${walletId}-${Date.now()}`,
+        notes,
+        idempotencyKey,
       },
     );
 
