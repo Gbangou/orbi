@@ -34,6 +34,7 @@ import {
 const tripShareLinkTtlMinutes = 120;
 const routeMonitoringAlertCooldownMinutes = 15;
 const safetySosCooldownMinutes = 2;
+const safetyIncidentCooldownMinutes = 2;
 const routeStopMinutesThreshold = 8;
 const routeNoProgressMinutesThreshold = 10;
 const routeDeviationKmThreshold = 0.75;
@@ -864,12 +865,12 @@ export class TripsService {
         include: {
           events: {
             where: {
-              eventType: 'SOS_TRIGGERED',
+              eventType: 'INCIDENT_REPORTED',
             },
             orderBy: {
               createdAt: 'desc',
             },
-            take: 5,
+            take: 10,
           },
         },
       });
@@ -883,6 +884,24 @@ export class TripsService {
       if (!ACTIVE_TRIP_STATUSES.includes(trip.status)) {
         throw new BadRequestException(
           'Incident reporting is only available for active trips.',
+        );
+      }
+
+      const cooldownSince =
+        Date.now() - safetyIncidentCooldownMinutes * 60 * 1000;
+      const recentIncidentFromActor = (trip.events ?? []).some((event) => {
+        const eventPayload = isRecord(event.payload) ? event.payload : {};
+
+        return (
+          event.createdAt.getTime() >= cooldownSince &&
+          eventPayload.reportedByUserId === auth.user.id &&
+          eventPayload.incidentType === normalizedIncidentType
+        );
+      });
+
+      if (recentIncidentFromActor) {
+        throw new BadRequestException(
+          `Incident already reported recently. Please wait ${safetyIncidentCooldownMinutes} minutes before retrying.`,
         );
       }
 

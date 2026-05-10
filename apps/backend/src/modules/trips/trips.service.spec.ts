@@ -722,6 +722,63 @@ describe('TripsService', () => {
     expect(result.incident.ticketId).toBe('ticket-1');
   });
 
+  it('throttles repeated incident reports from the same actor and type', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-incident-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+      events: [
+        {
+          eventType: 'INCIDENT_REPORTED',
+          createdAt: new Date(),
+          payload: {
+            incidentType: 'SAFETY_ALERT',
+            reportedByUserId: 'user-rider-1',
+          },
+        },
+      ],
+    });
+
+    await expect(
+      service.reportIncident(
+        {
+          user: {
+            id: 'user-rider-1',
+            role: 'RIDER',
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        'trip-incident-1',
+        {
+          incidentType: 'safety_alert',
+          details: 'Second report from the same button tap.',
+        },
+      ),
+    ).rejects.toThrow('Incident already reported recently.');
+
+    expect(prisma.trip.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          events: expect.objectContaining({
+            where: {
+              eventType: 'INCIDENT_REPORTED',
+            },
+            take: 10,
+          }),
+        }),
+      }),
+    );
+    expect(prisma.supportTicket.create).not.toHaveBeenCalled();
+    expect(prisma.trip.update).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
+    expect(realtimeService.publish).not.toHaveBeenCalled();
+  });
+
   it('declares voluntary incident evidence with consent and audit trail', async () => {
     const { prisma, realtimeService, service } = createService();
 
