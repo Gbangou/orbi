@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   acceptRideRequestWithApi,
-  createTripShareLinkWithApi,
   declineDriverOfferWithApi,
   driverOffers,
   fetchDriverOffers,
@@ -533,37 +532,6 @@ export default function OffersScreen() {
     }
   }
 
-  async function handleShareTrip(tripId: string) {
-    setIsSubmitting(true);
-    setStatus('Creation du lien de partage mission...');
-
-    try {
-      const { authClient } = await restoreDriverSession();
-      const response = await createTripShareLinkWithApi(authClient, tripId);
-      const shareUrl = response.share.path;
-
-      await Share.share({
-        message: `Suivi securise de ma mission Mobilis: ${shareUrl}`,
-        url: shareUrl,
-      });
-      setStatus('Lien de partage mission pret. Expiration automatique active.');
-      await loadDriverData();
-    } catch (error) {
-      const feedback = await resolveDriverAppError(error, {
-        surface: 'safety',
-        fallback: "Le lien de partage mission n'a pas pu etre cree.",
-      });
-
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
-      }
-
-      setStatus(feedback.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   function renderActiveTripAction() {
     if (!activeTrip) {
       return null;
@@ -794,13 +762,6 @@ export default function OffersScreen() {
             label="SOS securite"
             onPress={() => handleTriggerSos(activeTrip.id)}
             emphasis="primary"
-            style={isSubmitting ? styles.disabled : null}
-          />
-          <FlowActionButton
-            disabled={isSubmitting}
-            label="Partager la mission"
-            onPress={() => handleShareTrip(activeTrip.id)}
-            emphasis="secondary"
             style={isSubmitting ? styles.disabled : null}
           />
           <FlowActionButton

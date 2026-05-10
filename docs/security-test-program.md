@@ -1,6 +1,6 @@
 # Mobilis Security And Reliability Test Program
 
-Date de reference: 9 mai 2026
+Date de reference: 10 mai 2026
 
 Ce programme transforme la checklist type Uber/Yango en controles executables,
 preuves attendues et criteres de sortie pour Mobilis. Il s'appuie sur:
@@ -10,6 +10,27 @@ preuves attendues et criteres de sortie pour Mobilis. Il s'appuie sur:
 - OWASP MASVS: https://mas.owasp.org/MASVS/
 - OWASP MASTG: https://mas.owasp.org/MASTG/
 - NIST SSDF SP 800-218: https://csrc.nist.gov/pubs/sp/800/218/final
+
+## Discipline Continue Par Defaut
+
+Chaque changement Mobilis doit etre traite comme un changement de produit
+critique: on ajoute ou on ajuste les tests au meme moment que le code, sans
+attendre une phase separee. La boucle minimale est:
+
+1. identifier les actifs touches: compte, session, trajet, position, paiement,
+   document KYC, admin action, log, notification ou export;
+2. mapper le changement aux controles OWASP WSTG, OWASP API Top 10, MASVS/MASTG
+   et NIST SSDF pertinents;
+3. ajouter le test automatisable le plus proche dans le repo;
+4. noter les tests lab/offensifs qui ne peuvent pas etre executes localement;
+5. executer les tests cibles puis `pnpm typecheck` avant de considerer le
+   changement termine.
+
+Pour Mobilis, les flux sensibles OWASP API6:2023 sont explicitement inclus:
+creation massive de comptes, abus promotions/parrainage, spam OTP, scraping
+chauffeurs, demandes de courses automatisees, annulations repetees, exports
+admin, remboursements, replays webhooks, bascule disponibilite chauffeur et
+changements tarifaires.
 
 ## Gate De Lancement
 
@@ -66,6 +87,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
 | 1 Web/backend auth | Auth specs, guards, rate limit, dirty input | MFA/OTP live, credential stuffing controle, vol/fixation session avec proxy | Security/backend |
 | 1 Autorisation | roles/profile guards, admin specs, opaque id pipe | BOLA/IDOR exhaustif sur tous objets avec Burp/ZAP | Security/backend |
 | 1 API Top 10 | DTO validation, rate limit, feature flags, security headers | DAST API complet, inventaire endpoints, SSRF et mass assignment offensifs | Security/API |
+| 1 API6 flux sensibles | rate limit, audit, feature flags, business guards | abus promos/parrainage/OTP, creation massive, scraping, remboursement abuse | Fraud/security |
 | 2 Mobile MASVS/MASTG | smoke rider/driver, session-feedback, SecureStore paths | reverse APK/IPA, stockage local, root/jailbreak, pinning, deep links, permissions | Mobile security |
 | 3 Geo/cartes | route metrics, dispatch, pricing, presence tests | GPS spoofing, trajet impossible, zones interdites, privacy realtime sur appareils | Fraud/geo |
 | 4 Realtime | realtime transport/service specs, degraded mode | WebSocket auth, channel isolation, replay/injection sous proxy | Realtime/backend |
@@ -108,6 +130,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
 | `pnpm test:admin:smoke` | 4 suites, 22 tests passed |
 | `pnpm --filter backend exec prisma validate` | schema valide |
 | `pnpm audit --audit-level moderate` | no known vulnerabilities after overrides |
+
+## Commandes Executees Le 10 Mai 2026
+
+| Commande | Resultat |
+| --- | --- |
+| `pnpm --filter @mobilis/rider-app typecheck` | OK |
+| `pnpm --filter @mobilis/driver-app typecheck` | OK |
+| `pnpm test:mobile:smoke` | rider 25 tests passed, driver 28 tests passed |
+| `pnpm typecheck` | OK apres correction Expo web/Metro |
+| Chrome DevTools headless `http://localhost:8081` | `/auth` rendu, aucun overlay `Uncaught Error` |
 
 ## Tests Non Executables Depuis Ce Poste Seul
 

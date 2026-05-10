@@ -901,6 +901,49 @@ describe('TripsService', () => {
     });
   });
 
+  it('throttles repeated SOS triggers from the same actor on a trip', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-sos-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+      events: [
+        {
+          eventType: 'SOS_TRIGGERED',
+          createdAt: new Date(),
+          payload: {
+            reportedByUserId: 'user-rider-1',
+          },
+        },
+      ],
+    });
+
+    await expect(
+      service.triggerSafetySos(
+        {
+          user: {
+            id: 'user-rider-1',
+            role: 'RIDER',
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        'trip-sos-1',
+        {
+          details: 'Second tap accidental.',
+        },
+      ),
+    ).rejects.toThrow('SOS already triggered recently.');
+
+    expect(prisma.supportTicket.create).not.toHaveBeenCalled();
+    expect(prisma.trip.update).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
+    expect(realtimeService.publish).not.toHaveBeenCalled();
+  });
+
   it('creates an audited expiring share link for an active trip', async () => {
     const { prisma, realtimeService, service } = createService();
 
@@ -964,6 +1007,29 @@ describe('TripsService', () => {
     );
   });
 
+  it('rejects public share link creation from a driver account', async () => {
+    const { prisma, service } = createService();
+
+    await expect(
+      service.createShareLink(
+        {
+          user: {
+            id: 'user-driver-1',
+            role: 'DRIVER',
+            driverProfile: {
+              id: 'driver-1',
+            },
+          },
+        } as never,
+        'trip-share-1',
+      ),
+    ).rejects.toThrow('Only the rider can create a public trip share link.');
+
+    expect(prisma.trip.findUnique).not.toHaveBeenCalled();
+    expect(prisma.trip.update).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
+  });
+
   it('returns limited public trip data for a valid share token', async () => {
     const { prisma, service } = createService();
     const token = 'share-token-1234567890';
@@ -1003,15 +1069,19 @@ describe('TripsService', () => {
     expect(result.sharedTrip).toMatchObject({
       tripId: 'trip-share-1',
       status: 'IN_PROGRESS',
-      riderName: 'Awa Rider',
-      driverName: 'Issa Driver',
+      riderName: 'Passager Mobilis',
+      driverName: 'Chauffeur Mobilis',
       vehicleLabel: 'Yamaha Crypton',
       lastEvent: {
         label: 'Course demarree',
         createdAt: '2026-05-02T10:05:00.000Z',
       },
     });
-    expect(result.sharedTrip.safetyNote).toContain('Aucun numero personnel');
+    expect(result.sharedTrip.safetyNote).toContain('Aucun nom reel');
+    expect(result.sharedTrip).not.toMatchObject({
+      riderName: 'Awa Rider',
+      driverName: 'Issa Driver',
+    });
   });
 
   it('records route monitoring positions and escalates abnormal deviation', async () => {

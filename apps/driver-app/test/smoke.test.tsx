@@ -3,7 +3,6 @@ import React from 'react';
 import { router } from 'expo-router';
 import {
   acceptRideRequestWithApi,
-  createTripShareLinkWithApi,
   declineDriverOfferWithApi,
   driverOffers,
   fetchDriverEarnings,
@@ -109,7 +108,6 @@ jest.mock('@mobilis/api', () => {
     fetchMyTrips: jest.fn(),
     fetchTripDetail: jest.fn(),
     acceptRideRequestWithApi: jest.fn(),
-    createTripShareLinkWithApi: jest.fn(),
     declineDriverOfferWithApi: jest.fn(),
     requestDriverDocumentUploadLinks: jest.fn(),
     upsertDriverOnboarding: jest.fn(),
@@ -130,7 +128,6 @@ const mockedFetchDriverEarnings = jest.mocked(fetchDriverEarnings);
 const mockedFetchDriverProfile = jest.mocked(fetchDriverProfile);
 const mockedFetchTripDetail = jest.mocked(fetchTripDetail);
 const mockedAcceptRideRequestWithApi = jest.mocked(acceptRideRequestWithApi);
-const mockedCreateTripShareLinkWithApi = jest.mocked(createTripShareLinkWithApi);
 const mockedDeclineDriverOfferWithApi = jest.mocked(declineDriverOfferWithApi);
 const mockedReportTripIncidentWithApi = jest.mocked(reportTripIncidentWithApi);
 const mockedTriggerTripSafetySosWithApi = jest.mocked(triggerTripSafetySosWithApi);
@@ -294,7 +291,6 @@ beforeEach(() => {
   mockedFetchDriverProfile.mockReset();
   mockedFetchTripDetail.mockReset();
   mockedAcceptRideRequestWithApi.mockReset();
-  mockedCreateTripShareLinkWithApi.mockReset();
   mockedDeclineDriverOfferWithApi.mockReset();
   mockedReportTripIncidentWithApi.mockReset();
   mockedTriggerTripSafetySosWithApi.mockReset();
@@ -321,16 +317,6 @@ beforeEach(() => {
       locationCaptured: false,
     },
   } as never);
-  mockedCreateTripShareLinkWithApi.mockResolvedValue({
-    share: {
-      tripId: 'trip-1',
-      token: 'share-token',
-      path: '/trips/shared/share-token',
-      expiresAt: '2026-05-02T12:00:00.000Z',
-      ttlMinutes: 120,
-    },
-  } as never);
-
   driverRealtimeState.eventHandler = null;
   driverRealtimeState.options = null;
 });

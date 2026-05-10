@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
@@ -74,6 +74,7 @@ function buildRideOptionDetailLines(option: RideOption) {
 }
 
 export default function RiderHomeScreen() {
+  const router = useRouter();
   const [options, setOptions] = useState<RideOption[]>(riderRideOptions);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [statusLabel, setStatusLabel] = useState('Connexion du compte passager de demonstration...');
@@ -251,27 +252,25 @@ export default function RiderHomeScreen() {
       </LiveHeroCard>
 
       <View style={styles.primaryActions}>
-        <Link href="/book" asChild>
-          <QuickActionCard
-            eyebrow="Reservation"
-            title="Reserver maintenant"
-            description={
-              flow.hasOpenFlow
-                ? 'Consulter le flux actif avant de creer une nouvelle demande.'
-                : 'Choisir un trajet, un service et un paiement.'
-            }
-            tone="teal"
-            emphasis="primary"
-          />
-        </Link>
-        <Link href="/activity" asChild>
-          <QuickActionCard
-            eyebrow="Suivi"
-            title="Voir l activite"
-            description="Suivre la course, la timeline et les incidents."
-            tone="sky"
-          />
-        </Link>
+        <QuickActionCard
+          eyebrow="Reservation"
+          title="Reserver maintenant"
+          description={
+            flow.hasOpenFlow
+              ? 'Consulter le flux actif avant de creer une nouvelle demande.'
+              : 'Choisir un trajet, un service et un paiement.'
+          }
+          tone="teal"
+          emphasis="primary"
+          onPress={() => router.push('/book')}
+        />
+        <QuickActionCard
+          eyebrow="Suivi"
+          title="Voir l activite"
+          description="Suivre la course, la timeline et les incidents."
+          tone="sky"
+          onPress={() => router.push('/activity')}
+        />
       </View>
 
       <View style={styles.metricsRow}>
@@ -316,14 +315,13 @@ export default function RiderHomeScreen() {
         }
       />
       <View style={styles.actions}>
-        <Link href="/account" asChild>
-          <QuickActionCard
-            eyebrow="Compte"
-            title="Profil et lieux enregistres"
-            description="Gerer vos informations, domiciles et points favoris."
-            tone="teal"
-          />
-        </Link>
+        <QuickActionCard
+          eyebrow="Compte"
+          title="Profil et lieux enregistres"
+          description="Gerer vos informations, domiciles et points favoris."
+          tone="teal"
+          onPress={() => router.push('/account')}
+        />
       </View>
     </ScrollView>
   );

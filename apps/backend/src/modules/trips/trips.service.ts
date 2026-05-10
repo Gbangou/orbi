@@ -33,6 +33,7 @@ import {
 
 const tripShareLinkTtlMinutes = 120;
 const routeMonitoringAlertCooldownMinutes = 15;
+const safetySosCooldownMinutes = 2;
 const routeStopMinutesThreshold = 8;
 const routeNoProgressMinutesThreshold = 10;
 const routeDeviationKmThreshold = 0.75;
@@ -137,6 +138,12 @@ export class TripsService {
   }
 
   async createShareLink(auth: RequestAuthContext, tripId: string) {
+    if (auth.user.role !== UserRole.RIDER) {
+      throw new BadRequestException(
+        'Only the rider can create a public trip share link.',
+      );
+    }
+
     const token = randomBytes(24).toString('base64url');
     const tokenHash = hashShareToken(token);
     const expiresAt = new Date(
@@ -308,8 +315,8 @@ export class TripsService {
         status: matchedTrip.status,
         pickupAddress: matchedTrip.pickupAddress,
         destinationAddress: matchedTrip.destinationAddress,
-        riderName: matchedTrip.rider.user.fullName,
-        driverName: matchedTrip.driver.user.fullName,
+        riderName: 'Passager Mobilis',
+        driverName: 'Chauffeur Mobilis',
         vehicleLabel: `${matchedTrip.vehicle.make} ${matchedTrip.vehicle.model}`,
         lastEvent: lastEvent
           ? {
@@ -323,7 +330,7 @@ export class TripsService {
             ? sharePayload.expiresAt
             : null,
         safetyNote:
-          'Lien limite aux informations utiles de securite. Aucun numero personnel n est expose.',
+          'Lien limite aux informations utiles de securite. Aucun nom reel ni numero personnel n est expose.',
       },
     };
   }
@@ -854,6 +861,17 @@ export class TripsService {
         where: {
           id: tripId,
         },
+        include: {
+          events: {
+            where: {
+              eventType: 'SOS_TRIGGERED',
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 5,
+          },
+        },
       });
 
       if (!trip) {
@@ -1023,6 +1041,28 @@ export class TripsService {
       if (!ACTIVE_TRIP_STATUSES.includes(trip.status)) {
         throw new BadRequestException(
           'SOS is only available for active trips.',
+        );
+      }
+
+      const tripWithSosEvents = trip as typeof trip & {
+        events?: Array<{
+          payload: unknown;
+          createdAt: Date;
+        }>;
+      };
+      const cooldownSince = Date.now() - safetySosCooldownMinutes * 60 * 1000;
+      const recentSosFromActor = (tripWithSosEvents.events ?? []).some((event) => {
+        const eventPayload = isRecord(event.payload) ? event.payload : {};
+
+        return (
+          event.createdAt.getTime() >= cooldownSince &&
+          eventPayload.reportedByUserId === auth.user.id
+        );
+      });
+
+      if (recentSosFromActor) {
+        throw new BadRequestException(
+          `SOS already triggered recently. Please wait ${safetySosCooldownMinutes} minutes before retrying.`,
         );
       }
 

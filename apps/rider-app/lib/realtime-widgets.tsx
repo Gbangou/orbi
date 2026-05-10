@@ -197,6 +197,14 @@ export function DashboardMetricCard({
   );
 }
 
+type QuickActionCardProps = PressableProps & {
+  eyebrow?: string;
+  title: string;
+  description?: string | null;
+  tone?: Tone;
+  emphasis?: 'primary' | 'secondary';
+};
+
 export function QuickActionCard({
   eyebrow,
   title,
@@ -205,13 +213,7 @@ export function QuickActionCard({
   emphasis = 'secondary',
   style,
   ...pressableProps
-}: PressableProps & {
-  eyebrow?: string;
-  title: string;
-  description?: string | null;
-  tone?: Tone;
-  emphasis?: 'primary' | 'secondary';
-}) {
+}: QuickActionCardProps) {
   const toneStyle = toneStyles[tone];
   const isPrimary = emphasis === 'primary';
 

@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
@@ -52,6 +52,7 @@ import { useDriverRealtimeStream } from '../lib/use-driver-realtime-stream';
 import { useLiveRefresh } from '../lib/use-live-refresh';
 
 export default function DriverHomeScreen() {
+  const router = useRouter();
   const [offers, setOffers] = useState<DriverOffer[]>(driverOffers);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [earnings, setEarnings] = useState<DriverEarningsResponse | null>(null);
@@ -400,15 +401,14 @@ export default function DriverHomeScreen() {
           {activeTripTransitionLabel ? (
             <Text style={styles.transitionMeta}>{activeTripTransitionLabel}</Text>
           ) : null}
-          <Link href="/offres" asChild>
-            <QuickActionCard
-              eyebrow="Direct"
-              title="Ouvrir la course en direct"
-              description="Retrouver la navigation, le client et le suivi d execution."
-              tone="amber"
-              emphasis="primary"
-            />
-          </Link>
+          <QuickActionCard
+            eyebrow="Direct"
+            title="Ouvrir la course en direct"
+            description="Retrouver la navigation, le client et le suivi d execution."
+            tone="amber"
+            emphasis="primary"
+            onPress={() => router.push('/offres')}
+          />
         </View>
       ) : null}
 
@@ -478,14 +478,13 @@ export default function DriverHomeScreen() {
       ) : null}
 
       <View style={styles.actions}>
-        <Link href="/revenus" asChild>
-          <QuickActionCard
-            eyebrow="Finance"
-            title="Consulter les revenus"
-            description="Suivre les gains du jour, de la semaine et les tendances."
-            tone="sky"
-          />
-        </Link>
+        <QuickActionCard
+          eyebrow="Finance"
+          title="Consulter les revenus"
+          description="Suivre les gains du jour, de la semaine et les tendances."
+          tone="sky"
+          onPress={() => router.push('/revenus')}
+        />
       </View>
     </ScrollView>
   );

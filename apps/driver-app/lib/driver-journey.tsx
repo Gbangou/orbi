@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import {
   QuickActionCard,
@@ -64,6 +64,7 @@ export function DriverJourneySection({
   currentStep: DriverJourneyStepId;
   description?: string;
 }) {
+  const router = useRouter();
   const currentStepIndex = driverJourneySteps.findIndex(
     (step) => step.id === currentStep,
   );
@@ -90,19 +91,19 @@ export function DriverJourneySection({
               : 'teal';
 
           return (
-            <Link key={step.id} href={step.href} asChild>
-              <QuickActionCard
-                eyebrow={step.eyebrow}
-                title={step.title}
-                description={
-                  isCurrent
-                    ? `Vous etes ici. ${step.description}`
-                    : step.description
-                }
-                tone={tone}
-                emphasis={isCurrent ? 'primary' : 'secondary'}
-              />
-            </Link>
+            <QuickActionCard
+              key={step.id}
+              eyebrow={step.eyebrow}
+              title={step.title}
+              description={
+                isCurrent
+                  ? `Vous etes ici. ${step.description}`
+                  : step.description
+              }
+              tone={tone}
+              emphasis={isCurrent ? 'primary' : 'secondary'}
+              onPress={() => router.push(step.href)}
+            />
           );
         })}
       </View>

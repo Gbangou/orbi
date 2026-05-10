@@ -713,4 +713,5 @@ describe('rider smoke flows', () => {
     );
     expectText(renderer, 'Course active');
   });
+
 });

@@ -115,7 +115,7 @@ export class TripsController {
   @Version('1')
   @ApiBearerAuth('session-token')
   @UseGuards(SessionAuthGuard, RolesGuard)
-  @Roles(UserRole.RIDER, UserRole.DRIVER, UserRole.ADMIN, UserRole.OPS)
+  @Roles(UserRole.RIDER)
   createShareLink(
     @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
     @CurrentAuth() auth: RequestAuthContext,

@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
@@ -159,6 +159,7 @@ function findCityPresetForPlace(place: Place) {
 }
 
 export default function BookingScreen() {
+  const router = useRouter();
   const [options, setOptions] = useState<RideOption[]>(riderRideOptions);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [profile, setProfile] =
@@ -729,21 +730,20 @@ export default function BookingScreen() {
         isHighlighted={Boolean(bookingTransitionLabel)}
       >
         {hasOpenFlow ? (
-          <Link href="/activity" asChild>
-            <QuickActionCard
-              title="Suivre le flux actif"
-              description={
-                activeTrip
-                  ? `${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`
-                  : activeRequest
-                    ? `${activeRequest.pickupAddress} vers ${activeRequest.destinationAddress}`
-                    : 'Ouvrir le suivi pour finaliser la demande en cours.'
-              }
-              tone="amber"
-              emphasis="primary"
-              style={styles.inlineActionCard}
-            />
-          </Link>
+          <QuickActionCard
+            title="Suivre le flux actif"
+            description={
+              activeTrip
+                ? `${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`
+                : activeRequest
+                  ? `${activeRequest.pickupAddress} vers ${activeRequest.destinationAddress}`
+                  : 'Ouvrir le suivi pour finaliser la demande en cours.'
+            }
+            tone="amber"
+            emphasis="primary"
+            onPress={() => router.push('/activity')}
+            style={styles.inlineActionCard}
+          />
         ) : (
           <View style={styles.routeActionStack}>
             <FlowActionButton
