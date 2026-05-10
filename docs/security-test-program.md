@@ -123,6 +123,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
 6. Trust & safety trajet: SOS, incidents et liens publics doivent etre limites
    aux acteurs autorises, throttles contre les doubles taps/abus, audites avant
    diffusion live, et resolus par hash de token sans fuite de nom reel.
+7. Booking: les doubles taps rider doivent etre absorbes cote mobile et cote
+   API; une demande active strictement equivalente est retournee sans nouvelle
+   creation ni nouvel evenement realtime.
 
 ## Commandes Executees Le 9 Mai 2026
 
@@ -144,6 +147,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
 | `pnpm typecheck` | OK apres correction Expo web/Metro |
 | `pnpm --filter backend test -- trips.service --runInBand` | 26 tests passed apres verrous SOS/incident/share |
 | `pnpm --filter backend test -- payments.service --runInBand` | 34 tests passed apres idempotence checkout et rejet webhook montant/devise |
+| `pnpm --filter backend test -- ride-requests.service --runInBand` | 11 tests passed apres idempotence active booking |
 | Chrome DevTools headless `http://localhost:8081` | `/auth` rendu, aucun overlay `Uncaught Error` |
 
 ## Tests Non Executables Depuis Ce Poste Seul
