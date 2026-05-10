@@ -938,6 +938,18 @@ describe('TripsService', () => {
       ),
     ).rejects.toThrow('SOS already triggered recently.');
 
+    expect(prisma.trip.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          events: expect.objectContaining({
+            where: {
+              eventType: 'SOS_TRIGGERED',
+            },
+            take: 5,
+          }),
+        }),
+      }),
+    );
     expect(prisma.supportTicket.create).not.toHaveBeenCalled();
     expect(prisma.trip.update).not.toHaveBeenCalled();
     expect(prisma.auditLog.create).not.toHaveBeenCalled();

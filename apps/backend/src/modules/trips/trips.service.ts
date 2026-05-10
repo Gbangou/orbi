@@ -1030,6 +1030,17 @@ export class TripsService {
         where: {
           id: tripId,
         },
+        include: {
+          events: {
+            where: {
+              eventType: 'SOS_TRIGGERED',
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 5,
+          },
+        },
       });
 
       if (!trip) {
