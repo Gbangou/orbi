@@ -28,6 +28,9 @@ describe('TripsService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn(),
       },
+      tripEvent: {
+        findFirst: jest.fn(),
+      },
       auditLog: {
         create: jest.fn(),
       },
@@ -1104,8 +1107,15 @@ describe('TripsService', () => {
     const token = 'share-token-1234567890';
     const tokenHash = createHash('sha256').update(token).digest('hex');
 
-    prisma.trip.findMany.mockResolvedValue([
-      {
+    prisma.tripEvent.findFirst.mockResolvedValue({
+      id: 'event-share-1',
+      eventType: 'SHARE_LINK_CREATED',
+      payload: {
+        tokenHash,
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      },
+      createdAt: new Date('2026-05-02T10:00:00.000Z'),
+      trip: {
         id: 'trip-share-1',
         status: 'IN_PROGRESS',
         pickupAddress: 'Universite Joseph Ki-Zerbo',
@@ -1131,10 +1141,22 @@ describe('TripsService', () => {
           },
         ],
       },
-    ]);
+    });
 
     const result = await service.getSharedTrip(token);
 
+    expect(prisma.tripEvent.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          eventType: 'SHARE_LINK_CREATED',
+          payload: {
+            path: ['tokenHash'],
+            equals: tokenHash,
+          },
+        }),
+      }),
+    );
+    expect(prisma.trip.findMany).not.toHaveBeenCalled();
     expect(result.sharedTrip).toMatchObject({
       tripId: 'trip-share-1',
       status: 'IN_PROGRESS',
@@ -1151,6 +1173,35 @@ describe('TripsService', () => {
       riderName: 'Awa Rider',
       driverName: 'Issa Driver',
     });
+  });
+
+  it('rejects expired public share tokens after direct token lookup', async () => {
+    const { prisma, service } = createService();
+    const token = 'share-token-expired-1234567890';
+
+    prisma.tripEvent.findFirst.mockResolvedValue({
+      id: 'event-share-expired',
+      eventType: 'SHARE_LINK_CREATED',
+      payload: {
+        tokenHash: createHash('sha256').update(token).digest('hex'),
+        expiresAt: new Date(Date.now() - 60_000).toISOString(),
+      },
+      createdAt: new Date('2026-05-02T10:00:00.000Z'),
+      trip: {
+        id: 'trip-share-expired',
+        status: 'IN_PROGRESS',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        rider: { user: { fullName: 'Awa Rider' } },
+        driver: { user: { fullName: 'Issa Driver' } },
+        vehicle: { make: 'Yamaha', model: 'Crypton' },
+        events: [],
+      },
+    });
+
+    await expect(service.getSharedTrip(token)).rejects.toThrow(
+      'Shared trip not found.',
+    );
   });
 
   it('records route monitoring positions and escalates abnormal deviation', async () => {

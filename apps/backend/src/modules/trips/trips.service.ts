@@ -243,71 +243,61 @@ export class TripsService {
     }
 
     const tokenHash = hashShareToken(token);
-    const trips = await this.prisma.trip.findMany({
+    const shareEvent = await this.prisma.tripEvent.findFirst({
       where: {
-        status: {
-          in: ACTIVE_TRIP_STATUSES,
+        eventType: 'SHARE_LINK_CREATED',
+        payload: {
+          path: ['tokenHash'],
+          equals: tokenHash,
         },
-        events: {
-          some: {
-            eventType: 'SHARE_LINK_CREATED',
+        trip: {
+          is: {
+            status: {
+              in: ACTIVE_TRIP_STATUSES,
+            },
           },
         },
       },
       include: {
-        rider: {
+        trip: {
           include: {
-            user: true,
-          },
-        },
-        driver: {
-          include: {
-            user: true,
-          },
-        },
-        vehicle: true,
-        events: {
-          orderBy: {
-            createdAt: 'asc',
+            rider: {
+              include: {
+                user: true,
+              },
+            },
+            driver: {
+              include: {
+                user: true,
+              },
+            },
+            vehicle: true,
+            events: {
+              orderBy: {
+                createdAt: 'asc',
+              },
+            },
           },
         },
       },
       orderBy: {
         createdAt: 'desc',
       },
-      take: 50,
     });
     const now = Date.now();
-    const matchedTrip = trips.find((trip) =>
-      trip.events.some((event) => {
-        if (event.eventType !== 'SHARE_LINK_CREATED') {
-          return false;
-        }
-
-        const payload = isRecord(event.payload) ? event.payload : {};
-        const expiresAt =
-          typeof payload.expiresAt === 'string'
-            ? Date.parse(payload.expiresAt)
-            : NaN;
-
-        return payload.tokenHash === tokenHash && expiresAt > now;
-      }),
-    );
-
-    if (!matchedTrip) {
-      throw new NotFoundException('Shared trip not found.');
-    }
-
-    const shareEvent = matchedTrip.events
-      .filter((event) => event.eventType === 'SHARE_LINK_CREATED')
-      .find((event) => {
-        const payload = isRecord(event.payload) ? event.payload : {};
-
-        return payload.tokenHash === tokenHash;
-      });
     const sharePayload = isRecord(shareEvent?.payload)
       ? shareEvent.payload
       : {};
+    const expiresAt =
+      typeof sharePayload.expiresAt === 'string'
+        ? Date.parse(sharePayload.expiresAt)
+        : NaN;
+
+    if (!shareEvent || expiresAt <= now) {
+      throw new NotFoundException('Shared trip not found.');
+    }
+
+    const matchedTrip = shareEvent.trip;
     const lastEvent = matchedTrip.events.at(-1);
 
     return {
