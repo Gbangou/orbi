@@ -3518,10 +3518,14 @@ export async function fetchPricingEstimate(
 export async function createRideRequestWithApi(
   client: MobilisApiClient,
   payload: CreateRideRequestPayload,
+  options: { idempotencyKey?: string } = {},
 ) {
   return client.request<RideRequestResponse>(apiRoutes.rideRequests.root, {
     method: 'POST',
     body: payload,
+    headers: options.idempotencyKey
+      ? { 'Idempotency-Key': options.idempotencyKey }
+      : undefined,
   });
 }
 

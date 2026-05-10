@@ -435,6 +435,11 @@ describe('rider smoke flows', () => {
         city: 'BOBO_DIOULASSO',
         districtProfile: 'MARKET_DENSE',
       }),
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(
+          /^ride-request-rider-bobo-dioulasso-/,
+        ),
+      }),
     );
     expect(mockedCreateCheckoutIntentWithApi).toHaveBeenCalledWith(
       { token: 'rider-auth-client' },

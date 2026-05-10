@@ -118,6 +118,12 @@ function normalizePlaceText(value: string) {
   return value.trim().toLowerCase();
 }
 
+function toIdempotencySegment(value: string | null | undefined) {
+  return normalizePlaceText(value ?? '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'unknown';
+}
+
 function isSamePlace(
   left: Place,
   right: RiderProfileResponse['profile']['savedPlaces'][number],
@@ -194,6 +200,7 @@ export default function BookingScreen() {
     channel: string;
   } | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
+  const bookingMutationInFlightRef = useRef(false);
 
   const selectedOption = useMemo(
     () =>
@@ -411,6 +418,10 @@ export default function BookingScreen() {
   }
 
   async function handleSaveCurrentPlace(target: 'pickup' | 'destination') {
+    if (bookingMutationInFlightRef.current) {
+      return;
+    }
+
     const place = target === 'pickup' ? pickupPlace : destinationPlace;
 
     if (!place.coordinates) {
@@ -429,6 +440,7 @@ export default function BookingScreen() {
       return;
     }
 
+    bookingMutationInFlightRef.current = true;
     setIsSubmitting(true);
     setStatus(
       target === 'pickup'
@@ -458,6 +470,7 @@ export default function BookingScreen() {
 
       setStatus(feedback.message);
     } finally {
+      bookingMutationInFlightRef.current = false;
       setIsSubmitting(false);
     }
   }
@@ -492,6 +505,10 @@ export default function BookingScreen() {
   }, [bookingTransitionLabel]);
 
   async function handleCreateRideRequest() {
+    if (bookingMutationInFlightRef.current) {
+      return;
+    }
+
     if (!selectedOption) {
       return;
     }
@@ -506,6 +523,7 @@ export default function BookingScreen() {
       return;
     }
 
+    bookingMutationInFlightRef.current = true;
     setIsSubmitting(true);
     setStatus(
       `Creation authentifiee de la demande ${selectedOption.title}...`,
@@ -513,23 +531,40 @@ export default function BookingScreen() {
 
     try {
       const { authClient, me } = await restoreRiderSession();
-      const createdRequest = await createRideRequestWithApi(authClient, {
-        pickupAddress: pickupPlace.address,
-        pickupLatitude: pickupPlace.coordinates?.latitude,
-        pickupLongitude: pickupPlace.coordinates?.longitude,
-        destinationAddress: destinationPlace.address,
-        destinationLatitude: destinationPlace.coordinates?.latitude,
-        destinationLongitude: destinationPlace.coordinates?.longitude,
-        requestedVehicleType: toApiVehicleType(selectedOption.category),
-        requestedServiceTier: toApiServiceTier(selectedOption.tier),
-        estimatedDistanceKm: tripEstimate.distanceKm,
-        estimatedDurationMinutes: tripEstimate.durationMinutes,
-        paymentMethod: toApiPaymentMethod(selectedPaymentMethod),
-        pickupAreaType: selectedCity.zone,
-        city: selectedCity.id,
-        districtProfile: selectedCity.districtProfile,
-        notes: `Flow authentifie depuis l'app rider pour ${me.user.fullName}, ville ${selectedCity.label}, profil ${selectedCity.districtProfile}, option ${selectedOption.title}, paiement ${selectedPaymentMethod}`,
-      });
+      const bookingIdempotencyKey = [
+        'ride-request',
+        toIdempotencySegment(me.user.id ?? 'rider'),
+        toIdempotencySegment(selectedCity.id),
+        toIdempotencySegment(selectedOption.id),
+        toIdempotencySegment(selectedPaymentMethod),
+        toIdempotencySegment(pickupPlace.address),
+        toIdempotencySegment(destinationPlace.address),
+      ]
+        .join('-')
+        .slice(0, 128);
+      const createdRequest = await createRideRequestWithApi(
+        authClient,
+        {
+          pickupAddress: pickupPlace.address,
+          pickupLatitude: pickupPlace.coordinates?.latitude,
+          pickupLongitude: pickupPlace.coordinates?.longitude,
+          destinationAddress: destinationPlace.address,
+          destinationLatitude: destinationPlace.coordinates?.latitude,
+          destinationLongitude: destinationPlace.coordinates?.longitude,
+          requestedVehicleType: toApiVehicleType(selectedOption.category),
+          requestedServiceTier: toApiServiceTier(selectedOption.tier),
+          estimatedDistanceKm: tripEstimate.distanceKm,
+          estimatedDurationMinutes: tripEstimate.durationMinutes,
+          paymentMethod: toApiPaymentMethod(selectedPaymentMethod),
+          pickupAreaType: selectedCity.zone,
+          city: selectedCity.id,
+          districtProfile: selectedCity.districtProfile,
+          notes: `Flow authentifie depuis l'app rider pour ${me.user.fullName}, ville ${selectedCity.label}, profil ${selectedCity.districtProfile}, option ${selectedOption.title}, paiement ${selectedPaymentMethod}`,
+        },
+        {
+          idempotencyKey: bookingIdempotencyKey,
+        },
+      );
 
       if (selectedPaymentMethod !== 'cash') {
         const paymentIntent = await createCheckoutIntentWithApi(authClient, {
@@ -576,6 +611,7 @@ export default function BookingScreen() {
 
       setStatus(feedback.message);
     } finally {
+      bookingMutationInFlightRef.current = false;
       setIsSubmitting(false);
     }
   }
