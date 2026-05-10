@@ -99,6 +99,9 @@ paiement provider, observabilite et runbooks verts.
 - Files locales de rapports d erreur mobile durcies: rider/driver relisent
   uniquement des rapports bien formes, du bon role, bornes a 20 entrees et
   redaction des tokens/emails/telephones avant replay backend.
+- Auth demo Expo web stabilisee: rider/driver web repassent sur `localhost`
+  quand l environnement mobile pointe vers une IP LAN, le backend accepte les
+  origines localhost de dev, et Metro ignore les artefacts `.next` admin.
 
 ## Architecture active
 
