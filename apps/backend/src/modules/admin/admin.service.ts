@@ -85,6 +85,10 @@ const documentSafetyPolicies: Record<
     maxBytes: 3_000_000,
   },
 };
+const sensitiveSupportTokenPattern =
+  /\b(sessiontoken|session|token|authorization|password|secret|otp|code)\s*[=:]\s*(?:bearer\s+)?["']?[^"'&\s,;)]+["']?/gi;
+const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const phonePattern = /\+?\d[\d\s().-]{7,}\d/g;
 
 type LaunchReadinessCheck = {
   id: string;
@@ -643,6 +647,29 @@ function resolveStoredDecisionGuidance(
     detail,
     blockers,
   };
+}
+
+function redactSupportText(value: string) {
+  return value
+    .replace(emailPattern, '[email masque]')
+    .replace(phonePattern, '[telephone masque]')
+    .replace(sensitiveSupportTokenPattern, '$1=[masque]');
+}
+
+function maskRequesterName(fullName: string | null | undefined) {
+  const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean);
+
+  if (!parts.length) {
+    return 'Utilisateur Mobilis';
+  }
+
+  const [firstName, ...rest] = parts;
+  const initials = rest
+    .map((part) => part.at(0)?.toUpperCase())
+    .filter(Boolean)
+    .join('.');
+
+  return initials ? `${firstName} ${initials}.` : firstName;
 }
 
 function nullableNonNegativeInteger(value: Prisma.JsonValue | undefined) {
@@ -3130,7 +3157,12 @@ export class AdminService {
         skip,
         take,
         include: {
-          user: true,
+          user: {
+            select: {
+              fullName: true,
+              role: true,
+            },
+          },
         },
         orderBy: [
           {
@@ -3152,11 +3184,11 @@ export class AdminService {
 
         return {
           id: ticket.id,
-          subject: ticket.subject,
-          description: ticket.description,
+          subject: redactSupportText(ticket.subject),
+          description: redactSupportText(ticket.description),
           status: ticket.status,
           priority: ticket.priority,
-          requesterName: ticket.user.fullName,
+          requesterName: maskRequesterName(ticket.user.fullName),
           requesterRole: ticket.user.role,
           tripId: tripIdMatch?.[1] ?? null,
           createdAt: ticket.createdAt.toISOString(),

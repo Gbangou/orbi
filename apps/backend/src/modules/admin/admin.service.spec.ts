@@ -801,14 +801,15 @@ describe('AdminService', () => {
     ).rejects.toThrow('Launch readiness action is not currently active.');
   });
 
-  it('returns a support queue with extracted trip ids', async () => {
+  it('returns a privacy-minimized support queue with extracted trip ids', async () => {
     const { prisma, service } = createService();
 
     prisma.supportTicket.findMany.mockResolvedValue([
       {
         id: 'ticket-1',
-        subject: 'Incident trajet tripabc123',
-        description: 'Type: SAFETY_ALERT',
+        subject: 'Incident trajet tripabc123 pour awa@mobilis.test',
+        description:
+          'Type: SAFETY_ALERT phone +226 70 00 00 00 token=secret-session-token',
         status: 'OPEN',
         priority: 3,
         createdAt: new Date('2026-04-17T09:00:00.000Z'),
@@ -830,8 +831,23 @@ describe('AdminService', () => {
     expect(result.tickets[0]).toEqual(
       expect.objectContaining({
         id: 'ticket-1',
-        requesterName: 'Awa Rider',
+        subject: 'Incident trajet tripabc123 pour [email masque]',
+        description:
+          'Type: SAFETY_ALERT phone [telephone masque] token=[masque]',
+        requesterName: 'Awa R.',
         tripId: 'tripabc123',
+      }),
+    );
+    expect(prisma.supportTicket.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: {
+          user: {
+            select: {
+              fullName: true,
+              role: true,
+            },
+          },
+        },
       }),
     );
     expect(result.meta).toEqual({

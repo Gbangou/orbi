@@ -152,6 +152,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
 | `pnpm --filter backend test -- ride-requests.service --runInBand` | 11 tests passed apres idempotence active booking |
 | `pnpm typecheck` | OK apres garde-fous admin wallet/payout/recouvrement |
 | Chrome DevTools headless `http://localhost:8081` | `/auth` rendu, aucun overlay `Uncaught Error` |
+| `pnpm --filter backend test -- admin.service.spec.ts --runInBand` | 50 tests passed apres minimisation privacy de la file support |
+
+## Regles Privacy Enforcees Localement
+
+- Les listes support ne chargent cote Prisma que les champs utilisateur utiles
+  a l affichage operationnel, jamais email, telephone, hash ou session.
+- Les champs libres support affiches en admin redigent emails, telephones et
+  secrets/tokens avant sortie API.
+- Les noms demandeurs support sont affiches sous forme masquee pour limiter
+  l exposition de donnees personnelles hors necessite operationnelle.
 
 ## Tests Non Executables Depuis Ce Poste Seul
 
