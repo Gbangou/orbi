@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   type AdminDriverPayoutResponse,
   type AdminDriverWalletRecoveryAdjustmentResponse,
@@ -43,8 +43,28 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
     Record<string, string>
   >({});
   const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const mutationInFlightRef = useRef(new Set<string>());
+
+  function beginMutation(key: string) {
+    if (mutationInFlightRef.current.has(key)) {
+      return false;
+    }
+
+    mutationInFlightRef.current.add(key);
+    return true;
+  }
+
+  function endMutation(key: string) {
+    mutationInFlightRef.current.delete(key);
+  }
 
   async function preparePayout(walletId: string) {
+    const mutationKey = `prepare:${walletId}`;
+
+    if (!beginMutation(mutationKey)) {
+      return;
+    }
+
     setStatusByWalletId((current) => ({
       ...current,
       [walletId]: 'Preparation payout...',
@@ -91,10 +111,18 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
         ...current,
         [walletId]: "Le payout n'a pas pu etre prepare.",
       }));
+    } finally {
+      endMutation(mutationKey);
     }
   }
 
   async function markPayoutPaid(walletId: string, payoutId: string) {
+    const mutationKey = `paid:${payoutId}`;
+
+    if (!beginMutation(mutationKey)) {
+      return;
+    }
+
     setStatusByWalletId((current) => ({
       ...current,
       [walletId]: 'Marquage paiement...',
@@ -138,10 +166,18 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
         ...current,
         [walletId]: "Le payout n'a pas pu etre marque paye.",
       }));
+    } finally {
+      endMutation(mutationKey);
     }
   }
 
   async function recordRecovery(walletId: string, recoveryDue: number) {
+    const mutationKey = `recovery:${walletId}`;
+
+    if (!beginMutation(mutationKey)) {
+      return;
+    }
+
     setStatusByWalletId((current) => ({
       ...current,
       [walletId]: 'Recouvrement enregistrement...',
@@ -215,10 +251,18 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
         ...current,
         [walletId]: "Le recouvrement n'a pas pu etre enregistre.",
       }));
+    } finally {
+      endMutation(mutationKey);
     }
   }
 
   async function downloadSettlement(format: 'csv' | 'pdf') {
+    const mutationKey = `export:${format}`;
+
+    if (!beginMutation(mutationKey)) {
+      return;
+    }
+
     setExportStatus(`Export ${format.toUpperCase()}...`);
 
     try {
@@ -240,6 +284,8 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
       setExportStatus(`Export ${format.toUpperCase()} pret.`);
     } catch {
       setExportStatus(`Export ${format.toUpperCase()} indisponible.`);
+    } finally {
+      endMutation(mutationKey);
     }
   }
 
