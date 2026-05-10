@@ -1352,6 +1352,56 @@ describe('PaymentsService', () => {
     expect(prisma.paymentAttempt.create).not.toHaveBeenCalled();
   });
 
+  it('returns the concurrent checkout attempt when idempotent creation races', async () => {
+    const { service, prisma } = createService('flutterwave');
+    const payload = {
+      rideRequestId: 'ride-request-1',
+      channel: 'MOBILE_MONEY' as const,
+      amount: 2400,
+      mobileMoneyNetwork: 'ORANGE_MONEY' as const,
+    };
+    const idempotencyHash = buildExpectedIdempotencyHash(
+      'user-1',
+      payload,
+      'FLUTTERWAVE',
+      2400,
+      'XOF',
+    );
+
+    prisma.paymentAttempt.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        provider: 'FLUTTERWAVE',
+        transactionRef: 'mobilis_concurrent_ride-request-1',
+        amount: { toString: () => '2400', valueOf: () => 2400 },
+        currency: 'XOF',
+        channel: 'MOBILE_MONEY',
+        providerMetadata: {
+          publicKeyPresent: true,
+          callbackUrl: 'https://mobilis.app/payments/return',
+        },
+        idempotencyHash,
+      });
+    prisma.paymentAttempt.create.mockRejectedValue(prismaUniqueConstraintError());
+
+    const result = await service.createCheckoutIntent(
+      {
+        user: {
+          id: 'user-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      payload,
+      'checkout-key-001',
+    );
+
+    expect(result.transactionRef).toBe('mobilis_concurrent_ride-request-1');
+    expect(prisma.paymentAttempt.findUnique).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects idempotency key reuse when the payload changes', async () => {
     const { service, prisma } = createService('flutterwave');
     const payload = {

@@ -124,19 +124,43 @@ export class PaymentsService {
       rideRequest.currency || currency,
     );
 
-    await this.prisma.paymentAttempt.create({
-      data: this.buildPaymentAttemptCreateData(
-        auth,
-        payload,
-        amount,
-        normalizedIdempotencyKey,
-        idempotencyHash,
-        provider,
-        rideRequest.currency || currency,
-        transactionRef,
-        checkoutIntent.providerMetadata,
-      ),
-    });
+    try {
+      await this.prisma.paymentAttempt.create({
+        data: this.buildPaymentAttemptCreateData(
+          auth,
+          payload,
+          amount,
+          normalizedIdempotencyKey,
+          idempotencyHash,
+          provider,
+          rideRequest.currency || currency,
+          transactionRef,
+          checkoutIntent.providerMetadata,
+        ),
+      });
+    } catch (error) {
+      if (!isPrismaUniqueConstraintError(error) || !normalizedIdempotencyKey) {
+        throw error;
+      }
+
+      const concurrentAttempt = await this.prisma.paymentAttempt.findUnique({
+        where: {
+          userId_idempotencyKey: {
+            userId: auth.user.id,
+            idempotencyKey: normalizedIdempotencyKey,
+          },
+        },
+      });
+
+      if (
+        !concurrentAttempt ||
+        concurrentAttempt.idempotencyHash !== idempotencyHash
+      ) {
+        throw error;
+      }
+
+      return this.serializeExistingCheckoutIntent(concurrentAttempt);
+    }
 
     return checkoutIntent;
   }
