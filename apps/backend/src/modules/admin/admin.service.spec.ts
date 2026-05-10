@@ -1711,6 +1711,56 @@ describe('AdminService', () => {
     expect(result.meta.total).toBe(1);
   });
 
+  it('minimizes driver onboarding identities for support readers', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findMany.mockResolvedValue([
+      {
+        id: 'driver-1',
+        verificationStatus: 'PENDING',
+        serviceRadiusKm: 8,
+        user: {
+          fullName: 'Issa Driver',
+          email: 'driver@mobilis.app',
+          phoneNumber: '+22670000000',
+        },
+        vehicles: [{ id: 'vehicle-1' }],
+        onboardingDocuments: [],
+        onboardingReviews: [
+          {
+            id: 'review-1',
+            status: 'UNDER_REVIEW',
+            decisionReason: 'Verification documentaire.',
+            createdAt: new Date('2026-04-18T08:10:00.000Z'),
+            metadata: {},
+            actor: {
+              fullName: 'Admin Mobilis',
+            },
+          },
+        ],
+      },
+    ]);
+    prisma.driverProfile.count.mockResolvedValue(1);
+
+    const result = await service.driverOnboardingQueue(
+      {
+        page: 1,
+        pageSize: 10,
+      },
+      authContext({ id: 'support-1', role: 'SUPPORT' }),
+    );
+
+    expect(result.drivers[0]).toEqual(
+      expect.objectContaining({
+        driverName: 'Issa D.',
+        email: 'd***@mobilis.app',
+        phoneNumber: '***0000',
+        latestReviewActor: 'Admin M.',
+      }),
+    );
+    expect(result.drivers[0].reviewHistory[0].actorName).toBe('Admin M.');
+  });
+
   it('flags incomplete driver document integrity in the onboarding queue', async () => {
     const { prisma, service } = createService();
 

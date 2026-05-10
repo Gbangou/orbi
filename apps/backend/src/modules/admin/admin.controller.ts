@@ -144,8 +144,11 @@ export class AdminController {
   @ApiBearerAuth('session-token')
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
-  driverOnboardingQueue(@Query() query: PageQueryDto) {
-    return this.adminService.driverOnboardingQueue(query);
+  driverOnboardingQueue(
+    @Query() query: PageQueryDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.driverOnboardingQueue(query, auth);
   }
 
   @Get('driver-onboarding/export-history')

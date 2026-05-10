@@ -162,6 +162,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
   secrets/tokens avant sortie API.
 - Les noms demandeurs support sont affiches sous forme masquee pour limiter
   l exposition de donnees personnelles hors necessite operationnelle.
+- La file onboarding chauffeur applique une minimisation par role: le support
+  voit email, telephone, chauffeur et acteur de revue masques; admin/ops gardent
+  les details requis pour les decisions KYC auditees et les exports autorises.
 
 ## Tests Non Executables Depuis Ce Poste Seul
 

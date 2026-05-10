@@ -672,6 +672,34 @@ function maskRequesterName(fullName: string | null | undefined) {
   return initials ? `${firstName} ${initials}.` : firstName;
 }
 
+function maskEmailAddress(email: string | null | undefined) {
+  if (!email?.trim()) {
+    return '[email masque]';
+  }
+
+  const [localPart, domain] = email.trim().split('@');
+
+  if (!localPart || !domain) {
+    return '[email masque]';
+  }
+
+  return `${localPart.slice(0, 1)}***@${domain}`;
+}
+
+function maskPhoneNumber(phoneNumber: string | null | undefined) {
+  const digits = phoneNumber?.replace(/\D/g, '') ?? '';
+
+  if (digits.length < 4) {
+    return null;
+  }
+
+  return `***${digits.slice(-4)}`;
+}
+
+function shouldMinimizeDriverOnboardingIdentity(auth?: RequestAuthContext) {
+  return auth?.user.role === UserRole.SUPPORT;
+}
+
 function nullableNonNegativeInteger(value: Prisma.JsonValue | undefined) {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0
     ? value
@@ -3204,8 +3232,12 @@ export class AdminService {
     };
   }
 
-  async driverOnboardingQueue(query: PageQueryDto = new PageQueryDto()) {
+  async driverOnboardingQueue(
+    query: PageQueryDto = new PageQueryDto(),
+    auth?: RequestAuthContext,
+  ) {
     const { page, pageSize, skip, take } = resolvePageQuery(query);
+    const minimizeIdentity = shouldMinimizeDriverOnboardingIdentity(auth);
     const [profiles, total] = await Promise.all([
       this.prisma.driverProfile.findMany({
         skip,
@@ -3304,14 +3336,24 @@ export class AdminService {
 
         return {
           id: profile.id,
-          driverName: profile.user.fullName,
-          email: profile.user.email,
-          phoneNumber: profile.user.phoneNumber,
+          driverName: minimizeIdentity
+            ? maskRequesterName(profile.user.fullName)
+            : profile.user.fullName,
+          email: minimizeIdentity
+            ? maskEmailAddress(profile.user.email)
+            : profile.user.email,
+          phoneNumber: minimizeIdentity
+            ? maskPhoneNumber(profile.user.phoneNumber)
+            : profile.user.phoneNumber,
           verificationStatus: profile.verificationStatus,
           reviewStatus:
             latestReview?.status ?? DriverOnboardingReviewStatus.SUBMITTED,
           latestReviewAt: latestReview?.createdAt.toISOString() ?? null,
-          latestReviewActor: latestReview?.actor.fullName ?? null,
+          latestReviewActor: latestReview?.actor.fullName
+            ? minimizeIdentity
+              ? maskRequesterName(latestReview.actor.fullName)
+              : latestReview.actor.fullName
+            : null,
           latestDecisionReason: latestReview?.decisionReason ?? null,
           serviceRadiusKm: Number(profile.serviceRadiusKm ?? 0),
           activeVehicleCount: profile.vehicles.length,
@@ -3328,7 +3370,9 @@ export class AdminService {
           reviewHistory: profile.onboardingReviews.map((review) => ({
             id: review.id,
             status: review.status,
-            actorName: review.actor.fullName,
+            actorName: minimizeIdentity
+              ? maskRequesterName(review.actor.fullName)
+              : review.actor.fullName,
             decisionReason: review.decisionReason ?? null,
             createdAt: review.createdAt.toISOString(),
             decisionGuidance: resolveStoredDecisionGuidance(review.metadata),

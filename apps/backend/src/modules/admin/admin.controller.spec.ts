@@ -116,6 +116,24 @@ describe('AdminController', () => {
     );
   });
 
+  it('delegates driver onboarding queue reads with auth for role-aware privacy', async () => {
+    const { adminService, controller } = createController();
+    const query = {
+      page: 1,
+      pageSize: 10,
+    };
+    const auth = {
+      user: { id: 'support-1', role: 'SUPPORT' },
+    };
+
+    await controller.driverOnboardingQueue(query as never, auth as never);
+
+    expect(adminService.driverOnboardingQueue).toHaveBeenCalledWith(
+      query,
+      auth,
+    );
+  });
+
   it('delegates driver wallet reads to the admin service', async () => {
     const { adminService, controller } = createController();
     const query = {
