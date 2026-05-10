@@ -126,6 +126,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
 7. Booking: les doubles taps rider doivent etre absorbes cote mobile et cote
    API; une demande active strictement equivalente est retournee sans nouvelle
    creation ni nouvel evenement realtime.
+8. Finance admin: les actions wallet/payout/recouvrement doivent etre
+   idempotentes cote API et bloquees contre les doubles clics cote console.
 
 ## Commandes Executees Le 9 Mai 2026
 
@@ -148,6 +150,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
 | `pnpm --filter backend test -- trips.service --runInBand` | 26 tests passed apres verrous SOS/incident/share |
 | `pnpm --filter backend test -- payments.service --runInBand` | 34 tests passed apres idempotence checkout et rejet webhook montant/devise |
 | `pnpm --filter backend test -- ride-requests.service --runInBand` | 11 tests passed apres idempotence active booking |
+| `pnpm typecheck` | OK apres garde-fous admin wallet/payout/recouvrement |
 | Chrome DevTools headless `http://localhost:8081` | `/auth` rendu, aucun overlay `Uncaught Error` |
 
 ## Tests Non Executables Depuis Ce Poste Seul
