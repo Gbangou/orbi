@@ -37,6 +37,7 @@ function formatAction(action: string) {
   const labels: Record<string, string> = {
     persisted_and_reconciled: 'Reconcilie',
     persisted_idempotent_replay: 'Replay idempotent',
+    ignored_amount_mismatch: 'Montant suspect',
     ignored_conflicting_provider_reference: 'Conflit reference',
     ignored_unknown_reference: 'Reference inconnue',
     ignored_missing_reference: 'Reference absente',

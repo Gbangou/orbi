@@ -6,6 +6,7 @@ const paymentWebhookProviders = ['FLUTTERWAVE', 'CINETPAY'] as const;
 const paymentWebhookActions = [
   'persisted_and_reconciled',
   'persisted_idempotent_replay',
+  'ignored_amount_mismatch',
   'ignored_conflicting_provider_reference',
   'ignored_unknown_reference',
   'ignored_missing_reference',

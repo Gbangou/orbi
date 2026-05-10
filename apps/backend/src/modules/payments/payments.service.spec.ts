@@ -464,6 +464,38 @@ describe('PaymentsService', () => {
     expect(result.reconciledAttemptCount).toBe(0);
   });
 
+  it('ignores successful webhooks when provider amount does not match the attempt', async () => {
+    const { service, prisma } = createService();
+    prisma.paymentAttempt.findUnique.mockResolvedValue({
+      id: 'payment-1',
+      userId: 'user-1',
+      amount: { toString: () => '2400', valueOf: () => 2400 },
+      currency: 'XOF',
+    });
+
+    const result = await service.handleWebhook('secret_123', {
+      event: 'payment.completed',
+      transactionRef: 'mobilis_123_ride-request-1',
+      data: {
+        providerReference: 'fw_ref_123',
+        amount: 1200,
+        currency: 'XOF',
+      },
+    });
+
+    expect(result.nextAction).toBe('ignored_amount_mismatch');
+    expect(result.reconciledAttemptCount).toBe(0);
+    expect(prisma.paymentAttempt.updateMany).not.toHaveBeenCalled();
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'ignored_amount_mismatch',
+        paymentAttemptId: 'payment-1',
+        userId: 'user-1',
+      }),
+    });
+  });
+
   it('creates a driver payout ledger entry when a payment succeeds', async () => {
     const { service, prisma } = createService();
 
@@ -471,6 +503,8 @@ describe('PaymentsService', () => {
       .mockResolvedValueOnce({
         id: 'payment-1',
         userId: 'user-1',
+        amount: { toString: () => '2400', valueOf: () => 2400 },
+        currency: 'XOF',
       })
       .mockResolvedValueOnce({
         id: 'payment-1',
@@ -1195,6 +1229,8 @@ describe('PaymentsService', () => {
       .mockResolvedValueOnce({
         id: 'payment-1',
         userId: 'user-1',
+        amount: { toString: () => '2400', valueOf: () => 2400 },
+        currency: 'XOF',
       })
       .mockResolvedValueOnce({
         id: 'payment-1',

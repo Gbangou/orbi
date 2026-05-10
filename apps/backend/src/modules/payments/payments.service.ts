@@ -425,6 +425,7 @@ export class PaymentsService {
     let nextAction:
       | 'persisted_and_reconciled'
       | 'persisted_idempotent_replay'
+      | 'ignored_amount_mismatch'
       | 'ignored_conflicting_provider_reference'
       | 'ignored_unknown_reference'
       | 'ignored_missing_reference' = transactionRef
@@ -442,6 +443,8 @@ export class PaymentsService {
             id: true,
             transactionRef: true,
             userId: true,
+            amount: true,
+            currency: true,
           },
         });
 
@@ -482,6 +485,44 @@ export class PaymentsService {
       if (existingProviderAttempt) {
         const nextStatus = this.resolveWebhookStatus(event);
 
+        if (
+          this.hasWebhookPaymentAmountMismatch(
+            payload,
+            existingProviderAttempt,
+            nextStatus,
+          )
+        ) {
+          paymentAttemptId = existingProviderAttempt.id;
+          userId = existingProviderAttempt.userId;
+          nextAction = 'ignored_amount_mismatch';
+
+          const result = {
+            received: true,
+            event,
+            transactionRef,
+            provider: providerContext.providerKey,
+            providerReference,
+            reconciledAttemptCount,
+            nextAction,
+          };
+
+          await this.persistWebhookEvent({
+            provider,
+            event,
+            transactionRef,
+            providerReference,
+            nextAction,
+            reconciledAttemptCount,
+            signatureVerified,
+            payload,
+            signatureContext,
+            paymentAttemptId,
+            userId,
+          });
+
+          return result;
+        }
+
         const reconciliation = await this.prisma.paymentAttempt.updateMany({
           where: {
             id: existingProviderAttempt.id,
@@ -518,36 +559,47 @@ export class PaymentsService {
         select: {
           id: true,
           userId: true,
+          amount: true,
+          currency: true,
         },
       });
       const nextStatus = this.resolveWebhookStatus(event);
 
-      const reconciliation = await this.prisma.paymentAttempt.updateMany({
-        where: {
-          transactionRef,
-          status: {
-            notIn: ['REFUND_PENDING', 'REFUNDED'],
+      if (
+        targetAttempt &&
+        this.hasWebhookPaymentAmountMismatch(payload, targetAttempt, nextStatus)
+      ) {
+        paymentAttemptId = targetAttempt.id;
+        userId = targetAttempt.userId;
+        nextAction = 'ignored_amount_mismatch';
+      } else {
+        const reconciliation = await this.prisma.paymentAttempt.updateMany({
+          where: {
+            transactionRef,
+            status: {
+              notIn: ['REFUND_PENDING', 'REFUNDED'],
+            },
           },
-        },
-        data: this.buildWebhookReconciliationData(
-          nextStatus,
-          providerReference,
-          payload,
-          event,
-        ),
-      });
-      reconciledAttemptCount = reconciliation.count;
-      paymentAttemptId = targetAttempt?.id ?? null;
-      userId = targetAttempt?.userId ?? null;
-      nextAction =
-        reconciledAttemptCount > 0
-          ? 'persisted_and_reconciled'
-          : 'ignored_unknown_reference';
-      if (reconciledAttemptCount > 0) {
-        await this.recordSuccessfulPaymentLedgerIfNeeded(
-          targetAttempt?.id ?? null,
-          nextStatus,
-        );
+          data: this.buildWebhookReconciliationData(
+            nextStatus,
+            providerReference,
+            payload,
+            event,
+          ),
+        });
+        reconciledAttemptCount = reconciliation.count;
+        paymentAttemptId = targetAttempt?.id ?? null;
+        userId = targetAttempt?.userId ?? null;
+        nextAction =
+          reconciledAttemptCount > 0
+            ? 'persisted_and_reconciled'
+            : 'ignored_unknown_reference';
+        if (reconciledAttemptCount > 0) {
+          await this.recordSuccessfulPaymentLedgerIfNeeded(
+            targetAttempt?.id ?? null,
+            nextStatus,
+          );
+        }
       }
     }
 
@@ -1645,6 +1697,60 @@ export class PaymentsService {
     }
 
     return null;
+  }
+
+  private hasWebhookPaymentAmountMismatch(
+    payload: PaymentWebhookPayload,
+    attempt: {
+      amount: Prisma.Decimal;
+      currency: string;
+    },
+    nextStatus: PaymentAttemptStatus,
+  ) {
+    if (nextStatus !== 'SUCCEEDED') {
+      return false;
+    }
+
+    const providerAmount = this.extractWebhookPaymentAmount(payload);
+    const providerCurrency = this.extractWebhookPaymentCurrency(payload);
+
+    if (
+      providerAmount !== undefined &&
+      Math.round(providerAmount) !== Math.round(Number(attempt.amount))
+    ) {
+      return true;
+    }
+
+    return Boolean(
+      providerCurrency &&
+        providerCurrency.toUpperCase() !== attempt.currency.toUpperCase(),
+    );
+  }
+
+  private extractWebhookPaymentAmount(payload: PaymentWebhookPayload) {
+    const data = this.asRecord(payload.data);
+
+    return (
+      this.numberValue(data.amount) ??
+      this.numberValue(data.Amount) ??
+      this.numberValue(data.cpm_amount) ??
+      this.numberValue(payload.amount) ??
+      this.numberValue(payload.Amount) ??
+      this.numberValue(payload.cpm_amount)
+    );
+  }
+
+  private extractWebhookPaymentCurrency(payload: PaymentWebhookPayload) {
+    const data = this.asRecord(payload.data);
+
+    return (
+      this.stringValue(data.currency) ??
+      this.stringValue(data.Currency) ??
+      this.stringValue(data.cpm_currency) ??
+      this.stringValue(payload.currency) ??
+      this.stringValue(payload.Currency) ??
+      this.stringValue(payload.cpm_currency)
+    );
   }
 
   private buildWebhookReconciliationData(

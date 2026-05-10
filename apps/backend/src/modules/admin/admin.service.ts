@@ -2841,6 +2841,7 @@ export class AdminService {
 
     if (kind === 'ignored') {
       return [
+        'ignored_amount_mismatch',
         'ignored_conflicting_provider_reference',
         'ignored_unknown_reference',
         'ignored_missing_reference',
