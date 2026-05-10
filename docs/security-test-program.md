@@ -143,6 +143,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
 | `pnpm test:mobile:smoke` | rider 25 tests passed, driver 28 tests passed |
 | `pnpm typecheck` | OK apres correction Expo web/Metro |
 | `pnpm --filter backend test -- trips.service --runInBand` | 26 tests passed apres verrous SOS/incident/share |
+| `pnpm --filter backend test -- payments.service --runInBand` | 34 tests passed apres idempotence checkout et rejet webhook montant/devise |
 | Chrome DevTools headless `http://localhost:8081` | `/auth` rendu, aucun overlay `Uncaught Error` |
 
 ## Tests Non Executables Depuis Ce Poste Seul
