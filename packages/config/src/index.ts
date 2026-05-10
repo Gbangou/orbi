@@ -2,6 +2,9 @@ const runtimeEnvironment = globalThis as typeof globalThis & {
   process?: {
     env?: Record<string, string | undefined>;
   };
+  location?: {
+    hostname: string;
+  };
 };
 
 export const workspaceApps = ['backend', 'rider-app', 'driver-app', 'admin-web'] as const;
@@ -30,6 +33,29 @@ export const mobilisRuntimeConfig = {
   launchLocale: 'fr-BF',
   launchMarket: 'Burkina Faso',
 } as const;
+
+export function resolveMobilisApiBaseUrlForRuntime(
+  configuredBaseUrl = mobilisRuntimeConfig.apiBaseUrl,
+) {
+  const location = runtimeEnvironment.location;
+
+  if (!location || !isLocalWebHost(location.hostname)) {
+    return configuredBaseUrl;
+  }
+
+  try {
+    const apiUrl = new URL(configuredBaseUrl);
+
+    if (isPrivateLanHost(apiUrl.hostname)) {
+      apiUrl.hostname = 'localhost';
+      return apiUrl.toString().replace(/\/$/, '');
+    }
+  } catch {
+    return configuredBaseUrl;
+  }
+
+  return configuredBaseUrl;
+}
 
 export const mobilisDemoAccounts = {
   rider: {
@@ -106,4 +132,16 @@ export function parseAllowedOrigins(value: string | undefined) {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+}
+
+function isLocalWebHost(hostname: string) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+}
+
+function isPrivateLanHost(hostname: string) {
+  return (
+    /^10\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+  );
 }

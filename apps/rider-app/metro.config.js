@@ -45,7 +45,7 @@ config.resolver.extraNodeModules = {
 };
 
 config.resolver.blockList =
-  /(packages[\\/]ui[\\/]node_modules[\\/](react|react-dom)|[\\/]\.chrome-(cdp|headless))([\\/].*)?$/;
+  /(packages[\\/]ui[\\/]node_modules[\\/](react|react-dom)|apps[\\/]admin-web[\\/]\.next|[\\/]\.chrome-(cdp|headless))([\\/].*)?$/;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const forcedReactPath = reactResolutions.get(moduleName);
 

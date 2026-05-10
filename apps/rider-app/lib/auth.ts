@@ -7,13 +7,16 @@ import {
   signOutWithApi,
   signUpWithApi,
 } from '@mobilis/api';
-import { mobilisRuntimeConfig } from '@mobilis/config';
+import {
+  mobilisRuntimeConfig,
+  resolveMobilisApiBaseUrlForRuntime,
+} from '@mobilis/config';
 import type { AuthenticatedApiContext } from '@mobilis/api';
 import { flushRiderMobileErrorReports } from './mobile-error-reporting';
 import { riderSessionStorage, riderSessionStorageKey } from './session-storage';
 
 function createRiderClient() {
-  return createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
+  return createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
     version: mobilisRuntimeConfig.apiVersion,
   });
 }

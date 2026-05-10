@@ -7,13 +7,16 @@ import {
   signOutWithApi,
   signUpWithApi,
 } from '@mobilis/api';
-import { mobilisRuntimeConfig } from '@mobilis/config';
+import {
+  mobilisRuntimeConfig,
+  resolveMobilisApiBaseUrlForRuntime,
+} from '@mobilis/config';
 import type { AuthenticatedApiContext } from '@mobilis/api';
 import { flushDriverMobileErrorReports } from './mobile-error-reporting';
 import { driverSessionStorage, driverSessionStorageKey } from './session-storage';
 
 function createDriverClient() {
-  return createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
+  return createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
     version: mobilisRuntimeConfig.apiVersion,
   });
 }

@@ -76,7 +76,22 @@ async function bootstrap() {
   });
 
   app.enableCors({
-    origin: frontendOrigins,
+    origin(origin, callback) {
+      if (!origin || frontendOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      if (
+        configService.get<string>('app.environment') !== 'production' &&
+        isLocalDevelopmentOrigin(origin)
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('Origin is not allowed by Mobilis CORS policy.'));
+    },
     credentials: true,
   });
   app.setGlobalPrefix('api');
@@ -146,3 +161,15 @@ async function bootstrap() {
   process.once('SIGINT', beginShutdown);
 }
 void bootstrap();
+
+function isLocalDevelopmentOrigin(origin: string) {
+  try {
+    const url = new URL(origin);
+    return (
+      ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) &&
+      ['http:', 'https:'].includes(url.protocol)
+    );
+  } catch {
+    return false;
+  }
+}
