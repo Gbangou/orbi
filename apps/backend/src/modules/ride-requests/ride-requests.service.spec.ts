@@ -18,7 +18,9 @@ describe('RideRequestsService', () => {
       },
     };
     const pricingService = {
-      quote: jest.fn(),
+      quote: jest.fn().mockResolvedValue({
+        estimatedFare: 1800,
+      }),
       deriveOperatingContext: jest.fn(() => ({
         demandLevel: 'HIGH',
         trafficLevel: 'HEAVY',
@@ -213,6 +215,57 @@ describe('RideRequestsService', () => {
         pickupAreaType: 'URBAN_CORE',
       }),
     ).rejects.toThrow('The rider already has an active ride request.');
+  });
+
+  it('returns an equivalent active request for duplicate booking retries', async () => {
+    const { prisma, pricingService, realtimeService, service } =
+      createService();
+
+    pricingService.quote.mockResolvedValue({
+      estimatedFare: 2150,
+    });
+    prisma.rideRequest.findFirst.mockResolvedValue({
+      id: 'request-active-1',
+      riderId: 'rider-1',
+      status: 'REQUESTED',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      pickupLatitude: 12.3714,
+      pickupLongitude: -1.5197,
+      destinationAddress: 'Ouaga 2000',
+      destinationLatitude: 12.3274,
+      destinationLongitude: -1.5339,
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      pricingCity: 'OUAGADOUGOU',
+      districtProfile: 'UNIVERSITY',
+      estimatedFare: 2150,
+      estimatedDistanceKm: 5.1,
+      estimatedDurationMinutes: 18,
+      createdAt: new Date('2026-05-10T09:00:00.000Z'),
+    });
+    prisma.trip.findFirst.mockResolvedValue(null);
+
+    const result = await service.create({
+      riderId: 'rider-1',
+      pickupAddress: ' Universite Joseph Ki-Zerbo ',
+      pickupLatitude: 12.3714,
+      pickupLongitude: -1.5197,
+      destinationAddress: ' Ouaga 2000 ',
+      destinationLatitude: 12.3274,
+      destinationLongitude: -1.5339,
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      estimatedDistanceKm: 99,
+      estimatedDurationMinutes: 99,
+      paymentMethod: 'MOBILE_MONEY',
+      pickupAreaType: 'URBAN_CORE',
+      city: 'OUAGADOUGOU',
+      districtProfile: 'UNIVERSITY',
+    });
+
+    expect(result.id).toBe('request-active-1');
+    expect(prisma.rideRequest.create).not.toHaveBeenCalled();
+    expect(realtimeService.publish).not.toHaveBeenCalled();
   });
 
   it('falls back to client route estimates when coordinates are absent', async () => {

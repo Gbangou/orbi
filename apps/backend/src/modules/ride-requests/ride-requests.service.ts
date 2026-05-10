@@ -69,13 +69,23 @@ export class RideRequestsService {
       roadCondition: operatingContext.roadCondition,
       isPeakHour: inferRideRequestPeakHour(),
     });
+    const createData = buildRideRequestCreateData(
+      payload,
+      pricing.estimatedFare,
+      routeMetrics,
+    );
 
-    let rideRequest: Awaited<
-      ReturnType<typeof this.prisma.rideRequest.create>
-    > | null = null;
+    let result: {
+      rideRequest: Parameters<
+        RideRequestProjector['projectCreatedRideRequest']
+      >[0]['rideRequest'] & {
+        riderId?: string;
+      };
+      created: boolean;
+    } | null = null;
 
     try {
-      rideRequest = await this.prisma.$transaction(async (tx) => {
+      result = await this.prisma.$transaction(async (tx) => {
         const [existingActiveRequest, existingActiveTrip] = await Promise.all([
           tx.rideRequest.findFirst({
             where: {
@@ -86,6 +96,21 @@ export class RideRequestsService {
             },
             select: {
               id: true,
+              status: true,
+              pickupAddress: true,
+              pickupLatitude: true,
+              pickupLongitude: true,
+              destinationAddress: true,
+              destinationLatitude: true,
+              destinationLongitude: true,
+              requestedVehicleType: true,
+              requestedServiceTier: true,
+              pricingCity: true,
+              districtProfile: true,
+              estimatedFare: true,
+              estimatedDistanceKm: true,
+              estimatedDurationMinutes: true,
+              createdAt: true,
             },
           }),
           tx.trip.findFirst({
@@ -102,6 +127,15 @@ export class RideRequestsService {
         ]);
 
         if (existingActiveRequest) {
+          if (
+            this.isEquivalentActiveRideRequest(existingActiveRequest, createData)
+          ) {
+            return {
+              rideRequest: existingActiveRequest,
+              created: false,
+            };
+          }
+
           throw new BadRequestException(
             'The rider already has an active ride request.',
           );
@@ -113,13 +147,12 @@ export class RideRequestsService {
           );
         }
 
-        return tx.rideRequest.create({
-          data: buildRideRequestCreateData(
-            payload,
-            pricing.estimatedFare,
-            routeMetrics,
-          ),
-        });
+        return {
+          rideRequest: await tx.rideRequest.create({
+            data: createData,
+          }),
+          created: true,
+        };
       });
     } catch (error) {
       if (this.isRiderActiveFlowConstraintError(error)) {
@@ -131,19 +164,27 @@ export class RideRequestsService {
       throw error;
     }
 
-    this.realtimeService.publish({
-      channel: 'ride-request',
-      type: 'ride-request.created',
-      entityId: rideRequest.id,
-      riderId: rideRequest.riderId,
-      payload: {
-        status: rideRequest.status,
-        estimatedFare: Number(
-          rideRequest.estimatedFare ?? pricing.estimatedFare,
-        ),
-        operatingContext,
-      },
-    });
+    if (!result) {
+      throw new BadRequestException('Ride request could not be created.');
+    }
+
+    const rideRequest = result.rideRequest;
+
+    if (result.created) {
+      this.realtimeService.publish({
+        channel: 'ride-request',
+        type: 'ride-request.created',
+        entityId: rideRequest.id,
+        riderId: rideRequest.riderId ?? payload.riderId,
+        payload: {
+          status: rideRequest.status,
+          estimatedFare: Number(
+            rideRequest.estimatedFare ?? pricing.estimatedFare,
+          ),
+          operatingContext,
+        },
+      });
+    }
 
     return this.rideRequestProjector.projectCreatedRideRequest({
       rideRequest,
@@ -158,6 +199,74 @@ export class RideRequestsService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     );
+  }
+
+  private isEquivalentActiveRideRequest(
+    existing: {
+      pickupAddress: string;
+      pickupLatitude?: unknown;
+      pickupLongitude?: unknown;
+      destinationAddress: string;
+      destinationLatitude?: unknown;
+      destinationLongitude?: unknown;
+      requestedVehicleType: string;
+      requestedServiceTier?: string | null;
+      pricingCity?: string | null;
+      districtProfile?: string | null;
+      estimatedFare?: unknown;
+      estimatedDistanceKm?: unknown;
+      estimatedDurationMinutes?: number | null;
+    },
+    next: ReturnType<typeof buildRideRequestCreateData>,
+  ) {
+    return (
+      this.normalizeComparableText(existing.pickupAddress) ===
+        this.normalizeComparableText(next.pickupAddress) &&
+      this.normalizeComparableText(existing.destinationAddress) ===
+        this.normalizeComparableText(next.destinationAddress) &&
+      this.sameNullableNumber(existing.pickupLatitude, next.pickupLatitude) &&
+      this.sameNullableNumber(existing.pickupLongitude, next.pickupLongitude) &&
+      this.sameNullableNumber(
+        existing.destinationLatitude,
+        next.destinationLatitude,
+      ) &&
+      this.sameNullableNumber(
+        existing.destinationLongitude,
+        next.destinationLongitude,
+      ) &&
+      existing.requestedVehicleType === next.requestedVehicleType &&
+      (existing.requestedServiceTier ?? null) ===
+        (next.requestedServiceTier ?? null) &&
+      (existing.pricingCity ?? null) === (next.pricingCity ?? null) &&
+      (existing.districtProfile ?? null) === (next.districtProfile ?? null) &&
+      this.sameRoundedNumber(existing.estimatedFare, next.estimatedFare) &&
+      this.sameRoundedNumber(
+        existing.estimatedDistanceKm,
+        next.estimatedDistanceKm,
+      ) &&
+      this.sameRoundedNumber(
+        existing.estimatedDurationMinutes,
+        next.estimatedDurationMinutes,
+      )
+    );
+  }
+
+  private normalizeComparableText(value: unknown) {
+    return typeof value === 'string'
+      ? value.trim().replace(/\s+/g, ' ').toLowerCase()
+      : '';
+  }
+
+  private sameNullableNumber(left: unknown, right: unknown) {
+    if (left === null || left === undefined || right === null || right === undefined) {
+      return left === right;
+    }
+
+    return Math.abs(Number(left) - Number(right)) < 0.0001;
+  }
+
+  private sameRoundedNumber(left: unknown, right: unknown) {
+    return Math.round(Number(left)) === Math.round(Number(right));
   }
 
   async findActive() {
