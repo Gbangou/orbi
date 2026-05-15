@@ -44,6 +44,7 @@ import {
 } from '../lib/driver-active-flow';
 import {
   buildDriverOfferDetailLines,
+  formatDriverOfferFare,
   buildDriverOfferInsights,
   buildDriverOfferNote,
 } from '../lib/offer-signal';
@@ -452,7 +453,7 @@ export default function DriverHomeScreen() {
             }
             badgeTone={freshOfferIds.includes(offer.id) ? 'sky' : 'amber'}
             title={offer.riderName}
-            titleAside={formatXof(offer.fare)}
+            titleAside={formatDriverOfferFare(offer)}
             titleAsideColor={mobilisTheme.colors.amber}
             description={`${offer.pickup} vers ${offer.destination}`}
             insights={buildDriverOfferInsights(offer)}

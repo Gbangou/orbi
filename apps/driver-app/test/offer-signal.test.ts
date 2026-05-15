@@ -3,6 +3,7 @@ import {
   buildDriverOfferDetailLines,
   buildDriverOfferInsights,
   buildDriverOfferNote,
+  formatDriverOfferFare,
 } from '../lib/offer-signal';
 
 describe('driver offer signal helpers', () => {
@@ -46,5 +47,6 @@ describe('driver offer signal helpers', () => {
       'Moto - trajet ND km - priorite dispatch -',
     ]);
     expect(buildDriverOfferNote(dirtyOffer)).toBeNull();
+    expect(formatDriverOfferFare(dirtyOffer)).toBe('Prix indisponible');
   });
 });

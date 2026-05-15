@@ -58,6 +58,10 @@ function formatOfferMoney(primary: unknown, fallback: unknown) {
   return 'Gain indisponible';
 }
 
+export function formatDriverOfferFare(offer: DriverOffer) {
+  return isFiniteNumber(offer.fare) ? formatXof(offer.fare) : 'Prix indisponible';
+}
+
 export function buildDriverOfferInsights(
   offer: DriverOffer,
 ): Array<{
