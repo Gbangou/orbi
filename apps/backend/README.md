@@ -98,8 +98,9 @@ Variables utiles:
 ## Realtime production
 
 - `REALTIME_ADAPTER=in-memory` pour le dev local simple
-- `REALTIME_ADAPTER=redis` pour signaler une cible multi-instance partagee
-- `REALTIME_REDIS_URL` preparatoire pour le backplane partage
+- `REALTIME_ADAPTER=postgres` pour la preproduction/production multi-instance
+- `REALTIME_ADAPTER=redis` reste reserve a un futur transport Redis
+- `REALTIME_REDIS_URL` preparatoire pour un futur backplane Redis
 - `REALTIME_STRICT=true` pour faire echouer la readiness si l adapter configure n est pas effectivement disponible
 - `DRIVER_RESERVATION_EXPIRY_SWEEP_INTERVAL_MS=5000` pour definir la frequence de nettoyage serveur des reservations chauffeur expirees
 - `DISPATCH_SIGNAL_LOOKBACK_HOURS=72` pour la profondeur d historique exploitee par la memoire dispatch
@@ -123,8 +124,9 @@ Important:
 ## Rate limit production
 
 - `RATE_LIMIT_ADAPTER=in-memory` pour le dev local simple
-- `RATE_LIMIT_ADAPTER=redis` pour viser un comptage partage entre instances
-- `RATE_LIMIT_REDIS_URL` preparatoire pour le store partage
+- `RATE_LIMIT_ADAPTER=postgres` pour un comptage partage entre instances
+- `RATE_LIMIT_ADAPTER=redis` reste reserve a un futur store Redis
+- `RATE_LIMIT_REDIS_URL` preparatoire pour un futur store Redis
 - `RATE_LIMIT_STRICT=true` pour faire echouer la readiness si le rate limiting partage attendu n est pas effectivement disponible
 
 Important:
@@ -161,6 +163,8 @@ de developpement est encore exposee:
 - `ENABLE_SWAGGER` doit etre `false`
 - `FRONTEND_ALLOWED_ORIGINS` doit lister des origines explicites, sans `*` ni localhost
 - `DATABASE_URL` ne doit pas pointer vers localhost
+- `RATE_LIMIT_ADAPTER=postgres` et `RATE_LIMIT_STRICT=true` sont obligatoires
+- `REALTIME_ADAPTER=postgres` et `REALTIME_STRICT=true` sont obligatoires
 - `PAYMENTS_DEFAULT_REDIRECT_URL` et `PAYMENTS_DEFAULT_WEBHOOK_URL` ne doivent pas pointer localhost
 - `DOCUMENT_UPLOAD_BASE_URL` et `DOCUMENT_VIEW_BASE_URL` doivent etre HTTPS et non locales
 - les secrets paiement/document ne doivent pas utiliser les valeurs de dev

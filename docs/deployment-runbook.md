@@ -58,38 +58,39 @@ Utiliser la strategie `expand -> migrate traffic -> contract`:
 - tout traitement webhook doit etre idempotent
 - ne jamais lier une mise a jour critique de paiement a un seul process en memoire
 - preferer des traitements rejouables et journalises
-- en production multi-instance, brancher les adapters `rate limit` et `realtime` sur Redis ou un broker partage
+- en production multi-instance, brancher les adapters `rate limit` et `realtime` sur le backplane PostgreSQL partage: `RATE_LIMIT_ADAPTER=postgres`, `REALTIME_ADAPTER=postgres`, `RATE_LIMIT_STRICT=true`, `REALTIME_STRICT=true`
 - verifier que la job queue durable traite `DRIVER_RESERVATION_EXPIRY`: le timer ne fait qu enqueuer un job deduplique et le worker partage execute le sweep avec verrou PostgreSQL
 
 ## Temps reel
 
-Aujourd'hui, le backend fournit une base SSE et un transport in-memory.
+Aujourd'hui, le backend fournit une base SSE, un transport in-memory pour le
+local, et un transport PostgreSQL `LISTEN/NOTIFY` pour les instances partagees.
 
 Pour la vraie production multi-instance:
 
 1. garder la meme interface applicative
-2. remplacer le transport realtime par un backend Redis pub/sub ou broker
+2. configurer `REALTIME_ADAPTER=postgres` et `REALTIME_STRICT=true`
 3. connecter rider, driver et admin a des flux live partageant la meme source d'evenements
 
 ## Garde-fous de deploiement realtime
 
 - `REALTIME_ADAPTER=in-memory` reste acceptable pour le dev local et les previews mono-instance
-- `REALTIME_ADAPTER=redis` declare l intention de tourner avec un backplane partage multi-instance
-- tant que le transport Redis partage n est pas branche, la sante remontera un etat realtime degrade
-- activer `REALTIME_STRICT=true` en preproduction/production pour faire echouer la readiness d une instance qui demarrerait avec un fallback non partage
+- `REALTIME_ADAPTER=postgres` utilise `DATABASE_URL` comme backplane partage multi-instance
+- `REALTIME_ADAPTER=redis` n est pas encore implemente et reste refuse au demarrage production
+- `REALTIME_STRICT=true` est obligatoire en production pour faire echouer la readiness d une instance qui demarrerait avec un fallback non partage
 
 Cela evite un faux sentiment de securite ou une prod multi-instance tournerait par erreur en transport local non partage.
 
 ## Garde-fous de deploiement rate limit
 
 - `RATE_LIMIT_ADAPTER=in-memory` reste acceptable pour le dev local et les previews mono-instance
-- `RATE_LIMIT_ADAPTER=redis` declare l intention d utiliser un comptage partage entre instances
+- `RATE_LIMIT_ADAPTER=postgres` utilise `DATABASE_URL` pour compter les limites entre instances
+- `RATE_LIMIT_ADAPTER=redis` n est pas encore implemente et reste refuse au demarrage production
 - `TRUST_PROXY=true` doit etre active uniquement quand l API est derriere un
   proxy/load balancer de confiance; le rate limit IP utilise `request.ip`, pas
   un en-tete `x-forwarded-for` fourni directement par le client, et HSTS se
   base sur le marqueur HTTPS fiable d Express
-- tant que le store Redis partage n est pas branche, la sante remontera un etat rate limit degrade
-- activer `RATE_LIMIT_STRICT=true` en preproduction/production pour faire echouer la readiness d une instance qui demarrerait avec un fallback non partage
+- `RATE_LIMIT_STRICT=true` est obligatoire en production pour faire echouer la readiness d une instance qui demarrerait avec un fallback non partage
 
 Cela evite qu un cluster multi-instance expose des limites incoherentes selon les noeuds, ce qui degrade la securite et la stabilite sous charge.
 

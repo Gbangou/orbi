@@ -251,24 +251,24 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
     );
   }
 
-  if (
-    config.RATE_LIMIT_STRICT === 'true' &&
-    config.RATE_LIMIT_ADAPTER === 'redis' &&
-    !config.RATE_LIMIT_REDIS_URL
-  ) {
+  if (!isSharedPostgresAdapter(config.RATE_LIMIT_ADAPTER)) {
     throw new Error(
-      'RATE_LIMIT_REDIS_URL is required when RATE_LIMIT_STRICT=true.',
+      'RATE_LIMIT_ADAPTER must be postgres in production until another shared store is implemented.',
     );
   }
 
-  if (
-    config.REALTIME_STRICT === 'true' &&
-    config.REALTIME_ADAPTER === 'redis' &&
-    !config.REALTIME_REDIS_URL
-  ) {
+  if (config.RATE_LIMIT_STRICT !== 'true') {
+    throw new Error('RATE_LIMIT_STRICT must be true in production.');
+  }
+
+  if (!isSharedPostgresAdapter(config.REALTIME_ADAPTER)) {
     throw new Error(
-      'REALTIME_REDIS_URL is required when REALTIME_STRICT=true.',
+      'REALTIME_ADAPTER must be postgres in production until another shared transport is implemented.',
     );
+  }
+
+  if (config.REALTIME_STRICT !== 'true') {
+    throw new Error('REALTIME_STRICT must be true in production.');
   }
 
   if (
@@ -299,4 +299,8 @@ function isHttpsUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function isSharedPostgresAdapter(value: string | undefined) {
+  return value === 'postgres' || value === 'postgresql';
 }

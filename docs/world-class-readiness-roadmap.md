@@ -37,8 +37,10 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
 
 ### Ce qui est encore riske
 
-- Le realtime est encore base sur un transport non partage.
-- Le rate limit partage n est pas encore branche pour du multi-instance reel.
+- Le realtime dispose maintenant d un backplane PostgreSQL partage; la
+  production refuse le fallback local.
+- Le rate limit dispose maintenant d un store PostgreSQL partage; la production
+  refuse le comptage local.
 - Les justificatifs chauffeur ont maintenant des liens HMAC courts et des
   contraintes d upload revalidees au rattachement; la confirmation
   d existence/hash post-upload est automatisee via job queue locale, et il
@@ -179,7 +181,8 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
 
 ## Prochaines etapes recommandees dans ce repo
 
-1. Brancher `realtime` et `rate-limit` sur un backend partage.
+1. Exercer le backplane PostgreSQL `realtime`/`rate-limit` en preproduction
+   multi-instance avec chaos DB et load balancer.
 2. Ajouter validation objet post-upload des documents: existence, comparaison
    hash declare/hash calcule, scan, provenance et quarantaine.
 3. Introduire queues/dead-letter pour webhooks, documents et notifications.

@@ -25,29 +25,28 @@ describe('validateEnvironment', () => {
     expect(env.DOCUMENT_SIGNING_SECRET).toBe('mobilis_dev_document_secret');
   });
 
-  it.each([
-    ['default adapters', {}],
-    [
-      'postgres shared backplanes',
-      {
-        RATE_LIMIT_ADAPTER: 'postgres',
-        RATE_LIMIT_STRICT: 'true',
-        REALTIME_ADAPTER: 'postgres',
-        REALTIME_STRICT: 'true',
-      },
-    ],
-  ])(
-    'accepts a production configuration with %s',
-    (_label, adapterOverrides) => {
-      const env = validateEnvironment({
-        ...productionBase,
-        ...adapterOverrides,
-      });
+  const productionSharedBackplanes = {
+    RATE_LIMIT_ADAPTER: 'postgres',
+    RATE_LIMIT_STRICT: 'true',
+    REALTIME_ADAPTER: 'postgres',
+    REALTIME_STRICT: 'true',
+  };
 
-      expect(env.NODE_ENV).toBe('production');
-      expect(env.PAYMENTS_WEBHOOK_SECRET).toBe('prod_webhook_secret');
-    },
-  );
+  it('accepts a production configuration with postgres shared backplanes', () => {
+    const env = validateEnvironment({
+      ...productionBase,
+      ...productionSharedBackplanes,
+    });
+
+    expect(env.NODE_ENV).toBe('production');
+    expect(env.PAYMENTS_WEBHOOK_SECRET).toBe('prod_webhook_secret');
+  });
+
+  it('rejects a production configuration that relies on local adapter defaults', () => {
+    expect(() => validateEnvironment(productionBase)).toThrow(
+      'RATE_LIMIT_ADAPTER must be postgres in production until another shared store is implemented.',
+    );
+  });
 
   it.each([
     [
@@ -122,14 +121,43 @@ describe('validateEnvironment', () => {
       'DOCUMENT_VIEW_BASE_URL must not use localhost in production.',
     ],
     [
-      'missing rate limit Redis URL',
-      { RATE_LIMIT_ADAPTER: 'redis', RATE_LIMIT_STRICT: 'true' },
-      'RATE_LIMIT_REDIS_URL is required when RATE_LIMIT_STRICT=true.',
+      'default local rate limit adapter',
+      { RATE_LIMIT_ADAPTER: 'in-memory' },
+      'RATE_LIMIT_ADAPTER must be postgres in production until another shared store is implemented.',
     ],
     [
-      'missing realtime Redis URL',
-      { REALTIME_ADAPTER: 'redis', REALTIME_STRICT: 'true' },
-      'REALTIME_REDIS_URL is required when REALTIME_STRICT=true.',
+      'non-strict rate limit',
+      { RATE_LIMIT_STRICT: 'false' },
+      'RATE_LIMIT_STRICT must be true in production.',
+    ],
+    [
+      'redis rate limit adapter before implementation',
+      { RATE_LIMIT_ADAPTER: 'redis' },
+      'RATE_LIMIT_ADAPTER must be postgres in production until another shared store is implemented.',
+    ],
+    [
+      'default local realtime adapter',
+      { REALTIME_ADAPTER: 'in-memory' },
+      'REALTIME_ADAPTER must be postgres in production until another shared transport is implemented.',
+    ],
+    [
+      'non-strict realtime',
+      {
+        RATE_LIMIT_ADAPTER: 'postgres',
+        RATE_LIMIT_STRICT: 'true',
+        REALTIME_ADAPTER: 'postgres',
+        REALTIME_STRICT: 'false',
+      },
+      'REALTIME_STRICT must be true in production.',
+    ],
+    [
+      'redis realtime adapter before implementation',
+      {
+        RATE_LIMIT_ADAPTER: 'postgres',
+        RATE_LIMIT_STRICT: 'true',
+        REALTIME_ADAPTER: 'redis',
+      },
+      'REALTIME_ADAPTER must be postgres in production until another shared transport is implemented.',
     ],
     [
       'missing Flutterwave secret for provider refunds',
@@ -143,6 +171,7 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({
         ...productionBase,
+        ...productionSharedBackplanes,
         ...override,
       }),
     ).toThrow(message);
