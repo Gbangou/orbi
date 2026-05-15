@@ -5,6 +5,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 
 export type JobQueueKind =
   | 'PAYMENT_WEBHOOK'
+  | 'PAYMENT_REFUND_VERIFICATION'
   | 'DRIVER_DOCUMENT'
   | 'NOTIFICATION'
   | 'DRIVER_RESERVATION_EXPIRY';
@@ -352,6 +353,7 @@ export class JobQueueService {
       durable: true,
       families: [
         'PAYMENT_WEBHOOK',
+        'PAYMENT_REFUND_VERIFICATION',
         'DRIVER_DOCUMENT',
         'NOTIFICATION',
         'DRIVER_RESERVATION_EXPIRY',
@@ -390,6 +392,7 @@ export class JobQueueService {
     if (
       ![
         'PAYMENT_WEBHOOK',
+        'PAYMENT_REFUND_VERIFICATION',
         'DRIVER_DOCUMENT',
         'NOTIFICATION',
         'DRIVER_RESERVATION_EXPIRY',

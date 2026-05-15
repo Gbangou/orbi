@@ -768,8 +768,9 @@ describe('PaymentsService', () => {
     expect(result.providerRefundReference).toBe('cinetpay_refund_payment-1');
   });
 
-  it('initiates a Flutterwave provider refund and keeps wallet reversal pending until provider processing completes', async () => {
-    const { service, prisma, configService } = createService('flutterwave');
+  it('initiates a Flutterwave provider refund and queues verification until provider processing completes', async () => {
+    const { service, prisma, configService, jobQueueService } =
+      createService('flutterwave');
     configService.get.mockImplementation((key: string) => {
       const values: Record<string, string | undefined> = {
         'payments.provider': 'flutterwave',
@@ -861,6 +862,19 @@ describe('PaymentsService', () => {
     expect(result.walletReversal).toEqual({
       applied: false,
       reason: 'refund_pending',
+    });
+    expect(jobQueueService.enqueue).toHaveBeenCalledWith({
+      kind: 'PAYMENT_REFUND_VERIFICATION',
+      dedupeKey: 'payment-refund-verification:payment-1',
+      entityType: 'payment_attempt',
+      entityId: 'payment-1',
+      maxAttempts: 12,
+      nextRunAt: expect.any(Date),
+      resetSucceededOnDedupe: true,
+      payload: {
+        paymentAttemptId: 'payment-1',
+        providerRefundReference: 'flutterwave_refund_payment-1',
+      },
     });
 
     fetchSpy.mockRestore();

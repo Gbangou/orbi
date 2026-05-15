@@ -1771,6 +1771,29 @@ export class AdminService {
         !error.includes('amount') &&
         !error.includes('currency');
       severity = canRequeueSafely ? severity : 'critical';
+    } else if (job.kind === 'PAYMENT_REFUND_VERIFICATION') {
+      owner = 'finance';
+      const providerRefundReference = nullableString(
+        payload.providerRefundReference,
+      );
+      const paymentAttemptId = nullableString(payload.paymentAttemptId);
+
+      if (providerRefundReference) {
+        riskSignals.push(`refund:${providerRefundReference}`);
+      }
+
+      if (paymentAttemptId) {
+        riskSignals.push(`payment:${paymentAttemptId}`);
+      }
+
+      recommendedAction = error.includes('still_pending')
+        ? 'Verifier le statut provider du remboursement; requeue acceptable tant que le provider n a pas finalise.'
+        : 'Controler la tentative paiement, la reference refund provider et le solde wallet avant requeue.';
+      canRequeueSafely =
+        job.status === 'DEAD_LETTER' &&
+        !error.includes('missing') &&
+        !error.includes('not enabled');
+      severity = canRequeueSafely ? 'high' : 'critical';
     } else if (job.kind === 'NOTIFICATION') {
       owner = 'ops';
       const channel = nullableString(payload.channel);

@@ -47,8 +47,9 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
   reste a brancher la pre-signature provider objet reelle et la rotation.
 - Le workflow ops d approbation chauffeur existe; il doit maintenant etre durci
   par preuves terrain, re-verification periodique et SLA support.
-- Les flux argent ont deja des protections d idempotence/reconciliation; il
-  reste a les pousser vers queue, dead-letter et monitoring financier long terme.
+- Les flux argent ont deja des protections d idempotence/reconciliation; les
+  refunds provider pending passent maintenant par queue/dead-letter, et il
+  reste a etendre ce modele aux autres webhooks financiers critiques.
 - La montee en charge commence a etre encadree par des SLO runtime exposes dans
   `/health`; il reste a brancher les metriques longues, alertes externes,
   queues et backpressure.
@@ -185,7 +186,8 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
    multi-instance avec chaos DB et load balancer.
 2. Ajouter validation objet post-upload des documents: existence, comparaison
    hash declare/hash calcule, scan, provenance et quarantaine.
-3. Introduire queues/dead-letter pour webhooks, documents et notifications.
+3. Etendre queues/dead-letter aux webhooks financiers entrants non resolus et
+   au monitoring long terme des notifications.
 4. Ajouter feature flags et canary strategy pour pricing, payments et onboarding.
 5. Brancher les SLO runtime sur tracing, alertes externes et dashboards de
    capacite.

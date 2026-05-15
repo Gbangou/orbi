@@ -93,8 +93,23 @@ describe('JobQueueWorkerService', () => {
     const driverReservationExpiryService = {
       runSweep: jest.fn().mockResolvedValue(undefined),
     };
+    const paymentsService = {
+      verifyPaymentAttemptWithProvider: jest.fn().mockResolvedValue({
+        verified: true,
+        paymentAttemptId: 'payment-1',
+        provider: 'flutterwave',
+        transactionRef: 'mobilis_123_ride-request-1',
+        result: {
+          nextAction: 'refund_processed',
+        },
+      }),
+    };
     const moduleRef = {
-      get: jest.fn().mockReturnValue(driverReservationExpiryService),
+      get: jest.fn((token: { name?: string }) =>
+        token?.name === 'PaymentsService'
+          ? paymentsService
+          : driverReservationExpiryService,
+      ),
     };
 
     return {
@@ -105,6 +120,7 @@ describe('JobQueueWorkerService', () => {
       documentSafetyScannerService,
       documentObjectStorageService,
       driverReservationExpiryService,
+      paymentsService,
       moduleRef,
       service: new JobQueueWorkerService(
         configService as never,
@@ -404,6 +420,81 @@ describe('JobQueueWorkerService', () => {
       claimed: 1,
       completed: 1,
       failed: 0,
+    });
+  });
+
+  it('verifies pending provider refund jobs through the payments service', async () => {
+    const { jobQueueService, moduleRef, paymentsService, service } =
+      createService();
+    jobQueueService.claimDueJobs.mockResolvedValue([
+      job({
+        id: 'job-refund',
+        kind: 'PAYMENT_REFUND_VERIFICATION',
+        dedupeKey: 'payment-refund-verification:payment-1',
+        entityType: 'payment_attempt',
+        entityId: 'payment-1',
+        payload: {
+          paymentAttemptId: 'payment-1',
+          providerRefundReference: 'fw_refund_123',
+        },
+      }),
+    ]);
+
+    const result = await service.processDueJobs({
+      kinds: ['PAYMENT_REFUND_VERIFICATION'],
+      limit: 1,
+    });
+
+    expect(moduleRef.get).toHaveBeenCalledWith(expect.any(Function), {
+      strict: false,
+    });
+    expect(paymentsService.verifyPaymentAttemptWithProvider).toHaveBeenCalledWith(
+      'payment-1',
+    );
+    expect(jobQueueService.complete).toHaveBeenCalledWith('job-refund', {
+      lockedAt: now,
+    });
+    expect(result).toEqual({
+      claimed: 1,
+      completed: 1,
+      failed: 0,
+    });
+  });
+
+  it('retries pending provider refund verification until the provider finishes', async () => {
+    const { jobQueueService, paymentsService, service } = createService();
+    paymentsService.verifyPaymentAttemptWithProvider.mockResolvedValueOnce({
+      verified: true,
+      paymentAttemptId: 'payment-1',
+      provider: 'flutterwave',
+      transactionRef: 'mobilis_123_ride-request-1',
+      result: {
+        nextAction: 'refund_still_pending',
+      },
+    });
+    jobQueueService.claimDueJobs.mockResolvedValue([
+      job({
+        id: 'job-refund',
+        kind: 'PAYMENT_REFUND_VERIFICATION',
+        payload: {
+          paymentAttemptId: 'payment-1',
+        },
+      }),
+    ]);
+
+    const result = await service.processDueJobs();
+
+    expect(jobQueueService.fail).toHaveBeenCalledWith('job-refund', {
+      error: 'payment_refund_still_pending',
+      retryDelayMs: 60_000,
+      deadLetterReason:
+        'payment_refund_verification_worker_failed:payment_refund_still_pending',
+      lockedAt: now,
+    });
+    expect(result).toEqual({
+      claimed: 1,
+      completed: 0,
+      failed: 1,
     });
   });
 });

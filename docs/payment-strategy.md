@@ -117,6 +117,10 @@ idempotent refund request. In local/manual mode, the attempt moves directly to
 `PAYMENTS_REFUND_MODE=provider`, Mobilis calls the Flutterwave refund endpoint,
 stores the provider response in `providerMetadata.refund`, and leaves the
 attempt as `REFUND_PENDING` until the provider reports a processed refund.
+Each pending provider refund also enqueues a durable
+`PAYMENT_REFUND_VERIFICATION` job, deduped by payment attempt, so worker retries
+can poll the provider and move the refund forward without requiring an operator
+click.
 
 `POST /api/v1/admin/payment-attempts/:paymentAttemptId/verify-provider` also
 acts as the controlled refund-status poller for `REFUND_PENDING` attempts. For

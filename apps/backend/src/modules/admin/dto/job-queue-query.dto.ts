@@ -6,6 +6,7 @@ export class JobQueueQueryDto extends PageQueryDto {
   @ApiPropertyOptional({
     enum: [
       'PAYMENT_WEBHOOK',
+      'PAYMENT_REFUND_VERIFICATION',
       'DRIVER_DOCUMENT',
       'NOTIFICATION',
       'DRIVER_RESERVATION_EXPIRY',
@@ -14,12 +15,14 @@ export class JobQueueQueryDto extends PageQueryDto {
   @IsOptional()
   @IsIn([
     'PAYMENT_WEBHOOK',
+    'PAYMENT_REFUND_VERIFICATION',
     'DRIVER_DOCUMENT',
     'NOTIFICATION',
     'DRIVER_RESERVATION_EXPIRY',
   ])
   kind?:
     | 'PAYMENT_WEBHOOK'
+    | 'PAYMENT_REFUND_VERIFICATION'
     | 'DRIVER_DOCUMENT'
     | 'NOTIFICATION'
     | 'DRIVER_RESERVATION_EXPIRY';

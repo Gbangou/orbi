@@ -140,6 +140,16 @@ Important:
 - activer `RATE_LIMIT_STRICT=true` en preproduction/production pour bloquer un
   deploy multi-instance qui tomberait en fallback local
 
+## File durable paiements
+
+- `PAYMENT_WEBHOOK` garde un outbox durable pour les webhooks paiement
+- `PAYMENT_REFUND_VERIFICATION` reprend automatiquement les refunds provider
+  en `REFUND_PENDING` jusqu au verdict final du provider ou dead-letter visible
+  aux operations
+- les remboursements restent idempotents: le worker appelle la verification
+  provider et la reversal wallet utilise toujours la reference unique
+  `payment:<paymentAttemptId>:driver-payout-refund`
+
 ## Realtime partage
 
 `REALTIME_ADAPTER=in-memory` garde le flux SSE local, utile en developpement

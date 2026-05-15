@@ -207,6 +207,7 @@ describe('AdminService', () => {
         durable: true,
         families: [
           'PAYMENT_WEBHOOK',
+          'PAYMENT_REFUND_VERIFICATION',
           'DRIVER_DOCUMENT',
           'NOTIFICATION',
           'DRIVER_RESERVATION_EXPIRY',

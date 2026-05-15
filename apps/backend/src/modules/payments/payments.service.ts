@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   Optional,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -47,6 +48,8 @@ function jsonObject(value: unknown): Record<string, unknown> {
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
@@ -280,8 +283,7 @@ export class PaymentsService {
     input: PaymentRefundInput,
   ) {
     const refundedAt = new Date();
-
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const attempt = await tx.paymentAttempt.findUnique({
         where: {
           id: paymentAttemptId,
@@ -393,6 +395,15 @@ export class PaymentsService {
         walletReversal,
       };
     });
+
+    if (result.action === 'refund_pending') {
+      await this.enqueueRefundVerificationJob(
+        paymentAttemptId,
+        result.providerRefundReference,
+      );
+    }
+
+    return result;
   }
 
   private async reconcileWebhookPayload(
@@ -2131,6 +2142,33 @@ export class PaymentsService {
     });
   }
 
+  private async enqueueRefundVerificationJob(
+    paymentAttemptId: string,
+    providerRefundReference: string,
+  ) {
+    try {
+      await this.jobQueueService?.enqueue({
+        kind: 'PAYMENT_REFUND_VERIFICATION',
+        dedupeKey: `payment-refund-verification:${paymentAttemptId}`,
+        entityType: 'payment_attempt',
+        entityId: paymentAttemptId,
+        maxAttempts: 12,
+        nextRunAt: new Date(Date.now() + 300_000),
+        resetSucceededOnDedupe: true,
+        payload: {
+          paymentAttemptId,
+          providerRefundReference,
+        },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to enqueue refund verification for payment ${paymentAttemptId}: ${this.errorMessage(
+          error,
+        )}`,
+      );
+    }
+  }
+
   private wasProviderSignatureVerified(
     signatureContext: PaymentWebhookSignatureContext,
   ) {
@@ -2278,5 +2316,11 @@ export class PaymentsService {
     return typeof payload.data?.failureReason === 'string'
       ? payload.data.failureReason
       : fallbackEvent;
+  }
+
+  private errorMessage(error: unknown) {
+    return error instanceof Error && error.message
+      ? error.message
+      : 'unknown_error';
   }
 }

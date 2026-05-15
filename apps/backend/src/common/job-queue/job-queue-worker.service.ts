@@ -10,6 +10,7 @@ import { NotificationChannel } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { DocumentObjectStorageService } from '../document-links/document-object-storage.service';
 import { DriverReservationExpiryService } from '../../modules/drivers/driver-reservation-expiry.service';
+import { PaymentsService } from '../../modules/payments/payments.service';
 import {
   JobQueueEntry,
   JobQueueKind,
@@ -152,6 +153,11 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    if (job.kind === 'PAYMENT_REFUND_VERIFICATION') {
+      await this.handlePaymentRefundVerificationJob(job);
+      return;
+    }
+
     if (job.kind === 'DRIVER_DOCUMENT') {
       await this.handleDriverDocumentJob(job);
       return;
@@ -191,6 +197,24 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn(
         `Payment webhook ${event.id} requires operations review before replay.`,
       );
+    }
+  }
+
+  private async handlePaymentRefundVerificationJob(job: JobQueueEntry) {
+    const payload = this.payloadRecord(job.payload);
+    const paymentAttemptId = this.requiredString(
+      payload.paymentAttemptId,
+      'paymentAttemptId',
+    );
+    const paymentsService = this.moduleRef.get(PaymentsService, {
+      strict: false,
+    });
+    const verification =
+      await paymentsService.verifyPaymentAttemptWithProvider(paymentAttemptId);
+    const nextAction = verification.result.nextAction;
+
+    if (nextAction === 'refund_still_pending') {
+      throw new Error('payment_refund_still_pending');
     }
   }
 
