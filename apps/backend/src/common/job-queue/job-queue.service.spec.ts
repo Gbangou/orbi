@@ -114,6 +114,34 @@ describe('JobQueueService', () => {
     );
   });
 
+  it('recovers stale running jobs after a worker interruption', async () => {
+    const { prisma, service } = createService();
+    prisma.$queryRaw.mockResolvedValue([
+      row({
+        id: 'job-stale-1',
+        status: 'PENDING',
+        attempts: 2,
+        locked_at: null,
+        last_error: 'Recovered stale RUNNING job after worker interruption.',
+      }),
+    ]);
+
+    const result = await service.recoverStaleRunningJobs({
+      kinds: ['PAYMENT_WEBHOOK'],
+      olderThanMs: 300_000,
+      limit: 10,
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'job-stale-1',
+        status: 'PENDING',
+        lockedAt: null,
+        lastError: 'Recovered stale RUNNING job after worker interruption.',
+      }),
+    ]);
+  });
+
   it('lists jobs with pagination metadata for admin operations', async () => {
     const { prisma, service } = createService();
     prisma.$queryRaw
@@ -181,5 +209,10 @@ describe('JobQueueService', () => {
     await expect(service.claimDueJobs({ limit: 101 })).rejects.toBeInstanceOf(
       BadRequestException,
     );
+    await expect(
+      service.recoverStaleRunningJobs({
+        olderThanMs: 59_999,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

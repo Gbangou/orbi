@@ -66,6 +66,23 @@ export default () => ({
       process.env.HEALTH_INCIDENT_HISTORY_LIMIT ?? '12',
       10,
     ),
+    jobQueueWorkerEnabled: process.env.JOB_QUEUE_WORKER_ENABLED !== 'false',
+    jobQueueWorkerIntervalMs: Number.parseInt(
+      process.env.JOB_QUEUE_WORKER_INTERVAL_MS ?? '5000',
+      10,
+    ),
+    jobQueueWorkerBatchSize: Number.parseInt(
+      process.env.JOB_QUEUE_WORKER_BATCH_SIZE ?? '10',
+      10,
+    ),
+    jobQueueWorkerRetryDelayMs: Number.parseInt(
+      process.env.JOB_QUEUE_WORKER_RETRY_DELAY_MS ?? '30000',
+      10,
+    ),
+    jobQueueWorkerStaleAfterMs: Number.parseInt(
+      process.env.JOB_QUEUE_WORKER_STALE_AFTER_MS ?? '300000',
+      10,
+    ),
     dispatchSignalLookbackHours: Number.parseInt(
       process.env.DISPATCH_SIGNAL_LOOKBACK_HOURS ?? '72',
       10,
@@ -131,9 +148,18 @@ export default () => ({
         process.env.CINETPAY_SECRET_KEY ?? process.env.CINETPAY_API_KEY,
     },
   },
+  notifications: {
+    provider: process.env.NOTIFICATIONS_PROVIDER ?? 'local',
+    providerTimeoutMs: Number.parseInt(
+      process.env.NOTIFICATIONS_PROVIDER_TIMEOUT_MS ?? '5000',
+      10,
+    ),
+  },
   documents: {
     signingSecret:
       process.env.DOCUMENT_SIGNING_SECRET ?? 'mobilis_dev_document_secret',
+    safetyScannerProvider:
+      process.env.DOCUMENT_SAFETY_SCANNER_PROVIDER ?? 'local-policy',
     uploadBaseUrl:
       process.env.DOCUMENT_UPLOAD_BASE_URL ??
       'https://storage.mobilis.local/upload',

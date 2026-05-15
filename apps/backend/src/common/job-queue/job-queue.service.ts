@@ -148,6 +148,54 @@ export class JobQueueService {
     return rows.map((row) => this.mapRow(row));
   }
 
+  async recoverStaleRunningJobs(input: {
+    olderThanMs: number;
+    kinds?: JobQueueKind[];
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 25;
+
+    if (!Number.isInteger(input.olderThanMs) || input.olderThanMs < 60_000) {
+      throw new BadRequestException(
+        'Stale job threshold must be at least 60000ms.',
+      );
+    }
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new BadRequestException(
+        'Stale job recovery limit must be between 1 and 100.',
+      );
+    }
+
+    for (const kind of input.kinds ?? []) {
+      this.assertKnownKind(kind);
+    }
+
+    const rows = await this.prisma.$queryRaw<JobQueueRow[]>`
+      UPDATE job_queue_entries
+      SET
+        status = 'PENDING'::"JobQueueStatus",
+        next_run_at = NOW(),
+        locked_at = NULL,
+        last_error = 'Recovered stale RUNNING job after worker interruption.',
+        updated_at = NOW()
+      WHERE id IN (
+        SELECT id
+        FROM job_queue_entries
+        WHERE status = 'RUNNING'::"JobQueueStatus"
+          AND locked_at IS NOT NULL
+          AND locked_at <= NOW() - (${input.olderThanMs}::integer * INTERVAL '1 millisecond')
+          AND (${input.kinds ?? []}::"JobQueueKind"[] = '{}' OR kind = ANY(${input.kinds ?? []}::"JobQueueKind"[]))
+        ORDER BY locked_at ASC, created_at ASC
+        LIMIT ${limit}
+        FOR UPDATE SKIP LOCKED
+      )
+      RETURNING *
+    `;
+
+    return rows.map((row) => this.mapRow(row));
+  }
+
   async complete(jobId: string) {
     const rows = await this.prisma.$queryRaw<JobQueueRow[]>`
       UPDATE job_queue_entries

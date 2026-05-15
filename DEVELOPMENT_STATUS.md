@@ -102,6 +102,48 @@ paiement provider, observabilite et runbooks verts.
 - Auth demo Expo web stabilisee: rider/driver web repassent sur `localhost`
   quand l environnement mobile pointe vers une IP LAN, le backend accepte les
   origines localhost de dev, et Metro ignore les artefacts `.next` admin.
+- Worker durable de file critique branche: les jobs `PAYMENT_WEBHOOK`,
+  `DRIVER_DOCUMENT` et `NOTIFICATION` sont reclames en batch borne, completes
+  apres verification d existence, ou remis en retry/dead-letter avec raison
+  bornee. Les notifications sont marquees `sentAt` de maniere idempotente pour
+  eviter les doubles envois logiques apres redemarrage.
+- Reprise automatique des jobs `RUNNING` orphelins ajoutee: si un worker est
+  interrompu apres claim, le prochain tick replace les jobs verrouilles trop
+  longtemps en `PENDING` avec un `lastError` explicite, ce qui evite une panne
+  silencieuse de webhooks, documents ou notifications.
+- Frontiere provider notification ajoutee: le worker verifie `sentAt` avant
+  dispatch, utilise un provider local idempotent par defaut et refuse les
+  providers non configures. Les jobs rejoues ne declenchent donc pas de double
+  envoi, et aucune donnee personnelle brute de notification n est journalisee
+  dans le chemin worker/provider.
+- Frontiere scanner documentaire ajoutee pour les jobs `DRIVER_DOCUMENT`: le
+  worker recalcule et persiste `safetyScan` depuis `objectVerification`,
+  `integrity`, type documentaire et extension, avec un provider `local-policy`
+  par defaut et refus explicite des scanners externes non configures. Cette
+  etape rend le scan KYC rejouable et remplacable par antivirus/anti-fraude
+  reel sans exposer le document lui-meme au journal worker.
+- Journal admin de file durable enrichi avec diagnostics minimises: pression de
+  retry, signaux non sensibles par famille et action recommandee. Les operations
+  peuvent distinguer webhook paiement, notification provider et document
+  quarantainable sans lire le payload brut ni exposer de donnees utilisateur.
+- Filtres ops ajoutes au journal admin de file durable: famille
+  `PAYMENT_WEBHOOK`/`DRIVER_DOCUMENT`/`NOTIFICATION` et statut
+  `PENDING`/`RUNNING`/`SUCCEEDED`/`DEAD_LETTER`, afin d isoler rapidement les
+  incidents sans changer de surface ni exposer plus de donnees.
+- Resume visuel du filtre actif ajoute au journal des jobs: volume charge,
+  action ops requise, pression retry moyenne/max et signal principal minimisé,
+  pour prioriser rapidement les quarantaines et webhooks sans ouvrir les
+  payloads bruts.
+- Requeue admin durci cote UX: les jobs non `DEAD_LETTER` ont l action
+  desactivee, et les jobs requeueables exigent une confirmation contextualisee
+  differente pour paiement, document KYC ou notification provider.
+- Diagnostics jobs structures ajoutes: `severity`, `owner` et
+  `canRequeueSafely` sont calcules cote backend et consommes par l admin web
+  pour prioriser finance/trust-and-safety/ops et bloquer les requeues trop
+  risqués avant correction.
+- Vue owner queue ajoutee au journal admin des jobs: les jobs charges sont
+  regroupes par `finance`, `trust-and-safety`, `ops` et `engineering` avec
+  total, critiques, requeues bloquees et pression retry max.
 
 ## Architecture active
 
@@ -116,15 +158,15 @@ paiement provider, observabilite et runbooks verts.
 
 ## Priorite d'execution
 
-1. Brancher les workers de consommation sur la queue durable: replay webhooks,
-   scan documentaire externe et envoi provider notifications.
-2. Capturer fixtures provider paiement sandbox, surtout refund/reconciliation.
-3. Brancher un scan antivirus/anti-fraude documentaire externe sur `safetyScan`.
-4. Adapter S3/GCS production pour objets documentaires.
-5. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
-6. Etendre le proxy serveur admin HttpOnly aux autres actions sensibles:
+1. Capturer fixtures provider paiement sandbox, surtout refund/reconciliation.
+2. Brancher providers externes au worker durable: replay paiement strictement
+   controle, antivirus/anti-fraude documentaire et push/SMS/email reels derriere
+   les frontieres provider deja testees.
+3. Adapter S3/GCS production pour objets documentaires.
+4. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
+5. Etendre le proxy serveur admin HttpOnly aux autres actions sensibles:
    wallet/payout, refund/replay paiement, onboarding documents et dispatch.
-7. Continuer le programme de tests securite iteratif:
+6. Continuer le programme de tests securite iteratif:
    - API1/API5: IDOR/BOLA et function-level authorization sur onboarding
      documents, dispatch, support tickets et exports finance.
    - API3/API6: mass assignment, pagination abusive et filtrage excessif sur

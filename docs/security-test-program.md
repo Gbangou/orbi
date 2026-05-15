@@ -60,6 +60,7 @@ Ces tests sont directement executables dans le repo:
 | Paiements | `pnpm --filter backend test -- payments.service.spec.ts --runInBand` | checkout, webhook signe, replay, refund, wallet payout |
 | Admin ops | `pnpm --filter backend test -- admin.service.spec.ts admin.controller.spec.ts --runInBand` | audit, finance, support, launch readiness |
 | Realtime | `pnpm --filter backend test -- realtime --runInBand` | transport, degradation, publication |
+| File durable | `pnpm --filter backend test -- job-queue notifications --runInBand` | claim borne, recovery RUNNING orphelin, idempotence notification/provider, scanner documentaire, references webhook/document, retry/dead-letter |
 | Ride/dispatch/trips | `pnpm --filter backend test -- ride trips drivers --runInBand` | matching, lifecycle, acceptance policy |
 | Mobile smoke | `pnpm test:mobile:smoke` | parcours rider/driver, sessions, feedback |
 | Admin smoke | `pnpm test:admin:smoke` | routes serveur, securite admin, launch readiness |
@@ -120,13 +121,37 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
 5. Mobile: aucun token/session, mot de passe, secret ou header Authorization ne
    doit apparaitre dans logs, rapports d erreur, stockage clair, screenshots
    sensibles, clipboard ou deep links non controles.
-6. Trust & safety trajet: SOS, incidents et liens publics doivent etre limites
+6. File durable: chaque webhook, document et notification critique doit etre
+   rejouable/idempotent. Un job malforme ou orphelin part en retry borne puis
+   dead-letter visible aux operations, sans journaliser de donnees personnelles
+   brutes. Un job `RUNNING` bloque apres crash worker doit revenir en
+   `PENDING` apres seuil borne afin d eviter les pertes silencieuses.
+   Le dispatch notification verifie l etat `sentAt` avant tout appel provider
+   pour eviter un double envoi apres replay.
+   Les jobs documents chauffeur recalculent un `safetyScan` rejouable depuis
+   les metadonnees provider/integrite et refusent les scanners externes non
+   configures.
+   La console admin n affiche que des diagnostics minimises pour les jobs:
+   pression retry, signaux non sensibles et action recommandee, jamais le
+   payload brut de notification, paiement ou document.
+   Le journal admin permet de filtrer par famille et statut pour isoler les
+   quarantaines documentaires, webhooks paiement et notifications provider sans
+   exporter de donnees sensibles.
+   Le resume du filtre actif doit rester base uniquement sur diagnostics
+   minimises: volume, pression retry, besoin d action et signal principal.
+   La remise en file depuis l admin exige une confirmation contextualisee et
+   reste limitee aux jobs `DEAD_LETTER`.
+   La decision UI de requeue doit utiliser `canRequeueSafely`, `severity` et
+   `owner` fournis par le backend, pas une inference fragile depuis du texte.
+   La vue owner queue doit permettre aux responsables finance, trust-and-safety,
+   ops et engineering d isoler leur charge critique sans payload brut.
+7. Trust & safety trajet: SOS, incidents et liens publics doivent etre limites
    aux acteurs autorises, throttles contre les doubles taps/abus, audites avant
    diffusion live, et resolus par hash de token sans fuite de nom reel.
-7. Booking: les doubles taps rider doivent etre absorbes cote mobile et cote
+8. Booking: les doubles taps rider doivent etre absorbes cote mobile et cote
    API; une demande active strictement equivalente est retournee sans nouvelle
    creation ni nouvel evenement realtime.
-8. Finance admin: les actions wallet/payout/recouvrement doivent etre
+9. Finance admin: les actions wallet/payout/recouvrement doivent etre
    idempotentes cote API et bloquees contre les doubles clics cote console.
 
 ## Commandes Executees Le 9 Mai 2026

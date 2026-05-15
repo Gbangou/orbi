@@ -2040,6 +2040,14 @@ export type AdminJobQueueResponse = {
     failedAt: string | null;
     lastError: string | null;
     deadLetterReason: string | null;
+    diagnostics: {
+      attemptPressure: number;
+      canRequeueSafely: boolean;
+      owner: 'ops' | 'engineering' | 'finance' | 'trust-and-safety';
+      riskSignals: string[];
+      recommendedAction: string;
+      severity: 'low' | 'medium' | 'high' | 'critical';
+    };
     createdAt: string;
     updatedAt: string;
   }>;

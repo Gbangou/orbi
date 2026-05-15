@@ -1686,9 +1686,115 @@ export class AdminService {
         failedAt: job.failedAt?.toISOString() ?? null,
         lastError: job.lastError,
         deadLetterReason: job.deadLetterReason,
+        diagnostics: this.buildJobQueueDiagnostics(job),
         createdAt: job.createdAt.toISOString(),
         updatedAt: job.updatedAt.toISOString(),
       })),
+    };
+  }
+
+  private buildJobQueueDiagnostics(job: {
+    kind: string;
+    status: string;
+    attempts: number;
+    maxAttempts: number;
+    payload?: Prisma.JsonValue;
+    lastError: string | null;
+    deadLetterReason: string | null;
+  }) {
+    const payload = isJsonRecord(job.payload) ? job.payload : {};
+    const error = `${job.deadLetterReason ?? ''} ${job.lastError ?? ''}`;
+    const riskSignals: string[] = [];
+    let severity: 'low' | 'medium' | 'high' | 'critical' =
+      job.status === 'DEAD_LETTER' ? 'high' : 'medium';
+    let owner: 'ops' | 'engineering' | 'finance' | 'trust-and-safety' =
+      'engineering';
+    let canRequeueSafely = job.status === 'DEAD_LETTER';
+    let recommendedAction =
+      job.status === 'DEAD_LETTER'
+        ? 'Verifier la cause, corriger la configuration ou la donnee, puis remettre en file.'
+        : 'Surveiller le prochain passage worker.';
+
+    if (job.kind === 'DRIVER_DOCUMENT') {
+      owner = 'trust-and-safety';
+      const safetyScanState = nullableString(payload.safetyScanState);
+      const objectVerificationState = nullableString(
+        payload.objectVerificationState,
+      );
+      const documentType = nullableString(payload.documentType);
+
+      if (documentType) {
+        riskSignals.push(`document:${documentType}`);
+      }
+
+      if (objectVerificationState) {
+        riskSignals.push(`object:${objectVerificationState}`);
+      }
+
+      if (safetyScanState) {
+        riskSignals.push(`scan:${safetyScanState}`);
+      }
+
+      recommendedAction =
+        safetyScanState === 'quarantined' ||
+        error.includes('scanner') ||
+        error.includes('document')
+          ? 'Ouvrir la file onboarding, verifier la raison de quarantaine et ne pas approuver le chauffeur avant correction.'
+          : 'Verifier que le scan documentaire worker a persiste un verdict clair.';
+      canRequeueSafely =
+        job.status === 'DEAD_LETTER' &&
+        safetyScanState !== 'quarantined' &&
+        objectVerificationState !== 'failed' &&
+        !error.includes('quarantine');
+      severity = canRequeueSafely ? severity : 'critical';
+    } else if (job.kind === 'PAYMENT_WEBHOOK') {
+      owner = 'finance';
+      const action = nullableString(payload.action);
+      const provider = nullableString(payload.provider);
+
+      if (provider) {
+        riskSignals.push(`provider:${provider}`);
+      }
+
+      if (action) {
+        riskSignals.push(`action:${action}`);
+      }
+
+      recommendedAction =
+        action?.includes('ignored') || error.includes('provider')
+          ? 'Ouvrir le journal webhooks paiement, verifier signature/reference/montant, puis relancer seulement si idempotent.'
+          : 'Verifier la reconciliation paiement avant requeue.';
+      canRequeueSafely =
+        job.status === 'DEAD_LETTER' &&
+        !action?.includes('ignored') &&
+        !error.includes('conflicting') &&
+        !error.includes('amount') &&
+        !error.includes('currency');
+      severity = canRequeueSafely ? severity : 'critical';
+    } else if (job.kind === 'NOTIFICATION') {
+      owner = 'ops';
+      const channel = nullableString(payload.channel);
+
+      if (channel) {
+        riskSignals.push(`channel:${channel}`);
+      }
+
+      recommendedAction = error.includes('provider')
+        ? 'Configurer le provider notification ou basculer temporairement sur le provider local avant requeue.'
+        : 'Verifier que la notification n est pas deja marquee envoyee avant requeue.';
+      canRequeueSafely =
+        job.status === 'DEAD_LETTER' && !error.includes('provider');
+      severity = canRequeueSafely ? 'medium' : severity;
+    }
+
+    return {
+      attemptPressure:
+        job.maxAttempts > 0 ? Math.round((job.attempts / job.maxAttempts) * 100) : 0,
+      canRequeueSafely,
+      owner,
+      riskSignals,
+      recommendedAction,
+      severity,
     };
   }
 

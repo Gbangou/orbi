@@ -32,7 +32,19 @@ type HealthAuditEvent = {
   detail: string;
   createdAt: string;
 };
+type AdminJobQueueEntry = AdminJobQueueResponse['jobs'][number];
 type HealthAuditFilter = 'all' | 'incidents' | 'recoveries' | 'human-actions';
+type JobQueueKindFilter =
+  | 'ALL'
+  | 'PAYMENT_WEBHOOK'
+  | 'DRIVER_DOCUMENT'
+  | 'NOTIFICATION';
+type JobQueueStatusFilter =
+  | 'ALL'
+  | 'PENDING'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'DEAD_LETTER';
 
 const healthAuditFilters: Array<{
   id: HealthAuditFilter;
@@ -59,6 +71,27 @@ const healthAuditFilters: Array<{
     label: 'Actions humaines',
     description: 'Accuses reception et masquages realises par les ops.',
   },
+];
+
+const jobQueueKindFilters: Array<{
+  id: JobQueueKindFilter;
+  label: string;
+}> = [
+  { id: 'ALL', label: 'Toutes familles' },
+  { id: 'PAYMENT_WEBHOOK', label: 'Paiements' },
+  { id: 'DRIVER_DOCUMENT', label: 'Documents' },
+  { id: 'NOTIFICATION', label: 'Notifications' },
+];
+
+const jobQueueStatusFilters: Array<{
+  id: JobQueueStatusFilter;
+  label: string;
+}> = [
+  { id: 'DEAD_LETTER', label: 'Dead-letter' },
+  { id: 'PENDING', label: 'En attente' },
+  { id: 'RUNNING', label: 'En cours' },
+  { id: 'SUCCEEDED', label: 'Traites' },
+  { id: 'ALL', label: 'Tous statuts' },
 ];
 
 function describeOverallHealth(status: HealthCheckResponse['status']) {
@@ -155,6 +188,32 @@ function resolveJobStatusTone(status: string) {
   }
 
   return 'good';
+}
+
+function resolveJobSeverityTone(severity: string) {
+  if (severity === 'critical' || severity === 'high') {
+    return 'bad';
+  }
+
+  if (severity === 'medium') {
+    return 'warn';
+  }
+
+  return 'good';
+}
+
+function buildRequeueConfirmation(job: AdminJobQueueEntry) {
+  const base = `Remettre en file ${describeJobKind(job.kind)} (${job.entityType ?? 'entity'}:${job.entityId ?? 'non-reference'}) ?`;
+
+  if (job.kind === 'PAYMENT_WEBHOOK') {
+    return `${base}\n\nVerifier avant de continuer: signature, reference provider, montant/devise et idempotence finance.`;
+  }
+
+  if (job.kind === 'DRIVER_DOCUMENT') {
+    return `${base}\n\nVerifier avant de continuer: raison de quarantaine KYC, preuve objet provider et decision onboarding non approuvee.`;
+  }
+
+  return `${base}\n\nVerifier avant de continuer: provider notification configure et absence de double envoi visible.`;
 }
 
 function describeReadinessCheckState(state: string) {
@@ -310,12 +369,22 @@ function adminMutationHeaders() {
   };
 }
 
-async function fetchAdminJobQueueFromServer() {
+async function fetchAdminJobQueueFromServer(input: {
+  kind: JobQueueKindFilter;
+  status: JobQueueStatusFilter;
+}) {
   const params = new URLSearchParams({
     page: '1',
     pageSize: '6',
-    status: 'DEAD_LETTER',
   });
+
+  if (input.kind !== 'ALL') {
+    params.set('kind', input.kind);
+  }
+
+  if (input.status !== 'ALL') {
+    params.set('status', input.status);
+  }
 
   return fetchAdminJson<AdminJobQueueResponse>(
     `/api/admin/job-queue?${params.toString()}`,
@@ -336,6 +405,10 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
   const [jobQueueStatus, setJobQueueStatus] = useState(
     'Journal dead-letter en attente.',
   );
+  const [jobQueueKindFilter, setJobQueueKindFilter] =
+    useState<JobQueueKindFilter>('ALL');
+  const [jobQueueStateFilter, setJobQueueStateFilter] =
+    useState<JobQueueStatusFilter>('DEAD_LETTER');
   const [auditFilter, setAuditFilter] = useState<HealthAuditFilter>('all');
   const previousHealthRef = useRef<HealthCheckResponse | null>(null);
   const productionReadiness = health.operations.productionReadiness ?? {
@@ -412,18 +485,21 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
 
   const refreshJobQueue = useCallback(async () => {
     try {
-      const response = await fetchAdminJobQueueFromServer();
+      const response = await fetchAdminJobQueueFromServer({
+        kind: jobQueueKindFilter,
+        status: jobQueueStateFilter,
+      });
 
       setJobQueueDetails(response);
       setJobQueueStatus(
         response.jobs.length
-          ? `${response.jobs.length} dead-letter(s) a qualifier.`
-          : 'Aucun dead-letter dans le journal operations.',
+          ? `${response.jobs.length} job(s) a qualifier.`
+          : 'Aucun job pour ce filtre operations.',
       );
     } catch {
-      setJobQueueStatus("Impossible d'actualiser les dead-letters.");
+      setJobQueueStatus("Impossible d'actualiser le journal de jobs.");
     }
-  }, []);
+  }, [jobQueueKindFilter, jobQueueStateFilter]);
 
   const visibleHistory = useMemo(
     () => history.filter((entry) => !entry.mutedAt),
@@ -505,6 +581,105 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
       }),
     [jobQueue.counts, jobQueue.families],
   );
+  const jobQueueFilterSummary = useMemo(() => {
+    const jobs = jobQueueDetails?.jobs ?? [];
+    const actionRequired = jobs.filter(
+      (job) =>
+        job.status === 'DEAD_LETTER' ||
+        job.diagnostics.riskSignals.some(
+          (signal) =>
+            signal.includes('quarantined') ||
+            signal.includes('ignored') ||
+            signal.includes('provider'),
+        ),
+    ).length;
+    const maxAttemptPressure = jobs.reduce(
+      (max, job) => Math.max(max, job.diagnostics.attemptPressure),
+      0,
+    );
+    const averageAttemptPressure = jobs.length
+      ? Math.round(
+          jobs.reduce(
+            (sum, job) => sum + job.diagnostics.attemptPressure,
+            0,
+          ) / jobs.length,
+        )
+      : 0;
+    const allSignals = jobs.flatMap((job) => job.diagnostics.riskSignals);
+    const dominantSignal =
+      allSignals.find((signal) => signal.includes('quarantined')) ??
+      allSignals.find((signal) => signal.includes('ignored')) ??
+      allSignals[0] ??
+      null;
+    let message = 'Aucun job charge pour ce filtre.';
+
+    if (jobs.length > 0) {
+      if (jobQueueKindFilter === 'DRIVER_DOCUMENT') {
+        message =
+          actionRequired > 0
+            ? `${actionRequired} document(s) demandent une revue KYC avant approbation chauffeur.`
+            : 'Documents charges sans signal critique dans ce filtre.';
+      } else if (jobQueueKindFilter === 'PAYMENT_WEBHOOK') {
+        message =
+          actionRequired > 0
+            ? `${actionRequired} webhook(s) paiement demandent investigation finance avant requeue.`
+            : 'Webhooks paiement charges sans signal critique dans ce filtre.';
+      } else if (jobQueueKindFilter === 'NOTIFICATION') {
+        message =
+          actionRequired > 0
+            ? `${actionRequired} notification(s) demandent verification provider avant requeue.`
+            : 'Notifications chargees sans signal critique dans ce filtre.';
+      } else {
+        message =
+          actionRequired > 0
+            ? `${actionRequired} job(s) demandent une action operations immediate.`
+            : 'Aucun signal critique dans les jobs charges.';
+      }
+    }
+
+    return {
+      actionRequired,
+      averageAttemptPressure,
+      dominantSignal,
+      jobsLoaded: jobs.length,
+      maxAttemptPressure,
+      message,
+      requeueBlocked: jobs.filter(
+        (job) => job.status === 'DEAD_LETTER' && !job.diagnostics.canRequeueSafely,
+      ).length,
+    };
+  }, [jobQueueDetails?.jobs, jobQueueKindFilter]);
+  const jobQueueOwnerRows = useMemo(() => {
+    const jobs = jobQueueDetails?.jobs ?? [];
+    const owners = ['finance', 'trust-and-safety', 'ops', 'engineering'];
+
+    return owners
+      .map((owner) => {
+        const ownerJobs = jobs.filter((job) => job.diagnostics.owner === owner);
+        const critical = ownerJobs.filter(
+          (job) =>
+            job.diagnostics.severity === 'critical' ||
+            job.diagnostics.severity === 'high',
+        ).length;
+        const blocked = ownerJobs.filter(
+          (job) =>
+            job.status === 'DEAD_LETTER' && !job.diagnostics.canRequeueSafely,
+        ).length;
+        const maxAttemptPressure = ownerJobs.reduce(
+          (max, job) => Math.max(max, job.diagnostics.attemptPressure),
+          0,
+        );
+
+        return {
+          owner,
+          total: ownerJobs.length,
+          critical,
+          blocked,
+          maxAttemptPressure,
+        };
+      })
+      .filter((row) => row.total > 0);
+  }, [jobQueueDetails?.jobs]);
 
   const acknowledgeIncident = useCallback(
     async (incidentId: string) => {
@@ -549,12 +724,23 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
   );
 
   const requeueJob = useCallback(
-    async (jobId: string) => {
+    async (job: AdminJobQueueEntry) => {
+      if (job.status !== 'DEAD_LETTER') {
+        setJobQueueStatus(
+          'Seuls les jobs dead-letter peuvent etre remis en file.',
+        );
+        return;
+      }
+
+      if (!window.confirm(buildRequeueConfirmation(job))) {
+        return;
+      }
+
       try {
-        setActiveJobId(jobId);
+        setActiveJobId(job.id);
 
         await fetchAdminJson(
-          `/api/admin/job-queue/${encodeURIComponent(jobId)}/requeue`,
+          `/api/admin/job-queue/${encodeURIComponent(job.id)}/requeue`,
           { method: 'POST', headers: adminMutationHeaders() },
         );
         await refreshHealth('Job dead-letter remis en file.');
@@ -974,7 +1160,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
         <div className="health-audit-panel">
           <div className="ticket-topline">
             <span className="priority-badge priority-2">
-              dead-letter journal
+              journal jobs
             </span>
             <div className="queue-actions">
               <button
@@ -986,6 +1172,94 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
               </button>
               <span className="queue-status">{jobQueueStatus}</span>
             </div>
+          </div>
+          <div className="health-audit-toolbar">
+            <div className="job-queue-filter-list" aria-label="Famille de jobs">
+              {jobQueueKindFilters.map((filter) => (
+                <button
+                  className={`job-queue-filter ${
+                    jobQueueKindFilter === filter.id
+                      ? 'job-queue-filter-active'
+                      : ''
+                  }`}
+                  key={filter.id}
+                  onClick={() => setJobQueueKindFilter(filter.id)}
+                  type="button"
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+            <div className="job-queue-filter-list" aria-label="Statut de jobs">
+              {jobQueueStatusFilters.map((filter) => (
+                <button
+                  className={`job-queue-filter ${
+                    jobQueueStateFilter === filter.id
+                      ? 'job-queue-filter-active'
+                      : ''
+                  }`}
+                  key={filter.id}
+                  onClick={() => setJobQueueStateFilter(filter.id)}
+                  type="button"
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+            <div className="job-queue-filter-summary">
+              <div>
+                <span>Jobs charges</span>
+                <strong>{jobQueueFilterSummary.jobsLoaded}</strong>
+              </div>
+              <div>
+                <span>Action ops</span>
+                <strong>{jobQueueFilterSummary.actionRequired}</strong>
+              </div>
+              <div>
+                <span>Retry moyen</span>
+                <strong>{jobQueueFilterSummary.averageAttemptPressure}%</strong>
+              </div>
+              <div>
+                <span>Retry max</span>
+                <strong>{jobQueueFilterSummary.maxAttemptPressure}%</strong>
+              </div>
+              <div>
+                <span>Requeue bloque</span>
+                <strong>{jobQueueFilterSummary.requeueBlocked}</strong>
+              </div>
+              <p>
+                {jobQueueFilterSummary.message}
+                {jobQueueFilterSummary.dominantSignal
+                  ? ` Signal principal: ${jobQueueFilterSummary.dominantSignal}.`
+                  : ''}
+              </p>
+            </div>
+            {jobQueueOwnerRows.length ? (
+              <div className="job-owner-grid" aria-label="Files par owner">
+                {jobQueueOwnerRows.map((row) => (
+                  <article className="job-owner-card" key={row.owner}>
+                    <div className="ticket-topline">
+                      <strong>{row.owner}</strong>
+                      <span
+                        className={`readiness-pill readiness-pill-${readinessTone(
+                          row.critical > 0
+                            ? 'fail'
+                            : row.blocked > 0
+                              ? 'warn'
+                              : 'ok',
+                        )}`}
+                      >
+                        {row.total}
+                      </span>
+                    </div>
+                    <span>
+                      {row.critical} critique(s) · {row.blocked} requeue
+                      bloque(s) · retry max {row.maxAttemptPressure}%
+                    </span>
+                  </article>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div className="health-audit-list">
             {jobQueueDetails?.jobs.length ? (
@@ -1003,15 +1277,48 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
                       {job.entityId ?? 'non-reference'} · {job.attempts}/
                       {job.maxAttempts} tentative(s)
                     </span>
+                    <span className="health-inline-note">
+                      Pression retry {job.diagnostics.attemptPressure}% ·{' '}
+                      {job.diagnostics.riskSignals.length
+                        ? job.diagnostics.riskSignals.join(' · ')
+                        : 'aucun signal non sensible'}
+                    </span>
+                    <span className="health-inline-note">
+                      Owner {job.diagnostics.owner} · Requeue{' '}
+                      {job.diagnostics.canRequeueSafely
+                        ? 'autorise apres verification'
+                        : 'bloque jusqu a correction'}
+                    </span>
+                    <p className="health-remediation-note">
+                      {job.diagnostics.recommendedAction}
+                    </p>
                   </div>
                   <div className="health-audit-meta">
+                    <span
+                      className={`readiness-pill readiness-pill-${resolveJobSeverityTone(
+                        job.diagnostics.severity,
+                      )}`}
+                    >
+                      {job.diagnostics.severity}
+                    </span>
                     <span className="readiness-pill readiness-pill-bad">
                       {describeJobStatus(job.status)}
                     </span>
                     <button
                       className="ticket-button ticket-button-neutral"
-                      disabled={activeJobId === job.id}
-                      onClick={() => void requeueJob(job.id)}
+                      disabled={
+                        activeJobId === job.id ||
+                        job.status !== 'DEAD_LETTER' ||
+                        !job.diagnostics.canRequeueSafely
+                      }
+                      onClick={() => void requeueJob(job)}
+                      title={
+                        job.status === 'DEAD_LETTER'
+                          ? job.diagnostics.canRequeueSafely
+                            ? 'Confirmer puis remettre ce job en file'
+                            : 'Corriger ou investiguer avant remise en file'
+                          : 'Seuls les jobs dead-letter peuvent etre remis en file'
+                      }
                       type="button"
                     >
                       Remettre en file

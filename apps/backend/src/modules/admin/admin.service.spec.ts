@@ -188,6 +188,10 @@ describe('AdminService', () => {
             failedAt: new Date('2026-05-08T10:05:00.000Z'),
             lastError: 'provider unavailable',
             deadLetterReason: 'provider unavailable',
+            payload: {
+              provider: 'FLUTTERWAVE',
+              action: 'ignored_unknown_reference',
+            },
             createdAt: new Date('2026-05-08T09:55:00.000Z'),
             updatedAt: new Date('2026-05-08T10:05:00.000Z'),
           },
@@ -459,6 +463,12 @@ describe('AdminService', () => {
         id: 'job-dead-1',
         status: 'DEAD_LETTER',
         failedAt: '2026-05-08T10:05:00.000Z',
+        diagnostics: expect.objectContaining({
+          owner: 'finance',
+          severity: 'critical',
+          canRequeueSafely: false,
+          riskSignals: expect.arrayContaining(['provider:FLUTTERWAVE']),
+        }),
       }),
     );
     expect(result.snapshot.counts[0].count).toBe(1);

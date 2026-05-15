@@ -1,0 +1,296 @@
+import { JobQueueWorkerService } from './job-queue-worker.service';
+
+describe('JobQueueWorkerService', () => {
+  const now = new Date('2026-05-15T08:00:00.000Z');
+
+  function job(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'job-1',
+      kind: 'NOTIFICATION',
+      status: 'RUNNING',
+      dedupeKey: 'notification:notification-1',
+      entityType: 'notification',
+      entityId: 'notification-1',
+      payload: {
+        notificationId: 'notification-1',
+        userId: 'user-1',
+        channel: 'PUSH',
+      },
+      attempts: 1,
+      maxAttempts: 5,
+      nextRunAt: now,
+      lockedAt: now,
+      completedAt: null,
+      failedAt: null,
+      lastError: null,
+      deadLetterReason: null,
+      createdAt: now,
+      updatedAt: now,
+      ...overrides,
+    };
+  }
+
+  function createService() {
+    const configService = {
+      get: jest.fn((key: string) => {
+        const values: Record<string, unknown> = {
+          'app.environment': 'test',
+          'operations.jobQueueWorkerBatchSize': 10,
+          'operations.jobQueueWorkerRetryDelayMs': 30_000,
+          'operations.jobQueueWorkerStaleAfterMs': 300_000,
+        };
+
+        return values[key];
+      }),
+    };
+    const prisma = {
+      paymentWebhookEvent: {
+        findUnique: jest.fn(),
+      },
+      driverDocument: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      notification: {
+        updateMany: jest.fn(),
+        findUnique: jest.fn(),
+      },
+    };
+    const jobQueueService = {
+      claimDueJobs: jest.fn(),
+      recoverStaleRunningJobs: jest.fn().mockResolvedValue([]),
+      complete: jest.fn(),
+      fail: jest.fn(),
+    };
+    const notificationDeliveryService = {
+      dispatch: jest.fn().mockResolvedValue({
+        provider: 'local',
+        providerMessageId: 'local:notification-1',
+        deliveredAt: now,
+      }),
+    };
+    const documentSafetyScannerService = {
+      scan: jest.fn().mockResolvedValue({
+        state: 'clear',
+        engine: 'local-policy',
+        scannedAt: now.toISOString(),
+        findings: [],
+        quarantineReason: null,
+      }),
+    };
+
+    return {
+      configService,
+      prisma,
+      jobQueueService,
+      notificationDeliveryService,
+      documentSafetyScannerService,
+      service: new JobQueueWorkerService(
+        configService as never,
+        prisma as never,
+        jobQueueService as never,
+        notificationDeliveryService as never,
+        documentSafetyScannerService as never,
+      ),
+    };
+  }
+
+  it('claims due notification jobs and marks them sent exactly once', async () => {
+    const { jobQueueService, notificationDeliveryService, prisma, service } =
+      createService();
+    jobQueueService.claimDueJobs.mockResolvedValue([job()]);
+    prisma.notification.findUnique.mockResolvedValue({
+      id: 'notification-1',
+      sentAt: null,
+    });
+    prisma.notification.updateMany.mockResolvedValue({ count: 1 });
+    jobQueueService.complete.mockResolvedValue(job({ status: 'SUCCEEDED' }));
+
+    const result = await service.processDueJobs({
+      kinds: ['NOTIFICATION'],
+      limit: 5,
+    });
+
+    expect(jobQueueService.claimDueJobs).toHaveBeenCalledWith({
+      kinds: ['NOTIFICATION'],
+      limit: 5,
+    });
+    expect(jobQueueService.recoverStaleRunningJobs).toHaveBeenCalledWith({
+      kinds: ['NOTIFICATION'],
+      limit: 5,
+      olderThanMs: 300_000,
+    });
+    expect(prisma.notification.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'notification-1',
+        sentAt: null,
+      },
+      data: {
+        sentAt: now,
+      },
+    });
+    expect(notificationDeliveryService.dispatch).toHaveBeenCalledWith({
+      notificationId: 'notification-1',
+      userId: 'user-1',
+      channel: 'PUSH',
+    });
+    expect(jobQueueService.complete).toHaveBeenCalledWith('job-1');
+    expect(jobQueueService.fail).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      claimed: 1,
+      completed: 1,
+      failed: 0,
+    });
+  });
+
+  it('completes already-sent notification jobs without duplicate provider dispatch', async () => {
+    const { jobQueueService, notificationDeliveryService, prisma, service } =
+      createService();
+    jobQueueService.claimDueJobs.mockResolvedValue([job()]);
+    prisma.notification.findUnique.mockResolvedValue({
+      id: 'notification-1',
+      sentAt: now,
+    });
+
+    await service.processDueJobs();
+
+    expect(prisma.notification.findUnique).toHaveBeenCalledWith({
+      where: {
+        id: 'notification-1',
+      },
+      select: {
+        id: true,
+        sentAt: true,
+      },
+    });
+    expect(notificationDeliveryService.dispatch).not.toHaveBeenCalled();
+    expect(prisma.notification.updateMany).not.toHaveBeenCalled();
+    expect(jobQueueService.complete).toHaveBeenCalledWith('job-1');
+  });
+
+  it('fails malformed jobs into retry/dead-letter flow without leaking payloads', async () => {
+    const { jobQueueService, service } = createService();
+    jobQueueService.claimDueJobs.mockResolvedValue([
+      job({
+        payload: {
+          userId: 'user-1',
+        },
+      }),
+    ]);
+
+    const result = await service.processDueJobs();
+
+    expect(jobQueueService.fail).toHaveBeenCalledWith('job-1', {
+      error: 'job_payload_notificationId_missing',
+      retryDelayMs: 60_000,
+      deadLetterReason:
+        'notification_worker_failed:job_payload_notificationId_missing',
+    });
+    expect(result).toEqual({
+      claimed: 1,
+      completed: 0,
+      failed: 1,
+    });
+  });
+
+  it('validates payment webhook and driver document outbox references', async () => {
+    const { documentSafetyScannerService, jobQueueService, prisma, service } =
+      createService();
+    jobQueueService.claimDueJobs.mockResolvedValue([
+      job({
+        id: 'job-payment',
+        kind: 'PAYMENT_WEBHOOK',
+        payload: {
+          eventId: 'webhook-event-1',
+        },
+      }),
+      job({
+        id: 'job-document',
+        kind: 'DRIVER_DOCUMENT',
+        payload: {
+          documentId: 'document-1',
+        },
+      }),
+    ]);
+    prisma.paymentWebhookEvent.findUnique.mockResolvedValue({
+      id: 'webhook-event-1',
+      action: 'persisted_and_reconciled',
+      signatureVerified: true,
+      paymentAttemptId: 'payment-1',
+    });
+    prisma.driverDocument.findUnique.mockResolvedValue({
+      id: 'document-1',
+      type: 'DRIVER_LICENSE',
+      fileName: 'permis.pdf',
+      storageKey: 'drivers/driver-1/permis.pdf',
+      metadata: {
+        safetyScan: {
+          state: 'pending',
+        },
+      },
+    });
+    prisma.driverDocument.update.mockResolvedValue({
+      id: 'document-1',
+    });
+
+    const result = await service.processDueJobs();
+
+    expect(prisma.paymentWebhookEvent.findUnique).toHaveBeenCalledWith({
+      where: {
+        id: 'webhook-event-1',
+      },
+      select: {
+        id: true,
+        action: true,
+        signatureVerified: true,
+        paymentAttemptId: true,
+      },
+    });
+    expect(prisma.driverDocument.findUnique).toHaveBeenCalledWith({
+      where: {
+        id: 'document-1',
+      },
+      select: {
+        id: true,
+        type: true,
+        fileName: true,
+        storageKey: true,
+        metadata: true,
+      },
+    });
+    expect(documentSafetyScannerService.scan).toHaveBeenCalledWith({
+      documentId: 'document-1',
+      type: 'DRIVER_LICENSE',
+      fileName: 'permis.pdf',
+      storageKey: 'drivers/driver-1/permis.pdf',
+      metadata: {
+        safetyScan: {
+          state: 'pending',
+        },
+      },
+    });
+    expect(prisma.driverDocument.update).toHaveBeenCalledWith({
+      where: {
+        id: 'document-1',
+      },
+      data: {
+        metadata: {
+          safetyScan: {
+            state: 'clear',
+            engine: 'local-policy',
+            scannedAt: now.toISOString(),
+            findings: [],
+            quarantineReason: null,
+          },
+        },
+      },
+    });
+    expect(jobQueueService.complete).toHaveBeenCalledWith('job-payment');
+    expect(jobQueueService.complete).toHaveBeenCalledWith('job-document');
+    expect(result).toEqual({
+      claimed: 2,
+      completed: 2,
+      failed: 0,
+    });
+  });
+});
