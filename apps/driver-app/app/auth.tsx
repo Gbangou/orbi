@@ -16,8 +16,8 @@ import {
 export default function DriverAuthScreen() {
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState(mobilisDemoAccounts.driver.email);
-  const [password, setPassword] = useState(mobilisDemoAccounts.driver.password);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [status, setStatus] = useState(
     'Connectez-vous pour gerer les offres, les revenus et l onboarding.',
   );
@@ -102,7 +102,7 @@ export default function DriverAuthScreen() {
         <SectionHeading
           eyebrow="Parcours"
           title="Entrez dans votre cockpit chauffeur"
-          description="Connexion rapide, bascule inscription et compte demo pour tester ou reprendre une session sans friction."
+          description="Connexion, bascule inscription et compte demo volontaire pour tester ou reprendre une session sans friction."
         />
         <View style={styles.insightRow}>
           <InsightBadge label="Flux" value="Offres live" tone="teal" />
@@ -145,7 +145,7 @@ export default function DriverAuthScreen() {
           </Text>
           <Text style={styles.cardMeta}>
             {mode === 'sign-in'
-              ? 'Utilisez vos identifiants ou le compte demo.'
+              ? 'Utilisez vos identifiants ou chargez explicitement le compte demo.'
               : 'Le compte vous permettra ensuite de completer le dossier et le vehicule.'}
           </Text>
         </View>

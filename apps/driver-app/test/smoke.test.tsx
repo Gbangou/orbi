@@ -347,6 +347,7 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<DriverAuthScreen />);
 
+    await pressByText(renderer, 'Utiliser le compte demo');
     await pressByText(renderer, 'Se connecter');
 
     expect(mockedSignInDriverAccount).toHaveBeenCalledWith({

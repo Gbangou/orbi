@@ -16,8 +16,8 @@ import {
 export default function RiderAuthScreen() {
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState(mobilisDemoAccounts.rider.email);
-  const [password, setPassword] = useState(mobilisDemoAccounts.rider.password);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [status, setStatus] = useState(
     'Connectez-vous pour suivre vos reservations et votre historique.',
   );
@@ -101,7 +101,7 @@ export default function RiderAuthScreen() {
         <SectionHeading
           eyebrow="Parcours"
           title="Reprenez vos trajets sans friction"
-          description="Connexion, inscription et compte demo dans une entree plus nette pour lancer rapidement une reservation."
+          description="Connexion, inscription et compte demo volontaire dans une entree plus nette pour lancer rapidement une reservation."
         />
         <View style={styles.insightRow}>
           <InsightBadge label="Booking" value="Prix clairs" tone="teal" />
@@ -144,7 +144,7 @@ export default function RiderAuthScreen() {
           </Text>
           <Text style={styles.cardMeta}>
             {mode === 'sign-in'
-              ? 'Reconnectez-vous pour retrouver vos demandes, trajets et lieux enregistres.'
+              ? 'Reconnectez-vous avec vos identifiants ou chargez explicitement le compte demo.'
               : 'Le compte vous permettra ensuite de reserver et sauvegarder vos lieux favoris.'}
           </Text>
         </View>

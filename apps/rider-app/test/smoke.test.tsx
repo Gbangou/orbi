@@ -375,6 +375,7 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
 
+    await pressByText(renderer, 'Utiliser le compte demo');
     await pressByText(renderer, 'Se connecter');
 
     expect(mockedSignInRiderAccount).toHaveBeenCalledWith({
@@ -390,6 +391,7 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
 
+    await pressByText(renderer, 'Utiliser le compte demo');
     await pressByText(renderer, 'Se connecter');
 
     expect(router.replace).not.toHaveBeenCalled();
