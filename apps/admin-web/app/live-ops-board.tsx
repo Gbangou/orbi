@@ -12,6 +12,7 @@ import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
 import {
   adminSyncHighlightDurationMs,
   resolveCollectionDelta,
+  resolveLiveOpsRouteMonitoringCopy,
   resolveStringFeedDelta,
 } from './admin-ops-kernel';
 import { subscribeToAdminRealtime } from './admin-realtime';
@@ -248,70 +249,70 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
       ) : null}
 
       <div className="roadmap-grid live-ops-grid">
-        {liveOps.trips.map((trip) => (
-          <article
-            className={`phase-card live-trip-card ${
-              freshTripIds.includes(trip.id) ? 'phase-card-fresh' : ''
-            }`}
-            key={trip.id}
-          >
-            {freshTripIds.includes(trip.id) ? (
-              <span className="entity-transition-badge">Resync live</span>
-            ) : null}
-            <div className="ticket-topline">
-              <span className="phase-status phase-status-next">
-                {formatOperationalStatus(trip.status)}
-              </span>
-              <span className="live-trip-fare">
-                {trip.currency} {trip.fare}
-              </span>
-            </div>
-            <h3>{trip.route}</h3>
-            <p>
-              {trip.riderName} avec {trip.driverName} - {trip.vehicleLabel}
-            </p>
-            <p>
-              Dernier evenement:{' '}
-              {trip.lastEvent
-                ? `${trip.lastEvent.label} a ${new Date(
-                    trip.lastEvent.createdAt,
-                  ).toLocaleTimeString('fr-FR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}`
-                : 'Aucun evenement'}
-            </p>
-            <div className="trip-meta-grid">
-              <div className="trip-meta-card">
-                <span>Pickup code</span>
-                <strong>
-                  {trip.pickupCodeIssued ? 'Emis' : 'Non emis'}
-                </strong>
+        {liveOps.trips.map((trip) => {
+          const routeMonitoringCopy = resolveLiveOpsRouteMonitoringCopy(
+            trip.routeMonitoring,
+          );
+
+          return (
+            <article
+              className={`phase-card live-trip-card ${
+                freshTripIds.includes(trip.id) ? 'phase-card-fresh' : ''
+              }`}
+              key={trip.id}
+            >
+              {freshTripIds.includes(trip.id) ? (
+                <span className="entity-transition-badge">Resync live</span>
+              ) : null}
+              <div className="ticket-topline">
+                <span className="phase-status phase-status-next">
+                  {formatOperationalStatus(trip.status)}
+                </span>
+                <span className="live-trip-fare">
+                  {trip.currency} {trip.fare}
+                </span>
               </div>
-              <div className="trip-meta-card">
-                <span>Incidents</span>
-                <strong>
-                  {trip.hasIncident
-                    ? `${trip.incidentCount} signalement(s)`
-                    : 'Aucun'}
-                </strong>
+              <h3>{trip.route}</h3>
+              <p>
+                {trip.riderName} avec {trip.driverName} - {trip.vehicleLabel}
+              </p>
+              <p>
+                Dernier evenement:{' '}
+                {trip.lastEvent
+                  ? `${trip.lastEvent.label} a ${new Date(
+                      trip.lastEvent.createdAt,
+                    ).toLocaleTimeString('fr-FR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}`
+                  : 'Aucun evenement'}
+              </p>
+              <div className="trip-meta-grid">
+                <div className="trip-meta-card">
+                  <span>Pickup code</span>
+                  <strong>
+                    {trip.pickupCodeIssued ? 'Emis' : 'Non emis'}
+                  </strong>
+                </div>
+                <div className="trip-meta-card">
+                  <span>Incidents</span>
+                  <strong>
+                    {trip.hasIncident
+                      ? `${trip.incidentCount} signalement(s)`
+                      : 'Aucun'}
+                  </strong>
+                </div>
+                <div className="trip-meta-card">
+                  <span>Route monitoring</span>
+                  <strong>{routeMonitoringCopy.statusLabel}</strong>
+                  {routeMonitoringCopy.lastSignalLabel ? (
+                    <small>{routeMonitoringCopy.lastSignalLabel}</small>
+                  ) : null}
+                </div>
               </div>
-              <div className="trip-meta-card">
-                <span>Route monitoring</span>
-                <strong>
-                  {trip.routeMonitoring.state === 'unknown'
-                    ? 'En attente'
-                    : trip.routeMonitoring.state === 'clear'
-                      ? 'Clair'
-                      : `${formatOperationalStatus(trip.routeMonitoring.state)} (${trip.routeMonitoring.alertCount})`}
-                </strong>
-                {trip.routeMonitoring.lastAlertType ? (
-                  <small>{trip.routeMonitoring.lastAlertType}</small>
-                ) : null}
-              </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
         {!liveOps.trips.length ? (
           <article className="phase-card">
             <span className="phase-status phase-status-planned">stable</span>

@@ -1,17 +1,38 @@
 import type {
   AdminJobQueueResponse,
+  AdminLiveOpsResponse,
   DriverOnboardingQueueResponse,
   HealthCheckResponse,
 } from '@mobilis/api';
+import { formatOperationalStatus } from '@mobilis/ui';
 
 export const adminSyncHighlightDurationMs = 5000;
 
 type AdminJobQueueEntry = AdminJobQueueResponse['jobs'][number];
+type LiveOpsRouteMonitoring = AdminLiveOpsResponse['trips'][number]['routeMonitoring'];
 export type JobQueueKindFilter =
   | 'ALL'
   | 'PAYMENT_WEBHOOK'
   | 'DRIVER_DOCUMENT'
   | 'NOTIFICATION';
+
+export function resolveLiveOpsRouteMonitoringCopy(
+  routeMonitoring: LiveOpsRouteMonitoring,
+) {
+  const statusLabel =
+    routeMonitoring.state === 'unknown'
+      ? 'En attente'
+      : routeMonitoring.state === 'clear'
+        ? 'Clair'
+        : `${formatOperationalStatus(routeMonitoring.state)} (${routeMonitoring.alertCount})`;
+
+  return {
+    statusLabel,
+    lastSignalLabel: routeMonitoring.lastAlertType
+      ? formatOperationalStatus(routeMonitoring.lastAlertType)
+      : null,
+  };
+}
 
 export function resolveJobQueueFilterSummary(
   jobs: AdminJobQueueEntry[],

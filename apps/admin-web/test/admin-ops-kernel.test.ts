@@ -13,6 +13,7 @@ import {
   resolveHealthTransitionLabel,
   resolveJobQueueFilterSummary,
   resolveJobQueueOwnerRows,
+  resolveLiveOpsRouteMonitoringCopy,
   resolveVisibleDriverOnboardingQueue,
 } from '../app/admin-ops-kernel';
 
@@ -182,6 +183,47 @@ function createHealth(
 }
 
 describe('admin-ops-kernel', () => {
+  it('formats live ops route monitoring signals for operators', () => {
+    expect(
+      resolveLiveOpsRouteMonitoringCopy({
+        state: 'unknown',
+        alertCount: 0,
+        lastAlertType: null,
+        lastAlertAt: null,
+        lastPositionAt: null,
+      }),
+    ).toEqual({
+      statusLabel: 'En attente',
+      lastSignalLabel: null,
+    });
+
+    expect(
+      resolveLiveOpsRouteMonitoringCopy({
+        state: 'clear',
+        alertCount: 0,
+        lastAlertType: null,
+        lastAlertAt: null,
+        lastPositionAt: '2026-04-19T08:02:30.000Z',
+      }),
+    ).toEqual({
+      statusLabel: 'Clair',
+      lastSignalLabel: null,
+    });
+
+    expect(
+      resolveLiveOpsRouteMonitoringCopy({
+        state: 'critical',
+        alertCount: 2,
+        lastAlertType: 'ROUTE_DEVIATION',
+        lastAlertAt: '2026-04-19T08:03:00.000Z',
+        lastPositionAt: '2026-04-19T08:02:30.000Z',
+      }),
+    ).toEqual({
+      statusLabel: 'Critical (2)',
+      lastSignalLabel: 'Route Deviation',
+    });
+  });
+
   it('summarizes job queue filters without reading raw payloads', () => {
     const summary = resolveJobQueueFilterSummary(
       [
