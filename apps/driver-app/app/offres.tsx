@@ -451,6 +451,10 @@ export default function OffersScreen() {
     });
   }
 
+  function handlePickupCodeChange(value: string) {
+    setPickupCodeInput(value.replace(/\D/g, '').slice(0, 4));
+  }
+
   async function handleReportIncident(tripId: string) {
     await runExclusiveDriverAction(async () => {
       setStatus('Signalement de l incident a l equipe operations...');
@@ -588,7 +592,7 @@ export default function OffersScreen() {
           <Text style={styles.meta}>Saisir le code donne par le passager avant de demarrer.</Text>
           <TextInput
             value={pickupCodeInput}
-            onChangeText={setPickupCodeInput}
+            onChangeText={handlePickupCodeChange}
             placeholder="Code a 4 chiffres"
             placeholderTextColor={mobilisTheme.colors.muted}
             keyboardType="number-pad"

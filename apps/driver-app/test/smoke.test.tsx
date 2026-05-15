@@ -935,7 +935,7 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
-    await changeInputByPlaceholder(renderer, 'Code a 4 chiffres', '1234');
+    await changeInputByPlaceholder(renderer, 'Code a 4 chiffres', '12a3-4<script>');
     await pressByText(renderer, 'Verifier le code et demarrer');
 
     expect(mockedVerifyPickupCodeWithApi).toHaveBeenCalledWith(
