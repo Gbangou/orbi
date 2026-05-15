@@ -114,6 +114,31 @@ describe('JobQueueService', () => {
     );
   });
 
+  it('completes only the running job that still owns the worker lock', async () => {
+    const { prisma, service } = createService();
+    prisma.$queryRaw.mockResolvedValue([
+      row({
+        status: 'SUCCEEDED',
+        attempts: 1,
+        locked_at: null,
+        completed_at: now,
+      }),
+    ]);
+
+    const result = await service.complete('job-1', {
+      lockedAt: now,
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: 'SUCCEEDED',
+        completedAt: now,
+        lockedAt: null,
+      }),
+    );
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+  });
+
   it('recovers stale running jobs after a worker interruption', async () => {
     const { prisma, service } = createService();
     prisma.$queryRaw.mockResolvedValue([

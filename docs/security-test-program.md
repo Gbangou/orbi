@@ -147,6 +147,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
    ops et engineering d isoler leur charge critique sans payload brut.
    Les regles UI associees au journal jobs doivent etre couvertes par tests
    admin-web: resume, owner queue et blocage de requeue.
+   Les transitions `complete`/`fail` worker doivent verifier le verrou
+   `lockedAt` du claim courant pour eviter qu un ancien worker ecrase une
+   recuperation ou une reprise concurrente.
 7. Trust & safety trajet: SOS, incidents et liens publics doivent etre limites
    aux acteurs autorises, throttles contre les doubles taps/abus, audites avant
    diffusion live, et resolus par hash de token sans fuite de nom reel.

@@ -134,7 +134,9 @@ describe('JobQueueWorkerService', () => {
       userId: 'user-1',
       channel: 'PUSH',
     });
-    expect(jobQueueService.complete).toHaveBeenCalledWith('job-1');
+    expect(jobQueueService.complete).toHaveBeenCalledWith('job-1', {
+      lockedAt: now,
+    });
     expect(jobQueueService.fail).not.toHaveBeenCalled();
     expect(result).toEqual({
       claimed: 1,
@@ -165,7 +167,9 @@ describe('JobQueueWorkerService', () => {
     });
     expect(notificationDeliveryService.dispatch).not.toHaveBeenCalled();
     expect(prisma.notification.updateMany).not.toHaveBeenCalled();
-    expect(jobQueueService.complete).toHaveBeenCalledWith('job-1');
+    expect(jobQueueService.complete).toHaveBeenCalledWith('job-1', {
+      lockedAt: now,
+    });
   });
 
   it('fails malformed jobs into retry/dead-letter flow without leaking payloads', async () => {
@@ -185,6 +189,7 @@ describe('JobQueueWorkerService', () => {
       retryDelayMs: 60_000,
       deadLetterReason:
         'notification_worker_failed:job_payload_notificationId_missing',
+      lockedAt: now,
     });
     expect(result).toEqual({
       claimed: 1,
@@ -285,8 +290,12 @@ describe('JobQueueWorkerService', () => {
         },
       },
     });
-    expect(jobQueueService.complete).toHaveBeenCalledWith('job-payment');
-    expect(jobQueueService.complete).toHaveBeenCalledWith('job-document');
+    expect(jobQueueService.complete).toHaveBeenCalledWith('job-payment', {
+      lockedAt: now,
+    });
+    expect(jobQueueService.complete).toHaveBeenCalledWith('job-document', {
+      lockedAt: now,
+    });
     expect(result).toEqual({
       claimed: 2,
       completed: 2,

@@ -116,7 +116,9 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
       for (const job of jobs) {
         try {
           await this.handleJob(job);
-          await this.jobQueueService.complete(job.id);
+          await this.jobQueueService.complete(job.id, {
+            lockedAt: job.lockedAt,
+          });
           completed += 1;
         } catch (error) {
           failed += 1;
@@ -124,6 +126,7 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
             error: this.errorMessage(error),
             retryDelayMs: this.retryDelayMs(job),
             deadLetterReason: this.deadLetterReason(job, error),
+            lockedAt: job.lockedAt,
           });
         }
       }

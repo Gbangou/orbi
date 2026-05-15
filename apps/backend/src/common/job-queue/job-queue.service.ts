@@ -196,7 +196,7 @@ export class JobQueueService {
     return rows.map((row) => this.mapRow(row));
   }
 
-  async complete(jobId: string) {
+  async complete(jobId: string, input: { lockedAt?: Date | null } = {}) {
     const rows = await this.prisma.$queryRaw<JobQueueRow[]>`
       UPDATE job_queue_entries
       SET
@@ -206,6 +206,8 @@ export class JobQueueService {
         last_error = NULL,
         updated_at = NOW()
       WHERE id = ${jobId}
+        AND status = 'RUNNING'::"JobQueueStatus"
+        AND (${input.lockedAt ?? null}::timestamp IS NULL OR locked_at = ${input.lockedAt ?? null})
       RETURNING *
     `;
 
@@ -214,7 +216,12 @@ export class JobQueueService {
 
   async fail(
     jobId: string,
-    input: { error: string; retryDelayMs?: number; deadLetterReason?: string },
+    input: {
+      error: string;
+      retryDelayMs?: number;
+      deadLetterReason?: string;
+      lockedAt?: Date | null;
+    },
   ) {
     const error = input.error.slice(0, 1_000);
     const retryDelayMs = input.retryDelayMs ?? 60_000;
@@ -240,6 +247,8 @@ export class JobQueueService {
         END,
         updated_at = NOW()
       WHERE id = ${jobId}
+        AND status = 'RUNNING'::"JobQueueStatus"
+        AND (${input.lockedAt ?? null}::timestamp IS NULL OR locked_at = ${input.lockedAt ?? null})
       RETURNING *
     `;
 
