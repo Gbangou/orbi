@@ -92,7 +92,8 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
 
 - idempotency keys sur creation paiement, capture, remboursement, webhook
 - journal financier append-only pour toutes les transitions d argent
-- reconciliation asynchrone entre provider, wallet et etat de course
+- reconciliation asynchrone entre provider, wallet et etat de course, avec
+  reprise worker pour webhooks a reference inconnue et refunds provider pending
 - retries avec backoff et dead-letter queue
 - separation claire entre etat metier et etat provider
 - exporter les indicateurs refund, wallet recovery et payout vers un dashboard

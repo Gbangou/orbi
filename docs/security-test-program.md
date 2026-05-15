@@ -126,6 +126,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
    dead-letter visible aux operations, sans journaliser de donnees personnelles
    brutes. Un job `RUNNING` bloque apres crash worker doit revenir en
    `PENDING` apres seuil borne afin d eviter les pertes silencieuses.
+   Les jobs `PAYMENT_WEBHOOK` retentent les references paiement inconnues et
+   rejouent le webhook stocke seulement quand la tentative paiement cible existe.
    Le dispatch notification verifie l etat `sentAt` avant tout appel provider
    pour eviter un double envoi apres replay.
    Les jobs documents chauffeur recalculent un `safetyScan` rejouable depuis

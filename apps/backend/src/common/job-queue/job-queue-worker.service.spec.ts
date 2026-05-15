@@ -47,6 +47,9 @@ describe('JobQueueWorkerService', () => {
       paymentWebhookEvent: {
         findUnique: jest.fn(),
       },
+      paymentAttempt: {
+        findUnique: jest.fn(),
+      },
       driverDocument: {
         findUnique: jest.fn(),
         update: jest.fn(),
@@ -101,6 +104,13 @@ describe('JobQueueWorkerService', () => {
         transactionRef: 'mobilis_123_ride-request-1',
         result: {
           nextAction: 'refund_processed',
+        },
+      }),
+      replayStoredWebhookEvent: jest.fn().mockResolvedValue({
+        replayed: true,
+        sourceEventId: 'webhook-event-1',
+        result: {
+          nextAction: 'persisted_and_reconciled',
         },
       }),
     };
@@ -298,6 +308,7 @@ describe('JobQueueWorkerService', () => {
         action: true,
         signatureVerified: true,
         paymentAttemptId: true,
+        transactionRef: true,
       },
     });
     expect(prisma.driverDocument.findUnique).toHaveBeenCalledWith({
@@ -381,6 +392,89 @@ describe('JobQueueWorkerService', () => {
     expect(result).toEqual({
       claimed: 2,
       completed: 2,
+      failed: 0,
+    });
+  });
+
+  it('retries unresolved payment webhooks until the referenced attempt exists', async () => {
+    const { jobQueueService, prisma, service } = createService();
+    jobQueueService.claimDueJobs.mockResolvedValue([
+      job({
+        id: 'job-payment',
+        kind: 'PAYMENT_WEBHOOK',
+        payload: {
+          eventId: 'webhook-event-1',
+        },
+      }),
+    ]);
+    prisma.paymentWebhookEvent.findUnique.mockResolvedValue({
+      id: 'webhook-event-1',
+      action: 'ignored_unknown_reference',
+      signatureVerified: true,
+      paymentAttemptId: null,
+      transactionRef: 'mobilis_late_ride-request-1',
+    });
+    prisma.paymentAttempt.findUnique.mockResolvedValue(null);
+
+    const result = await service.processDueJobs();
+
+    expect(prisma.paymentAttempt.findUnique).toHaveBeenCalledWith({
+      where: {
+        transactionRef: 'mobilis_late_ride-request-1',
+      },
+      select: {
+        id: true,
+      },
+    });
+    expect(jobQueueService.fail).toHaveBeenCalledWith('job-payment', {
+      error: 'payment_webhook_unknown_reference_pending',
+      retryDelayMs: 60_000,
+      deadLetterReason:
+        'payment_webhook_worker_failed:payment_webhook_unknown_reference_pending',
+      lockedAt: now,
+    });
+    expect(result).toEqual({
+      claimed: 1,
+      completed: 0,
+      failed: 1,
+    });
+  });
+
+  it('replays unresolved payment webhooks once the referenced attempt exists', async () => {
+    const { jobQueueService, paymentsService, prisma, service } =
+      createService();
+    jobQueueService.claimDueJobs.mockResolvedValue([
+      job({
+        id: 'job-payment',
+        kind: 'PAYMENT_WEBHOOK',
+        payload: {
+          eventId: 'webhook-event-1',
+        },
+      }),
+    ]);
+    prisma.paymentWebhookEvent.findUnique.mockResolvedValue({
+      id: 'webhook-event-1',
+      action: 'ignored_unknown_reference',
+      signatureVerified: true,
+      paymentAttemptId: null,
+      transactionRef: 'mobilis_late_ride-request-1',
+    });
+    prisma.paymentAttempt.findUnique.mockResolvedValue({
+      id: 'payment-1',
+    });
+
+    const result = await service.processDueJobs();
+
+    expect(paymentsService.replayStoredWebhookEvent).toHaveBeenCalledWith(
+      'webhook-event-1',
+    );
+    expect(jobQueueService.complete).toHaveBeenCalledWith('job-payment', {
+      lockedAt: now,
+    });
+    expect(jobQueueService.fail).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      claimed: 1,
+      completed: 1,
       failed: 0,
     });
   });

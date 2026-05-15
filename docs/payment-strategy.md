@@ -88,6 +88,11 @@ provider notification, writes an audit log, and publishes a realtime admin
 signal. This gives ops a controlled pilot tool when a webhook arrived before a
 payment attempt could be matched or when a provider reference needs to be
 rechecked safely.
+The durable `PAYMENT_WEBHOOK` job also retries
+`ignored_unknown_reference` events with a Mobilis transaction reference. If the
+payment attempt appears later, the worker replays the stored webhook through
+the same idempotent path; conflict and amount mismatch events still require
+manual finance review.
 
 When reconciliation marks a payment attempt as `SUCCEEDED`, Mobilis now writes
 an internal driver payout ledger entry. The entry credits the driver's XOF

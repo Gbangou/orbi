@@ -183,6 +183,7 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
         action: true,
         signatureVerified: true,
         paymentAttemptId: true,
+        transactionRef: true,
       },
     });
 
@@ -191,9 +192,35 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (
-      event.action.includes('ignored') ||
-      event.action.includes('conflicting')
+      event.action === 'ignored_unknown_reference' &&
+      event.transactionRef
     ) {
+      const targetAttempt = await this.prisma.paymentAttempt.findUnique({
+        where: {
+          transactionRef: event.transactionRef,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!targetAttempt) {
+        throw new Error('payment_webhook_unknown_reference_pending');
+      }
+
+      const paymentsService = this.moduleRef.get(PaymentsService, {
+        strict: false,
+      });
+      const replay = await paymentsService.replayStoredWebhookEvent(event.id);
+
+      if (replay.result.nextAction === 'ignored_unknown_reference') {
+        throw new Error('payment_webhook_unknown_reference_pending');
+      }
+
+      return;
+    }
+
+    if (event.action.includes('ignored') || event.action.includes('conflicting')) {
       this.logger.warn(
         `Payment webhook ${event.id} requires operations review before replay.`,
       );
