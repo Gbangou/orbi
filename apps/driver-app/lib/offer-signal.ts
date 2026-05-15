@@ -34,6 +34,30 @@ function resolveOfferPriorityLabel(label: DriverOffer['offerConfidenceLabel']) {
   }
 }
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function formatOfferNumber(value: unknown, fallback = 'ND') {
+  return isFiniteNumber(value) ? String(value) : fallback;
+}
+
+function formatOfferMinutes(value: unknown) {
+  return isFiniteNumber(value) && value >= 0 ? `${Math.round(value)} min` : 'Indisponible';
+}
+
+function formatOfferMoney(primary: unknown, fallback: unknown) {
+  if (isFiniteNumber(primary)) {
+    return formatXof(primary);
+  }
+
+  if (isFiniteNumber(fallback)) {
+    return formatXof(fallback);
+  }
+
+  return 'Gain indisponible';
+}
+
 export function buildDriverOfferInsights(
   offer: DriverOffer,
 ): Array<{
@@ -44,7 +68,7 @@ export function buildDriverOfferInsights(
   return [
     {
       label: 'Pickup',
-      value: `${offer.etaToPickupMinutes} min`,
+      value: formatOfferMinutes(offer.etaToPickupMinutes),
       tone: 'teal',
     },
     {
@@ -54,34 +78,38 @@ export function buildDriverOfferInsights(
     },
     {
       label: 'Gain',
-      value: formatXof(offer.driverPayout ?? offer.fare),
+      value: formatOfferMoney(offer.driverPayout, offer.fare),
       tone: 'amber',
     },
   ];
 }
 
 export function buildDriverOfferDetailLines(offer: DriverOffer) {
+  const hasPickupDistance = isFiniteNumber(offer.pickupDistanceKm);
+  const hasServiceRadius = isFiniteNumber(offer.serviceRadiusKm);
+  const hasOfferConfidenceScore = isFiniteNumber(offer.offerConfidenceScore);
+  const reservationWindowSeconds = offer.reservationWindowSeconds;
+  const hasReservationWindow = isFiniteNumber(reservationWindowSeconds);
   const lines = [
-    `${offer.category === 'motorcycle' ? 'Moto' : 'Voiture'} - trajet ${offer.distanceKm} km - priorite dispatch ${offer.dispatchScore ?? '-'}`,
-    offer.pickupDistanceKm !== undefined && offer.pickupDistanceKm !== null
+    `${offer.category === 'motorcycle' ? 'Moto' : 'Voiture'} - trajet ${formatOfferNumber(offer.distanceKm)} km - priorite dispatch ${formatOfferNumber(offer.dispatchScore, '-')}`,
+    hasPickupDistance
       ? `Pickup a ${offer.pickupDistanceKm} km`
       : null,
     offer.pickupDistanceSource
       ? `Source pickup: ${offer.pickupDistanceSource === 'DRIVER_AND_PICKUP_COORDINATES' ? 'coordonnees reelles' : 'fallback dispatch'}`
       : null,
-    offer.serviceRadiusKm !== undefined && offer.serviceRadiusKm !== null
+    hasServiceRadius
       ? `Rayon actif: ${offer.serviceRadiusKm} km`
       : null,
     offer.matchedTier ? `Vehicule retenu: ${offer.matchedTier}` : null,
     offer.dispatchContextSummary
       ? `Contexte dispatch: ${offer.dispatchContextSummary}`
       : null,
-    offer.offerConfidenceLabel || offer.offerConfidenceScore !== undefined
-      ? `Confiance offre: ${offer.offerConfidenceLabel ?? 'ND'}${offer.offerConfidenceScore !== undefined && offer.offerConfidenceScore !== null ? ` (${offer.offerConfidenceScore}/100)` : ''}`
+    offer.offerConfidenceLabel || hasOfferConfidenceScore
+      ? `Confiance offre: ${offer.offerConfidenceLabel ?? 'ND'}${hasOfferConfidenceScore ? ` (${offer.offerConfidenceScore}/100)` : ''}`
       : null,
-    offer.reservationWindowSeconds !== undefined &&
-    offer.reservationWindowSeconds !== null
-      ? `Fenetre d acceptation: ${offer.reservationWindowSeconds}s`
+    hasReservationWindow && reservationWindowSeconds >= 0
+      ? `Fenetre d acceptation: ${reservationWindowSeconds}s`
       : null,
     offer.dispatchLearningSummary ?? null,
   ];
@@ -104,7 +132,7 @@ export function buildDriverOfferNote(offer: DriverOffer) {
     };
   }
 
-  if (offer.driverPayout) {
+  if (isFiniteNumber(offer.driverPayout)) {
     return {
       text: `Gain net estime: ${formatXof(offer.driverPayout)}`,
       tone: 'sky' as const,
