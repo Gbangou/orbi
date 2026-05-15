@@ -10,6 +10,7 @@ export const adminSyncHighlightDurationMs = 5000;
 
 type AdminJobQueueEntry = AdminJobQueueResponse['jobs'][number];
 type LiveOpsRouteMonitoring = AdminLiveOpsResponse['trips'][number]['routeMonitoring'];
+type LiveOpsTrip = AdminLiveOpsResponse['trips'][number];
 export type JobQueueKindFilter =
   | 'ALL'
   | 'PAYMENT_WEBHOOK'
@@ -32,6 +33,27 @@ export function resolveLiveOpsRouteMonitoringCopy(
       ? formatOperationalStatus(routeMonitoring.lastAlertType)
       : null,
   };
+}
+
+export function hasLiveOpsTripChanged(
+  previousTrip: LiveOpsTrip,
+  nextTrip: LiveOpsTrip,
+) {
+  return (
+    previousTrip.status !== nextTrip.status ||
+    previousTrip.lastEvent?.label !== nextTrip.lastEvent?.label ||
+    previousTrip.lastEvent?.createdAt !== nextTrip.lastEvent?.createdAt ||
+    previousTrip.incidentCount !== nextTrip.incidentCount ||
+    previousTrip.routeMonitoring.state !== nextTrip.routeMonitoring.state ||
+    previousTrip.routeMonitoring.alertCount !==
+      nextTrip.routeMonitoring.alertCount ||
+    previousTrip.routeMonitoring.lastAlertType !==
+      nextTrip.routeMonitoring.lastAlertType ||
+    previousTrip.routeMonitoring.lastAlertAt !==
+      nextTrip.routeMonitoring.lastAlertAt ||
+    previousTrip.routeMonitoring.lastPositionAt !==
+      nextTrip.routeMonitoring.lastPositionAt
+  );
 }
 
 export function resolveJobQueueFilterSummary(

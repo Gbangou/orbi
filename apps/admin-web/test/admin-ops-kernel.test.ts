@@ -2,12 +2,14 @@
 
 import type {
   AdminJobQueueResponse,
+  AdminLiveOpsResponse,
   DriverOnboardingQueueResponse,
   HealthCheckResponse,
 } from '@mobilis/api';
 
 import {
   canAttemptJobRequeue,
+  hasLiveOpsTripChanged,
   resolveCollectionDelta,
   resolveDriverOnboardingDelta,
   resolveHealthTransitionLabel,
@@ -110,6 +112,37 @@ function createDriver(
   };
 }
 
+function createLiveOpsTrip(
+  overrides: Partial<AdminLiveOpsResponse['trips'][number]> = {},
+): AdminLiveOpsResponse['trips'][number] {
+  return {
+    id: 'trip-1',
+    status: 'IN_PROGRESS',
+    riderName: 'Awa Rider',
+    driverName: 'Issa Driver',
+    route: 'Zone du Bois -> Koulouba',
+    fare: 3500,
+    currency: 'XOF',
+    vehicleLabel: 'Yamaha Crypton',
+    pickupCodeIssued: true,
+    hasIncident: false,
+    incidentCount: 0,
+    routeMonitoring: {
+      state: 'warning',
+      alertCount: 1,
+      lastAlertType: 'LONG_STOP',
+      lastAlertAt: '2026-04-19T08:03:00.000Z',
+      lastPositionAt: '2026-04-19T08:02:30.000Z',
+    },
+    lastEvent: {
+      label: 'Course demarree',
+      createdAt: '2026-04-19T08:00:00.000Z',
+    },
+    timeline: [],
+    ...overrides,
+  };
+}
+
 function createHealth(
   overrides: Partial<HealthCheckResponse> = {},
 ): HealthCheckResponse {
@@ -183,6 +216,27 @@ function createHealth(
 }
 
 describe('admin-ops-kernel', () => {
+  it('detects live ops route monitoring signal changes', () => {
+    expect(hasLiveOpsTripChanged(createLiveOpsTrip(), createLiveOpsTrip())).toBe(
+      false,
+    );
+
+    expect(
+      hasLiveOpsTripChanged(
+        createLiveOpsTrip(),
+        createLiveOpsTrip({
+          routeMonitoring: {
+            state: 'warning',
+            alertCount: 1,
+            lastAlertType: 'ROUTE_DEVIATION',
+            lastAlertAt: '2026-04-19T08:04:00.000Z',
+            lastPositionAt: '2026-04-19T08:03:30.000Z',
+          },
+        }),
+      ),
+    ).toBe(true);
+  });
+
   it('formats live ops route monitoring signals for operators', () => {
     expect(
       resolveLiveOpsRouteMonitoringCopy({

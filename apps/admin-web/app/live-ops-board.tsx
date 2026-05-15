@@ -11,6 +11,7 @@ import { describeRealtimeConnection, formatOperationalStatus } from '@mobilis/ui
 import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
 import {
   adminSyncHighlightDurationMs,
+  hasLiveOpsTripChanged,
   resolveCollectionDelta,
   resolveLiveOpsRouteMonitoringCopy,
   resolveStringFeedDelta,
@@ -91,13 +92,7 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
     if (previousTrips) {
       const delta = resolveCollectionDelta(previousTrips, liveOps.trips, {
         getId: (trip) => trip.id,
-        hasChanged: (previousTrip, nextTrip) =>
-          previousTrip.status !== nextTrip.status
-          || previousTrip.lastEvent?.label !== nextTrip.lastEvent?.label
-          || previousTrip.lastEvent?.createdAt !== nextTrip.lastEvent?.createdAt
-          || previousTrip.incidentCount !== nextTrip.incidentCount
-          || previousTrip.routeMonitoring.state !== nextTrip.routeMonitoring.state
-          || previousTrip.routeMonitoring.alertCount !== nextTrip.routeMonitoring.alertCount,
+        hasChanged: hasLiveOpsTripChanged,
       });
       const updatedTrip = liveOps.trips.find((trip) =>
         delta.updatedIds.includes(trip.id),
