@@ -64,6 +64,7 @@ export default function ActivityScreen() {
   const previousActiveTripStatusRef = useRef<string | null>(null);
   const previousTimelineEventIdsRef = useRef<string[] | null>(null);
   const previousPendingRequestIdsRef = useRef<string[] | null>(null);
+  const submissionLockRef = useRef(false);
 
   const loadHistory = useCallback(async (silent = false) => {
     if (!silent) {
@@ -220,6 +221,11 @@ export default function ActivityScreen() {
   }, [recentlyClearedRequestCount]);
 
   async function handleCancelPendingRequest(rideRequestId: string) {
+    if (submissionLockRef.current) {
+      return;
+    }
+
+    submissionLockRef.current = true;
     setIsSubmitting(true);
     setStatus('Annulation de la demande en cours...');
 
@@ -240,11 +246,17 @@ export default function ActivityScreen() {
 
       setStatus(feedback.message);
     } finally {
+      submissionLockRef.current = false;
       setIsSubmitting(false);
     }
   }
 
   async function handleCancelActiveTrip(tripId: string) {
+    if (submissionLockRef.current) {
+      return;
+    }
+
+    submissionLockRef.current = true;
     setIsSubmitting(true);
     setStatus('Annulation de la course avant depart...');
 
@@ -265,11 +277,17 @@ export default function ActivityScreen() {
 
       setStatus(feedback.message);
     } finally {
+      submissionLockRef.current = false;
       setIsSubmitting(false);
     }
   }
 
   async function handleReportIncident(tripId: string) {
+    if (submissionLockRef.current) {
+      return;
+    }
+
+    submissionLockRef.current = true;
     setIsSubmitting(true);
     setStatus('Signalement de l incident a l equipe support...');
 
@@ -294,11 +312,17 @@ export default function ActivityScreen() {
 
       setStatus(feedback.message);
     } finally {
+      submissionLockRef.current = false;
       setIsSubmitting(false);
     }
   }
 
   async function handleDeclareIncidentEvidence(tripId: string) {
+    if (submissionLockRef.current) {
+      return;
+    }
+
+    submissionLockRef.current = true;
     setIsSubmitting(true);
     setStatus('Declaration de preuve volontaire avec consentement...');
 
@@ -327,11 +351,17 @@ export default function ActivityScreen() {
 
       setStatus(feedback.message);
     } finally {
+      submissionLockRef.current = false;
       setIsSubmitting(false);
     }
   }
 
   async function handleTriggerSos(tripId: string) {
+    if (submissionLockRef.current) {
+      return;
+    }
+
+    submissionLockRef.current = true;
     setIsSubmitting(true);
     setStatus('SOS en cours: creation du ticket prioritaire...');
 
@@ -358,11 +388,17 @@ export default function ActivityScreen() {
 
       setStatus(feedback.message);
     } finally {
+      submissionLockRef.current = false;
       setIsSubmitting(false);
     }
   }
 
   async function handleShareTrip(tripId: string) {
+    if (submissionLockRef.current) {
+      return;
+    }
+
+    submissionLockRef.current = true;
     setIsSubmitting(true);
     setStatus('Creation du lien de partage securise...');
 
@@ -392,6 +428,7 @@ export default function ActivityScreen() {
 
       setStatus(feedback.message);
     } finally {
+      submissionLockRef.current = false;
       setIsSubmitting(false);
     }
   }

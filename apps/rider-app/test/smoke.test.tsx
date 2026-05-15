@@ -769,4 +769,43 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Course active');
   });
 
+  it('absorbs double taps while reporting a rider incident from activity', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchMyTrips
+      .mockResolvedValueOnce(buildRiderRealtimeHistory('IN_PROGRESS') as never)
+      .mockResolvedValueOnce(buildRiderRealtimeHistory('IN_PROGRESS') as never);
+    mockedFetchTripDetail.mockResolvedValue(
+      buildTripDetail(['timeline-1'], ['Course demarree']) as never,
+    );
+
+    let resolveIncident: ((value: unknown) => void) | null = null;
+    mockedReportTripIncidentWithApi.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveIncident = resolve;
+        }) as never,
+    );
+
+    const renderer = await renderScreen(<ActivityScreen />);
+    await pressByText(renderer, 'Actualiser le suivi');
+
+    const incidentButton = renderer.root.find(
+      (node) =>
+        node.type === 'Pressable' &&
+        collectText(node).includes('Signaler un incident'),
+    );
+
+    await invokeInAct(() => {
+      incidentButton.props.onPress?.();
+      incidentButton.props.onPress?.();
+    });
+
+    expect(mockedReportTripIncidentWithApi).toHaveBeenCalledTimes(1);
+
+    resolveIncident?.({
+      incident: { ticketId: 'ticket-1' },
+    });
+    await flushMicrotasks();
+  });
+
 });
