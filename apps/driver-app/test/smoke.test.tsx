@@ -31,6 +31,7 @@ import ProfilScreen from '../app/profil';
 import RevenusScreen from '../app/revenus';
 import {
   changeInputByPlaceholder,
+  collectText,
   expectText,
   flushMicrotasks,
   invokeInAct,
@@ -423,6 +424,48 @@ describe('driver smoke flows', () => {
       { token: 'driver-auth-client' },
       driverOffers[0]?.id,
     );
+  });
+
+  it('absorbs double taps while accepting an offer from the offres screen', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers.mockResolvedValue(
+      driverOffers.slice(0, 1).map((offer) => ({
+        ...offer,
+        reservationExpiresAt: '2099-01-01T00:00:00.000Z',
+      })) as never,
+    );
+    mockedFetchMyTrips.mockResolvedValue(buildDriverTrips() as never);
+    mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
+
+    let resolveAccept: ((value: unknown) => void) | null = null;
+    mockedAcceptRideRequestWithApi.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAccept = resolve;
+        }) as never,
+    );
+
+    const renderer = await renderScreen(<OffersScreen />);
+    await pressByText(renderer, 'Actualiser le direct');
+
+    const acceptButton = renderer.root.find(
+      (node) => node.type === 'Pressable' && collectText(node).includes('Accepter cette offre'),
+    );
+
+    await invokeInAct(() => {
+      acceptButton.props.onPress?.();
+      acceptButton.props.onPress?.();
+    });
+
+    expect(mockedAcceptRideRequestWithApi).toHaveBeenCalledTimes(1);
+
+    resolveAccept?.({
+      trip: {
+        id: 'trip-accepted-12345678',
+        status: 'MATCHED',
+      },
+    });
+    await flushMicrotasks();
   });
 
   it('declines an offer from the offres screen', async () => {

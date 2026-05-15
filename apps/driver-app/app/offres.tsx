@@ -101,6 +101,7 @@ export default function OffersScreen() {
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
   const previousTimelineEventIdsRef = useRef<string[] | null>(null);
+  const submissionLockRef = useRef(false);
 
   const loadDriverData = useCallback(async (silent = false) => {
     if (!silent) {
@@ -300,236 +301,244 @@ export default function OffersScreen() {
     return () => clearTimeout(timeout);
   }, [freshTimelineEventIds]);
 
-  async function handleToggleAvailability() {
+  async function runExclusiveDriverAction(action: () => Promise<void>) {
+    if (submissionLockRef.current) {
+      return;
+    }
+
+    submissionLockRef.current = true;
     setIsSubmitting(true);
-    const nextStatus = flow.availabilityStatus === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
-    setStatus(
-      nextStatus === 'ONLINE'
-        ? 'Passage en ligne du compte chauffeur...'
-        : 'Passage hors ligne du compte chauffeur...',
-    );
 
     try {
-      const { authClient } = await restoreDriverSession();
-      const response = await updateDriverAvailabilityWithApi(
-        authClient,
-        nextStatus,
-      );
-      setDriverProfileStatus(response.availability.status);
-      await loadDriverData();
-    } catch (error) {
-      const feedback = await resolveDriverAppError(error, {
-        surface: 'driver-availability',
-        fallback: "Le changement de disponibilite a echoue.",
-      });
-
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
-      }
-
-      setStatus(feedback.message);
+      await action();
     } finally {
+      submissionLockRef.current = false;
       setIsSubmitting(false);
     }
+  }
+
+  async function handleToggleAvailability() {
+    await runExclusiveDriverAction(async () => {
+      const nextStatus = flow.availabilityStatus === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
+      setStatus(
+        nextStatus === 'ONLINE'
+          ? 'Passage en ligne du compte chauffeur...'
+          : 'Passage hors ligne du compte chauffeur...',
+      );
+
+      try {
+        const { authClient } = await restoreDriverSession();
+        const response = await updateDriverAvailabilityWithApi(
+          authClient,
+          nextStatus,
+        );
+        setDriverProfileStatus(response.availability.status);
+        await loadDriverData();
+      } catch (error) {
+        const feedback = await resolveDriverAppError(error, {
+          surface: 'driver-availability',
+          fallback: "Le changement de disponibilite a echoue.",
+        });
+
+        if (feedback.shouldClearSessionToken) {
+          setSessionToken(null);
+        }
+
+        setStatus(feedback.message);
+      }
+    });
   }
 
   async function handleAcceptOffer(rideRequestId: string) {
-    setIsSubmitting(true);
-    setStatus('Acceptation de l offre et creation du trajet...');
+    await runExclusiveDriverAction(async () => {
+      setStatus('Acceptation de l offre et creation du trajet...');
 
-    try {
-      const { authClient } = await restoreDriverSession();
-      const response = await acceptRideRequestWithApi(authClient, rideRequestId);
-      setStatus(`Trajet ${response.trip.id.slice(0, 8)} cree avec statut ${response.trip.status}.`);
-      await loadDriverData();
-    } catch (error) {
-      const feedback = await resolveDriverAppError(error, {
-        surface: 'booking',
-        fallback: "L'acceptation de l'offre a echoue.",
-      });
+      try {
+        const { authClient } = await restoreDriverSession();
+        const response = await acceptRideRequestWithApi(authClient, rideRequestId);
+        setStatus(`Trajet ${response.trip.id.slice(0, 8)} cree avec statut ${response.trip.status}.`);
+        await loadDriverData();
+      } catch (error) {
+        const feedback = await resolveDriverAppError(error, {
+          surface: 'booking',
+          fallback: "L'acceptation de l'offre a echoue.",
+        });
 
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
+        if (feedback.shouldClearSessionToken) {
+          setSessionToken(null);
+        }
+
+        setStatus(feedback.message);
       }
-
-      setStatus(feedback.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   async function handleDeclineOffer(rideRequestId: string) {
-    setIsSubmitting(true);
-    setStatus('Refus explicite de l offre et liberation de la reservation...');
+    await runExclusiveDriverAction(async () => {
+      setStatus('Refus explicite de l offre et liberation de la reservation...');
 
-    try {
-      const { authClient } = await restoreDriverSession();
-      const response = await declineDriverOfferWithApi(authClient, rideRequestId);
-      setStatus(
-        `Offre ${response.offer.rideRequestId.slice(0, 8)} refusee. Le dispatch memorise ce signal.`,
-      );
-      await loadDriverData();
-    } catch (error) {
-      const feedback = await resolveDriverAppError(error, {
-        surface: 'booking',
-        fallback: "Le refus explicite de l'offre a echoue.",
-      });
+      try {
+        const { authClient } = await restoreDriverSession();
+        const response = await declineDriverOfferWithApi(authClient, rideRequestId);
+        setStatus(
+          `Offre ${response.offer.rideRequestId.slice(0, 8)} refusee. Le dispatch memorise ce signal.`,
+        );
+        await loadDriverData();
+      } catch (error) {
+        const feedback = await resolveDriverAppError(error, {
+          surface: 'booking',
+          fallback: "Le refus explicite de l'offre a echoue.",
+        });
 
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
+        if (feedback.shouldClearSessionToken) {
+          setSessionToken(null);
+        }
+
+        setStatus(feedback.message);
       }
-
-      setStatus(feedback.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   async function handleAdvanceTrip(
     tripId: string,
     nextStatus: 'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED',
   ) {
-    setIsSubmitting(true);
-    setStatus(`Mise a jour du trajet vers ${nextStatus}...`);
+    await runExclusiveDriverAction(async () => {
+      setStatus(`Mise a jour du trajet vers ${nextStatus}...`);
 
-    try {
-      const { authClient } = await restoreDriverSession();
-      const response = await updateTripStatusWithApi(authClient, tripId, nextStatus);
-      setStatus(`Trajet ${response.trip.id.slice(0, 8)} mis a jour: ${response.trip.status}.`);
-      await loadDriverData();
-    } catch (error) {
-      const feedback = await resolveDriverAppError(error, {
-        surface: 'active-trip',
-        fallback: 'La mise a jour du trajet a echoue.',
-      });
+      try {
+        const { authClient } = await restoreDriverSession();
+        const response = await updateTripStatusWithApi(authClient, tripId, nextStatus);
+        setStatus(`Trajet ${response.trip.id.slice(0, 8)} mis a jour: ${response.trip.status}.`);
+        await loadDriverData();
+      } catch (error) {
+        const feedback = await resolveDriverAppError(error, {
+          surface: 'active-trip',
+          fallback: 'La mise a jour du trajet a echoue.',
+        });
 
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
+        if (feedback.shouldClearSessionToken) {
+          setSessionToken(null);
+        }
+
+        setStatus(feedback.message);
       }
-
-      setStatus(feedback.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   async function handleVerifyPickupCode(tripId: string, pickupCode: string) {
-    setIsSubmitting(true);
-    setStatus('Verification du code de prise en charge...');
+    await runExclusiveDriverAction(async () => {
+      setStatus('Verification du code de prise en charge...');
 
-    try {
-      const { authClient } = await restoreDriverSession();
-      const response = await verifyPickupCodeWithApi(authClient, tripId, pickupCode);
-      setPickupCodeInput('');
-      setStatus(`Code valide. Trajet ${response.trip.id.slice(0, 8)} demarre.`);
-      await loadDriverData();
-    } catch (error) {
-      const feedback = await resolveDriverAppError(error, {
-        surface: 'active-trip',
-        fallback: 'Code incorrect ou verification impossible.',
-      });
+      try {
+        const { authClient } = await restoreDriverSession();
+        const response = await verifyPickupCodeWithApi(authClient, tripId, pickupCode);
+        setPickupCodeInput('');
+        setStatus(`Code valide. Trajet ${response.trip.id.slice(0, 8)} demarre.`);
+        await loadDriverData();
+      } catch (error) {
+        const feedback = await resolveDriverAppError(error, {
+          surface: 'active-trip',
+          fallback: 'Code incorrect ou verification impossible.',
+        });
 
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
+        if (feedback.shouldClearSessionToken) {
+          setSessionToken(null);
+        }
+
+        setStatus(feedback.message);
       }
-
-      setStatus(feedback.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   async function handleReportIncident(tripId: string) {
-    setIsSubmitting(true);
-    setStatus('Signalement de l incident a l equipe operations...');
+    await runExclusiveDriverAction(async () => {
+      setStatus('Signalement de l incident a l equipe operations...');
 
-    try {
-      const { authClient } = await restoreDriverSession();
-      await reportTripIncidentWithApi(authClient, tripId, {
-        incidentType: 'DRIVER_ALERT',
-        details: 'Signalement rapide envoye depuis l ecran chauffeur.',
-        priority: 3,
-      });
-      setStatus('Incident signale. Le support live a ete notifie.');
-      await loadDriverData();
-    } catch (error) {
-      const feedback = await resolveDriverAppError(error, {
-        surface: 'safety',
-        fallback: "Le signalement de l'incident a echoue.",
-      });
+      try {
+        const { authClient } = await restoreDriverSession();
+        await reportTripIncidentWithApi(authClient, tripId, {
+          incidentType: 'DRIVER_ALERT',
+          details: 'Signalement rapide envoye depuis l ecran chauffeur.',
+          priority: 3,
+        });
+        setStatus('Incident signale. Le support live a ete notifie.');
+        await loadDriverData();
+      } catch (error) {
+        const feedback = await resolveDriverAppError(error, {
+          surface: 'safety',
+          fallback: "Le signalement de l'incident a echoue.",
+        });
 
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
+        if (feedback.shouldClearSessionToken) {
+          setSessionToken(null);
+        }
+
+        setStatus(feedback.message);
       }
-
-      setStatus(feedback.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   async function handleDeclareIncidentEvidence(tripId: string) {
-    setIsSubmitting(true);
-    setStatus('Declaration de preuve volontaire chauffeur...');
+    await runExclusiveDriverAction(async () => {
+      setStatus('Declaration de preuve volontaire chauffeur...');
 
-    try {
-      const { authClient } = await restoreDriverSession();
-      await reportTripIncidentWithApi(authClient, tripId, {
-        incidentType: 'DRIVER_VOLUNTARY_EVIDENCE',
-        details:
-          'Preuve conservee localement par le chauffeur. Upload support uniquement sur action explicite.',
-        priority: 3,
-        evidenceConsent: true,
-        evidenceType: 'AUDIO',
-        evidenceRetentionHours: 24,
-      });
-      setStatus('Preuve volontaire declaree. Aucun fichier n a ete envoye automatiquement.');
-      await loadDriverData();
-    } catch (error) {
-      const feedback = await resolveDriverAppError(error, {
-        surface: 'safety',
-        fallback: "La preuve volontaire chauffeur n'a pas pu etre declaree.",
-      });
+      try {
+        const { authClient } = await restoreDriverSession();
+        await reportTripIncidentWithApi(authClient, tripId, {
+          incidentType: 'DRIVER_VOLUNTARY_EVIDENCE',
+          details:
+            'Preuve conservee localement par le chauffeur. Upload support uniquement sur action explicite.',
+          priority: 3,
+          evidenceConsent: true,
+          evidenceType: 'AUDIO',
+          evidenceRetentionHours: 24,
+        });
+        setStatus('Preuve volontaire declaree. Aucun fichier n a ete envoye automatiquement.');
+        await loadDriverData();
+      } catch (error) {
+        const feedback = await resolveDriverAppError(error, {
+          surface: 'safety',
+          fallback: "La preuve volontaire chauffeur n'a pas pu etre declaree.",
+        });
 
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
+        if (feedback.shouldClearSessionToken) {
+          setSessionToken(null);
+        }
+
+        setStatus(feedback.message);
       }
-
-      setStatus(feedback.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   async function handleTriggerSos(tripId: string) {
-    setIsSubmitting(true);
-    setStatus('SOS chauffeur en cours: notification operations...');
+    await runExclusiveDriverAction(async () => {
+      setStatus('SOS chauffeur en cours: notification operations...');
 
-    try {
-      const { authClient } = await restoreDriverSession();
-      const response = await triggerTripSafetySosWithApi(authClient, tripId, {
-        details: 'SOS declenche depuis le cockpit chauffeur.',
-      });
+      try {
+        const { authClient } = await restoreDriverSession();
+        const response = await triggerTripSafetySosWithApi(authClient, tripId, {
+          details: 'SOS declenche depuis le cockpit chauffeur.',
+        });
 
-      setStatus(
-        `SOS envoye au support. Appel local ${response.sos.localEmergencyNumber} disponible.`,
-      );
-      void Linking.openURL(`tel:${response.sos.localEmergencyNumber}`);
-      await loadDriverData();
-    } catch (error) {
-      const feedback = await resolveDriverAppError(error, {
-        surface: 'safety',
-        fallback: "Le SOS chauffeur n'a pas pu etre envoye.",
-      });
+        setStatus(
+          `SOS envoye au support. Appel local ${response.sos.localEmergencyNumber} disponible.`,
+        );
+        void Linking.openURL(`tel:${response.sos.localEmergencyNumber}`);
+        await loadDriverData();
+      } catch (error) {
+        const feedback = await resolveDriverAppError(error, {
+          surface: 'safety',
+          fallback: "Le SOS chauffeur n'a pas pu etre envoye.",
+        });
 
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
+        if (feedback.shouldClearSessionToken) {
+          setSessionToken(null);
+        }
+
+        setStatus(feedback.message);
       }
-
-      setStatus(feedback.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   function renderActiveTripAction() {
