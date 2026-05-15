@@ -38,6 +38,12 @@ Write-Host "Admin: $AdminUrl"
 Write-Host "Rider: $RiderMode"
 Write-Host "Driver: $DriverMode"
 
+Write-Section "Launch Windows"
+Write-Host "[now] Local MVP verification is open when local API, mobile, admin, Prisma, audit and typecheck gates stay green."
+Write-Host "[earliest] Controlled field beta: 22 May 2026 to 29 May 2026 after repeated real-device and Flutterwave sandbox fixture passes."
+Write-Host "[earliest] First production pilot: 12 June 2026 to 26 June 2026 after observability, secrets, rollback, live provider credentials, incident runbooks and CI money-path smoke are green."
+Write-Host "[blocked] Broad production has no date until external pentest, resilience, cloud/SOC and legal/privacy evidence is signed."
+
 Write-Section "Readiness"
 Test-HttpEndpoint -Name "Backend health" -Url "$ApiBaseUrl/api/v1/health"
 Test-HttpEndpoint -Name "Admin web" -Url $AdminUrl
