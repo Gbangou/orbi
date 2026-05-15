@@ -35,6 +35,27 @@ Do not treat "production" as a binary deploy. The right first production shape i
 a controlled pilot in one Ouagadougou zone with manual ops backup, a capped rider
 and driver cohort, and a daily money reconciliation ritual.
 
+## Readiness Snapshot - 15 May 2026
+
+The repo is in local MVP verification, not broad production.
+
+- Local MVP: ready for repeatable local and LAN testing now, provided
+  `pnpm e2e:local-api`, `pnpm test:mobile:smoke`, `pnpm test:admin:smoke`,
+  Prisma validation, dependency audit and `pnpm typecheck` stay green.
+- Controlled field beta: earliest realistic window is 22 May 2026 to
+  29 May 2026 if real-device rider/driver sessions and Flutterwave sandbox
+  payment/refund webhook fixtures pass repeatedly starting now.
+- First production pilot: earliest realistic window is 12 June 2026 to
+  26 June 2026 if observability, secrets, rollback, provider live credentials,
+  incident runbooks, CI money-path smoke and launch-readiness gates are green
+  before the clock starts.
+- Broad production: no calendar date yet. It requires signed evidence for the
+  launch gates in `docs/security-test-program.md`, including real-device mobile
+  validation, external pentest, resilience/chaos, cloud/SOC and legal/privacy.
+
+If any blocking launch-readiness check returns to red, the calendar resets from
+the day that check is corrected and verified.
+
 ## Non-Negotiable Build Rules
 
 1. No feature ships without a clear invariant, API contract and owner surface.
