@@ -1311,13 +1311,19 @@ describe('TripsService', () => {
         },
       },
       driver: {
+        verificationStatus: 'APPROVED',
+        averageRating: 4.7,
+        completedTripsCount: 84,
         user: {
           fullName: 'Issa Driver',
+          isPhoneVerified: true,
         },
       },
       vehicle: {
+        plateNumber: '11 AA 1234',
         make: 'Yamaha',
         model: 'Crypton',
+        color: 'rouge',
       },
       events: [
         {
@@ -1349,6 +1355,18 @@ describe('TripsService', () => {
     );
 
     expect(result.trip.pickupCode).toBe('4821');
+    expect(result.trip.driverVerification).toEqual({
+      verificationStatus: 'APPROVED',
+      phoneVerified: true,
+      averageRating: 4.7,
+      completedTripsCount: 84,
+      vehicle: {
+        plateNumber: '11 AA 1234',
+        color: 'rouge',
+        make: 'Yamaha',
+        model: 'Crypton',
+      },
+    });
     expect(result.trip.timeline).toEqual([
       expect.objectContaining({ label: 'Course acceptee par le chauffeur' }),
       expect.objectContaining({ label: 'Code de prise en charge genere' }),

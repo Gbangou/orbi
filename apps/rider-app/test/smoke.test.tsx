@@ -220,6 +220,18 @@ function buildTripDetail(eventIds: string[], labels: string[]) {
       riderName: 'Awa Ouedraogo',
       driverName: 'Issa Driver',
       vehicleLabel: 'Yamaha Crypton',
+      driverVerification: {
+        verificationStatus: 'APPROVED',
+        phoneVerified: true,
+        averageRating: 4.8,
+        completedTripsCount: 126,
+        vehicle: {
+          plateNumber: '11 AA 1234',
+          color: 'rouge',
+          make: 'Yamaha',
+          model: 'Crypton',
+        },
+      },
       pickupCode: '1234',
       actualFare: 2500,
       currency: 'XOF',
@@ -656,6 +668,9 @@ describe('rider smoke flows', () => {
 
     expectText(renderer, 'Changement critique: Driver Arriving.');
     expectText(renderer, 'Le chauffeur arrive');
+    expectText(renderer, 'Chauffeur verifie: Approved');
+    expectText(renderer, 'Plaque a verifier: 11 AA 1234');
+    expectText(renderer, 'Note 4.8/5 - 126 courses terminees');
   });
 
   it('cancels a pending rider request from activity', async () => {

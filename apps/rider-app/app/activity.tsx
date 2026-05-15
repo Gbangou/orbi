@@ -433,6 +433,24 @@ export default function ActivityScreen() {
     }
   }
 
+  function buildDriverVerificationLines() {
+    const verification = activeTripDetail?.trip.driverVerification;
+
+    if (!verification) {
+      return [];
+    }
+
+    return [
+      `Chauffeur verifie: ${formatOperationalStatus(verification.verificationStatus)}`,
+      `Telephone chauffeur: ${verification.phoneVerified ? 'verifie' : 'non verifie'}`,
+      `Vehicule: ${verification.vehicle.color} ${verification.vehicle.make} ${verification.vehicle.model}`,
+      `Plaque a verifier: ${verification.vehicle.plateNumber}`,
+      verification.averageRating === null
+        ? `${verification.completedTripsCount} courses terminees`
+        : `Note ${verification.averageRating.toFixed(1)}/5 - ${verification.completedTripsCount} courses terminees`,
+    ];
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <Text style={styles.title}>Historique des trajets</Text>
@@ -539,6 +557,7 @@ export default function ActivityScreen() {
           ]}
           detailLines={[
             'Partage, code pickup et monitoring route connectes aux operations.',
+            ...buildDriverVerificationLines(),
             activeTrip.status,
             `Etat principal: ${primaryStatusLabel}`,
           ]}

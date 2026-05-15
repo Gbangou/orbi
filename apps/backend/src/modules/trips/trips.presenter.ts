@@ -18,8 +18,18 @@ export function serializeTripDetail(trip: {
   completedAt: Date | null;
   createdAt: Date;
   rider: { user: { fullName: string } };
-  driver: { user: { fullName: string } };
-  vehicle: { make: string; model: string };
+  driver: {
+    verificationStatus: string;
+    averageRating: unknown;
+    completedTripsCount: number;
+    user: { fullName: string; isPhoneVerified: boolean };
+  };
+  vehicle: {
+    plateNumber: string;
+    make: string;
+    model: string;
+    color: string;
+  };
   events: Array<{
     id: string;
     eventType: string;
@@ -37,6 +47,22 @@ export function serializeTripDetail(trip: {
       riderName: trip.rider.user.fullName,
       driverName: trip.driver.user.fullName,
       vehicleLabel: formatVehicleLabel(trip.vehicle),
+      driverVerification: {
+        verificationStatus: trip.driver.verificationStatus,
+        phoneVerified: trip.driver.user.isPhoneVerified,
+        averageRating:
+          trip.driver.averageRating === null ||
+          trip.driver.averageRating === undefined
+            ? null
+            : toAmount(trip.driver.averageRating),
+        completedTripsCount: trip.driver.completedTripsCount,
+        vehicle: {
+          plateNumber: trip.vehicle.plateNumber,
+          color: trip.vehicle.color,
+          make: trip.vehicle.make,
+          model: trip.vehicle.model,
+        },
+      },
       pickupCode: PICKUP_CODE_VISIBLE_STATUSES.includes(trip.status as never)
         ? extractPickupCode(trip.events)
         : null,

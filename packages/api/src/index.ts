@@ -2414,6 +2414,18 @@ export type TripDetailResponse = {
     riderName: string;
     driverName: string;
     vehicleLabel: string;
+    driverVerification: {
+      verificationStatus: string;
+      phoneVerified: boolean;
+      averageRating: number | null;
+      completedTripsCount: number;
+      vehicle: {
+        plateNumber: string;
+        color: string;
+        make: string;
+        model: string;
+      };
+    };
     pickupCode?: string | null;
     actualFare: number;
     currency: string;

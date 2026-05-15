@@ -19,6 +19,9 @@ Ce document compare Mobilis a des plateformes VTC reputees afin de guider les pr
 - Yango safety overview LATAM: https://yango.com/en_int/lp/safety/latam/rider
 - Yango support overview: https://yango.com/support/taxi-all-app-yango/about.html
 - Yango tariff example: https://yango.com/en_int/thies/tariff/econom
+- LibreTaxi open-source Telegram rideshare PoC: https://github.com/ro31337/libretaxi
+- JavaScript Mastery Uber clone: https://github.com/adrianhajdin/uber
+- Amit Shekhar Uber/Lyft Android learning app: https://github.com/amitshekhariitbhu/ridesharing-uber-lyft-app
 
 ## Lecture executive
 
@@ -62,6 +65,20 @@ Mobilis peut devenir meilleur que beaucoup d acteurs etablis si le produit execu
 - Positionnement fort sur le prix visible a l avance et sur l adaptation locale.
 - Safety center oriente partage, SOS, verification et suivi.
 - Communication plus explicite dans certains marches sur la composition de tarif et les frais.
+
+### Open-source Uber/Lyft clones utiles
+
+- LibreTaxi rappelle qu un flux rideshare minimal peut fonctionner par chat,
+  avec PostgreSQL, RabbitMQ, moderation admin et une surface tres simple. La
+  lecon utile pour Mobilis est la resilience operationnelle, pas la copie UI.
+- Le clone JavaScript Mastery montre les attentes demo modernes: Expo, maps,
+  autocomplete, choix trajet, paiement Stripe, historique et UI mobile lisible.
+  Il reste un produit d apprentissage, sans les couches ops, audit, KYC et
+  reconciliation argent necessaires a Mobilis.
+- Le projet Android Uber/Lyft d Amit Shekhar met en avant les micro-etats UX:
+  cabs proches, pickup/drop, trajet pickup, arrivee chauffeur, trip ongoing,
+  fin de course, animation et WebSocket simule. Mobilis doit garder ces etats
+  visibles tout en les reliant a de vrais contrats backend, audit et safety.
 
 ## Matrice benchmark
 
@@ -125,6 +142,10 @@ Points deja credibles:
   et driver pour classer auth, booking, paiement, realtime, securite, reseau et
   validation avec message utilisateur, owner et politique de reprise
   avec detection deviation, arret long et absence de progression
+- detail de course rider avec preuve chauffeur/vehicule structuree: statut de
+  verification, telephone verifie, note, courses terminees, plaque, couleur,
+  marque et modele. C est un standard Uber/Lyft avant montee a bord, relie au
+  pickup code et au support.
 
 Ecarts encore majeurs avant niveau world-class:
 
@@ -147,6 +168,9 @@ Ecarts encore majeurs avant niveau world-class:
 - route monitoring, fatigue et preuve incident encore dependants de seuils et
   workflows initiaux; il faut calibrer avec donnees terrain, chaleur, nuit,
   type vehicule et doctrine support
+- preuve chauffeur/vehicule visible mais encore incomplete: il manque photo de
+  profil verifiee, selfie live avant mise en ligne, masquage telephone et
+  rescreening periodique documente.
 
 ## Direction produit pour etre meilleur que les concurrents
 
