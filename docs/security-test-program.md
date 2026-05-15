@@ -145,6 +145,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
    `owner` fournis par le backend, pas une inference fragile depuis du texte.
    La vue owner queue doit permettre aux responsables finance, trust-and-safety,
    ops et engineering d isoler leur charge critique sans payload brut.
+   Les regles UI associees au journal jobs doivent etre couvertes par tests
+   admin-web: resume, owner queue et blocage de requeue.
 7. Trust & safety trajet: SOS, incidents et liens publics doivent etre limites
    aux acteurs autorises, throttles contre les doubles taps/abus, audites avant
    diffusion live, et resolus par hash de token sans fuite de nom reel.

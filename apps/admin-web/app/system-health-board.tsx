@@ -10,7 +10,11 @@ import {
 import { describeRealtimeConnection } from '@mobilis/ui';
 import {
   adminSyncHighlightDurationMs,
+  canAttemptJobRequeue,
+  type JobQueueKindFilter,
   resolveHealthTransitionLabel,
+  resolveJobQueueFilterSummary,
+  resolveJobQueueOwnerRows,
 } from './admin-ops-kernel';
 import { mobilisRuntimeConfig } from '@mobilis/config';
 import { subscribeToAdminRealtime } from './admin-realtime';
@@ -34,11 +38,6 @@ type HealthAuditEvent = {
 };
 type AdminJobQueueEntry = AdminJobQueueResponse['jobs'][number];
 type HealthAuditFilter = 'all' | 'incidents' | 'recoveries' | 'human-actions';
-type JobQueueKindFilter =
-  | 'ALL'
-  | 'PAYMENT_WEBHOOK'
-  | 'DRIVER_DOCUMENT'
-  | 'NOTIFICATION';
 type JobQueueStatusFilter =
   | 'ALL'
   | 'PENDING'
@@ -583,102 +582,11 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
   );
   const jobQueueFilterSummary = useMemo(() => {
     const jobs = jobQueueDetails?.jobs ?? [];
-    const actionRequired = jobs.filter(
-      (job) =>
-        job.status === 'DEAD_LETTER' ||
-        job.diagnostics.riskSignals.some(
-          (signal) =>
-            signal.includes('quarantined') ||
-            signal.includes('ignored') ||
-            signal.includes('provider'),
-        ),
-    ).length;
-    const maxAttemptPressure = jobs.reduce(
-      (max, job) => Math.max(max, job.diagnostics.attemptPressure),
-      0,
-    );
-    const averageAttemptPressure = jobs.length
-      ? Math.round(
-          jobs.reduce(
-            (sum, job) => sum + job.diagnostics.attemptPressure,
-            0,
-          ) / jobs.length,
-        )
-      : 0;
-    const allSignals = jobs.flatMap((job) => job.diagnostics.riskSignals);
-    const dominantSignal =
-      allSignals.find((signal) => signal.includes('quarantined')) ??
-      allSignals.find((signal) => signal.includes('ignored')) ??
-      allSignals[0] ??
-      null;
-    let message = 'Aucun job charge pour ce filtre.';
-
-    if (jobs.length > 0) {
-      if (jobQueueKindFilter === 'DRIVER_DOCUMENT') {
-        message =
-          actionRequired > 0
-            ? `${actionRequired} document(s) demandent une revue KYC avant approbation chauffeur.`
-            : 'Documents charges sans signal critique dans ce filtre.';
-      } else if (jobQueueKindFilter === 'PAYMENT_WEBHOOK') {
-        message =
-          actionRequired > 0
-            ? `${actionRequired} webhook(s) paiement demandent investigation finance avant requeue.`
-            : 'Webhooks paiement charges sans signal critique dans ce filtre.';
-      } else if (jobQueueKindFilter === 'NOTIFICATION') {
-        message =
-          actionRequired > 0
-            ? `${actionRequired} notification(s) demandent verification provider avant requeue.`
-            : 'Notifications chargees sans signal critique dans ce filtre.';
-      } else {
-        message =
-          actionRequired > 0
-            ? `${actionRequired} job(s) demandent une action operations immediate.`
-            : 'Aucun signal critique dans les jobs charges.';
-      }
-    }
-
-    return {
-      actionRequired,
-      averageAttemptPressure,
-      dominantSignal,
-      jobsLoaded: jobs.length,
-      maxAttemptPressure,
-      message,
-      requeueBlocked: jobs.filter(
-        (job) => job.status === 'DEAD_LETTER' && !job.diagnostics.canRequeueSafely,
-      ).length,
-    };
+    return resolveJobQueueFilterSummary(jobs, jobQueueKindFilter);
   }, [jobQueueDetails?.jobs, jobQueueKindFilter]);
   const jobQueueOwnerRows = useMemo(() => {
     const jobs = jobQueueDetails?.jobs ?? [];
-    const owners = ['finance', 'trust-and-safety', 'ops', 'engineering'];
-
-    return owners
-      .map((owner) => {
-        const ownerJobs = jobs.filter((job) => job.diagnostics.owner === owner);
-        const critical = ownerJobs.filter(
-          (job) =>
-            job.diagnostics.severity === 'critical' ||
-            job.diagnostics.severity === 'high',
-        ).length;
-        const blocked = ownerJobs.filter(
-          (job) =>
-            job.status === 'DEAD_LETTER' && !job.diagnostics.canRequeueSafely,
-        ).length;
-        const maxAttemptPressure = ownerJobs.reduce(
-          (max, job) => Math.max(max, job.diagnostics.attemptPressure),
-          0,
-        );
-
-        return {
-          owner,
-          total: ownerJobs.length,
-          critical,
-          blocked,
-          maxAttemptPressure,
-        };
-      })
-      .filter((row) => row.total > 0);
+    return resolveJobQueueOwnerRows(jobs);
   }, [jobQueueDetails?.jobs]);
 
   const acknowledgeIncident = useCallback(
@@ -1307,9 +1215,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
                     <button
                       className="ticket-button ticket-button-neutral"
                       disabled={
-                        activeJobId === job.id ||
-                        job.status !== 'DEAD_LETTER' ||
-                        !job.diagnostics.canRequeueSafely
+                        activeJobId === job.id || !canAttemptJobRequeue(job)
                       }
                       onClick={() => void requeueJob(job)}
                       title={

@@ -1,16 +1,52 @@
 /// <reference path="../../backend/node_modules/@types/jest/index.d.ts" />
 
 import type {
+  AdminJobQueueResponse,
   DriverOnboardingQueueResponse,
   HealthCheckResponse,
 } from '@mobilis/api';
 
 import {
+  canAttemptJobRequeue,
   resolveCollectionDelta,
   resolveDriverOnboardingDelta,
   resolveHealthTransitionLabel,
+  resolveJobQueueFilterSummary,
+  resolveJobQueueOwnerRows,
   resolveVisibleDriverOnboardingQueue,
 } from '../app/admin-ops-kernel';
+
+function createJob(
+  overrides: Partial<AdminJobQueueResponse['jobs'][number]> = {},
+): AdminJobQueueResponse['jobs'][number] {
+  return {
+    id: 'job-1',
+    kind: 'PAYMENT_WEBHOOK',
+    status: 'DEAD_LETTER',
+    dedupeKey: 'payment-webhook:event-1',
+    entityType: 'payment_webhook_event',
+    entityId: 'event-1',
+    attempts: 5,
+    maxAttempts: 5,
+    nextRunAt: '2026-05-15T08:00:00.000Z',
+    lockedAt: null,
+    completedAt: null,
+    failedAt: '2026-05-15T08:05:00.000Z',
+    lastError: 'provider unavailable',
+    deadLetterReason: 'provider unavailable',
+    diagnostics: {
+      attemptPressure: 100,
+      canRequeueSafely: false,
+      owner: 'finance',
+      riskSignals: ['provider:FLUTTERWAVE', 'action:ignored_unknown_reference'],
+      recommendedAction: 'Verifier le webhook paiement.',
+      severity: 'critical',
+    },
+    createdAt: '2026-05-15T07:55:00.000Z',
+    updatedAt: '2026-05-15T08:05:00.000Z',
+    ...overrides,
+  };
+}
 
 function createDriver(
   overrides: Partial<DriverOnboardingQueueResponse['drivers'][number]> = {},
@@ -146,6 +182,117 @@ function createHealth(
 }
 
 describe('admin-ops-kernel', () => {
+  it('summarizes job queue filters without reading raw payloads', () => {
+    const summary = resolveJobQueueFilterSummary(
+      [
+        createJob(),
+        createJob({
+          id: 'job-2',
+          kind: 'DRIVER_DOCUMENT',
+          diagnostics: {
+            attemptPressure: 60,
+            canRequeueSafely: false,
+            owner: 'trust-and-safety',
+            riskSignals: ['scan:quarantined'],
+            recommendedAction: 'Verifier la quarantaine KYC.',
+            severity: 'critical',
+          },
+        }),
+      ],
+      'DRIVER_DOCUMENT',
+    );
+
+    expect(summary).toEqual({
+      actionRequired: 2,
+      averageAttemptPressure: 80,
+      dominantSignal: 'scan:quarantined',
+      jobsLoaded: 2,
+      maxAttemptPressure: 100,
+      message:
+        '2 document(s) demandent une revue KYC avant approbation chauffeur.',
+      requeueBlocked: 2,
+    });
+  });
+
+  it('groups job queue entries by accountable owner', () => {
+    const rows = resolveJobQueueOwnerRows([
+      createJob(),
+      createJob({
+        id: 'job-2',
+        status: 'PENDING',
+        diagnostics: {
+          attemptPressure: 25,
+          canRequeueSafely: false,
+          owner: 'engineering',
+          riskSignals: [],
+          recommendedAction: 'Surveiller.',
+          severity: 'medium',
+        },
+      }),
+      createJob({
+        id: 'job-3',
+        diagnostics: {
+          attemptPressure: 40,
+          canRequeueSafely: true,
+          owner: 'finance',
+          riskSignals: ['provider:CINETPAY'],
+          recommendedAction: 'Verifier puis requeue.',
+          severity: 'high',
+        },
+      }),
+    ]);
+
+    expect(rows).toEqual([
+      {
+        owner: 'finance',
+        total: 2,
+        critical: 2,
+        blocked: 1,
+        maxAttemptPressure: 100,
+      },
+      {
+        owner: 'engineering',
+        total: 1,
+        critical: 0,
+        blocked: 0,
+        maxAttemptPressure: 25,
+      },
+    ]);
+  });
+
+  it('allows requeue only when backend diagnostics say it is safe', () => {
+    expect(canAttemptJobRequeue(createJob())).toBe(false);
+    expect(
+      canAttemptJobRequeue(
+        createJob({
+          diagnostics: {
+            attemptPressure: 100,
+            canRequeueSafely: true,
+            owner: 'finance',
+            riskSignals: ['provider:CINETPAY'],
+            recommendedAction: 'Verifier puis requeue.',
+            severity: 'high',
+          },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      canAttemptJobRequeue(
+        createJob({
+          status: 'RUNNING',
+          diagnostics: {
+            attemptPressure: 20,
+            canRequeueSafely: true,
+            owner: 'ops',
+            riskSignals: [],
+            recommendedAction: 'Surveiller.',
+            severity: 'medium',
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
+
   it('resolves fresh, updated and removed ids for a generic collection', () => {
     const delta = resolveCollectionDelta(
       [

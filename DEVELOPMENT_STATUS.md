@@ -144,6 +144,9 @@ paiement provider, observabilite et runbooks verts.
 - Vue owner queue ajoutee au journal admin des jobs: les jobs charges sont
   regroupes par `finance`, `trust-and-safety`, `ops` et `engineering` avec
   total, critiques, requeues bloquees et pression retry max.
+- Tests admin-web ajoutes pour verrouiller les comportements critiques du
+  journal jobs: resume filtre, owner queue et blocage de requeue base sur
+  `canRequeueSafely`.
 
 ## Architecture active
 
