@@ -111,7 +111,7 @@ Important:
 
 - tant que le transport Redis partage n est pas branche, `REALTIME_ADAPTER=redis` place le backend en mode degrade visible dans `health`
 - utiliser `REALTIME_STRICT=true` en preproduction/production pour bloquer un deploy qui tomberait en fallback in-memory
-- le sweep d expiration chauffeur reste un worker local par instance; la prochaine etape production est de le remplacer par un job partage/queue pour eviter les doubles sweeps multi-instance
+- le sweep d expiration chauffeur est produit par timer mais execute via la job queue durable `DRIVER_RESERVATION_EXPIRY`; le dedupe key `driver-reservation-expiry:sweep` et le claim `FOR UPDATE SKIP LOCKED` evitent les doubles sweeps multi-instance
 
 ## Reglages dispatch persistants
 

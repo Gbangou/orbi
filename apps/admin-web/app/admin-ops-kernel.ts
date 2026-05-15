@@ -15,7 +15,8 @@ export type JobQueueKindFilter =
   | 'ALL'
   | 'PAYMENT_WEBHOOK'
   | 'DRIVER_DOCUMENT'
-  | 'NOTIFICATION';
+  | 'NOTIFICATION'
+  | 'DRIVER_RESERVATION_EXPIRY';
 
 export function resolveLiveOpsRouteMonitoringCopy(
   routeMonitoring: LiveOpsRouteMonitoring,
@@ -104,6 +105,11 @@ export function resolveJobQueueFilterSummary(
         actionRequired > 0
           ? `${actionRequired} notification(s) demandent verification provider avant requeue.`
           : 'Notifications chargees sans signal critique dans ce filtre.';
+    } else if (kindFilter === 'DRIVER_RESERVATION_EXPIRY') {
+      message =
+        actionRequired > 0
+          ? `${actionRequired} job(s) expiration reservation demandent verification dispatch avant requeue.`
+          : 'Expirations reservation chargees sans signal critique dans ce filtre.';
     } else {
       message =
         actionRequired > 0

@@ -80,6 +80,7 @@ const jobQueueKindFilters: Array<{
   { id: 'PAYMENT_WEBHOOK', label: 'Paiements' },
   { id: 'DRIVER_DOCUMENT', label: 'Documents' },
   { id: 'NOTIFICATION', label: 'Notifications' },
+  { id: 'DRIVER_RESERVATION_EXPIRY', label: 'Reservations' },
 ];
 
 const jobQueueStatusFilters: Array<{
@@ -158,6 +159,10 @@ function describeJobKind(kind: string) {
     return 'Documents chauffeur';
   }
 
+  if (kind === 'DRIVER_RESERVATION_EXPIRY') {
+    return 'Reservations chauffeur';
+  }
+
   return 'Notifications';
 }
 
@@ -210,6 +215,10 @@ function buildRequeueConfirmation(job: AdminJobQueueEntry) {
 
   if (job.kind === 'DRIVER_DOCUMENT') {
     return `${base}\n\nVerifier avant de continuer: raison de quarantaine KYC, preuve objet provider et decision onboarding non approuvee.`;
+  }
+
+  if (job.kind === 'DRIVER_RESERVATION_EXPIRY') {
+    return `${base}\n\nVerifier avant de continuer: worker durable actif, dispatch sain et absence de backlog reservation.`;
   }
 
   return `${base}\n\nVerifier avant de continuer: provider notification configure et absence de double envoi visible.`;
@@ -456,7 +465,12 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
   };
   const jobQueue = health.infrastructure.jobQueue ?? {
     durable: false,
-    families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'] as const,
+    families: [
+      'PAYMENT_WEBHOOK',
+      'DRIVER_DOCUMENT',
+      'NOTIFICATION',
+      'DRIVER_RESERVATION_EXPIRY',
+    ] as const,
     counts: [],
   };
 

@@ -67,7 +67,12 @@ describe('HealthService', () => {
     const jobQueueService = {
       snapshot: jest.fn().mockResolvedValue({
         durable: true,
-        families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'],
+        families: [
+          'PAYMENT_WEBHOOK',
+          'DRIVER_DOCUMENT',
+          'NOTIFICATION',
+          'DRIVER_RESERVATION_EXPIRY',
+        ],
         counts: [
           {
             kind: 'PAYMENT_WEBHOOK',
@@ -139,7 +144,12 @@ describe('HealthService', () => {
       },
       jobQueue: {
         durable: true,
-        families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'],
+        families: [
+          'PAYMENT_WEBHOOK',
+          'DRIVER_DOCUMENT',
+          'NOTIFICATION',
+          'DRIVER_RESERVATION_EXPIRY',
+        ],
         counts: [
           {
             kind: 'PAYMENT_WEBHOOK',

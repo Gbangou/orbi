@@ -17,15 +17,23 @@ describe('DriverReservationExpiryService', () => {
         .fn()
         .mockResolvedValue(overrides?.expireCount ?? 0),
     };
+    const jobQueueService = {
+      enqueue: jest.fn().mockResolvedValue({
+        id: 'job-reservation-expiry',
+        kind: 'DRIVER_RESERVATION_EXPIRY',
+      }),
+    };
 
     return {
       configService,
       appLifecycleService,
       dispatchCoordinator,
+      jobQueueService,
       service: new DriverReservationExpiryService(
         configService as never,
         appLifecycleService as never,
         dispatchCoordinator as never,
+        jobQueueService as never,
       ),
     };
   }
@@ -46,6 +54,32 @@ describe('DriverReservationExpiryService', () => {
     await service.runSweep();
 
     expect(dispatchCoordinator.expireStaleReservations).not.toHaveBeenCalled();
+  });
+
+  it('enqueues a durable reservation expiry job when the app is ready', async () => {
+    const { jobQueueService, service } = createService();
+
+    await service.enqueueSweep();
+
+    expect(jobQueueService.enqueue).toHaveBeenCalledWith({
+      kind: 'DRIVER_RESERVATION_EXPIRY',
+      dedupeKey: 'driver-reservation-expiry:sweep',
+      entityType: 'driver_reservation_expiry',
+      entityId: 'sweep',
+      payload: {
+        requestedAt: expect.any(String),
+      },
+      maxAttempts: 3,
+      resetSucceededOnDedupe: true,
+    });
+  });
+
+  it('does not enqueue durable sweeps while the app is not ready', async () => {
+    const { jobQueueService, service } = createService({ isReady: false });
+
+    await service.enqueueSweep();
+
+    expect(jobQueueService.enqueue).not.toHaveBeenCalled();
   });
 
   it('does not start an interval in test environment', () => {
@@ -90,13 +124,14 @@ describe('DriverReservationExpiryService', () => {
       .spyOn(global, 'setInterval')
       .mockReturnValue(intervalHandle);
     const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
-    const { service } = createService();
+    const { jobQueueService, service } = createService();
 
     service.onModuleInit();
     service.onModuleDestroy();
 
     expect(setIntervalSpy).toHaveBeenCalledTimes(1);
     expect(clearIntervalSpy).toHaveBeenCalledWith(intervalHandle);
+    expect(jobQueueService.enqueue).not.toHaveBeenCalled();
 
     clearIntervalSpy.mockRestore();
     setIntervalSpy.mockRestore();

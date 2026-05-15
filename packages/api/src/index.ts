@@ -1593,6 +1593,12 @@ export type AdminPaymentAttemptRefundResponse = {
   };
 };
 
+export type AdminJobQueueKind =
+  | 'PAYMENT_WEBHOOK'
+  | 'DRIVER_DOCUMENT'
+  | 'NOTIFICATION'
+  | 'DRIVER_RESERVATION_EXPIRY';
+
 export type DriverOnboardingQueueResponse = {
   drivers: Array<{
     id: string;
@@ -1943,9 +1949,9 @@ export type HealthCheckResponse = {
     };
     jobQueue?: {
       durable: boolean;
-      families: Array<'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION'>;
+      families: AdminJobQueueKind[];
       counts: Array<{
-        kind: 'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION';
+        kind: AdminJobQueueKind;
         status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
         count: number;
       }>;
@@ -2027,7 +2033,7 @@ export type HealthCheckResponse = {
 export type AdminJobQueueResponse = {
   jobs: Array<{
     id: string;
-    kind: 'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION';
+    kind: AdminJobQueueKind;
     status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
     dedupeKey: string | null;
     entityType: string | null;
@@ -2063,7 +2069,7 @@ export type AdminJobQueueResponse = {
 export type AdminJobQueueRequeueResponse = {
   job: {
     id: string;
-    kind: 'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION';
+    kind: AdminJobQueueKind;
     status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
     attempts: number;
     nextRunAt: string;
@@ -2818,7 +2824,7 @@ export async function fetchAdminJobQueue(
   query?: {
     page?: number;
     pageSize?: number;
-    kind?: 'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION';
+    kind?: AdminJobQueueKind;
     status?: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
   },
 ) {

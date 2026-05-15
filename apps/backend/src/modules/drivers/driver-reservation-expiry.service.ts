@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppLifecycleService } from '../../core/runtime/app-lifecycle.service';
+import { JobQueueService } from '../../common/job-queue/job-queue.service';
 import { DispatchCoordinator } from './dispatch-coordinator.service';
 
 @Injectable()
@@ -29,6 +30,7 @@ export class DriverReservationExpiryService
     private readonly configService: ConfigService,
     private readonly appLifecycleService: AppLifecycleService,
     private readonly dispatchCoordinator: DispatchCoordinator,
+    private readonly jobQueueService: JobQueueService,
   ) {}
 
   onModuleInit() {
@@ -53,7 +55,7 @@ export class DriverReservationExpiryService
     }
 
     this.intervalHandle = setInterval(() => {
-      void this.runSweep();
+      void this.enqueueSweep();
     }, intervalMs);
     this.intervalHandle.unref?.();
   }
@@ -110,6 +112,24 @@ export class DriverReservationExpiryService
     } finally {
       this.sweepInFlight = false;
     }
+  }
+
+  async enqueueSweep() {
+    if (!this.appLifecycleService.isReady()) {
+      return null;
+    }
+
+    return this.jobQueueService.enqueue({
+      kind: 'DRIVER_RESERVATION_EXPIRY',
+      dedupeKey: 'driver-reservation-expiry:sweep',
+      entityType: 'driver_reservation_expiry',
+      entityId: 'sweep',
+      payload: {
+        requestedAt: new Date().toISOString(),
+      },
+      maxAttempts: 3,
+      resetSucceededOnDedupe: true,
+    });
   }
 
   snapshot() {

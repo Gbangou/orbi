@@ -98,7 +98,7 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
 
 - read replicas si necessaire pour analytics et consoles ops
 - Redis partage pour cache, locks courts, quotas et presence
-- queues de jobs pour notifications, documents, antifraude, webhooks et recalculs
+- queues de jobs pour notifications, documents, expirations reservations, antifraude, webhooks et recalculs
 - indexation et pagination strictes sur tous les endpoints volumineux
 - partitionnement progressif des evenements et journaux si la volumetrie l exige
 

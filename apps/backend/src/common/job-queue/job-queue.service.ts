@@ -6,7 +6,8 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 export type JobQueueKind =
   | 'PAYMENT_WEBHOOK'
   | 'DRIVER_DOCUMENT'
-  | 'NOTIFICATION';
+  | 'NOTIFICATION'
+  | 'DRIVER_RESERVATION_EXPIRY';
 export type JobQueueStatus =
   | 'PENDING'
   | 'RUNNING'
@@ -65,6 +66,7 @@ export class JobQueueService {
     entityId?: string | null;
     maxAttempts?: number;
     nextRunAt?: Date;
+    resetSucceededOnDedupe?: boolean;
   }) {
     this.assertKnownKind(input.kind);
     const maxAttempts = input.maxAttempts ?? 5;
@@ -101,10 +103,28 @@ export class JobQueueService {
         NOW()
       )
       ON CONFLICT (dedupe_key) DO UPDATE SET
+        status = CASE
+          WHEN ${input.resetSucceededOnDedupe ?? false} = TRUE
+            AND job_queue_entries.status = 'SUCCEEDED'::"JobQueueStatus"
+            THEN 'PENDING'::"JobQueueStatus"
+          ELSE job_queue_entries.status
+        END,
         payload = EXCLUDED.payload,
         entity_type = EXCLUDED.entity_type,
         entity_id = EXCLUDED.entity_id,
+        attempts = CASE
+          WHEN ${input.resetSucceededOnDedupe ?? false} = TRUE
+            AND job_queue_entries.status = 'SUCCEEDED'::"JobQueueStatus"
+            THEN 0
+          ELSE job_queue_entries.attempts
+        END,
         next_run_at = LEAST(job_queue_entries.next_run_at, EXCLUDED.next_run_at),
+        completed_at = CASE
+          WHEN ${input.resetSucceededOnDedupe ?? false} = TRUE
+            AND job_queue_entries.status = 'SUCCEEDED'::"JobQueueStatus"
+            THEN NULL
+          ELSE job_queue_entries.completed_at
+        END,
         updated_at = NOW()
       RETURNING *
     `;
@@ -330,7 +350,12 @@ export class JobQueueService {
 
     return {
       durable: true,
-      families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'] as const,
+      families: [
+        'PAYMENT_WEBHOOK',
+        'DRIVER_DOCUMENT',
+        'NOTIFICATION',
+        'DRIVER_RESERVATION_EXPIRY',
+      ] as const,
       counts: rows.map((row) => ({
         kind: row.kind,
         status: row.status,
@@ -363,7 +388,12 @@ export class JobQueueService {
 
   private assertKnownKind(kind: string) {
     if (
-      !['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'].includes(kind)
+      ![
+        'PAYMENT_WEBHOOK',
+        'DRIVER_DOCUMENT',
+        'NOTIFICATION',
+        'DRIVER_RESERVATION_EXPIRY',
+      ].includes(kind)
     ) {
       throw new BadRequestException(`Unsupported job kind ${kind}.`);
     }

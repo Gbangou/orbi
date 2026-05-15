@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { fetchAdminJobQueue } from '@mobilis/api';
+import { fetchAdminJobQueue, type AdminJobQueueKind } from '@mobilis/api';
 import { getAdminServerAuthClient } from '../../../admin-server-auth';
 import { createNoStoreAdminHeaders } from '../../../admin-server-security';
 
@@ -9,6 +9,7 @@ const allowedKinds = new Set([
   'PAYMENT_WEBHOOK',
   'DRIVER_DOCUMENT',
   'NOTIFICATION',
+  'DRIVER_RESERVATION_EXPIRY',
 ]);
 const allowedStatuses = new Set([
   'PENDING',
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
       page: parsePositiveInteger(params.get('page')),
       pageSize: parsePositiveInteger(params.get('pageSize')),
       kind: allowedKinds.has(kind ?? '')
-        ? (kind as 'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION')
+        ? (kind as AdminJobQueueKind)
         : undefined,
       status: allowedStatuses.has(status ?? '')
         ? (status as 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER')

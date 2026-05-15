@@ -1785,6 +1785,15 @@ export class AdminService {
       canRequeueSafely =
         job.status === 'DEAD_LETTER' && !error.includes('provider');
       severity = canRequeueSafely ? 'medium' : severity;
+    } else if (job.kind === 'DRIVER_RESERVATION_EXPIRY') {
+      owner = 'ops';
+      riskSignals.push('dispatch:reservation-expiry');
+      recommendedAction = error.includes('expiry')
+        ? 'Verifier la sante dispatch et relancer seulement si le worker durable est revenu stable.'
+        : 'Surveiller que le worker durable expire les reservations chauffeur sans double sweep multi-instance.';
+      canRequeueSafely =
+        job.status === 'DEAD_LETTER' && !error.includes('database');
+      severity = canRequeueSafely ? 'medium' : severity;
     }
 
     return {

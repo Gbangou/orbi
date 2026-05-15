@@ -4,11 +4,25 @@ import { PageQueryDto } from '../../../common/dto/page-query.dto';
 
 export class JobQueueQueryDto extends PageQueryDto {
   @ApiPropertyOptional({
-    enum: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'],
+    enum: [
+      'PAYMENT_WEBHOOK',
+      'DRIVER_DOCUMENT',
+      'NOTIFICATION',
+      'DRIVER_RESERVATION_EXPIRY',
+    ],
   })
   @IsOptional()
-  @IsIn(['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'])
-  kind?: 'PAYMENT_WEBHOOK' | 'DRIVER_DOCUMENT' | 'NOTIFICATION';
+  @IsIn([
+    'PAYMENT_WEBHOOK',
+    'DRIVER_DOCUMENT',
+    'NOTIFICATION',
+    'DRIVER_RESERVATION_EXPIRY',
+  ])
+  kind?:
+    | 'PAYMENT_WEBHOOK'
+    | 'DRIVER_DOCUMENT'
+    | 'NOTIFICATION'
+    | 'DRIVER_RESERVATION_EXPIRY';
 
   @ApiPropertyOptional({
     enum: ['PENDING', 'RUNNING', 'SUCCEEDED', 'DEAD_LETTER'],

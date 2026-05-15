@@ -61,6 +61,41 @@ describe('JobQueueService', () => {
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
+  it('accepts recurring reservation expiry jobs that reset succeeded dedupe entries', async () => {
+    const { prisma, service } = createService();
+    prisma.$queryRaw.mockResolvedValue([
+      row({
+        kind: 'DRIVER_RESERVATION_EXPIRY',
+        dedupe_key: 'driver-reservation-expiry:sweep',
+        entity_type: 'driver_reservation_expiry',
+        entity_id: 'sweep',
+        payload: {
+          requestedAt: now.toISOString(),
+        },
+      }),
+    ]);
+
+    const result = await service.enqueue({
+      kind: 'DRIVER_RESERVATION_EXPIRY',
+      dedupeKey: 'driver-reservation-expiry:sweep',
+      entityType: 'driver_reservation_expiry',
+      entityId: 'sweep',
+      payload: {
+        requestedAt: now.toISOString(),
+      },
+      maxAttempts: 3,
+      resetSucceededOnDedupe: true,
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        kind: 'DRIVER_RESERVATION_EXPIRY',
+        status: 'PENDING',
+        dedupeKey: 'driver-reservation-expiry:sweep',
+      }),
+    );
+  });
+
   it('claims due document and notification jobs in bounded batches', async () => {
     const { prisma, service } = createService();
     prisma.$queryRaw.mockResolvedValue([

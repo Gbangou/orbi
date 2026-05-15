@@ -78,6 +78,12 @@ describe('JobQueueWorkerService', () => {
         quarantineReason: null,
       }),
     };
+    const driverReservationExpiryService = {
+      runSweep: jest.fn().mockResolvedValue(undefined),
+    };
+    const moduleRef = {
+      get: jest.fn().mockReturnValue(driverReservationExpiryService),
+    };
 
     return {
       configService,
@@ -85,12 +91,15 @@ describe('JobQueueWorkerService', () => {
       jobQueueService,
       notificationDeliveryService,
       documentSafetyScannerService,
+      driverReservationExpiryService,
+      moduleRef,
       service: new JobQueueWorkerService(
         configService as never,
         prisma as never,
         jobQueueService as never,
         notificationDeliveryService as never,
         documentSafetyScannerService as never,
+        moduleRef as never,
       ),
     };
   }
@@ -299,6 +308,44 @@ describe('JobQueueWorkerService', () => {
     expect(result).toEqual({
       claimed: 2,
       completed: 2,
+      failed: 0,
+    });
+  });
+
+  it('runs reservation expiry jobs through the shared worker', async () => {
+    const { driverReservationExpiryService, jobQueueService, moduleRef, service } =
+      createService();
+    jobQueueService.claimDueJobs.mockResolvedValue([
+      job({
+        id: 'job-reservation-expiry',
+        kind: 'DRIVER_RESERVATION_EXPIRY',
+        dedupeKey: 'driver-reservation-expiry:sweep',
+        entityType: 'driver_reservation_expiry',
+        entityId: 'sweep',
+        payload: {
+          requestedAt: now.toISOString(),
+        },
+      }),
+    ]);
+
+    const result = await service.processDueJobs({
+      kinds: ['DRIVER_RESERVATION_EXPIRY'],
+      limit: 1,
+    });
+
+    expect(moduleRef.get).toHaveBeenCalledWith(expect.any(Function), {
+      strict: false,
+    });
+    expect(driverReservationExpiryService.runSweep).toHaveBeenCalledTimes(1);
+    expect(jobQueueService.complete).toHaveBeenCalledWith(
+      'job-reservation-expiry',
+      {
+        lockedAt: now,
+      },
+    );
+    expect(result).toEqual({
+      claimed: 1,
+      completed: 1,
       failed: 0,
     });
   });

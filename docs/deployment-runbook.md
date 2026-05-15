@@ -59,6 +59,7 @@ Utiliser la strategie `expand -> migrate traffic -> contract`:
 - ne jamais lier une mise a jour critique de paiement a un seul process en memoire
 - preferer des traitements rejouables et journalises
 - en production multi-instance, brancher les adapters `rate limit` et `realtime` sur Redis ou un broker partage
+- verifier que la job queue durable traite `DRIVER_RESERVATION_EXPIRY`: le timer ne fait qu enqueuer un job deduplique et le worker partage execute le sweep avec verrou PostgreSQL
 
 ## Temps reel
 

@@ -205,7 +205,12 @@ describe('AdminService', () => {
       }),
       snapshot: jest.fn().mockResolvedValue({
         durable: true,
-        families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'],
+        families: [
+          'PAYMENT_WEBHOOK',
+          'DRIVER_DOCUMENT',
+          'NOTIFICATION',
+          'DRIVER_RESERVATION_EXPIRY',
+        ],
         counts: [
           {
             kind: 'PAYMENT_WEBHOOK',

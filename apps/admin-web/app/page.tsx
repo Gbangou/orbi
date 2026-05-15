@@ -154,7 +154,12 @@ const fallbackHealth: HealthCheckResponse = {
     },
     jobQueue: {
       durable: true,
-      families: ['PAYMENT_WEBHOOK', 'DRIVER_DOCUMENT', 'NOTIFICATION'],
+      families: [
+        'PAYMENT_WEBHOOK',
+        'DRIVER_DOCUMENT',
+        'NOTIFICATION',
+        'DRIVER_RESERVATION_EXPIRY',
+      ],
       counts: [],
     },
   },

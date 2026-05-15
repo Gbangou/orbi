@@ -5,8 +5,10 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ModuleRef } from '@nestjs/core';
 import { NotificationChannel } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { DriverReservationExpiryService } from '../../modules/drivers/driver-reservation-expiry.service';
 import {
   JobQueueEntry,
   JobQueueKind,
@@ -33,6 +35,7 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly jobQueueService: JobQueueService,
     private readonly notificationDeliveryService: NotificationDeliveryService,
     private readonly documentSafetyScannerService: DocumentSafetyScannerService,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   onModuleInit() {
@@ -149,6 +152,11 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
 
     if (job.kind === 'DRIVER_DOCUMENT') {
       await this.handleDriverDocumentJob(job);
+      return;
+    }
+
+    if (job.kind === 'DRIVER_RESERVATION_EXPIRY') {
+      await this.handleDriverReservationExpiryJob();
       return;
     }
 
@@ -276,6 +284,15 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
     if (updated.count === 0) {
       throw new Error('notification_delivery_race_detected');
     }
+  }
+
+  private async handleDriverReservationExpiryJob() {
+    const reservationExpiryService = this.moduleRef.get(
+      DriverReservationExpiryService,
+      { strict: false },
+    );
+
+    await reservationExpiryService.runSweep();
   }
 
   private payloadRecord(value: unknown): Record<string, unknown> {
