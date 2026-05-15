@@ -31,6 +31,7 @@ import RiderHomeScreen from '../app/home';
 import BookingScreen from '../app/book';
 import VoiceScreen from '../app/voice';
 import {
+  collectText,
   expectText,
   flushMicrotasks,
   changeInputByPlaceholder,
@@ -453,6 +454,55 @@ describe('rider smoke flows', () => {
         idempotencyKey: 'checkout-ride-request-12345678-mobile-money',
       },
     );
+  });
+
+  it('absorbs double taps while creating a ride request from the booking screen', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+
+    let resolveRideRequest: ((value: unknown) => void) | null = null;
+    mockedCreateRideRequestWithApi.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRideRequest = resolve;
+        }) as never,
+    );
+    mockedCreateCheckoutIntentWithApi.mockResolvedValue({
+      provider: 'Orange Money',
+      transactionRef: 'txn-123',
+      supportedMobileMoneyNetworks: ['ORANGE_MONEY'],
+      channel: 'MOBILE_MONEY',
+    } as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+
+    await pressByText(renderer, 'Bobo-Dioulasso');
+    const confirmButton = renderer.root.find(
+      (node) =>
+        node.type === 'Pressable' &&
+        collectText(node).includes(`Confirmer ${riderRideOptions[0]?.title}`),
+    );
+
+    await invokeInAct(() => {
+      confirmButton.props.onPress?.();
+      confirmButton.props.onPress?.();
+    });
+
+    expect(mockedCreateRideRequestWithApi).toHaveBeenCalledTimes(1);
+
+    resolveRideRequest?.({
+      id: 'ride-request-12345678',
+      routeMetricsSource: 'SERVER_COORDINATES',
+    });
+    await flushMicrotasks();
   });
 
   it('guides the rider to activity when booking is blocked by an active flow', async () => {
