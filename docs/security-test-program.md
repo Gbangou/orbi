@@ -55,7 +55,7 @@ Ces tests sont directement executables dans le repo:
 
 | Domaine | Commande | Couvre |
 | --- | --- | --- |
-| Auth, RBAC, session, guards | `pnpm --filter backend test -- auth --runInBand` | connexion, session, roles, presenter, guards |
+| Auth, RBAC, session, guards | `pnpm --filter backend test -- auth --runInBand` | connexion, session, roles, presenter, guards, session chauffeur appareil unique |
 | API/DTO dirty input | `pnpm --filter backend test -- dirty-input-validation.spec.ts --runInBand` | validation stricte, schema, champs inconnus |
 | Paiements | `pnpm --filter backend test -- payments.service.spec.ts --runInBand` | checkout, webhook signe, replay, refund, wallet payout |
 | Admin ops | `pnpm --filter backend test -- admin.service.spec.ts admin.controller.spec.ts --runInBand` | audit, finance, support, launch readiness |
@@ -121,7 +121,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
 5. Mobile: aucun token/session, mot de passe, secret ou header Authorization ne
    doit apparaitre dans logs, rapports d erreur, stockage clair, screenshots
    sensibles, clipboard ou deep links non controles.
-6. File durable: chaque webhook, document et notification critique doit etre
+6. Auth chauffeur: une nouvelle connexion chauffeur doit revoquer les anciennes
+   sessions actives du meme compte afin de reduire l usurpation operationnelle;
+   les comptes rider gardent la connexion multi-appareils controlee.
+7. File durable: chaque webhook, document et notification critique doit etre
    rejouable/idempotent. Un job malforme ou orphelin part en retry borne puis
    dead-letter visible aux operations, sans journaliser de donnees personnelles
    brutes. Un job `RUNNING` bloque apres crash worker doit revenir en
@@ -152,13 +155,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
    Les transitions `complete`/`fail` worker doivent verifier le verrou
    `lockedAt` du claim courant pour eviter qu un ancien worker ecrase une
    recuperation ou une reprise concurrente.
-7. Trust & safety trajet: SOS, incidents et liens publics doivent etre limites
+8. Trust & safety trajet: SOS, incidents et liens publics doivent etre limites
    aux acteurs autorises, throttles contre les doubles taps/abus, audites avant
    diffusion live, et resolus par hash de token sans fuite de nom reel.
-8. Booking: les doubles taps rider doivent etre absorbes cote mobile et cote
+9. Booking: les doubles taps rider doivent etre absorbes cote mobile et cote
    API; une demande active strictement equivalente est retournee sans nouvelle
    creation ni nouvel evenement realtime.
-9. Finance admin: les actions wallet/payout/recouvrement doivent etre
+10. Finance admin: les actions wallet/payout/recouvrement doivent etre
    idempotentes cote API et bloquees contre les doubles clics cote console.
 
 ## Commandes Executees Le 9 Mai 2026

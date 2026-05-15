@@ -107,6 +107,10 @@ export class AuthService {
       },
     });
 
+    if (user.role === UserRole.DRIVER) {
+      await this.revokeOtherActiveSessions(user.id, session.id);
+    }
+
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
@@ -184,6 +188,27 @@ export class AuthService {
       message: 'Session revoked successfully.',
       revokedSessionId: session.id,
     };
+  }
+
+  private async revokeOtherActiveSessions(
+    userId: string,
+    currentSessionId: string,
+  ) {
+    await this.prisma.userSession.updateMany({
+      where: {
+        userId,
+        id: {
+          not: currentSessionId,
+        },
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
   }
 
   private createSessionExpiryDate() {

@@ -17,6 +17,7 @@ describe('AuthService', () => {
         findMany: jest.fn(),
         findFirst: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
       },
     };
 
@@ -131,6 +132,60 @@ describe('AuthService', () => {
     expect(result.user.role).toBe(UserRole.DRIVER);
     expect(result.sessionToken).toBeTruthy();
     expect(prisma.userSession.create).toHaveBeenCalled();
+    expect(prisma.userSession.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        id: {
+          not: 'session-2',
+        },
+        revokedAt: null,
+        expiresAt: {
+          gt: expect.any(Date),
+        },
+      },
+      data: {
+        revokedAt: expect.any(Date),
+      },
+    });
+  });
+
+  it('keeps rider multi-device sessions active on sign-in', async () => {
+    const { prisma, service } = createService();
+    const passwordHash = await hashPassword('Mobilis123!');
+
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'rider-user-1',
+      email: 'rider@mobilis.app',
+      fullName: 'Awa Rider',
+      phoneNumber: null,
+      passwordHash,
+      role: UserRole.RIDER,
+      provider: 'EMAIL',
+      isActive: true,
+      isPhoneVerified: false,
+      lastLoginAt: null,
+      createdAt: new Date(),
+      riderProfile: { id: 'rider-1', userId: 'rider-user-1' },
+      driverProfile: null,
+    });
+    prisma.userSession.create.mockResolvedValue({
+      id: 'rider-session-2',
+      createdAt: new Date(),
+      lastSeenAt: new Date(),
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+      revokedAt: null,
+      userAgent: 'jest',
+      ipAddress: '127.0.0.1',
+    });
+    prisma.user.update.mockResolvedValue(undefined);
+
+    const result = await service.signIn(
+      { email: 'rider@mobilis.app', password: 'Mobilis123!' },
+      { userAgent: 'jest', ipAddress: '127.0.0.1' },
+    );
+
+    expect(result.user.role).toBe(UserRole.RIDER);
+    expect(prisma.userSession.updateMany).not.toHaveBeenCalled();
   });
 
   it('rejects sign-in with invalid credentials', async () => {
