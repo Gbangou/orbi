@@ -13,7 +13,7 @@
     "@mobilis/api": "workspace:*",
     "@mobilis/config": "workspace:*",
     "@mobilis/ui": "workspace:*",
-    "next": "^15.1.6",
+    "next": "15.5.18",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "server-only": "^0.0.1"
@@ -25,7 +25,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.2",
-    "eslint-config-next": "15.5.15",
+    "eslint-config-next": "15.5.18",
     "jest": "^30.0.0",
     "ts-jest": "^29.2.5",
     "typescript": "^5.7.3"
