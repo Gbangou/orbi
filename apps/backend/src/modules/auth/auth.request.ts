@@ -5,6 +5,22 @@ export type AuthenticatedRequest = Request & {
   auth?: RequestAuthContext;
 };
 
+const safeSessionTokenPattern = /^[A-Za-z0-9._~-]{16,256}$/;
+
+function normalizeSessionToken(token: unknown) {
+  if (typeof token !== 'string') {
+    return null;
+  }
+
+  const normalizedToken = token.trim();
+
+  if (!safeSessionTokenPattern.test(normalizedToken)) {
+    return null;
+  }
+
+  return normalizedToken;
+}
+
 export function extractBearerToken(request: Request) {
   const authorizationHeader = request.headers.authorization;
 
@@ -12,13 +28,13 @@ export function extractBearerToken(request: Request) {
     return null;
   }
 
-  const [scheme, token] = authorizationHeader.split(' ');
+  const parts = authorizationHeader.trim().split(/\s+/);
 
-  if (scheme !== 'Bearer' || !token) {
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
     return null;
   }
 
-  return token.trim();
+  return normalizeSessionToken(parts[1]);
 }
 
 export function extractSessionToken(request: Request) {
@@ -30,9 +46,5 @@ export function extractSessionToken(request: Request) {
 
   const queryToken = request.query.sessionToken;
 
-  if (typeof queryToken === 'string' && queryToken.trim().length > 0) {
-    return queryToken.trim();
-  }
-
-  return null;
+  return normalizeSessionToken(queryToken);
 }
