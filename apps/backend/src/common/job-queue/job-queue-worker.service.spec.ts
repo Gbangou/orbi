@@ -78,6 +78,18 @@ describe('JobQueueWorkerService', () => {
         quarantineReason: null,
       }),
     };
+    const documentObjectStorageService = {
+      verifyStoredDocument: jest.fn().mockResolvedValue({
+        state: 'confirmed',
+        provider: 'local-provider',
+        objectId: 'drivers/driver-1/permis.pdf',
+        verifiedAt: now.toISOString(),
+        sizeBytes: 120000,
+        sha256:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        failureReason: null,
+      }),
+    };
     const driverReservationExpiryService = {
       runSweep: jest.fn().mockResolvedValue(undefined),
     };
@@ -91,6 +103,7 @@ describe('JobQueueWorkerService', () => {
       jobQueueService,
       notificationDeliveryService,
       documentSafetyScannerService,
+      documentObjectStorageService,
       driverReservationExpiryService,
       moduleRef,
       service: new JobQueueWorkerService(
@@ -99,6 +112,7 @@ describe('JobQueueWorkerService', () => {
         jobQueueService as never,
         notificationDeliveryService as never,
         documentSafetyScannerService as never,
+        documentObjectStorageService as never,
         moduleRef as never,
       ),
     };
@@ -208,8 +222,13 @@ describe('JobQueueWorkerService', () => {
   });
 
   it('validates payment webhook and driver document outbox references', async () => {
-    const { documentSafetyScannerService, jobQueueService, prisma, service } =
-      createService();
+    const {
+      documentObjectStorageService,
+      documentSafetyScannerService,
+      jobQueueService,
+      prisma,
+      service,
+    } = createService();
     jobQueueService.claimDueJobs.mockResolvedValue([
       job({
         id: 'job-payment',
@@ -238,8 +257,13 @@ describe('JobQueueWorkerService', () => {
       fileName: 'permis.pdf',
       storageKey: 'drivers/driver-1/permis.pdf',
       metadata: {
-        safetyScan: {
-          state: 'pending',
+        integrity: {
+          sizeBytes: 120000,
+          sha256:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        },
+        objectVerification: {
+          state: 'pending_provider_confirmation',
         },
       },
     });
@@ -278,10 +302,28 @@ describe('JobQueueWorkerService', () => {
       fileName: 'permis.pdf',
       storageKey: 'drivers/driver-1/permis.pdf',
       metadata: {
-        safetyScan: {
-          state: 'pending',
+        integrity: {
+          sizeBytes: 120000,
+          sha256:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        },
+        objectVerification: {
+          state: 'confirmed',
+          provider: 'local-provider',
+          objectId: 'drivers/driver-1/permis.pdf',
+          verifiedAt: now.toISOString(),
+          sizeBytes: 120000,
+          sha256:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          failureReason: null,
         },
       },
+    });
+    expect(documentObjectStorageService.verifyStoredDocument).toHaveBeenCalledWith({
+      storageKey: 'drivers/driver-1/permis.pdf',
+      expectedSizeBytes: 120000,
+      expectedSha256:
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     });
     expect(prisma.driverDocument.update).toHaveBeenCalledWith({
       where: {
@@ -289,6 +331,21 @@ describe('JobQueueWorkerService', () => {
       },
       data: {
         metadata: {
+          integrity: {
+            sizeBytes: 120000,
+            sha256:
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          },
+          objectVerification: {
+            state: 'confirmed',
+            provider: 'local-provider',
+            objectId: 'drivers/driver-1/permis.pdf',
+            verifiedAt: now.toISOString(),
+            sizeBytes: 120000,
+            sha256:
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            failureReason: null,
+          },
           safetyScan: {
             state: 'clear',
             engine: 'local-policy',

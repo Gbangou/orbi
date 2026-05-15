@@ -87,13 +87,15 @@ flowchart LR
 8. Chaque generation de liens ecrit un audit log sans exposer de secret.
 9. Les operations consultent les justificatifs via liens de lecture courts avant
    decision explicite.
-10. Les operations peuvent declencher la verification provider objet; le backend
-    local confirme existence, taille et SHA-256, ou marque la verification en
-    echec si le stockage ne prouve pas l integrite declaree.
-11. Chaque decision de revue conserve dans ses metadonnees une snapshot de la
+10. Un job durable `DRIVER_DOCUMENT` verifie automatiquement l objet provider
+    apres rattachement: existence, taille et SHA-256 calcule, puis scan local.
+11. Les operations peuvent aussi relancer la verification provider objet; le
+    backend local confirme existence, taille et SHA-256, ou marque la
+    verification en echec si le stockage ne prouve pas l integrite declaree.
+12. Chaque decision de revue conserve dans ses metadonnees une snapshot de la
     guidance dossier et du resume documentaire utilises au moment de l action,
     afin de rendre les approbations, revues et redemandes auditables a posteriori.
-12. La file admin restitue les dernieres decisions avec cette snapshot quand
+13. La file admin restitue les dernieres decisions avec cette snapshot quand
     elle existe, ce qui permet aux operations de relire le contexte de decision
     sans ouvrir les logs techniques.
 

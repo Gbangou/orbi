@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { ModuleRef } from '@nestjs/core';
 import { NotificationChannel } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { DocumentObjectStorageService } from '../document-links/document-object-storage.service';
 import { DriverReservationExpiryService } from '../../modules/drivers/driver-reservation-expiry.service';
 import {
   JobQueueEntry,
@@ -35,6 +36,7 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly jobQueueService: JobQueueService,
     private readonly notificationDeliveryService: NotificationDeliveryService,
     private readonly documentSafetyScannerService: DocumentSafetyScannerService,
+    private readonly documentObjectStorageService: DocumentObjectStorageService,
     private readonly moduleRef: ModuleRef,
   ) {}
 
@@ -213,12 +215,23 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
     }
 
     const metadata = this.payloadRecord(document.metadata);
+    const integrity = this.payloadRecord(metadata.integrity);
+    const objectVerification =
+      await this.documentObjectStorageService.verifyStoredDocument({
+        storageKey: document.storageKey,
+        expectedSizeBytes: this.positiveInteger(integrity.sizeBytes),
+        expectedSha256: this.optionalString(integrity.sha256),
+      });
+    const metadataWithVerification = {
+      ...metadata,
+      objectVerification,
+    };
     const safetyScan = await this.documentSafetyScannerService.scan({
       documentId: document.id,
       type: document.type,
       fileName: document.fileName,
       storageKey: document.storageKey,
-      metadata,
+      metadata: metadataWithVerification,
     });
 
     await this.prisma.driverDocument.update({
@@ -227,7 +240,7 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
       },
       data: {
         metadata: {
-          ...metadata,
+          ...metadataWithVerification,
           safetyScan,
         },
       },
@@ -307,6 +320,18 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
     }
 
     return value.trim();
+  }
+
+  private optionalString(value: unknown) {
+    return typeof value === 'string' && value.trim()
+      ? value.trim().toLowerCase()
+      : null;
+  }
+
+  private positiveInteger(value: unknown) {
+    return typeof value === 'number' && Number.isInteger(value) && value > 0
+      ? value
+      : null;
   }
 
   private retryDelayMs(job: JobQueueEntry) {

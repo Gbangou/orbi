@@ -19,6 +19,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { FeatureFlagsService } from '../../core/runtime/feature-flags.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { DocumentLinksService } from '../../common/document-links/document-links.service';
+import { JobQueueService } from '../../common/job-queue/job-queue.service';
 import { RequestDriverDocumentUploadLinksDto } from './dto/request-driver-document-upload-links.dto';
 import { UpsertDriverOnboardingDto } from './dto/upsert-driver-onboarding.dto';
 import { ACTIVE_TRIP_STATUSES } from '../trips/trips.constants';
@@ -88,6 +89,7 @@ export class DriversService {
     private readonly documentLinksService: DocumentLinksService,
     private readonly featureFlagsService: FeatureFlagsService,
     private readonly dispatchCoordinator: DispatchCoordinator,
+    private readonly jobQueueService: JobQueueService,
   ) {}
 
   async getDispatchLearningSettings() {
@@ -323,7 +325,7 @@ export class DriversService {
         }
 
         if (existingDocument) {
-          await this.prisma.driverDocument.update({
+          const updatedDocument = await this.prisma.driverDocument.update({
             where: {
               id: existingDocument.id,
             },
@@ -345,11 +347,18 @@ export class DriversService {
               } as Prisma.InputJsonValue,
             },
           });
+          await this.enqueueDriverDocumentVerification(
+            profile.id,
+            updatedDocument.id,
+            artifact.type,
+            normalizedStorageKey,
+            validatedArtifact.objectVerification.state,
+          );
 
           continue;
         }
 
-        await this.prisma.driverDocument.create({
+        const createdDocument = await this.prisma.driverDocument.create({
           data: {
             driverProfileId: profile.id,
             type: artifact.type as DriverDocumentType,
@@ -365,6 +374,13 @@ export class DriversService {
             } as Prisma.InputJsonValue,
           },
         });
+        await this.enqueueDriverDocumentVerification(
+          profile.id,
+          createdDocument.id,
+          artifact.type,
+          normalizedStorageKey,
+          validatedArtifact.objectVerification.state,
+        );
       }
     }
 
@@ -996,5 +1012,27 @@ export class DriversService {
 
   private async releaseDriverReservations(driverProfileId: string) {
     await this.dispatchCoordinator.releaseDriverReservations(driverProfileId);
+  }
+
+  private async enqueueDriverDocumentVerification(
+    driverProfileId: string,
+    documentId: string,
+    documentType: string,
+    storageKey: string,
+    objectVerificationState: string,
+  ) {
+    await this.jobQueueService.enqueue({
+      kind: 'DRIVER_DOCUMENT',
+      dedupeKey: `driver-document:${documentId}:artifact-uploaded`,
+      entityType: 'driver_document',
+      entityId: documentId,
+      payload: {
+        driverProfileId,
+        documentId,
+        documentType,
+        storageKey,
+        objectVerificationState,
+      },
+    });
   }
 }

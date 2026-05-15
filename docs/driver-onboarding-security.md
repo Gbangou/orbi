@@ -66,6 +66,10 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
 - endpoint admin `PATCH /api/v1/admin/driver-onboarding/:driverId/documents/:documentId/object-verification`
   reserve `ADMIN/OPS`, pour confirmer ou echouer la verification objet provider
   avec audit `DRIVER_DOCUMENT_OBJECT_VERIFICATION_UPDATED`
+- job durable `DRIVER_DOCUMENT` cree au rattachement d un artefact chauffeur:
+  le worker confirme l existence provider, calcule taille/SHA-256, persiste
+  `objectVerification`, puis lance le scan documentaire sans attendre une
+  action manuelle ops
 - scan documentaire local `safetyScan` apres verification objet provider:
   `clear` si la politique locale est respectee, `quarantined` si la
   verification provider echoue ou si extension, taille ou empreinte divergent
@@ -110,6 +114,9 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
 - provider local par defaut: `DOCUMENT_OBJECT_PROVIDER=local-provider`
 - racine locale par defaut: `DOCUMENT_LOCAL_PROVIDER_ROOT=.mobilis-document-store`
 - la verification confirme existence fichier, taille et SHA-256 calcule
+- le worker de job queue execute la meme verification automatiquement pour les
+  artefacts rattaches par le chauffeur; l endpoint admin reste le filet de
+  reprise manuelle
 - si les signaux declares `sizeBytes` ou `sha256` ne correspondent pas, le
   document passe en `objectVerification.state=failed`
 - chaque verification ecrit `DRIVER_DOCUMENT_OBJECT_VERIFICATION_UPDATED`

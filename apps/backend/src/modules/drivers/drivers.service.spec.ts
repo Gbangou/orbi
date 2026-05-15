@@ -29,8 +29,18 @@ describe('DriversService', () => {
       },
       driverDocument: {
         findUnique: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
+        create: jest.fn((input) =>
+          Promise.resolve({
+            id: `document-${input.data.type}`,
+            ...input.data,
+          }),
+        ),
+        update: jest.fn((input) =>
+          Promise.resolve({
+            id: input.where.id,
+            ...input.data,
+          }),
+        ),
       },
       driverOnboardingReview: {
         create: jest.fn(),
@@ -61,7 +71,19 @@ describe('DriversService', () => {
           uploadSource: artifact.uploadSource ?? null,
           capturedAt: '2026-05-03T00:00:00.000Z',
         },
+        objectVerification: {
+          state: 'pending_provider_confirmation',
+          provider: null,
+          objectId: null,
+          verifiedAt: null,
+          sizeBytes: null,
+          sha256: null,
+          failureReason: null,
+        },
       })),
+    };
+    const jobQueueService = {
+      enqueue: jest.fn().mockResolvedValue(undefined),
     };
     const featureFlagsService = {
       isEnabled: jest.fn().mockReturnValue(true),
@@ -105,7 +127,9 @@ describe('DriversService', () => {
         documentLinksService as never,
         featureFlagsService as never,
         dispatchCoordinator as never,
+        jobQueueService as never,
       ),
+      jobQueueService,
     };
   }
 
@@ -676,7 +700,8 @@ describe('DriversService', () => {
   });
 
   it('submits onboarding data and writes an audit trail', async () => {
-    const { prisma, documentLinksService, service } = createService();
+    const { jobQueueService, prisma, documentLinksService, service } =
+      createService();
 
     prisma.driverProfile.findUnique
       .mockResolvedValueOnce({
@@ -744,7 +769,6 @@ describe('DriversService', () => {
     prisma.vehicle.findUnique.mockResolvedValue(null);
     prisma.vehicle.create.mockResolvedValue(undefined);
     prisma.driverDocument.findUnique.mockResolvedValue(null);
-    prisma.driverDocument.create.mockResolvedValue(undefined);
     prisma.driverOnboardingReview.create.mockResolvedValue(undefined);
     prisma.auditLog.create.mockResolvedValue(undefined);
     prisma.auditLog.findFirst.mockResolvedValue({
@@ -831,6 +855,20 @@ describe('DriversService', () => {
       }),
     });
     expect(prisma.driverDocument.create).toHaveBeenCalledTimes(2);
+    expect(jobQueueService.enqueue).toHaveBeenCalledTimes(2);
+    expect(jobQueueService.enqueue).toHaveBeenCalledWith({
+      kind: 'DRIVER_DOCUMENT',
+      dedupeKey: 'driver-document:document-IDENTITY_DOCUMENT:artifact-uploaded',
+      entityType: 'driver_document',
+      entityId: 'document-IDENTITY_DOCUMENT',
+      payload: {
+        driverProfileId: 'driver-1',
+        documentId: 'document-IDENTITY_DOCUMENT',
+        documentType: 'IDENTITY_DOCUMENT',
+        storageKey: 'driver-1/identity/id-card.pdf',
+        objectVerificationState: 'pending_provider_confirmation',
+      },
+    });
     expect(documentLinksService.validateUploadedArtifact).toHaveBeenCalledWith({
       documentType: 'IDENTITY_DOCUMENT',
       fileName: 'id-card.pdf',

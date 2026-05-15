@@ -40,8 +40,9 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
 - Le realtime est encore base sur un transport non partage.
 - Le rate limit partage n est pas encore branche pour du multi-instance reel.
 - Les justificatifs chauffeur ont maintenant des liens HMAC courts et des
-  contraintes d upload revalidees au rattachement; le backend objet reel, la
-  confirmation d existence/hash post-upload et la rotation restent a brancher.
+  contraintes d upload revalidees au rattachement; la confirmation
+  d existence/hash post-upload est automatisee via job queue locale, et il
+  reste a brancher la pre-signature provider objet reelle et la rotation.
 - Le workflow ops d approbation chauffeur existe; il doit maintenant etre durci
   par preuves terrain, re-verification periodique et SLA support.
 - Les flux argent ont deja des protections d idempotence/reconciliation; il
@@ -66,9 +67,9 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
 - stockage objet securise pour permis, piece d identite, carte grise, assurance et selfie
 - URLs signees courtes durees pour upload et consultation
   - etat actuel: HMAC applicatif, TTL borne, whitelist MIME/extension/taille
-    et revalidation au rattachement avec taille, SHA-256 declare et provenance
-  - reste: pre-signature provider objet, confirmation d existence, hash calcule,
-    scan post-upload et rotation de cle
+    et revalidation au rattachement avec taille, SHA-256 declare et provenance;
+    confirmation existence/hash calcule et scan post-upload via job queue
+  - reste: pre-signature provider objet reelle et rotation de cle
 - renforcer la table de documents chauffeur avec hash de contenu, empreinte
   antivirus, provenance et retention
 - workflow ops existant a calibrer terrain:
