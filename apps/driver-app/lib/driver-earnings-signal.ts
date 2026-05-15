@@ -23,3 +23,22 @@ export function buildDriverEarningsDeltaLabel(previousToday: unknown, nextToday:
 
   return `Nouveau gain comptabilise: +${formatDriverEarningsAmount(nextToday - previousToday)} sur le jour.`;
 }
+
+export function formatDriverTripCompletedAt(completedAt: unknown) {
+  if (typeof completedAt !== 'string' || completedAt.trim().length === 0) {
+    return 'En attente de cloture';
+  }
+
+  const completedAtDate = new Date(completedAt);
+
+  if (!Number.isFinite(completedAtDate.getTime())) {
+    return 'Date de cloture indisponible';
+  }
+
+  return completedAtDate.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}

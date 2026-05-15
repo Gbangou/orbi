@@ -3,6 +3,7 @@ import {
   buildDriverEarningsDeltaLabel,
   formatDriverEarningsAmount,
   formatDriverEarningsCount,
+  formatDriverTripCompletedAt,
 } from '../lib/driver-earnings-signal';
 
 describe('driver earnings signal helpers', () => {
@@ -16,5 +17,10 @@ describe('driver earnings signal helpers', () => {
     expect(buildDriverEarningsDeltaLabel(1000, 2500)).toBe(
       `Nouveau gain comptabilise: +${formatDriverEarningsAmount(1500)} sur le jour.`,
     );
+  });
+
+  it('formats dirty trip completion dates without leaking Invalid Date', () => {
+    expect(formatDriverTripCompletedAt(null)).toBe('En attente de cloture');
+    expect(formatDriverTripCompletedAt('not-a-date')).toBe('Date de cloture indisponible');
   });
 });

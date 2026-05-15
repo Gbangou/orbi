@@ -18,6 +18,7 @@ import {
   buildDriverEarningsDeltaLabel,
   formatDriverEarningsAmount,
   formatDriverEarningsCount,
+  formatDriverTripCompletedAt,
 } from '../lib/driver-earnings-signal';
 import {
   InsightBadge,
@@ -302,14 +303,7 @@ export default function RevenusScreen() {
           </View>
           <Text style={styles.meta}>{formatOperationalStatus(trip.status)}</Text>
           <Text style={styles.tripDate}>
-            {trip.completedAt
-              ? new Date(trip.completedAt).toLocaleString('fr-FR', {
-                  day: '2-digit',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
-              : 'En attente de cloture'}
+            {formatDriverTripCompletedAt(trip.completedAt)}
           </Text>
         </View>
       ))}
