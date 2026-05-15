@@ -23,7 +23,13 @@ export function getReservationTimeLeftMs(
     return null;
   }
 
-  return new Date(reservationExpiresAt).getTime() - now;
+  const expiresAtMs = new Date(reservationExpiresAt).getTime();
+
+  if (!Number.isFinite(expiresAtMs)) {
+    return 0;
+  }
+
+  return expiresAtMs - now;
 }
 
 export function isOfferReservationActive(offer: DriverOffer, now: number) {
