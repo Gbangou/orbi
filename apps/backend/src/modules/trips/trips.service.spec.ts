@@ -1339,6 +1339,25 @@ describe('TripsService', () => {
           },
           createdAt: new Date('2026-04-17T08:02:00.000Z'),
         },
+        {
+          id: 'event-3',
+          eventType: 'ROUTE_POSITION_RECORDED',
+          payload: {
+            latitude: 12.34,
+            longitude: -1.53,
+            observedAt: '2026-04-17T08:03:00.000Z',
+          },
+          createdAt: new Date('2026-04-17T08:03:00.000Z'),
+        },
+        {
+          id: 'event-4',
+          eventType: 'ROUTE_MONITORING_ALERT',
+          payload: {
+            alertType: 'ROUTE_DEVIATION',
+            severity: 'critical',
+          },
+          createdAt: new Date('2026-04-17T08:04:00.000Z'),
+        },
       ],
     });
 
@@ -1367,9 +1386,18 @@ describe('TripsService', () => {
         model: 'Crypton',
       },
     });
+    expect(result.trip.routeMonitoring).toEqual({
+      state: 'critical',
+      alertCount: 1,
+      lastAlertType: 'ROUTE_DEVIATION',
+      lastAlertAt: '2026-04-17T08:04:00.000Z',
+      lastPositionAt: '2026-04-17T08:03:00.000Z',
+    });
     expect(result.trip.timeline).toEqual([
       expect.objectContaining({ label: 'Course acceptee par le chauffeur' }),
       expect.objectContaining({ label: 'Code de prise en charge genere' }),
+      expect.objectContaining({ label: 'Position trajet recue' }),
+      expect.objectContaining({ label: 'Alerte monitoring trajet' }),
     ]);
   });
 

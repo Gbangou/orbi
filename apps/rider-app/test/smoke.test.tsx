@@ -232,6 +232,13 @@ function buildTripDetail(eventIds: string[], labels: string[]) {
           model: 'Crypton',
         },
       },
+      routeMonitoring: {
+        state: 'critical',
+        alertCount: 1,
+        lastAlertType: 'ROUTE_DEVIATION',
+        lastAlertAt: '2026-04-19T08:03:00.000Z',
+        lastPositionAt: '2026-04-19T08:02:30.000Z',
+      },
       pickupCode: '1234',
       actualFare: 2500,
       currency: 'XOF',
@@ -671,6 +678,8 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Chauffeur verifie: Approved');
     expectText(renderer, 'Plaque a verifier: 11 AA 1234');
     expectText(renderer, 'Note 4.8/5 - 126 courses terminees');
+    expectText(renderer, 'Ride Check: Critical (1)');
+    expectText(renderer, 'Dernier signal: Route Deviation');
   });
 
   it('cancels a pending rider request from activity', async () => {

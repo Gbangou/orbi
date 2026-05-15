@@ -451,6 +451,29 @@ export default function ActivityScreen() {
     ];
   }
 
+  function buildRouteMonitoringLines() {
+    const routeMonitoring = activeTripDetail?.trip.routeMonitoring;
+
+    if (!routeMonitoring) {
+      return [];
+    }
+
+    if (routeMonitoring.state === 'unknown') {
+      return ['Ride Check: en attente du premier signal route.'];
+    }
+
+    if (routeMonitoring.state === 'clear') {
+      return ['Ride Check: trajet coherent sur le dernier signal route.'];
+    }
+
+    return [
+      `Ride Check: ${formatOperationalStatus(routeMonitoring.state)} (${routeMonitoring.alertCount})`,
+      routeMonitoring.lastAlertType
+        ? `Dernier signal: ${formatOperationalStatus(routeMonitoring.lastAlertType)}`
+        : 'Dernier signal: anomalie route',
+    ];
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <Text style={styles.title}>Historique des trajets</Text>
@@ -558,6 +581,7 @@ export default function ActivityScreen() {
           detailLines={[
             'Partage, code pickup et monitoring route connectes aux operations.',
             ...buildDriverVerificationLines(),
+            ...buildRouteMonitoringLines(),
             activeTrip.status,
             `Etat principal: ${primaryStatusLabel}`,
           ]}

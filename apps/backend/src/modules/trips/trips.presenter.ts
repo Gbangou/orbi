@@ -6,6 +6,51 @@ import {
   toAmount,
 } from './trips.utils';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function resolveRouteMonitoringSummary(
+  events: Array<{
+    eventType: string;
+    payload?: unknown;
+    createdAt: Date;
+  }>,
+) {
+  const latestRoutePosition = events
+    .filter((event) => event.eventType === 'ROUTE_POSITION_RECORDED')
+    .at(-1);
+  const routeAlertEvents = events.filter(
+    (event) => event.eventType === 'ROUTE_MONITORING_ALERT',
+  );
+  const latestRouteAlert = routeAlertEvents.at(-1);
+  const latestRouteAlertPayload = isRecord(latestRouteAlert?.payload)
+    ? latestRouteAlert.payload
+    : {};
+  const latestAlertType =
+    typeof latestRouteAlertPayload.alertType === 'string'
+      ? latestRouteAlertPayload.alertType
+      : null;
+
+  return {
+    state: latestRouteAlert
+      ? latestRouteAlertPayload.severity === 'critical'
+        ? 'critical'
+        : 'warning'
+      : latestRoutePosition
+        ? 'clear'
+        : 'unknown',
+    alertCount: routeAlertEvents.length,
+    lastAlertType: ['LONG_STOP', 'ROUTE_DEVIATION', 'NO_PROGRESS'].includes(
+      latestAlertType ?? '',
+    )
+      ? (latestAlertType as 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS')
+      : null,
+    lastAlertAt: latestRouteAlert?.createdAt.toISOString() ?? null,
+    lastPositionAt: latestRoutePosition?.createdAt.toISOString() ?? null,
+  };
+}
+
 export function serializeTripDetail(trip: {
   id: string;
   rideRequestId: string;
@@ -63,6 +108,7 @@ export function serializeTripDetail(trip: {
           model: trip.vehicle.model,
         },
       },
+      routeMonitoring: resolveRouteMonitoringSummary(trip.events),
       pickupCode: PICKUP_CODE_VISIBLE_STATUSES.includes(trip.status as never)
         ? extractPickupCode(trip.events)
         : null,

@@ -2426,6 +2426,13 @@ export type TripDetailResponse = {
         model: string;
       };
     };
+    routeMonitoring: {
+      state: 'unknown' | 'clear' | 'warning' | 'critical';
+      alertCount: number;
+      lastAlertType: 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS' | null;
+      lastAlertAt: string | null;
+      lastPositionAt: string | null;
+    };
     pickupCode?: string | null;
     actualFare: number;
     currency: string;
