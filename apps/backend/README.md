@@ -133,6 +133,8 @@ Important:
 
 - `RATE_LIMIT_ADAPTER=postgres` utilise la base PostgreSQL configuree comme
   backplane partage multi-instance
+- la table `mobilis_rate_limit_counters` est creee par migration Prisma; le
+  runtime applicatif ne depend pas d un droit DDL en production
 - `RATE_LIMIT_ADAPTER=redis` reste signale degrade tant que l adapter Redis
   n est pas branche
 - activer `RATE_LIMIT_STRICT=true` en preproduction/production pour bloquer un

@@ -18,6 +18,7 @@ import type {
 } from './realtime.types';
 
 const realtimeChannel = 'mobilis_realtime_events';
+const maxNotifyPayloadBytes = 7_500;
 
 @Injectable()
 export class PostgresRealtimeTransport
@@ -48,13 +49,23 @@ export class PostgresRealtimeTransport
   }
 
   publish(event: RealtimeEvent) {
+    const payload = JSON.stringify(event);
+    const payloadSize = Buffer.byteLength(payload, 'utf8');
+
+    if (payloadSize > maxNotifyPayloadBytes) {
+      this.markDegraded(
+        new Error(
+          `payload exceeds ${maxNotifyPayloadBytes} bytes (${payloadSize} bytes)`,
+        ),
+        'publish',
+      );
+      return;
+    }
+
     this.publishedEvents += 1;
 
     void this.pool
-      .query('SELECT pg_notify($1, $2)', [
-        realtimeChannel,
-        JSON.stringify(event),
-      ])
+      .query('SELECT pg_notify($1, $2)', [realtimeChannel, payload])
       .catch((error) => {
         this.markDegraded(error, 'publish');
       });

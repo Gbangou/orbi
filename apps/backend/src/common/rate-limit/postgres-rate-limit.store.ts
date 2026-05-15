@@ -6,7 +6,6 @@ import type { RateLimitDecision, RateLimitStore } from './rate-limit.types';
 @Injectable()
 export class PostgresRateLimitStore implements RateLimitStore, OnModuleDestroy {
   private readonly pool: Pool;
-  private initPromise: Promise<void> | null = null;
 
   constructor(private readonly configService: ConfigService) {
     const connectionString =
@@ -29,8 +28,6 @@ export class PostgresRateLimitStore implements RateLimitStore, OnModuleDestroy {
     limit: number,
     windowMs: number,
   ): Promise<RateLimitDecision> {
-    await this.ensureInitialized();
-
     const result = await this.pool.query<{
       count: number;
       reset_at_ms: string;
@@ -63,8 +60,6 @@ export class PostgresRateLimitStore implements RateLimitStore, OnModuleDestroy {
   }
 
   async snapshot() {
-    await this.ensureInitialized();
-
     await this.pool.query(
       `
         DELETE FROM mobilis_rate_limit_counters
@@ -86,21 +81,5 @@ export class PostgresRateLimitStore implements RateLimitStore, OnModuleDestroy {
 
   async onModuleDestroy() {
     await this.pool.end();
-  }
-
-  private ensureInitialized() {
-    this.initPromise ??= this.pool
-      .query(
-        `
-          CREATE TABLE IF NOT EXISTS mobilis_rate_limit_counters (
-            key TEXT PRIMARY KEY,
-            count INTEGER NOT NULL,
-            reset_at TIMESTAMPTZ NOT NULL
-          )
-        `,
-      )
-      .then(() => undefined);
-
-    return this.initPromise;
   }
 }

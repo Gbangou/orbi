@@ -85,6 +85,8 @@ Cela evite un faux sentiment de securite ou une prod multi-instance tournerait p
 
 - `RATE_LIMIT_ADAPTER=in-memory` reste acceptable pour le dev local et les previews mono-instance
 - `RATE_LIMIT_ADAPTER=postgres` utilise `DATABASE_URL` pour compter les limites entre instances
+- appliquer les migrations avant trafic: `mobilis_rate_limit_counters` doit
+  exister avant d activer le store partage
 - `RATE_LIMIT_ADAPTER=redis` n est pas encore implemente et reste refuse au demarrage production
 - `TRUST_PROXY=true` doit etre active uniquement quand l API est derriere un
   proxy/load balancer de confiance; le rate limit IP utilise `request.ip`, pas
