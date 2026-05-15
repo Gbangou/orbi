@@ -266,6 +266,25 @@ function buildDriverTripDetail(eventIds: string[], labels: string[]) {
       riderName: 'Awa Ouedraogo',
       driverName: 'Issa Driver',
       vehicleLabel: 'Yamaha Crypton',
+      driverVerification: {
+        verificationStatus: 'APPROVED',
+        phoneVerified: true,
+        averageRating: 4.8,
+        completedTripsCount: 126,
+        vehicle: {
+          plateNumber: '11 AA 1234',
+          color: 'rouge',
+          make: 'Yamaha',
+          model: 'Crypton',
+        },
+      },
+      routeMonitoring: {
+        state: 'warning',
+        alertCount: 1,
+        lastAlertType: 'LONG_STOP',
+        lastAlertAt: '2026-04-19T08:03:00.000Z',
+        lastPositionAt: '2026-04-19T08:02:30.000Z',
+      },
       pickupCode: '1234',
       actualFare: 3500,
       currency: 'XOF',
@@ -991,5 +1010,7 @@ describe('driver smoke flows', () => {
       }),
     );
     expectText(renderer, 'Course active');
+    expectText(renderer, 'Ride Check: Warning (1)');
+    expectText(renderer, 'Dernier signal: Long Stop');
   });
 });
