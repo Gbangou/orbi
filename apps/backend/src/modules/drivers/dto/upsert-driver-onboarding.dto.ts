@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -226,12 +228,15 @@ export class UpsertDriverOnboardingDto {
   @ApiProperty({ required: false, type: [DriverDocumentArtifactDto] })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(5)
   @ValidateNested({ each: true })
   @Type(() => DriverDocumentArtifactDto)
   documentArtifacts?: DriverDocumentArtifactDto[];
 
   @ApiProperty({ type: [DriverVehicleOnboardingDto] })
   @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(3)
   @ValidateNested({ each: true })
   @Type(() => DriverVehicleOnboardingDto)
   vehicles!: DriverVehicleOnboardingDto[];

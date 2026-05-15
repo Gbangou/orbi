@@ -9,7 +9,10 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  Validate,
   ValidateNested,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 
 const mobileErrorCodes = [
@@ -34,6 +37,32 @@ const mobileErrorSurfaces = [
   'network',
   'unknown',
 ] as const;
+
+@ValidatorConstraint({ name: 'isFlatMobileErrorContext', async: false })
+class IsFlatMobileErrorContext implements ValidatorConstraintInterface {
+  validate(value: unknown) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return false;
+    }
+
+    return Object.entries(value).every(([key, entry]) => {
+      if (key.length > 48) {
+        return false;
+      }
+
+      return (
+        entry === null ||
+        typeof entry === 'string' ||
+        (typeof entry === 'number' && Number.isFinite(entry)) ||
+        typeof entry === 'boolean'
+      );
+    });
+  }
+
+  defaultMessage() {
+    return 'Context must be a flat object with primitive values only.';
+  }
+}
 
 class MobileErrorClassificationDto {
   @IsIn(mobileErrorCodes)
@@ -100,6 +129,7 @@ class MobileErrorReportDto {
 
   @IsOptional()
   @IsObject()
+  @Validate(IsFlatMobileErrorContext)
   context?: Record<string, string | number | boolean | null>;
 }
 

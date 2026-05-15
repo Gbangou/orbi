@@ -276,10 +276,37 @@ describe('dirty input validation', () => {
         },
       ],
     });
+    const nestedContextErrors = await validateDto(SubmitMobileErrorReportsDto, {
+      reports: [
+        {
+          ...validReport,
+          context: {
+            screen: 'book',
+            token: { leaked: 'secret' },
+          },
+        },
+      ],
+    });
+    const unsafeContextKeyErrors = await validateDto(
+      SubmitMobileErrorReportsDto,
+      {
+        reports: [
+          {
+            ...validReport,
+            context: {
+              ['x'.repeat(80)]: 'too-large-key',
+              retryCount: Number.POSITIVE_INFINITY,
+            },
+          },
+        ],
+      },
+    );
 
     expect(validErrors).toEqual([]);
     expect(oversizedErrors.length).toBeGreaterThan(0);
     expect(dirtyErrors.length).toBeGreaterThan(0);
+    expect(nestedContextErrors.length).toBeGreaterThan(0);
+    expect(unsafeContextKeyErrors.length).toBeGreaterThan(0);
   });
 
   it('bounds voice transcripts while accepting real local phrasing', async () => {
@@ -411,6 +438,81 @@ describe('dirty input validation', () => {
     });
 
     expect(errors).toEqual([]);
+  });
+
+  it('bounds driver onboarding collection sizes before writes fan out', async () => {
+    const vehicle = {
+      plateNumber: '11 JD 9021',
+      make: 'Yamaha',
+      model: 'Crypton',
+      color: 'Bleu',
+      year: 2022,
+      type: 'MOTORCYCLE',
+      tier: 'MOTO_STANDARD',
+      seats: 1,
+    };
+    const artifact = {
+      type: 'IDENTITY_DOCUMENT',
+      fileName: 'carte-identite.pdf',
+      storageKey: 'driver-1/identity/carte-identite.pdf',
+      mimeType: 'application/pdf',
+      expiresAt: '2027-04-30T00:00:00.000Z',
+    };
+    const emptyVehicles = await validateDto(UpsertDriverOnboardingDto, {
+      phoneNumber: '+22670000000',
+      licenseNumber: 'BF-12345',
+      city: 'OUAGADOUGOU',
+      serviceRadiusKm: 8,
+      documents: {
+        identityDocumentProvided: true,
+        driverLicenseProvided: true,
+        vehicleRegistrationProvided: true,
+        insuranceProofProvided: true,
+        selfieMatchProvided: true,
+      },
+      documentArtifacts: [artifact],
+      vehicles: [],
+    });
+    const tooManyVehicles = await validateDto(UpsertDriverOnboardingDto, {
+      phoneNumber: '+22670000000',
+      licenseNumber: 'BF-12345',
+      city: 'OUAGADOUGOU',
+      serviceRadiusKm: 8,
+      documents: {
+        identityDocumentProvided: true,
+        driverLicenseProvided: true,
+        vehicleRegistrationProvided: true,
+        insuranceProofProvided: true,
+        selfieMatchProvided: true,
+      },
+      documentArtifacts: [artifact],
+      vehicles: Array.from({ length: 4 }, (_, index) => ({
+        ...vehicle,
+        plateNumber: `11 JD 902${index}`,
+      })),
+    });
+    const tooManyArtifacts = await validateDto(UpsertDriverOnboardingDto, {
+      phoneNumber: '+22670000000',
+      licenseNumber: 'BF-12345',
+      city: 'OUAGADOUGOU',
+      serviceRadiusKm: 8,
+      documents: {
+        identityDocumentProvided: true,
+        driverLicenseProvided: true,
+        vehicleRegistrationProvided: true,
+        insuranceProofProvided: true,
+        selfieMatchProvided: true,
+      },
+      documentArtifacts: Array.from({ length: 6 }, (_, index) => ({
+        ...artifact,
+        storageKey: `driver-1/identity/carte-identite-${index}.pdf`,
+      })),
+      vehicles: [vehicle],
+    });
+
+    expect(emptyVehicles.length).toBeGreaterThan(0);
+    expect(tooManyVehicles.length).toBeGreaterThan(0);
+    expect(tooManyArtifacts.length).toBeGreaterThan(0);
   });
 
   it('bounds admin driver onboarding export filters', async () => {
