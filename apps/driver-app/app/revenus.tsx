@@ -7,13 +7,18 @@ import {
   type DriverEarningsResponse,
   type MyTripsResponse,
 } from '@mobilis/api';
-import { formatOperationalStatus, formatXof, mobilisTheme } from '@mobilis/ui';
+import { formatOperationalStatus, mobilisTheme } from '@mobilis/ui';
 import { restoreDriverSession } from '../lib/auth';
 import { resolveDriverAppError } from '../lib/session-feedback';
 import {
   buildDriverEarningsStatusLabel,
   resolveDriverActiveFlow,
 } from '../lib/driver-active-flow';
+import {
+  buildDriverEarningsDeltaLabel,
+  formatDriverEarningsAmount,
+  formatDriverEarningsCount,
+} from '../lib/driver-earnings-signal';
 import {
   InsightBadge,
   LiveStatusBanner,
@@ -97,9 +102,13 @@ export default function RevenusScreen() {
     const previousSummary = previousSummaryRef.current;
 
     if (previousSummary) {
-      if (earnings.summary.today > previousSummary.today) {
-        const delta = earnings.summary.today - previousSummary.today;
-        setEarningsTransitionLabel(`Nouveau gain comptabilise: +${formatXof(delta)} sur le jour.`);
+      const deltaLabel = buildDriverEarningsDeltaLabel(
+        previousSummary.today,
+        earnings.summary.today,
+      );
+
+      if (deltaLabel) {
+        setEarningsTransitionLabel(deltaLabel);
       } else if (earnings.summary.completedTrips > previousSummary.completedTrips) {
         setEarningsTransitionLabel('Une course supplementaire vient d etre cloturee.');
       } else if (earnings.summary.week !== previousSummary.week) {
@@ -193,12 +202,12 @@ export default function RevenusScreen() {
           />
           <MetricTile
             label="Semaine"
-            value={formatXof(earnings.summary.week)}
-            helper={`${earnings.summary.completedTrips} courses bouclees`}
+            value={formatDriverEarningsAmount(earnings.summary.week)}
+            helper={`${formatDriverEarningsCount(earnings.summary.completedTrips)} courses bouclees`}
           />
           <MetricTile
             label="Paiement moyen"
-            value={formatXof(earnings.summary.averagePayout)}
+            value={formatDriverEarningsAmount(earnings.summary.averagePayout)}
             helper="gain net moyen par course"
           />
         </View>
@@ -222,11 +231,11 @@ export default function RevenusScreen() {
         <View style={styles.heroTopRow}>
           <View style={styles.heroHeading}>
             <Text style={styles.heroLabel}>Cap du jour</Text>
-            <Text style={styles.heroValue}>{formatXof(earnings.summary.today)}</Text>
+            <Text style={styles.heroValue}>{formatDriverEarningsAmount(earnings.summary.today)}</Text>
           </View>
           <InsightBadge
             label="Courses"
-            value={String(earnings.summary.completedTrips)}
+            value={formatDriverEarningsCount(earnings.summary.completedTrips)}
             tone="amber"
           />
         </View>
@@ -244,17 +253,17 @@ export default function RevenusScreen() {
       <View style={styles.metricsGrid}>
         <View style={styles.card}>
           <Text style={styles.label}>Cette semaine</Text>
-          <Text style={styles.value}>{formatXof(earnings.summary.week)}</Text>
-          <Text style={styles.meta}>{earnings.summary.completedTrips} courses bouclees</Text>
+          <Text style={styles.value}>{formatDriverEarningsAmount(earnings.summary.week)}</Text>
+          <Text style={styles.meta}>{formatDriverEarningsCount(earnings.summary.completedTrips)} courses bouclees</Text>
         </View>
         <View style={styles.card}>
           <Text style={styles.label}>Ce mois</Text>
-          <Text style={styles.value}>{formatXof(earnings.summary.month)}</Text>
+          <Text style={styles.value}>{formatDriverEarningsAmount(earnings.summary.month)}</Text>
           <Text style={styles.meta}>vision long terme de votre activite</Text>
         </View>
         <View style={styles.card}>
           <Text style={styles.label}>Moyenne</Text>
-          <Text style={styles.value}>{formatXof(earnings.summary.averagePayout)}</Text>
+          <Text style={styles.value}>{formatDriverEarningsAmount(earnings.summary.averagePayout)}</Text>
           <Text style={styles.meta}>cap de rentabilite par trajet</Text>
         </View>
       </View>
@@ -289,7 +298,7 @@ export default function RevenusScreen() {
           ) : null}
           <View style={styles.tripHeader}>
             <Text style={styles.tripRoute}>{trip.route}</Text>
-            <Text style={styles.tripPayout}>{formatXof(trip.payout)}</Text>
+            <Text style={styles.tripPayout}>{formatDriverEarningsAmount(trip.payout)}</Text>
           </View>
           <Text style={styles.meta}>{formatOperationalStatus(trip.status)}</Text>
           <Text style={styles.tripDate}>

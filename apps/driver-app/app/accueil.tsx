@@ -17,7 +17,6 @@ import {
   describeRealtimeConnection,
   formatRealtimeBadgeLabel,
   formatOperationalStatus,
-  formatXof,
   mobilisCopy,
   mobilisTheme,
 } from '@mobilis/ui';
@@ -30,6 +29,7 @@ import {
 } from '../lib/realtime-widgets';
 import { DriverJourneySection } from '../lib/driver-journey';
 import { restoreDriverSession } from '../lib/auth';
+import { formatDriverEarningsAmount } from '../lib/driver-earnings-signal';
 import { resolveDriverAppError } from '../lib/session-feedback';
 import {
   formatReservationCountdown,
@@ -314,7 +314,7 @@ export default function DriverHomeScreen() {
           />
           <MetricTile
             label="Cap aujourd hui"
-            value={formatXof(earnings?.summary.today ?? 0)}
+            value={formatDriverEarningsAmount(earnings?.summary.today ?? 0)}
           />
         </View>
         {flow.operationalStatus === 'SUSPENDED' ? (
@@ -370,13 +370,13 @@ export default function DriverHomeScreen() {
       <View style={styles.metricsGrid}>
         <DashboardMetricCard
           label="Aujourd hui"
-          value={formatXof(earnings?.summary.today ?? 0)}
+          value={formatDriverEarningsAmount(earnings?.summary.today ?? 0)}
           helper="Revenus du jour"
           tone="amber"
         />
         <DashboardMetricCard
           label="Semaine"
-          value={formatXof(earnings?.summary.week ?? 0)}
+          value={formatDriverEarningsAmount(earnings?.summary.week ?? 0)}
           helper={`${earnings?.summary.completedTrips ?? 0} courses completees`}
           tone="sky"
         />
