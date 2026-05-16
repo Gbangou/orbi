@@ -36,7 +36,15 @@ import {
   buildDriverProfileStatusLabel,
   resolveDriverActiveFlow,
 } from '../lib/driver-active-flow';
-import { formatDriverProfileDateTime } from '../lib/driver-profile-signal';
+import {
+  formatDriverOnboardingProgress,
+  formatDriverProfileBytes,
+  formatDriverProfileCount,
+  formatDriverProfileDateTime,
+  formatDriverProfileDistanceKm,
+  formatDriverProfilePercent,
+  formatDriverProfileRating,
+} from '../lib/driver-profile-signal';
 
 const cityOptions = [
   'OUAGADOUGOU',
@@ -245,14 +253,6 @@ function inferMimeType(fileName: string) {
   }
 
   return 'application/octet-stream';
-}
-
-function formatBytes(bytes: number) {
-  if (bytes >= 1_000_000) {
-    return `${(bytes / 1_000_000).toFixed(1)} MB`;
-  }
-
-  return `${Math.round(bytes / 1_000)} KB`;
 }
 
 function buildInitialForm(profile: DriverProfileResponse): OnboardingFormState {
@@ -818,7 +818,7 @@ export default function ProfilScreen() {
           />
           <InsightBadge
             label="Readiness"
-            value={`${profile.profile.onboarding.readinessPercent}%`}
+            value={formatDriverProfilePercent(profile.profile.onboarding.readinessPercent)}
             tone="sky"
           />
         </View>
@@ -828,17 +828,17 @@ export default function ProfilScreen() {
         <View style={styles.metricsRow}>
           <MetricTile
             label="Rayon"
-            value={`${profile.profile.serviceRadiusKm ?? 'ND'} km`}
+            value={formatDriverProfileDistanceKm(profile.profile.serviceRadiusKm)}
             helper="zone de prise en charge"
           />
           <MetricTile
             label="Note"
-            value={String(profile.profile.averageRating ?? 'Nouvelle')}
+            value={formatDriverProfileRating(profile.profile.averageRating, 'Nouvelle')}
             helper="moyenne qualite"
           />
           <MetricTile
             label="Vehicules"
-            value={String(profile.profile.vehicles.length)}
+            value={formatDriverProfileCount(profile.profile.vehicles.length)}
             helper="vehicules synchronises"
           />
         </View>
@@ -852,9 +852,7 @@ export default function ProfilScreen() {
       <View style={[styles.card, profileTransitionLabel ? styles.cardHighlight : null]}>
         <Text style={styles.name}>Onboarding securise</Text>
         <Text style={styles.meta}>
-          Dossier {profile.profile.onboarding.completedItems}/
-          {profile.profile.onboarding.totalItems} complete a{' '}
-          {profile.profile.onboarding.readinessPercent}%
+          {formatDriverOnboardingProgress(profile.profile.onboarding)}
         </Text>
         <Text style={styles.meta}>
           Ville: {profile.profile.onboarding.city ?? 'Non definie'}
@@ -1059,7 +1057,7 @@ export default function ProfilScreen() {
                 Lien securise pret jusqu au{' '}
                 {formatDriverProfileDateTime(preparedDocumentLinks[document.type]?.expiresAt)}
                 . Limite:{' '}
-                {formatBytes(
+                {formatDriverProfileBytes(
                   preparedDocumentLinks[document.type]?.constraints.maxBytes ?? 0,
                 )}
                 , formats:{' '}
@@ -1111,14 +1109,14 @@ export default function ProfilScreen() {
         <View style={styles.metricCard}>
           <Text style={styles.metricLabel}>Rayon</Text>
           <Text style={styles.metricValue}>
-            {profile.profile.serviceRadiusKm ?? 'Non defini'} km
+            {formatDriverProfileDistanceKm(profile.profile.serviceRadiusKm, 'Non defini')}
           </Text>
           <Text style={styles.meta}>zone de prise en charge</Text>
         </View>
         <View style={styles.metricCard}>
           <Text style={styles.metricLabel}>Note</Text>
           <Text style={styles.metricValue}>
-            {profile.profile.averageRating ?? 'Nouvelle activite'}
+            {formatDriverProfileRating(profile.profile.averageRating)}
           </Text>
           <Text style={styles.meta}>moyenne qualite</Text>
         </View>
