@@ -772,6 +772,7 @@ export class DispatchCoordinator {
       type,
       entityId: input.rideRequestId,
       riderId: input.riderId ?? undefined,
+      driverId: input.actorDriverId ?? undefined,
       payload: {
         driverId: input.actorDriverId ?? null,
         expiresAt: input.expiresAt ?? null,

@@ -9,10 +9,11 @@ import {
   map,
   merge,
 } from 'rxjs';
-import type {
-  RealtimeEvent,
-  RealtimeEventFilter,
-  RealtimeTransport,
+import {
+  canReceiveRealtimeEvent,
+  type RealtimeEvent,
+  type RealtimeEventFilter,
+  type RealtimeTransport,
 } from './realtime.types';
 
 @Injectable()
@@ -30,7 +31,7 @@ export class InMemoryRealtimeTransport implements RealtimeTransport {
     this.activeStreams += 1;
 
     const eventStream = this.events$.pipe(
-      filter((event) => this.canReceiveEvent(event, filterOptions)),
+      filter((event) => canReceiveRealtimeEvent(event, filterOptions)),
       map((event) => ({
         data: event,
         type: event.type,
@@ -62,24 +63,5 @@ export class InMemoryRealtimeTransport implements RealtimeTransport {
       activeStreams: this.activeStreams,
       publishedEvents: this.publishedEvents,
     };
-  }
-
-  private canReceiveEvent(
-    event: RealtimeEvent,
-    filterOptions: RealtimeEventFilter,
-  ) {
-    if (['ADMIN', 'OPS', 'SUPPORT'].includes(filterOptions.role)) {
-      return true;
-    }
-
-    if (filterOptions.role === 'RIDER') {
-      return !event.riderId || event.riderId === filterOptions.riderId;
-    }
-
-    if (filterOptions.role === 'DRIVER') {
-      return !event.driverId || event.driverId === filterOptions.driverId;
-    }
-
-    return false;
   }
 }

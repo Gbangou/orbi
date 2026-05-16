@@ -39,3 +39,34 @@ export type RealtimeTransport = {
 };
 
 export const REALTIME_TRANSPORT = Symbol('REALTIME_TRANSPORT');
+
+const adminRealtimeRoles = new Set(['ADMIN', 'OPS', 'SUPPORT']);
+
+export function canReceiveRealtimeEvent(
+  event: RealtimeEvent,
+  filterOptions: RealtimeEventFilter,
+) {
+  if (adminRealtimeRoles.has(filterOptions.role)) {
+    return true;
+  }
+
+  if (event.channel === 'admin') {
+    return false;
+  }
+
+  if (filterOptions.role === 'RIDER') {
+    return Boolean(
+      filterOptions.riderId && event.riderId === filterOptions.riderId,
+    );
+  }
+
+  if (filterOptions.role === 'DRIVER') {
+    if (event.driverId) {
+      return event.driverId === filterOptions.driverId;
+    }
+
+    return event.channel === 'ride-request';
+  }
+
+  return false;
+}

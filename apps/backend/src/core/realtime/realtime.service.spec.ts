@@ -32,6 +32,91 @@ describe('RealtimeService', () => {
     expect(result.type).toBe('trip.updated');
   });
 
+  it('keeps admin and unrelated rider events off rider streams', () => {
+    const service = new RealtimeService(new InMemoryRealtimeTransport(), {
+      isEnabled: jest.fn().mockReturnValue(true),
+      getMode: jest.fn().mockReturnValue('on'),
+    } as never);
+    const receivedEvents: string[] = [];
+    const subscription = service
+      .stream({
+        role: 'RIDER',
+        actorId: 'user-1',
+        riderId: 'rider-1',
+        driverId: null,
+      })
+      .subscribe((event) => {
+        receivedEvents.push(event.type ?? 'message');
+      });
+
+    service.publish({
+      channel: 'admin',
+      type: 'system.health-alert',
+      entityId: 'health-1',
+    });
+    service.publish({
+      channel: 'ride-request',
+      type: 'ride-request.created',
+      entityId: 'request-1',
+      riderId: 'rider-2',
+    });
+
+    expect(receivedEvents).toEqual([]);
+
+    subscription.unsubscribe();
+  });
+
+  it('broadcasts market ride-request events to drivers but scopes addressed driver events', () => {
+    const service = new RealtimeService(new InMemoryRealtimeTransport(), {
+      isEnabled: jest.fn().mockReturnValue(true),
+      getMode: jest.fn().mockReturnValue('on'),
+    } as never);
+    const receivedEvents: string[] = [];
+    const subscription = service
+      .stream({
+        role: 'DRIVER',
+        actorId: 'user-1',
+        riderId: null,
+        driverId: 'driver-1',
+      })
+      .subscribe((event) => {
+        receivedEvents.push(event.type ?? 'message');
+      });
+
+    service.publish({
+      channel: 'admin',
+      type: 'system.health-alert',
+      entityId: 'health-1',
+    });
+    service.publish({
+      channel: 'ride-request',
+      type: 'ride-request.created',
+      entityId: 'request-1',
+      riderId: 'rider-1',
+    });
+    service.publish({
+      channel: 'ride-request',
+      type: 'ride-request.reservation-assigned',
+      entityId: 'request-2',
+      riderId: 'rider-2',
+      driverId: 'driver-2',
+    });
+    service.publish({
+      channel: 'ride-request',
+      type: 'ride-request.reservation-assigned',
+      entityId: 'request-3',
+      riderId: 'rider-3',
+      driverId: 'driver-1',
+    });
+
+    expect(receivedEvents).toEqual([
+      'ride-request.created',
+      'ride-request.reservation-assigned',
+    ]);
+
+    subscription.unsubscribe();
+  });
+
   it('tracks published events in the realtime snapshot', () => {
     const service = new RealtimeService(new InMemoryRealtimeTransport(), {
       isEnabled: jest.fn().mockReturnValue(true),
