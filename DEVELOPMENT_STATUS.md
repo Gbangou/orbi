@@ -164,6 +164,10 @@ paiement provider, observabilite et runbooks verts.
 - Reglages dispatch admin migres derriere route serveur locale:
   lecture/update/reset passent par `/api/admin/dispatch-settings`, session
   HttpOnly, no-store, garde mutation same-origin et bornes locales avant proxy.
+- Revue onboarding chauffeur migree derriere routes serveur locales: file,
+  historique/export CSV, decisions ops, liens signes documents et verification
+  provider utilisent maintenant la session HttpOnly, no-store, IDs bornes et
+  garde mutation same-origin pour les actions sensibles.
 
 ## Architecture active
 
@@ -186,10 +190,10 @@ paiement provider, observabilite et runbooks verts.
    les frontieres provider deja testees.
 3. Adapter S3/GCS production pour objets documentaires.
 4. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
-5. Etendre le proxy serveur admin HttpOnly aux autres actions sensibles:
-   onboarding documents; wallet/payout, refund/replay paiement, support,
-   health, jobs, feature flags et dispatch sont deja couverts cote routes
-   serveur locales.
+5. Verifier qu il ne reste pas de surface admin sensible exposee en Bearer
+   navigateur; wallet/payout, refund/replay paiement, support, health, jobs,
+   feature flags, dispatch et onboarding documents sont deja couverts cote
+   routes serveur locales.
 6. Continuer le programme de tests securite iteratif:
    - API1/API5: IDOR/BOLA et function-level authorization sur onboarding
      documents, dispatch, support tickets et exports finance.
@@ -237,8 +241,8 @@ git diff --check
   terrain repetee.
 - Les clients mobiles conservent le modele Bearer token pour Expo; l'admin web
   a migre plusieurs surfaces sensibles vers routes serveur + cookie HttpOnly,
-  avec contrat de regression sur les mutations locales; onboarding documents
-  doit encore suivre ce modele avant exposition publique large.
+  avec contrat de regression sur les mutations locales; il faut continuer a
+  scanner les nouvelles surfaces admin avant exposition publique large.
 - Le backend refuse maintenant les identifiants admin et mobiles malformes
   avant Prisma; les controles IDOR metier restent assures par les requetes
   scoping existantes, et doivent continuer a etre testes par role.

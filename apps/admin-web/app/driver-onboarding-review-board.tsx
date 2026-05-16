@@ -2,16 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  authenticateAndFetchCurrentUser,
-  createMobilisApiClient,
-  fetchAdminDriverDocumentViewLink,
-  fetchAdminDriverOnboardingExportCsv,
-  fetchAdminDriverOnboardingExportHistory,
-  fetchAdminDriverOnboardingQueue,
-  updateAdminDriverOnboardingReview,
-  verifyAdminDriverDocumentObjectWithProvider,
   type DriverOnboardingExportHistoryResponse,
   type DriverOnboardingQueueResponse,
+  type DriverDocumentObjectVerificationResponse,
+  type DriverDocumentViewLinkResponse,
+  type DriverOnboardingReviewUpdateResponse,
 } from '@mobilis/api';
 import { describeRealtimeConnection } from '@mobilis/ui';
 import {
@@ -21,7 +16,10 @@ import {
   resolveVisibleDriverOnboardingQueue,
   type DriverOnboardingGuidanceFilter,
 } from './admin-ops-kernel';
-import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
+import {
+  adminMutationHeaderName,
+  adminMutationHeaderValue,
+} from './admin-server-security';
 import { subscribeToAdminRealtime } from './admin-realtime';
 import { resolveSafeDocumentUrl } from './admin-url-security';
 
@@ -159,6 +157,117 @@ function formatExportFilterLabel(
   return labels[value];
 }
 
+async function fetchDriverOnboardingQueue() {
+  const response = await fetch('/api/admin/driver-onboarding-queue');
+
+  if (!response.ok) {
+    throw new Error('Driver onboarding queue fetch failed');
+  }
+
+  return (await response.json()) as DriverOnboardingQueueResponse;
+}
+
+async function fetchDriverOnboardingExportHistory() {
+  const response = await fetch(
+    '/api/admin/driver-onboarding/export-history?page=1&pageSize=6',
+  );
+
+  if (!response.ok) {
+    throw new Error('Driver onboarding export history fetch failed');
+  }
+
+  return (await response.json()) as DriverOnboardingExportHistoryResponse;
+}
+
+async function fetchDriverOnboardingExportCsv(query: {
+  guidanceFilter: DriverOnboardingGuidanceFilter;
+  searchQuery?: string;
+  limit: number;
+}) {
+  const params = new URLSearchParams({
+    guidanceFilter: query.guidanceFilter,
+    limit: String(query.limit),
+  });
+
+  if (query.searchQuery) {
+    params.set('searchQuery', query.searchQuery);
+  }
+
+  const response = await fetch(
+    `/api/admin/driver-onboarding/export.csv?${params.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error('Driver onboarding CSV export failed');
+  }
+
+  return response.text();
+}
+
+async function updateDriverOnboardingReview(
+  driverId: string,
+  payload: {
+    status: 'UNDER_REVIEW' | 'APPROVED' | 'CHANGES_REQUESTED';
+    decisionReason: string;
+    supportPriority: number;
+    documentDecisions?: Array<{
+      documentId: string;
+      status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+    }>;
+  },
+) {
+  const response = await fetch(`/api/admin/driver-onboarding/${driverId}/review`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      [adminMutationHeaderName]: adminMutationHeaderValue,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error('Driver onboarding review update failed');
+  }
+
+  return (await response.json()) as DriverOnboardingReviewUpdateResponse;
+}
+
+async function fetchDriverDocumentViewLink(
+  driverId: string,
+  documentId: string,
+) {
+  const response = await fetch(
+    `/api/admin/driver-onboarding/${driverId}/documents/${documentId}/view-link`,
+  );
+
+  if (!response.ok) {
+    throw new Error('Driver document view link fetch failed');
+  }
+
+  return (await response.json()) as DriverDocumentViewLinkResponse;
+}
+
+async function verifyDriverDocumentObjectWithProvider(
+  driverId: string,
+  documentId: string,
+) {
+  const response = await fetch(
+    `/api/admin/driver-onboarding/${driverId}/documents/${documentId}/object-verification/verify-provider`,
+    {
+      method: 'POST',
+      headers: {
+        [adminMutationHeaderName]: adminMutationHeaderValue,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error('Driver document object verification failed');
+  }
+
+  return (await response.json()) as DriverDocumentObjectVerificationResponse;
+}
+
 export function DriverOnboardingReviewBoard({
   initialQueue,
 }: DriverOnboardingReviewBoardProps) {
@@ -179,49 +288,27 @@ export function DriverOnboardingReviewBoard({
   const previousDriversRef =
     useRef<DriverOnboardingReviewBoardProps['initialQueue'] | null>(null);
 
-  const client = useMemo(
-    () =>
-      createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-        version: mobilisRuntimeConfig.apiVersion,
-      }),
-    [],
-  );
-
-  const withAdminClient = useCallback(async () => {
-    const { authClient } = await authenticateAndFetchCurrentUser(
-      client,
-      mobilisDemoAccounts.admin,
-    );
-
-    return authClient;
-  }, [client]);
-
   const refreshQueue = useCallback(
     async (message = 'File onboarding actualisee.') => {
       try {
-        const authClient = await withAdminClient();
-        const response = await fetchAdminDriverOnboardingQueue(authClient);
+        const response = await fetchDriverOnboardingQueue();
         setDrivers(response.drivers);
         setStatus(message);
       } catch {
         setStatus("Impossible d'actualiser la file onboarding.");
       }
     },
-    [withAdminClient],
+    [],
   );
 
   const refreshExportHistory = useCallback(async () => {
     try {
-      const authClient = await withAdminClient();
-      const response = await fetchAdminDriverOnboardingExportHistory(authClient, {
-        page: 1,
-        pageSize: 6,
-      });
+      const response = await fetchDriverOnboardingExportHistory();
       setExportHistory(response.exports);
     } catch {
       setExportHistory([]);
     }
-  }, [withAdminClient]);
+  }, []);
 
   const summary = useMemo(() => {
     const approved = drivers.filter(
@@ -358,9 +445,8 @@ export function DriverOnboardingReviewBoard({
     setStatus('Mise a jour de la decision ops...');
 
     try {
-      const authClient = await withAdminClient();
       const driver = drivers.find((candidate) => candidate.id === driverId);
-      await updateAdminDriverOnboardingReview(authClient, driverId, {
+      await updateDriverOnboardingReview(driverId, {
         status: decision,
         decisionReason:
           decision === 'APPROVED'
@@ -399,12 +485,7 @@ export function DriverOnboardingReviewBoard({
     setStatus('Generation du lien signe...');
 
     try {
-      const authClient = await withAdminClient();
-      const response = await fetchAdminDriverDocumentViewLink(
-        authClient,
-        driverId,
-        documentId,
-      );
+      const response = await fetchDriverDocumentViewLink(driverId, documentId);
       const signedUrl = resolveSafeDocumentUrl(response.signedUrl);
 
       if (!signedUrl) {
@@ -429,9 +510,7 @@ export function DriverOnboardingReviewBoard({
     setStatus('Verification provider du justificatif...');
 
     try {
-      const authClient = await withAdminClient();
-      const response = await verifyAdminDriverDocumentObjectWithProvider(
-        authClient,
+      const response = await verifyDriverDocumentObjectWithProvider(
         driverId,
         documentId,
       );
@@ -451,8 +530,7 @@ export function DriverOnboardingReviewBoard({
     setStatus('Generation export CSV audite...');
 
     try {
-      const authClient = await withAdminClient();
-      const csv = await fetchAdminDriverOnboardingExportCsv(authClient, {
+      const csv = await fetchDriverOnboardingExportCsv({
         guidanceFilter,
         searchQuery: searchQuery.trim() || undefined,
         limit: 100,
