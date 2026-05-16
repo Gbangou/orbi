@@ -1734,7 +1734,7 @@ export class PaymentsService {
 
     return Boolean(
       providerCurrency &&
-        providerCurrency.toUpperCase() !== attempt.currency.toUpperCase(),
+      providerCurrency.toUpperCase() !== attempt.currency.toUpperCase(),
     );
   }
 

@@ -14,8 +14,7 @@ export class DriverWalletRecoveryAdjustmentDto {
   @IsString()
   @MaxLength(128)
   @Matches(/^[a-z0-9._-]{8,128}$/i, {
-    message:
-      'idempotencyKey must be 8 to 128 URL-safe characters.',
+    message: 'idempotencyKey must be 8 to 128 URL-safe characters.',
   })
   idempotencyKey!: string;
 }

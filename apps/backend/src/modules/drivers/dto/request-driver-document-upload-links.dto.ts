@@ -20,7 +20,7 @@ const supportedDriverDocumentTypes = [
   'INSURANCE_PROOF',
   'SELFIE_VERIFICATION',
 ] as const;
-const safeLeafFileNamePattern = /^[^<>:"/\\|?*\x00-\x1F\x7F]+$/;
+const safeLeafFileNamePattern = /^[^\p{Cc}<>:"/\\|?*]+$/u;
 
 class DriverDocumentUploadRequestDto {
   @ApiProperty({ enum: supportedDriverDocumentTypes })

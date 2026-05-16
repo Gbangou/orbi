@@ -1214,7 +1214,10 @@ function resolveLaunchSecurityAssurance(input: {
   const criticalOpenGates = gates.filter(
     (gate) => gate.priority === 'critical' && gate.status !== 'covered',
   ).length;
-  const coverageRate = safeRate(coveredGates + partialGates * 0.5, gates.length);
+  const coverageRate = safeRate(
+    coveredGates + partialGates * 0.5,
+    gates.length,
+  );
 
   return {
     summary: {
@@ -1958,7 +1961,9 @@ export class AdminService {
 
     return {
       attemptPressure:
-        job.maxAttempts > 0 ? Math.round((job.attempts / job.maxAttempts) * 100) : 0,
+        job.maxAttempts > 0
+          ? Math.round((job.attempts / job.maxAttempts) * 100)
+          : 0,
       canRequeueSafely,
       owner,
       riskSignals,

@@ -67,7 +67,8 @@ describe('PaymentsService', () => {
           'payments.cinetpay.siteId': 'site_123',
           'payments.cinetpay.apiKey': 'api_123',
           'payments.webhookSecret': 'secret_123',
-          'payments.defaultRedirectUrl': 'https://app.mobilis.bf/payments/return',
+          'payments.defaultRedirectUrl':
+            'https://app.mobilis.bf/payments/return',
         };
 
         if (key === 'app.frontendOrigins') {
@@ -1432,7 +1433,9 @@ describe('PaymentsService', () => {
         },
         idempotencyHash,
       });
-    prisma.paymentAttempt.create.mockRejectedValue(prismaUniqueConstraintError());
+    prisma.paymentAttempt.create.mockRejectedValue(
+      prismaUniqueConstraintError(),
+    );
 
     const result = await service.createCheckoutIntent(
       {
@@ -1515,9 +1518,7 @@ describe('PaymentsService', () => {
         },
         'checkout key with spaces',
       ),
-    ).rejects.toThrow(
-      'Idempotency key must be 8 to 128 URL-safe characters.',
-    );
+    ).rejects.toThrow('Idempotency key must be 8 to 128 URL-safe characters.');
     expect(prisma.paymentAttempt.create).not.toHaveBeenCalled();
   });
 

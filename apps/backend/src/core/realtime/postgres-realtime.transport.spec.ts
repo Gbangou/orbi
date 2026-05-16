@@ -97,10 +97,9 @@ describe('PostgresRealtimeTransport', () => {
   });
 
   it('streams PostgreSQL notifications through role-aware filters', async () => {
-    const notificationHandlers: Array<(message: {
-      channel: string;
-      payload?: string;
-    }) => void> = [];
+    const notificationHandlers: Array<
+      (message: { channel: string; payload?: string }) => void
+    > = [];
     mockClientOn.mockImplementation(
       (
         event: string,
@@ -154,7 +153,9 @@ describe('PostgresRealtimeTransport', () => {
         riderId: 'rider-1',
       }),
     });
-    expect(mockClientQuery).toHaveBeenCalledWith('LISTEN mobilis_realtime_events');
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      'LISTEN mobilis_realtime_events',
+    );
     expect(transport.snapshot()).toEqual(
       expect.objectContaining({
         activeStreams: 0,
@@ -163,10 +164,9 @@ describe('PostgresRealtimeTransport', () => {
   });
 
   it('marks the transport degraded when a notification cannot be parsed', async () => {
-    const notificationHandlers: Array<(message: {
-      channel: string;
-      payload?: string;
-    }) => void> = [];
+    const notificationHandlers: Array<
+      (message: { channel: string; payload?: string }) => void
+    > = [];
     mockClientOn.mockImplementation(
       (
         event: string,

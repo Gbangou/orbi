@@ -22,6 +22,7 @@ export class NotificationDeliveryService {
     input: NotificationDeliveryInput,
   ): Promise<NotificationDeliveryResult> {
     this.assertDeliveryInput(input);
+    await Promise.resolve();
     const provider = this.resolveProvider();
 
     if (provider !== 'local') {

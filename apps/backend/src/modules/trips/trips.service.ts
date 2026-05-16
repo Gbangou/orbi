@@ -1071,14 +1071,16 @@ export class TripsService {
         }>;
       };
       const cooldownSince = Date.now() - safetySosCooldownMinutes * 60 * 1000;
-      const recentSosFromActor = (tripWithSosEvents.events ?? []).some((event) => {
-        const eventPayload = isRecord(event.payload) ? event.payload : {};
+      const recentSosFromActor = (tripWithSosEvents.events ?? []).some(
+        (event) => {
+          const eventPayload = isRecord(event.payload) ? event.payload : {};
 
-        return (
-          event.createdAt.getTime() >= cooldownSince &&
-          eventPayload.reportedByUserId === auth.user.id
-        );
-      });
+          return (
+            event.createdAt.getTime() >= cooldownSince &&
+            eventPayload.reportedByUserId === auth.user.id
+          );
+        },
+      );
 
       if (recentSosFromActor) {
         throw new BadRequestException(

@@ -8,7 +8,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-const safePlaceTextPattern = /^[^<>{}[\]\\\x00-\x1F\x7F]+$/;
+const safePlaceTextPattern = new RegExp('^[^\\p{Cc}<>{}\\[\\]\\\\]+$', 'u');
 
 export class CreateSavedPlaceDto {
   @ApiProperty()

@@ -170,19 +170,21 @@ describe('AdminController', () => {
   });
 
   it('keeps money mutation endpoints restricted to admin and ops roles', () => {
-    const { controller } = createController();
-    const moneyMutationHandlers = [
-      controller.prepareDriverWalletPayout,
-      controller.recordDriverWalletRecoveryAdjustment,
-      controller.markDriverPayoutPaid,
-      controller.replayPaymentWebhookEvent,
-      controller.verifyPaymentAttemptWithProvider,
-      controller.refundPaymentAttempt,
-      controller.driverPayoutSettlementCsv,
-      controller.driverPayoutSettlementPdf,
+    const moneyMutationHandlerNames = [
+      'prepareDriverWalletPayout',
+      'recordDriverWalletRecoveryAdjustment',
+      'markDriverPayoutPaid',
+      'replayPaymentWebhookEvent',
+      'verifyPaymentAttemptWithProvider',
+      'refundPaymentAttempt',
+      'driverPayoutSettlementCsv',
+      'driverPayoutSettlementPdf',
     ];
 
-    for (const handler of moneyMutationHandlers) {
+    for (const handlerName of moneyMutationHandlerNames) {
+      const handler =
+        AdminController.prototype[handlerName as keyof AdminController];
+
       expect(Reflect.getMetadata(ROLES_KEY, handler)).toEqual([
         UserRole.ADMIN,
         UserRole.OPS,
@@ -224,16 +226,18 @@ describe('AdminController', () => {
   });
 
   it('allows support to read driver wallets without granting payout mutation roles', () => {
-    const { controller } = createController();
+    const driverWalletsHandler = AdminController.prototype['driverWallets'];
+    const preparePayoutHandler =
+      AdminController.prototype['prepareDriverWalletPayout'];
 
-    expect(Reflect.getMetadata(ROLES_KEY, controller.driverWallets)).toEqual([
+    expect(Reflect.getMetadata(ROLES_KEY, driverWalletsHandler)).toEqual([
       UserRole.ADMIN,
       UserRole.OPS,
       UserRole.SUPPORT,
     ]);
-    expect(
-      Reflect.getMetadata(ROLES_KEY, controller.prepareDriverWalletPayout),
-    ).not.toContain(UserRole.SUPPORT);
+    expect(Reflect.getMetadata(ROLES_KEY, preparePayoutHandler)).not.toContain(
+      UserRole.SUPPORT,
+    );
   });
 
   it('delegates recovery adjustments with required auth context', async () => {

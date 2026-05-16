@@ -31,13 +31,11 @@ describe('PostgresRateLimitStore', () => {
     });
     const store = new PostgresRateLimitStore(configService as never);
 
-    await expect(store.consume('ip:203.0.113.10', 5, 60_000)).resolves.toEqual(
-      {
-        allowed: true,
-        remaining: 3,
-        resetAt: 1770000000123,
-      },
-    );
+    await expect(store.consume('ip:203.0.113.10', 5, 60_000)).resolves.toEqual({
+      allowed: true,
+      remaining: 3,
+      resetAt: 1770000000123,
+    });
     expect(mockPoolQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO mobilis_rate_limit_counters'),
       ['ip:203.0.113.10', 60_000],

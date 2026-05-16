@@ -2534,9 +2534,7 @@ describe('AdminService', () => {
           },
         } as never,
       ),
-    ).rejects.toThrow(
-      'Idempotency key must be 8 to 128 URL-safe characters.',
-    );
+    ).rejects.toThrow('Idempotency key must be 8 to 128 URL-safe characters.');
     expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
     expect(prisma.wallet.update).not.toHaveBeenCalled();
   });

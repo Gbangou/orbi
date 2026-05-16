@@ -41,8 +41,8 @@ const supportedDriverDocumentTypes = [
   'INSURANCE_PROOF',
   'SELFIE_VERIFICATION',
 ] as const;
-const safeLeafFileNamePattern = /^[^<>:"/\\|?*\x00-\x1F\x7F]+$/;
-const safeVehicleTextPattern = /^[^<>{}[\]\\\x00-\x1F\x7F]+$/;
+const safeLeafFileNamePattern = /^[^\p{Cc}<>:"/\\|?*]+$/u;
+const safeVehicleTextPattern = new RegExp('^[^\\p{Cc}<>{}\\[\\]\\\\]+$', 'u');
 const safeStorageKeyPattern =
   /^[A-Za-z0-9][A-Za-z0-9_.:-]*(\/[A-Za-z0-9][A-Za-z0-9_.:-]*)+$/;
 

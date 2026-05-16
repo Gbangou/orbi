@@ -77,10 +77,12 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async processDueJobs(input: {
-    kinds?: JobQueueKind[];
-    limit?: number;
-  } = {}): Promise<WorkerRunResult> {
+  async processDueJobs(
+    input: {
+      kinds?: JobQueueKind[];
+      limit?: number;
+    } = {},
+  ): Promise<WorkerRunResult> {
     if (this.running) {
       return {
         claimed: 0,
@@ -191,10 +193,7 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
       throw new Error('payment_webhook_event_missing');
     }
 
-    if (
-      event.action === 'ignored_unknown_reference' &&
-      event.transactionRef
-    ) {
+    if (event.action === 'ignored_unknown_reference' && event.transactionRef) {
       const targetAttempt = await this.prisma.paymentAttempt.findUnique({
         where: {
           transactionRef: event.transactionRef,
@@ -220,7 +219,10 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    if (event.action.includes('ignored') || event.action.includes('conflicting')) {
+    if (
+      event.action.includes('ignored') ||
+      event.action.includes('conflicting')
+    ) {
       this.logger.warn(
         `Payment webhook ${event.id} requires operations review before replay.`,
       );

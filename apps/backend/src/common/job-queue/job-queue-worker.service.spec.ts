@@ -346,7 +346,9 @@ describe('JobQueueWorkerService', () => {
         },
       },
     });
-    expect(documentObjectStorageService.verifyStoredDocument).toHaveBeenCalledWith({
+    expect(
+      documentObjectStorageService.verifyStoredDocument,
+    ).toHaveBeenCalledWith({
       storageKey: 'drivers/driver-1/permis.pdf',
       expectedSizeBytes: 120000,
       expectedSha256:
@@ -480,8 +482,12 @@ describe('JobQueueWorkerService', () => {
   });
 
   it('runs reservation expiry jobs through the shared worker', async () => {
-    const { driverReservationExpiryService, jobQueueService, moduleRef, service } =
-      createService();
+    const {
+      driverReservationExpiryService,
+      jobQueueService,
+      moduleRef,
+      service,
+    } = createService();
     jobQueueService.claimDueJobs.mockResolvedValue([
       job({
         id: 'job-reservation-expiry',
@@ -542,9 +548,9 @@ describe('JobQueueWorkerService', () => {
     expect(moduleRef.get).toHaveBeenCalledWith(expect.any(Function), {
       strict: false,
     });
-    expect(paymentsService.verifyPaymentAttemptWithProvider).toHaveBeenCalledWith(
-      'payment-1',
-    );
+    expect(
+      paymentsService.verifyPaymentAttemptWithProvider,
+    ).toHaveBeenCalledWith('payment-1');
     expect(jobQueueService.complete).toHaveBeenCalledWith('job-refund', {
       lockedAt: now,
     });

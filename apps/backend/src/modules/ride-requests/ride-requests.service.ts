@@ -128,7 +128,10 @@ export class RideRequestsService {
 
         if (existingActiveRequest) {
           if (
-            this.isEquivalentActiveRideRequest(existingActiveRequest, createData)
+            this.isEquivalentActiveRideRequest(
+              existingActiveRequest,
+              createData,
+            )
           ) {
             return {
               rideRequest: existingActiveRequest,
@@ -258,7 +261,12 @@ export class RideRequestsService {
   }
 
   private sameNullableNumber(left: unknown, right: unknown) {
-    if (left === null || left === undefined || right === null || right === undefined) {
+    if (
+      left === null ||
+      left === undefined ||
+      right === null ||
+      right === undefined
+    ) {
       return left === right;
     }
 

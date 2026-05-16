@@ -40,7 +40,10 @@ const districtProfiles = [
   'INDUSTRIAL',
   'INTERCITY_GATE',
 ] as const;
-const safeStructuredTextPattern = /^[^<>{}[\]\\\x00-\x1F\x7F]+$/;
+const safeStructuredTextPattern = new RegExp(
+  '^[^\\p{Cc}<>{}\\[\\]\\\\]+$',
+  'u',
+);
 const safeOpaqueIdPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{2,96}$/;
 
 export class CreateRideRequestDto {

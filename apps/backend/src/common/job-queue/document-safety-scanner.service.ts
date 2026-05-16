@@ -50,8 +50,11 @@ const documentSafetyPolicies: Record<
 export class DocumentSafetyScannerService {
   constructor(private readonly configService: ConfigService) {}
 
-  async scan(input: DocumentSafetyScanInput): Promise<DocumentSafetyScanResult> {
+  async scan(
+    input: DocumentSafetyScanInput,
+  ): Promise<DocumentSafetyScanResult> {
     this.assertScanInput(input);
+    await Promise.resolve();
     const engine = this.resolveEngine();
 
     if (engine !== 'local-policy') {
