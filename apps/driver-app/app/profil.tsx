@@ -36,6 +36,7 @@ import {
   buildDriverProfileStatusLabel,
   resolveDriverActiveFlow,
 } from '../lib/driver-active-flow';
+import { formatDriverProfileDateTime } from '../lib/driver-profile-signal';
 
 const cityOptions = [
   'OUAGADOUGOU',
@@ -1056,9 +1057,7 @@ export default function ProfilScreen() {
             {preparedDocumentLinks[document.type] ? (
               <Text style={styles.documentHint}>
                 Lien securise pret jusqu au{' '}
-                {new Date(
-                  preparedDocumentLinks[document.type]?.expiresAt ?? '',
-                ).toLocaleString('fr-FR')}
+                {formatDriverProfileDateTime(preparedDocumentLinks[document.type]?.expiresAt)}
                 . Limite:{' '}
                 {formatBytes(
                   preparedDocumentLinks[document.type]?.constraints.maxBytes ?? 0,
@@ -1196,7 +1195,7 @@ export default function ProfilScreen() {
             <Text style={styles.vehicleTitle}>{formatOperationalStatus(review.status)}</Text>
             <Text style={styles.meta}>
               {review.actorName} |{' '}
-              {new Date(review.createdAt).toLocaleString('fr-FR')}
+              {formatDriverProfileDateTime(review.createdAt)}
             </Text>
             {review.decisionReason ? (
               <Text style={styles.meta}>{review.decisionReason}</Text>
