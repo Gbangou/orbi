@@ -171,6 +171,10 @@ paiement provider, observabilite et runbooks verts.
 - Rafraichissement Live Ops admin migre derriere route serveur locale
   `/api/admin/live-ops`, afin que le snapshot operations reste consulte via
   session HttpOnly/no-store sans authentification backend depuis le navigateur.
+- Launch readiness admin migree derriere routes serveur locales: refresh et
+  acknowledgement d actions utilisent maintenant session HttpOnly, no-store,
+  garde mutation same-origin, owner/notes/idempotency bornes et check IDs
+  valides avant proxy backend.
 
 ## Architecture active
 
@@ -195,8 +199,8 @@ paiement provider, observabilite et runbooks verts.
 4. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
 5. Verifier qu il ne reste pas de surface admin sensible exposee en Bearer
    navigateur; wallet/payout, refund/replay paiement, support, health, jobs,
-   feature flags, dispatch, onboarding documents et live ops sont deja couverts
-   cote routes serveur locales.
+   feature flags, dispatch, onboarding documents, live ops et launch readiness
+   sont deja couverts cote routes serveur locales.
 6. Continuer le programme de tests securite iteratif:
    - API1/API5: IDOR/BOLA et function-level authorization sur onboarding
      documents, dispatch, support tickets et exports finance.

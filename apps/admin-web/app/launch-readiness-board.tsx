@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   AdminFeatureFlagsResponse,
   AdminDriverWalletsResponse,
+  AdminLaunchReadinessActionAcknowledgementResponse,
   AdminLaunchReadinessResponse,
   AdminLiveOpsResponse,
   AdminPaymentWebhookEventsResponse,
@@ -12,12 +13,9 @@ import type {
   SupportTicketQueueResponse,
 } from '@mobilis/api';
 import {
-  acknowledgeAdminLaunchReadinessAction,
-  authenticateAndFetchCurrentUser,
-  createMobilisApiClient,
-  fetchAdminLaunchReadiness,
-} from '@mobilis/api';
-import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
+  adminMutationHeaderName,
+  adminMutationHeaderValue,
+} from './admin-server-security';
 import {
   describeProductionReadiness,
   describeReadinessState,
@@ -45,6 +43,43 @@ type ReadinessCheck = {
   detail: string;
   state: ReadinessState;
 };
+
+async function fetchLaunchReadiness() {
+  const response = await fetch('/api/admin/launch-readiness');
+
+  if (!response.ok) {
+    throw new Error('Launch readiness fetch failed');
+  }
+
+  return (await response.json()) as AdminLaunchReadinessResponse;
+}
+
+async function acknowledgeLaunchReadinessAction(
+  checkId: string,
+  payload: {
+    owner: 'ops' | 'engineering' | 'support' | 'finance';
+    notes: string;
+    idempotencyKey: string;
+  },
+) {
+  const response = await fetch(
+    `/api/admin/launch-readiness/actions/${checkId}/acknowledge`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        [adminMutationHeaderName]: adminMutationHeaderValue,
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error('Launch readiness acknowledgement failed');
+  }
+
+  return (await response.json()) as AdminLaunchReadinessActionAcknowledgementResponse;
+}
 
 function describeActionOwner(owner: string) {
   if (owner === 'engineering') {
@@ -155,13 +190,6 @@ export function LaunchReadinessBoard({
   const [actionStatus, setActionStatus] = useState(
     'Plan de stabilisation pret.',
   );
-  const client = useMemo(
-    () =>
-      createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-        version: mobilisRuntimeConfig.apiVersion,
-      }),
-    [],
-  );
   const syncAcknowledgements = useCallback(
     (readiness?: AdminLaunchReadinessResponse) => {
       setAcknowledgedActions(
@@ -178,11 +206,7 @@ export function LaunchReadinessBoard({
   const refreshLaunchReadiness = useCallback(
     async (message = 'Launch readiness resynchronisee.') => {
       try {
-        const { authClient } = await authenticateAndFetchCurrentUser(
-          client,
-          mobilisDemoAccounts.admin,
-        );
-        const response = await fetchAdminLaunchReadiness(authClient);
+        const response = await fetchLaunchReadiness();
 
         setLiveLaunchReadiness(response);
         syncAcknowledgements(response);
@@ -191,7 +215,7 @@ export function LaunchReadinessBoard({
         setActionStatus("Launch readiness n'a pas pu etre resynchronisee.");
       }
     },
-    [client, syncAcknowledgements],
+    [syncAcknowledgements],
   );
 
   useEffect(() => {
@@ -402,12 +426,7 @@ export function LaunchReadinessBoard({
     setActionStatus('Acknowledgement en cours...');
 
     try {
-      const { authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
-      );
-      const response = await acknowledgeAdminLaunchReadinessAction(
-        authClient,
+      const response = await acknowledgeLaunchReadinessAction(
         action.checkId,
         {
           owner: action.owner,
