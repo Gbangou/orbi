@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  createMobilisApiClient,
-  fetchHealthCheck,
   type AdminJobQueueResponse,
   type HealthCheckResponse,
 } from '@mobilis/api';
@@ -17,7 +15,6 @@ import {
   resolveJobQueueFilterSummary,
   resolveJobQueueOwnerRows,
 } from './admin-ops-kernel';
-import { mobilisRuntimeConfig } from '@mobilis/config';
 import { subscribeToAdminRealtime } from './admin-realtime';
 import {
   adminMutationHeaderName,
@@ -368,6 +365,10 @@ async function fetchAdminJson<TResponse>(path: string, init?: RequestInit) {
   return (await response.json()) as TResponse;
 }
 
+async function fetchSystemHealth() {
+  return fetchAdminJson<HealthCheckResponse>('/api/admin/health');
+}
+
 function adminMutationHeaders() {
   return {
     [adminMutationHeaderName]: adminMutationHeaderValue,
@@ -471,18 +472,10 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
     counts: [],
   };
 
-  const client = useMemo(
-    () =>
-      createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-        version: mobilisRuntimeConfig.apiVersion,
-      }),
-    [],
-  );
-
   const refreshHealth = useCallback(
     async (message = 'Sante systeme resynchronisee.') => {
       try {
-        const response = await fetchHealthCheck(client);
+        const response = await fetchSystemHealth();
         setHealth(response);
         setHistory(response.operations.healthHistory);
         setStatus(message);
@@ -490,7 +483,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
         setStatus("Impossible d'actualiser la sante systeme.");
       }
     },
-    [client],
+    [],
   );
 
   const refreshJobQueue = useCallback(async () => {
