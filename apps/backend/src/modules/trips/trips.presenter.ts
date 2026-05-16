@@ -10,6 +10,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+function isPickupCodeVisibleStatus(status: string) {
+  return (PICKUP_CODE_VISIBLE_STATUSES as readonly string[]).includes(status);
+}
+
 function resolveRouteMonitoringSummary(
   events: Array<{
     eventType: string;
@@ -109,7 +113,7 @@ export function serializeTripDetail(trip: {
         },
       },
       routeMonitoring: resolveRouteMonitoringSummary(trip.events),
-      pickupCode: PICKUP_CODE_VISIBLE_STATUSES.includes(trip.status as never)
+      pickupCode: isPickupCodeVisibleStatus(trip.status)
         ? extractPickupCode(trip.events)
         : null,
       actualFare: toAmount(trip.actualFare),
@@ -181,7 +185,7 @@ export function serializeTripHistoryItem(trip: {
     amount: toAmount(trip.actualFare),
     currency: trip.currency,
     vehicleLabel: formatVehicleLabel(trip.vehicle),
-    pickupCode: PICKUP_CODE_VISIBLE_STATUSES.includes(trip.status as never)
+    pickupCode: isPickupCodeVisibleStatus(trip.status)
       ? extractPickupCode(trip.events)
       : null,
     completedAt: trip.completedAt?.toISOString() ?? null,
