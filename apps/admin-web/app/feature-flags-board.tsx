@@ -12,7 +12,12 @@ type FeatureFlagsBoardProps = {
 };
 
 async function fetchFeatureFlags() {
-  const response = await fetch('/api/admin/feature-flags');
+  const response = await fetch('/api/admin/feature-flags', {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
 
   if (!response.ok) {
     throw new Error('Feature flags fetch failed');

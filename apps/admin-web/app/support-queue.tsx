@@ -33,7 +33,12 @@ function getTicketStatusClass(status: string) {
 }
 
 async function fetchSupportTickets() {
-  const response = await fetch('/api/admin/support-tickets');
+  const response = await fetch('/api/admin/support-tickets', {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
 
   if (!response.ok) {
     throw new Error('Support queue fetch failed');

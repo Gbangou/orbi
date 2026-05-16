@@ -158,7 +158,12 @@ function formatExportFilterLabel(
 }
 
 async function fetchDriverOnboardingQueue() {
-  const response = await fetch('/api/admin/driver-onboarding-queue');
+  const response = await fetch('/api/admin/driver-onboarding-queue', {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
 
   if (!response.ok) {
     throw new Error('Driver onboarding queue fetch failed');
@@ -170,6 +175,12 @@ async function fetchDriverOnboardingQueue() {
 async function fetchDriverOnboardingExportHistory() {
   const response = await fetch(
     '/api/admin/driver-onboarding/export-history?page=1&pageSize=6',
+    {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+      },
+    },
   );
 
   if (!response.ok) {
@@ -195,6 +206,9 @@ async function fetchDriverOnboardingExportCsv(query: {
 
   const response = await fetch(
     `/api/admin/driver-onboarding/export.csv?${params.toString()}`,
+    {
+      cache: 'no-store',
+    },
   );
 
   if (!response.ok) {
@@ -238,6 +252,12 @@ async function fetchDriverDocumentViewLink(
 ) {
   const response = await fetch(
     `/api/admin/driver-onboarding/${driverId}/documents/${documentId}/view-link`,
+    {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+      },
+    },
   );
 
   if (!response.ok) {

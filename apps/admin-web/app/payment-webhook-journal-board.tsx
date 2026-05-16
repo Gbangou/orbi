@@ -88,7 +88,12 @@ function canRefundPaymentAttempt(event: PaymentWebhookJournalEvent) {
 }
 
 async function fetchAdminJson<TResponse>(path: string) {
-  const response = await fetch(path);
+  const response = await fetch(path, {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
 
   if (!response.ok) {
     throw new Error('Admin request failed');

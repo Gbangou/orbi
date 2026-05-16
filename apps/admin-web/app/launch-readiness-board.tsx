@@ -45,7 +45,12 @@ type ReadinessCheck = {
 };
 
 async function fetchLaunchReadiness() {
-  const response = await fetch('/api/admin/launch-readiness');
+  const response = await fetch('/api/admin/launch-readiness', {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
 
   if (!response.ok) {
     throw new Error('Launch readiness fetch failed');

@@ -17,7 +17,12 @@ type LiveOpsBoardProps = {
 };
 
 async function fetchLiveOps() {
-  const response = await fetch('/api/admin/live-ops');
+  const response = await fetch('/api/admin/live-ops', {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
 
   if (!response.ok) {
     throw new Error('Live ops fetch failed');

@@ -271,6 +271,9 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
     try {
       const response = await fetch(
         `/api/admin/driver-payouts/settlement.${format}?status=PREPARED`,
+        {
+          cache: 'no-store',
+        },
       );
 
       if (!response.ok) {

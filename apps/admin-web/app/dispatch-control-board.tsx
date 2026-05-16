@@ -128,7 +128,12 @@ function resolveActorRole(entry: DispatchHistoryEntry) {
 }
 
 async function fetchDispatchSettings() {
-  const response = await fetch('/api/admin/dispatch-settings');
+  const response = await fetch('/api/admin/dispatch-settings', {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
 
   if (!response.ok) {
     throw new Error('Dispatch settings fetch failed');
