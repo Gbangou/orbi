@@ -104,6 +104,33 @@ describe('admin server security', () => {
     expect(resolveDriverPayoutSettlementStatus(null)).toBe('PREPARED');
   });
 
+  it('keeps binary admin export proxy fetches no-store and typed', () => {
+    const exportRoutes = [
+      {
+        path: join(
+          process.cwd(),
+          'app/api/admin/driver-payouts/settlement.csv/route.ts',
+        ),
+        accept: "Accept: 'text/csv'",
+      },
+      {
+        path: join(
+          process.cwd(),
+          'app/api/admin/driver-payouts/settlement.pdf/route.ts',
+        ),
+        accept: "Accept: 'application/pdf'",
+      },
+    ];
+
+    for (const route of exportRoutes) {
+      const source = readFileSync(route.path, 'utf8');
+
+      expect(source).toContain(route.accept);
+      expect(source).toContain("cache: 'no-store'");
+      expect(source).toContain('createNoStoreAdminHeaders()');
+    }
+  });
+
   it('bounds payment webhook journal kind before proxying filters', () => {
     expect(resolvePaymentWebhookJournalKind('payment')).toBe('payment');
     expect(resolvePaymentWebhookJournalKind('refund')).toBe('refund');

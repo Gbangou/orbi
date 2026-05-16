@@ -19,8 +19,10 @@ export async function GET(request: NextRequest) {
       authClient.endpoint(buildAdminDriverPayoutSettlementPdfUrl(status)),
       {
         headers: {
+          Accept: 'application/pdf',
           Authorization: `Bearer ${sessionToken}`,
         },
+        cache: 'no-store',
       },
     );
 

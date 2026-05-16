@@ -19,8 +19,10 @@ export async function GET(request: NextRequest) {
       authClient.endpoint(buildAdminDriverPayoutSettlementCsvUrl(status)),
       {
         headers: {
+          Accept: 'text/csv',
           Authorization: `Bearer ${sessionToken}`,
         },
+        cache: 'no-store',
       },
     );
 
