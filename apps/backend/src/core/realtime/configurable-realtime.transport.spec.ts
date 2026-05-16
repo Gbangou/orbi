@@ -109,6 +109,73 @@ describe('ConfigurableRealtimeTransport', () => {
     });
   });
 
+  it('normalizes configured adapter casing and whitespace before resolving postgres', () => {
+    const configService = {
+      get: jest.fn((key: string) => {
+        const values: Record<string, string> = {
+          'infrastructure.realtime.adapter': ' PostgreSQL ',
+        };
+
+        return values[key];
+      }),
+    };
+    const postgresTransport = {
+      publish: jest.fn(),
+      stream: jest.fn(),
+      snapshot: jest.fn(() => ({
+        adapter: 'postgres',
+        sharedBackplane: true,
+        degraded: false,
+        degradeReason: null,
+        activeStreams: 1,
+        publishedEvents: 3,
+      })),
+    };
+    const transport = new ConfigurableRealtimeTransport(
+      configService as never,
+      new InMemoryRealtimeTransport(),
+      postgresTransport as never,
+    );
+
+    expect(transport.snapshot()).toEqual({
+      adapter: 'postgres',
+      sharedBackplane: true,
+      degraded: false,
+      degradeReason: null,
+      activeStreams: 1,
+      publishedEvents: 3,
+    });
+  });
+
+  it('reports a degraded snapshot when an unsupported adapter is configured', () => {
+    const configService = {
+      get: jest.fn((key: string) => {
+        const values: Record<string, string> = {
+          'infrastructure.realtime.adapter': 'nats',
+        };
+
+        return values[key];
+      }),
+    };
+    const transport = new ConfigurableRealtimeTransport(
+      configService as never,
+      new InMemoryRealtimeTransport(),
+    );
+
+    expect(transport.snapshot()).toEqual(
+      expect.objectContaining({
+        adapter: 'in-memory',
+        sharedBackplane: false,
+        degraded: true,
+        activeStreams: 0,
+        publishedEvents: 0,
+      }),
+    );
+    expect(transport.snapshot().degradeReason).toContain(
+      'REALTIME_ADAPTER=nats n est pas supporte',
+    );
+  });
+
   it('delegates postgres publish and stream when configured', () => {
     const configService = {
       get: jest.fn((key: string) => {

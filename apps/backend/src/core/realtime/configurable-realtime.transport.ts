@@ -55,9 +55,7 @@ export class ConfigurableRealtimeTransport implements RealtimeTransport {
   }
 
   snapshot() {
-    const configuredAdapter =
-      this.configService.get<string>('infrastructure.realtime.adapter') ??
-      'in-memory';
+    const configuredAdapter = this.getConfiguredAdapter();
 
     try {
       const delegateSnapshot = this.resolveActiveTransport().snapshot();
@@ -87,9 +85,7 @@ export class ConfigurableRealtimeTransport implements RealtimeTransport {
   }
 
   protected resolveDelegate(): RealtimeTransport {
-    const configuredAdapter =
-      this.configService.get<string>('infrastructure.realtime.adapter') ??
-      'in-memory';
+    const configuredAdapter = this.getConfiguredAdapter();
 
     if (
       configuredAdapter === 'postgres' ||
@@ -120,6 +116,8 @@ export class ConfigurableRealtimeTransport implements RealtimeTransport {
         ? 'REALTIME_ADAPTER=redis est configure, mais le transport Redis n est pas encore branche. Utiliser REALTIME_ADAPTER=postgres pour un backplane partage sans nouvelle dependance.'
         : configuredAdapter.startsWith('postgres') && !this.postgresTransport
           ? 'REALTIME_ADAPTER=postgres est configure, mais le transport PostgreSQL n est pas disponible.'
+          : !this.isSupportedAdapter(configuredAdapter)
+            ? `REALTIME_ADAPTER=${configuredAdapter} n est pas supporte. Utiliser in-memory ou postgres.`
           : null;
 
     const degradeReason = this.combineReasons(
@@ -145,6 +143,24 @@ export class ConfigurableRealtimeTransport implements RealtimeTransport {
     );
 
     return uniqueReasons.length > 0 ? uniqueReasons.join(' | ') : null;
+  }
+
+  private getConfiguredAdapter() {
+    return (
+      this.configService
+        .get<string>('infrastructure.realtime.adapter')
+        ?.trim()
+        .toLowerCase() || 'in-memory'
+    );
+  }
+
+  private isSupportedAdapter(configuredAdapter: string) {
+    return (
+      configuredAdapter === 'in-memory' ||
+      configuredAdapter === 'redis' ||
+      configuredAdapter === 'postgres' ||
+      configuredAdapter === 'postgresql'
+    );
   }
 
   private activateFallback(
