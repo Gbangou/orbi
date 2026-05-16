@@ -162,10 +162,21 @@ Important:
 
 - `REALTIME_ADAPTER=postgres` reutilise `DATABASE_URL` et ne demande pas de
   dependance externe additionnelle
+- les flux SSE restent lies a la session authentifiee: le backend ferme le
+  stream quand `session.expiresAt` est atteint, meme si le client garde la
+  connexion ouverte
 - `REALTIME_ADAPTER=redis` reste signale degrade tant que l adapter Redis
   n est pas branche
 - activer `REALTIME_STRICT=true` en preproduction/production pour faire remonter
   une degradation si le backplane partage tombe en fallback local
+
+## Observabilite mobile
+
+- Les apps rider/driver classent les erreurs client avec la taxonomie `MOB-*`.
+- Le backend revalide le role applicatif avant ingestion, borne les champs, puis
+  redige les secrets cote serveur avant d ecrire l audit log.
+- Les rapports critiques creent un ticket support deduplique et publient un
+  signal realtime admin.
 
 ## Garde-fous de demarrage production
 

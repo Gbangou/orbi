@@ -20,6 +20,7 @@ export type RealtimeEventFilter = {
   actorId?: string | null;
   riderId?: string | null;
   driverId?: string | null;
+  sessionExpiresAt?: Date | null;
 };
 
 export type RealtimeTransport = {

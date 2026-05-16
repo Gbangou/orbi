@@ -105,6 +105,40 @@ describe('MobileObservabilityService', () => {
     );
   });
 
+  it('redacts secrets from mobile error metadata on the server boundary', async () => {
+    const { service, prisma } = createService();
+
+    await service.submitErrorReports(riderAuth(), {
+      reports: [
+        buildReport({
+          errorMessage:
+            'Authorization: Bearer rider-secret-token failed for awa@example.com and +22670000000',
+          context: {
+            sessionToken: 'sessionToken=rider-secret-token',
+            callbackUrl:
+              'https://mobilis.local/callback?token=rider-secret-token&ok=true',
+            password: 'password=Mobilis123!',
+          },
+        }),
+      ],
+    });
+
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        metadata: expect.objectContaining({
+          errorMessage:
+            'Authorization=[redacted] failed for [email] and [phone]',
+          context: {
+            sessionToken: 'sessionToken=[redacted]',
+            callbackUrl:
+              'https://mobilis.local/callback?token=[redacted]&ok=true',
+            password: 'password=[redacted]',
+          },
+        }),
+      }),
+    });
+  });
+
   it('keeps non-reportable mobile errors out of audit and support queues', async () => {
     const { service, prisma } = createService();
 

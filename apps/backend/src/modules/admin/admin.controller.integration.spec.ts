@@ -423,6 +423,7 @@ describe('AdminController (integration)', () => {
       actorId: 'ops-1',
       riderId: null,
       driverId: null,
+      sessionExpiresAt: expect.any(Date),
     });
   });
 

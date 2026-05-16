@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ServiceUnavailableException } from '@nestjs/common';
 import type { MessageEvent } from '@nestjs/common';
 import type { Observable } from 'rxjs';
+import { takeUntil, timer } from 'rxjs';
 import { FeatureFlagsService } from '../runtime/feature-flags.service';
 import {
   REALTIME_TRANSPORT,
@@ -46,7 +47,16 @@ export class RealtimeService {
       );
     }
 
-    return this.transport.stream(filterOptions);
+    const stream = this.transport.stream(filterOptions);
+    const sessionExpiresAt = filterOptions.sessionExpiresAt;
+
+    if (!sessionExpiresAt) {
+      return stream;
+    }
+
+    const expiresInMs = Math.max(0, sessionExpiresAt.getTime() - Date.now());
+
+    return stream.pipe(takeUntil(timer(expiresInMs)));
   }
 
   snapshot() {

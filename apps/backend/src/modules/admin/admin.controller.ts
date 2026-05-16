@@ -127,6 +127,7 @@ export class AdminController {
       actorId: auth.user.id,
       riderId: null,
       driverId: null,
+      sessionExpiresAt: auth.session.expiresAt,
     });
   }
 

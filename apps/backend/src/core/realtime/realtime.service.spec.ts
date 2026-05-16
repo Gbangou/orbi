@@ -107,6 +107,28 @@ describe('RealtimeService', () => {
     ).toThrow(ServiceUnavailableException);
   });
 
+  it('completes streams when the authenticated session expires', async () => {
+    const service = new RealtimeService(new InMemoryRealtimeTransport(), {
+      isEnabled: jest.fn().mockReturnValue(true),
+      getMode: jest.fn().mockReturnValue('on'),
+    } as never);
+
+    const events = await firstValueFrom(
+      service
+        .stream({
+          role: 'ADMIN',
+          actorId: 'admin-1',
+          riderId: null,
+          driverId: null,
+          sessionExpiresAt: new Date(Date.now() + 10),
+        })
+        .pipe(toArray(), timeout(100)),
+    );
+
+    expect(events).toEqual([]);
+    expect(service.snapshot().activeStreams).toBe(0);
+  });
+
   it('includes the feature flag mode and evaluated enablement in the snapshot', () => {
     const featureFlagsService = {
       isEnabled: jest

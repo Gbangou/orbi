@@ -71,6 +71,8 @@ Pour la vraie production multi-instance:
 1. garder la meme interface applicative
 2. configurer `REALTIME_ADAPTER=postgres` et `REALTIME_STRICT=true`
 3. connecter rider, driver et admin a des flux live partageant la meme source d'evenements
+4. verifier que les flux SSE se ferment a l expiration de session et que les
+   clients mobiles reconnectent apres renouvellement auth
 
 ## Garde-fous de deploiement realtime
 
@@ -110,8 +112,12 @@ Cela evite qu un cluster multi-instance expose des limites incoherentes selon le
 - verifier que les URLs publiques de production ne contiennent pas `localhost`
 - verifier que `TRUST_PROXY=true` correspond a une topologie avec proxy fiable,
   et rester a `false` si l API est exposee directement
-- si `RATE_LIMIT_STRICT=true`, `RATE_LIMIT_REDIS_URL` doit etre configure
-- si `REALTIME_STRICT=true`, `REALTIME_REDIS_URL` doit etre configure
+- si `RATE_LIMIT_STRICT=true`, utiliser `RATE_LIMIT_ADAPTER=postgres` avec une
+  `DATABASE_URL` valide, ou attendre l implementation Redis avant de choisir
+  `RATE_LIMIT_ADAPTER=redis`
+- si `REALTIME_STRICT=true`, utiliser `REALTIME_ADAPTER=postgres` avec une
+  `DATABASE_URL` valide, ou attendre l implementation Redis avant de choisir
+  `REALTIME_ADAPTER=redis`
 - si `PAYMENTS_REFUND_MODE=provider` avec Flutterwave,
   `FLUTTERWAVE_SECRET_KEY` doit etre configure
 - consulter `GET /api/v1/admin/launch-readiness` avec un compte admin/ops:

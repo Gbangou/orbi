@@ -5,6 +5,12 @@ import { RealtimeService } from '../../core/realtime/realtime.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import type { SubmitMobileErrorReportsDto } from './dto/submit-mobile-error-reports.dto';
 
+const sensitiveMobileErrorPattern =
+  /\b(sessiontoken|session|token|authorization|password|secret)\s*[=:]\s*(?:bearer\s+)?["']?[^"'&\s,;)]+["']?/gi;
+const bearerSecretPattern = /bearer\s+["']?[a-z0-9._~+/=-]+["']?/gi;
+const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const phonePattern = /\+?\d[\d\s().-]{7,}\d/g;
+
 @Injectable()
 export class MobileObservabilityService {
   constructor(
@@ -58,7 +64,7 @@ export class MobileObservabilityService {
             occurredAt: report.occurredAt,
             fingerprint: report.fingerprint,
             errorName: report.errorName,
-            errorMessage: report.errorMessage,
+            errorMessage: this.redactMobileErrorText(report.errorMessage),
             sessionId: auth.session.id,
             classification: report.classification,
             context: this.boundContext(report.context),
@@ -157,6 +163,23 @@ export class MobileObservabilityService {
   private boundContext(
     context?: Record<string, string | number | boolean | null>,
   ) {
-    return Object.fromEntries(Object.entries(context ?? {}).slice(0, 16));
+    return Object.fromEntries(
+      Object.entries(context ?? {})
+        .slice(0, 16)
+        .map(([key, value]) => [
+          this.redactMobileErrorText(key).slice(0, 48),
+          typeof value === 'string'
+            ? this.redactMobileErrorText(value).slice(0, 160)
+            : value,
+        ]),
+    );
+  }
+
+  private redactMobileErrorText(value: string) {
+    return value
+      .replace(emailPattern, '[email]')
+      .replace(phonePattern, '[phone]')
+      .replace(sensitiveMobileErrorPattern, '$1=[redacted]')
+      .replace(bearerSecretPattern, 'Bearer [token]');
   }
 }

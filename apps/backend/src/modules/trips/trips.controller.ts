@@ -69,6 +69,7 @@ export class TripsController {
       actorId: auth.user.id,
       riderId: auth.user.riderProfile?.id ?? null,
       driverId: auth.user.driverProfile?.id ?? null,
+      sessionExpiresAt: auth.session.expiresAt,
     });
   }
 

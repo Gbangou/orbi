@@ -82,7 +82,7 @@ preuves documentaires et revue explicite.
 - Onboarding chauffeur securise avec documents, guidance ops, decisions et
   export CSV audite.
 - Historique admin des exports onboarding lu depuis `AuditLog`.
-- Mobile error reporting `MOB-*` avec ingestion backend et tickets critiques.
+- Mobile error reporting `MOB-*` avec ingestion backend, redaction serveur des
+  secrets et tickets critiques.
 - Health/readiness et launch-readiness exposes pour pilote terrain encadre.
 - Idempotence et audit des flux argent deja representes dans le plan.
-

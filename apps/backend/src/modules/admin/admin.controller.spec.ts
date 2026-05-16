@@ -69,6 +69,7 @@ describe('AdminController', () => {
 
     const result = controller.stream({
       user: { id: 'ops-1', role: 'OPS' },
+      session: { expiresAt: new Date('2026-05-17T10:00:00.000Z') },
     } as never);
 
     expect(realtimeService.stream).toHaveBeenCalledWith({
@@ -76,6 +77,7 @@ describe('AdminController', () => {
       actorId: 'ops-1',
       riderId: null,
       driverId: null,
+      sessionExpiresAt: new Date('2026-05-17T10:00:00.000Z'),
     });
     expect(result).toBe(stream$);
   });
@@ -92,6 +94,7 @@ describe('AdminController', () => {
     expect(() =>
       controller.stream({
         user: { id: 'support-1', role: 'SUPPORT' },
+        session: { expiresAt: new Date('2026-05-17T10:00:00.000Z') },
       } as never),
     ).toThrow(ServiceUnavailableException);
   });
