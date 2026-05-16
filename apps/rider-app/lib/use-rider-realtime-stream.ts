@@ -1,5 +1,8 @@
 import { buildRealtimeStreamUrl, createMobilisApiClient } from '@mobilis/api';
-import { mobilisRuntimeConfig } from '@mobilis/config';
+import {
+  mobilisRuntimeConfig,
+  resolveMobilisApiBaseUrlForRuntime,
+} from '@mobilis/config';
 import {
   useRealtimeEventStream,
   type RealtimeStatusCallbacks,
@@ -29,9 +32,12 @@ export function useRiderRealtimeStream(
     callbacks,
     coalesceWindowMs: 350,
     buildStreamUrl: (token) => {
-      const client = createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-        version: mobilisRuntimeConfig.apiVersion,
-      });
+      const client = createMobilisApiClient(
+        resolveMobilisApiBaseUrlForRuntime(),
+        {
+          version: mobilisRuntimeConfig.apiVersion,
+        },
+      );
 
       return buildRealtimeStreamUrl(client, token);
     },

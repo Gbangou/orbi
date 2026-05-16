@@ -28,7 +28,10 @@ import { restoreRiderSession } from '../lib/auth';
 import { useLiveRefresh } from '../lib/use-live-refresh';
 import { useRiderRealtimeStream } from '../lib/use-rider-realtime-stream';
 import { createMobilisApiClient } from '@mobilis/api';
-import { mobilisRuntimeConfig } from '@mobilis/config';
+import {
+  mobilisRuntimeConfig,
+  resolveMobilisApiBaseUrlForRuntime,
+} from '@mobilis/config';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import {
   buildRiderFlowTransitionLabel,
@@ -88,7 +91,7 @@ export default function RiderHomeScreen() {
   const previousFlowStateRef = useRef<string | null>(null);
 
   const loadHomeContext = useCallback(async (silent = false) => {
-    const client = createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
+    const client = createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
       version: mobilisRuntimeConfig.apiVersion,
     });
 

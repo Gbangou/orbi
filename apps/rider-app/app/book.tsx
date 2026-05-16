@@ -32,7 +32,10 @@ import {
   mobilisTheme,
 } from '@mobilis/ui';
 import { createMobilisApiClient } from '@mobilis/api';
-import { mobilisRuntimeConfig } from '@mobilis/config';
+import {
+  mobilisRuntimeConfig,
+  resolveMobilisApiBaseUrlForRuntime,
+} from '@mobilis/config';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import {
@@ -263,7 +266,7 @@ export default function BookingScreen() {
   }, [pickupPlace, destinationPlace, selectedCityId]);
 
   async function loadBookingContext() {
-    const client = createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
+    const client = createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
       version: mobilisRuntimeConfig.apiVersion,
     });
 
@@ -357,7 +360,7 @@ export default function BookingScreen() {
   );
 
   async function handleResolveVoiceIntent() {
-    const client = createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
+    const client = createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
       version: mobilisRuntimeConfig.apiVersion,
     });
 

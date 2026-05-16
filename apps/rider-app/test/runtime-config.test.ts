@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { resolveMobilisApiBaseUrlForRuntime } from '@mobilis/config';
 
 describe('Mobilis runtime config', () => {
@@ -41,5 +44,25 @@ describe('Mobilis runtime config', () => {
     expect(
       resolveMobilisApiBaseUrlForRuntime('https://api.mobilis.app'),
     ).toBe('https://api.mobilis.app');
+  });
+
+  it('keeps mobile API clients and realtime streams on the runtime-resolved base URL', () => {
+    const files = [
+      'app/home.tsx',
+      'app/book.tsx',
+      'app/voice.tsx',
+      'app/activity.tsx',
+      'lib/auth.ts',
+      'lib/use-rider-realtime-stream.ts',
+      '../driver-app/lib/auth.ts',
+      '../driver-app/lib/use-driver-realtime-stream.ts',
+    ];
+
+    for (const file of files) {
+      const source = readFileSync(join(process.cwd(), file), 'utf8');
+
+      expect(source).toContain('resolveMobilisApiBaseUrlForRuntime');
+      expect(source).not.toContain('mobilisRuntimeConfig.apiBaseUrl');
+    }
   });
 });

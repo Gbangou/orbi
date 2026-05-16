@@ -35,7 +35,7 @@ import {
 import { useLiveRefresh } from '../lib/use-live-refresh';
 import { useRiderRealtimeStream } from '../lib/use-rider-realtime-stream';
 import { resolveRiderAppError } from '../lib/session-feedback';
-import { mobilisRuntimeConfig } from '@mobilis/config';
+import { resolveMobilisApiBaseUrlForRuntime } from '@mobilis/config';
 
 const fallbackHistory: MyTripsResponse = {
   role: 'RIDER',
@@ -407,7 +407,7 @@ export default function ActivityScreen() {
       const response = await createTripShareLinkWithApi(authClient, tripId);
       const shareUrl = new URL(
         response.share.path,
-        mobilisRuntimeConfig.apiBaseUrl,
+        resolveMobilisApiBaseUrlForRuntime(),
       ).toString();
 
       await Share.share({

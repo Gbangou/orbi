@@ -9,7 +9,10 @@ import {
   type VoiceLocationIntentResponse,
 } from "@mobilis/api";
 import { mobilisCopy, mobilisTheme } from "@mobilis/ui";
-import { mobilisRuntimeConfig } from "@mobilis/config";
+import {
+  mobilisRuntimeConfig,
+  resolveMobilisApiBaseUrlForRuntime,
+} from "@mobilis/config";
 import { restoreRiderSession } from "../lib/auth";
 import { resolveRiderAppError } from "../lib/session-feedback";
 import {
@@ -110,7 +113,7 @@ export default function VoiceScreen() {
   }
 
   async function resolveTranscript(nextTranscript: string) {
-    const client = createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
+    const client = createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
       version: mobilisRuntimeConfig.apiVersion,
     });
 
