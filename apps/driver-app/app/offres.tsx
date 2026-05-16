@@ -48,6 +48,10 @@ import {
   resolveDriverReservationChangeSet,
 } from '../lib/driver-active-flow';
 import {
+  buildDriverFatigueMessage,
+  buildDriverRouteMonitoringLines,
+} from '../lib/driver-operational-signal';
+import {
   buildDriverOfferDetailLines,
   formatDriverOfferFare,
   buildDriverOfferInsights,
@@ -546,29 +550,6 @@ export default function OffersScreen() {
     });
   }
 
-  function buildRouteMonitoringLines() {
-    const routeMonitoring = activeTripDetail?.trip.routeMonitoring;
-
-    if (!routeMonitoring) {
-      return [];
-    }
-
-    if (routeMonitoring.state === 'unknown') {
-      return ['Ride Check: en attente du premier signal route.'];
-    }
-
-    if (routeMonitoring.state === 'clear') {
-      return ['Ride Check: trajet coherent sur le dernier signal route.'];
-    }
-
-    return [
-      `Ride Check: ${formatOperationalStatus(routeMonitoring.state)} (${routeMonitoring.alertCount})`,
-      routeMonitoring.lastAlertType
-        ? `Dernier signal: ${formatOperationalStatus(routeMonitoring.lastAlertType)}`
-        : 'Dernier signal: anomalie route',
-    ];
-  }
-
   function renderActiveTripAction() {
     if (!activeTrip) {
       return null;
@@ -662,7 +643,7 @@ export default function OffersScreen() {
       {driverFatigue.state !== 'clear' ? (
         <TransitionNoticeCard
           label={driverFatigue.state === 'blocked' ? 'Pause obligatoire' : 'Pause conseillee'}
-          message={`${driverFatigue.reason} ${driverFatigue.drivingMinutes}/${driverFatigue.maxDrivingMinutes} min sur ${driverFatigue.windowHours}h.`}
+          message={buildDriverFatigueMessage(driverFatigue)}
           tone={driverFatigue.state === 'blocked' ? 'rose' : 'amber'}
         />
       ) : null}
@@ -775,7 +756,7 @@ export default function OffersScreen() {
           detailLines={[
             `Statut: ${activeTrip.status}`,
             'Monitoring route actif cote operations pendant la mission.',
-            ...buildRouteMonitoringLines(),
+            ...buildDriverRouteMonitoringLines(activeTripDetail?.trip.routeMonitoring),
           ]}
           note={
             activeTrip.pickupCode
