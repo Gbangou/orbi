@@ -45,6 +45,16 @@ describe('PricingService', () => {
     expect(quote.trustAndPolicy.pickupCodeRequired).toBe(true);
     expect(quote.trustAndPolicy.burkinaLocalizedPricing).toBe(true);
     expect(quote.trustAndPolicy.priceReviewAvailable).toBe(true);
+    expect(quote.trustAndPolicy.driverPickupDistanceIncludedInFare).toBe(false);
+    expect(quote.trustAndPolicy.driverPickupDistancePolicy).toContain(
+      'distance chauffeur',
+    );
+    expect(quote.fareBreakdown.reasons).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Distance trajet 5.8 km'),
+        expect.stringContaining('distance d approche chauffeur'),
+      ]),
+    );
   });
 
   it('uses fallback rate cards when no pricing rule is found', async () => {

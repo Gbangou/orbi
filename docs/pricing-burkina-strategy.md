@@ -26,11 +26,22 @@ Ces hypotheses sont des choix produit/operations en attendant une boucle d appre
 Le moteur pricing applique maintenant:
 
 - un socle par type de vehicule et zone,
+- un calcul par distance et duree du trajet demande entre pickup client et destination,
 - un multiplicateur de demande plafonne,
 - un ajustement local par ville,
 - un ajustement par profil de quartier,
+- un ajustement trafic, meteo, etat de route et disponibilite flotte,
 - un soutien d accessibilite sur certaines courses moto peri-urbaines,
 - une fenetre de prix et des raisons explicables.
+
+La distance d approche chauffeur vers le client est volontairement traitee comme
+un signal de dispatch, d ETA et de qualite d affectation. Elle ne devient pas une
+ligne de prix cachee pour le passager dans le devis upfront. Cette separation
+evite de penaliser le client parce que le systeme a choisi un chauffeur plus loin,
+tout en permettant au dispatch de prioriser les chauffeurs proches et rentables.
+Si Mobilis decide plus tard de subventionner ou compenser explicitement certaines
+approches longues, cela devra etre expose comme une regle ops ou une promotion
+auditable, pas comme une hausse silencieuse du prix passager.
 
 La console admin expose aussi une calibration terrain sur les 14 derniers jours:
 

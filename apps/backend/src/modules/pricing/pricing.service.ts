@@ -384,6 +384,9 @@ export class PricingService {
         burkinaLocalizedPricing: true,
         priceReviewAvailable: true,
         priceLockWindowSeconds: 90,
+        driverPickupDistanceIncludedInFare: false,
+        driverPickupDistancePolicy:
+          'La distance chauffeur vers le client optimise le dispatch et l ETA; le prix passager reste calcule sur le trajet demande, le temps, le trafic et le contexte operationnel.',
       },
     };
   }
@@ -528,6 +531,14 @@ export class PricingService {
     const reasons = [
       'Prix affiche avant confirmation pour eviter les surprises.',
     ];
+
+    reasons.push(
+      `Distance trajet ${input.distanceKm.toFixed(1)} km et duree estimee ${Math.round(input.durationMinutes)} min incluses dans le calcul.`,
+    );
+
+    reasons.push(
+      'La distance d approche chauffeur sert au dispatch et a l ETA, sans surfacturation cachee du client.',
+    );
 
     reasons.push(
       `Tarification localisee pour ${this.formatCityLabel(

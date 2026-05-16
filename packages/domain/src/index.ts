@@ -578,6 +578,8 @@ export type PricingEstimate = {
     burkinaLocalizedPricing: boolean;
     priceReviewAvailable: boolean;
     priceLockWindowSeconds: number;
+    driverPickupDistanceIncludedInFare: boolean;
+    driverPickupDistancePolicy: string;
   };
 };
 
