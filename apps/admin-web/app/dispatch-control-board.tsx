@@ -2,14 +2,13 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import {
-  authenticateAndFetchCurrentUser,
-  createMobilisApiClient,
-  fetchAdminDispatchSettings,
-  updateAdminDispatchSettings,
   type AdminDispatchSettingsResponse,
 } from '@mobilis/api';
-import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
 import { formatAdminDateTime } from './admin-ops-kernel';
+import {
+  adminMutationHeaderName,
+  adminMutationHeaderValue,
+} from './admin-server-security';
 
 type DispatchControlBoardProps = {
   initialSettings: AdminDispatchSettingsResponse;
@@ -128,6 +127,41 @@ function resolveActorRole(entry: DispatchHistoryEntry) {
   return entry.actor.role?.toUpperCase() ?? 'UNKNOWN';
 }
 
+async function fetchDispatchSettings() {
+  const response = await fetch('/api/admin/dispatch-settings');
+
+  if (!response.ok) {
+    throw new Error('Dispatch settings fetch failed');
+  }
+
+  return (await response.json()) as AdminDispatchSettingsResponse;
+}
+
+async function updateDispatchSettings(
+  payload: {
+    lookbackHours?: number;
+    halfLifeHours?: number;
+    declineCooldownMinutes?: number;
+    historyLimit?: number;
+    resetToDefaults?: boolean;
+  },
+) {
+  const response = await fetch('/api/admin/dispatch-settings', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      [adminMutationHeaderName]: adminMutationHeaderValue,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error('Dispatch settings update failed');
+  }
+
+  return (await response.json()) as AdminDispatchSettingsResponse;
+}
+
 export function DispatchControlBoard({
   initialSettings,
 }: DispatchControlBoardProps) {
@@ -149,23 +183,6 @@ export function DispatchControlBoard({
     historyLimit: String(initialSettings.settings.historyLimit),
   });
 
-  const client = useMemo(
-    () =>
-      createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-        version: mobilisRuntimeConfig.apiVersion,
-      }),
-    [],
-  );
-
-  const withAdminClient = useCallback(async () => {
-    const { authClient } = await authenticateAndFetchCurrentUser(
-      client,
-      mobilisDemoAccounts.admin,
-    );
-
-    return authClient;
-  }, [client]);
-
   const syncFormWithSnapshot = useCallback(
     (snapshot: AdminDispatchSettingsResponse) => {
       setFormValues({
@@ -185,8 +202,7 @@ export function DispatchControlBoard({
       setIsSubmitting(true);
 
       try {
-        const authClient = await withAdminClient();
-        const response = await fetchAdminDispatchSettings(authClient);
+        const response = await fetchDispatchSettings();
         setLiveSettings(response);
         syncFormWithSnapshot(response);
         setStatus(message);
@@ -196,7 +212,7 @@ export function DispatchControlBoard({
         setIsSubmitting(false);
       }
     },
-    [syncFormWithSnapshot, withAdminClient],
+    [syncFormWithSnapshot],
   );
 
   async function handleSubmit() {
@@ -204,8 +220,7 @@ export function DispatchControlBoard({
     setStatus('Enregistrement des reglages dispatch persistants...');
 
     try {
-      const authClient = await withAdminClient();
-      const response = await updateAdminDispatchSettings(authClient, {
+      const response = await updateDispatchSettings({
         lookbackHours: Number(formValues.lookbackHours),
         halfLifeHours: Number(formValues.halfLifeHours),
         declineCooldownMinutes: Number(formValues.declineCooldownMinutes),
@@ -226,8 +241,7 @@ export function DispatchControlBoard({
     setStatus('Retour aux reglages dispatch par defaut...');
 
     try {
-      const authClient = await withAdminClient();
-      const response = await updateAdminDispatchSettings(authClient, {
+      const response = await updateDispatchSettings({
         resetToDefaults: true,
       });
       setLiveSettings(response);
