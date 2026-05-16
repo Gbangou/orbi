@@ -122,17 +122,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isRealtimeEventChannel(
-  value: unknown,
-): value is RealtimeEventChannel {
+function isRealtimeEventChannel(value: unknown): value is RealtimeEventChannel {
   return typeof value === 'string' && realtimeEventChannels.has(value);
 }
 
 function isBoundedString(value: unknown, maxLength: number): value is string {
   return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    value.length <= maxLength
+    typeof value === 'string' && value.length > 0 && value.length <= maxLength
   );
 }
 

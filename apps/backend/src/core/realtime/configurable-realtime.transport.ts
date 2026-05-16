@@ -118,7 +118,7 @@ export class ConfigurableRealtimeTransport implements RealtimeTransport {
           ? 'REALTIME_ADAPTER=postgres est configure, mais le transport PostgreSQL n est pas disponible.'
           : !this.isSupportedAdapter(configuredAdapter)
             ? `REALTIME_ADAPTER=${configuredAdapter} n est pas supporte. Utiliser in-memory ou postgres.`
-          : null;
+            : null;
 
     const degradeReason = this.combineReasons(
       snapshot.degradeReason,
