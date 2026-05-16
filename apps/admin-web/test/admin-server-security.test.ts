@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
+
 import {
   adminMutationHeaderName,
   adminMutationHeaderValue,
@@ -17,6 +20,23 @@ function request(headers: Record<string, string>, method = 'POST') {
     },
     headers: new Headers(headers),
   };
+}
+
+function collectRouteFiles(directory: string): string[] {
+  return readdirSync(directory).flatMap((entry) => {
+    const fullPath = join(directory, entry);
+    const stat = statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      return collectRouteFiles(fullPath);
+    }
+
+    return entry === 'route.ts' ? [fullPath] : [];
+  });
+}
+
+function relativeRoutePath(routeFile: string) {
+  return relative(process.cwd(), routeFile).split(sep).join('/');
 }
 
 describe('admin server security', () => {
@@ -98,5 +118,53 @@ describe('admin server security', () => {
     expect(resolveSafeDocumentUrl('javascript:alert(1)')).toBeNull();
     expect(resolveSafeDocumentUrl('data:text/html,<script>')).toBeNull();
     expect(resolveSafeDocumentUrl('/api/admin/document')).toBeNull();
+  });
+
+  it('keeps every admin server mutation behind the same-origin mutation guard', () => {
+    const routeFiles = collectRouteFiles(join(process.cwd(), 'app/api/admin'));
+    const mutationRoutes = routeFiles.filter((routeFile) =>
+      /export async function (POST|PUT|PATCH|DELETE)\b/.test(
+        readFileSync(routeFile, 'utf8'),
+      ),
+    );
+
+    expect(mutationRoutes.map((routeFile) => relativeRoutePath(routeFile)))
+      .toEqual(expect.arrayContaining([
+        'app/api/admin/driver-payouts/[payoutId]/paid/route.ts',
+        'app/api/admin/payment-attempts/[paymentAttemptId]/refund/route.ts',
+        'app/api/admin/payment-webhook-events/[eventId]/replay/route.ts',
+      ]));
+
+    const unguardedRoutes = mutationRoutes
+      .filter(
+        (routeFile) =>
+          !readFileSync(routeFile, 'utf8').includes(
+            'isSafeAdminMutationRequest',
+          ),
+      )
+      .map((routeFile) => relativeRoutePath(routeFile));
+
+    expect(unguardedRoutes).toEqual([]);
+  });
+
+  it('bounds dynamic admin mutation identifiers before proxying to backend', () => {
+    const routeFiles = collectRouteFiles(join(process.cwd(), 'app/api/admin'));
+    const dynamicMutationRoutes = routeFiles.filter((routeFile) => {
+      const source = readFileSync(routeFile, 'utf8');
+
+      return (
+        routeFile.includes('[') &&
+        /export async function (POST|PUT|PATCH|DELETE)\b/.test(source)
+      );
+    });
+
+    const unboundedRoutes = dynamicMutationRoutes
+      .filter(
+        (routeFile) =>
+          !readFileSync(routeFile, 'utf8').includes('isSafeOpaqueAdminId'),
+      )
+      .map((routeFile) => relativeRoutePath(routeFile));
+
+    expect(unboundedRoutes).toEqual([]);
   });
 });

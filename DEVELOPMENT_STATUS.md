@@ -158,6 +158,9 @@ paiement provider, observabilite et runbooks verts.
   `processing` et `completed` sont conservees dans le repo et executees par
   `pnpm test:payments:fixtures`, afin de verifier que le webhook pending ne
   deplace pas d argent et que le webhook processed finalise la reversal wallet.
+- Contrat admin-web ajoute sur les routes serveur operations: chaque mutation
+  locale `/api/admin/**` doit conserver le garde same-origin explicite, et les
+  mutations avec identifiant dynamique doivent borner l ID avant proxy backend.
 
 ## Architecture active
 
@@ -181,7 +184,9 @@ paiement provider, observabilite et runbooks verts.
 3. Adapter S3/GCS production pour objets documentaires.
 4. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
 5. Etendre le proxy serveur admin HttpOnly aux autres actions sensibles:
-   wallet/payout, refund/replay paiement, onboarding documents et dispatch.
+   onboarding documents et dispatch; wallet/payout, refund/replay paiement,
+   support, health, jobs et feature flags sont deja couverts cote routes
+   serveur locales.
 6. Continuer le programme de tests securite iteratif:
    - API1/API5: IDOR/BOLA et function-level authorization sur onboarding
      documents, dispatch, support tickets et exports finance.
@@ -228,8 +233,9 @@ git diff --check
   rollback pratique, secrets production, URLs externes HTTPS et validation
   terrain repetee.
 - Les clients mobiles conservent le modele Bearer token pour Expo; l'admin web
-  commence sa migration vers routes serveur + cookie HttpOnly, mais toutes les
-  actions sensibles doivent suivre ce modele avant exposition publique large.
+  a migre plusieurs surfaces sensibles vers routes serveur + cookie HttpOnly,
+  avec contrat de regression sur les mutations locales; onboarding documents et
+  dispatch doivent encore suivre ce modele avant exposition publique large.
 - Le backend refuse maintenant les identifiants admin et mobiles malformes
   avant Prisma; les controles IDOR metier restent assures par les requetes
   scoping existantes, et doivent continuer a etre testes par role.
