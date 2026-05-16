@@ -39,7 +39,7 @@ export class RateLimitGuard implements CanActivate {
     const request = http.getRequest<AuthenticatedRequest>();
     const response = http.getResponse<Response>();
     const identifier = this.resolveIdentifier(request, options.scope ?? 'ip');
-    const routeKey = request.originalUrl || request.url;
+    const routeKey = this.resolveRouteKey(request);
     const key = `${request.method}:${routeKey}:${identifier}`;
     const result = await this.rateLimitService.consume(
       key,
@@ -70,5 +70,11 @@ export class RateLimitGuard implements CanActivate {
     }
 
     return `ip:${request.ip ?? 'unknown'}`;
+  }
+
+  private resolveRouteKey(request: Request) {
+    const path = request.path || request.originalUrl || request.url || '/';
+
+    return path.split('?')[0] || '/';
   }
 }

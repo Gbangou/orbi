@@ -85,6 +85,25 @@ describe('RateLimitGuard', () => {
     );
   });
 
+  it('ignores query strings when building rate-limit route keys', async () => {
+    const { guard, rateLimitService } = createGuard();
+    const { context } = createExecutionContext({
+      method: 'POST',
+      originalUrl: '/api/v1/auth/sign-in?attempt=one',
+      url: '/api/v1/auth/sign-in?attempt=one',
+      ip: '10.0.0.10',
+      headers: {},
+    });
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+
+    expect(rateLimitService.consume).toHaveBeenCalledWith(
+      'POST:/api/v1/auth/sign-in:ip:10.0.0.10',
+      2,
+      60_000,
+    );
+  });
+
   it('throws when the configured limit is exceeded', async () => {
     const { guard, rateLimitService } = createGuard();
     rateLimitService.consume.mockResolvedValue({
