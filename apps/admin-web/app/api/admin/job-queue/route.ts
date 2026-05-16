@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { fetchAdminJobQueue } from '@mobilis/api';
-import { getAdminServerAuthClient } from '../../../admin-server-auth';
+import {
+  createAdminServerAuthErrorResponse,
+  getAdminServerAuthClient,
+} from '../../../admin-server-auth';
 import {
   createNoStoreAdminHeaders,
   resolveAdminJobQueueKind,
@@ -26,10 +29,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, {
       headers: createNoStoreAdminHeaders(),
     });
-  } catch {
-    return NextResponse.json(
-      { message: 'Unable to fetch admin job queue.' },
-      { status: 502, headers: createNoStoreAdminHeaders() },
+  } catch (error) {
+    return createAdminServerAuthErrorResponse(
+      error,
+      'Unable to fetch admin job queue.',
     );
   }
 }

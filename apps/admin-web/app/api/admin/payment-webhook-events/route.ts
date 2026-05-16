@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { fetchAdminPaymentWebhookEvents } from '@mobilis/api';
-import { getAdminServerAuthClient } from '../../../admin-server-auth';
+import {
+  createAdminServerAuthErrorResponse,
+  getAdminServerAuthClient,
+} from '../../../admin-server-auth';
 import {
   createNoStoreAdminHeaders,
   resolvePaymentWebhookJournalKind,
@@ -22,10 +25,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, {
       headers: createNoStoreAdminHeaders(),
     });
-  } catch {
-    return NextResponse.json(
-      { message: 'Unable to fetch payment webhook journal.' },
-      { status: 502, headers: createNoStoreAdminHeaders() },
+  } catch (error) {
+    return createAdminServerAuthErrorResponse(
+      error,
+      'Unable to fetch payment webhook journal.',
     );
   }
 }

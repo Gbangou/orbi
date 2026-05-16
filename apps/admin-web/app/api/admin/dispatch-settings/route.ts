@@ -3,7 +3,10 @@ import {
   fetchAdminDispatchSettings,
   updateAdminDispatchSettings,
 } from '@mobilis/api';
-import { getAdminServerAuthClient } from '../../../admin-server-auth';
+import {
+  createAdminServerAuthErrorResponse,
+  getAdminServerAuthClient,
+} from '../../../admin-server-auth';
 import {
   createNoStoreAdminHeaders,
   isSafeAdminMutationRequest,
@@ -79,10 +82,10 @@ export async function GET() {
     return NextResponse.json(response, {
       headers: createNoStoreAdminHeaders(),
     });
-  } catch {
-    return NextResponse.json(
-      { message: 'Unable to fetch dispatch settings.' },
-      { status: 502, headers: createNoStoreAdminHeaders() },
+  } catch (error) {
+    return createAdminServerAuthErrorResponse(
+      error,
+      'Unable to fetch dispatch settings.',
     );
   }
 }
@@ -113,10 +116,10 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(response, {
       headers: createNoStoreAdminHeaders(),
     });
-  } catch {
-    return NextResponse.json(
-      { message: 'Unable to update dispatch settings.' },
-      { status: 502, headers: createNoStoreAdminHeaders() },
+  } catch (error) {
+    return createAdminServerAuthErrorResponse(
+      error,
+      'Unable to update dispatch settings.',
     );
   }
 }

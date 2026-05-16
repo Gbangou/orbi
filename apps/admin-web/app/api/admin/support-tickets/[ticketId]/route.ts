@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateAdminSupportTicket } from '@mobilis/api';
-import { getAdminServerAuthClient } from '../../../../admin-server-auth';
+import {
+  createAdminServerAuthErrorResponse,
+  getAdminServerAuthClient,
+} from '../../../../admin-server-auth';
 import {
   createNoStoreAdminHeaders,
   isSafeAdminMutationRequest,
@@ -89,10 +92,10 @@ export async function PATCH(
     return NextResponse.json(response, {
       headers: createNoStoreAdminHeaders(),
     });
-  } catch {
-    return NextResponse.json(
-      { message: 'Unable to update support ticket.' },
-      { status: 502, headers: createNoStoreAdminHeaders() },
+  } catch (error) {
+    return createAdminServerAuthErrorResponse(
+      error,
+      'Unable to update support ticket.',
     );
   }
 }

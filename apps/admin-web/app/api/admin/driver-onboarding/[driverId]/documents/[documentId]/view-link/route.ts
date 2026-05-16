@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { fetchAdminDriverDocumentViewLink } from '@mobilis/api';
-import { getAdminServerAuthClient } from '../../../../../../../admin-server-auth';
+import {
+  createAdminServerAuthErrorResponse,
+  getAdminServerAuthClient,
+} from '../../../../../../../admin-server-auth';
 import {
   createNoStoreAdminHeaders,
   isSafeOpaqueAdminId,
@@ -32,10 +35,10 @@ export async function GET(
     return NextResponse.json(response, {
       headers: createNoStoreAdminHeaders(),
     });
-  } catch {
-    return NextResponse.json(
-      { message: 'Unable to create driver document view link.' },
-      { status: 502, headers: createNoStoreAdminHeaders() },
+  } catch (error) {
+    return createAdminServerAuthErrorResponse(
+      error,
+      'Unable to create driver document view link.',
     );
   }
 }

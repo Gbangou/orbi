@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { fetchAdminDriverOnboardingExportCsv } from '@mobilis/api';
-import { getAdminServerAuthClient } from '../../../../admin-server-auth';
+import {
+  createAdminServerAuthErrorResponse,
+  getAdminServerAuthClient,
+} from '../../../../admin-server-auth';
 import { createNoStoreAdminHeaders } from '../../../../admin-server-security';
 
 export const dynamic = 'force-dynamic';
@@ -52,10 +55,10 @@ export async function GET(request: NextRequest) {
           'attachment; filename="mobilis-driver-onboarding-export.csv"',
       },
     });
-  } catch {
-    return NextResponse.json(
-      { message: 'Unable to export driver onboarding CSV.' },
-      { status: 502, headers: createNoStoreAdminHeaders() },
+  } catch (error) {
+    return createAdminServerAuthErrorResponse(
+      error,
+      'Unable to export driver onboarding CSV.',
     );
   }
 }

@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { recordAdminDriverWalletRecoveryAdjustment } from '@mobilis/api';
-import { getAdminServerAuthClient } from '../../../../../admin-server-auth';
+import {
+  createAdminServerAuthErrorResponse,
+  getAdminServerAuthClient,
+} from '../../../../../admin-server-auth';
 import {
   createNoStoreAdminHeaders,
   isSafeAdminMutationRequest,
@@ -87,10 +90,10 @@ export async function POST(
     return NextResponse.json(response, {
       headers: createNoStoreAdminHeaders(),
     });
-  } catch {
-    return NextResponse.json(
-      { message: 'Unable to record driver wallet recovery.' },
-      { status: 502, headers: createNoStoreAdminHeaders() },
+  } catch (error) {
+    return createAdminServerAuthErrorResponse(
+      error,
+      'Unable to record driver wallet recovery.',
     );
   }
 }

@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { fetchAdminDriverOnboardingExportHistory } from '@mobilis/api';
-import { getAdminServerAuthClient } from '../../../../admin-server-auth';
+import {
+  createAdminServerAuthErrorResponse,
+  getAdminServerAuthClient,
+} from '../../../../admin-server-auth';
 import { createNoStoreAdminHeaders } from '../../../../admin-server-security';
 
 export const dynamic = 'force-dynamic';
@@ -32,10 +35,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, {
       headers: createNoStoreAdminHeaders(),
     });
-  } catch {
-    return NextResponse.json(
-      { message: 'Unable to fetch driver onboarding export history.' },
-      { status: 502, headers: createNoStoreAdminHeaders() },
+  } catch (error) {
+    return createAdminServerAuthErrorResponse(
+      error,
+      'Unable to fetch driver onboarding export history.',
     );
   }
 }

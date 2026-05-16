@@ -206,6 +206,28 @@ describe('admin server security', () => {
     expect(unguardedRoutes).toEqual([]);
   });
 
+  it('maps missing admin server sessions explicitly on every authenticated proxy route', () => {
+    const routeFiles = collectRouteFiles(join(process.cwd(), 'app/api/admin'));
+    const authenticatedProxyRoutes = routeFiles.filter((routeFile) =>
+      /getAdminServerAuth(Client|Session)/.test(
+        readFileSync(routeFile, 'utf8'),
+      ),
+    );
+
+    expect(authenticatedProxyRoutes.length).toBeGreaterThan(20);
+
+    const routesWithoutAuthErrorMapping = authenticatedProxyRoutes
+      .filter(
+        (routeFile) =>
+          !readFileSync(routeFile, 'utf8').includes(
+            'createAdminServerAuthErrorResponse',
+          ),
+      )
+      .map((routeFile) => relativeRoutePath(routeFile));
+
+    expect(routesWithoutAuthErrorMapping).toEqual([]);
+  });
+
   it('bounds dynamic admin mutation identifiers before proxying to backend', () => {
     const routeFiles = collectRouteFiles(join(process.cwd(), 'app/api/admin'));
     const dynamicMutationRoutes = routeFiles.filter((routeFile) => {
