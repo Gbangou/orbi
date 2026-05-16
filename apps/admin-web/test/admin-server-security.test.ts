@@ -7,6 +7,10 @@ import {
   createNoStoreAdminHeaders,
   isSafeAdminMutationRequest,
   isSafeOpaqueAdminId,
+  resolveAdminJobQueueKind,
+  resolveAdminJobQueuePageNumber,
+  resolveAdminJobQueuePageSize,
+  resolveAdminJobQueueStatus,
   resolveDriverPayoutSettlementStatus,
   resolvePaymentWebhookJournalKind,
 } from '../app/admin-server-security';
@@ -106,6 +110,34 @@ describe('admin server security', () => {
     expect(resolvePaymentWebhookJournalKind('ignored')).toBe('ignored');
     expect(resolvePaymentWebhookJournalKind('all')).toBeUndefined();
     expect(resolvePaymentWebhookJournalKind('../ignored')).toBeUndefined();
+  });
+
+  it('bounds admin job queue filters before proxying to the backend', () => {
+    expect(resolveAdminJobQueueKind('PAYMENT_WEBHOOK')).toBe(
+      'PAYMENT_WEBHOOK',
+    );
+    expect(resolveAdminJobQueueKind('PAYMENT_REFUND_VERIFICATION')).toBe(
+      'PAYMENT_REFUND_VERIFICATION',
+    );
+    expect(resolveAdminJobQueueKind('DRIVER_DOCUMENT')).toBe(
+      'DRIVER_DOCUMENT',
+    );
+    expect(resolveAdminJobQueueKind('ALL')).toBeUndefined();
+    expect(resolveAdminJobQueueKind('../PAYMENT_WEBHOOK')).toBeUndefined();
+
+    expect(resolveAdminJobQueueStatus('DEAD_LETTER')).toBe('DEAD_LETTER');
+    expect(resolveAdminJobQueueStatus('RUNNING')).toBe('RUNNING');
+    expect(resolveAdminJobQueueStatus('all')).toBeUndefined();
+  });
+
+  it('bounds admin job queue pagination before proxying to the backend', () => {
+    expect(resolveAdminJobQueuePageNumber('3')).toBe(3);
+    expect(resolveAdminJobQueuePageNumber('0')).toBeUndefined();
+    expect(resolveAdminJobQueuePageNumber('bad')).toBeUndefined();
+
+    expect(resolveAdminJobQueuePageSize('6')).toBe(6);
+    expect(resolveAdminJobQueuePageSize('500')).toBe(50);
+    expect(resolveAdminJobQueuePageSize('-1')).toBeUndefined();
   });
 
   it('allows only safe document view URLs for admin links', () => {

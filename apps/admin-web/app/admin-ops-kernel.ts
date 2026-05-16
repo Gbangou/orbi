@@ -14,6 +14,7 @@ type LiveOpsTrip = AdminLiveOpsResponse['trips'][number];
 export type JobQueueKindFilter =
   | 'ALL'
   | 'PAYMENT_WEBHOOK'
+  | 'PAYMENT_REFUND_VERIFICATION'
   | 'DRIVER_DOCUMENT'
   | 'NOTIFICATION'
   | 'DRIVER_RESERVATION_EXPIRY';
@@ -121,6 +122,11 @@ export function resolveJobQueueFilterSummary(
         actionRequired > 0
           ? `${actionRequired} webhook(s) paiement demandent investigation finance avant requeue.`
           : 'Webhooks paiement charges sans signal critique dans ce filtre.';
+    } else if (kindFilter === 'PAYMENT_REFUND_VERIFICATION') {
+      message =
+        actionRequired > 0
+          ? `${actionRequired} refund(s) paiement demandent verification provider avant requeue.`
+          : 'Refunds paiement charges sans signal critique dans ce filtre.';
     } else if (kindFilter === 'NOTIFICATION') {
       message =
         actionRequired > 0

@@ -1616,6 +1616,7 @@ export type AdminPaymentAttemptRefundResponse = {
 
 export type AdminJobQueueKind =
   | 'PAYMENT_WEBHOOK'
+  | 'PAYMENT_REFUND_VERIFICATION'
   | 'DRIVER_DOCUMENT'
   | 'NOTIFICATION'
   | 'DRIVER_RESERVATION_EXPIRY';

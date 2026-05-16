@@ -14,6 +14,20 @@ const paymentWebhookJournalKinds = new Set([
   'refund',
   'ignored',
 ]);
+const adminJobQueueKinds = new Set([
+  'PAYMENT_WEBHOOK',
+  'PAYMENT_REFUND_VERIFICATION',
+  'DRIVER_DOCUMENT',
+  'NOTIFICATION',
+  'DRIVER_RESERVATION_EXPIRY',
+]);
+const adminJobQueueStatuses = new Set([
+  'PENDING',
+  'RUNNING',
+  'SUCCEEDED',
+  'DEAD_LETTER',
+]);
+const adminJobQueueMaxPageSize = 50;
 const adminNoStoreHeaders = {
   'Cache-Control': 'no-store, max-age=0',
   Pragma: 'no-cache',
@@ -70,6 +84,43 @@ export function resolvePaymentWebhookJournalKind(value: string | null) {
   }
 
   return undefined;
+}
+
+export function resolveAdminJobQueueKind(value: string | null) {
+  if (adminJobQueueKinds.has(value ?? '')) {
+    return value as
+      | 'PAYMENT_WEBHOOK'
+      | 'PAYMENT_REFUND_VERIFICATION'
+      | 'DRIVER_DOCUMENT'
+      | 'NOTIFICATION'
+      | 'DRIVER_RESERVATION_EXPIRY';
+  }
+
+  return undefined;
+}
+
+export function resolveAdminJobQueueStatus(value: string | null) {
+  if (adminJobQueueStatuses.has(value ?? '')) {
+    return value as 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
+  }
+
+  return undefined;
+}
+
+export function resolveAdminJobQueuePageNumber(value: string | null) {
+  const parsed = Number.parseInt(value ?? '', 10);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+export function resolveAdminJobQueuePageSize(value: string | null) {
+  const parsed = Number.parseInt(value ?? '', 10);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+
+  return Math.min(parsed, adminJobQueueMaxPageSize);
 }
 
 export function createNoStoreAdminHeaders() {

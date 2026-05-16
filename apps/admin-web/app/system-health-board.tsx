@@ -76,6 +76,7 @@ const jobQueueKindFilters: Array<{
 }> = [
   { id: 'ALL', label: 'Toutes familles' },
   { id: 'PAYMENT_WEBHOOK', label: 'Paiements' },
+  { id: 'PAYMENT_REFUND_VERIFICATION', label: 'Refunds' },
   { id: 'DRIVER_DOCUMENT', label: 'Documents' },
   { id: 'NOTIFICATION', label: 'Notifications' },
   { id: 'DRIVER_RESERVATION_EXPIRY', label: 'Reservations' },
@@ -153,6 +154,10 @@ function describeJobKind(kind: string) {
     return 'Webhooks paiement';
   }
 
+  if (kind === 'PAYMENT_REFUND_VERIFICATION') {
+    return 'Refunds paiement';
+  }
+
   if (kind === 'DRIVER_DOCUMENT') {
     return 'Documents chauffeur';
   }
@@ -209,6 +214,10 @@ function buildRequeueConfirmation(job: AdminJobQueueEntry) {
 
   if (job.kind === 'PAYMENT_WEBHOOK') {
     return `${base}\n\nVerifier avant de continuer: signature, reference provider, montant/devise et idempotence finance.`;
+  }
+
+  if (job.kind === 'PAYMENT_REFUND_VERIFICATION') {
+    return `${base}\n\nVerifier avant de continuer: statut provider du remboursement, tentative paiement et solde wallet.`;
   }
 
   if (job.kind === 'DRIVER_DOCUMENT') {
@@ -465,6 +474,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
     durable: false,
     families: [
       'PAYMENT_WEBHOOK',
+      'PAYMENT_REFUND_VERIFICATION',
       'DRIVER_DOCUMENT',
       'NOTIFICATION',
       'DRIVER_RESERVATION_EXPIRY',

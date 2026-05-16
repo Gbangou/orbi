@@ -325,6 +325,30 @@ describe('admin-ops-kernel', () => {
     });
   });
 
+  it('summarizes refund verification jobs for finance triage', () => {
+    const summary = resolveJobQueueFilterSummary(
+      [
+        createJob({
+          kind: 'PAYMENT_REFUND_VERIFICATION',
+          diagnostics: {
+            attemptPressure: 80,
+            canRequeueSafely: false,
+            owner: 'finance',
+            riskSignals: ['provider:CINETPAY'],
+            recommendedAction: 'Verifier le remboursement provider.',
+            severity: 'high',
+          },
+        }),
+      ],
+      'PAYMENT_REFUND_VERIFICATION',
+    );
+
+    expect(summary.message).toBe(
+      '1 refund(s) paiement demandent verification provider avant requeue.',
+    );
+    expect(summary.dominantSignal).toBe('provider:CINETPAY');
+  });
+
   it('groups job queue entries by accountable owner', () => {
     const rows = resolveJobQueueOwnerRows([
       createJob(),
