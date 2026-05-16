@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { extractApiErrorMessage } from '@mobilis/api';
-import { mobilisDemoAccounts } from '@mobilis/config';
+import { mobilisDemoAccessEnabled, mobilisDemoAccounts } from '@mobilis/config';
 import { mobilisTheme } from '@mobilis/ui';
 import { signInRiderAccount, signUpRiderAccount } from '../lib/auth';
 import { RiderJourneySection } from '../lib/rider-journey';
@@ -101,7 +101,11 @@ export default function RiderAuthScreen() {
         <SectionHeading
           eyebrow="Parcours"
           title="Reprenez vos trajets sans friction"
-          description="Connexion, inscription et compte demo volontaire dans une entree plus nette pour lancer rapidement une reservation."
+          description={
+            mobilisDemoAccessEnabled
+              ? 'Connexion, inscription et compte demo volontaire dans une entree plus nette pour lancer rapidement une reservation.'
+              : 'Connexion et inscription dans une entree plus nette pour lancer rapidement une reservation.'
+          }
         />
         <View style={styles.insightRow}>
           <InsightBadge label="Booking" value="Prix clairs" tone="teal" />
@@ -144,7 +148,9 @@ export default function RiderAuthScreen() {
           </Text>
           <Text style={styles.cardMeta}>
             {mode === 'sign-in'
-              ? 'Reconnectez-vous avec vos identifiants ou chargez explicitement le compte demo.'
+              ? mobilisDemoAccessEnabled
+                ? 'Reconnectez-vous avec vos identifiants ou chargez explicitement le compte demo.'
+                : 'Reconnectez-vous avec vos identifiants.'
               : 'Le compte vous permettra ensuite de reserver et sauvegarder vos lieux favoris.'}
           </Text>
         </View>
@@ -183,13 +189,15 @@ export default function RiderAuthScreen() {
           style={styles.input}
         />
 
-        <Pressable
-          onPress={applyDemoAccount}
-          disabled={isSubmitting}
-          style={[styles.secondaryButton, isSubmitting ? styles.buttonDisabled : null]}
-        >
-          <Text style={styles.secondaryButtonLabel}>Utiliser le compte demo</Text>
-        </Pressable>
+        {mobilisDemoAccessEnabled ? (
+          <Pressable
+            onPress={applyDemoAccount}
+            disabled={isSubmitting}
+            style={[styles.secondaryButton, isSubmitting ? styles.buttonDisabled : null]}
+          >
+            <Text style={styles.secondaryButtonLabel}>Utiliser le compte demo</Text>
+          </Pressable>
+        ) : null}
 
         <Pressable
           disabled={isSubmitting || !canSubmit}

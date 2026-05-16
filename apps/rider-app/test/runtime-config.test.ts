@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { resolveMobilisApiBaseUrlForRuntime } from '@mobilis/config';
+import {
+  resolveMobilisApiBaseUrlForRuntime,
+  resolveMobilisDemoAccessEnabled,
+} from '@mobilis/config';
 
 describe('Mobilis runtime config', () => {
   const originalLocation = globalThis.location;
@@ -44,6 +47,16 @@ describe('Mobilis runtime config', () => {
     expect(
       resolveMobilisApiBaseUrlForRuntime('https://api.mobilis.app'),
     ).toBe('https://api.mobilis.app');
+  });
+
+  it('disables demo account affordances by default in production runtime config', () => {
+    expect(resolveMobilisDemoAccessEnabled({ NODE_ENV: 'production' })).toBe(false);
+    expect(
+      resolveMobilisDemoAccessEnabled({
+        NODE_ENV: 'production',
+        EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS: 'true',
+      }),
+    ).toBe(true);
   });
 
   it('keeps mobile API clients and realtime streams on the runtime-resolved base URL', () => {

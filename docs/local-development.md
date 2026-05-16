@@ -122,6 +122,11 @@ pnpm mobile:lan -- -HostIp 192.168.1.20
 - `rider@mobilis.app`
 - mot de passe commun: `Mobilis123!`
 
+Les raccourcis UI qui prechargent ces comptes sont actifs en dev/test. En
+production, ils sont masques par defaut; il faut definir explicitement
+`NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=true` ou
+`EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS=true` pour les afficher.
+
 ## Commandes utiles
 
 - `pnpm dev:backend`

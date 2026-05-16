@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { extractApiErrorMessage } from '@mobilis/api';
-import { mobilisDemoAccounts } from '@mobilis/config';
+import { mobilisDemoAccessEnabled, mobilisDemoAccounts } from '@mobilis/config';
 import { mobilisTheme } from '@mobilis/ui';
 import { signInDriverAccount, signUpDriverAccount } from '../lib/auth';
 import { DriverJourneySection } from '../lib/driver-journey';
@@ -102,7 +102,11 @@ export default function DriverAuthScreen() {
         <SectionHeading
           eyebrow="Parcours"
           title="Entrez dans votre cockpit chauffeur"
-          description="Connexion, bascule inscription et compte demo volontaire pour tester ou reprendre une session sans friction."
+          description={
+            mobilisDemoAccessEnabled
+              ? 'Connexion, bascule inscription et compte demo volontaire pour tester ou reprendre une session sans friction.'
+              : 'Connexion et bascule inscription pour reprendre une session sans friction.'
+          }
         />
         <View style={styles.insightRow}>
           <InsightBadge label="Flux" value="Offres live" tone="teal" />
@@ -145,7 +149,9 @@ export default function DriverAuthScreen() {
           </Text>
           <Text style={styles.cardMeta}>
             {mode === 'sign-in'
-              ? 'Utilisez vos identifiants ou chargez explicitement le compte demo.'
+              ? mobilisDemoAccessEnabled
+                ? 'Utilisez vos identifiants ou chargez explicitement le compte demo.'
+                : 'Utilisez vos identifiants chauffeur.'
               : 'Le compte vous permettra ensuite de completer le dossier et le vehicule.'}
           </Text>
         </View>
@@ -184,13 +190,15 @@ export default function DriverAuthScreen() {
           style={styles.input}
         />
 
-        <Pressable
-          onPress={applyDemoAccount}
-          disabled={isSubmitting}
-          style={[styles.secondaryButton, isSubmitting ? styles.buttonDisabled : null]}
-        >
-          <Text style={styles.secondaryButtonLabel}>Utiliser le compte demo</Text>
-        </Pressable>
+        {mobilisDemoAccessEnabled ? (
+          <Pressable
+            onPress={applyDemoAccount}
+            disabled={isSubmitting}
+            style={[styles.secondaryButton, isSubmitting ? styles.buttonDisabled : null]}
+          >
+            <Text style={styles.secondaryButtonLabel}>Utiliser le compte demo</Text>
+          </Pressable>
+        ) : null}
 
         <Pressable
           disabled={isSubmitting || !canSubmit}

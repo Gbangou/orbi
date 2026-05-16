@@ -2,6 +2,7 @@ jest.mock('server-only', () => ({}), { virtual: true });
 
 import {
   buildAdminSessionCookieOptions,
+  canUseAdminDemoAccess,
   getAdminSessionCookieName,
 } from '../app/admin-server-auth';
 
@@ -38,5 +39,9 @@ describe('admin server auth cookie hardening', () => {
       maxAge: 28800,
       priority: 'high',
     });
+  });
+
+  it('keeps demo auto sign-in behind the shared runtime flag', () => {
+    expect(canUseAdminDemoAccess()).toBe(true);
   });
 });

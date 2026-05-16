@@ -6,7 +6,11 @@ import {
   signInWithApi,
   type MobilisApiClient,
 } from '@mobilis/api';
-import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
+import {
+  mobilisDemoAccessEnabled,
+  mobilisDemoAccounts,
+  mobilisRuntimeConfig,
+} from '@mobilis/config';
 import { cookies } from 'next/headers';
 
 const legacyAdminSessionCookieName = 'mobilis_admin_session';
@@ -33,6 +37,10 @@ export function buildAdminSessionCookieOptions() {
     maxAge: adminSessionMaxAgeSeconds,
     priority: 'high' as const,
   };
+}
+
+export function canUseAdminDemoAccess() {
+  return mobilisDemoAccessEnabled;
 }
 
 function createAdminBaseClient() {
@@ -72,6 +80,16 @@ export async function getAdminServerAuthSession() {
         sessionToken: existingToken,
       };
     }
+  }
+
+  if (!canUseAdminDemoAccess()) {
+    if (isProductionRuntime() && legacyToken) {
+      cookieStore.delete(legacyAdminSessionCookieName);
+    }
+
+    throw new Error(
+      'Admin demo auto sign-in is disabled for this runtime.',
+    );
   }
 
   const session = await signInWithApi(baseClient, mobilisDemoAccounts.admin);

@@ -34,6 +34,22 @@ export const mobilisRuntimeConfig = {
   launchMarket: 'Burkina Faso',
 } as const;
 
+export function resolveMobilisDemoAccessEnabled(
+  env: Record<string, string | undefined> = runtimeEnvironment.process?.env ?? {},
+) {
+  const explicitValue =
+    env.EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS ??
+    env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS;
+
+  if (explicitValue) {
+    return ['1', 'true', 'yes', 'on'].includes(explicitValue.toLowerCase());
+  }
+
+  return env.NODE_ENV !== 'production';
+}
+
+export const mobilisDemoAccessEnabled = resolveMobilisDemoAccessEnabled();
+
 export function resolveMobilisApiBaseUrlForRuntime(
   configuredBaseUrl = mobilisRuntimeConfig.apiBaseUrl,
 ) {
