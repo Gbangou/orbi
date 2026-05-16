@@ -287,4 +287,29 @@ describe('RealtimeService', () => {
       featureFlagEnabled: true,
     });
   });
+
+  it('does not count inactive stream observables as connected clients', () => {
+    const service = new RealtimeService(new InMemoryRealtimeTransport(), {
+      isEnabled: jest.fn().mockReturnValue(true),
+      getMode: jest.fn().mockReturnValue('on'),
+    } as never);
+
+    service.stream({
+      role: 'ADMIN',
+      actorId: 'admin-1',
+      riderId: null,
+      driverId: null,
+    });
+
+    expect(service.snapshot()).toEqual({
+      adapter: 'in-memory',
+      sharedBackplane: false,
+      degraded: false,
+      degradeReason: null,
+      activeStreams: 0,
+      publishedEvents: 0,
+      featureFlagMode: 'on',
+      featureFlagEnabled: true,
+    });
+  });
 });

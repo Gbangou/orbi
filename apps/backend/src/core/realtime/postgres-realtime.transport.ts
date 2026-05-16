@@ -5,6 +5,7 @@ import { Client, Pool, type PoolConfig } from 'pg';
 import {
   Observable,
   Subject,
+  defer,
   filter,
   finalize,
   interval,
@@ -75,31 +76,33 @@ export class PostgresRealtimeTransport
   }
 
   stream(filterOptions: RealtimeEventFilter): Observable<MessageEvent> {
-    this.activeStreams += 1;
-    void this.ensureListening();
+    return defer(() => {
+      this.activeStreams += 1;
+      void this.ensureListening();
 
-    const eventStream = this.events$.pipe(
-      filter((event) => canReceiveRealtimeEvent(event, filterOptions)),
-      map((event) => ({
-        data: event,
-        type: event.type,
-      })),
-    );
-    const heartbeatStream = interval(15_000).pipe(
-      map(() => ({
-        data: {
+      const eventStream = this.events$.pipe(
+        filter((event) => canReceiveRealtimeEvent(event, filterOptions)),
+        map((event) => ({
+          data: event,
+          type: event.type,
+        })),
+      );
+      const heartbeatStream = interval(15_000).pipe(
+        map(() => ({
+          data: {
+            type: 'heartbeat',
+            createdAt: new Date().toISOString(),
+          },
           type: 'heartbeat',
-          createdAt: new Date().toISOString(),
-        },
-        type: 'heartbeat',
-      })),
-    );
+        })),
+      );
 
-    return merge(eventStream, heartbeatStream).pipe(
-      finalize(() => {
-        this.activeStreams = Math.max(0, this.activeStreams - 1);
-      }),
-    );
+      return merge(eventStream, heartbeatStream).pipe(
+        finalize(() => {
+          this.activeStreams = Math.max(0, this.activeStreams - 1);
+        }),
+      );
+    });
   }
 
   snapshot() {

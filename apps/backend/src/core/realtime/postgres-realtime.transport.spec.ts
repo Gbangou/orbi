@@ -185,12 +185,14 @@ describe('PostgresRealtimeTransport', () => {
     );
     const transport = new PostgresRealtimeTransport(configService as never);
 
-    transport.stream({
-      role: 'ADMIN',
-      actorId: 'admin-1',
-      riderId: null,
-      driverId: null,
-    });
+    const subscription = transport
+      .stream({
+        role: 'ADMIN',
+        actorId: 'admin-1',
+        riderId: null,
+        driverId: null,
+      })
+      .subscribe();
     await Promise.resolve();
     notificationHandlers[0]?.({
       channel: 'mobilis_realtime_events',
@@ -205,6 +207,21 @@ describe('PostgresRealtimeTransport', () => {
     expect(transport.snapshot().degradeReason).toContain(
       'Postgres realtime parse failed',
     );
+
+    subscription.unsubscribe();
+  });
+
+  it('does not connect listeners for inactive stream observables', () => {
+    const transport = new PostgresRealtimeTransport(configService as never);
+
+    transport.stream({
+      role: 'ADMIN',
+      actorId: 'admin-1',
+      riderId: null,
+      driverId: null,
+    });
+
+    expect(mockClientConnect).not.toHaveBeenCalled();
   });
 
   it('uses the local default database URL for the listener when config is absent', async () => {
