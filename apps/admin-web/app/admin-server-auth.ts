@@ -12,11 +12,20 @@ import {
   mobilisRuntimeConfig,
 } from '@mobilis/config';
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+import { createNoStoreAdminHeaders } from './admin-server-security';
 
 const legacyAdminSessionCookieName = 'mobilis_admin_session';
 const hardenedAdminSessionCookieName = '__Host-mobilis_admin_session';
 const adminSessionMaxAgeSeconds = 60 * 60 * 8;
 const adminRoles = new Set(['ADMIN', 'OPS', 'SUPPORT']);
+
+export class AdminServerAuthRequiredError extends Error {
+  constructor() {
+    super('Admin session is required.');
+    this.name = 'AdminServerAuthRequiredError';
+  }
+}
 
 function isProductionRuntime() {
   return process.env.NODE_ENV === 'production';
@@ -41,6 +50,29 @@ export function buildAdminSessionCookieOptions() {
 
 export function canUseAdminDemoAccess() {
   return mobilisDemoAccessEnabled;
+}
+
+export function isAdminServerAuthRequiredError(
+  error: unknown,
+): error is AdminServerAuthRequiredError {
+  return error instanceof AdminServerAuthRequiredError;
+}
+
+export function createAdminServerAuthErrorResponse(
+  error: unknown,
+  fallbackMessage: string,
+) {
+  if (isAdminServerAuthRequiredError(error)) {
+    return NextResponse.json(
+      { message: 'Admin session is required.' },
+      { status: 401, headers: createNoStoreAdminHeaders() },
+    );
+  }
+
+  return NextResponse.json(
+    { message: fallbackMessage },
+    { status: 502, headers: createNoStoreAdminHeaders() },
+  );
 }
 
 function createAdminBaseClient() {
@@ -87,9 +119,7 @@ export async function getAdminServerAuthSession() {
       cookieStore.delete(legacyAdminSessionCookieName);
     }
 
-    throw new Error(
-      'Admin demo auto sign-in is disabled for this runtime.',
-    );
+    throw new AdminServerAuthRequiredError();
   }
 
   const session = await signInWithApi(baseClient, mobilisDemoAccounts.admin);

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { apiRoutes } from '@mobilis/api';
-import { getAdminServerAuthSession } from '../../../admin-server-auth';
+import {
+  createAdminServerAuthErrorResponse,
+  getAdminServerAuthSession,
+} from '../../../admin-server-auth';
 import { createNoStoreAdminHeaders } from '../../../admin-server-security';
 
 export const dynamic = 'force-dynamic';
@@ -40,10 +43,10 @@ export async function GET() {
         Connection: 'keep-alive',
       },
     });
-  } catch {
-    return NextResponse.json(
-      { message: 'Unable to open admin realtime stream.' },
-      { status: 502, headers: createNoStoreAdminHeaders() },
+  } catch (error) {
+    return createAdminServerAuthErrorResponse(
+      error,
+      'Unable to open admin realtime stream.',
     );
   }
 }

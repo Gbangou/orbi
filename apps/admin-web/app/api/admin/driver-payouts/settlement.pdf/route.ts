@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { buildAdminDriverPayoutSettlementPdfUrl } from '@mobilis/api';
-import { getAdminServerAuthSession } from '../../../../admin-server-auth';
+import {
+  createAdminServerAuthErrorResponse,
+  getAdminServerAuthSession,
+} from '../../../../admin-server-auth';
 import {
   createNoStoreAdminHeaders,
   resolveDriverPayoutSettlementStatus,
@@ -38,10 +41,10 @@ export async function GET(request: NextRequest) {
           'attachment; filename="mobilis-driver-payout-settlement.pdf"',
       },
     });
-  } catch {
-    return NextResponse.json(
-      { message: 'Unable to export driver payout settlement PDF.' },
-      { status: 502, headers: createNoStoreAdminHeaders() },
+  } catch (error) {
+    return createAdminServerAuthErrorResponse(
+      error,
+      'Unable to export driver payout settlement PDF.',
     );
   }
 }
