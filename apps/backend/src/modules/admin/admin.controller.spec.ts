@@ -1,7 +1,10 @@
 import { ServiceUnavailableException } from '@nestjs/common';
+import { GUARDS_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { of } from 'rxjs';
 import { UserRole } from '@prisma/client';
 import { ROLES_KEY } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { AdminController } from './admin.controller';
 
 describe('AdminController', () => {
@@ -184,6 +187,39 @@ describe('AdminController', () => {
         UserRole.ADMIN,
         UserRole.OPS,
       ]);
+    }
+  });
+
+  it('requires session auth, RBAC and explicit roles on every non-public admin handler', () => {
+    const publicHandlers = new Set(['preview']);
+    const prototype = AdminController.prototype;
+    const handlerNames = Object.getOwnPropertyNames(prototype).filter(
+      (name) =>
+        name !== 'constructor' &&
+        typeof prototype[name as keyof AdminController] === 'function',
+    );
+
+    expect(handlerNames).toContain('launchReadiness');
+    expect(handlerNames).toContain('refundPaymentAttempt');
+
+    for (const handlerName of handlerNames) {
+      if (publicHandlers.has(handlerName)) {
+        continue;
+      }
+
+      const handler = prototype[handlerName as keyof AdminController];
+      const routePath = Reflect.getMetadata(PATH_METADATA, handler);
+      const guards = Reflect.getMetadata(GUARDS_METADATA, handler) ?? [];
+      const roles = Reflect.getMetadata(ROLES_KEY, handler) ?? [];
+
+      expect(routePath).toBeDefined();
+      expect(guards).toEqual(
+        expect.arrayContaining([SessionAuthGuard, RolesGuard]),
+      );
+      expect(roles.length).toBeGreaterThan(0);
+      expect(roles).toEqual(
+        expect.arrayContaining([expect.stringMatching(/ADMIN|OPS|SUPPORT/)]),
+      );
     }
   });
 
