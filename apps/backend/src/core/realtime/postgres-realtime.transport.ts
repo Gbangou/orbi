@@ -171,6 +171,10 @@ export class PostgresRealtimeTransport
       error instanceof Error ? error.message : 'Unknown realtime failure';
     const nextReason = `Postgres realtime ${operation} failed: ${message}`;
 
+    if (this.degradeReason?.split(' | ').includes(nextReason)) {
+      return;
+    }
+
     this.degradeReason = this.degradeReason
       ? `${this.degradeReason} | ${nextReason}`
       : nextReason;

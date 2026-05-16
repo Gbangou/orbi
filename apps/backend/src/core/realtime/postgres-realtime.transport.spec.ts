@@ -102,6 +102,25 @@ describe('PostgresRealtimeTransport', () => {
     );
   });
 
+  it('deduplicates repeated degradation reasons in the snapshot', () => {
+    const transport = new PostgresRealtimeTransport(configService as never);
+    const oversizedEvent = {
+      id: 'admin:health.updated:health:2026-05-15T10:00:00.000Z:0',
+      channel: 'admin' as const,
+      type: 'health.updated',
+      entityId: 'health',
+      createdAt: '2026-05-15T10:00:00.000Z',
+      payload: { details: 'x'.repeat(8_000) },
+    };
+
+    transport.publish(oversizedEvent);
+    transport.publish(oversizedEvent);
+
+    const reason = transport.snapshot().degradeReason;
+
+    expect(reason?.match(/payload exceeds 7500 bytes/g)).toHaveLength(1);
+  });
+
   it('streams PostgreSQL notifications through role-aware filters', async () => {
     const notificationHandlers: Array<
       (message: { channel: string; payload?: string }) => void
