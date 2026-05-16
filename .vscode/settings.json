@@ -9,6 +9,29 @@
   "[typescriptreact]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
+  "files.exclude": {
+    "**/.expo": true,
+    "**/.next": true,
+    "**/coverage": true,
+    "**/dist": true,
+    "**/node_modules": true,
+    "**/*.tsbuildinfo": true
+  },
+  "files.watcherExclude": {
+    "**/.expo/**": true,
+    "**/.next/**": true,
+    "**/coverage/**": true,
+    "**/dist/**": true,
+    "**/node_modules/**": true
+  },
+  "search.exclude": {
+    "**/.expo": true,
+    "**/.next": true,
+    "**/coverage": true,
+    "**/dist": true,
+    "**/node_modules": true,
+    "**/*.tsbuildinfo": true
+  },
   "eslint.workingDirectories": [
     {
       "directory": "apps/backend",
