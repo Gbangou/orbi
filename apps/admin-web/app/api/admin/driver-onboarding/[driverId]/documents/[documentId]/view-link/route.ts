@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { fetchAdminDriverDocumentViewLink } from '@mobilis/api';
+import { fetchAdminDriverDocumentViewLink } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

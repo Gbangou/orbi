@@ -101,7 +101,7 @@ describe('JobQueueWorkerService', () => {
         verified: true,
         paymentAttemptId: 'payment-1',
         provider: 'flutterwave',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         result: {
           nextAction: 'refund_processed',
         },
@@ -414,7 +414,7 @@ describe('JobQueueWorkerService', () => {
       action: 'ignored_unknown_reference',
       signatureVerified: true,
       paymentAttemptId: null,
-      transactionRef: 'mobilis_late_ride-request-1',
+      transactionRef: 'orbi_late_ride-request-1',
     });
     prisma.paymentAttempt.findUnique.mockResolvedValue(null);
 
@@ -422,7 +422,7 @@ describe('JobQueueWorkerService', () => {
 
     expect(prisma.paymentAttempt.findUnique).toHaveBeenCalledWith({
       where: {
-        transactionRef: 'mobilis_late_ride-request-1',
+        transactionRef: 'orbi_late_ride-request-1',
       },
       select: {
         id: true,
@@ -459,7 +459,7 @@ describe('JobQueueWorkerService', () => {
       action: 'ignored_unknown_reference',
       signatureVerified: true,
       paymentAttemptId: null,
-      transactionRef: 'mobilis_late_ride-request-1',
+      transactionRef: 'orbi_late_ride-request-1',
     });
     prisma.paymentAttempt.findUnique.mockResolvedValue({
       id: 'payment-1',
@@ -567,7 +567,7 @@ describe('JobQueueWorkerService', () => {
       verified: true,
       paymentAttemptId: 'payment-1',
       provider: 'flutterwave',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       result: {
         nextAction: 'refund_still_pending',
       },

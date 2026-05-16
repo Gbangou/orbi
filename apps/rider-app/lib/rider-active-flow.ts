@@ -1,5 +1,5 @@
-import { isActiveTripLifecycleStatus, type MyTripsResponse } from '@mobilis/api';
-import { formatOperationalStatus } from '@mobilis/ui';
+import { isActiveTripLifecycleStatus, type MyTripsResponse } from '@orbi/api';
+import { formatOperationalStatus } from '@orbi/ui';
 
 export type RiderActiveFlowSummary = {
   activeTrip: MyTripsResponse['recentTrips'][number] | null;

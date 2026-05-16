@@ -109,7 +109,7 @@ export class DocumentLinksService {
       expiresAt: expiresAt.toISOString(),
       uploadUrl: this.buildSignedUrl(
         this.configService.get<string>('documents.uploadBaseUrl') ??
-          'https://storage.mobilis.local/upload',
+          'https://storage.orbi.local/upload',
         storageKey,
         payload,
       ),
@@ -143,7 +143,7 @@ export class DocumentLinksService {
       expiresAt: expiresAt.toISOString(),
       signedUrl: this.buildSignedUrl(
         this.configService.get<string>('documents.viewBaseUrl') ??
-          'https://storage.mobilis.local/view',
+          'https://storage.orbi.local/view',
         input.storageKey,
         payload,
       ),
@@ -210,7 +210,7 @@ export class DocumentLinksService {
     const signature = createHmac(
       'sha256',
       this.configService.get<string>('documents.signingSecret') ??
-        'mobilis_dev_document_secret',
+        'orbi_dev_document_secret',
     )
       .update(serializedPayload)
       .digest('hex');

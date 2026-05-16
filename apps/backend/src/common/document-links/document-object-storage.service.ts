@@ -124,7 +124,7 @@ export class DocumentObjectStorageService {
 
     const root =
       this.configService.get<string>('documents.localProviderRoot') ??
-      path.resolve(process.cwd(), '.mobilis-document-store');
+      path.resolve(process.cwd(), '.orbi-document-store');
     const rootPath = path.resolve(root);
     const objectPath = path.resolve(rootPath, ...storageKey.split('/'));
 

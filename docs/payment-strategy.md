@@ -1,8 +1,8 @@
-# Mobilis Payment Strategy
+# Orbi Payment Strategy
 
 ## Decision
 
-Mobilis should use an aggregator-first architecture for the MVP, not a direct one-by-one integration with every mobile money operator.
+Orbi should use an aggregator-first architecture for the MVP, not a direct one-by-one integration with every mobile money operator.
 
 ## Why
 
@@ -55,10 +55,10 @@ creating duplicate aggregator references.
 
 ## Current webhook contract
 
-Mobilis now keeps two layers of webhook protection:
+Orbi now keeps two layers of webhook protection:
 
-- a Mobilis shared secret header for local/server-to-server compatibility:
-  `x-mobilis-webhook-secret`
+- a Orbi shared secret header for local/server-to-server compatibility:
+  `x-orbi-webhook-secret`
 - provider verification when configured:
   - Flutterwave: `FLUTTERWAVE_WEBHOOK_SECRET_HASH`, checked against
     `verif-hash` and the newer `flutterwave-signature` HMAC form
@@ -67,13 +67,13 @@ Mobilis now keeps two layers of webhook protection:
 
 Reconciliation is idempotent by `providerReference` per provider. A repeated
 provider reference updates the same attempt as a replay; a provider reference
-already bound to another Mobilis `transactionRef` is ignored as a conflict.
+already bound to another Orbi `transactionRef` is ignored as a conflict.
 Every accepted webhook is stored in `PaymentWebhookEvent` with its action,
 reference fields, payload, optional raw-body hash, signature verification marker
 and linked payment attempt when reconciliation finds one.
 Ops and support can inspect recent stored events through
 `GET /api/v1/admin/payment-webhook-events`, with filters for provider, action,
-Mobilis transaction reference and provider reference. They can also use the
+Orbi transaction reference and provider reference. They can also use the
 higher-level `kind` filter: `payment`, `refund` or `ignored`.
 `GET /api/v1/admin/payment-webhook-events/:eventId` returns a redacted detail
 view for investigation. Sensitive payload fields such as phone numbers, tokens,
@@ -89,12 +89,12 @@ signal. This gives ops a controlled pilot tool when a webhook arrived before a
 payment attempt could be matched or when a provider reference needs to be
 rechecked safely.
 The durable `PAYMENT_WEBHOOK` job also retries
-`ignored_unknown_reference` events with a Mobilis transaction reference. If the
+`ignored_unknown_reference` events with a Orbi transaction reference. If the
 payment attempt appears later, the worker replays the stored webhook through
 the same idempotent path; conflict and amount mismatch events still require
 manual finance review.
 
-When reconciliation marks a payment attempt as `SUCCEEDED`, Mobilis now writes
+When reconciliation marks a payment attempt as `SUCCEEDED`, Orbi now writes
 an internal driver payout ledger entry. The entry credits the driver's XOF
 wallet with the fare minus the platform commission, uses
 `payment:<paymentAttemptId>:driver-payout` as an idempotent reference, and keeps
@@ -112,14 +112,14 @@ bounded approval notes stored on the payout.
 
 Ops can also verify a stored `PaymentAttempt` directly with the configured
 provider. Flutterwave verification uses the transaction reference endpoint, and
-CinetPay verification uses the payment check endpoint. Mobilis validates amount
+CinetPay verification uses the payment check endpoint. Orbi validates amount
 and currency before reconciling through the same idempotent webhook path.
 
 Refund operations now have an admin-controlled path:
 `POST /api/v1/admin/payment-attempts/:paymentAttemptId/refund` records an
 idempotent refund request. In local/manual mode, the attempt moves directly to
 `REFUNDED` after ops has handled the provider-console action. When
-`PAYMENTS_REFUND_MODE=provider`, Mobilis calls the Flutterwave refund endpoint,
+`PAYMENTS_REFUND_MODE=provider`, Orbi calls the Flutterwave refund endpoint,
 stores the provider response in `providerMetadata.refund`, and leaves the
 attempt as `REFUND_PENDING` until the provider reports a processed refund.
 Each pending provider refund also enqueues a durable
@@ -130,8 +130,8 @@ click.
 `POST /api/v1/admin/payment-attempts/:paymentAttemptId/verify-provider` also
 acts as the controlled refund-status poller for `REFUND_PENDING` attempts. For
 Flutterwave it checks the provider refund id; once the provider marks the
-refund processed, Mobilis finalizes the attempt as `REFUNDED`. Only then does
-Mobilis write the idempotent `REFUND` wallet transaction using
+refund processed, Orbi finalizes the attempt as `REFUNDED`. Only then does
+Orbi write the idempotent `REFUND` wallet transaction using
 `payment:<paymentAttemptId>:driver-payout-refund` and decrement the wallet by
 the original driver payout amount. CinetPay refunds are deliberately blocked
 until a supported refund/status endpoint is configured.
@@ -152,7 +152,7 @@ payloads are captured, add them there first, then update
 does or does not move wallet money.
 
 If the driver payout was already marked paid before the refund, the wallet can
-become negative. Admin wallets expose this as `recoveryDue`: the amount Mobilis
+become negative. Admin wallets expose this as `recoveryDue`: the amount Orbi
 must recover or offset before future payouts. Wallets with recovery due are not
 payable until the balance becomes positive again.
 

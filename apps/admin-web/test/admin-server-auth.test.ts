@@ -18,7 +18,7 @@ describe('admin server auth cookie hardening', () => {
   it('keeps local development cookies usable on plain localhost', () => {
     process.env.NODE_ENV = 'development';
 
-    expect(getAdminSessionCookieName()).toBe('mobilis_admin_session');
+    expect(getAdminSessionCookieName()).toBe('orbi_admin_session');
     expect(buildAdminSessionCookieOptions()).toMatchObject({
       httpOnly: true,
       sameSite: 'strict',
@@ -32,7 +32,7 @@ describe('admin server auth cookie hardening', () => {
   it('uses a host-bound secure cookie name in production', () => {
     process.env.NODE_ENV = 'production';
 
-    expect(getAdminSessionCookieName()).toBe('__Host-mobilis_admin_session');
+    expect(getAdminSessionCookieName()).toBe('__Host-orbi_admin_session');
     expect(buildAdminSessionCookieOptions()).toMatchObject({
       httpOnly: true,
       sameSite: 'strict',

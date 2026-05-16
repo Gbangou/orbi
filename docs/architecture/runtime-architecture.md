@@ -1,4 +1,4 @@
-# Mobilis Runtime Architecture
+# Orbi Runtime Architecture
 
 Cette vue relie le modele de donnees, les cas d'utilisation et les invariants d'execution. Elle sert de carte de navigation pour continuer le developpement sans separer artificiellement produit, backend, temps reel et UX mobile.
 
@@ -18,8 +18,8 @@ flowchart LR
   RiderApp[Rider App Expo]
   DriverApp[Driver App Expo]
   AdminWeb[Admin Web Next.js]
-  ApiClient[@mobilis/api]
-  Domain[@mobilis/domain]
+  ApiClient[@orbi/api]
+  Domain[@orbi/domain]
   Backend[NestJS Backend]
   Prisma[Prisma Client]
   Postgres[(PostgreSQL)]
@@ -54,7 +54,7 @@ flowchart LR
 ### Reservation Rider
 
 1. L'app rider choisit pickup, destination, ville, service et paiement.
-2. `@mobilis/api` transporte les DTO alignes sur `@mobilis/domain`.
+2. `@orbi/api` transporte les DTO alignes sur `@orbi/domain`.
 3. `RideRequestsService` valide le payload, calcule route/pricing et verifie le flux actif.
 4. PostgreSQL bloque les courses concurrentes via index uniques partiels.
 5. `RealtimeService` diffuse la nouvelle demande aux surfaces rider, driver et admin.
@@ -102,7 +102,7 @@ flowchart LR
 ### Cycle De Course
 
 1. `TripsService` transforme une demande en course avec transaction.
-2. Les transitions autorisees viennent de `@mobilis/domain`.
+2. Les transitions autorisees viennent de `@orbi/domain`.
 3. Le code pickup est visible seulement sur `MATCHED` et `DRIVER_ARRIVING`.
 4. Chaque transition cree un `TripEvent` et pousse un evenement realtime.
 5. Admin et support consomment la timeline pour operations, incidents et audit.
@@ -111,7 +111,7 @@ flowchart LR
 
 1. Le rider initialise un checkout apres creation de demande.
 2. `PaymentsService` applique idempotence, montant, canal et fournisseur.
-3. Les webhooks verifient le secret Mobilis puis la signature fournisseur si
+3. Les webhooks verifient le secret Orbi puis la signature fournisseur si
    elle est configuree.
 4. La reconciliation est idempotente par `providerReference` et ne casse pas le
    flux course.

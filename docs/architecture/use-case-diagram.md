@@ -1,6 +1,6 @@
-# Mobilis Use Case Diagram
+# Orbi Use Case Diagram
 
-Ce diagramme visualise les cas d'utilisation coeur de Mobilis au 27 avril 2026. Il couvre les apps rider et driver, la console admin, les operations support, les services backend temps reel, le paiement et les workflows de confiance.
+Ce diagramme visualise les cas d'utilisation coeur de Orbi au 27 avril 2026. Il couvre les apps rider et driver, la console admin, les operations support, les services backend temps reel, le paiement et les workflows de confiance.
 
 ## Mermaid
 
@@ -15,7 +15,7 @@ flowchart LR
   RealtimeClient[Client temps reel]
   DocumentStorage[Stockage documents]
 
-  subgraph Mobilis["Plateforme Mobilis"]
+  subgraph Orbi["Plateforme Orbi"]
     UCAuth((S'inscrire / se connecter))
     UCRestore((Restaurer une session))
     UCManagePlaces((Gerer lieux favoris))

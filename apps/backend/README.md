@@ -1,6 +1,6 @@
-# Mobilis Backend
+# Orbi Backend
 
-Backend NestJS pour la plateforme Mobilis.
+Backend NestJS pour la plateforme Orbi.
 
 ## Base actuelle
 
@@ -61,9 +61,9 @@ pnpm start:dev
 
 ## Comptes seed
 
-- `admin@mobilis.app` / `Mobilis123!`
-- `rider@mobilis.app` / `Mobilis123!`
-- `driver@mobilis.app` / `Mobilis123!`
+- `admin@orbi.app` / `Orbi123!`
+- `rider@orbi.app` / `Orbi123!`
+- `driver@orbi.app` / `Orbi123!`
 
 ## Paiements
 
@@ -77,7 +77,7 @@ Le backend expose maintenant une fondation paiements orientee agregateur:
 - action admin `payment-webhook-events/:eventId/replay` pour rejouer un webhook deja journalise sans accepter de nouveau payload manuel
 - action admin `payment-attempts/:paymentAttemptId/verify-provider` pour verifier une tentative directement chez Flutterwave/CinetPay, puis reconcilier via le meme chemin idempotent que les webhooks
 - action admin `investigation` pour journaliser une enquete et creer un ticket support quand l evenement est rattache a un utilisateur
-- ledger chauffeur idempotent apres paiement `SUCCEEDED`: credit du wallet chauffeur avec payout net et commission Mobilis en metadata
+- ledger chauffeur idempotent apres paiement `SUCCEEDED`: credit du wallet chauffeur avec payout net et commission Orbi en metadata
 - endpoints admin `driver-wallets/:walletId/payouts/prepare` et `driver-payouts/:payoutId/paid` pour preparer puis marquer paye un payout chauffeur avec audit log, signal realtime et transaction ledger `PAYOUT`
 - exports admin `driver-payouts/settlement.csv` et `driver-payouts/settlement.pdf` pour les settlements terrain signes et audites
 
@@ -133,7 +133,7 @@ Important:
 
 - `RATE_LIMIT_ADAPTER=postgres` utilise la base PostgreSQL configuree comme
   backplane partage multi-instance
-- la table `mobilis_rate_limit_counters` est creee par migration Prisma; le
+- la table `orbi_rate_limit_counters` est creee par migration Prisma; le
   runtime applicatif ne depend pas d un droit DDL en production
 - `RATE_LIMIT_ADAPTER=redis` reste signale degrade tant que l adapter Redis
   n est pas branche

@@ -24,7 +24,7 @@
     "prisma:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@mobilis/domain": "workspace:*",
+    "@orbi/domain": "workspace:*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -79,14 +79,14 @@
     "rootDir": ".",
     "testRegex": "src/.*\\.spec\\.ts$",
     "moduleNameMapper": {
-      "^@mobilis/domain$": "<rootDir>/../../packages/domain/src/index.ts"
+      "^@orbi/domain$": "<rootDir>/../../packages/domain/src/index.ts"
     },
     "roots": [
       "<rootDir>/src",
       "<rootDir>/../../packages/domain/src"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(@mobilis/domain)/)"
+      "node_modules/(?!(@orbi/domain)/)"
     ],
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"

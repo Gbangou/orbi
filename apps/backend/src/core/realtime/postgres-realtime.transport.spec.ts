@@ -30,7 +30,7 @@ describe('PostgresRealtimeTransport', () => {
   const configService = {
     get: jest.fn((key: string) => {
       const values: Record<string, string> = {
-        'database.url': 'postgresql://mobilis:secret@db.internal:5432/mobilis',
+        'database.url': 'postgresql://orbi:secret@db.internal:5432/orbi',
       };
 
       return values[key];
@@ -60,7 +60,7 @@ describe('PostgresRealtimeTransport', () => {
     });
 
     expect(mockPoolQuery).toHaveBeenCalledWith('SELECT pg_notify($1, $2)', [
-      'mobilis_realtime_events',
+      'orbi_realtime_events',
       expect.stringContaining('"type":"health.updated"'),
     ]);
     expect(transport.snapshot()).toEqual(
@@ -149,7 +149,7 @@ describe('PostgresRealtimeTransport', () => {
 
     await Promise.resolve();
     notificationHandlers[0]?.({
-      channel: 'mobilis_realtime_events',
+      channel: 'orbi_realtime_events',
       payload: JSON.stringify({
         id: 'trip:trip.updated:trip-1:2026-05-15T10:00:00.000Z:0',
         channel: 'trip',
@@ -160,7 +160,7 @@ describe('PostgresRealtimeTransport', () => {
       }),
     });
     notificationHandlers[0]?.({
-      channel: 'mobilis_realtime_events',
+      channel: 'orbi_realtime_events',
       payload: JSON.stringify({
         id: 'trip:trip.updated:trip-2:2026-05-15T10:00:01.000Z:1',
         channel: 'trip',
@@ -178,9 +178,7 @@ describe('PostgresRealtimeTransport', () => {
         riderId: 'rider-1',
       }),
     });
-    expect(mockClientQuery).toHaveBeenCalledWith(
-      'LISTEN mobilis_realtime_events',
-    );
+    expect(mockClientQuery).toHaveBeenCalledWith('LISTEN orbi_realtime_events');
     expect(transport.snapshot()).toEqual(
       expect.objectContaining({
         activeStreams: 0,
@@ -214,7 +212,7 @@ describe('PostgresRealtimeTransport', () => {
       .subscribe();
     await Promise.resolve();
     notificationHandlers[0]?.({
-      channel: 'mobilis_realtime_events',
+      channel: 'orbi_realtime_events',
       payload: '{bad-json',
     });
 
@@ -253,7 +251,7 @@ describe('PostgresRealtimeTransport', () => {
 
     expect(mockClientConfigs).toContainEqual({
       connectionString:
-        'postgresql://postgres:postgres@localhost:5433/mobilis?schema=public',
+        'postgresql://postgres:postgres@localhost:5433/orbi?schema=public',
     });
   });
 
@@ -286,7 +284,7 @@ describe('PostgresRealtimeTransport', () => {
 
     await Promise.resolve();
     notificationHandlers[0]?.({
-      channel: 'mobilis_realtime_events',
+      channel: 'orbi_realtime_events',
       payload: JSON.stringify({
         id: 'trip:trip.updated:trip-1:2026-05-15T10:00:00.000Z:0',
         channel: 'trip',

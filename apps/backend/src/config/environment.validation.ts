@@ -67,7 +67,7 @@ export function validateEnvironment(config: EnvironmentVariables) {
   const isProductionEnvironment = config.NODE_ENV === 'production';
 
   if (!config.DATABASE_URL && !isTestEnvironment) {
-    throw new Error('DATABASE_URL is required to start the Mobilis backend.');
+    throw new Error('DATABASE_URL is required to start the Orbi backend.');
   }
 
   if (isProductionEnvironment) {
@@ -79,7 +79,7 @@ export function validateEnvironment(config: EnvironmentVariables) {
     NODE_ENV: config.NODE_ENV ?? 'development',
     DATABASE_URL:
       config.DATABASE_URL ??
-      'postgresql://postgres:postgres@localhost:5433/mobilis?schema=public',
+      'postgresql://postgres:postgres@localhost:5433/orbi?schema=public',
     FRONTEND_ALLOWED_ORIGINS:
       config.FRONTEND_ALLOWED_ORIGINS ??
       'http://localhost:3001,http://localhost:8081',
@@ -135,7 +135,7 @@ export function validateEnvironment(config: EnvironmentVariables) {
     PAYMENTS_PROVIDER: config.PAYMENTS_PROVIDER ?? 'flutterwave',
     PAYMENTS_CURRENCY: config.PAYMENTS_CURRENCY ?? 'XOF',
     PAYMENTS_WEBHOOK_SECRET:
-      config.PAYMENTS_WEBHOOK_SECRET ?? 'mobilis_dev_webhook_secret',
+      config.PAYMENTS_WEBHOOK_SECRET ?? 'orbi_dev_webhook_secret',
     PAYMENTS_DEFAULT_REDIRECT_URL:
       config.PAYMENTS_DEFAULT_REDIRECT_URL ?? 'http://localhost:8081/book',
     PAYMENTS_DEFAULT_WEBHOOK_URL:
@@ -153,17 +153,17 @@ export function validateEnvironment(config: EnvironmentVariables) {
     NOTIFICATIONS_PROVIDER_TIMEOUT_MS:
       config.NOTIFICATIONS_PROVIDER_TIMEOUT_MS ?? '5000',
     DOCUMENT_SIGNING_SECRET:
-      config.DOCUMENT_SIGNING_SECRET ?? 'mobilis_dev_document_secret',
+      config.DOCUMENT_SIGNING_SECRET ?? 'orbi_dev_document_secret',
     DOCUMENT_SAFETY_SCANNER_PROVIDER:
       config.DOCUMENT_SAFETY_SCANNER_PROVIDER ?? 'local-policy',
     DOCUMENT_UPLOAD_BASE_URL:
-      config.DOCUMENT_UPLOAD_BASE_URL ?? 'https://storage.mobilis.local/upload',
+      config.DOCUMENT_UPLOAD_BASE_URL ?? 'https://storage.orbi.local/upload',
     DOCUMENT_VIEW_BASE_URL:
-      config.DOCUMENT_VIEW_BASE_URL ?? 'https://storage.mobilis.local/view',
+      config.DOCUMENT_VIEW_BASE_URL ?? 'https://storage.orbi.local/view',
     DOCUMENT_OBJECT_PROVIDER:
       config.DOCUMENT_OBJECT_PROVIDER ?? 'local-provider',
     DOCUMENT_LOCAL_PROVIDER_ROOT:
-      config.DOCUMENT_LOCAL_PROVIDER_ROOT ?? '.mobilis-document-store',
+      config.DOCUMENT_LOCAL_PROVIDER_ROOT ?? '.orbi-document-store',
     DOCUMENT_LINK_TTL_SECONDS: config.DOCUMENT_LINK_TTL_SECONDS ?? '900',
   };
 }
@@ -186,7 +186,7 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
     throw new Error('PAYMENTS_WEBHOOK_SECRET is required in production.');
   }
 
-  if (paymentsWebhookSecret === 'mobilis_dev_webhook_secret') {
+  if (paymentsWebhookSecret === 'orbi_dev_webhook_secret') {
     throw new Error(
       'PAYMENTS_WEBHOOK_SECRET must not use the dev default in production.',
     );
@@ -196,7 +196,7 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
     throw new Error('DOCUMENT_SIGNING_SECRET is required in production.');
   }
 
-  if (documentSigningSecret === 'mobilis_dev_document_secret') {
+  if (documentSigningSecret === 'orbi_dev_document_secret') {
     throw new Error(
       'DOCUMENT_SIGNING_SECRET must not use the dev default in production.',
     );

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { apiRoutes } from '@mobilis/api';
+import { apiRoutes } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthSession,

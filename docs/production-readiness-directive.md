@@ -1,8 +1,8 @@
-# Mobilis Production Readiness Directive
+# Orbi Production Readiness Directive
 
 ## Truth Check
 
-Mobilis is not AI slop in its current shape. It has a monorepo, typed API
+Orbi is not AI slop in its current shape. It has a monorepo, typed API
 contracts, backend modules, Prisma migrations, mobile apps, admin ops, realtime
 abstractions, rate limiting, payments, docs and tests.
 

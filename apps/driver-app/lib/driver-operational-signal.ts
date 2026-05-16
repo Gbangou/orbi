@@ -1,5 +1,5 @@
-import { type DriverFatigueStatus, type TripDetailResponse } from '@mobilis/api';
-import { formatOperationalStatus } from '@mobilis/ui';
+import { type DriverFatigueStatus, type TripDetailResponse } from '@orbi/api';
+import { formatOperationalStatus } from '@orbi/ui';
 
 function formatOperationalCount(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0

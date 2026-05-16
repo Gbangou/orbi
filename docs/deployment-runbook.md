@@ -1,6 +1,6 @@
-# Mobilis Deployment Runbook
+# Orbi Deployment Runbook
 
-Ce document decrit la strategie de deploiement prudente pour Mobilis lorsqu'il y a:
+Ce document decrit la strategie de deploiement prudente pour Orbi lorsqu'il y a:
 
 - des utilisateurs connectes
 - des trajets en cours
@@ -87,7 +87,7 @@ Cela evite un faux sentiment de securite ou une prod multi-instance tournerait p
 
 - `RATE_LIMIT_ADAPTER=in-memory` reste acceptable pour le dev local et les previews mono-instance
 - `RATE_LIMIT_ADAPTER=postgres` utilise `DATABASE_URL` pour compter les limites entre instances
-- appliquer les migrations avant trafic: `mobilis_rate_limit_counters` doit
+- appliquer les migrations avant trafic: `orbi_rate_limit_counters` doit
   exister avant d activer le store partage
 - `RATE_LIMIT_ADAPTER=redis` n est pas encore implemente et reste refuse au demarrage production
 - `TRUST_PROXY=true` doit etre active uniquement quand l API est derriere un
@@ -153,7 +153,7 @@ Cela evite qu un cluster multi-instance expose des limites incoherentes selon le
 
 ## Securite et benchmark concurrents
 
-Le launch gate compare Mobilis aux standards visibles des leaders VTC:
+Le launch gate compare Orbi aux standards visibles des leaders VTC:
 
 - Uber met en avant Emergency Button, Safety Toolkit, Share My Trip, RideCheck,
   Verify Your Ride/PIN, contacts d'urgence, anonymisation telephone et audio
@@ -164,13 +164,13 @@ Le launch gate compare Mobilis aux standards visibles des leaders VTC:
   verification, support, in-app calls, conflict button et shift control selon
   pays.
 
-Mobilis expose maintenant un SOS in-app cote rider et driver: l action force un
+Orbi expose maintenant un SOS in-app cote rider et driver: l action force un
 ticket support P3, ecrit un event `SOS_TRIGGERED` dans la timeline trip, publie
 `trip.sos-triggered` en temps reel, journalise `TRIP_SOS_TRIGGERED` dans
 l audit log et ouvre l appel local `112` depuis l app mobile quand le device le
 permet.
 
-Mobilis expose aussi un lien de partage trajet depuis rider et driver:
+Orbi expose aussi un lien de partage trajet depuis rider et driver:
 `POST /api/v1/trips/:tripId/share-link` cree un token a duree courte, stocke
 uniquement son hash dans l event `SHARE_LINK_CREATED`, journalise
 `TRIP_SHARE_LINK_CREATED`, publie `trip.share-link-created`, puis permet a un
@@ -178,7 +178,7 @@ proche de consulter `GET /api/v1/trips/shared/:shareToken` avec seulement les
 informations utiles de securite. Le lien public n expose aucun numero personnel
 et expire automatiquement.
 
-Mobilis expose maintenant le premier socle route monitoring:
+Orbi expose maintenant le premier socle route monitoring:
 `POST /api/v1/trips/:tripId/route-position` journalise une position bornee dans
 `ROUTE_POSITION_RECORDED`, compare le signal au corridor pickup-destination et
 aux derniers pings, puis cree une alerte `ROUTE_MONITORING_ALERT` avec ticket
@@ -187,7 +187,7 @@ detectee. L alerte est auditee via `TRIP_ROUTE_MONITORING_ALERT_CREATED`,
 publiee en temps reel avec `trip.route-monitor-alert`, et visible dans Live Ops.
 Les alertes sont refroidies par type pour eviter le spam support.
 
-Mobilis expose aussi un contact de confiance principal cote rider:
+Orbi expose aussi un contact de confiance principal cote rider:
 `PATCH /api/v1/riders/trusted-contact` accepte uniquement un numero Burkina
 borne au format `+226XXXXXXXX`, un mode `MANUAL`, `NIGHT` ou `ALL_TRIPS`, puis
 met a jour `RiderProfile.emergencyPhone` et journalise
@@ -196,7 +196,7 @@ modifiable et desactivable. Le prochain palier production consiste a brancher
 SMS/WhatsApp et plusieurs contacts sans exposer de donnees personnelles dans le
 lien public de trajet.
 
-Mobilis impose maintenant un premier garde-fou fatigue chauffeur. Avant mise en
+Orbi impose maintenant un premier garde-fou fatigue chauffeur. Avant mise en
 ligne et avant acceptation d une mission, le backend calcule les courses
 terminees et minutes de conduite sur une fenetre glissante de 8h. Au-dela de 8
 courses terminees ou 300 minutes de conduite, une pause de 30 minutes est
@@ -205,7 +205,7 @@ requise: `DRIVER_FATIGUE_AVAILABILITY_BLOCKED` ou
 fatigue dans son cockpit offres. Les seuils doivent etre calibres avec le pilote
 terrain, surtout par chaleur, nuit et type de vehicule.
 
-Mobilis expose enfin une declaration de preuve incident volontaire:
+Orbi expose enfin une declaration de preuve incident volontaire:
 `POST /api/v1/trips/:tripId/report-incident` accepte `evidenceConsent`,
 `evidenceType` (`AUDIO`, `PHOTO`, `VIDEO`, `TEXT_NOTE`) et
 `evidenceRetentionHours` borne a 72h. Si le consentement est explicite, la
@@ -214,7 +214,7 @@ timeline recoit `INCIDENT_EVIDENCE_DECLARED`, l audit log recoit
 reste locale jusqu a upload explicite. Aucun fichier n est envoye
 automatiquement.
 
-Mobilis ne doit pas copier aveuglement ces produits. La regle de production est
+Orbi ne doit pas copier aveuglement ces produits. La regle de production est
 plus stricte: une capacite securite n est consideree comme concurrentielle que
 si elle est visible dans le parcours rider/driver, auditable par les ops, et
 degradee proprement quand le temps reel, le support ou le provider externe ne

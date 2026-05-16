@@ -1,6 +1,6 @@
 /// <reference path="../../backend/node_modules/@types/jest/index.d.ts" />
 
-import type { HealthCheckResponse } from '@mobilis/api';
+import type { HealthCheckResponse } from '@orbi/api';
 import {
   resolveProductionPilotDecision,
   resolveProductionReadinessState,

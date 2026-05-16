@@ -1,6 +1,6 @@
-# Mobilis Version Control
+# Orbi Version Control
 
-Git is mandatory for Mobilis. Do not continue serious development without
+Git is mandatory for Orbi. Do not continue serious development without
 commits, branches and rollback points.
 
 ## One-Time Local Setup
@@ -22,7 +22,7 @@ After checking that `.env` files are ignored:
 ```bash
 git status --short
 git add .
-git commit -m "Initial Mobilis production foundation"
+git commit -m "Initial Orbi production foundation"
 ```
 
 ## Daily Workflow

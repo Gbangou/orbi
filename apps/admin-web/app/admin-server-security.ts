@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 
-export const adminMutationHeaderName = 'x-mobilis-admin-action';
+export const adminMutationHeaderName = 'x-orbi-admin-action';
 export const adminMutationHeaderValue = 'true';
 
 const opaqueIdPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{2,96}$/;

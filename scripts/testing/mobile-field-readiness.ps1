@@ -74,7 +74,7 @@ $driverApiBaseUrl = Read-EnvValue -Path $driverEnv -Key "EXPO_PUBLIC_API_BASE_UR
 $riderApiVersion = Read-EnvValue -Path $riderEnv -Key "EXPO_PUBLIC_API_VERSION"
 $driverApiVersion = Read-EnvValue -Path $driverEnv -Key "EXPO_PUBLIC_API_VERSION"
 
-Write-Host "Mobilis mobile field readiness" -ForegroundColor White
+Write-Host "Orbi mobile field readiness" -ForegroundColor White
 Write-Host "Rider API:  $riderApiBaseUrl ($riderApiVersion)"
 Write-Host "Driver API: $driverApiBaseUrl ($driverApiVersion)"
 

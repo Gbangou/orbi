@@ -1160,8 +1160,8 @@ describe('TripsService', () => {
     expect(result.sharedTrip).toMatchObject({
       tripId: 'trip-share-1',
       status: 'IN_PROGRESS',
-      riderName: 'Passager Mobilis',
-      driverName: 'Chauffeur Mobilis',
+      riderName: 'Passager Orbi',
+      driverName: 'Chauffeur Orbi',
       vehicleLabel: 'Yamaha Crypton',
       lastEvent: {
         label: 'Course demarree',

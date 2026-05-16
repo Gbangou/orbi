@@ -1,8 +1,8 @@
-# Mobilis Agent Guide
+# Orbi Agent Guide
 
 ## Mission
 
-Mobilis is a Burkina Faso mobility platform for riders, drivers, operations and
+Orbi is a Burkina Faso mobility platform for riders, drivers, operations and
 support. The system optimizes for safe local transport, clear pricing, reliable
 dispatch, mobile money readiness and operational trust.
 

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { buildAdminDriverPayoutSettlementPdfUrl } from '@mobilis/api';
+import { buildAdminDriverPayoutSettlementPdfUrl } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthSession,
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         ...createNoStoreAdminHeaders(),
         'Content-Type': 'application/pdf',
         'Content-Disposition':
-          'attachment; filename="mobilis-driver-payout-settlement.pdf"',
+          'attachment; filename="orbi-driver-payout-settlement.pdf"',
       },
     });
   } catch (error) {

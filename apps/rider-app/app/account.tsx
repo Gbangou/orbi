@@ -9,8 +9,8 @@ import {
   updateSavedPlaceWithApi,
   type MyTripsResponse,
   type RiderProfileResponse,
-} from '@mobilis/api';
-import { mobilisTheme } from '@mobilis/ui';
+} from '@orbi/api';
+import { orbiTheme } from '@orbi/ui';
 import { router } from 'expo-router';
 import { restoreRiderSession, signOutRiderAccount } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
@@ -33,7 +33,7 @@ const fallbackProfile: RiderProfileResponse = {
   profile: {
     id: 'fallback-rider',
     fullName: 'Awa Ouedraogo',
-    email: 'rider@mobilis.app',
+    email: 'rider@orbi.app',
     phoneNumber: null,
     preferredTier: 'MOTO_STANDARD',
     emergencyPhone: null,
@@ -536,7 +536,7 @@ export default function AccountScreen() {
             setTrustedContactForm((current) => ({ ...current, phoneNumber: value }))
           }
           placeholder="+22670000001"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           keyboardType="phone-pad"
           style={styles.input}
         />
@@ -569,7 +569,7 @@ export default function AccountScreen() {
             setTrustedContactForm((current) => ({ ...current, notes: value }))
           }
           placeholder="Note ops courte, facultative"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           maxLength={120}
           style={styles.input}
         />
@@ -613,14 +613,14 @@ export default function AccountScreen() {
           value={placeForm.label}
           onChangeText={(value) => setPlaceForm((current) => ({ ...current, label: value }))}
           placeholder="Libelle du lieu"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           style={styles.input}
         />
         <TextInput
           value={placeForm.address}
           onChangeText={(value) => setPlaceForm((current) => ({ ...current, address: value }))}
           placeholder="Adresse"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           style={styles.input}
         />
         <View style={styles.metricsRow}>
@@ -628,7 +628,7 @@ export default function AccountScreen() {
             value={placeForm.latitude}
             onChangeText={(value) => setPlaceForm((current) => ({ ...current, latitude: value }))}
             placeholder="Latitude"
-            placeholderTextColor={mobilisTheme.colors.muted}
+            placeholderTextColor={orbiTheme.colors.muted}
             keyboardType="decimal-pad"
             style={[styles.input, styles.coordInput]}
           />
@@ -636,7 +636,7 @@ export default function AccountScreen() {
             value={placeForm.longitude}
             onChangeText={(value) => setPlaceForm((current) => ({ ...current, longitude: value }))}
             placeholder="Longitude"
-            placeholderTextColor={mobilisTheme.colors.muted}
+            placeholderTextColor={orbiTheme.colors.muted}
             keyboardType="decimal-pad"
             style={[styles.input, styles.coordInput]}
           />
@@ -704,16 +704,16 @@ const styles = StyleSheet.create({
     paddingTop: 88,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     gap: 14,
   },
   title: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 32,
     fontWeight: '800',
   },
   subtitle: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   insightRow: {
     flexDirection: 'row',
@@ -725,15 +725,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   refreshButtonDisabled: {
     opacity: 0.65,
   },
   refreshButtonLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -744,18 +744,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: 'rgba(248, 113, 113, 0.12)',
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.danger,
+    borderColor: orbiTheme.colors.danger,
   },
   signOutButtonLabel: {
-    color: mobilisTheme.colors.danger,
+    color: orbiTheme.colors.danger,
     fontWeight: '700',
     fontSize: 13,
   },
   card: {
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 18,
     gap: 8,
   },
@@ -774,29 +774,29 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   heading: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '800',
     fontSize: 18,
   },
   meta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   transitionMeta: {
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '700',
     lineHeight: 19,
   },
   flowMeta: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     lineHeight: 20,
   },
   input: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
-    color: mobilisTheme.colors.text,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    color: orbiTheme.colors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -814,25 +814,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
   },
   modeChipActive: {
-    borderColor: mobilisTheme.colors.sky,
+    borderColor: orbiTheme.colors.sky,
     backgroundColor: 'rgba(56, 189, 248, 0.14)',
   },
   modeChipLabel: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     fontWeight: '700',
     fontSize: 12,
   },
   modeChipLabelActive: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
   },
   placeRow: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: mobilisTheme.colors.border,
+    borderTopColor: orbiTheme.colors.border,
     gap: 4,
   },
   placeRowFresh: {
@@ -843,13 +843,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
   },
   placeLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 16,
   },
   placeTransitionBadge: {
     alignSelf: 'flex-start',
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '800',
     fontSize: 11,
     textTransform: 'uppercase',
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.teal,
+    backgroundColor: orbiTheme.colors.teal,
   },
   primaryActionLabel: {
     color: '#052a28',
@@ -876,12 +876,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   secondaryActionLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -890,11 +890,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
   },
   inlineActionLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 12,
   },
@@ -903,11 +903,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.danger,
+    borderColor: orbiTheme.colors.danger,
     backgroundColor: 'rgba(248, 113, 113, 0.12)',
   },
   inlineDangerActionLabel: {
-    color: mobilisTheme.colors.danger,
+    color: orbiTheme.colors.danger,
     fontWeight: '700',
     fontSize: 12,
   },

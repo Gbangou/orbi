@@ -1,6 +1,6 @@
 param(
   [string]$ApiBaseUrl = "http://localhost:3000",
-  [string]$WebhookSecret = "mobilis_dev_webhook_secret"
+  [string]$WebhookSecret = "orbi_dev_webhook_secret"
 )
 
 $ErrorActionPreference = "Stop"
@@ -64,7 +64,7 @@ function Sign-In {
 
   $response = Invoke-Json -Method "POST" -Path "/auth/sign-in" -Body @{
     email = $Email
-    password = "Mobilis123!"
+    password = "Orbi123!"
   }
 
   if (!$response.sessionToken) {
@@ -100,9 +100,9 @@ try {
 }
 
 Write-Step "Signing in demo accounts"
-$adminToken = Sign-In -Email "admin@mobilis.app"
-$riderToken = Sign-In -Email "rider@mobilis.app"
-$driverToken = Sign-In -Email "driver@mobilis.app"
+$adminToken = Sign-In -Email "admin@orbi.app"
+$riderToken = Sign-In -Email "rider@orbi.app"
+$driverToken = Sign-In -Email "driver@orbi.app"
 
 Write-Step "Putting driver online and updating presence"
 Invoke-Json -Method "PATCH" -Path "/drivers/availability" -Token $driverToken -Body @{
@@ -178,7 +178,7 @@ if (!$checkout.transactionRef -or !$checkout.amount) {
 Write-Step "Posting local success webhook"
 $providerReference = "local_provider_ref_$RunId"
 $webhook = Invoke-Json -Method "POST" -Path "/payments/webhooks" -ExtraHeaders @{
-  "x-mobilis-webhook-secret" = $WebhookSecret
+  "x-orbi-webhook-secret" = $WebhookSecret
 } -Body @{
   event = "payment.completed"
   transactionRef = $checkout.transactionRef

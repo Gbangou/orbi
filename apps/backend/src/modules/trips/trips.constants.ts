@@ -4,7 +4,7 @@ import {
   activeTripLifecycleStatuses,
   allowedTripLifecycleTransitions,
   pickupCodeVisibleTripLifecycleStatuses,
-} from '@mobilis/domain';
+} from '@orbi/domain';
 
 export const ACTIVE_TRIP_STATUSES: TripStatus[] = [
   ...activeTripLifecycleStatuses,

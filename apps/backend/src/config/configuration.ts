@@ -1,6 +1,6 @@
 export default () => ({
   app: {
-    name: 'Mobilis',
+    name: 'Orbi',
     port: Number.parseInt(process.env.PORT ?? '3000', 10),
     environment: process.env.NODE_ENV ?? 'development',
     frontendOrigins: process.env.FRONTEND_ALLOWED_ORIGINS?.split(',')
@@ -157,18 +157,17 @@ export default () => ({
   },
   documents: {
     signingSecret:
-      process.env.DOCUMENT_SIGNING_SECRET ?? 'mobilis_dev_document_secret',
+      process.env.DOCUMENT_SIGNING_SECRET ?? 'orbi_dev_document_secret',
     safetyScannerProvider:
       process.env.DOCUMENT_SAFETY_SCANNER_PROVIDER ?? 'local-policy',
     uploadBaseUrl:
       process.env.DOCUMENT_UPLOAD_BASE_URL ??
-      'https://storage.mobilis.local/upload',
+      'https://storage.orbi.local/upload',
     viewBaseUrl:
-      process.env.DOCUMENT_VIEW_BASE_URL ??
-      'https://storage.mobilis.local/view',
+      process.env.DOCUMENT_VIEW_BASE_URL ?? 'https://storage.orbi.local/view',
     objectProvider: process.env.DOCUMENT_OBJECT_PROVIDER ?? 'local-provider',
     localProviderRoot:
-      process.env.DOCUMENT_LOCAL_PROVIDER_ROOT ?? '.mobilis-document-store',
+      process.env.DOCUMENT_LOCAL_PROVIDER_ROOT ?? '.orbi-document-store',
     ttlSeconds: Number.parseInt(
       process.env.DOCUMENT_LINK_TTL_SECONDS ?? '900',
       10,

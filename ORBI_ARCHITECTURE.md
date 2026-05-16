@@ -1,11 +1,11 @@
-# Mobilis Architecture & Development Standards
+# Orbi Architecture & Development Standards
 
 *Last updated: May 8, 2026*
 *Stability: strong local foundation | Production posture: controlled pilot, not broad launch*
 
 ## Executive Summary
 
-Mobilis is a complete mobility platform for Burkina Faso with:
+Orbi is a complete mobility platform for Burkina Faso with:
 - Unified moto + car experience for riders and drivers
 - Secure authentication with session tokens & password hashing (scrypt + timing-safe comparison)
 - Real-time dispatch with event-sourced trip lifecycle
@@ -19,7 +19,7 @@ Mobilis is a complete mobility platform for Burkina Faso with:
 ### Monorepo Structure
 
 ```
-mobilis/
+orbi/
 ├── apps/
 │   ├── backend/          # NestJS + Prisma (Auth, Dispatch, Payments, Admin API)
 │   ├── admin-web/        # Next.js 15 ops console (live dispatch, pricing, health)
@@ -178,7 +178,7 @@ but every meaningful change still requires focused tests plus `pnpm typecheck`.
 describe('AuthService', () => {
   it('signs up a new user with hashed password', async () => {
     const result = await authService.signUp({
-      email: 'test@mobilis.app',
+      email: 'test@orbi.app',
       password: 'SecurePassword123!',
       fullName: 'Test User',
       role: SignUpRole.RIDER
@@ -221,11 +221,11 @@ describe('AuthService', () => {
 Required in `apps/backend/.env`:
 
 ```env
-DATABASE_URL=postgresql://user:pass@host:5432/mobilis
+DATABASE_URL=postgresql://user:pass@host:5432/orbi
 NODE_ENV=production
 JWT_SECRET=<random 32+ bytes>
 SESSION_TTL_DAYS=30
-FRONTEND_ORIGINS=https://app.mobilis.bf,https://admin.mobilis.bf
+FRONTEND_ORIGINS=https://app.orbi.bf,https://admin.orbi.bf
 ENABLE_SWAGGER_DOCS=false
 ```
 
@@ -381,7 +381,7 @@ export function serializeAuthenticatedUser(user: User) {
 
 ## Quick Links
 
-- **GitHub**: https://github.com/mobilis-app/mobilis
+- **GitHub**: https://github.com/orbi-app/orbi
 - **API Docs**: `/docs` (when enabled)
 - **Deployment**: See `docs/deployment-runbook.md`
 - **Pricing Strategy**: See `docs/pricing-burkina-strategy.md`

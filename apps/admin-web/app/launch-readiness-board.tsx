@@ -11,7 +11,7 @@ import type {
   DriverOnboardingQueueResponse,
   HealthCheckResponse,
   SupportTicketQueueResponse,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
   adminMutationHeaderName,
   adminMutationHeaderValue,
@@ -671,7 +671,7 @@ export function LaunchReadinessBoard({
                   <strong>{capability.label}</strong>
                   <span>{describeSafetyCapabilityStatus(capability.status)}</span>
                 </div>
-                <p>{capability.mobilisSignal}</p>
+                <p>{capability.orbiSignal}</p>
                 <small>{capability.nextStep}</small>
               </article>
             ))}
@@ -776,7 +776,7 @@ export function LaunchReadinessBoard({
                 </div>
                 <h3>{signal.label}</h3>
                 <strong>{signal.score}/100</strong>
-                <p>{signal.mobilisSignal}</p>
+                <p>{signal.orbiSignal}</p>
                 <small>{signal.competitorReference}</small>
                 <em>{signal.nextStep}</em>
               </article>

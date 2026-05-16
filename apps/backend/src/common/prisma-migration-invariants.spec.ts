@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import {
   activeRideRequestLifecycleStatuses,
   activeTripLifecycleStatuses,
-} from '@mobilis/domain';
+} from '@orbi/domain';
 
 function readMigration(name: string) {
   return readFileSync(

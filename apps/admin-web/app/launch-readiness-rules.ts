@@ -1,4 +1,4 @@
-import type { HealthCheckResponse } from '@mobilis/api';
+import type { HealthCheckResponse } from '@orbi/api';
 
 export type ReadinessState = 'good' | 'warn' | 'bad';
 

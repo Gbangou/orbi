@@ -6,7 +6,7 @@ import {
   riderMobileErrorReportQueueKey,
 } from '../lib/mobile-error-reporting';
 import { riderSessionStorage } from '../lib/session-storage';
-import { submitMobileErrorReportsWithApi } from '@mobilis/api';
+import { submitMobileErrorReportsWithApi } from '@orbi/api';
 
 jest.mock('../lib/session-storage', () => ({
   riderSessionStorage: {
@@ -16,8 +16,8 @@ jest.mock('../lib/session-storage', () => ({
   },
 }));
 
-jest.mock('@mobilis/api', () => {
-  const actual = jest.requireActual('@mobilis/api');
+jest.mock('@orbi/api', () => {
+  const actual = jest.requireActual('@orbi/api');
 
   return {
     ...actual,
@@ -53,8 +53,8 @@ function buildQueuedReport(overrides: Record<string, unknown> = {}) {
     context: {
       sessionToken: 'sessionToken=rider-secret-token',
       callbackUrl:
-        'https://mobilis.local/callback?token=rider-secret-token&ok=true',
-      password: 'password=Mobilis123!',
+        'https://orbi.local/callback?token=rider-secret-token&ok=true',
+      password: 'password=Orbi123!',
       screen: 'booking',
     },
     ...overrides,
@@ -95,7 +95,7 @@ describe('rider mobile error reporting queue', () => {
       errorMessage: 'Authorization=[redacted] failed for [email] and [phone]',
       context: {
         sessionToken: 'sessionToken=[redacted]',
-        callbackUrl: 'https://mobilis.local/callback?token=[redacted]&ok=true',
+        callbackUrl: 'https://orbi.local/callback?token=[redacted]&ok=true',
         password: 'password=[redacted]',
         screen: 'booking',
       },

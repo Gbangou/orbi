@@ -1,4 +1,4 @@
-# Mobilis Local E2E Field Session
+# Orbi Local E2E Field Session
 
 This runbook validates the MVP as a real Burkina Faso field session, not only as a compiling codebase.
 
@@ -47,9 +47,9 @@ backend health endpoint is reachable from that configured URL.
 
 Demo accounts:
 
-- Admin: `admin@mobilis.app` / `Mobilis123!`
-- Rider: `rider@mobilis.app` / `Mobilis123!`
-- Driver: `driver@mobilis.app` / `Mobilis123!`
+- Admin: `admin@orbi.app` / `Orbi123!`
+- Rider: `rider@orbi.app` / `Orbi123!`
+- Driver: `driver@orbi.app` / `Orbi123!`
 
 ## Checklist Command
 
@@ -146,7 +146,7 @@ Invoke-RestMethod `
   -Method Post `
   -Uri "http://localhost:3000/api/v1/payments/webhooks" `
   -ContentType "application/json" `
-  -Headers @{ "x-mobilis-webhook-secret" = "mobilis_dev_webhook_secret" } `
+  -Headers @{ "x-orbi-webhook-secret" = "orbi_dev_webhook_secret" } `
   -Body $body
 ```
 
@@ -166,7 +166,7 @@ Expected:
 
 - driver wallet has a `CREDIT` ledger entry
 - transaction reference is `payment:<paymentAttemptId>:driver-payout`
-- wallet balance increased by fare minus Mobilis commission
+- wallet balance increased by fare minus Orbi commission
 - commission metadata is visible in the transaction summary
 
 ### 7. Payout Settlement

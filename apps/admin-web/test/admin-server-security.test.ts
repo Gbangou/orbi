@@ -168,8 +168,8 @@ describe('admin server security', () => {
   });
 
   it('allows only safe document view URLs for admin links', () => {
-    expect(resolveSafeDocumentUrl('https://storage.mobilis.app/view/doc')).toBe(
-      'https://storage.mobilis.app/view/doc',
+    expect(resolveSafeDocumentUrl('https://storage.orbi.app/view/doc')).toBe(
+      'https://storage.orbi.app/view/doc',
     );
     expect(resolveSafeDocumentUrl('http://localhost:9000/view/doc')).toBe(
       'http://localhost:9000/view/doc',

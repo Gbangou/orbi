@@ -306,8 +306,8 @@ export class TripsService {
         status: matchedTrip.status,
         pickupAddress: matchedTrip.pickupAddress,
         destinationAddress: matchedTrip.destinationAddress,
-        riderName: 'Passager Mobilis',
-        driverName: 'Chauffeur Mobilis',
+        riderName: 'Passager Orbi',
+        driverName: 'Chauffeur Orbi',
         vehicleLabel: `${matchedTrip.vehicle.make} ${matchedTrip.vehicle.model}`,
         lastEvent: lastEvent
           ? {

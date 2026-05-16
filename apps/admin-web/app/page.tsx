@@ -2,7 +2,7 @@ import {
   adminMetrics,
   authenticateAndFetchCurrentUser,
   burkinaPricingCityPresets,
-  createMobilisApiClient,
+  createOrbiApiClient,
   fetchHealthCheck,
   fetchPricingEstimate,
   fetchAdminLiveOps,
@@ -28,13 +28,13 @@ import {
   type AdminPreviewResponse,
   type PricingEstimate,
   type SupportTicketQueueResponse,
-} from '@mobilis/api';
-import { mobilisCopy } from '@mobilis/ui';
+} from '@orbi/api';
+import { orbiCopy } from '@orbi/ui';
 import {
   executionPhases,
-  mobilisDemoAccounts,
-  mobilisRuntimeConfig,
-} from '@mobilis/config';
+  orbiDemoAccounts,
+  orbiRuntimeConfig,
+} from '@orbi/config';
 import { LiveOpsBoard } from './live-ops-board';
 import { PricingStrategyBoard } from './pricing-strategy-board';
 import { DriverOnboardingReviewBoard } from './driver-onboarding-review-board';
@@ -107,7 +107,7 @@ const fallbackLiveOps: AdminLiveOpsResponse = {
 
 const fallbackHealth: HealthCheckResponse = {
   status: 'ok',
-  service: 'mobilis-backend',
+  service: 'orbi-backend',
   timestamp: new Date('2026-04-19T00:00:00.000Z').toISOString(),
   uptimeSeconds: 0,
   runtime: {
@@ -225,7 +225,7 @@ const fallbackHealth: HealthCheckResponse = {
           owner: 'engineering',
           retryPolicy: 'fallback-polling-with-last-known-state',
           userMessage:
-            'Connexion live instable. Le trajet reste suivi par Mobilis.',
+            'Connexion live instable. Le trajet reste suivi par Orbi.',
         },
       ],
     },
@@ -396,7 +396,7 @@ const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
         label: 'Benchmark securite',
         status: 'planned',
         priority: 'critical',
-        mobilisSignal:
+        orbiSignal:
           'Fallback admin: reconnecter le backend pour obtenir la matrice officielle.',
         competitorSignal: 'Uber, Bolt et Yango exposent SOS et partage trajet.',
         nextStep:
@@ -443,7 +443,7 @@ const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
         owner: 'engineering',
         competitorReference:
           'Les leaders pilotent leur qualite avec support, paiement, disponibilite et stabilite mobile.',
-        mobilisSignal:
+        orbiSignal:
           'Fallback admin: reconnecter le backend pour obtenir le score terrain officiel.',
         nextStep:
           'Relancer le backend puis verifier launch-readiness et System Health.',
@@ -472,8 +472,8 @@ async function loadAdminData(): Promise<{
     estimate: PricingEstimate;
   }>;
 }> {
-  const client = createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-    version: mobilisRuntimeConfig.apiVersion,
+  const client = createOrbiApiClient(orbiRuntimeConfig.apiBaseUrl, {
+    version: orbiRuntimeConfig.apiVersion,
   });
   const ouagaPreset =
     burkinaPricingCityPresets.find((preset) => preset.id === 'OUAGADOUGOU') ??
@@ -488,7 +488,7 @@ async function loadAdminData(): Promise<{
   try {
     const { authClient, me } = await authenticateAndFetchCurrentUser(
       client,
-      mobilisDemoAccounts.admin,
+      orbiDemoAccounts.admin,
     );
     const [
       overview,
@@ -748,8 +748,8 @@ export default async function AdminHomePage() {
     <main className="shell">
       <section className="hero hero-grid">
         <div className="hero-copy">
-          <p className="eyebrow">Mobilis Operations Burkina Faso</p>
-          <h1>{mobilisCopy.adminHeadline}</h1>
+          <p className="eyebrow">Orbi Operations Burkina Faso</p>
+          <h1>{orbiCopy.adminHeadline}</h1>
           <p className="lede">
             Centre de pilotage premium pour les reservations, la tarification,
             les incidents, la voix et la qualite de service.
@@ -803,26 +803,26 @@ export default async function AdminHomePage() {
         <div className="test-access-grid">
           <article className="test-access-card">
             <span>Admin web</span>
-            <strong>{mobilisDemoAccounts.admin.email}</strong>
+            <strong>{orbiDemoAccounts.admin.email}</strong>
             <p>Deja connecte sur cette console.</p>
             {showDemoPasswords ? (
-              <code>{mobilisDemoAccounts.admin.password}</code>
+              <code>{orbiDemoAccounts.admin.password}</code>
             ) : null}
           </article>
           <article className="test-access-card">
             <span>Rider app</span>
-            <strong>{mobilisDemoAccounts.rider.email}</strong>
+            <strong>{orbiDemoAccounts.rider.email}</strong>
             <p>Ouvre l app rider avec `pnpm dev:rider`.</p>
             {showDemoPasswords ? (
-              <code>{mobilisDemoAccounts.rider.password}</code>
+              <code>{orbiDemoAccounts.rider.password}</code>
             ) : null}
           </article>
           <article className="test-access-card">
             <span>Driver app</span>
-            <strong>{mobilisDemoAccounts.driver.email}</strong>
+            <strong>{orbiDemoAccounts.driver.email}</strong>
             <p>Ouvre l app driver avec `pnpm dev:driver`.</p>
             {showDemoPasswords ? (
-              <code>{mobilisDemoAccounts.driver.password}</code>
+              <code>{orbiDemoAccounts.driver.password}</code>
             ) : null}
           </article>
         </div>

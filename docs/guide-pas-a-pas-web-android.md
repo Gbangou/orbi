@@ -1,12 +1,12 @@
-# Guide Tres Pratique Pour Lancer Mobilis Sur Ce PC Et Sur Android
+# Guide Tres Pratique Pour Lancer Orbi Sur Ce PC Et Sur Android
 
 Ce document est ecrit pour une personne qui ne connait presque rien en informatique.
 
 Le but est simple:
 
 1. ouvrir le projet
-2. lancer Mobilis sur le PC
-3. lancer Mobilis sur un telephone Android
+2. lancer Orbi sur le PC
+3. lancer Orbi sur un telephone Android
 
 Je vais te dire:
 
@@ -29,7 +29,7 @@ Tu n as normalement pas besoin de reinstaller:
 Le projet existe deja ici:
 
 ```text
-C:\Users\LENOVO\Desktop\mobilis
+C:\Users\LENOVO\Desktop\orbi
 ```
 
 La base locale et Prisma ont deja ete remis en bon etat sur cette machine.
@@ -81,13 +81,13 @@ Ce que tu fais:
 C:\Users\LENOVO\Desktop
 ```
 
-4. Clique une fois sur le dossier `mobilis`.
+4. Clique une fois sur le dossier `orbi`.
 5. Clique sur `Select Folder`.
 
 Ce que tu dois voir:
 
 - a gauche, une colonne avec des dossiers comme `apps`, `docs`, `packages`, `scripts`
-- en haut, l onglet VS Code doit maintenant etre sur le projet `mobilis`
+- en haut, l onglet VS Code doit maintenant etre sur le projet `orbi`
 
 Si une fenetre demande si tu fais confiance au dossier:
 
@@ -108,7 +108,7 @@ Ce que tu dois voir:
 - une ligne qui finit souvent par quelque chose comme:
 
 ```text
-PS C:\Users\LENOVO\Desktop\mobilis>
+PS C:\Users\LENOVO\Desktop\orbi>
 ```
 
 Si tu ne vois pas exactement ce chemin:
@@ -117,7 +117,7 @@ Si tu ne vois pas exactement ce chemin:
 2. tape:
 
 ```powershell
-cd C:\Users\LENOVO\Desktop\mobilis
+cd C:\Users\LENOVO\Desktop\orbi
 ```
 
 3. appuie sur `Entree`
@@ -125,7 +125,7 @@ cd C:\Users\LENOVO\Desktop\mobilis
 Tu dois ensuite voir:
 
 ```text
-PS C:\Users\LENOVO\Desktop\mobilis>
+PS C:\Users\LENOVO\Desktop\orbi>
 ```
 
 ### Etape 4. Verifier Ou Remettre Les Dependances
@@ -318,7 +318,7 @@ Ce que tu fais:
 4. tape:
 
 ```powershell
-cd C:\Users\LENOVO\Desktop\mobilis\apps\backend
+cd C:\Users\LENOVO\Desktop\orbi\apps\backend
 ```
 
 5. appuie sur `Entree`
@@ -363,7 +363,7 @@ Ce que tu fais:
 4. tape:
 
 ```powershell
-cd C:\Users\LENOVO\Desktop\mobilis
+cd C:\Users\LENOVO\Desktop\orbi
 ```
 
 5. appuie sur `Entree`
@@ -437,7 +437,7 @@ http://localhost:3001
 
 Ce que tu dois voir:
 
-- l interface admin Mobilis
+- l interface admin Orbi
 
 ### Etape 15. Ouvrir Le Rider Web
 
@@ -490,9 +490,9 @@ Ce que tu dois voir:
 
 Quand tout est bien lance, tu peux utiliser ces comptes:
 
-- Admin: `admin@mobilis.app` / `Mobilis123!`
-- Rider: `rider@mobilis.app` / `Mobilis123!`
-- Driver: `driver@mobilis.app` / `Mobilis123!`
+- Admin: `admin@orbi.app` / `Orbi123!`
+- Rider: `rider@orbi.app` / `Orbi123!`
+- Driver: `driver@orbi.app` / `Orbi123!`
 
 ## 6. Partie C. Tester Simplement Les Ecrans Sur Le PC
 
@@ -504,8 +504,8 @@ Ce que tu fais:
 2. si tu vois un ecran de connexion, entre:
 
 ```text
-Email: rider@mobilis.app
-Mot de passe: Mobilis123!
+Email: rider@orbi.app
+Mot de passe: Orbi123!
 ```
 
 3. clique sur le bouton de connexion
@@ -527,8 +527,8 @@ Ce que tu fais:
 2. si tu vois un ecran de connexion, entre:
 
 ```text
-Email: driver@mobilis.app
-Mot de passe: Mobilis123!
+Email: driver@orbi.app
+Mot de passe: Orbi123!
 ```
 
 3. clique sur le bouton de connexion
@@ -707,7 +707,7 @@ Ce que tu fais:
 4. tape:
 
 ```powershell
-cd C:\Users\LENOVO\Desktop\mobilis
+cd C:\Users\LENOVO\Desktop\orbi
 ```
 
 5. appuie sur `Entree`
@@ -733,7 +733,7 @@ Ce que tu fais:
 4. tape:
 
 ```powershell
-cd C:\Users\LENOVO\Desktop\mobilis
+cd C:\Users\LENOVO\Desktop\orbi
 ```
 
 5. appuie sur `Entree`
@@ -766,7 +766,7 @@ Ce que tu fais:
 4. tape:
 
 ```powershell
-cd C:\Users\LENOVO\Desktop\mobilis
+cd C:\Users\LENOVO\Desktop\orbi
 ```
 
 5. appuie sur `Entree`
@@ -799,8 +799,8 @@ Ce que tu fais:
 2. si besoin, connecte-toi avec:
 
 ```text
-Email: rider@mobilis.app
-Mot de passe: Mobilis123!
+Email: rider@orbi.app
+Mot de passe: Orbi123!
 ```
 
 3. ouvre `home`
@@ -847,8 +847,8 @@ Ce que tu fais:
 2. si besoin, connecte-toi avec:
 
 ```text
-Email: driver@mobilis.app
-Mot de passe: Mobilis123!
+Email: driver@orbi.app
+Mot de passe: Orbi123!
 ```
 
 3. ouvre `accueil`
@@ -927,7 +927,7 @@ docker compose down
 
 Si tu veux juste l ordre des grandes actions:
 
-1. ouvrir `mobilis` dans VS Code
+1. ouvrir `orbi` dans VS Code
 2. ouvrir un terminal
 3. lancer `pnpm install`
 4. lancer `pnpm setup:local`
@@ -947,10 +947,10 @@ Si tu veux juste l ordre des grandes actions:
 
 ## 21. Fichiers Et Scripts Importants
 
-- [package.json](/c:/Users/LENOVO/Desktop/mobilis/package.json:1)
-- [apps/backend/package.json](/c:/Users/LENOVO/Desktop/mobilis/apps/backend/package.json:1)
-- [apps/backend/.env.example](/c:/Users/LENOVO/Desktop/mobilis/apps/backend/.env.example:1)
-- [apps/rider-app/.env.example](/c:/Users/LENOVO/Desktop/mobilis/apps/rider-app/.env.example:1)
-- [apps/driver-app/.env.example](/c:/Users/LENOVO/Desktop/mobilis/apps/driver-app/.env.example:1)
-- [scripts/bootstrap-local.ps1](/c:/Users/LENOVO/Desktop/mobilis/scripts/bootstrap-local.ps1:1)
-- [scripts/start-local-db.ps1](/c:/Users/LENOVO/Desktop/mobilis/scripts/start-local-db.ps1:1)
+- [package.json](/c:/Users/LENOVO/Desktop/orbi/package.json:1)
+- [apps/backend/package.json](/c:/Users/LENOVO/Desktop/orbi/apps/backend/package.json:1)
+- [apps/backend/.env.example](/c:/Users/LENOVO/Desktop/orbi/apps/backend/.env.example:1)
+- [apps/rider-app/.env.example](/c:/Users/LENOVO/Desktop/orbi/apps/rider-app/.env.example:1)
+- [apps/driver-app/.env.example](/c:/Users/LENOVO/Desktop/orbi/apps/driver-app/.env.example:1)
+- [scripts/bootstrap-local.ps1](/c:/Users/LENOVO/Desktop/orbi/scripts/bootstrap-local.ps1:1)
+- [scripts/start-local-db.ps1](/c:/Users/LENOVO/Desktop/orbi/scripts/start-local-db.ps1:1)

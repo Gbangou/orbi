@@ -1,4 +1,4 @@
-import { type PricingEstimate } from '@mobilis/api';
+import { type PricingEstimate } from '@orbi/api';
 
 type PricingScenario = {
   id: string;
@@ -24,7 +24,7 @@ export function PricingStrategyBoard({
           <h2>Simulation locale et fairness economique</h2>
         </div>
         <p className="lede">
-          Le pricing Mobilis tient compte de la ville, du profil de quartier,
+          Le pricing Orbi tient compte de la ville, du profil de quartier,
           de la pression offre-demande et d une logique d accessibilite pour
           garder un systeme plus lisible et plus juste.
         </p>

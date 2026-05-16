@@ -61,9 +61,9 @@ describe('AuthService', () => {
 
     const result = await service.signUp(
       {
-        email: 'rider@mobilis.app',
+        email: 'rider@orbi.app',
         fullName: 'Awa Rider',
-        password: 'Mobilis123!',
+        password: 'Orbi123!',
         role: SignUpRole.RIDER,
       },
       { userAgent: 'jest', ipAddress: '127.0.0.1' },
@@ -73,7 +73,7 @@ describe('AuthService', () => {
     expect(result.user.riderProfile?.id).toBe('rider-1');
     expect(result.sessionToken).toBeTruthy();
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
-      where: { email: 'rider@mobilis.app' },
+      where: { email: 'rider@orbi.app' },
       select: { id: true },
     });
     expect(prisma.user.create).toHaveBeenCalled();
@@ -86,9 +86,9 @@ describe('AuthService', () => {
 
     await expect(
       service.signUp({
-        email: 'rider@mobilis.app',
+        email: 'rider@orbi.app',
         fullName: 'Awa Rider',
-        password: 'Mobilis123!',
+        password: 'Orbi123!',
         role: SignUpRole.RIDER,
       }),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -96,11 +96,11 @@ describe('AuthService', () => {
 
   it('signs in with valid credentials and returns a session token', async () => {
     const { prisma, service } = createService();
-    const passwordHash = await hashPassword('Mobilis123!');
+    const passwordHash = await hashPassword('Orbi123!');
 
     prisma.user.findUnique.mockResolvedValue({
       id: 'user-1',
-      email: 'driver@mobilis.app',
+      email: 'driver@orbi.app',
       fullName: 'Issa Driver',
       phoneNumber: null,
       passwordHash,
@@ -125,7 +125,7 @@ describe('AuthService', () => {
     prisma.user.update.mockResolvedValue(undefined);
 
     const result = await service.signIn(
-      { email: 'driver@mobilis.app', password: 'Mobilis123!' },
+      { email: 'driver@orbi.app', password: 'Orbi123!' },
       { userAgent: 'jest', ipAddress: '127.0.0.1' },
     );
 
@@ -151,11 +151,11 @@ describe('AuthService', () => {
 
   it('keeps rider multi-device sessions active on sign-in', async () => {
     const { prisma, service } = createService();
-    const passwordHash = await hashPassword('Mobilis123!');
+    const passwordHash = await hashPassword('Orbi123!');
 
     prisma.user.findUnique.mockResolvedValue({
       id: 'rider-user-1',
-      email: 'rider@mobilis.app',
+      email: 'rider@orbi.app',
       fullName: 'Awa Rider',
       phoneNumber: null,
       passwordHash,
@@ -180,7 +180,7 @@ describe('AuthService', () => {
     prisma.user.update.mockResolvedValue(undefined);
 
     const result = await service.signIn(
-      { email: 'rider@mobilis.app', password: 'Mobilis123!' },
+      { email: 'rider@orbi.app', password: 'Orbi123!' },
       { userAgent: 'jest', ipAddress: '127.0.0.1' },
     );
 
@@ -190,11 +190,11 @@ describe('AuthService', () => {
 
   it('rejects sign-in with invalid credentials', async () => {
     const { prisma, service } = createService();
-    const passwordHash = await hashPassword('Mobilis123!');
+    const passwordHash = await hashPassword('Orbi123!');
 
     prisma.user.findUnique.mockResolvedValue({
       id: 'user-1',
-      email: 'driver@mobilis.app',
+      email: 'driver@orbi.app',
       fullName: 'Issa Driver',
       phoneNumber: null,
       passwordHash,
@@ -210,7 +210,7 @@ describe('AuthService', () => {
 
     await expect(
       service.signIn({
-        email: 'driver@mobilis.app',
+        email: 'driver@orbi.app',
         password: 'WrongPassword1!',
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);

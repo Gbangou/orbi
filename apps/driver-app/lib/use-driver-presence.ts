@@ -3,7 +3,7 @@ import * as Location from 'expo-location';
 import {
   extractApiErrorMessage,
   updateDriverPresenceWithApi,
-} from '@mobilis/api';
+} from '@orbi/api';
 import { restoreDriverSession } from './auth';
 
 type DriverPresenceStatus =

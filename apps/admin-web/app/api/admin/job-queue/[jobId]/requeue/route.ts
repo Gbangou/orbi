@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { requeueAdminJobQueueEntry } from '@mobilis/api';
+import { requeueAdminJobQueueEntry } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

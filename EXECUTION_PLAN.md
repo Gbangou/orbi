@@ -1,6 +1,6 @@
-# Mobilis Execution Plan
+# Orbi Execution Plan
 
-Mobilis vise une plateforme de mobilite complete, premium et francaise d'abord pour le Burkina Faso, avec rider app, driver app, admin web et backend robuste.
+Orbi vise une plateforme de mobilite complete, premium et francaise d'abord pour le Burkina Faso, avec rider app, driver app, admin web et backend robuste.
 
 ## Ambition produit
 

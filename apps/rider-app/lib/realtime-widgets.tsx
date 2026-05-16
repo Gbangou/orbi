@@ -9,7 +9,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { mobilisTheme } from '@mobilis/ui';
+import { orbiTheme } from '@orbi/ui';
 
 type Tone = 'teal' | 'amber' | 'sky' | 'rose';
 
@@ -17,32 +17,32 @@ const toneStyles = {
   teal: {
     backgroundColor: 'rgba(45, 212, 191, 0.12)',
     borderColor: 'rgba(45, 212, 191, 0.32)',
-    textColor: mobilisTheme.colors.teal,
-    solidBackground: mobilisTheme.colors.teal,
+    textColor: orbiTheme.colors.teal,
+    solidBackground: orbiTheme.colors.teal,
     solidTextColor: '#052a28',
     solidMutedTextColor: 'rgba(5, 42, 40, 0.72)',
   },
   amber: {
     backgroundColor: 'rgba(245, 158, 11, 0.12)',
     borderColor: 'rgba(245, 158, 11, 0.32)',
-    textColor: mobilisTheme.colors.amber,
-    solidBackground: mobilisTheme.colors.amber,
+    textColor: orbiTheme.colors.amber,
+    solidBackground: orbiTheme.colors.amber,
     solidTextColor: '#3b2205',
     solidMutedTextColor: 'rgba(59, 34, 5, 0.72)',
   },
   sky: {
     backgroundColor: 'rgba(56, 189, 248, 0.12)',
     borderColor: 'rgba(56, 189, 248, 0.32)',
-    textColor: mobilisTheme.colors.sky,
-    solidBackground: mobilisTheme.colors.sky,
+    textColor: orbiTheme.colors.sky,
+    solidBackground: orbiTheme.colors.sky,
     solidTextColor: '#082f49',
     solidMutedTextColor: 'rgba(8, 47, 73, 0.72)',
   },
   rose: {
     backgroundColor: 'rgba(251, 113, 133, 0.12)',
     borderColor: 'rgba(251, 113, 133, 0.32)',
-    textColor: mobilisTheme.colors.rose,
-    solidBackground: mobilisTheme.colors.rose,
+    textColor: orbiTheme.colors.rose,
+    solidBackground: orbiTheme.colors.rose,
     solidTextColor: '#4a1020',
     solidMutedTextColor: 'rgba(74, 16, 32, 0.72)',
   },
@@ -228,7 +228,7 @@ export function QuickActionCard({
               borderColor: toneStyle.solidBackground,
             }
           : {
-              backgroundColor: mobilisTheme.colors.panel,
+              backgroundColor: orbiTheme.colors.panel,
               borderColor: toneStyle.borderColor,
             },
         state.pressed ? styles.actionCardPressed : null,
@@ -255,7 +255,7 @@ export function QuickActionCard({
           {
             color: isPrimary
               ? toneStyle.solidTextColor
-              : mobilisTheme.colors.text,
+              : orbiTheme.colors.text,
           },
         ]}
       >
@@ -268,7 +268,7 @@ export function QuickActionCard({
             {
               color: isPrimary
                 ? toneStyle.solidMutedTextColor
-                : mobilisTheme.colors.muted,
+                : orbiTheme.colors.muted,
             },
           ]}
         >
@@ -480,8 +480,8 @@ export function FlowActionButton({
                 borderColor: toneStyle.borderColor,
               }
             : {
-                backgroundColor: mobilisTheme.colors.backgroundAlt,
-                borderColor: mobilisTheme.colors.border,
+                backgroundColor: orbiTheme.colors.backgroundAlt,
+                borderColor: orbiTheme.colors.border,
               },
         state.pressed ? styles.flowActionButtonPressed : null,
         resolvePressableStyle(style, state),
@@ -494,7 +494,7 @@ export function FlowActionButton({
             ? { color: toneStyle.solidTextColor }
             : emphasis === 'ghost'
               ? { color: toneStyle.textColor }
-              : { color: mobilisTheme.colors.text },
+              : { color: orbiTheme.colors.text },
         ]}
       >
         {label}
@@ -578,18 +578,18 @@ export function InsightBadge({
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 16,
     gap: 6,
   },
   heroCard: {
     borderRadius: 26,
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 20,
     gap: 8,
   },
@@ -604,25 +604,25 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   heroLabel: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
   },
   heroTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '800',
     fontSize: 20,
   },
   heroMeta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   heroSyncMeta: {
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '700',
   },
   heroTransitionMeta: {
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '700',
     lineHeight: 19,
   },
@@ -648,37 +648,37 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   bannerMessage: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     lineHeight: 20,
   },
   bannerSecondary: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   metricTile: {
     flexGrow: 1,
     minWidth: 110,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
     gap: 4,
   },
   metricLabel: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
   },
   metricValue: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '800',
     fontSize: 15,
   },
   metricHelper: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -697,12 +697,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   metricCardValue: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '800',
     fontSize: 24,
   },
   metricCardHelper: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -734,9 +734,9 @@ const styles = StyleSheet.create({
   routeCard: {
     borderRadius: 22,
     padding: 18,
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     gap: 10,
   },
   routeCardHighlight: {
@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   routeEyebrow: {
-    color: mobilisTheme.colors.textSoft,
+    color: orbiTheme.colors.textSoft,
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 1.3,
@@ -763,18 +763,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   routeTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 18,
     fontWeight: '800',
     flex: 1,
   },
   routeTitleAside: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 18,
     fontWeight: '800',
   },
   routeDescription: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 19,
   },
   routeInsights: {
@@ -791,7 +791,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   routeInsightLabel: {
-    color: mobilisTheme.colors.textSoft,
+    color: orbiTheme.colors.textSoft,
     fontSize: 10,
     textTransform: 'uppercase',
     letterSpacing: 1.1,
@@ -805,7 +805,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   routeDetailLine: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 18,
   },
   routeNote: {
@@ -820,11 +820,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   transitionNoticeLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '800',
   },
   transitionNoticeText: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 18,
   },
   timeline: {
@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
   timelineRow: {
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: mobilisTheme.colors.border,
+    borderTopColor: orbiTheme.colors.border,
     gap: 2,
   },
   timelineRowFresh: {
@@ -845,11 +845,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
   },
   timelineLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
   },
   timelineMeta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     fontSize: 12,
   },
   flowActionButton: {
@@ -876,18 +876,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sectionEyebrow: {
-    color: mobilisTheme.colors.textSoft,
+    color: orbiTheme.colors.textSoft,
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 1.4,
   },
   sectionTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 20,
     fontWeight: '800',
   },
   sectionDescription: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 19,
   },
   insightBadge: {
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   insightLabel: {
-    color: mobilisTheme.colors.textSoft,
+    color: orbiTheme.colors.textSoft,
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 1.2,

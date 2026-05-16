@@ -2,11 +2,11 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
-  resolveMobilisApiBaseUrlForRuntime,
-  resolveMobilisDemoAccessEnabled,
-} from '@mobilis/config';
+  resolveOrbiApiBaseUrlForRuntime,
+  resolveOrbiDemoAccessEnabled,
+} from '@orbi/config';
 
-describe('Mobilis runtime config', () => {
+describe('Orbi runtime config', () => {
   const originalLocation = globalThis.location;
 
   afterEach(() => {
@@ -23,7 +23,7 @@ describe('Mobilis runtime config', () => {
     });
 
     expect(
-      resolveMobilisApiBaseUrlForRuntime('http://192.168.2.250:3000'),
+      resolveOrbiApiBaseUrlForRuntime('http://192.168.2.250:3000'),
     ).toBe('http://localhost:3000');
   });
 
@@ -34,7 +34,7 @@ describe('Mobilis runtime config', () => {
     });
 
     expect(
-      resolveMobilisApiBaseUrlForRuntime('http://192.168.2.250:3000'),
+      resolveOrbiApiBaseUrlForRuntime('http://192.168.2.250:3000'),
     ).toBe('http://192.168.2.250:3000');
   });
 
@@ -45,14 +45,14 @@ describe('Mobilis runtime config', () => {
     });
 
     expect(
-      resolveMobilisApiBaseUrlForRuntime('https://api.mobilis.app'),
-    ).toBe('https://api.mobilis.app');
+      resolveOrbiApiBaseUrlForRuntime('https://api.orbi.app'),
+    ).toBe('https://api.orbi.app');
   });
 
   it('disables demo account affordances by default in production runtime config', () => {
-    expect(resolveMobilisDemoAccessEnabled({ NODE_ENV: 'production' })).toBe(false);
+    expect(resolveOrbiDemoAccessEnabled({ NODE_ENV: 'production' })).toBe(false);
     expect(
-      resolveMobilisDemoAccessEnabled({
+      resolveOrbiDemoAccessEnabled({
         NODE_ENV: 'production',
         EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS: 'true',
       }),
@@ -74,8 +74,8 @@ describe('Mobilis runtime config', () => {
     for (const file of files) {
       const source = readFileSync(join(process.cwd(), file), 'utf8');
 
-      expect(source).toContain('resolveMobilisApiBaseUrlForRuntime');
-      expect(source).not.toContain('mobilisRuntimeConfig.apiBaseUrl');
+      expect(source).toContain('resolveOrbiApiBaseUrlForRuntime');
+      expect(source).not.toContain('orbiRuntimeConfig.apiBaseUrl');
     }
   });
 

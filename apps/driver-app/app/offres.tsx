@@ -17,15 +17,15 @@ import {
   updateTripStatusWithApi,
   updateDriverAvailabilityWithApi,
   verifyPickupCodeWithApi,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
   describeRealtimeEvent,
   describeRealtimeConnection,
   formatRealtimeBadgeLabel,
   formatOperationalStatus,
   formatXof,
-  mobilisTheme,
-} from '@mobilis/ui';
+  orbiTheme,
+} from '@orbi/ui';
 import {
   FlowActionButton,
   LiveStatusBanner,
@@ -576,7 +576,7 @@ export default function OffersScreen() {
             value={pickupCodeInput}
             onChangeText={handlePickupCodeChange}
             placeholder="Code a 4 chiffres"
-            placeholderTextColor={mobilisTheme.colors.muted}
+            placeholderTextColor={orbiTheme.colors.muted}
             keyboardType="number-pad"
             maxLength={4}
             style={styles.codeInput}
@@ -839,7 +839,7 @@ export default function OffersScreen() {
             badgeTone={freshOfferIds.includes(offer.id) ? 'sky' : 'amber'}
             title={offer.riderName}
             titleAside={formatDriverOfferFare(offer)}
-            titleAsideColor={mobilisTheme.colors.amber}
+            titleAsideColor={orbiTheme.colors.amber}
             description={`${offer.pickup} vers ${offer.destination}`}
             insights={buildDriverOfferInsights(offer)}
             detailLines={buildDriverOfferDetailLines(offer)}
@@ -899,16 +899,16 @@ const styles = StyleSheet.create({
     paddingTop: 88,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     gap: 14,
   },
   title: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 32,
     fontWeight: '800',
   },
   subtitle: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   snapshotRow: {
     flexDirection: 'row',
@@ -920,12 +920,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   refreshButtonLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -938,24 +938,24 @@ const styles = StyleSheet.create({
   },
   toggleButtonOnline: {
     backgroundColor: 'rgba(45, 212, 191, 0.16)',
-    borderColor: mobilisTheme.colors.teal,
+    borderColor: orbiTheme.colors.teal,
   },
   toggleButtonOffline: {
     backgroundColor: 'rgba(245, 158, 11, 0.16)',
-    borderColor: mobilisTheme.colors.amber,
+    borderColor: orbiTheme.colors.amber,
   },
   toggleButtonLabel: {
     fontWeight: '700',
     fontSize: 13,
   },
   toggleButtonLabelOnline: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
   },
   toggleButtonLabelOffline: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
   },
   transitionInlineLabel: {
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '700',
   },
   codeBlock: {
@@ -964,9 +964,9 @@ const styles = StyleSheet.create({
   codeInput: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
-    backgroundColor: mobilisTheme.colors.panel,
-    color: mobilisTheme.colors.text,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.panel,
+    color: orbiTheme.colors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
   meta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   offerActionRow: {
     flexDirection: 'row',

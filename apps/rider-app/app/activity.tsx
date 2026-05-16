@@ -11,14 +11,14 @@ import {
   type MyTripsResponse,
   type TripDetailResponse,
   updateTripStatusWithApi,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
   describeRealtimeEvent,
   describeRealtimeConnection,
   formatOperationalStatus,
   formatXof,
-  mobilisTheme,
-} from '@mobilis/ui';
+  orbiTheme,
+} from '@orbi/ui';
 import {
   FlowActionButton,
   LiveStatusBanner,
@@ -35,7 +35,7 @@ import {
 import { useLiveRefresh } from '../lib/use-live-refresh';
 import { useRiderRealtimeStream } from '../lib/use-rider-realtime-stream';
 import { resolveRiderAppError } from '../lib/session-feedback';
-import { resolveMobilisApiBaseUrlForRuntime } from '@mobilis/config';
+import { resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
 
 const fallbackHistory: MyTripsResponse = {
   role: 'RIDER',
@@ -407,11 +407,11 @@ export default function ActivityScreen() {
       const response = await createTripShareLinkWithApi(authClient, tripId);
       const shareUrl = new URL(
         response.share.path,
-        resolveMobilisApiBaseUrlForRuntime(),
+        resolveOrbiApiBaseUrlForRuntime(),
       ).toString();
 
       await Share.share({
-        message: `Suivi securise de ma course Mobilis: ${shareUrl}`,
+        message: `Suivi securise de ma course Orbi: ${shareUrl}`,
         url: shareUrl,
       });
       setStatus('Lien de partage pret. Il expire automatiquement.');
@@ -704,34 +704,34 @@ const styles = StyleSheet.create({
     paddingTop: 88,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     gap: 14,
   },
   title: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 32,
     fontWeight: '800',
   },
   syncMeta: {
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '700',
   },
   refreshButton: {
     alignSelf: 'flex-start',
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   refreshButtonLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
   transitionMeta: {
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '700',
     lineHeight: 19,
   },

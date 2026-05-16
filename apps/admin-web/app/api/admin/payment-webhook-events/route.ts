@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { fetchAdminPaymentWebhookEvents } from '@mobilis/api';
+import { fetchAdminPaymentWebhookEvents } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

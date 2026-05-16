@@ -31,7 +31,7 @@ export class PaymentWebhookEventsQueryDto extends PageQueryDto {
   @IsIn(paymentWebhookKinds)
   kind?: (typeof paymentWebhookKinds)[number];
 
-  @ApiPropertyOptional({ example: 'mobilis_123_ride-request-1' })
+  @ApiPropertyOptional({ example: 'orbi_123_ride-request-1' })
   @IsOptional()
   @IsString()
   @MaxLength(128)

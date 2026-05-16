@@ -3,26 +3,26 @@ import { validateEnvironment } from './environment.validation';
 describe('validateEnvironment', () => {
   const productionBase = {
     NODE_ENV: 'production',
-    DATABASE_URL: 'postgresql://mobilis:secret@db.internal:5432/mobilis',
-    FRONTEND_ALLOWED_ORIGINS: 'https://admin.mobilis.app,https://mobilis.app',
+    DATABASE_URL: 'postgresql://orbi:secret@db.internal:5432/orbi',
+    FRONTEND_ALLOWED_ORIGINS: 'https://admin.orbi.app,https://orbi.app',
     PAYMENTS_WEBHOOK_SECRET: 'prod_webhook_secret',
-    PAYMENTS_DEFAULT_REDIRECT_URL: 'https://mobilis.app/payments/return',
+    PAYMENTS_DEFAULT_REDIRECT_URL: 'https://orbi.app/payments/return',
     PAYMENTS_DEFAULT_WEBHOOK_URL:
-      'https://api.mobilis.app/api/v1/payments/webhooks',
+      'https://api.orbi.app/api/v1/payments/webhooks',
     DOCUMENT_SIGNING_SECRET: 'prod_document_secret',
-    DOCUMENT_UPLOAD_BASE_URL: 'https://storage.mobilis.app/upload',
-    DOCUMENT_VIEW_BASE_URL: 'https://storage.mobilis.app/view',
+    DOCUMENT_UPLOAD_BASE_URL: 'https://storage.orbi.app/upload',
+    DOCUMENT_VIEW_BASE_URL: 'https://storage.orbi.app/view',
     ENABLE_SWAGGER: 'false',
   };
 
   it('keeps development defaults available outside production', () => {
     const env = validateEnvironment({
       NODE_ENV: 'development',
-      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5433/mobilis',
+      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5433/orbi',
     });
 
-    expect(env.PAYMENTS_WEBHOOK_SECRET).toBe('mobilis_dev_webhook_secret');
-    expect(env.DOCUMENT_SIGNING_SECRET).toBe('mobilis_dev_document_secret');
+    expect(env.PAYMENTS_WEBHOOK_SECRET).toBe('orbi_dev_webhook_secret');
+    expect(env.DOCUMENT_SIGNING_SECRET).toBe('orbi_dev_document_secret');
   });
 
   const productionSharedBackplanes = {
@@ -56,7 +56,7 @@ describe('validateEnvironment', () => {
     ],
     [
       'dev payment webhook secret',
-      { PAYMENTS_WEBHOOK_SECRET: 'mobilis_dev_webhook_secret' },
+      { PAYMENTS_WEBHOOK_SECRET: 'orbi_dev_webhook_secret' },
       'PAYMENTS_WEBHOOK_SECRET must not use the dev default in production.',
     ],
     [
@@ -66,25 +66,25 @@ describe('validateEnvironment', () => {
     ],
     [
       'dev document signing secret',
-      { DOCUMENT_SIGNING_SECRET: 'mobilis_dev_document_secret' },
+      { DOCUMENT_SIGNING_SECRET: 'orbi_dev_document_secret' },
       'DOCUMENT_SIGNING_SECRET must not use the dev default in production.',
     ],
     [
       'localhost frontend origin',
       {
         FRONTEND_ALLOWED_ORIGINS:
-          'https://admin.mobilis.app,http://localhost:3001',
+          'https://admin.orbi.app,http://localhost:3001',
       },
       'FRONTEND_ALLOWED_ORIGINS must not include localhost in production.',
     ],
     [
       'wildcard frontend origin',
-      { FRONTEND_ALLOWED_ORIGINS: 'https://admin.mobilis.app,*' },
+      { FRONTEND_ALLOWED_ORIGINS: 'https://admin.orbi.app,*' },
       'FRONTEND_ALLOWED_ORIGINS must not include wildcard origins in production.',
     ],
     [
       'localhost database URL',
-      { DATABASE_URL: 'postgresql://mobilis:secret@localhost:5432/mobilis' },
+      { DATABASE_URL: 'postgresql://orbi:secret@localhost:5432/orbi' },
       'DATABASE_URL must not use localhost in production.',
     ],
     [
@@ -102,7 +102,7 @@ describe('validateEnvironment', () => {
     ],
     [
       'non-HTTPS document upload URL',
-      { DOCUMENT_UPLOAD_BASE_URL: 'http://storage.mobilis.app/upload' },
+      { DOCUMENT_UPLOAD_BASE_URL: 'http://storage.orbi.app/upload' },
       'DOCUMENT_UPLOAD_BASE_URL must be HTTPS in production.',
     ],
     [
@@ -112,7 +112,7 @@ describe('validateEnvironment', () => {
     ],
     [
       'non-HTTPS document view URL',
-      { DOCUMENT_VIEW_BASE_URL: 'http://storage.mobilis.app/view' },
+      { DOCUMENT_VIEW_BASE_URL: 'http://storage.orbi.app/view' },
       'DOCUMENT_VIEW_BASE_URL must be HTTPS in production.',
     ],
     [

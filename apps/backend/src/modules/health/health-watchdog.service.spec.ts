@@ -44,7 +44,7 @@ describe('HealthWatchdogService', () => {
   function degradedSnapshot() {
     return {
       status: 'degraded' as const,
-      service: 'mobilis-backend',
+      service: 'orbi-backend',
       timestamp: '2026-04-19T03:00:00.000Z',
       uptimeSeconds: 120,
       runtime: {
@@ -155,7 +155,7 @@ describe('HealthWatchdogService', () => {
       expect.objectContaining({
         channel: 'admin',
         type: 'system.health-alert',
-        entityId: 'mobilis-backend',
+        entityId: 'orbi-backend',
         actorRole: 'SYSTEM',
       }),
     );
@@ -199,7 +199,7 @@ describe('HealthWatchdogService', () => {
       expect.objectContaining({
         channel: 'admin',
         type: 'system.health-recovered',
-        entityId: 'mobilis-backend',
+        entityId: 'orbi-backend',
         actorRole: 'SYSTEM',
       }),
     );

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchAdminFeatureFlags } from '@mobilis/api';
+import { fetchAdminFeatureFlags } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

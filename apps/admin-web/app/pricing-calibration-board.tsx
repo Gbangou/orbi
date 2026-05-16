@@ -1,4 +1,4 @@
-import { type AdminPricingCalibrationResponse } from '@mobilis/api';
+import { type AdminPricingCalibrationResponse } from '@orbi/api';
 
 type PricingCalibrationBoardProps = {
   calibration: AdminPricingCalibrationResponse;

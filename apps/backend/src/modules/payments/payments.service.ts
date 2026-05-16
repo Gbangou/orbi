@@ -709,7 +709,7 @@ export class PaymentsService {
   }
 
   private buildTransactionReference(rideRequestId: string) {
-    return `mobilis_${Date.now()}_${rideRequestId}`;
+    return `orbi_${Date.now()}_${rideRequestId}`;
   }
 
   // The response returned to the client should stay provider-agnostic enough to
@@ -939,7 +939,7 @@ export class PaymentsService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'Mobilis/1.0',
+          'User-Agent': 'Orbi/1.0',
         },
         body: JSON.stringify({
           apikey: apiKey,
@@ -1421,7 +1421,7 @@ export class PaymentsService {
         },
         body: JSON.stringify({
           amount: Math.round(Number(attempt.amount)),
-          comments: input.reason ?? `Mobilis refund ${attempt.transactionRef}`,
+          comments: input.reason ?? `Orbi refund ${attempt.transactionRef}`,
         }),
       },
     );

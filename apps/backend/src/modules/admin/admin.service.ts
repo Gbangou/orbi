@@ -123,7 +123,7 @@ type LaunchSafetyBenchmarkCapability = {
   label: string;
   status: 'active' | 'partial' | 'planned';
   priority: 'critical' | 'high' | 'medium';
-  mobilisSignal: string;
+  orbiSignal: string;
   competitorSignal: string;
   nextStep: string;
 };
@@ -135,7 +135,7 @@ type LaunchFieldQualitySignal = {
   state: 'excellent' | 'watch' | 'blocked';
   owner: 'ops' | 'engineering' | 'support' | 'finance';
   competitorReference: string;
-  mobilisSignal: string;
+  orbiSignal: string;
   nextStep: string;
 };
 
@@ -671,7 +671,7 @@ function maskRequesterName(fullName: string | null | undefined) {
   const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean);
 
   if (!parts.length) {
-    return 'Utilisateur Mobilis';
+    return 'Utilisateur Orbi';
   }
 
   const [firstName, ...rest] = parts;
@@ -1324,7 +1324,7 @@ function resolveLaunchSafetyBenchmark() {
       label: 'Code pickup anti-erreur',
       status: 'active',
       priority: 'critical',
-      mobilisSignal:
+      orbiSignal:
         'Code de prise en charge emis, visible et verifiable avant depart.',
       competitorSignal: 'Uber Verify your ride, Bolt pickup codes.',
       nextStep:
@@ -1335,7 +1335,7 @@ function resolveLaunchSafetyBenchmark() {
       label: 'Verification chauffeur',
       status: 'active',
       priority: 'critical',
-      mobilisSignal:
+      orbiSignal:
         'Piece, permis, carte grise, assurance et selfie requis avant activation.',
       competitorSignal:
         'Uber/Bolt/Yango mettent en avant verification documentaire et identite chauffeur.',
@@ -1347,7 +1347,7 @@ function resolveLaunchSafetyBenchmark() {
       label: 'Trace trajet GPS',
       status: 'active',
       priority: 'critical',
-      mobilisSignal:
+      orbiSignal:
         'Trips, timeline live ops et lien de partage securise a expiration courte disponibles.',
       competitorSignal:
         'Uber/Bolt/Yango exposent partage de trajet et suivi route.',
@@ -1359,7 +1359,7 @@ function resolveLaunchSafetyBenchmark() {
       label: 'SOS en course',
       status: 'active',
       priority: 'critical',
-      mobilisSignal:
+      orbiSignal:
         'Bouton SOS rider/driver, ticket P3, event realtime, audit log et appel local 112 disponibles.',
       competitorSignal:
         'Uber Emergency Button, Bolt Emergency Assist, Yango SOS Button.',
@@ -1371,7 +1371,7 @@ function resolveLaunchSafetyBenchmark() {
       label: 'Detection deviation/arret',
       status: 'active',
       priority: 'critical',
-      mobilisSignal:
+      orbiSignal:
         'Pings route journalises, detection arret long, deviation et absence de progression avec ticket support et alerte live ops.',
       competitorSignal:
         'Uber RideCheck, Bolt Ride Check, Yango route monitoring.',
@@ -1383,7 +1383,7 @@ function resolveLaunchSafetyBenchmark() {
       label: 'Contacts de confiance',
       status: 'active',
       priority: 'high',
-      mobilisSignal:
+      orbiSignal:
         'Contact de confiance rider configure, audite, avec modes manuel, nuit ou tous trajets et partage trajet securise.',
       competitorSignal:
         'Uber Emergency Contacts, Bolt Trusted Contacts, Yango trusted contacts.',
@@ -1395,7 +1395,7 @@ function resolveLaunchSafetyBenchmark() {
       label: 'Preuve incident chiffree',
       status: 'active',
       priority: 'high',
-      mobilisSignal:
+      orbiSignal:
         'Declaration volontaire de preuve audio/photo/video/note, consentement explicite, retention courte et aucun upload automatique.',
       competitorSignal:
         'Uber/Bolt/Yango proposent enregistrement audio selon pays.',
@@ -1407,7 +1407,7 @@ function resolveLaunchSafetyBenchmark() {
       label: 'Limites fatigue chauffeur',
       status: 'active',
       priority: 'high',
-      mobilisSignal:
+      orbiSignal:
         'Mise en ligne et acceptation bloquees apres seuil de courses/minutes sur fenetre glissante avec pause obligatoire auditee.',
       competitorSignal: 'Bolt driving shift limits, Yango shift control.',
       nextStep:
@@ -1482,7 +1482,7 @@ function resolveLaunchFieldQuality(input: {
       owner: 'engineering',
       competitorReference:
         'Uber, Bolt et Yango reduisent les bugs visibles par observabilite, crash triage et fallback temps reel.',
-      mobilisSignal: `Risque runtime ${input.productionRiskLevel}; SLO ${input.serviceLevelPosture ?? 'non expose'}.`,
+      orbiSignal: `Risque runtime ${input.productionRiskLevel}; SLO ${input.serviceLevelPosture ?? 'non expose'}.`,
       nextStep:
         'Brancher crash reporting mobile, traces backend et alertes externes sur les codes MOB-* deja exposes.',
     },
@@ -1502,7 +1502,7 @@ function resolveLaunchFieldQuality(input: {
       owner: 'ops',
       competitorReference:
         'Les leaders mettent en avant SOS, partage trajet, verification, PIN et ride checks.',
-      mobilisSignal: `${input.safetyParityRate}% de parite securite; ${input.criticalSafetyGaps} gap critique.`,
+      orbiSignal: `${input.safetyParityRate}% de parite securite; ${input.criticalSafetyGaps} gap critique.`,
       nextStep:
         'Continuer la calibration terrain des seuils SOS, route monitoring, fatigue et preuve volontaire.',
     },
@@ -1523,8 +1523,8 @@ function resolveLaunchFieldQuality(input: {
             : 'watch',
       owner: 'support',
       competitorReference:
-        'Uber/Bolt/Yango vendent une assistance rapide; Mobilis doit montrer les owners et SLA.',
-      mobilisSignal: `${input.openSupportTickets} ticket(s) actifs; ${input.urgentSupportTickets} P3.`,
+        'Uber/Bolt/Yango vendent une assistance rapide; Orbi doit montrer les owners et SLA.',
+      orbiSignal: `${input.openSupportTickets} ticket(s) actifs; ${input.urgentSupportTickets} P3.`,
       nextStep:
         'Ajouter SLA par priorite, temps de premiere reponse et rituel support quotidien pilote.',
     },
@@ -1544,7 +1544,7 @@ function resolveLaunchFieldQuality(input: {
       owner: 'ops',
       competitorReference:
         'Les concurrents gagnent par disponibilite chauffeur et controle documentaire constant.',
-      mobilisSignal: `${input.onboardingReviewQueue} dossier(s) onboarding; ${input.pendingDocuments} document(s) en attente.`,
+      orbiSignal: `${input.onboardingReviewQueue} dossier(s) onboarding; ${input.pendingDocuments} document(s) en attente.`,
       nextStep:
         'Ajouter expiration bloquante, reverification periodique et score de qualite chauffeur par zone.',
     },
@@ -1566,7 +1566,7 @@ function resolveLaunchFieldQuality(input: {
       owner: 'finance',
       competitorReference:
         'La confiance paiement vient de la reconciliation, des remboursements et des payouts lisibles.',
-      mobilisSignal: `${input.refundPendingPayments} refund(s), ${input.ignoredPaymentWebhooks} webhook(s) ignore(s), ${input.recoveryWallets} wallet(s) en recouvrement.`,
+      orbiSignal: `${input.refundPendingPayments} refund(s), ${input.ignoredPaymentWebhooks} webhook(s) ignore(s), ${input.recoveryWallets} wallet(s) en recouvrement.`,
       nextStep:
         'Connecter reconciliation provider planifiee, exports finance signes et alertes double-debit zero tolerance.',
     },
@@ -1586,7 +1586,7 @@ function resolveLaunchFieldQuality(input: {
       owner: 'engineering',
       competitorReference:
         'Le suivi live concurrentiel repose sur evenements fiables, reprise et supervision active.',
-      mobilisSignal: input.realtimeDegraded
+      orbiSignal: input.realtimeDegraded
         ? 'Transport realtime degrade.'
         : `${input.activeRealtimeStreams} flux realtime actif(s).`,
       nextStep:
@@ -4566,7 +4566,7 @@ export class AdminService {
       'pdf',
     );
     const lines = [
-      'Mobilis - Settlement payouts chauffeurs',
+      'Orbi - Settlement payouts chauffeurs',
       `Genere le: ${settlement.generatedAt.toISOString()}`,
       `Statut: ${settlement.status}`,
       `Exporte par: ${auth.user.fullName} (${auth.user.role})`,

@@ -11,7 +11,7 @@ export class PostgresRateLimitStore implements RateLimitStore, OnModuleDestroy {
     const connectionString =
       this.configService.get<string>('database.url') ??
       process.env.DATABASE_URL ??
-      'postgresql://postgres:postgres@localhost:5433/mobilis?schema=public';
+      'postgresql://postgres:postgres@localhost:5433/orbi?schema=public';
     const poolConfig: PoolConfig = {
       connectionString,
       max: 4,
@@ -33,17 +33,17 @@ export class PostgresRateLimitStore implements RateLimitStore, OnModuleDestroy {
       reset_at_ms: string;
     }>(
       `
-        INSERT INTO mobilis_rate_limit_counters (key, count, reset_at)
+        INSERT INTO orbi_rate_limit_counters (key, count, reset_at)
         VALUES ($1, 1, NOW() + ($2::integer * INTERVAL '1 millisecond'))
         ON CONFLICT (key) DO UPDATE SET
           count = CASE
-            WHEN mobilis_rate_limit_counters.reset_at <= NOW() THEN 1
-            ELSE mobilis_rate_limit_counters.count + 1
+            WHEN orbi_rate_limit_counters.reset_at <= NOW() THEN 1
+            ELSE orbi_rate_limit_counters.count + 1
           END,
           reset_at = CASE
-            WHEN mobilis_rate_limit_counters.reset_at <= NOW()
+            WHEN orbi_rate_limit_counters.reset_at <= NOW()
               THEN NOW() + ($2::integer * INTERVAL '1 millisecond')
-            ELSE mobilis_rate_limit_counters.reset_at
+            ELSE orbi_rate_limit_counters.reset_at
           END
         RETURNING count, EXTRACT(EPOCH FROM reset_at) * 1000 AS reset_at_ms
       `,
@@ -62,12 +62,12 @@ export class PostgresRateLimitStore implements RateLimitStore, OnModuleDestroy {
   async snapshot() {
     await this.pool.query(
       `
-        DELETE FROM mobilis_rate_limit_counters
+        DELETE FROM orbi_rate_limit_counters
         WHERE reset_at <= NOW()
       `,
     );
     const result = await this.pool.query<{ tracked_keys: string }>(
-      'SELECT COUNT(*) AS tracked_keys FROM mobilis_rate_limit_counters',
+      'SELECT COUNT(*) AS tracked_keys FROM orbi_rate_limit_counters',
     );
 
     return {

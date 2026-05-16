@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { verifyAdminPaymentAttemptWithProvider } from '@mobilis/api';
+import { verifyAdminPaymentAttemptWithProvider } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

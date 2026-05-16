@@ -17,7 +17,7 @@ import {
   updateDriverAvailabilityWithApi,
   updateTripStatusWithApi,
   verifyPickupCodeWithApi,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
   restoreDriverSession,
   signInDriverAccount,
@@ -98,8 +98,8 @@ jest.mock('../lib/offer-reservation', () => ({
   useReservationExpiryRefresh: jest.fn(),
 }));
 
-jest.mock('@mobilis/api', () => {
-  const actual = jest.requireActual('@mobilis/api');
+jest.mock('@orbi/api', () => {
+  const actual = jest.requireActual('@orbi/api');
 
   return {
     ...actual,
@@ -173,7 +173,7 @@ function buildDriverProfile() {
     profile: {
       id: 'driver-1',
       fullName: 'Issa Driver',
-      email: 'driver@mobilis.app',
+      email: 'driver@orbi.app',
       phoneNumber: '+22676000000',
       status: 'ONLINE',
       verificationStatus: 'APPROVED',
@@ -204,7 +204,7 @@ function buildDriverProfile() {
         submittedAt: '2026-04-18T08:00:00.000Z',
         latestReviewAt: '2026-04-18T09:00:00.000Z',
         latestDecisionReason: null,
-        reviewActorName: 'Ops Mobilis',
+        reviewActorName: 'Ops Orbi',
         notes: 'Profil pret.',
         checklist: [],
         documents: [],
@@ -351,8 +351,8 @@ describe('driver smoke flows', () => {
     await pressByText(renderer, 'Se connecter');
 
     expect(mockedSignInDriverAccount).toHaveBeenCalledWith({
-      email: 'driver@mobilis.app',
-      password: 'Mobilis123!',
+      email: 'driver@orbi.app',
+      password: 'Orbi123!',
     });
     expect(router.replace).toHaveBeenCalledWith('/accueil');
     expectText(renderer, 'Session chauffeur active.');
@@ -616,7 +616,7 @@ describe('driver smoke flows', () => {
       ].map((key, index) => ({
         storageKey: `driver-1/${key}.pdf`,
         expiresAt: '2026-05-02T12:00:00.000Z',
-        uploadUrl: `https://storage.mobilis.local/upload/${key}`,
+        uploadUrl: `https://storage.orbi.local/upload/${key}`,
         method: 'PUT' as const,
         headers: {
           'content-type': index === 4 ? 'image/jpeg' : 'application/pdf',

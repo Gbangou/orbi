@@ -13,7 +13,7 @@ import { hashPassword } from '../src/modules/auth/auth-crypto';
 
 const pool = new Pool({
   connectionString:
-    process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5433/mobilis?schema=public',
+    process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5433/orbi?schema=public',
 });
 
 const prisma = new PrismaClient({
@@ -21,19 +21,19 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const demoPasswordHash = await hashPassword('Mobilis123!');
+  const demoPasswordHash = await hashPassword('Orbi123!');
 
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@mobilis.app' },
+    where: { email: 'admin@orbi.app' },
     update: {
-      fullName: 'Mobilis Admin',
+      fullName: 'Orbi Admin',
       role: UserRole.ADMIN,
       passwordHash: demoPasswordHash,
       isActive: true,
     },
     create: {
-      email: 'admin@mobilis.app',
-      fullName: 'Mobilis Admin',
+      email: 'admin@orbi.app',
+      fullName: 'Orbi Admin',
       role: UserRole.ADMIN,
       passwordHash: demoPasswordHash,
       wallets: {
@@ -45,7 +45,7 @@ async function main() {
   });
 
   const riderUser = await prisma.user.upsert({
-    where: { email: 'rider@mobilis.app' },
+    where: { email: 'rider@orbi.app' },
     update: {
       fullName: 'Awa Rider',
       role: UserRole.RIDER,
@@ -53,7 +53,7 @@ async function main() {
       isActive: true,
     },
     create: {
-      email: 'rider@mobilis.app',
+      email: 'rider@orbi.app',
       fullName: 'Awa Rider',
       role: UserRole.RIDER,
       passwordHash: demoPasswordHash,
@@ -83,7 +83,7 @@ async function main() {
   });
 
   const driverUser = await prisma.user.upsert({
-    where: { email: 'driver@mobilis.app' },
+    where: { email: 'driver@orbi.app' },
     update: {
       fullName: 'Issa Driver',
       role: UserRole.DRIVER,
@@ -91,7 +91,7 @@ async function main() {
       isActive: true,
     },
     create: {
-      email: 'driver@mobilis.app',
+      email: 'driver@orbi.app',
       fullName: 'Issa Driver',
       role: UserRole.DRIVER,
       passwordHash: demoPasswordHash,
@@ -241,7 +241,7 @@ async function main() {
   }
 
   console.log(
-    `Seeded Mobilis foundation data for admin ${admin.email}. Demo credentials are documented in the local runbook.`,
+    `Seeded Orbi foundation data for admin ${admin.email}. Demo credentials are documented in the local runbook.`,
   );
 }
 

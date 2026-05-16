@@ -35,7 +35,7 @@ class SessionAuthGuardStub implements CanActivate {
       user: {
         id: 'ops-1',
         role: 'OPS',
-        fullName: 'Ops Mobilis',
+        fullName: 'Ops Orbi',
       },
     };
 
@@ -438,7 +438,7 @@ describe('AdminController (integration)', () => {
         updatedAt: '2026-04-23T18:00:00.000Z',
         updatedBy: {
           id: 'ops-1',
-          name: 'Ops Mobilis',
+          name: 'Ops Orbi',
           role: 'OPS',
         },
       },
@@ -531,7 +531,7 @@ describe('AdminController (integration)', () => {
           provider: 'FLUTTERWAVE',
           action: 'persisted_and_reconciled',
           eventType: 'payment.completed',
-          transactionRef: 'mobilis_123_ride-request-1',
+          transactionRef: 'orbi_123_ride-request-1',
           providerReference: 'fw_ref_123',
           signatureVerified: true,
           createdAt: '2026-04-27T09:30:00.000Z',
@@ -628,7 +628,7 @@ describe('AdminController (integration)', () => {
         result: {
           received: true,
           event: 'payment.completed',
-          transactionRef: 'mobilis_123_ride-request-1',
+          transactionRef: 'orbi_123_ride-request-1',
           provider: 'flutterwave',
           providerReference: 'fw_ref_123',
           reconciledAttemptCount: 1,
@@ -666,7 +666,7 @@ describe('AdminController (integration)', () => {
           status: 'REFUNDED',
           amount: 2400,
           currency: 'XOF',
-          transactionRef: 'mobilis_123_ride-request-1',
+          transactionRef: 'orbi_123_ride-request-1',
           providerReference: 'fw_ref_123',
           updatedAt: '2026-05-01T08:05:00.000Z',
         },

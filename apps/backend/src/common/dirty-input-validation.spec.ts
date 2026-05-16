@@ -33,8 +33,8 @@ async function validateDto<T extends object>(
 describe('dirty input validation', () => {
   const validSignUp = {
     fullName: 'Awa Ouedraogo',
-    email: 'awa@mobilis.app',
-    password: 'Mobilis123!',
+    email: 'awa@orbi.app',
+    password: 'Orbi123!',
     role: SignUpRole.RIDER,
   };
 
@@ -43,9 +43,9 @@ describe('dirty input validation', () => {
     ['script name', { fullName: '<script>alert(1)</script>' }],
     ['numeric name', { fullName: 'Awa 123' }],
     ['oversized name', { fullName: 'A'.repeat(10_000) }],
-    ['email with spaces', { email: 'awa @mobilis.app' }],
-    ['oversized email', { email: `${'a'.repeat(245)}@mobilis.app` }],
-    ['weak password', { password: 'mobilis123' }],
+    ['email with spaces', { email: 'awa @orbi.app' }],
+    ['oversized email', { email: `${'a'.repeat(245)}@orbi.app` }],
+    ['weak password', { password: 'orbi123' }],
     ['oversized password', { password: 'A'.repeat(10_000) }],
     ['unknown field', { admin: true }],
   ])('rejects dirty sign-up payload: %s', async (_label, override) => {
@@ -67,15 +67,15 @@ describe('dirty input validation', () => {
   });
 
   it.each([
-    ['email with spaces', { email: 'driver @mobilis.app' }],
-    ['oversized email', { email: `${'d'.repeat(245)}@mobilis.app` }],
+    ['email with spaces', { email: 'driver @orbi.app' }],
+    ['oversized email', { email: `${'d'.repeat(245)}@orbi.app` }],
     ['short password', { password: '123' }],
-    ['weak password', { password: 'mobilis123' }],
+    ['weak password', { password: 'orbi123' }],
     ['oversized password', { password: 'P'.repeat(10_000) }],
   ])('rejects dirty sign-in payload: %s', async (_label, override) => {
     const errors = await validateDto(SignInDto, {
-      email: 'driver@mobilis.app',
-      password: 'Mobilis123!',
+      email: 'driver@orbi.app',
+      password: 'Orbi123!',
       ...override,
     });
 
@@ -535,7 +535,7 @@ describe('dirty input validation', () => {
   it('keeps provider webhook payloads bounded and rejects unknown top-level fields', async () => {
     const validCinetPayWebhook = await validateDto(PaymentWebhookDto, {
       event: 'transaction.successful',
-      cpm_trans_id: 'mobilis_123_ride-request-1',
+      cpm_trans_id: 'orbi_123_ride-request-1',
       cpm_amount: '2400',
       cpm_currency: 'XOF',
       cel_phone_num: '+22670000000',

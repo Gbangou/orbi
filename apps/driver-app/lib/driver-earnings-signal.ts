@@ -1,4 +1,4 @@
-import { formatXof } from '@mobilis/ui';
+import { formatXof } from '@orbi/ui';
 
 export function isFiniteEarningsNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);

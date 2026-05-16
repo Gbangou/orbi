@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { updateAdminDriverOnboardingReview } from '@mobilis/api';
+import { updateAdminDriverOnboardingReview } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

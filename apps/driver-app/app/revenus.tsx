@@ -6,8 +6,8 @@ import {
   fetchMyTrips,
   type DriverEarningsResponse,
   type MyTripsResponse,
-} from '@mobilis/api';
-import { formatOperationalStatus, mobilisTheme } from '@mobilis/ui';
+} from '@orbi/api';
+import { formatOperationalStatus, orbiTheme } from '@orbi/ui';
 import { restoreDriverSession } from '../lib/auth';
 import { resolveDriverAppError } from '../lib/session-feedback';
 import {
@@ -168,7 +168,7 @@ export default function RevenusScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.eyebrow}>Mobilis Chauffeur</Text>
+      <Text style={styles.eyebrow}>Orbi Chauffeur</Text>
       <Text style={styles.title}>Revenus et performance</Text>
       <Text style={styles.body}>
         Le recap financier reste branche au meme tunnel que le cockpit, le dispatch et le dossier chauffeur.
@@ -316,28 +316,28 @@ const styles = StyleSheet.create({
     paddingTop: 88,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     gap: 14,
   },
   eyebrow: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
   title: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 32,
     fontWeight: '800',
   },
   body: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 22,
   },
   heroCard: {
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 20,
     gap: 14,
   },
@@ -356,28 +356,28 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   heroLabel: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     textTransform: 'uppercase',
     fontSize: 12,
     letterSpacing: 1.5,
   },
   heroValue: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
     fontSize: 36,
     fontWeight: '800',
   },
   transitionMeta: {
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '700',
     lineHeight: 19,
   },
   activeRouteMeta: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     lineHeight: 20,
   },
   warningMeta: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
     lineHeight: 20,
   },
   heroMetrics: {
@@ -390,15 +390,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   refreshButtonDisabled: {
     opacity: 0.65,
   },
   refreshButtonLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -410,47 +410,47 @@ const styles = StyleSheet.create({
   card: {
     flexGrow: 1,
     minWidth: 150,
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 18,
     gap: 6,
   },
   label: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   value: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
     fontSize: 24,
     fontWeight: '800',
   },
   meta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     fontWeight: '600',
   },
   emptyCard: {
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 18,
     gap: 6,
   },
   emptyTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 18,
     fontWeight: '800',
   },
   emptyMeta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 20,
   },
   tripCard: {
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 18,
     gap: 8,
   },
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   },
   tripBadge: {
     alignSelf: 'flex-start',
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '800',
     fontSize: 11,
     textTransform: 'uppercase',
@@ -474,17 +474,17 @@ const styles = StyleSheet.create({
   },
   tripRoute: {
     flex: 1,
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 16,
   },
   tripPayout: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
     fontWeight: '800',
     fontSize: 18,
   },
   tripDate: {
-    color: mobilisTheme.colors.textSoft,
+    color: orbiTheme.colors.textSoft,
     fontSize: 12,
   },
 });

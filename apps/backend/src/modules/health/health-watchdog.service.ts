@@ -98,7 +98,7 @@ export class HealthWatchdogService implements OnModuleInit, OnModuleDestroy {
         this.realtimeService.publish({
           channel: 'admin',
           type: 'system.health-recovered',
-          entityId: 'mobilis-backend',
+          entityId: 'orbi-backend',
           actorRole: 'SYSTEM',
           payload: {
             status: snapshot.status,
@@ -127,7 +127,7 @@ export class HealthWatchdogService implements OnModuleInit, OnModuleDestroy {
       this.realtimeService.publish({
         channel: 'admin',
         type: 'system.health-alert',
-        entityId: 'mobilis-backend',
+        entityId: 'orbi-backend',
         actorRole: 'SYSTEM',
         payload: {
           status: snapshot.status,

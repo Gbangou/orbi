@@ -3,8 +3,8 @@ import type {
   AdminLiveOpsResponse,
   DriverOnboardingQueueResponse,
   HealthCheckResponse,
-} from '@mobilis/api';
-import { formatOperationalStatus } from '@mobilis/ui';
+} from '@orbi/api';
+import { formatOperationalStatus } from '@orbi/ui';
 
 export const adminSyncHighlightDurationMs = 5000;
 

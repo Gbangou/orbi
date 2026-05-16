@@ -1,6 +1,6 @@
-# Mobilis Class Diagram
+# Orbi Class Diagram
 
-Ce diagramme couvre le coeur du contexte actuel de Mobilis: identites, profils rider/driver, vehicules, demandes de course, trajets, pricing, wallets, notifications, support, audit et onboarding chauffeur securise.
+Ce diagramme couvre le coeur du contexte actuel de Orbi: identites, profils rider/driver, vehicules, demandes de course, trajets, pricing, wallets, notifications, support, audit et onboarding chauffeur securise.
 
 Il est aligne sur le schema Prisma reel du repo au 27 avril 2026, y compris les briques transverses de session, tentative de paiement, configuration systeme et noyau domaine partage utilises par le dispatch, le pricing et l exploitation ops.
 

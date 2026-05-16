@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { DriverOffer } from '@mobilis/api';
+import type { DriverOffer } from '@orbi/api';
 
 export function useReservationClock() {
   const [now, setNow] = useState(() => Date.now());

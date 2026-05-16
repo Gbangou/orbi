@@ -1,4 +1,4 @@
-# Mobilis Security Policy & Vulnerability Management
+# Orbi Security Policy & Vulnerability Management
 
 *Last updated: May 9, 2026*
 
@@ -43,7 +43,7 @@ Dependency vulnerabilities require ongoing review:
 4. Run full test suite (should still pass)
 5. Commit with security focus
 
-## Security Best Practices for Mobilis
+## Security Best Practices for Orbi
 
 ### Authentication
 
@@ -57,7 +57,7 @@ OK Implemented:
   character passwords before account creation or sign-in attempts are accepted.
 - Auth, admin and payment API responses are marked `no-store` to avoid cached
   session or money data in browsers and proxies.
-- Payment checkout return URLs are origin-bound to configured Mobilis frontend
+- Payment checkout return URLs are origin-bound to configured Orbi frontend
   origins/default redirect origin before any provider attempt is persisted.
 - Admin System Health operations now use Next.js server routes backed by an
   HttpOnly, SameSite=strict admin session cookie, so incident and dead-letter
@@ -73,7 +73,7 @@ OK Implemented:
 - Admin feature-flag refreshes are read through a no-store server route instead
   of re-authenticating from the browser.
 - Local admin server mutations require a same-origin request plus an explicit
-  `x-mobilis-admin-action: true` header, which gives the HttpOnly admin cookie
+  `x-orbi-admin-action: true` header, which gives the HttpOnly admin cookie
   a concrete CSRF gate instead of relying on cookie attributes alone.
 - In production, the admin server session cookie uses a host-bound
   `__Host-` name with `Secure`, `HttpOnly`, `SameSite=Strict`, path `/` and
@@ -286,7 +286,7 @@ Before deploying to production:
 ## Contact & Reporting
 
 - **Security Issues**: Do NOT open public GitHub issues
-- **Email**: security@mobilis.app (when set up)
+- **Email**: security@orbi.app (when set up)
 - **Process**: Vulnerability → Patch → Coordinate Disclosure → Public Announce
 
 ## References

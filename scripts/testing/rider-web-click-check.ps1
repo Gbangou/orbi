@@ -190,7 +190,7 @@ try {
   Invoke-Cdp -Socket $socket -Method 'Page.navigate' -Params @{ url = "$BaseUrl/auth" } | Out-Null
   Wait-CdpEvent -Socket $socket -Method 'Page.loadEventFired' | Out-Null
   Start-Sleep -Milliseconds 800
-  Invoke-JavaScript -Socket $socket -Expression "localStorage.removeItem('mobilis.rider.session-token'); true" | Out-Null
+  Invoke-JavaScript -Socket $socket -Expression "localStorage.removeItem('orbi.rider.session-token'); true" | Out-Null
   Assert-PageHealthy -Socket $socket -ExpectedText 'Connexion et compte'
 
   Click-Text -Socket $socket -Label 'Inscription'

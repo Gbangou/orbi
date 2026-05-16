@@ -1,4 +1,4 @@
-# Mobilis World-Class Readiness Roadmap
+# Orbi World-Class Readiness Roadmap
 
 Date de reference: 3 mai 2026
 
@@ -195,4 +195,4 @@ Le repo n est pas encore au niveau d une plateforme VTC massive, mais il est suf
 
 ## Conclusion
 
-Mobilis n a pas besoin de copier aveuglement Uber, Bolt, Lyft ou Yango. Le bon objectif est plus exigeant: prendre leurs fondamentaux les plus solides, eliminer leurs zones d opacite, et construire une execution locale Burkina Faso exceptionnellement claire, sure et operable. Le repo actuel est une bonne base. La prochaine valeur maximale vient maintenant des workflows de confiance, du realtime partage, de la resilience argent et de la discipline zero-downtime.
+Orbi n a pas besoin de copier aveuglement Uber, Bolt, Lyft ou Yango. Le bon objectif est plus exigeant: prendre leurs fondamentaux les plus solides, eliminer leurs zones d opacite, et construire une execution locale Burkina Faso exceptionnellement claire, sure et operable. Le repo actuel est une bonne base. La prochaine valeur maximale vient maintenant des workflows de confiance, du realtime partage, de la resilience argent et de la discipline zero-downtime.

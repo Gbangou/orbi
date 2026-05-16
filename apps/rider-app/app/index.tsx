@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { mobilisTheme } from '@mobilis/ui';
+import { orbiTheme } from '@orbi/ui';
 import { hasPersistedRiderSession } from '../lib/auth';
 import {
   InsightBadge,
@@ -32,7 +32,7 @@ export default function IndexScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.eyebrow}>Mobilis Passager</Text>
+      <Text style={styles.eyebrow}>Orbi Passager</Text>
       <Text style={styles.title}>Ouverture du tunnel rider</Text>
       <Text style={styles.body}>
         Verification de la session et reprise du bon ecran pour continuer sans friction.
@@ -60,21 +60,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 48,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     gap: 16,
   },
   eyebrow: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
   title: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 34,
     fontWeight: '800',
   },
   body: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 22,
   },
   insightRow: {

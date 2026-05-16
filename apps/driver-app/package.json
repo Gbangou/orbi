@@ -1,5 +1,5 @@
 {
-  "name": "@mobilis/driver-app",
+  "name": "@orbi/driver-app",
   "version": "0.1.0",
   "private": true,
   "main": "expo-router/entry",
@@ -16,9 +16,9 @@
   "dependencies": {
     "@babel/runtime": "7.29.2",
     "@expo/metro-runtime": "^4.0.1",
-    "@mobilis/api": "workspace:*",
-    "@mobilis/config": "workspace:*",
-    "@mobilis/ui": "workspace:*",
+    "@orbi/api": "workspace:*",
+    "@orbi/config": "workspace:*",
+    "@orbi/ui": "workspace:*",
     "expo": "^52.0.23",
     "expo-location": "^55.1.8",
     "expo-router": "^4.0.17",

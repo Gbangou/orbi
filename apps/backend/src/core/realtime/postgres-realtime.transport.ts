@@ -20,7 +20,7 @@ import {
   type RealtimeTransport,
 } from './realtime.types';
 
-const realtimeChannel = 'mobilis_realtime_events';
+const realtimeChannel = 'orbi_realtime_events';
 const maxNotifyPayloadBytes = 7_500;
 
 @Injectable()
@@ -40,7 +40,7 @@ export class PostgresRealtimeTransport
     this.connectionString =
       this.configService.get<string>('database.url') ??
       process.env.DATABASE_URL ??
-      'postgresql://postgres:postgres@localhost:5433/mobilis?schema=public';
+      'postgresql://postgres:postgres@localhost:5433/orbi?schema=public';
     const poolConfig: PoolConfig = {
       connectionString: this.connectionString,
       max: 4,

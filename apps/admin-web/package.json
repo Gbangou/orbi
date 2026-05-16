@@ -1,5 +1,5 @@
 {
-  "name": "@mobilis/admin-web",
+  "name": "@orbi/admin-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,9 +10,9 @@
     "test:smoke": "jest --config ./jest.config.cjs --runInBand"
   },
   "dependencies": {
-    "@mobilis/api": "workspace:*",
-    "@mobilis/config": "workspace:*",
-    "@mobilis/ui": "workspace:*",
+    "@orbi/api": "workspace:*",
+    "@orbi/config": "workspace:*",
+    "@orbi/ui": "workspace:*",
     "next": "15.5.18",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

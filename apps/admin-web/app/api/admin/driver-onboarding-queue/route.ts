@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchAdminDriverOnboardingQueue } from '@mobilis/api';
+import { fetchAdminDriverOnboardingQueue } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

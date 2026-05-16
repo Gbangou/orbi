@@ -32,7 +32,7 @@ function Test-HttpEndpoint {
   }
 }
 
-Write-Host "Mobilis local E2E field session checklist" -ForegroundColor White
+Write-Host "Orbi local E2E field session checklist" -ForegroundColor White
 Write-Host "API:   $ApiBaseUrl"
 Write-Host "Admin: $AdminUrl"
 Write-Host "Rider: $RiderMode"
@@ -59,9 +59,9 @@ Write-Host "  pnpm dev:web-driver-preview  # in a separate pass for driver web"
 Write-Host "  pnpm mobile:lan && pnpm dev:full-mobile  # for phone validation"
 
 Write-Section "Demo Accounts"
-Write-Host "Admin:  admin@mobilis.app / Mobilis123!"
-Write-Host "Rider:  rider@mobilis.app / Mobilis123!"
-Write-Host "Driver: driver@mobilis.app / Mobilis123!"
+Write-Host "Admin:  admin@orbi.app / Orbi123!"
+Write-Host "Rider:  rider@orbi.app / Orbi123!"
+Write-Host "Driver: driver@orbi.app / Orbi123!"
 
 Write-Section "Critical Path"
 $items = @(
@@ -70,9 +70,9 @@ $items = @(
   "Driver accepts the ride request; admin live ops shows the matched trip.",
   "Trip advances through DRIVER_ARRIVING, pickup code verification, IN_PROGRESS and COMPLETED.",
   "Rider creates a checkout intent; capture the transactionRef and amount.",
-  "Post a local payment webhook with x-mobilis-webhook-secret=mobilis_dev_webhook_secret.",
+  "Post a local payment webhook with x-orbi-webhook-secret=orbi_dev_webhook_secret.",
   "Admin journal shows reconciled webhook, linked payment attempt and provider reference.",
-  "Driver wallet shows CREDIT ledger entry, net payout and Mobilis commission.",
+  "Driver wallet shows CREDIT ledger entry, net payout and Orbi commission.",
   "Admin prepares payout, exports CSV/PDF settlement, then marks payout paid.",
   "Admin refunds the payment attempt; journal switches to REFUNDED and refund button disables.",
   "Driver wallet shows REFUND reversal and balance decreases by original driver payout.",

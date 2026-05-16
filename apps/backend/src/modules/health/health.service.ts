@@ -57,7 +57,7 @@ export class HealthService {
         driverReservationExpiryStatus !== 'degraded'
           ? 'ok'
           : 'degraded',
-      service: 'mobilis-backend',
+      service: 'orbi-backend',
       timestamp: new Date().toISOString(),
       uptimeSeconds: Math.round(process.uptime()),
       runtime: {
@@ -237,14 +237,14 @@ export class HealthService {
         label: 'Secret webhook paiement',
         state:
           paymentWebhookSecret &&
-          paymentWebhookSecret !== 'mobilis_dev_webhook_secret'
+          paymentWebhookSecret !== 'orbi_dev_webhook_secret'
             ? ('pass' as const)
             : environment === 'production'
               ? ('fail' as const)
               : ('warn' as const),
         detail:
           paymentWebhookSecret &&
-          paymentWebhookSecret !== 'mobilis_dev_webhook_secret'
+          paymentWebhookSecret !== 'orbi_dev_webhook_secret'
             ? 'Secret webhook explicite configure.'
             : 'Secret webhook dev ou absent; interdit en production.',
       },
@@ -253,14 +253,14 @@ export class HealthService {
         label: 'Secret documents',
         state:
           documentSigningSecret &&
-          documentSigningSecret !== 'mobilis_dev_document_secret'
+          documentSigningSecret !== 'orbi_dev_document_secret'
             ? ('pass' as const)
             : environment === 'production'
               ? ('fail' as const)
               : ('warn' as const),
         detail:
           documentSigningSecret &&
-          documentSigningSecret !== 'mobilis_dev_document_secret'
+          documentSigningSecret !== 'orbi_dev_document_secret'
             ? 'Secret de signature documents explicite configure.'
             : 'Secret documents dev ou absent; interdit en production.',
       },
@@ -461,7 +461,7 @@ export class HealthService {
           owner: 'engineering' as const,
           retryPolicy: 'fallback-polling-with-last-known-state',
           userMessage:
-            'Connexion live instable. Le trajet reste suivi par Mobilis.',
+            'Connexion live instable. Le trajet reste suivi par Orbi.',
         },
         {
           code: 'MOB-SAFETY-INCIDENT',

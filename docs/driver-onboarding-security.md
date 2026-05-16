@@ -112,7 +112,7 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
 - endpoint ops:
   `POST /api/v1/admin/driver-onboarding/:driverId/documents/:documentId/object-verification/verify-provider`
 - provider local par defaut: `DOCUMENT_OBJECT_PROVIDER=local-provider`
-- racine locale par defaut: `DOCUMENT_LOCAL_PROVIDER_ROOT=.mobilis-document-store`
+- racine locale par defaut: `DOCUMENT_LOCAL_PROVIDER_ROOT=.orbi-document-store`
 - la verification confirme existence fichier, taille et SHA-256 calcule
 - le worker de job queue execute la meme verification automatiquement pour les
   artefacts rattaches par le chauffeur; l endpoint admin reste le filet de

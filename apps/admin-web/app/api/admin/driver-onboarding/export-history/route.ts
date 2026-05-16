@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { fetchAdminDriverOnboardingExportHistory } from '@mobilis/api';
+import { fetchAdminDriverOnboardingExportHistory } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

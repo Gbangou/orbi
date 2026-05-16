@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   fetchAdminDispatchSettings,
   updateAdminDispatchSettings,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

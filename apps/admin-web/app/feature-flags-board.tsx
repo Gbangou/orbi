@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type AdminFeatureFlagsResponse,
-} from '@mobilis/api';
-import { describeRealtimeConnection } from '@mobilis/ui';
+} from '@orbi/api';
+import { describeRealtimeConnection } from '@orbi/ui';
 import { subscribeToAdminRealtime } from './admin-realtime';
 
 type FeatureFlagsBoardProps = {

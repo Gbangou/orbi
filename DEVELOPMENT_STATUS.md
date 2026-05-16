@@ -1,10 +1,10 @@
-# Mobilis Development Status
+# Orbi Development Status
 
 Date de reference: 9 mai 2026
 
 ## Etat court
 
-Mobilis dispose d'une fondation locale serieuse: monorepo pnpm, backend NestJS
+Orbi dispose d'une fondation locale serieuse: monorepo pnpm, backend NestJS
 + Prisma, apps Expo rider/driver, admin Next.js, contrats TypeScript partages,
 authentification session, RBAC, validation DTO, audit logs, health/readiness,
 pricing Burkina, paiements/wallet foundations, onboarding chauffeur securise et
@@ -76,7 +76,7 @@ paiement provider, observabilite et runbooks verts.
   verrouillees par metadata RBAC `ADMIN`/`OPS`; les IDs sales sont rejetes par
   les tests HTTP avant appel service sur les routes finance sensibles.
 - Retours checkout paiement bornes cote backend: `redirectUrl` doit correspondre
-  a une origine frontend Mobilis configuree avant persistance d une tentative.
+  a une origine frontend Orbi configuree avant persistance d une tentative.
 - Durcissement cookie/web admin ajoute: cookie session admin `__Host-` en
   production, attributs `Secure`/`HttpOnly`/`SameSite=Strict`/priority,
   compatibilite locale preservee, headers no-store uniformes sur les proxys
@@ -226,8 +226,8 @@ pnpm typecheck
 Selon la surface touchee:
 
 ```bash
-pnpm --filter @mobilis/api build
-pnpm --filter @mobilis/admin-web test:smoke
+pnpm --filter @orbi/api build
+pnpm --filter @orbi/admin-web test:smoke
 pnpm test:mobile:smoke
 pnpm --filter backend test -- --runInBand
 git diff --check

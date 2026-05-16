@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { fetchAdminDriverOnboardingExportCsv } from '@mobilis/api';
+import { fetchAdminDriverOnboardingExportCsv } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         ...createNoStoreAdminHeaders(),
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition':
-          'attachment; filename="mobilis-driver-onboarding-export.csv"',
+          'attachment; filename="orbi-driver-onboarding-export.csv"',
       },
     });
   } catch (error) {

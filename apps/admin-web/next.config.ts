@@ -29,10 +29,10 @@ const contentSecurityPolicy = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: [
-    "@mobilis/api",
-    "@mobilis/domain",
-    "@mobilis/ui",
-    "@mobilis/config",
+    "@orbi/api",
+    "@orbi/domain",
+    "@orbi/ui",
+    "@orbi/config",
   ],
   async headers() {
     return [

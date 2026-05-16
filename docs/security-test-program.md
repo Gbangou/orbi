@@ -1,9 +1,9 @@
-# Mobilis Security And Reliability Test Program
+# Orbi Security And Reliability Test Program
 
 Date de reference: 10 mai 2026
 
 Ce programme transforme la checklist type Uber/Yango en controles executables,
-preuves attendues et criteres de sortie pour Mobilis. Il s'appuie sur:
+preuves attendues et criteres de sortie pour Orbi. Il s'appuie sur:
 
 - OWASP WSTG: https://owasp.org/www-project-web-security-testing-guide/
 - OWASP API Security Top 10 2023: https://owasp.org/API-Security/
@@ -13,7 +13,7 @@ preuves attendues et criteres de sortie pour Mobilis. Il s'appuie sur:
 
 ## Discipline Continue Par Defaut
 
-Chaque changement Mobilis doit etre traite comme un changement de produit
+Chaque changement Orbi doit etre traite comme un changement de produit
 critique: on ajoute ou on ajuste les tests au meme moment que le code, sans
 attendre une phase separee. La boucle minimale est:
 
@@ -26,7 +26,7 @@ attendre une phase separee. La boucle minimale est:
 5. executer les tests cibles puis `pnpm typecheck` avant de considerer le
    changement termine.
 
-Pour Mobilis, les flux sensibles OWASP API6:2023 sont explicitement inclus:
+Pour Orbi, les flux sensibles OWASP API6:2023 sont explicitement inclus:
 creation massive de comptes, abus promotions/parrainage, spam OTP, scraping
 chauffeurs, demandes de courses automatisees, annulations repetees, exports
 admin, remboursements, replays webhooks, bascule disponibilite chauffeur et
@@ -34,7 +34,7 @@ changements tarifaires.
 
 ## Gate De Lancement
 
-Mobilis ne passe pas en production large tant que ces gates ne sont pas verts:
+Orbi ne passe pas en production large tant que ces gates ne sont pas verts:
 
 | Gate | Statut attendu | Preuve |
 | --- | --- | --- |
@@ -178,8 +178,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
 
 | Commande | Resultat |
 | --- | --- |
-| `pnpm --filter @mobilis/rider-app typecheck` | OK |
-| `pnpm --filter @mobilis/driver-app typecheck` | OK |
+| `pnpm --filter @orbi/rider-app typecheck` | OK |
+| `pnpm --filter @orbi/driver-app typecheck` | OK |
 | `pnpm test:mobile:smoke` | rider 25 tests passed, driver 28 tests passed |
 | `pnpm typecheck` | OK apres correction Expo web/Metro |
 | `pnpm --filter backend test -- trips.service --runInBand` | 26 tests passed apres verrous SOS/incident/share |

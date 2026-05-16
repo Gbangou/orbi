@@ -22,7 +22,7 @@ describe('Health (e2e)', () => {
     process.env.SKIP_DB_CONNECT = 'true';
     process.env.DRIVER_RESERVATION_EXPIRY_SWEEP_INTERVAL_MS = '0';
     process.env.DATABASE_URL =
-      'postgresql://postgres:postgres@localhost:5433/mobilis?schema=public';
+      'postgresql://postgres:postgres@localhost:5433/orbi?schema=public';
     prismaServiceMock = {
       $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
       $disconnect: jest.fn().mockResolvedValue(undefined),
@@ -62,7 +62,7 @@ describe('Health (e2e)', () => {
       .expect(200)
       .expect((response) => {
         expect(response.body.status).toBe('ok');
-        expect(response.body.service).toBe('mobilis-backend');
+        expect(response.body.service).toBe('orbi-backend');
         expect(response.body.dependencies.database).toBe('up');
       });
   });

@@ -1,8 +1,8 @@
-# Mobilis Competitive Benchmark
+# Orbi Competitive Benchmark
 
 Date de reference: 17 avril 2026
 
-Ce document compare Mobilis a des plateformes VTC reputees afin de guider les priorites produit, securite, pricing, operations et architecture. Les constats ci-dessous s appuient sur des pages officielles publiques de produit, de pricing et de safety.
+Ce document compare Orbi a des plateformes VTC reputees afin de guider les priorites produit, securite, pricing, operations et architecture. Les constats ci-dessous s appuient sur des pages officielles publiques de produit, de pricing et de safety.
 
 ## Sources officielles de reference
 
@@ -34,7 +34,7 @@ Les leaders mondiaux convergent sur six standards minimums:
 - support 24/7 ou quasi equivalent
 - operations temps reel pour incidents et courses actives
 
-Mobilis peut devenir meilleur que beaucoup d acteurs etablis si le produit execute mieux sur trois combinaisons rarement tres bien reunies ensemble:
+Orbi peut devenir meilleur que beaucoup d acteurs etablis si le produit execute mieux sur trois combinaisons rarement tres bien reunies ensemble:
 
 - clarte economique tres forte
 - securite active vraiment visible au bon moment
@@ -70,14 +70,14 @@ Mobilis peut devenir meilleur que beaucoup d acteurs etablis si le produit execu
 
 - LibreTaxi rappelle qu un flux rideshare minimal peut fonctionner par chat,
   avec PostgreSQL, RabbitMQ, moderation admin et une surface tres simple. La
-  lecon utile pour Mobilis est la resilience operationnelle, pas la copie UI.
+  lecon utile pour Orbi est la resilience operationnelle, pas la copie UI.
 - Le clone JavaScript Mastery montre les attentes demo modernes: Expo, maps,
   autocomplete, choix trajet, paiement Stripe, historique et UI mobile lisible.
   Il reste un produit d apprentissage, sans les couches ops, audit, KYC et
-  reconciliation argent necessaires a Mobilis.
+  reconciliation argent necessaires a Orbi.
 - Le projet Android Uber/Lyft d Amit Shekhar met en avant les micro-etats UX:
   cabs proches, pickup/drop, trajet pickup, arrivee chauffeur, trip ongoing,
-  fin de course, animation et WebSocket simule. Mobilis doit garder ces etats
+  fin de course, animation et WebSocket simule. Orbi doit garder ces etats
   visibles tout en les reliant a de vrais contrats backend, audit et safety.
 
 ## Matrice benchmark
@@ -88,7 +88,7 @@ Echelle:
 - moyen = present mais pas nettement differenciant
 - faible = peu visible ou peu structure publiquement
 
-| Axe | Uber | Lyft | Bolt | Yango | Ambition Mobilis |
+| Axe | Uber | Lyft | Bolt | Yango | Ambition Orbi |
 | --- | --- | --- | --- | --- | --- |
 | Prix upfront | fort | fort | moyen a fort | fort | fort avec fenetre de confiance, raisons et plafonds |
 | Explicabilite du prix | moyen | moyen | moyen | moyen a fort | fort, local et tres pedagogique |
@@ -118,7 +118,7 @@ Echelle:
 - Les parcours d onboarding chauffeur sont frequemment trop lents, trop opaques ou trop manuels.
 - Les experiences ops sont puissantes en interne mais peu reliees a la confiance percue par rider et driver.
 
-## Position actuelle de Mobilis dans ce repo
+## Position actuelle de Orbi dans ce repo
 
 Points deja credibles:
 
@@ -216,4 +216,4 @@ Ecarts encore majeurs avant niveau world-class:
 
 ## Conclusion
 
-Uber, Lyft, Bolt et Yango ont deja prouve que la vitesse, le prix upfront et la safety visible sont les fondamentaux du marche. La vraie opportunite de Mobilis est d assembler ces bases avec une execution plus juste, plus explicable, plus locale et plus operationnelle. Si Mobilis devient la plateforme la plus lisible, la plus rassurante et la plus bien operee du Burkina Faso, elle peut sembler plus moderne et plus fiable que des acteurs plus gros mais moins adaptes localement.
+Uber, Lyft, Bolt et Yango ont deja prouve que la vitesse, le prix upfront et la safety visible sont les fondamentaux du marche. La vraie opportunite de Orbi est d assembler ces bases avec une execution plus juste, plus explicable, plus locale et plus operationnelle. Si Orbi devient la plateforme la plus lisible, la plus rassurante et la plus bien operee du Burkina Faso, elle peut sembler plus moderne et plus fiable que des acteurs plus gros mais moins adaptes localement.

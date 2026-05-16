@@ -116,8 +116,8 @@ describe('MobileObservabilityService', () => {
           context: {
             sessionToken: 'sessionToken=rider-secret-token',
             callbackUrl:
-              'https://mobilis.local/callback?token=rider-secret-token&ok=true',
-            password: 'password=Mobilis123!',
+              'https://orbi.local/callback?token=rider-secret-token&ok=true',
+            password: 'password=Orbi123!',
           },
         }),
       ],
@@ -130,8 +130,7 @@ describe('MobileObservabilityService', () => {
             'Authorization=[redacted] failed for [email] and [phone]',
           context: {
             sessionToken: 'sessionToken=[redacted]',
-            callbackUrl:
-              'https://mobilis.local/callback?token=[redacted]&ok=true',
+            callbackUrl: 'https://orbi.local/callback?token=[redacted]&ok=true',
             password: 'password=[redacted]',
           },
         }),

@@ -1,8 +1,8 @@
-# Mobilis Documentation Index
+# Orbi Documentation Index
 
 Date de reference: 8 mai 2026
 
-Ce dossier garde la verite produit, architecture et operations de Mobilis. Les
+Ce dossier garde la verite produit, architecture et operations de Orbi. Les
 docs doivent rester utiles pour prendre une decision, executer un runbook ou
 verifier un invariant. Quand le code change un flux critique, la doc qui porte
 ce flux doit changer dans le meme travail.
@@ -14,7 +14,7 @@ ce flux doit changer dans le meme travail.
 | Mission, regles agent et invariants non negociables | `../AGENTS.md` |
 | Etat d'avancement courant | `../DEVELOPMENT_STATUS.md` |
 | Plan d'execution par phases | `../EXECUTION_PLAN.md` |
-| Architecture systeme et standards | `../MOBILIS_ARCHITECTURE.md` |
+| Architecture systeme et standards | `../ORBI_ARCHITECTURE.md` |
 | Politique securite | `../SECURITY.md` |
 | Carte du monorepo et regles de dependances | `architecture/repository-map.md` |
 | Invariants de donnees | `architecture/data-invariants.md` |

@@ -14,7 +14,7 @@ import {
   apiPricingCities,
   apiServiceTiers,
   apiVehicleTypes,
-} from '@mobilis/domain';
+} from '@orbi/domain';
 
 function expectSameValues(
   actual: readonly string[],

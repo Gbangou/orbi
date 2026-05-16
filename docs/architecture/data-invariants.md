@@ -1,10 +1,10 @@
-# Mobilis Data Invariants
+# Orbi Data Invariants
 
 Ce document liste les invariants metier qui ne doivent pas dependre uniquement du code applicatif. Il complete `apps/backend/prisma/schema.prisma`, les migrations SQL et le noyau partage `packages/domain`.
 
 ## Invariants Non Exprimables Dans Prisma
 
-Prisma ne sait pas representer les index uniques partiels PostgreSQL dans `schema.prisma`. Mobilis garde donc certains invariants dans les migrations SQL, avec les constantes applicatives correspondantes dans `packages/domain`.
+Prisma ne sait pas representer les index uniques partiels PostgreSQL dans `schema.prisma`. Orbi garde donc certains invariants dans les migrations SQL, avec les constantes applicatives correspondantes dans `packages/domain`.
 
 ### Un Seul Flux Actif Par Passager
 
@@ -44,7 +44,7 @@ Les listes de statuts doivent rester alignees avec:
 ### Cles D Idempotence Argent Normalisees
 
 Les operations argent qui acceptent une cle d idempotence fournie par un client
-ou par les ops doivent refuser les cles ambigues. Mobilis limite ces cles a 8-128
+ou par les ops doivent refuser les cles ambigues. Orbi limite ces cles a 8-128
 caracteres ASCII URL-safe: lettres, chiffres, point, underscore et tiret.
 
 Garantie:
@@ -61,14 +61,14 @@ Garantie:
 
 Une reference fournisseur de paiement ne peut etre reconciliee qu'une seule
 fois pour un fournisseur donne. Cela protege les webhooks contre les retries,
-les doubles notifications et les collisions entre `transactionRef` Mobilis et
+les doubles notifications et les collisions entre `transactionRef` Orbi et
 reference externe.
 
 Garantie:
 
 - applicatif: `PaymentsService` traite un webhook portant deja le meme
   `providerReference` comme un replay idempotent, et ignore une reference deja
-  attachee a une autre transaction Mobilis
+  attachee a une autre transaction Orbi
 - base de donnees: contrainte unique composite sur `provider` et
   `providerReference`
 
@@ -89,7 +89,7 @@ Garantie:
   reussie, et ignore l'ecriture si elle existe deja
 - base de donnees: contrainte unique composite sur `walletId` et `reference`
   dans `WalletTransaction`
-- metadonnees: l'ecriture conserve le montant brut, la commission Mobilis, le
+- metadonnees: l'ecriture conserve le montant brut, la commission Orbi, le
   payout chauffeur, le `paymentAttemptId`, la course et la reference fournisseur
 
 Migration importante:

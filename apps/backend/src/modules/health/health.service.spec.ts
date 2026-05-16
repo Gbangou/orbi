@@ -408,8 +408,8 @@ describe('HealthService', () => {
         'infrastructure.realtime.strict': true,
         'payments.provider': 'flutterwave',
         'payments.refunds.mode': 'provider',
-        'payments.webhookSecret': 'mobilis_dev_webhook_secret',
-        'documents.signingSecret': 'mobilis_dev_document_secret',
+        'payments.webhookSecret': 'orbi_dev_webhook_secret',
+        'documents.signingSecret': 'orbi_dev_document_secret',
         'payments.defaultRedirectUrl': 'http://localhost:8081/book',
         'payments.defaultWebhookUrl':
           'http://localhost:3000/api/v1/payments/webhooks',
@@ -443,7 +443,7 @@ describe('HealthService', () => {
         expect.objectContaining({
           id: 'payment-webhook-secret',
           state: 'fail',
-          detail: expect.not.stringContaining('mobilis_dev_webhook_secret'),
+          detail: expect.not.stringContaining('orbi_dev_webhook_secret'),
         }),
         expect.objectContaining({
           id: 'provider-refunds',

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { acknowledgeAdminLaunchReadinessAction } from '@mobilis/api';
+import { acknowledgeAdminLaunchReadinessAction } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

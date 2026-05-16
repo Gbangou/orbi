@@ -1,4 +1,4 @@
-import { driverOffers } from '@mobilis/api';
+import { driverOffers } from '@orbi/api';
 import {
   buildDriverEarningsStatusLabel,
   buildDriverFlowTransitionLabel,

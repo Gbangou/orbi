@@ -1,23 +1,23 @@
 import {
   clearPersistedSession,
-  createMobilisApiClient,
+  createOrbiApiClient,
   persistSessionToken,
   restorePersistedSession,
   signInWithApi,
   signOutWithApi,
   signUpWithApi,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
-  mobilisRuntimeConfig,
-  resolveMobilisApiBaseUrlForRuntime,
-} from '@mobilis/config';
-import type { AuthenticatedApiContext } from '@mobilis/api';
+  orbiRuntimeConfig,
+  resolveOrbiApiBaseUrlForRuntime,
+} from '@orbi/config';
+import type { AuthenticatedApiContext } from '@orbi/api';
 import { flushRiderMobileErrorReports } from './mobile-error-reporting';
 import { riderSessionStorage, riderSessionStorageKey } from './session-storage';
 
 function createRiderClient() {
-  return createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
-    version: mobilisRuntimeConfig.apiVersion,
+  return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
+    version: orbiRuntimeConfig.apiVersion,
   });
 }
 

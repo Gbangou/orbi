@@ -14,7 +14,7 @@ describe('PostgresRateLimitStore', () => {
   const configService = {
     get: jest.fn((key: string) => {
       const values: Record<string, string> = {
-        'database.url': 'postgresql://mobilis:secret@db.internal:5432/mobilis',
+        'database.url': 'postgresql://orbi:secret@db.internal:5432/orbi',
       };
 
       return values[key];
@@ -37,7 +37,7 @@ describe('PostgresRateLimitStore', () => {
       resetAt: 1770000000123,
     });
     expect(mockPoolQuery).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO mobilis_rate_limit_counters'),
+      expect.stringContaining('INSERT INTO orbi_rate_limit_counters'),
       ['ip:203.0.113.10', 60_000],
     );
     expect(mockPoolQuery).not.toHaveBeenCalledWith(
@@ -73,11 +73,11 @@ describe('PostgresRateLimitStore', () => {
     });
     expect(mockPoolQuery).toHaveBeenNthCalledWith(
       1,
-      expect.stringContaining('DELETE FROM mobilis_rate_limit_counters'),
+      expect.stringContaining('DELETE FROM orbi_rate_limit_counters'),
     );
     expect(mockPoolQuery).toHaveBeenNthCalledWith(
       2,
-      'SELECT COUNT(*) AS tracked_keys FROM mobilis_rate_limit_counters',
+      'SELECT COUNT(*) AS tracked_keys FROM orbi_rate_limit_counters',
     );
   });
 

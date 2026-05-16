@@ -1,24 +1,24 @@
 import {
-  createMobilisClientErrorReportFromClassification,
-  normalizeMobilisClientErrorReportQueue,
+  createOrbiClientErrorReportFromClassification,
+  normalizeOrbiClientErrorReportQueue,
   submitMobileErrorReportsWithApi,
-  type MobilisClientErrorClassification,
-  type MobilisClientErrorReport,
-  type MobilisApiClient,
-} from '@mobilis/api';
+  type OrbiClientErrorClassification,
+  type OrbiClientErrorReport,
+  type OrbiApiClient,
+} from '@orbi/api';
 import { riderSessionStorage } from './session-storage';
 
-export const riderMobileErrorReportQueueKey = 'mobilis.rider.mobile-error-reports';
+export const riderMobileErrorReportQueueKey = 'orbi.rider.mobile-error-reports';
 const maxQueuedReports = 20;
 
 export async function enqueueRiderMobileErrorReport(
   error: unknown,
   input: {
-    classification: MobilisClientErrorClassification;
+    classification: OrbiClientErrorClassification;
     context?: Record<string, unknown>;
   },
 ) {
-  const report = createMobilisClientErrorReportFromClassification(error, {
+  const report = createOrbiClientErrorReportFromClassification(error, {
     appRole: 'rider',
     classification: input.classification,
     context: input.context,
@@ -42,12 +42,12 @@ export async function readRiderMobileErrorReports() {
   const rawReports = await riderSessionStorage.getItem(riderMobileErrorReportQueueKey);
 
   if (!rawReports) {
-    return [] as MobilisClientErrorReport[];
+    return [] as OrbiClientErrorReport[];
   }
 
   try {
     const parsed = JSON.parse(rawReports);
-    return normalizeMobilisClientErrorReportQueue(parsed, {
+    return normalizeOrbiClientErrorReportQueue(parsed, {
       appRole: 'rider',
       maxReports: maxQueuedReports,
     });
@@ -60,7 +60,7 @@ export async function clearRiderMobileErrorReports() {
   await riderSessionStorage.removeItem(riderMobileErrorReportQueueKey);
 }
 
-export async function flushRiderMobileErrorReports(client: MobilisApiClient) {
+export async function flushRiderMobileErrorReports(client: OrbiApiClient) {
   const queuedReports = await readRiderMobileErrorReports();
 
   if (!queuedReports.length) {

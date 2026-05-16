@@ -1,4 +1,4 @@
-# Mobilis Repository Map
+# Orbi Repository Map
 
 Date de reference: 8 mai 2026
 
@@ -8,7 +8,7 @@ responsabilite entre applications, packages partages et documentation.
 ## Vue d'ensemble
 
 ```text
-mobilis/
+orbi/
   apps/
     backend/          NestJS API, Prisma, auth, dispatch, payments, admin, health
     admin-web/        Next.js console operations, onboarding, pricing, support

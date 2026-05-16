@@ -8,7 +8,7 @@ describe('DocumentObjectStorageService', () => {
   let tempRoot: string;
 
   beforeEach(async () => {
-    tempRoot = await mkdtemp(path.join(os.tmpdir(), 'mobilis-documents-'));
+    tempRoot = await mkdtemp(path.join(os.tmpdir(), 'orbi-documents-'));
   });
 
   afterEach(async () => {
@@ -29,7 +29,7 @@ describe('DocumentObjectStorageService', () => {
 
   it('confirms local provider objects with computed size and SHA-256', async () => {
     const service = createService();
-    const content = Buffer.from('mobilis-driver-document');
+    const content = Buffer.from('orbi-driver-document');
     const expectedSha256 = createHash('sha256').update(content).digest('hex');
     const objectPath = path.join(
       tempRoot,
@@ -61,7 +61,7 @@ describe('DocumentObjectStorageService', () => {
 
   it('fails closed for missing, escaped or mismatched local objects', async () => {
     const service = createService();
-    const content = Buffer.from('mobilis-driver-document');
+    const content = Buffer.from('orbi-driver-document');
     const objectPath = path.join(
       tempRoot,
       'driver-1',

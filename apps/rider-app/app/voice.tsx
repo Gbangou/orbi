@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import {
-  createMobilisApiClient,
+  createOrbiApiClient,
   extractApiErrorMessage,
   fetchMyTrips,
   resolveVoiceLocationIntentWithApi,
   type MyTripsResponse,
   type VoiceLocationIntentResponse,
-} from "@mobilis/api";
-import { mobilisCopy, mobilisTheme } from "@mobilis/ui";
+} from "@orbi/api";
+import { orbiCopy, orbiTheme } from "@orbi/ui";
 import {
-  mobilisRuntimeConfig,
-  resolveMobilisApiBaseUrlForRuntime,
-} from "@mobilis/config";
+  orbiRuntimeConfig,
+  resolveOrbiApiBaseUrlForRuntime,
+} from "@orbi/config";
 import { restoreRiderSession } from "../lib/auth";
 import { resolveRiderAppError } from "../lib/session-feedback";
 import {
@@ -113,8 +113,8 @@ export default function VoiceScreen() {
   }
 
   async function resolveTranscript(nextTranscript: string) {
-    const client = createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
-      version: mobilisRuntimeConfig.apiVersion,
+    const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
+      version: orbiRuntimeConfig.apiVersion,
     });
 
     if (!nextTranscript.trim()) {
@@ -155,7 +155,7 @@ export default function VoiceScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <Text style={styles.title}>Recherche vocale</Text>
-      <Text style={styles.body}>{mobilisCopy.voiceHeadline}</Text>
+      <Text style={styles.body}>{orbiCopy.voiceHeadline}</Text>
       <LiveStatusBanner
         label="Voice live"
         message={status}
@@ -215,7 +215,7 @@ export default function VoiceScreen() {
           value={transcript}
           onChangeText={setTranscript}
           placeholder="Ex: Je vais a Ouaga 2000"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           style={styles.input}
         />
         <View style={styles.sampleRow}>
@@ -325,16 +325,16 @@ const styles = StyleSheet.create({
     paddingTop: 88,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     gap: 16,
   },
   title: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 32,
     fontWeight: "800",
   },
   body: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 22,
   },
   insightRow: {
@@ -343,31 +343,31 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   voiceCard: {
-    backgroundColor: mobilisTheme.colors.panel,
-    borderColor: mobilisTheme.colors.border,
+    backgroundColor: orbiTheme.colors.panel,
+    borderColor: orbiTheme.colors.border,
     borderWidth: 1,
     borderRadius: 24,
     padding: 20,
     gap: 12,
   },
   label: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
     textTransform: "uppercase",
     fontSize: 12,
   },
   flowMeta: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: "700",
     lineHeight: 20,
   },
   input: {
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 16,
   },
   sampleRow: {
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   section: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 20,
     fontWeight: "700",
   },

@@ -1,23 +1,23 @@
 import {
   clearPersistedSession,
-  createMobilisApiClient,
+  createOrbiApiClient,
   persistSessionToken,
   restorePersistedSession,
   signInWithApi,
   signOutWithApi,
   signUpWithApi,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
-  mobilisRuntimeConfig,
-  resolveMobilisApiBaseUrlForRuntime,
-} from '@mobilis/config';
-import type { AuthenticatedApiContext } from '@mobilis/api';
+  orbiRuntimeConfig,
+  resolveOrbiApiBaseUrlForRuntime,
+} from '@orbi/config';
+import type { AuthenticatedApiContext } from '@orbi/api';
 import { flushDriverMobileErrorReports } from './mobile-error-reporting';
 import { driverSessionStorage, driverSessionStorageKey } from './session-storage';
 
 function createDriverClient() {
-  return createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
-    version: mobilisRuntimeConfig.apiVersion,
+  return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
+    version: orbiRuntimeConfig.apiVersion,
   });
 }
 

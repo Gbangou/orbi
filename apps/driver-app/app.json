@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Mobilis Chauffeur",
-    "slug": "mobilis-chauffeur",
-    "scheme": "mobilis-chauffeur",
+    "name": "Orbi Chauffeur",
+    "slug": "orbi-chauffeur",
+    "scheme": "orbi-chauffeur",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -12,13 +12,13 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Mobilis Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct."
+          "locationWhenInUsePermission": "Orbi Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct."
         }
       ]
     ],
     "ios": {
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Mobilis Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct."
+        "NSLocationWhenInUseUsageDescription": "Orbi Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct."
       }
     },
     "android": {

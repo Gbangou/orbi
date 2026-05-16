@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { recordAdminDriverWalletRecoveryAdjustment } from '@mobilis/api';
+import { recordAdminDriverWalletRecoveryAdjustment } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

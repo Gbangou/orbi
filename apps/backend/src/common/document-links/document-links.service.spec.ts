@@ -5,8 +5,8 @@ describe('DocumentLinksService', () => {
   function createService(overrides: Record<string, unknown> = {}) {
     const config: Record<string, unknown> = {
       'documents.ttlSeconds': 30,
-      'documents.uploadBaseUrl': 'https://storage.mobilis.local/upload',
-      'documents.viewBaseUrl': 'https://storage.mobilis.local/view',
+      'documents.uploadBaseUrl': 'https://storage.orbi.local/upload',
+      'documents.viewBaseUrl': 'https://storage.orbi.local/view',
       'documents.signingSecret': 'test-document-secret',
       ...overrides,
     };

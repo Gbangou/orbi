@@ -17,7 +17,7 @@ export const brandTokens = {
   surface: '#f8fafc',
 } as const;
 
-export const mobilisRuntimeConfig = {
+export const orbiRuntimeConfig = {
   apiBaseUrl:
     runtimeEnvironment.process?.env?.EXPO_PUBLIC_API_BASE_URL ??
     runtimeEnvironment.process?.env?.NEXT_PUBLIC_API_BASE_URL ??
@@ -34,7 +34,7 @@ export const mobilisRuntimeConfig = {
   launchMarket: 'Burkina Faso',
 } as const;
 
-export function resolveMobilisDemoAccessEnabled(
+export function resolveOrbiDemoAccessEnabled(
   env: Record<string, string | undefined> = runtimeEnvironment.process?.env ?? {},
 ) {
   const explicitValue =
@@ -48,10 +48,10 @@ export function resolveMobilisDemoAccessEnabled(
   return env.NODE_ENV !== 'production';
 }
 
-export const mobilisDemoAccessEnabled = resolveMobilisDemoAccessEnabled();
+export const orbiDemoAccessEnabled = resolveOrbiDemoAccessEnabled();
 
-export function resolveMobilisApiBaseUrlForRuntime(
-  configuredBaseUrl = mobilisRuntimeConfig.apiBaseUrl,
+export function resolveOrbiApiBaseUrlForRuntime(
+  configuredBaseUrl = orbiRuntimeConfig.apiBaseUrl,
 ) {
   const location = runtimeEnvironment.location;
 
@@ -73,36 +73,36 @@ export function resolveMobilisApiBaseUrlForRuntime(
   return configuredBaseUrl;
 }
 
-export const mobilisDemoAccounts = {
+export const orbiDemoAccounts = {
   rider: {
     email:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_MOBILIS_DEMO_RIDER_EMAIL ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_MOBILIS_DEMO_RIDER_EMAIL ??
-      'rider@mobilis.app',
+      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_RIDER_EMAIL ??
+      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_RIDER_EMAIL ??
+      'rider@orbi.app',
     password:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_MOBILIS_DEMO_RIDER_PASSWORD ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_MOBILIS_DEMO_RIDER_PASSWORD ??
-      'Mobilis123!',
+      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_RIDER_PASSWORD ??
+      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_RIDER_PASSWORD ??
+      'Orbi123!',
   },
   driver: {
     email:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_MOBILIS_DEMO_DRIVER_EMAIL ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_MOBILIS_DEMO_DRIVER_EMAIL ??
-      'driver@mobilis.app',
+      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_DRIVER_EMAIL ??
+      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_DRIVER_EMAIL ??
+      'driver@orbi.app',
     password:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_MOBILIS_DEMO_DRIVER_PASSWORD ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_MOBILIS_DEMO_DRIVER_PASSWORD ??
-      'Mobilis123!',
+      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD ??
+      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD ??
+      'Orbi123!',
   },
   admin: {
     email:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_MOBILIS_DEMO_ADMIN_EMAIL ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_MOBILIS_DEMO_ADMIN_EMAIL ??
-      'admin@mobilis.app',
+      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_ADMIN_EMAIL ??
+      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_ADMIN_EMAIL ??
+      'admin@orbi.app',
     password:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_MOBILIS_DEMO_ADMIN_PASSWORD ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_MOBILIS_DEMO_ADMIN_PASSWORD ??
-      'Mobilis123!',
+      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_ADMIN_PASSWORD ??
+      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_ADMIN_PASSWORD ??
+      'Orbi123!',
   },
 } as const;
 

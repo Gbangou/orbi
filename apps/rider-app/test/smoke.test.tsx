@@ -2,7 +2,7 @@
 import React from 'react';
 import { router } from 'expo-router';
 import {
-  createMobilisApiClient,
+  createOrbiApiClient,
   cancelRideRequestWithApi,
   createCheckoutIntentWithApi,
   createRideRequestWithApi,
@@ -17,7 +17,7 @@ import {
   triggerTripSafetySosWithApi,
   updateTrustedContactWithApi,
   updateTripStatusWithApi,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
   restoreRiderSession,
   signInRiderAccount,
@@ -86,12 +86,12 @@ jest.mock('../lib/use-rider-realtime-stream', () => ({
   ),
 }));
 
-jest.mock('@mobilis/api', () => {
-  const actual = jest.requireActual('@mobilis/api');
+jest.mock('@orbi/api', () => {
+  const actual = jest.requireActual('@orbi/api');
 
   return {
     ...actual,
-    createMobilisApiClient: jest.fn(() => ({ kind: 'mock-client' })),
+    createOrbiApiClient: jest.fn(() => ({ kind: 'mock-client' })),
     cancelRideRequestWithApi: jest.fn(),
     fetchRideOptionsPreview: jest.fn(),
     fetchMyTrips: jest.fn(),
@@ -260,7 +260,7 @@ function buildRiderProfile() {
     profile: {
       id: 'rider-1',
       fullName: 'Awa Ouedraogo',
-      email: 'rider@mobilis.app',
+      email: 'rider@orbi.app',
       phoneNumber: '+22670000000',
       preferredTier: 'MOTO_STANDARD',
       emergencyPhone: null,
@@ -308,7 +308,7 @@ beforeEach(() => {
   mockedUpdateTripStatusWithApi.mockReset();
   mockedResolveRiderAppError.mockReset();
 
-  jest.mocked(createMobilisApiClient).mockReturnValue({ kind: 'mock-client' } as never);
+  jest.mocked(createOrbiApiClient).mockReturnValue({ kind: 'mock-client' } as never);
   mockedResolveVoiceLocationIntentWithApi.mockResolvedValue({
     locale: 'fr-BF',
     transcript: 'Je vais a Ouaga 2000',
@@ -379,8 +379,8 @@ describe('rider smoke flows', () => {
     await pressByText(renderer, 'Se connecter');
 
     expect(mockedSignInRiderAccount).toHaveBeenCalledWith({
-      email: 'rider@mobilis.app',
-      password: 'Mobilis123!',
+      email: 'rider@orbi.app',
+      password: 'Orbi123!',
     });
     expect(router.replace).toHaveBeenCalledWith('/home');
     expectText(renderer, 'Session passager active.');

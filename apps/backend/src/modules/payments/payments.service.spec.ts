@@ -67,12 +67,11 @@ describe('PaymentsService', () => {
           'payments.cinetpay.siteId': 'site_123',
           'payments.cinetpay.apiKey': 'api_123',
           'payments.webhookSecret': 'secret_123',
-          'payments.defaultRedirectUrl':
-            'https://app.mobilis.bf/payments/return',
+          'payments.defaultRedirectUrl': 'https://app.orbi.bf/payments/return',
         };
 
         if (key === 'app.frontendOrigins') {
-          return ['https://app.mobilis.bf', 'http://localhost:8081'];
+          return ['https://app.orbi.bf', 'http://localhost:8081'];
         }
 
         return values[key];
@@ -184,7 +183,7 @@ describe('PaymentsService', () => {
     });
   });
 
-  it('accepts checkout redirect URLs from configured Mobilis frontend origins', async () => {
+  it('accepts checkout redirect URLs from configured Orbi frontend origins', async () => {
     const { service } = createService('flutterwave');
 
     const result = await service.createCheckoutIntent(
@@ -201,16 +200,16 @@ describe('PaymentsService', () => {
         rideRequestId: 'ride-request-1',
         channel: 'MOBILE_MONEY',
         amount: 2400,
-        redirectUrl: 'https://app.mobilis.bf/payments/return?attempt=1',
+        redirectUrl: 'https://app.orbi.bf/payments/return?attempt=1',
       },
     );
 
     expect(result.providerMetadata.callbackUrl).toBe(
-      'https://app.mobilis.bf/payments/return?attempt=1',
+      'https://app.orbi.bf/payments/return?attempt=1',
     );
   });
 
-  it('rejects checkout redirect URLs outside configured Mobilis origins', async () => {
+  it('rejects checkout redirect URLs outside configured Orbi origins', async () => {
     const { service, prisma } = createService('flutterwave');
 
     await expect(
@@ -362,7 +361,7 @@ describe('PaymentsService', () => {
 
     const result = await service.handleWebhook('secret_123', {
       event: 'payment.completed',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       data: {
         providerReference: 'fw_ref_123',
       },
@@ -388,7 +387,7 @@ describe('PaymentsService', () => {
         eventId: 'webhook-event-1',
         action: 'persisted_and_reconciled',
         provider: 'FLUTTERWAVE',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         providerReference: 'fw_ref_123',
       }),
     });
@@ -398,12 +397,12 @@ describe('PaymentsService', () => {
     const { service, prisma } = createService();
     prisma.paymentAttempt.findFirst.mockResolvedValue({
       id: 'payment-1',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
     });
 
     const result = await service.handleWebhook('secret_123', {
       event: 'payment.completed',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       data: {
         providerReference: 'fw_ref_123',
       },
@@ -429,12 +428,12 @@ describe('PaymentsService', () => {
     const { service, prisma } = createService();
     prisma.paymentAttempt.findFirst.mockResolvedValue({
       id: 'payment-1',
-      transactionRef: 'mobilis_existing_ride-request-1',
+      transactionRef: 'orbi_existing_ride-request-1',
     });
 
     const result = await service.handleWebhook('secret_123', {
       event: 'payment.completed',
-      transactionRef: 'mobilis_other_ride-request-2',
+      transactionRef: 'orbi_other_ride-request-2',
       data: {
         providerReference: 'fw_ref_123',
       },
@@ -458,7 +457,7 @@ describe('PaymentsService', () => {
 
     const result = await service.handleWebhook('secret_123', {
       event: 'payment.completed',
-      transactionRef: 'mobilis_unknown',
+      transactionRef: 'orbi_unknown',
     });
 
     expect(result.nextAction).toBe('ignored_unknown_reference');
@@ -476,7 +475,7 @@ describe('PaymentsService', () => {
 
     const result = await service.handleWebhook('secret_123', {
       event: 'payment.completed',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       data: {
         providerReference: 'fw_ref_123',
         amount: 1200,
@@ -513,7 +512,7 @@ describe('PaymentsService', () => {
         currency: 'XOF',
         provider: 'FLUTTERWAVE',
         providerReference: 'fw_ref_123',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         rideRequestId: 'ride-request-1',
         rideRequest: {
           trip: {
@@ -527,7 +526,7 @@ describe('PaymentsService', () => {
 
     const result = await service.handleWebhook('secret_123', {
       event: 'payment.completed',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       data: {
         providerReference: 'fw_ref_123',
       },
@@ -584,7 +583,7 @@ describe('PaymentsService', () => {
         currency: 'XOF',
         provider: 'FLUTTERWAVE',
         providerReference: 'fw_ref_123',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         rideRequestId: 'ride-request-1',
         rideRequest: {
           trip: {
@@ -601,7 +600,7 @@ describe('PaymentsService', () => {
 
     await service.handleWebhook('secret_123', {
       event: 'payment.completed',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       data: {
         providerReference: 'fw_ref_123',
       },
@@ -625,7 +624,7 @@ describe('PaymentsService', () => {
         currency: 'XOF',
         provider: 'FLUTTERWAVE',
         providerReference: 'fw_ref_123',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         rideRequestId: 'ride-request-1',
         rideRequest: {
           trip: {
@@ -643,7 +642,7 @@ describe('PaymentsService', () => {
 
     await service.handleWebhook('secret_123', {
       event: 'payment.completed',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       data: {
         providerReference: 'fw_ref_123',
       },
@@ -665,7 +664,7 @@ describe('PaymentsService', () => {
       providerMetadata: {
         checkout: 'metadata',
       },
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       rideRequestId: 'ride-request-1',
       updatedAt: new Date('2026-05-01T08:00:00.000Z'),
       rideRequest: {
@@ -684,7 +683,7 @@ describe('PaymentsService', () => {
       currency: 'XOF',
       provider: 'FLUTTERWAVE',
       providerReference: 'fw_ref_123',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       updatedAt: new Date('2026-05-01T08:05:00.000Z'),
     });
     prisma.walletTransaction.findUnique
@@ -693,7 +692,7 @@ describe('PaymentsService', () => {
 
     const result = await service.refundPaymentAttempt('payment-1', {
       actorUserId: 'ops-1',
-      actorName: 'Ops Mobilis',
+      actorName: 'Ops Orbi',
       reason: 'Rider charged after cancellation.',
     });
 
@@ -752,7 +751,7 @@ describe('PaymentsService', () => {
       currency: 'XOF',
       provider: 'CINETPAY',
       providerReference: 'cp_ref_123',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       updatedAt: new Date('2026-05-01T08:05:00.000Z'),
       rideRequest: {
         trip: null,
@@ -804,7 +803,7 @@ describe('PaymentsService', () => {
       providerMetadata: {
         checkout: 'metadata',
       },
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       rideRequestId: 'ride-request-1',
       updatedAt: new Date('2026-05-01T08:00:00.000Z'),
       rideRequest: {
@@ -823,13 +822,13 @@ describe('PaymentsService', () => {
       currency: 'XOF',
       provider: 'FLUTTERWAVE',
       providerReference: '123456',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       updatedAt: new Date('2026-05-01T08:05:00.000Z'),
     });
 
     const result = await service.refundPaymentAttempt('payment-1', {
       actorUserId: 'ops-1',
-      actorName: 'Ops Mobilis',
+      actorName: 'Ops Orbi',
       reason: 'Provider refund test.',
     });
 
@@ -909,7 +908,7 @@ describe('PaymentsService', () => {
         id: 'payment-1',
         provider: 'FLUTTERWAVE',
         status: 'REFUND_PENDING',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         amount: 2400,
         currency: 'XOF',
         providerMetadata: {
@@ -930,7 +929,7 @@ describe('PaymentsService', () => {
             providerRefundId: 'fw_refund_123',
           },
         },
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         rideRequestId: 'ride-request-1',
         rideRequest: {
           trip: {
@@ -980,7 +979,7 @@ describe('PaymentsService', () => {
     prisma.paymentAttempt.findFirst.mockResolvedValue({
       id: 'payment-1',
       userId: 'user-1',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
     });
     prisma.paymentAttempt.findUnique.mockResolvedValue({
       id: 'payment-1',
@@ -994,7 +993,7 @@ describe('PaymentsService', () => {
           providerRefundId: 'fw_refund_123',
         },
       },
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       rideRequestId: 'ride-request-1',
       rideRequest: {
         trip: {
@@ -1067,7 +1066,7 @@ describe('PaymentsService', () => {
     prisma.paymentAttempt.findFirst.mockResolvedValue({
       id: 'payment-1',
       userId: 'user-1',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
     });
 
     const result = await service.handleWebhook('secret_123', {
@@ -1097,7 +1096,7 @@ describe('PaymentsService', () => {
     prisma.paymentAttempt.findFirst.mockResolvedValue({
       id: 'payment-1',
       userId: 'user-1',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
     });
     prisma.paymentAttempt.findUnique.mockResolvedValue({
       id: 'payment-1',
@@ -1111,7 +1110,7 @@ describe('PaymentsService', () => {
           providerRefundId: 'fw_refund_123',
         },
       },
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       rideRequestId: 'ride-request-1',
       rideRequest: {
         trip: {
@@ -1154,7 +1153,7 @@ describe('PaymentsService', () => {
     prisma.paymentAttempt.findFirst.mockResolvedValue({
       id: 'payment-1',
       userId: 'user-1',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
     });
 
     const result = await service.handleWebhook(
@@ -1183,7 +1182,7 @@ describe('PaymentsService', () => {
       provider: 'FLUTTERWAVE',
       payload: {
         event: 'payment.completed',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         data: {
           providerReference: 'fw_ref_123',
         },
@@ -1191,7 +1190,7 @@ describe('PaymentsService', () => {
     });
     prisma.paymentAttempt.findFirst.mockResolvedValue({
       id: 'payment-1',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       userId: 'user-1',
     });
 
@@ -1224,7 +1223,7 @@ describe('PaymentsService', () => {
       json: jest.fn().mockResolvedValue({
         status: 'success',
         data: {
-          tx_ref: 'mobilis_123_ride-request-1',
+          tx_ref: 'orbi_123_ride-request-1',
           flw_ref: 'fw_ref_123',
           status: 'successful',
           amount: 2400,
@@ -1237,7 +1236,7 @@ describe('PaymentsService', () => {
       .mockResolvedValueOnce({
         id: 'payment-1',
         provider: 'FLUTTERWAVE',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         amount: 2400,
         currency: 'XOF',
       })
@@ -1253,7 +1252,7 @@ describe('PaymentsService', () => {
         currency: 'XOF',
         provider: 'FLUTTERWAVE',
         providerReference: 'fw_ref_123',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         rideRequestId: 'ride-request-1',
         rideRequest: {
           trip: {
@@ -1297,7 +1296,7 @@ describe('PaymentsService', () => {
       status: 200,
       json: jest.fn().mockResolvedValue({
         data: {
-          tx_ref: 'mobilis_123_ride-request-1',
+          tx_ref: 'orbi_123_ride-request-1',
           flw_ref: 'fw_ref_123',
           status: 'successful',
           amount: 1000,
@@ -1309,7 +1308,7 @@ describe('PaymentsService', () => {
     prisma.paymentAttempt.findUnique.mockResolvedValueOnce({
       id: 'payment-1',
       provider: 'FLUTTERWAVE',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       amount: 2400,
       currency: 'XOF',
     });
@@ -1374,13 +1373,13 @@ describe('PaymentsService', () => {
 
     prisma.paymentAttempt.findUnique.mockResolvedValue({
       provider: 'FLUTTERWAVE',
-      transactionRef: 'mobilis_existing_ride-request-1',
+      transactionRef: 'orbi_existing_ride-request-1',
       amount: { toString: () => '2400', valueOf: () => 2400 },
       currency: 'XOF',
       channel: 'MOBILE_MONEY',
       providerMetadata: {
         publicKeyPresent: true,
-        callbackUrl: 'https://mobilis.app/payments/return',
+        callbackUrl: 'https://orbi.app/payments/return',
       },
       idempotencyHash,
     });
@@ -1399,7 +1398,7 @@ describe('PaymentsService', () => {
       'checkout-key-001',
     );
 
-    expect(result.transactionRef).toBe('mobilis_existing_ride-request-1');
+    expect(result.transactionRef).toBe('orbi_existing_ride-request-1');
     expect(prisma.paymentAttempt.create).not.toHaveBeenCalled();
   });
 
@@ -1423,13 +1422,13 @@ describe('PaymentsService', () => {
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({
         provider: 'FLUTTERWAVE',
-        transactionRef: 'mobilis_concurrent_ride-request-1',
+        transactionRef: 'orbi_concurrent_ride-request-1',
         amount: { toString: () => '2400', valueOf: () => 2400 },
         currency: 'XOF',
         channel: 'MOBILE_MONEY',
         providerMetadata: {
           publicKeyPresent: true,
-          callbackUrl: 'https://mobilis.app/payments/return',
+          callbackUrl: 'https://orbi.app/payments/return',
         },
         idempotencyHash,
       });
@@ -1451,7 +1450,7 @@ describe('PaymentsService', () => {
       'checkout-key-001',
     );
 
-    expect(result.transactionRef).toBe('mobilis_concurrent_ride-request-1');
+    expect(result.transactionRef).toBe('orbi_concurrent_ride-request-1');
     expect(prisma.paymentAttempt.findUnique).toHaveBeenCalledTimes(2);
   });
 
@@ -1466,13 +1465,13 @@ describe('PaymentsService', () => {
 
     prisma.paymentAttempt.findUnique.mockResolvedValue({
       provider: 'FLUTTERWAVE',
-      transactionRef: 'mobilis_existing_ride-request-1',
+      transactionRef: 'orbi_existing_ride-request-1',
       amount: { toString: () => '2400', valueOf: () => 2400 },
       currency: 'XOF',
       channel: 'MOBILE_MONEY',
       providerMetadata: {
         publicKeyPresent: true,
-        callbackUrl: 'https://mobilis.app/payments/return',
+        callbackUrl: 'https://orbi.app/payments/return',
       },
       idempotencyHash: 'different-hash',
     });
@@ -1550,7 +1549,7 @@ describe('PaymentsService', () => {
         'secret_123',
         {
           event: 'payment.completed',
-          transactionRef: 'mobilis_123_ride-request-1',
+          transactionRef: 'orbi_123_ride-request-1',
         },
         {
           flutterwaveVerificationHash: 'bad_hash',

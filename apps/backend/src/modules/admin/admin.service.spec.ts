@@ -17,10 +17,10 @@ describe('AdminService', () => {
     return {
       user: {
         id,
-        email: overrides.email ?? `${id}@mobilis.test`,
+        email: overrides.email ?? `${id}@orbi.test`,
         phoneNumber: null,
         passwordHash: null,
-        fullName: overrides.fullName ?? 'Ops Mobilis',
+        fullName: overrides.fullName ?? 'Ops Orbi',
         role: overrides.role ?? 'OPS',
         provider: 'EMAIL',
         isActive: true,
@@ -60,7 +60,7 @@ describe('AdminService', () => {
   ) {
     return {
       state: 'confirmed',
-      provider: 'mobilis-object-store',
+      provider: 'orbi-object-store',
       verifiedAt: '2026-04-18T08:00:02.000Z',
       sizeBytes: 120000,
       sha256:
@@ -283,7 +283,7 @@ describe('AdminService', () => {
         updatedAt: '2026-04-23T18:00:00.000Z',
         updatedBy: {
           id: 'admin-1',
-          name: 'Admin Mobilis',
+          name: 'Admin Orbi',
           role: 'ADMIN',
         },
       }),
@@ -295,7 +295,7 @@ describe('AdminService', () => {
         result: {
           received: true,
           event: 'payment.completed',
-          transactionRef: 'mobilis_123_ride-request-1',
+          transactionRef: 'orbi_123_ride-request-1',
           provider: 'flutterwave',
           providerReference: 'fw_ref_123',
           reconciledAttemptCount: 1,
@@ -306,11 +306,11 @@ describe('AdminService', () => {
         verified: true,
         paymentAttemptId: 'payment-1',
         provider: 'flutterwave',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         result: {
           received: true,
           event: 'payment.completed',
-          transactionRef: 'mobilis_123_ride-request-1',
+          transactionRef: 'orbi_123_ride-request-1',
           provider: 'flutterwave',
           providerReference: 'fw_ref_123',
           reconciledAttemptCount: 1,
@@ -326,7 +326,7 @@ describe('AdminService', () => {
           status: 'REFUNDED',
           amount: 2400,
           currency: 'XOF',
-          transactionRef: 'mobilis_123_ride-request-1',
+          transactionRef: 'orbi_123_ride-request-1',
           providerReference: 'fw_ref_123',
           updatedAt: '2026-05-01T08:05:00.000Z',
         },
@@ -702,7 +702,7 @@ describe('AdminService', () => {
         },
         user: {
           id: 'ops-1',
-          fullName: 'Ops Mobilis',
+          fullName: 'Ops Orbi',
           role: 'OPS',
         },
       },
@@ -718,7 +718,7 @@ describe('AdminService', () => {
         acknowledgedAt: '2026-05-01T12:10:00.000Z',
         actor: {
           id: 'ops-1',
-          name: 'Ops Mobilis',
+          name: 'Ops Orbi',
           role: 'OPS',
         },
         notes: 'Redis backplane assigne.',
@@ -860,7 +860,7 @@ describe('AdminService', () => {
     prisma.supportTicket.findMany.mockResolvedValue([
       {
         id: 'ticket-1',
-        subject: 'Incident trajet tripabc123 pour awa@mobilis.test',
+        subject: 'Incident trajet tripabc123 pour awa@orbi.test',
         description:
           'Type: SAFETY_ALERT phone +226 70 00 00 00 token=secret-session-token',
         status: 'OPEN',
@@ -936,7 +936,7 @@ describe('AdminService', () => {
         },
         user: {
           id: 'admin-1',
-          fullName: 'Admin Mobilis',
+          fullName: 'Admin Orbi',
           role: 'ADMIN',
         },
       },
@@ -1103,7 +1103,7 @@ describe('AdminService', () => {
         updatedAt: '2026-04-23T18:00:00.000Z',
         updatedBy: {
           id: 'admin-1',
-          name: 'Admin Mobilis',
+          name: 'Admin Orbi',
           role: 'ADMIN',
         },
       });
@@ -1117,7 +1117,7 @@ describe('AdminService', () => {
         user: {
           id: 'admin-1',
           role: 'ADMIN',
-          fullName: 'Admin Mobilis',
+          fullName: 'Admin Orbi',
         },
       } as never,
     );
@@ -1128,7 +1128,7 @@ describe('AdminService', () => {
         halfLifeHours: 24,
         actor: {
           id: 'admin-1',
-          name: 'Admin Mobilis',
+          name: 'Admin Orbi',
           role: 'ADMIN',
         },
       }),
@@ -1161,7 +1161,7 @@ describe('AdminService', () => {
         id: 'webhook-event-1',
         provider: 'FLUTTERWAVE',
         eventType: 'payment.completed',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         providerReference: 'fw_ref_123',
         action: 'persisted_and_reconciled',
         reconciledAttemptCount: 1,
@@ -1180,7 +1180,7 @@ describe('AdminService', () => {
         payload: {
           event: 'payment.completed',
           customerPhoneNumber: '+22670000000',
-          transactionRef: 'mobilis_123_ride-request-1',
+          transactionRef: 'orbi_123_ride-request-1',
         },
         createdAt: new Date('2026-04-27T09:30:00.000Z'),
       },
@@ -1208,7 +1208,7 @@ describe('AdminService', () => {
         signatureVerified: true,
         payloadPreview: {
           event: 'payment.completed',
-          transactionRef: 'mobilis_123_ride-request-1',
+          transactionRef: 'orbi_123_ride-request-1',
         },
         paymentAttempt: expect.objectContaining({
           status: 'SUCCEEDED',
@@ -1234,7 +1234,7 @@ describe('AdminService', () => {
         id: 'webhook-event-refund-1',
         provider: 'FLUTTERWAVE',
         eventType: 'refund.completed',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         providerReference: 'fw_refund_123',
         action: 'refund_processed',
         reconciledAttemptCount: 1,
@@ -1292,14 +1292,14 @@ describe('AdminService', () => {
       id: 'webhook-event-1',
       provider: 'CINETPAY',
       eventType: 'transaction.successful',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       providerReference: 'cinetpay_ref_123',
       action: 'persisted_and_reconciled',
       reconciledAttemptCount: 1,
       signatureVerified: true,
       rawBodyHash: 'raw_hash_123',
       payload: {
-        cpm_trans_id: 'mobilis_123_ride-request-1',
+        cpm_trans_id: 'orbi_123_ride-request-1',
         cel_phone_num: '+22670000000',
         signature: 'provider-signature',
         cpm_amount: '2400',
@@ -1342,7 +1342,7 @@ describe('AdminService', () => {
       id: 'webhook-event-1',
       provider: 'FLUTTERWAVE',
       eventType: 'payment.completed',
-      transactionRef: 'mobilis_123_ride-request-1',
+      transactionRef: 'orbi_123_ride-request-1',
       providerReference: 'fw_ref_123',
       action: 'ignored_conflicting_provider_reference',
       userId: 'user-1',
@@ -1409,7 +1409,7 @@ describe('AdminService', () => {
       id: 'webhook-event-2',
       provider: 'CINETPAY',
       eventType: 'transaction.failed',
-      transactionRef: 'mobilis_unknown',
+      transactionRef: 'orbi_unknown',
       providerReference: 'cinetpay_ref_404',
       action: 'ignored_unknown_reference',
       userId: null,
@@ -1512,7 +1512,7 @@ describe('AdminService', () => {
         user: {
           id: 'ops-1',
           role: 'OPS',
-          fullName: 'Ops Mobilis',
+          fullName: 'Ops Orbi',
         },
       } as never,
     );
@@ -1521,7 +1521,7 @@ describe('AdminService', () => {
       'payment-1',
       {
         actorUserId: 'ops-1',
-        actorName: 'Ops Mobilis',
+        actorName: 'Ops Orbi',
         reason: 'Course annulee apres debit.',
       },
     );
@@ -1554,7 +1554,7 @@ describe('AdminService', () => {
         status: 'REFUND_PENDING',
         amount: 2400,
         currency: 'XOF',
-        transactionRef: 'mobilis_123_ride-request-1',
+        transactionRef: 'orbi_123_ride-request-1',
         providerReference: 'fw_ref_123',
         updatedAt: '2026-05-01T08:05:00.000Z',
       },
@@ -1573,7 +1573,7 @@ describe('AdminService', () => {
         user: {
           id: 'ops-1',
           role: 'OPS',
-          fullName: 'Ops Mobilis',
+          fullName: 'Ops Orbi',
         },
       } as never,
     );
@@ -1652,7 +1652,7 @@ describe('AdminService', () => {
         serviceRadiusKm: 8,
         user: {
           fullName: 'Issa Driver',
-          email: 'driver@mobilis.app',
+          email: 'driver@orbi.app',
           phoneNumber: '+22670000000',
         },
         vehicles: [{ id: 'vehicle-1' }],
@@ -1774,7 +1774,7 @@ describe('AdminService', () => {
         serviceRadiusKm: 8,
         user: {
           fullName: 'Issa Driver',
-          email: 'driver@mobilis.app',
+          email: 'driver@orbi.app',
           phoneNumber: '+22670000000',
         },
         vehicles: [{ id: 'vehicle-1' }],
@@ -1787,7 +1787,7 @@ describe('AdminService', () => {
             createdAt: new Date('2026-04-18T08:10:00.000Z'),
             metadata: {},
             actor: {
-              fullName: 'Admin Mobilis',
+              fullName: 'Admin Orbi',
             },
           },
         ],
@@ -1806,12 +1806,12 @@ describe('AdminService', () => {
     expect(result.drivers[0]).toEqual(
       expect.objectContaining({
         driverName: 'Issa D.',
-        email: 'd***@mobilis.app',
+        email: 'd***@orbi.app',
         phoneNumber: '***0000',
-        latestReviewActor: 'Admin M.',
+        latestReviewActor: 'Admin O.',
       }),
     );
-    expect(result.drivers[0].reviewHistory[0].actorName).toBe('Admin M.');
+    expect(result.drivers[0].reviewHistory[0].actorName).toBe('Admin O.');
   });
 
   it('flags incomplete driver document integrity in the onboarding queue', async () => {
@@ -1824,7 +1824,7 @@ describe('AdminService', () => {
         serviceRadiusKm: 8,
         user: {
           fullName: 'Issa Driver',
-          email: 'driver@mobilis.app',
+          email: 'driver@orbi.app',
           phoneNumber: '+22670000000',
         },
         vehicles: [{ id: 'vehicle-1' }],
@@ -1894,7 +1894,7 @@ describe('AdminService', () => {
         serviceRadiusKm: 8,
         user: {
           fullName: 'Issa Driver',
-          email: 'driver@mobilis.app',
+          email: 'driver@orbi.app',
           phoneNumber: '+22670000000',
         },
         vehicles: [{ id: 'vehicle-1' }],
@@ -1962,7 +1962,7 @@ describe('AdminService', () => {
         serviceRadiusKm: 8,
         user: {
           fullName: 'Issa Driver',
-          email: 'driver@mobilis.app',
+          email: 'driver@orbi.app',
           phoneNumber: '+22670000000',
         },
         vehicles: [{ id: 'vehicle-1' }],
@@ -2014,7 +2014,7 @@ describe('AdminService', () => {
         serviceRadiusKm: 8,
         user: {
           fullName: '=IMPORTXML("https://example.test")',
-          email: 'driver@mobilis.app',
+          email: 'driver@orbi.app',
           phoneNumber: '+22670000000',
         },
         vehicles: [{ id: 'vehicle-1' }],
@@ -2043,7 +2043,7 @@ describe('AdminService', () => {
             createdAt: new Date('2026-04-18T08:10:00.000Z'),
             metadata: null,
             actor: {
-              fullName: 'Ops Mobilis',
+              fullName: 'Ops Orbi',
             },
           },
         ],
@@ -2061,8 +2061,8 @@ describe('AdminService', () => {
         user: {
           id: 'ops-1',
           role: 'OPS',
-          fullName: 'Ops Mobilis',
-          email: 'ops@mobilis.app',
+          fullName: 'Ops Orbi',
+          email: 'ops@orbi.app',
         },
       } as never,
     );
@@ -2107,7 +2107,7 @@ describe('AdminService', () => {
         },
         user: {
           id: 'ops-1',
-          fullName: 'Ops Mobilis',
+          fullName: 'Ops Orbi',
           role: 'OPS',
         },
       },
@@ -2123,7 +2123,7 @@ describe('AdminService', () => {
         },
         user: {
           id: 'admin-1',
-          fullName: 'Admin Mobilis',
+          fullName: 'Admin Orbi',
           role: 'ADMIN',
         },
       },
@@ -2150,7 +2150,7 @@ describe('AdminService', () => {
         createdAt: '2026-05-02T09:00:00.000Z',
         actor: {
           id: 'ops-1',
-          name: 'Ops Mobilis',
+          name: 'Ops Orbi',
           role: 'OPS',
         },
         guidanceFilter: 'resubmit',
@@ -2165,7 +2165,7 @@ describe('AdminService', () => {
         createdAt: '2026-05-01T08:00:00.000Z',
         actor: {
           id: 'admin-1',
-          name: 'Admin Mobilis',
+          name: 'Admin Orbi',
           role: 'ADMIN',
         },
         guidanceFilter: 'all',
@@ -2208,7 +2208,7 @@ describe('AdminService', () => {
             type: 'CREDIT',
             amount: 1968,
             reference: 'payment:payment-1:driver-payout',
-            description: 'Payout chauffeur paiement mobilis_123',
+            description: 'Payout chauffeur paiement orbi_123',
             metadata: {
               paymentAttemptId: 'payment-1',
               provider: 'FLUTTERWAVE',
@@ -2455,7 +2455,7 @@ describe('AdminService', () => {
       {
         user: {
           id: 'ops-1',
-          fullName: 'Ops Mobilis',
+          fullName: 'Ops Orbi',
           role: 'OPS',
         },
       } as never,
@@ -2529,7 +2529,7 @@ describe('AdminService', () => {
         {
           user: {
             id: 'ops-1',
-            fullName: 'Ops Mobilis',
+            fullName: 'Ops Orbi',
             role: 'OPS',
           },
         } as never,
@@ -2679,7 +2679,7 @@ describe('AdminService', () => {
           },
         },
         preparedBy: {
-          fullName: 'Ops Mobilis',
+          fullName: 'Ops Orbi',
         },
         paidBy: null,
       },
@@ -2687,12 +2687,12 @@ describe('AdminService', () => {
 
     const csv = await service.driverPayoutSettlementCsv(
       { status: 'PREPARED' as never },
-      authContext({ fullName: 'Ops Mobilis' }),
+      authContext({ fullName: 'Ops Orbi' }),
     );
 
     expect(csv).toContain('"driver-payout-1"');
     expect(csv).toContain('"Paiement terrain valide."');
-    expect(csv).toContain('"prepared:Ops Mobilis:ops-1; paid:pending"');
+    expect(csv).toContain('"prepared:Ops Orbi:ops-1; paid:pending"');
     expect(prisma.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -2730,7 +2730,7 @@ describe('AdminService', () => {
           },
         },
         preparedBy: {
-          fullName: 'Ops Mobilis',
+          fullName: 'Ops Orbi',
         },
         paidBy: null,
       },
@@ -2738,7 +2738,7 @@ describe('AdminService', () => {
 
     const pdf = await service.driverPayoutSettlementPdf(
       { status: 'PREPARED' as never },
-      authContext({ fullName: 'Ops Mobilis' }),
+      authContext({ fullName: 'Ops Orbi' }),
     );
 
     expect(Buffer.isBuffer(pdf)).toBe(true);
@@ -3181,7 +3181,7 @@ describe('AdminService', () => {
     });
     documentLinksService.createViewLink.mockReturnValue({
       expiresAt: '2026-04-18T10:00:00.000Z',
-      signedUrl: 'https://storage.mobilis.local/view/doc-1',
+      signedUrl: 'https://storage.orbi.local/view/doc-1',
     });
 
     const result = await service.getDriverDocumentViewLink(
@@ -3197,7 +3197,7 @@ describe('AdminService', () => {
       actorRole: 'OPS',
     });
     expect(result.documentId).toBe('doc-1');
-    expect(result.signedUrl).toContain('storage.mobilis.local/view');
+    expect(result.signedUrl).toContain('storage.orbi.local/view');
   });
 
   it('records provider object verification for a driver document', async () => {
@@ -3229,7 +3229,7 @@ describe('AdminService', () => {
       'doc-1',
       {
         state: 'confirmed',
-        provider: 'mobilis-object-store',
+        provider: 'orbi-object-store',
         objectId: 'drivers/driver-1/doc-1.pdf',
         sizeBytes: 120000,
         sha256:
@@ -3247,7 +3247,7 @@ describe('AdminService', () => {
           }),
           objectVerification: expect.objectContaining({
             state: 'confirmed',
-            provider: 'mobilis-object-store',
+            provider: 'orbi-object-store',
             objectId: 'drivers/driver-1/doc-1.pdf',
             sizeBytes: 120000,
             sha256:
@@ -3309,7 +3309,7 @@ describe('AdminService', () => {
         'doc-1',
         {
           state: 'confirmed',
-          provider: 'mobilis-object-store',
+          provider: 'orbi-object-store',
         },
         authContext(),
       ),
@@ -3473,7 +3473,7 @@ describe('AdminService', () => {
       acknowledgedAt: '2026-04-19T03:05:00.000Z',
       acknowledgedBy: {
         id: 'ops-1',
-        fullName: 'Ops Mobilis',
+        fullName: 'Ops Orbi',
         role: 'OPS',
       },
       mutedAt: null,
@@ -3482,14 +3482,14 @@ describe('AdminService', () => {
 
     const result = service.acknowledgeHealthIncident(
       'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
-      authContext({ fullName: 'Ops Mobilis' }),
+      authContext({ fullName: 'Ops Orbi' }),
     );
 
     expect(healthIncidentJournalService.acknowledge).toHaveBeenCalledWith(
       'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
       {
         id: 'ops-1',
-        fullName: 'Ops Mobilis',
+        fullName: 'Ops Orbi',
         role: 'OPS',
       },
     );
@@ -3502,7 +3502,7 @@ describe('AdminService', () => {
         acknowledgedAt: '2026-04-19T03:05:00.000Z',
         acknowledgedBy: {
           id: 'ops-1',
-          fullName: 'Ops Mobilis',
+          fullName: 'Ops Orbi',
           role: 'OPS',
         },
       },
@@ -3526,7 +3526,7 @@ describe('AdminService', () => {
       mutedAt: '2026-04-19T03:06:00.000Z',
       mutedBy: {
         id: 'admin-1',
-        fullName: 'Admin Mobilis',
+        fullName: 'Admin Orbi',
         role: 'ADMIN',
       },
     });
@@ -3535,7 +3535,7 @@ describe('AdminService', () => {
       'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
       authContext({
         id: 'admin-1',
-        fullName: 'Admin Mobilis',
+        fullName: 'Admin Orbi',
         role: 'ADMIN',
       }),
     );
@@ -3544,7 +3544,7 @@ describe('AdminService', () => {
       'health:alert:degraded:2026-04-19T03:00:00.000Z:0',
       {
         id: 'admin-1',
-        fullName: 'Admin Mobilis',
+        fullName: 'Admin Orbi',
         role: 'ADMIN',
       },
     );
@@ -3557,7 +3557,7 @@ describe('AdminService', () => {
         mutedAt: '2026-04-19T03:06:00.000Z',
         mutedBy: {
           id: 'admin-1',
-          fullName: 'Admin Mobilis',
+          fullName: 'Admin Orbi',
           role: 'ADMIN',
         },
       },

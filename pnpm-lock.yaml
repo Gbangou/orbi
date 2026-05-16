@@ -66,13 +66,13 @@ importers:
 
   apps/admin-web:
     dependencies:
-      '@mobilis/api':
+      '@orbi/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@mobilis/config':
+      '@orbi/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@mobilis/ui':
+      '@orbi/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       next:
@@ -121,7 +121,7 @@ importers:
 
   apps/backend:
     dependencies:
-      '@mobilis/domain':
+      '@orbi/domain':
         specifier: workspace:*
         version: link:../../packages/domain
       '@nestjs/common':
@@ -251,13 +251,13 @@ importers:
       '@expo/metro-runtime':
         specifier: ^4.0.1
         version: 4.0.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))
-      '@mobilis/api':
+      '@orbi/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@mobilis/config':
+      '@orbi/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@mobilis/ui':
+      '@orbi/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       expo:
@@ -321,13 +321,13 @@ importers:
       '@expo/metro-runtime':
         specifier: ^4.0.1
         version: 4.0.1(react-native@0.76.9(@babel/core@7.29.0)(@babel/preset-env@7.29.2(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))
-      '@mobilis/api':
+      '@orbi/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@mobilis/config':
+      '@orbi/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@mobilis/ui':
+      '@orbi/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       expo:
@@ -382,7 +382,7 @@ importers:
 
   packages/api:
     dependencies:
-      '@mobilis/domain':
+      '@orbi/domain':
         specifier: workspace:*
         version: link:../domain
     devDependencies:

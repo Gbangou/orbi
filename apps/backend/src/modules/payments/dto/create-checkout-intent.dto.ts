@@ -37,7 +37,7 @@ export class CreateCheckoutIntentDto {
   @MaxLength(32)
   customerPhoneNumber?: string;
 
-  @ApiPropertyOptional({ example: 'https://mobilis.app/payments/return' })
+  @ApiPropertyOptional({ example: 'https://orbi.app/payments/return' })
   @IsOptional()
   @IsUrl()
   redirectUrl?: string;

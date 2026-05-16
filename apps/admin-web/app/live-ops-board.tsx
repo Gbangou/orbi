@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { type AdminLiveOpsResponse } from '@mobilis/api';
-import { describeRealtimeConnection, formatOperationalStatus } from '@mobilis/ui';
+import { type AdminLiveOpsResponse } from '@orbi/api';
+import { describeRealtimeConnection, formatOperationalStatus } from '@orbi/ui';
 import {
   adminSyncHighlightDurationMs,
   hasLiveOpsTripChanged,

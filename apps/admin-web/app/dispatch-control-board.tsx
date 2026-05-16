@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   type AdminDispatchSettingsResponse,
-} from '@mobilis/api';
+} from '@orbi/api';
 import { formatAdminDateTime } from './admin-ops-kernel';
 import {
   adminMutationHeaderName,

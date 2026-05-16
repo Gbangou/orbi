@@ -50,7 +50,7 @@ export class PaymentsController {
   // Aggregator callbacks are authenticated with a shared secret header rather
   // than a user session because they originate from server-to-server traffic.
   handleWebhook(
-    @Headers('x-mobilis-webhook-secret') secret: string | undefined,
+    @Headers('x-orbi-webhook-secret') secret: string | undefined,
     @Headers('flutterwave-signature') flutterwaveSignature: string | undefined,
     @Headers('verif-hash') flutterwaveVerificationHash: string | undefined,
     @Headers('x-token') cinetpayToken: string | undefined,

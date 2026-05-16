@@ -39,7 +39,7 @@ un signal de dispatch, d ETA et de qualite d affectation. Elle ne devient pas un
 ligne de prix cachee pour le passager dans le devis upfront. Cette separation
 evite de penaliser le client parce que le systeme a choisi un chauffeur plus loin,
 tout en permettant au dispatch de prioriser les chauffeurs proches et rentables.
-Si Mobilis decide plus tard de subventionner ou compenser explicitement certaines
+Si Orbi decide plus tard de subventionner ou compenser explicitement certaines
 approches longues, cela devra etre expose comme une regle ops ou une promotion
 auditable, pas comme une hausse silencieuse du prix passager.
 

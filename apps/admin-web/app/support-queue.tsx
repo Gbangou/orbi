@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type SupportTicketQueueResponse,
   type SupportTicketUpdateResponse,
-} from '@mobilis/api';
-import { describeRealtimeConnection, formatOperationalStatus } from '@mobilis/ui';
+} from '@orbi/api';
+import { describeRealtimeConnection, formatOperationalStatus } from '@orbi/ui';
 import {
   adminSyncHighlightDurationMs,
   resolveCollectionDelta,

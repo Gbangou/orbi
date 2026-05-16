@@ -53,7 +53,7 @@ describe('RidersService', () => {
       ],
       user: {
         fullName: 'Awa Rider',
-        email: 'rider@mobilis.app',
+        email: 'rider@orbi.app',
         phoneNumber: null,
       },
     });

@@ -7,7 +7,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { mobilisTheme } from '@mobilis/ui';
+import { orbiTheme } from '@orbi/ui';
 import { hasPersistedRiderSession } from '../lib/auth';
 
 export default function RootLayout() {
@@ -81,7 +81,7 @@ export default function RootLayout() {
       {!isResolved ? (
         <View style={styles.loadingScreen}>
           <View style={styles.loadingCard}>
-            <Text style={styles.loadingEyebrow}>Mobilis Passager</Text>
+            <Text style={styles.loadingEyebrow}>Orbi Passager</Text>
             <Text style={styles.loadingTitle}>Preparation de votre trajet</Text>
             <Text style={styles.loadingText}>
               Verification de la session, des acces et de la reprise de vos
@@ -98,30 +98,30 @@ const styles = StyleSheet.create({
   loadingScreen: {
     ...StyleSheet.absoluteFillObject,
     flex: 1,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
   loadingCard: {
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 24,
     gap: 10,
   },
   loadingEyebrow: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
     textTransform: 'uppercase',
     letterSpacing: 1.8,
   },
   loadingTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 28,
     fontWeight: '800',
   },
   loadingText: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 21,
   },
 });

@@ -1,12 +1,12 @@
 {
-  "name": "@mobilis/api",
+  "name": "@orbi/api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "@mobilis/domain": "workspace:*"
+    "@orbi/domain": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.3"

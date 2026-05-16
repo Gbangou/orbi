@@ -1,4 +1,4 @@
-export const mobilisTheme = {
+export const orbiTheme = {
   colors: {
     background: '#07111d',
     backgroundAlt: '#0d1828',
@@ -58,14 +58,14 @@ export const mobilisTheme = {
   },
 } as const;
 
-export const mobilisCopy = {
+export const orbiCopy = {
   riderHeadline: 'Moto quand chaque minute compte. Voiture quand le confort compte.',
   driverHeadline: 'De meilleures courses, une conduite plus claire, des revenus mieux maitrises.',
   adminHeadline: 'Pilotez la mobilite urbaine avec confiance entre motos et voitures.',
-  voiceHeadline: 'Parlez naturellement. Mobilis transforme la voix en trajet.',
+  voiceHeadline: 'Parlez naturellement. Orbi transforme la voix en trajet.',
 } as const;
 
-export const mobilisLayout = {
+export const orbiLayout = {
   maxContentWidth: 1240,
   maxReadableWidth: 760,
   appHorizontalPadding: 24,
@@ -75,8 +75,8 @@ export function createGlassPanel(opacity = 0.78) {
   return {
     backgroundColor: `rgba(15, 29, 48, ${opacity})`,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
-    borderRadius: mobilisTheme.radius.panel,
+    borderColor: orbiTheme.colors.border,
+    borderRadius: orbiTheme.radius.panel,
   } as const;
 }
 
@@ -129,7 +129,7 @@ const realtimeLabelsByAudience: Record<
     'ride-request.created': 'Votre demande est bien enregistree.',
     'ride-request.cancelled': 'Votre demande a ete annulee.',
     'ride-request.reservation-assigned':
-      'Un chauffeur vient d etre mobilise pour votre demande.',
+      'Un chauffeur vient d etre orbie pour votre demande.',
     'ride-request.reservation-released':
       'Le systeme cherche un nouveau chauffeur pour vous.',
     'ride-request.reservation-expired':

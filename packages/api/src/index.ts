@@ -17,7 +17,7 @@ import type {
   TripLifecycleStatus,
   VehicleCategory,
   VoiceSuggestion,
-} from '@mobilis/domain';
+} from '@orbi/domain';
 export type {
   AdminMetric,
   ApiDemandLevel,
@@ -50,7 +50,7 @@ export type {
   UserRole,
   VehicleCategory,
   VoiceSuggestion,
-} from '@mobilis/domain';
+} from '@orbi/domain';
 export {
   activeRideRequestLifecycleStatuses,
   activeTripLifecycleStatuses,
@@ -76,7 +76,7 @@ export {
   isActiveTripLifecycleStatus,
   isPickupCodeVisibleTripLifecycleStatus,
   marketZones,
-  mobilisBrand,
+  orbiBrand,
   paymentMethods,
   pickupCodeVisibleTripLifecycleStatuses,
   roundDistanceKm,
@@ -87,7 +87,7 @@ export {
   tripLifecycleStatuses,
   userRoles,
   vehicleCategories,
-} from '@mobilis/domain';
+} from '@orbi/domain';
 
 export const apiConfig = {
   versionPrefix: 'v1',
@@ -195,26 +195,26 @@ export type RequestOptions = {
   query?: Record<string, string | number | boolean | undefined>;
 };
 
-export class MobilisApiError extends Error {
+export class OrbiApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
     public readonly payload?: unknown,
   ) {
     super(message);
-    this.name = 'MobilisApiError';
+    this.name = 'OrbiApiError';
   }
 }
 
-export function isMobilisApiError(error: unknown): error is MobilisApiError {
-  return error instanceof MobilisApiError;
+export function isOrbiApiError(error: unknown): error is OrbiApiError {
+  return error instanceof OrbiApiError;
 }
 
 export function extractApiErrorMessage(
   error: unknown,
   fallback = 'Une erreur reseau ou serveur est survenue.',
 ) {
-  if (isMobilisApiError(error)) {
+  if (isOrbiApiError(error)) {
     return error.message;
   }
 
@@ -225,7 +225,7 @@ export function extractApiErrorMessage(
   return fallback;
 }
 
-export type MobilisClientErrorSurface =
+export type OrbiClientErrorSurface =
   | 'auth'
   | 'booking'
   | 'payments'
@@ -236,7 +236,7 @@ export type MobilisClientErrorSurface =
   | 'network'
   | 'unknown';
 
-export type MobilisClientErrorClassification = {
+export type OrbiClientErrorClassification = {
   code:
     | 'MOB-AUTH-SESSION'
     | 'MOB-BOOKING-DISPATCH'
@@ -246,7 +246,7 @@ export type MobilisClientErrorClassification = {
     | 'MOB-NETWORK-OFFLINE'
     | 'MOB-VALIDATION-INPUT'
     | 'MOB-GENERIC-API';
-  surface: MobilisClientErrorSurface;
+  surface: OrbiClientErrorSurface;
   severity: 'low' | 'medium' | 'high' | 'critical';
   owner: 'engineering' | 'ops' | 'support' | 'finance';
   retryPolicy:
@@ -264,9 +264,9 @@ export type MobilisClientErrorClassification = {
   reportable: boolean;
 };
 
-export type MobilisClientAppRole = 'rider' | 'driver';
+export type OrbiClientAppRole = 'rider' | 'driver';
 
-const mobilisClientErrorCodes = [
+const orbiClientErrorCodes = [
   'MOB-AUTH-SESSION',
   'MOB-BOOKING-DISPATCH',
   'MOB-PAYMENT-PROVIDER',
@@ -277,7 +277,7 @@ const mobilisClientErrorCodes = [
   'MOB-GENERIC-API',
 ] as const;
 
-const mobilisClientErrorSurfaces = [
+const orbiClientErrorSurfaces = [
   'auth',
   'booking',
   'payments',
@@ -289,21 +289,21 @@ const mobilisClientErrorSurfaces = [
   'unknown',
 ] as const;
 
-const mobilisClientErrorSeverities = [
+const orbiClientErrorSeverities = [
   'low',
   'medium',
   'high',
   'critical',
 ] as const;
 
-const mobilisClientErrorOwners = [
+const orbiClientErrorOwners = [
   'engineering',
   'ops',
   'support',
   'finance',
 ] as const;
 
-const mobilisClientErrorRetryPolicies = [
+const orbiClientErrorRetryPolicies = [
   'silent-refresh-once-then-relogin',
   'idempotent-retry-with-visible-status',
   'server-reconcile-before-client-retry',
@@ -314,12 +314,12 @@ const mobilisClientErrorRetryPolicies = [
   'manual-refresh',
 ] as const;
 
-export type MobilisClientErrorReport = {
+export type OrbiClientErrorReport = {
   id: string;
   occurredAt: string;
-  appRole: MobilisClientAppRole;
+  appRole: OrbiClientAppRole;
   appVersion?: string;
-  classification: MobilisClientErrorClassification;
+  classification: OrbiClientErrorClassification;
   fingerprint: string;
   errorName: string;
   errorMessage: string;
@@ -327,7 +327,7 @@ export type MobilisClientErrorReport = {
 };
 
 export type SubmitMobileErrorReportsPayload = {
-  reports: MobilisClientErrorReport[];
+  reports: OrbiClientErrorReport[];
 };
 
 export type SubmitMobileErrorReportsResponse = {
@@ -337,22 +337,22 @@ export type SubmitMobileErrorReportsResponse = {
   supportTicketCount: number;
 };
 
-export function normalizeMobilisClientErrorReportQueue(
+export function normalizeOrbiClientErrorReportQueue(
   value: unknown,
   options: {
-    appRole?: MobilisClientAppRole;
+    appRole?: OrbiClientAppRole;
     maxReports?: number;
   } = {},
-): MobilisClientErrorReport[] {
+): OrbiClientErrorReport[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
   const maxReports = options.maxReports ?? 20;
-  const reports: MobilisClientErrorReport[] = [];
+  const reports: OrbiClientErrorReport[] = [];
 
   for (const item of value) {
-    const report = normalizeMobilisClientErrorReport(item, options.appRole);
+    const report = normalizeOrbiClientErrorReport(item, options.appRole);
 
     if (report) {
       reports.push(report);
@@ -366,17 +366,17 @@ export function normalizeMobilisClientErrorReportQueue(
   return reports;
 }
 
-export function classifyMobilisClientError(
+export function classifyOrbiClientError(
   error: unknown,
   input: {
-    surface?: MobilisClientErrorSurface;
+    surface?: OrbiClientErrorSurface;
     fallbackMessage?: string;
   } = {},
-): MobilisClientErrorClassification {
-  const surface = input.surface ?? inferMobilisErrorSurface(error);
-  const normalizedMessage = normalizeMobilisErrorMessage(error);
+): OrbiClientErrorClassification {
+  const surface = input.surface ?? inferOrbiErrorSurface(error);
+  const normalizedMessage = normalizeOrbiErrorMessage(error);
 
-  if (isMobilisApiError(error) && [401, 403].includes(error.status)) {
+  if (isOrbiApiError(error) && [401, 403].includes(error.status)) {
     return {
       code: 'MOB-AUTH-SESSION',
       surface: 'auth',
@@ -391,7 +391,7 @@ export function classifyMobilisClientError(
     };
   }
 
-  if (isLikelyMobilisNetworkError(error)) {
+  if (isLikelyOrbiNetworkError(error)) {
     return {
       code: 'MOB-NETWORK-OFFLINE',
       surface: 'network',
@@ -399,14 +399,14 @@ export function classifyMobilisClientError(
       owner: 'engineering',
       retryPolicy: 'retry-when-network-recovers',
       userMessage:
-        'Connexion instable. Mobilis garde le dernier etat connu pendant la reprise reseau.',
+        'Connexion instable. Orbi garde le dernier etat connu pendant la reprise reseau.',
       shouldClearSessionToken: false,
       shouldNavigateToAuth: false,
       reportable: false,
     };
   }
 
-  if (isMobilisApiError(error) && error.status === 400) {
+  if (isOrbiApiError(error) && error.status === 400) {
     return {
       code: 'MOB-VALIDATION-INPUT',
       surface,
@@ -480,7 +480,7 @@ export function classifyMobilisClientError(
       retryPolicy: 'fallback-polling-with-last-known-state',
       userMessage:
         input.fallbackMessage ??
-        'Connexion live instable. Le trajet reste suivi par Mobilis.',
+        'Connexion live instable. Le trajet reste suivi par Orbi.',
       shouldClearSessionToken: false,
       shouldNavigateToAuth: false,
       reportable: true,
@@ -503,23 +503,23 @@ export function classifyMobilisClientError(
   };
 }
 
-export function createMobilisClientErrorReport(
+export function createOrbiClientErrorReport(
   error: unknown,
   input: {
-    appRole: MobilisClientAppRole;
+    appRole: OrbiClientAppRole;
     appVersion?: string;
-    surface?: MobilisClientErrorSurface;
+    surface?: OrbiClientErrorSurface;
     fallbackMessage?: string;
     occurredAt?: string;
     context?: Record<string, unknown>;
   },
-): MobilisClientErrorReport | null {
-  const classification = classifyMobilisClientError(error, {
+): OrbiClientErrorReport | null {
+  const classification = classifyOrbiClientError(error, {
     surface: input.surface,
     fallbackMessage: input.fallbackMessage,
   });
 
-  return createMobilisClientErrorReportFromClassification(error, {
+  return createOrbiClientErrorReportFromClassification(error, {
     appRole: input.appRole,
     appVersion: input.appVersion,
     classification,
@@ -528,27 +528,27 @@ export function createMobilisClientErrorReport(
   });
 }
 
-export function createMobilisClientErrorReportFromClassification(
+export function createOrbiClientErrorReportFromClassification(
   error: unknown,
   input: {
-    appRole: MobilisClientAppRole;
+    appRole: OrbiClientAppRole;
     appVersion?: string;
-    classification: MobilisClientErrorClassification;
+    classification: OrbiClientErrorClassification;
     occurredAt?: string;
     context?: Record<string, unknown>;
   },
-): MobilisClientErrorReport | null {
+): OrbiClientErrorReport | null {
   if (!input.classification.reportable) {
     return null;
   }
 
   const occurredAt = input.occurredAt ?? new Date().toISOString();
   const errorName = error instanceof Error ? error.name : typeof error;
-  const errorMessage = sanitizeMobilisErrorReportValue(
+  const errorMessage = sanitizeOrbiErrorReportValue(
     extractApiErrorMessage(error, input.classification.userMessage),
     220,
   );
-  const fingerprint = buildMobilisClientErrorFingerprint({
+  const fingerprint = buildOrbiClientErrorFingerprint({
     appRole: input.appRole,
     code: input.classification.code,
     surface: input.classification.surface,
@@ -562,13 +562,13 @@ export function createMobilisClientErrorReportFromClassification(
     appVersion: input.appVersion,
     classification: input.classification,
     fingerprint,
-    errorName: sanitizeMobilisErrorReportValue(errorName, 80),
+    errorName: sanitizeOrbiErrorReportValue(errorName, 80),
     errorMessage,
-    context: sanitizeMobilisErrorReportContext(input.context),
+    context: sanitizeOrbiErrorReportContext(input.context),
   };
 }
 
-function sanitizeMobilisErrorReportContext(context?: Record<string, unknown>) {
+function sanitizeOrbiErrorReportContext(context?: Record<string, unknown>) {
   const sanitized: Record<string, string | number | boolean | null> = {};
 
   if (!context) {
@@ -576,14 +576,14 @@ function sanitizeMobilisErrorReportContext(context?: Record<string, unknown>) {
   }
 
   for (const [key, value] of Object.entries(context).slice(0, 16)) {
-    const cleanKey = sanitizeMobilisErrorReportValue(key, 48);
+    const cleanKey = sanitizeOrbiErrorReportValue(key, 48);
 
     if (!cleanKey) {
       continue;
     }
 
     if (typeof value === 'string') {
-      sanitized[cleanKey] = sanitizeMobilisErrorReportValue(value, 160);
+      sanitized[cleanKey] = sanitizeOrbiErrorReportValue(value, 160);
     } else if (typeof value === 'number' && Number.isFinite(value)) {
       sanitized[cleanKey] = value;
     } else if (typeof value === 'boolean' || value === null) {
@@ -594,7 +594,7 @@ function sanitizeMobilisErrorReportContext(context?: Record<string, unknown>) {
   return sanitized;
 }
 
-function sanitizeMobilisErrorReportValue(value: string, maxLength: number) {
+function sanitizeOrbiErrorReportValue(value: string, maxLength: number) {
   return value
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
     .replace(/\+?\d[\d\s().-]{7,}\d/g, '[phone]')
@@ -606,16 +606,16 @@ function sanitizeMobilisErrorReportValue(value: string, maxLength: number) {
     .slice(0, maxLength);
 }
 
-function normalizeMobilisClientErrorReport(
+function normalizeOrbiClientErrorReport(
   value: unknown,
-  expectedAppRole?: MobilisClientAppRole,
-): MobilisClientErrorReport | null {
+  expectedAppRole?: OrbiClientAppRole,
+): OrbiClientErrorReport | null {
   if (!isRecord(value)) {
     return null;
   }
 
   const appRole = parseEnumValue(value.appRole, ['rider', 'driver'] as const);
-  const classification = normalizeMobilisClientErrorClassification(
+  const classification = normalizeOrbiClientErrorClassification(
     value.classification,
   );
 
@@ -646,24 +646,24 @@ function normalizeMobilisClientErrorReport(
     fingerprint,
     errorName,
     errorMessage,
-    context: normalizeMobilisErrorReportContext(value.context),
+    context: normalizeOrbiErrorReportContext(value.context),
   };
 }
 
-function normalizeMobilisClientErrorClassification(
+function normalizeOrbiClientErrorClassification(
   value: unknown,
-): MobilisClientErrorClassification | null {
+): OrbiClientErrorClassification | null {
   if (!isRecord(value)) {
     return null;
   }
 
-  const code = parseEnumValue(value.code, mobilisClientErrorCodes);
-  const surface = parseEnumValue(value.surface, mobilisClientErrorSurfaces);
-  const severity = parseEnumValue(value.severity, mobilisClientErrorSeverities);
-  const owner = parseEnumValue(value.owner, mobilisClientErrorOwners);
+  const code = parseEnumValue(value.code, orbiClientErrorCodes);
+  const surface = parseEnumValue(value.surface, orbiClientErrorSurfaces);
+  const severity = parseEnumValue(value.severity, orbiClientErrorSeverities);
+  const owner = parseEnumValue(value.owner, orbiClientErrorOwners);
   const retryPolicy = parseEnumValue(
     value.retryPolicy,
-    mobilisClientErrorRetryPolicies,
+    orbiClientErrorRetryPolicies,
   );
 
   if (!code || !surface || !severity || !owner || !retryPolicy) {
@@ -691,8 +691,8 @@ function normalizeMobilisClientErrorClassification(
   };
 }
 
-function normalizeMobilisErrorReportContext(value: unknown) {
-  const normalized: MobilisClientErrorReport['context'] = {};
+function normalizeOrbiErrorReportContext(value: unknown) {
+  const normalized: OrbiClientErrorReport['context'] = {};
 
   if (!isRecord(value)) {
     return normalized;
@@ -745,7 +745,7 @@ function normalizeErrorReportText(value: unknown, maxLength: number) {
     return '';
   }
 
-  return sanitizeMobilisErrorReportValue(
+  return sanitizeOrbiErrorReportValue(
     value.replace(/[\u0000-\u001f\u007f]/g, '').trim(),
     maxLength,
   );
@@ -778,10 +778,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function buildMobilisClientErrorFingerprint(input: {
-  appRole: MobilisClientAppRole;
-  code: MobilisClientErrorClassification['code'];
-  surface: MobilisClientErrorSurface;
+function buildOrbiClientErrorFingerprint(input: {
+  appRole: OrbiClientAppRole;
+  code: OrbiClientErrorClassification['code'];
+  surface: OrbiClientErrorSurface;
   message: string;
 }) {
   const seed = `${input.appRole}|${input.code}|${input.surface}|${input.message
@@ -796,7 +796,7 @@ function buildMobilisClientErrorFingerprint(input: {
   return (hash >>> 0).toString(36);
 }
 
-export class MobilisApiClient {
+export class OrbiApiClient {
   private readonly version: string;
   private readonly headers: Record<string, string>;
   private readonly fetcher: typeof fetch;
@@ -843,9 +843,9 @@ export class MobilisApiClient {
 
       const message =
         resolveApiErrorMessage(errorPayload) ??
-        `Mobilis API request failed with status ${response.status}`;
+        `Orbi API request failed with status ${response.status}`;
 
-      throw new MobilisApiError(message, response.status, errorPayload);
+      throw new OrbiApiError(message, response.status, errorPayload);
     }
 
     return (await response.json()) as T;
@@ -873,16 +873,16 @@ export class MobilisApiClient {
 
       const message =
         resolveApiErrorMessage(errorPayload) ??
-        `Mobilis API request failed with status ${response.status}`;
+        `Orbi API request failed with status ${response.status}`;
 
-      throw new MobilisApiError(message, response.status, errorPayload);
+      throw new OrbiApiError(message, response.status, errorPayload);
     }
 
     return response.text();
   }
 
   withAuthToken(token: string) {
-    return new MobilisApiClient({
+    return new OrbiApiClient({
       ...this.options,
       version: this.version,
       defaultHeaders: {
@@ -894,7 +894,7 @@ export class MobilisApiClient {
   }
 }
 
-function normalizeMobilisErrorMessage(error: unknown) {
+function normalizeOrbiErrorMessage(error: unknown) {
   if (error instanceof Error) {
     return error.message.toLowerCase();
   }
@@ -902,12 +902,12 @@ function normalizeMobilisErrorMessage(error: unknown) {
   return '';
 }
 
-function isLikelyMobilisNetworkError(error: unknown) {
+function isLikelyOrbiNetworkError(error: unknown) {
   if (error instanceof TypeError) {
     return true;
   }
 
-  const message = normalizeMobilisErrorMessage(error);
+  const message = normalizeOrbiErrorMessage(error);
 
   return (
     message.includes('network request failed') ||
@@ -917,8 +917,8 @@ function isLikelyMobilisNetworkError(error: unknown) {
   );
 }
 
-function inferMobilisErrorSurface(error: unknown): MobilisClientErrorSurface {
-  const message = normalizeMobilisErrorMessage(error);
+function inferOrbiErrorSurface(error: unknown): OrbiClientErrorSurface {
+  const message = normalizeOrbiErrorMessage(error);
 
   if (
     message.includes('session') ||
@@ -962,22 +962,22 @@ function inferMobilisErrorSurface(error: unknown): MobilisClientErrorSurface {
     return 'safety';
   }
 
-  if (isLikelyMobilisNetworkError(error)) {
+  if (isLikelyOrbiNetworkError(error)) {
     return 'network';
   }
 
   return 'unknown';
 }
 
-export function createMobilisApiClient(baseUrl: string, init?: Omit<ApiClientOptions, 'baseUrl'>) {
-  return new MobilisApiClient({
+export function createOrbiApiClient(baseUrl: string, init?: Omit<ApiClientOptions, 'baseUrl'>) {
+  return new OrbiApiClient({
     baseUrl,
     ...init,
   });
 }
 
 export function buildRealtimeStreamUrl(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   sessionToken: string,
 ) {
   return client.endpoint(apiRoutes.trips.stream, {
@@ -1164,7 +1164,7 @@ export type CurrentUserResponse = {
 
 export type AuthenticatedApiContext = {
   session: AuthSessionResponse;
-  authClient: MobilisApiClient;
+  authClient: OrbiApiClient;
   me: CurrentUserResponse;
 };
 
@@ -1312,7 +1312,7 @@ export type AdminLaunchReadinessResponse = {
       label: string;
       status: 'active' | 'partial' | 'planned';
       priority: 'critical' | 'high' | 'medium';
-      mobilisSignal: string;
+      orbiSignal: string;
       competitorSignal: string;
       nextStep: string;
     }>;
@@ -1350,7 +1350,7 @@ export type AdminLaunchReadinessResponse = {
       state: 'excellent' | 'watch' | 'blocked';
       owner: 'ops' | 'engineering' | 'support' | 'finance';
       competitorReference: string;
-      mobilisSignal: string;
+      orbiSignal: string;
       nextStep: string;
     }>;
   };
@@ -2673,7 +2673,7 @@ export function toApiPaymentMethod(
 }
 
 export async function signInWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: SignInPayload,
 ) {
   return client.request<AuthSessionResponse>(apiRoutes.auth.signIn, {
@@ -2683,7 +2683,7 @@ export async function signInWithApi(
 }
 
 export async function signUpWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: SignUpApiPayload,
 ) {
   return client.request<AuthSessionResponse>(apiRoutes.auth.signUp, {
@@ -2692,12 +2692,12 @@ export async function signUpWithApi(
   });
 }
 
-export async function fetchCurrentUser(client: MobilisApiClient) {
+export async function fetchCurrentUser(client: OrbiApiClient) {
   return client.request<CurrentUserResponse>(apiRoutes.auth.me);
 }
 
 export async function authenticateAndFetchCurrentUser(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: SignInPayload,
 ): Promise<AuthenticatedApiContext> {
   const session = await signInWithApi(client, payload);
@@ -2712,7 +2712,7 @@ export async function authenticateAndFetchCurrentUser(
 }
 
 export async function restoreOrAuthenticateSession(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   storage: SessionStorageAdapter,
   storageKey: string,
   credentials: SignInPayload,
@@ -2754,7 +2754,7 @@ export async function restoreOrAuthenticateSession(
 }
 
 export async function restorePersistedSession(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   storage: SessionStorageAdapter,
   storageKey: string,
 ): Promise<AuthenticatedApiContext> {
@@ -2805,7 +2805,7 @@ export async function clearPersistedSession(storage: SessionStorageAdapter, stor
 }
 
 export async function signOutWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload?: {
     sessionId?: string;
   },
@@ -2817,7 +2817,7 @@ export async function signOutWithApi(
 }
 
 export async function submitMobileErrorReportsWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: SubmitMobileErrorReportsPayload,
 ) {
   return client.request<SubmitMobileErrorReportsResponse>(
@@ -2829,20 +2829,20 @@ export async function submitMobileErrorReportsWithApi(
   );
 }
 
-export async function fetchAdminPreview(client: MobilisApiClient) {
+export async function fetchAdminPreview(client: OrbiApiClient) {
   return client.request<AdminPreviewResponse>(apiRoutes.admin.preview);
 }
 
-export async function fetchAdminOverview(client: MobilisApiClient) {
+export async function fetchAdminOverview(client: OrbiApiClient) {
   return client.request<AdminOverviewResponse>(apiRoutes.admin.overview);
 }
 
-export async function fetchAdminLiveOps(client: MobilisApiClient) {
+export async function fetchAdminLiveOps(client: OrbiApiClient) {
   return client.request<AdminLiveOpsResponse>(apiRoutes.admin.liveOps);
 }
 
 export async function fetchAdminJobQueue(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   query?: {
     page?: number;
     pageSize?: number;
@@ -2856,7 +2856,7 @@ export async function fetchAdminJobQueue(
 }
 
 export async function requeueAdminJobQueueEntry(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   jobId: string,
 ) {
   return client.request<AdminJobQueueRequeueResponse>(
@@ -2867,14 +2867,14 @@ export async function requeueAdminJobQueueEntry(
   );
 }
 
-export async function fetchAdminLaunchReadiness(client: MobilisApiClient) {
+export async function fetchAdminLaunchReadiness(client: OrbiApiClient) {
   return client.request<AdminLaunchReadinessResponse>(
     apiRoutes.admin.launchReadiness,
   );
 }
 
 export async function acknowledgeAdminLaunchReadinessAction(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   checkId: string,
   payload: {
     owner: 'ops' | 'engineering' | 'support' | 'finance';
@@ -2891,18 +2891,18 @@ export async function acknowledgeAdminLaunchReadinessAction(
   );
 }
 
-export async function fetchAdminSupportTickets(client: MobilisApiClient) {
+export async function fetchAdminSupportTickets(client: OrbiApiClient) {
   return client.request<SupportTicketQueueResponse>(apiRoutes.admin.supportTickets);
 }
 
-export async function fetchAdminDriverWallets(client: MobilisApiClient) {
+export async function fetchAdminDriverWallets(client: OrbiApiClient) {
   return client.request<AdminDriverWalletsResponse>(
     apiRoutes.admin.driverWallets,
   );
 }
 
 export async function prepareAdminDriverWalletPayout(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   walletId: string,
   payload: { notes?: string } = {},
 ) {
@@ -2916,7 +2916,7 @@ export async function prepareAdminDriverWalletPayout(
 }
 
 export async function recordAdminDriverWalletRecoveryAdjustment(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   walletId: string,
   payload: { amount: number; notes: string; idempotencyKey: string },
 ) {
@@ -2930,7 +2930,7 @@ export async function recordAdminDriverWalletRecoveryAdjustment(
 }
 
 export async function markAdminDriverPayoutPaid(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payoutId: string,
   payload: { notes?: string } = {},
 ) {
@@ -2956,7 +2956,7 @@ export function buildAdminDriverPayoutSettlementPdfUrl(
 }
 
 export async function updateAdminSupportTicket(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   ticketId: string,
   payload: {
     status?: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
@@ -2970,7 +2970,7 @@ export async function updateAdminSupportTicket(
 }
 
 export async function fetchAdminDriverOnboardingQueue(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   query?: {
     page?: number;
     pageSize?: number;
@@ -2985,7 +2985,7 @@ export async function fetchAdminDriverOnboardingQueue(
 }
 
 export async function fetchAdminDriverOnboardingExportCsv(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   query?: {
     guidanceFilter?: 'all' | 'approve' | 'review' | 'resubmit';
     searchQuery?: string;
@@ -2998,7 +2998,7 @@ export async function fetchAdminDriverOnboardingExportCsv(
 }
 
 export async function fetchAdminDriverOnboardingExportHistory(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   query?: {
     page?: number;
     pageSize?: number;
@@ -3012,24 +3012,24 @@ export async function fetchAdminDriverOnboardingExportHistory(
   );
 }
 
-export async function fetchAdminFeatureFlags(client: MobilisApiClient) {
+export async function fetchAdminFeatureFlags(client: OrbiApiClient) {
   return client.request<AdminFeatureFlagsResponse>(apiRoutes.admin.featureFlags);
 }
 
-export async function fetchAdminDispatchSettings(client: MobilisApiClient) {
+export async function fetchAdminDispatchSettings(client: OrbiApiClient) {
   return client.request<AdminDispatchSettingsResponse>(
     apiRoutes.admin.dispatchSettings,
   );
 }
 
-export async function fetchAdminPricingCalibration(client: MobilisApiClient) {
+export async function fetchAdminPricingCalibration(client: OrbiApiClient) {
   return client.request<AdminPricingCalibrationResponse>(
     apiRoutes.admin.pricingCalibration,
   );
 }
 
 export async function fetchAdminPaymentWebhookEvents(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   query?: {
     page?: number;
     pageSize?: number;
@@ -3049,7 +3049,7 @@ export async function fetchAdminPaymentWebhookEvents(
 }
 
 export async function fetchAdminPaymentWebhookEventDetail(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   eventId: string,
 ) {
   return client.request<AdminPaymentWebhookEventDetailResponse>(
@@ -3058,7 +3058,7 @@ export async function fetchAdminPaymentWebhookEventDetail(
 }
 
 export async function startAdminPaymentWebhookInvestigation(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   eventId: string,
 ) {
   return client.request<AdminPaymentWebhookInvestigationResponse>(
@@ -3070,7 +3070,7 @@ export async function startAdminPaymentWebhookInvestigation(
 }
 
 export async function replayAdminPaymentWebhookEvent(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   eventId: string,
 ) {
   return client.request<AdminPaymentWebhookReplayResponse>(
@@ -3082,7 +3082,7 @@ export async function replayAdminPaymentWebhookEvent(
 }
 
 export async function verifyAdminPaymentAttemptWithProvider(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   paymentAttemptId: string,
 ) {
   return client.request<AdminPaymentAttemptProviderVerificationResponse>(
@@ -3094,7 +3094,7 @@ export async function verifyAdminPaymentAttemptWithProvider(
 }
 
 export async function refundAdminPaymentAttempt(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   paymentAttemptId: string,
   payload: { reason?: string } = {},
 ) {
@@ -3108,7 +3108,7 @@ export async function refundAdminPaymentAttempt(
 }
 
 export async function updateAdminDispatchSettings(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: {
     lookbackHours?: number;
     halfLifeHours?: number;
@@ -3126,12 +3126,12 @@ export async function updateAdminDispatchSettings(
   );
 }
 
-export async function fetchHealthCheck(client: MobilisApiClient) {
+export async function fetchHealthCheck(client: OrbiApiClient) {
   return client.request<HealthCheckResponse>(apiRoutes.health);
 }
 
 export async function acknowledgeAdminHealthIncident(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   incidentId: string,
 ) {
   return client.request<{
@@ -3142,7 +3142,7 @@ export async function acknowledgeAdminHealthIncident(
 }
 
 export async function muteAdminHealthIncident(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   incidentId: string,
 ) {
   return client.request<{
@@ -3153,7 +3153,7 @@ export async function muteAdminHealthIncident(
 }
 
 export async function updateAdminDriverOnboardingReview(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   driverId: string,
   payload: {
     status: 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED';
@@ -3178,7 +3178,7 @@ export async function updateAdminDriverOnboardingReview(
 }
 
 export async function fetchAdminDriverDocumentViewLink(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   driverId: string,
   documentId: string,
 ) {
@@ -3188,7 +3188,7 @@ export async function fetchAdminDriverDocumentViewLink(
 }
 
 export async function updateAdminDriverDocumentObjectVerification(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   driverId: string,
   documentId: string,
   payload: {
@@ -3210,7 +3210,7 @@ export async function updateAdminDriverDocumentObjectVerification(
 }
 
 export async function verifyAdminDriverDocumentObjectWithProvider(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   driverId: string,
   documentId: string,
 ) {
@@ -3222,12 +3222,12 @@ export async function verifyAdminDriverDocumentObjectWithProvider(
   );
 }
 
-export async function fetchRiderProfile(client: MobilisApiClient) {
+export async function fetchRiderProfile(client: OrbiApiClient) {
   return client.request<RiderProfileResponse>(apiRoutes.riders.me);
 }
 
 export async function createSavedPlaceWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: {
     label: string;
     address: string;
@@ -3242,7 +3242,7 @@ export async function createSavedPlaceWithApi(
 }
 
 export async function updateTrustedContactWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: {
     phoneNumber?: string;
     shareMode?: 'MANUAL' | 'NIGHT' | 'ALL_TRIPS';
@@ -3259,7 +3259,7 @@ export async function updateTrustedContactWithApi(
 }
 
 export async function updateSavedPlaceWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   savedPlaceId: string,
   payload: {
     label?: string;
@@ -3278,7 +3278,7 @@ export async function updateSavedPlaceWithApi(
 }
 
 export async function deleteSavedPlaceWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   savedPlaceId: string,
 ) {
   return client.request<SavedPlaceDeleteResponse>(
@@ -3289,20 +3289,20 @@ export async function deleteSavedPlaceWithApi(
   );
 }
 
-export async function fetchDriverPreviewOffers(client: MobilisApiClient) {
+export async function fetchDriverPreviewOffers(client: OrbiApiClient) {
   return client.request<DriverOffer[]>(apiRoutes.drivers.previewOffers);
 }
 
-export async function fetchDriverProfile(client: MobilisApiClient) {
+export async function fetchDriverProfile(client: OrbiApiClient) {
   return client.request<DriverProfileResponse>(apiRoutes.drivers.me);
 }
 
-export async function fetchDriverOnboarding(client: MobilisApiClient) {
+export async function fetchDriverOnboarding(client: OrbiApiClient) {
   return client.request<DriverOnboardingResponse>(apiRoutes.drivers.onboarding);
 }
 
 export async function upsertDriverOnboarding(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: {
     phoneNumber?: string;
     licenseNumber: string;
@@ -3359,7 +3359,7 @@ export async function upsertDriverOnboarding(
 }
 
 export async function requestDriverDocumentUploadLinks(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: {
     documents: Array<{
       type:
@@ -3383,16 +3383,16 @@ export async function requestDriverDocumentUploadLinks(
   );
 }
 
-export async function fetchDriverEarnings(client: MobilisApiClient) {
+export async function fetchDriverEarnings(client: OrbiApiClient) {
   return client.request<DriverEarningsResponse>(apiRoutes.drivers.earnings);
 }
 
-export async function fetchDriverOffers(client: MobilisApiClient) {
+export async function fetchDriverOffers(client: OrbiApiClient) {
   return client.request<DriverOffer[]>(apiRoutes.drivers.offers);
 }
 
 export async function declineDriverOfferWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   rideRequestId: string,
 ) {
   return client.request<DriverOfferDeclineResponse>(
@@ -3404,7 +3404,7 @@ export async function declineDriverOfferWithApi(
 }
 
 export async function updateDriverAvailabilityWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   status: 'ONLINE' | 'OFFLINE',
 ) {
   return client.request<DriverAvailabilityResponse>(apiRoutes.drivers.availability, {
@@ -3416,7 +3416,7 @@ export async function updateDriverAvailabilityWithApi(
 }
 
 export async function updateDriverPresenceWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: {
     latitude: number;
     longitude: number;
@@ -3428,16 +3428,16 @@ export async function updateDriverPresenceWithApi(
   });
 }
 
-export async function fetchMyTrips(client: MobilisApiClient) {
+export async function fetchMyTrips(client: OrbiApiClient) {
   return client.request<MyTripsResponse>(apiRoutes.trips.mine);
 }
 
-export async function fetchTripDetail(client: MobilisApiClient, tripId: string) {
+export async function fetchTripDetail(client: OrbiApiClient, tripId: string) {
   return client.request<TripDetailResponse>(`${apiRoutes.trips.root}/${tripId}`);
 }
 
 export async function createTripShareLinkWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   tripId: string,
 ) {
   return client.request<TripShareLinkResponse>(
@@ -3449,7 +3449,7 @@ export async function createTripShareLinkWithApi(
 }
 
 export async function recordTripRoutePositionWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   tripId: string,
   payload: {
     latitude: number;
@@ -3469,7 +3469,7 @@ export async function recordTripRoutePositionWithApi(
 }
 
 export async function fetchSharedTripWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   shareToken: string,
 ) {
   return client.request<SharedTripResponse>(
@@ -3478,7 +3478,7 @@ export async function fetchSharedTripWithApi(
 }
 
 export async function acceptRideRequestWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   rideRequestId: string,
 ) {
   return client.request<TripLifecycleResponse>(
@@ -3490,7 +3490,7 @@ export async function acceptRideRequestWithApi(
 }
 
 export async function updateTripStatusWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   tripId: string,
   status: 'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED',
 ) {
@@ -3503,7 +3503,7 @@ export async function updateTripStatusWithApi(
 }
 
 export async function verifyPickupCodeWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   tripId: string,
   pickupCode: string,
 ) {
@@ -3516,7 +3516,7 @@ export async function verifyPickupCodeWithApi(
 }
 
 export async function reportTripIncidentWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   tripId: string,
   payload: {
     incidentType: string;
@@ -3534,7 +3534,7 @@ export async function reportTripIncidentWithApi(
 }
 
 export async function triggerTripSafetySosWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   tripId: string,
   payload: {
     details?: string;
@@ -3553,7 +3553,7 @@ export async function triggerTripSafetySosWithApi(
 }
 
 export async function fetchRideOptionsPreview(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   query: PricingEstimateQuery,
 ) {
   return client.request<RideOptionsPreviewResponse>(apiRoutes.pricing.rideOptions, {
@@ -3562,7 +3562,7 @@ export async function fetchRideOptionsPreview(
 }
 
 export async function fetchPricingEstimate(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   query: PricingEstimateQuery,
 ) {
   return client.request<PricingEstimate>(apiRoutes.pricing.estimate, {
@@ -3571,7 +3571,7 @@ export async function fetchPricingEstimate(
 }
 
 export async function createRideRequestWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: CreateRideRequestPayload,
   options: { idempotencyKey?: string } = {},
 ) {
@@ -3585,7 +3585,7 @@ export async function createRideRequestWithApi(
 }
 
 export async function cancelRideRequestWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   rideRequestId: string,
 ) {
   return client.request<RideRequestLifecycleResponse>(
@@ -3597,7 +3597,7 @@ export async function cancelRideRequestWithApi(
 }
 
 export async function createCheckoutIntentWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: CheckoutIntentPayload,
   options: { idempotencyKey?: string } = {},
 ) {
@@ -3611,7 +3611,7 @@ export async function createCheckoutIntentWithApi(
 }
 
 export async function resolveVoiceLocationIntentWithApi(
-  client: MobilisApiClient,
+  client: OrbiApiClient,
   payload: { transcript: string },
 ) {
   return client.request<VoiceLocationIntentResponse>(apiRoutes.voice.locationIntent, {

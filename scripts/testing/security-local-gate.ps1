@@ -34,7 +34,7 @@ function Invoke-Gate {
   Write-Host ("[ok] {0} passed in {1:n1}s" -f $Name, $duration.TotalSeconds) -ForegroundColor Green
 }
 
-Write-Host "Mobilis local security gate" -ForegroundColor White
+Write-Host "Orbi local security gate" -ForegroundColor White
 Write-Host "SkipAudit:       $SkipAudit"
 Write-Host "SkipTypecheck:   $SkipTypecheck"
 Write-Host "SkipFullBackend: $SkipFullBackend"

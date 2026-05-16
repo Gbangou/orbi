@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchAdminLiveOps } from '@mobilis/api';
+import { fetchAdminLiveOps } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

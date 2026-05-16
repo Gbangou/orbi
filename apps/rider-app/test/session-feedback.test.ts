@@ -1,6 +1,6 @@
 /// <reference path="../../backend/node_modules/@types/jest/index.d.ts" />
 import { router } from 'expo-router';
-import { MobilisApiError } from '@mobilis/api';
+import { OrbiApiError } from '@orbi/api';
 import { clearRiderPersistedSession } from '../lib/auth';
 import { enqueueRiderMobileErrorReport } from '../lib/mobile-error-reporting';
 import { resolveRiderAppError } from '../lib/session-feedback';
@@ -49,7 +49,7 @@ describe('resolveRiderAppError', () => {
 
   it('clears expired sessions and still queues a reportable auth signal', async () => {
     const feedback = await resolveRiderAppError(
-      new MobilisApiError('token expired', 401),
+      new OrbiApiError('token expired', 401),
     );
 
     expect(feedback).toMatchObject({
@@ -60,7 +60,7 @@ describe('resolveRiderAppError', () => {
     expect(mockedClearRiderPersistedSession).toHaveBeenCalledTimes(1);
     expect(router.replace).toHaveBeenCalledWith('/auth');
     expect(mockedEnqueueRiderMobileErrorReport).toHaveBeenCalledWith(
-      expect.any(MobilisApiError),
+      expect.any(OrbiApiError),
       {
         classification: expect.objectContaining({
           code: 'MOB-AUTH-SESSION',

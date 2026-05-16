@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { resolveBurkinaPricingPresetForPlace } from '@mobilis/domain';
+import { resolveBurkinaPricingPresetForPlace } from '@orbi/domain';
 import {
   calculateDistanceKm,
   estimateDurationMinutes,

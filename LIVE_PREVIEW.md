@@ -1,6 +1,6 @@
 # Live Preview
 
-Ce fichier explique comment suivre Mobilis en direct sur le web et sur Android pendant que le projet avance.
+Ce fichier explique comment suivre Orbi en direct sur le web et sur Android pendant que le projet avance.
 
 ## Ports
 
@@ -107,10 +107,10 @@ pnpm dev:driver:web
 
 ## Comptes demo
 
-- `admin@mobilis.app`
-- `driver@mobilis.app`
-- `rider@mobilis.app`
-- mot de passe: `Mobilis123!`
+- `admin@orbi.app`
+- `driver@orbi.app`
+- `rider@orbi.app`
+- mot de passe: `Orbi123!`
 
 ## Note importante
 

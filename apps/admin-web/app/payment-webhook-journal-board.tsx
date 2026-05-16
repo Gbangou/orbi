@@ -7,7 +7,7 @@ import {
   type AdminPaymentWebhookEventsResponse,
   type AdminPaymentWebhookInvestigationResponse,
   type AdminPaymentWebhookReplayResponse,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
   adminMutationHeaderName,
   adminMutationHeaderValue,
@@ -420,7 +420,7 @@ export function PaymentWebhookJournalBoard({
             </div>
             <h3>{event.eventType}</h3>
             <p>
-              Reference Mobilis: {event.transactionRef ?? 'absente'} -
+              Reference Orbi: {event.transactionRef ?? 'absente'} -
               fournisseur: {event.providerReference ?? 'absente'}
             </p>
             <div className="trip-meta-grid">

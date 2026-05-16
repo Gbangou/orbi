@@ -5,7 +5,7 @@ import type {
   AdminLiveOpsResponse,
   DriverOnboardingQueueResponse,
   HealthCheckResponse,
-} from '@mobilis/api';
+} from '@orbi/api';
 
 import {
   canAttemptJobRequeue,
@@ -149,7 +149,7 @@ function createHealth(
 ): HealthCheckResponse {
   return {
     status: 'ok',
-    service: 'mobilis-backend',
+    service: 'orbi-backend',
     timestamp: '2026-04-25T08:00:00.000Z',
     uptimeSeconds: 120,
     runtime: {
@@ -513,7 +513,7 @@ describe('admin-ops-kernel', () => {
         createDriver({
           reviewStatus: 'UNDER_REVIEW',
           latestReviewAt: '2026-04-25T09:00:00.000Z',
-          latestReviewActor: 'ops@mobilis',
+          latestReviewActor: 'ops@orbi',
         }),
       ],
     );

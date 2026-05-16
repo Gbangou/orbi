@@ -24,18 +24,18 @@ import {
   type RiderProfileResponse,
   type RideOption,
   type VoiceLocationIntentResponse,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
   describeRealtimeConnection,
   formatRealtimeBadgeLabel,
   formatXof,
-  mobilisTheme,
-} from '@mobilis/ui';
-import { createMobilisApiClient } from '@mobilis/api';
+  orbiTheme,
+} from '@orbi/ui';
+import { createOrbiApiClient } from '@orbi/api';
 import {
-  mobilisRuntimeConfig,
-  resolveMobilisApiBaseUrlForRuntime,
-} from '@mobilis/config';
+  orbiRuntimeConfig,
+  resolveOrbiApiBaseUrlForRuntime,
+} from '@orbi/config';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import {
@@ -62,7 +62,7 @@ const fallbackRiderProfile: RiderProfileResponse = {
   profile: {
     id: 'fallback-rider',
     fullName: 'Awa Ouedraogo',
-    email: 'rider@mobilis.app',
+    email: 'rider@orbi.app',
     phoneNumber: null,
     preferredTier: 'MOTO_STANDARD',
     emergencyPhone: null,
@@ -266,8 +266,8 @@ export default function BookingScreen() {
   }, [pickupPlace, destinationPlace, selectedCityId]);
 
   async function loadBookingContext() {
-    const client = createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
-      version: mobilisRuntimeConfig.apiVersion,
+    const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
+      version: orbiRuntimeConfig.apiVersion,
     });
 
     setIsRefreshing(true);
@@ -360,8 +360,8 @@ export default function BookingScreen() {
   );
 
   async function handleResolveVoiceIntent() {
-    const client = createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
-      version: mobilisRuntimeConfig.apiVersion,
+    const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
+      version: orbiRuntimeConfig.apiVersion,
     });
 
     setIsResolvingVoice(true);
@@ -579,7 +579,7 @@ export default function BookingScreen() {
               ? 'ORANGE_MONEY'
               : undefined,
           customerPhoneNumber: me.user.phoneNumber ?? undefined,
-          redirectUrl: mobilisRuntimeConfig.paymentRedirectUrl,
+          redirectUrl: orbiRuntimeConfig.paymentRedirectUrl,
         }, {
           idempotencyKey: `checkout-${createdRequest.id}-${selectedPaymentMethod}`,
         });
@@ -864,7 +864,7 @@ export default function BookingScreen() {
           value={voiceTranscript}
           onChangeText={setVoiceTranscript}
           placeholder="Ex: viens me chercher a l universite de Ouaga"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           style={styles.voiceInput}
         />
         <FlowActionButton
@@ -1045,28 +1045,28 @@ const styles = StyleSheet.create({
     paddingTop: 88,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     gap: 16,
   },
   title: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 32,
     fontWeight: '800',
   },
   subtitle: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   refreshButton: {
     alignSelf: 'flex-start',
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   refreshButtonLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -1074,11 +1074,11 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   routeCard: {
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     gap: 6,
   },
   routeCardHighlight: {
@@ -1086,17 +1086,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(56, 189, 248, 0.08)',
   },
   label: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
     textTransform: 'uppercase',
     fontSize: 12,
   },
   value: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 18,
     fontWeight: '700',
   },
   routeMeta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 18,
   },
   savePlaceButton: {
@@ -1104,34 +1104,34 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     marginTop: 2,
   },
   savePlaceButtonLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 12,
     fontWeight: '700',
   },
   selectionSummary: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     marginTop: 8,
     fontWeight: '600',
   },
   warning: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
     marginTop: 8,
     lineHeight: 18,
   },
   transitionMeta: {
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     marginTop: 6,
     lineHeight: 18,
     fontWeight: '700',
   },
   section: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 20,
     fontWeight: '700',
   },
@@ -1143,18 +1143,18 @@ const styles = StyleSheet.create({
   assuranceCard: {
     flexGrow: 1,
     minWidth: 150,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     borderRadius: 20,
     padding: 16,
     gap: 6,
   },
   selectorCard: {
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 18,
     gap: 12,
   },
@@ -1169,27 +1169,27 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   helperText: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 18,
   },
   placeChipRow: {
     gap: 10,
   },
   placeChoiceCard: {
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 14,
     gap: 6,
   },
   placeChoiceLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 15,
   },
   placeChoiceMeta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 18,
   },
   inlineActions: {
@@ -1204,22 +1204,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
-    backgroundColor: mobilisTheme.colors.panel,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.panel,
   },
   inlineChipLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 12,
   },
   voiceInput: {
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 15,
   },
   voiceAction: {
@@ -1227,55 +1227,55 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.teal,
+    backgroundColor: orbiTheme.colors.teal,
   },
   voiceActionLabel: {
     color: '#052a28',
     fontWeight: '800',
   },
   assuranceTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '800',
     fontSize: 15,
   },
   assuranceText: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 18,
     fontSize: 13,
   },
   paymentPreviewCard: {
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     gap: 6,
   },
   paymentPreviewTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '800',
     fontSize: 16,
   },
   paymentPreviewText: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 13,
   },
   paymentPreviewHint: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
     fontSize: 12,
     lineHeight: 18,
   },
   option: {
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     borderRadius: 20,
     padding: 18,
     gap: 6,
   },
   optionSelected: {
-    borderColor: mobilisTheme.colors.teal,
-    backgroundColor: mobilisTheme.colors.panel,
+    borderColor: orbiTheme.colors.teal,
+    backgroundColor: orbiTheme.colors.panel,
   },
   optionTop: {
     flexDirection: 'row',
@@ -1283,7 +1283,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   optionTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '800',
     fontSize: 18,
   },
@@ -1293,22 +1293,22 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   optionMeta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   breakdownBlock: {
     gap: 4,
   },
   breakdown: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 13,
   },
   breakdownHint: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     fontSize: 12,
     lineHeight: 17,
   },
   safety: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -1324,16 +1324,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   paymentChipActive: {
-    backgroundColor: mobilisTheme.colors.teal,
-    borderColor: mobilisTheme.colors.teal,
+    backgroundColor: orbiTheme.colors.teal,
+    borderColor: orbiTheme.colors.teal,
   },
   paymentChipLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -1341,7 +1341,7 @@ const styles = StyleSheet.create({
     color: '#052a28',
   },
   confirmButton: {
-    backgroundColor: mobilisTheme.colors.teal,
+    backgroundColor: orbiTheme.colors.teal,
     borderRadius: 18,
     paddingHorizontal: 18,
     paddingVertical: 16,

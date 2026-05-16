@@ -16,7 +16,7 @@ export class PrismaService
   constructor() {
     const connectionString =
       process.env.DATABASE_URL ??
-      'postgresql://postgres:postgres@localhost:5433/mobilis?schema=public';
+      'postgresql://postgres:postgres@localhost:5433/orbi?schema=public';
     const poolConfig: PoolConfig = {
       connectionString,
       max: Number.parseInt(process.env.DATABASE_POOL_MAX ?? '20', 10),

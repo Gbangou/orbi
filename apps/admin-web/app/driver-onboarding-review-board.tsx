@@ -7,8 +7,8 @@ import {
   type DriverDocumentObjectVerificationResponse,
   type DriverDocumentViewLinkResponse,
   type DriverOnboardingReviewUpdateResponse,
-} from '@mobilis/api';
-import { describeRealtimeConnection } from '@mobilis/ui';
+} from '@orbi/api';
+import { describeRealtimeConnection } from '@orbi/ui';
 import {
   adminSyncHighlightDurationMs,
   formatAdminDateTime,
@@ -567,7 +567,7 @@ export function DriverOnboardingReviewBoard({
       const date = new Date().toISOString().slice(0, 10);
 
       link.href = url;
-      link.download = `mobilis-onboarding-${guidanceFilter}-${date}.csv`;
+      link.download = `orbi-onboarding-${guidanceFilter}-${date}.csv`;
       document.body.appendChild(link);
       link.click();
       link.remove();

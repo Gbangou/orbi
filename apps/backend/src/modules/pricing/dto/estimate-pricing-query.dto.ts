@@ -17,7 +17,7 @@ import {
   apiTrafficLevels,
   apiVehicleTypes,
   apiWeatherConditions,
-} from '@mobilis/domain';
+} from '@orbi/domain';
 
 export class EstimatePricingQueryDto {
   @IsIn(apiVehicleTypes)

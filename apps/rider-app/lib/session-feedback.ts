@@ -1,8 +1,8 @@
 import {
-  classifyMobilisClientError,
+  classifyOrbiClientError,
   extractApiErrorMessage,
-  type MobilisClientErrorSurface,
-} from '@mobilis/api';
+  type OrbiClientErrorSurface,
+} from '@orbi/api';
 import { router } from 'expo-router';
 import { clearRiderPersistedSession } from './auth';
 import { enqueueRiderMobileErrorReport } from './mobile-error-reporting';
@@ -16,7 +16,7 @@ type RiderErrorCopy = {
 export type RiderAppErrorFeedback = {
   message: string;
   code?: string;
-  surface?: MobilisClientErrorSurface;
+  surface?: OrbiClientErrorSurface;
   severity?: string;
   owner?: string;
   retryPolicy?: string;
@@ -34,13 +34,13 @@ const defaultRiderErrorCopy: RiderErrorCopy = {
 
 export async function resolveRiderAppError(
   error: unknown,
-  copy?: Partial<RiderErrorCopy> & { surface?: MobilisClientErrorSurface },
+  copy?: Partial<RiderErrorCopy> & { surface?: OrbiClientErrorSurface },
 ): Promise<RiderAppErrorFeedback> {
   const messages = {
     ...defaultRiderErrorCopy,
     ...copy,
   };
-  const classification = classifyMobilisClientError(error, {
+  const classification = classifyOrbiClientError(error, {
     surface: copy?.surface,
     fallbackMessage: messages.fallback,
   });
@@ -92,7 +92,7 @@ export async function resolveRiderAppError(
 
 async function safelyQueueRiderErrorReport(
   error: unknown,
-  classification: ReturnType<typeof classifyMobilisClientError>,
+  classification: ReturnType<typeof classifyOrbiClientError>,
 ) {
   if (!classification.reportable) {
     return;

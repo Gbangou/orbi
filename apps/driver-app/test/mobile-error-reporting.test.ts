@@ -5,7 +5,7 @@ import {
   driverMobileErrorReportQueueKey,
 } from '../lib/mobile-error-reporting';
 import { driverSessionStorage } from '../lib/session-storage';
-import { submitMobileErrorReportsWithApi } from '@mobilis/api';
+import { submitMobileErrorReportsWithApi } from '@orbi/api';
 
 jest.mock('../lib/session-storage', () => ({
   driverSessionStorage: {
@@ -15,8 +15,8 @@ jest.mock('../lib/session-storage', () => ({
   },
 }));
 
-jest.mock('@mobilis/api', () => {
-  const actual = jest.requireActual('@mobilis/api');
+jest.mock('@orbi/api', () => {
+  const actual = jest.requireActual('@orbi/api');
 
   return {
     ...actual,

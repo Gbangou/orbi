@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { extractApiErrorMessage } from '@mobilis/api';
-import { mobilisDemoAccessEnabled, mobilisDemoAccounts } from '@mobilis/config';
-import { mobilisTheme } from '@mobilis/ui';
+import { extractApiErrorMessage } from '@orbi/api';
+import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
+import { orbiTheme } from '@orbi/ui';
 import { signInDriverAccount, signUpDriverAccount } from '../lib/auth';
 import { DriverJourneySection } from '../lib/driver-journey';
 import {
@@ -29,8 +29,8 @@ export default function DriverAuthScreen() {
 
   function applyDemoAccount() {
     setFullName('Issa Driver');
-    setEmail(mobilisDemoAccounts.driver.email);
-    setPassword(mobilisDemoAccounts.driver.password);
+    setEmail(orbiDemoAccounts.driver.email);
+    setPassword(orbiDemoAccounts.driver.password);
     setStatus('Compte demo chauffeur precharge pour accelerer la connexion.');
   }
 
@@ -89,7 +89,7 @@ export default function DriverAuthScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.eyebrow}>Mobilis Chauffeur</Text>
+      <Text style={styles.eyebrow}>Orbi Chauffeur</Text>
       <Text style={styles.title}>Connexion et activation</Text>
       <LiveStatusBanner
         label="Acces securise"
@@ -103,7 +103,7 @@ export default function DriverAuthScreen() {
           eyebrow="Parcours"
           title="Entrez dans votre cockpit chauffeur"
           description={
-            mobilisDemoAccessEnabled
+            orbiDemoAccessEnabled
               ? 'Connexion, bascule inscription et compte demo volontaire pour tester ou reprendre une session sans friction.'
               : 'Connexion et bascule inscription pour reprendre une session sans friction.'
           }
@@ -149,7 +149,7 @@ export default function DriverAuthScreen() {
           </Text>
           <Text style={styles.cardMeta}>
             {mode === 'sign-in'
-              ? mobilisDemoAccessEnabled
+              ? orbiDemoAccessEnabled
                 ? 'Utilisez vos identifiants ou chargez explicitement le compte demo.'
                 : 'Utilisez vos identifiants chauffeur.'
               : 'Le compte vous permettra ensuite de completer le dossier et le vehicule.'}
@@ -163,7 +163,7 @@ export default function DriverAuthScreen() {
               value={fullName}
               onChangeText={setFullName}
               placeholder="Issa Driver"
-              placeholderTextColor={mobilisTheme.colors.muted}
+              placeholderTextColor={orbiTheme.colors.muted}
               style={styles.input}
             />
           </>
@@ -175,8 +175,8 @@ export default function DriverAuthScreen() {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
-          placeholder="driver@mobilis.app"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholder="driver@orbi.app"
+          placeholderTextColor={orbiTheme.colors.muted}
           style={styles.input}
         />
 
@@ -186,11 +186,11 @@ export default function DriverAuthScreen() {
           onChangeText={setPassword}
           secureTextEntry
           placeholder="Mot de passe"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           style={styles.input}
         />
 
-        {mobilisDemoAccessEnabled ? (
+        {orbiDemoAccessEnabled ? (
           <Pressable
             onPress={applyDemoAccount}
             disabled={isSubmitting}
@@ -226,21 +226,21 @@ const styles = StyleSheet.create({
     paddingTop: 96,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     gap: 16,
   },
   eyebrow: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
   title: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 34,
     fontWeight: '800',
   },
   subtitle: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 20,
   },
   insightRow: {
@@ -256,26 +256,26 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   modeChipActive: {
-    backgroundColor: mobilisTheme.colors.amber,
-    borderColor: mobilisTheme.colors.amber,
+    backgroundColor: orbiTheme.colors.amber,
+    borderColor: orbiTheme.colors.amber,
   },
   modeChipLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
   },
   modeChipLabelActive: {
     color: '#3b2205',
   },
   card: {
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 18,
     gap: 10,
   },
@@ -284,31 +284,31 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 18,
     fontWeight: '800',
   },
   cardMeta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 18,
   },
   label: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
   input: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
-    color: mobilisTheme.colors.text,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    color: orbiTheme.colors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   primaryButton: {
     marginTop: 8,
-    backgroundColor: mobilisTheme.colors.amber,
+    backgroundColor: orbiTheme.colors.amber,
     borderRadius: 18,
     paddingVertical: 16,
     paddingHorizontal: 18,
@@ -320,15 +320,15 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     marginTop: 4,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 18,
     paddingVertical: 14,
     paddingHorizontal: 18,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   secondaryButtonLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     textAlign: 'center',
   },

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { verifyAdminDriverDocumentObjectWithProvider } from '@mobilis/api';
+import { verifyAdminDriverDocumentObjectWithProvider } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

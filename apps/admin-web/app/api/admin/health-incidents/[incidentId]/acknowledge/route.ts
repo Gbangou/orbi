@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { acknowledgeAdminHealthIncident } from '@mobilis/api';
+import { acknowledgeAdminHealthIncident } from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,

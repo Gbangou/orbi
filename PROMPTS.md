@@ -1,4 +1,4 @@
-# Mobilis Prompt Pack
+# Orbi Prompt Pack
 
 Use the prompts below to drive development of an excellent ride-hailing super app for cars and motorcycles in the same platform.
 
@@ -13,7 +13,7 @@ These prompts are tailored to your current monorepo:
 Paste this first when you want me to take ownership and build the application progressively.
 
 ```text
-You are my principal engineer for the `mobilis` monorepo at `C:\Users\LENOVO\Desktop\mobilis`.
+You are my principal engineer for the `orbi` monorepo at `C:\Users\LENOVO\Desktop\orbi`.
 
 Your mission is to design and build a production-grade, Uber-like and Bolt-like mobility platform that supports both motorcycles and cars in the same application ecosystem. The product must feel premium, modern, scalable, and locally adaptable for African markets first, while staying globally competitive.
 
@@ -60,7 +60,7 @@ Technical expectations:
 - Documentation in markdown as needed
 
 Product expectations:
-- The brand is `Mobilis`
+- The brand is `Orbi`
 - The app should feel revolutionary, elegant, fast, and trustworthy
 - Design for future support of delivery, fleet management, subscriptions, scheduled rides, and promo systems even if not all are built immediately
 - Prioritize a strong MVP foundation first, then extend
@@ -78,7 +78,7 @@ Do not just give advice. Build the application.
 Use this if you want me to focus on setting up the full structure first.
 
 ```text
-In the `mobilis` repo, design and implement the target monorepo architecture for a world-class multi-vertical ride-hailing platform for motorcycles and cars.
+In the `orbi` repo, design and implement the target monorepo architecture for a world-class multi-vertical ride-hailing platform for motorcycles and cars.
 
 I want a structure similar in seriousness to a funded startup codebase. Create the apps, packages, tooling, scripts, and baseline documentation needed for long-term scale.
 
@@ -105,7 +105,7 @@ Then implement enough starter code that the architecture is real, coherent, and 
 Use this when you want me to focus deeply on the API and data model.
 
 ```text
-In `C:\Users\LENOVO\Desktop\mobilis`, build the backend foundation for `Mobilis`, a premium ride-hailing platform for motorcycle and car transport.
+In `C:\Users\LENOVO\Desktop\orbi`, build the backend foundation for `Orbi`, a premium ride-hailing platform for motorcycle and car transport.
 
 Use NestJS + Prisma + PostgreSQL and implement a serious modular backend, not a tutorial project.
 
@@ -146,7 +146,7 @@ Do the work directly in the repository and leave the backend in a state that is 
 Use this if you want me to get the data model right before everything else.
 
 ```text
-Design and implement the production-minded Prisma schema for `Mobilis`, a mobility app supporting both motorcycles and cars.
+Design and implement the production-minded Prisma schema for `Orbi`, a mobility app supporting both motorcycles and cars.
 
 The schema should support:
 - users with roles
@@ -180,7 +180,7 @@ After designing the schema:
 Use this when you want the customer-facing product built.
 
 ```text
-Build the `Mobilis` rider application in the monorepo with premium UX.
+Build the `Orbi` rider application in the monorepo with premium UX.
 
 This app must let a customer:
 - sign up and sign in
@@ -209,7 +209,7 @@ Build the real app structure, screens, components, navigation, state management,
 Use this when you want the driver side built well.
 
 ```text
-Build the `Mobilis` driver application in the monorepo.
+Build the `Orbi` driver application in the monorepo.
 
 The driver app must support:
 - onboarding foundations
@@ -233,7 +233,7 @@ Implement the app structure, screens, API integration layer, driver state flows,
 Use this when you want the operations dashboard.
 
 ```text
-Build the `Mobilis` admin/operations web app in the monorepo.
+Build the `Orbi` admin/operations web app in the monorepo.
 
 The admin system should support:
 - overview dashboard
@@ -256,7 +256,7 @@ Implement the dashboard structure, layouts, major tables/views, route organizati
 Use this when you want the app to start feeling alive.
 
 ```text
-Implement the real-time ride and dispatch foundations for `Mobilis`.
+Implement the real-time ride and dispatch foundations for `Orbi`.
 
 I want the platform architecture to support:
 - live driver location updates
@@ -276,7 +276,7 @@ Focus on correctness of architecture, event flow clarity, and future scalability
 Use this when you want me to elevate the product from functional to outstanding.
 
 ```text
-Upgrade `Mobilis` so the product experience feels world-class, premium, and distinctive rather than generic.
+Upgrade `Orbi` so the product experience feels world-class, premium, and distinctive rather than generic.
 
 Improve:
 - branding
@@ -301,7 +301,7 @@ Make bold but disciplined design decisions.
 Use this after a few implementation phases.
 
 ```text
-Harden the `Mobilis` codebase for serious development.
+Harden the `Orbi` codebase for serious development.
 
 Improve:
 - code quality
@@ -336,7 +336,7 @@ If you want a highly effective sequence, use these prompts in order:
 Use this when you want a compact version:
 
 ```text
-Open `C:\Users\LENOVO\Desktop\mobilis` and build `Mobilis`, a production-grade ride-hailing platform for both motorcycles and cars in one ecosystem. Use the existing pnpm monorepo, evolve the current NestJS backend properly, add the missing apps and packages, create all required files/folders/dependencies, and implement the platform phase by phase until it becomes a polished, startup-quality product. Do not only plan; build.
+Open `C:\Users\LENOVO\Desktop\orbi` and build `Orbi`, a production-grade ride-hailing platform for both motorcycles and cars in one ecosystem. Use the existing pnpm monorepo, evolve the current NestJS backend properly, add the missing apps and packages, create all required files/folders/dependencies, and implement the platform phase by phase until it becomes a polished, startup-quality product. Do not only plan; build.
 ```
 
 ## 13. Best Practices For Prompting Me
@@ -366,7 +366,7 @@ That gives us a serious foundation without making the first build too heavy.
 Use this if you want me to continue with a very explicit cross-platform mandate.
 
 ```text
-Continue building `Mobilis` in `C:\Users\LENOVO\Desktop\mobilis` as a truly cross-platform mobility platform.
+Continue building `Orbi` in `C:\Users\LENOVO\Desktop\orbi` as a truly cross-platform mobility platform.
 
 I want:
 - Android apps
@@ -404,7 +404,7 @@ Do the work now.
 Use this when you want me to focus specifically on the user-facing cross-platform apps.
 
 ```text
-In the `mobilis` monorepo, continue building the rider and driver apps as true cross-platform Expo applications for Android, iPhone, and web.
+In the `orbi` monorepo, continue building the rider and driver apps as true cross-platform Expo applications for Android, iPhone, and web.
 
 I want:
 - production-quality folder structure
@@ -443,7 +443,7 @@ Build directly in the repo.
 Use this when you want me to unify the product visually across web and mobile.
 
 ```text
-Create or improve the shared Mobilis design system so the rider app, driver app, and admin experience feel like one premium brand across Android, iPhone, and web.
+Create or improve the shared Orbi design system so the rider app, driver app, and admin experience feel like one premium brand across Android, iPhone, and web.
 
 I want:
 - shared design tokens
@@ -466,7 +466,7 @@ Implement the code directly in the monorepo, not just a written proposal.
 This is the strongest short prompt to paste after the current foundation:
 
 ```text
-Continue building `Mobilis` from the current repository state. Treat the existing backend foundation, admin shell, rider shell, and driver shell as Phase 1. Now move into Phase 2 and make the platform truly cross-platform and startup-grade: improve the Expo apps for Android, iPhone, and web; deepen the backend for rider/driver workflows; keep the admin excellent; add reusable shared packages where needed; and keep implementing directly in the repo until the product is meaningfully more complete. Do not stop at planning.
+Continue building `Orbi` from the current repository state. Treat the existing backend foundation, admin shell, rider shell, and driver shell as Phase 1. Now move into Phase 2 and make the platform truly cross-platform and startup-grade: improve the Expo apps for Android, iPhone, and web; deepen the backend for rider/driver workflows; keep the admin excellent; add reusable shared packages where needed; and keep implementing directly in the repo until the product is meaningfully more complete. Do not stop at planning.
 ```
 
 ## 19. French-First Burkina Faso Prompt
@@ -474,7 +474,7 @@ Continue building `Mobilis` from the current repository state. Treat the existin
 Use this when you want the active implementation to stay French-first for the Burkina Faso launch.
 
 ```text
-Continue building `Mobilis` in `C:\Users\LENOVO\Desktop\mobilis` with a French-first product strategy for Burkina Faso.
+Continue building `Orbi` in `C:\Users\LENOVO\Desktop\orbi` with a French-first product strategy for Burkina Faso.
 
 Important product rule:
 - all user-facing app content should be implemented in French first

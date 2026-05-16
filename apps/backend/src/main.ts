@@ -93,7 +93,7 @@ async function bootstrap() {
         return;
       }
 
-      callback(new Error('Origin is not allowed by Mobilis CORS policy.'));
+      callback(new Error('Origin is not allowed by Orbi CORS policy.'));
     },
     credentials: true,
   });
@@ -114,7 +114,7 @@ async function bootstrap() {
 
   if (enableSwagger) {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Mobilis API')
+      .setTitle('Orbi API')
       .setDescription(
         'Backend API for rider, driver, dispatch, and admin workflows.',
       )

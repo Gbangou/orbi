@@ -577,7 +577,7 @@ describe('DriversService', () => {
         user: {
           id: 'user-1',
           fullName: 'Issa Driver',
-          email: 'driver@mobilis.app',
+          email: 'driver@orbi.app',
           phoneNumber: '+22670000000',
           isPhoneVerified: true,
         },
@@ -636,7 +636,7 @@ describe('DriversService', () => {
         user: {
           id: 'user-1',
           fullName: 'Issa Driver',
-          email: 'driver@mobilis.app',
+          email: 'driver@orbi.app',
           phoneNumber: '+22670000000',
           isPhoneVerified: true,
         },
@@ -712,7 +712,7 @@ describe('DriversService', () => {
           phoneNumber: null,
           isPhoneVerified: false,
           fullName: 'Issa Driver',
-          email: 'driver@mobilis.app',
+          email: 'driver@orbi.app',
         },
         vehicles: [],
       })
@@ -918,7 +918,7 @@ describe('DriversService', () => {
         phoneNumber: '+22670000000',
         isPhoneVerified: true,
         fullName: 'Issa Driver',
-        email: 'driver@mobilis.app',
+        email: 'driver@orbi.app',
       },
       vehicles: [],
     });
@@ -978,14 +978,14 @@ describe('DriversService', () => {
         phoneNumber: '+22670000000',
         isPhoneVerified: true,
         fullName: 'Issa Driver',
-        email: 'driver@mobilis.app',
+        email: 'driver@orbi.app',
       },
       vehicles: [],
     });
     documentLinksService.createUploadLink.mockReturnValue({
       storageKey: 'driver-1/identity/key.pdf',
       expiresAt: '2026-04-18T10:00:00.000Z',
-      uploadUrl: 'https://storage.mobilis.local/upload/example',
+      uploadUrl: 'https://storage.orbi.local/upload/example',
       method: 'PUT',
       headers: {
         'content-type': 'application/pdf',
@@ -1042,7 +1042,7 @@ describe('DriversService', () => {
         phoneNumber: '+22670000000',
         isPhoneVerified: true,
         fullName: 'Issa Driver',
-        email: 'driver@mobilis.app',
+        email: 'driver@orbi.app',
       },
       vehicles: [],
     });
@@ -1106,7 +1106,7 @@ describe('DriversService', () => {
         phoneNumber: '+22670000000',
         isPhoneVerified: true,
         fullName: 'Issa Driver',
-        email: 'driver@mobilis.app',
+        email: 'driver@orbi.app',
       },
       vehicles: [],
     });
@@ -1558,7 +1558,7 @@ describe('DriversService', () => {
       historyLimit: 60,
       actor: {
         id: 'ops-1',
-        name: 'Ops Mobilis',
+        name: 'Ops Orbi',
         role: 'OPS',
       },
     });
@@ -1585,7 +1585,7 @@ describe('DriversService', () => {
       resetToDefaults: true,
       actor: {
         id: 'ops-1',
-        name: 'Ops Mobilis',
+        name: 'Ops Orbi',
         role: 'OPS',
       },
     });

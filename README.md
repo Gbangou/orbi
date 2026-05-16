@@ -1,6 +1,6 @@
-# Mobilis
+# Orbi
 
-Mobilis est une plateforme de mobilite cross-platform pensee pour un lancement en francais au Burkina Faso.
+Orbi est une plateforme de mobilite cross-platform pensee pour un lancement en francais au Burkina Faso.
 
 ## Monorepo
 
@@ -85,5 +85,5 @@ pnpm dev:rider
 - `dev:full-web` lance backend + admin + rider web
 - `dev:web-driver-preview` lance backend + admin + driver web
 - `mobile:lan` configure les apps Expo pour appeler le backend via l IP Wi-Fi du PC
-- comptes demo seedes: `admin@mobilis.app`, `driver@mobilis.app`, `rider@mobilis.app`
-- mot de passe demo: `Mobilis123!`
+- comptes demo seedes: `admin@orbi.app`, `driver@orbi.app`, `rider@orbi.app`
+- mot de passe demo: `Orbi123!`

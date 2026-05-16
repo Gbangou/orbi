@@ -80,7 +80,7 @@ describe('HealthIncidentJournalService', () => {
       incidentId,
       {
         id: 'ops-1',
-        fullName: 'Ops Mobilis',
+        fullName: 'Ops Orbi',
         role: 'OPS',
       },
       '2026-04-19T03:11:00.000Z',
@@ -89,7 +89,7 @@ describe('HealthIncidentJournalService', () => {
       incidentId,
       {
         id: 'admin-1',
-        fullName: 'Admin Mobilis',
+        fullName: 'Admin Orbi',
         role: 'ADMIN',
       },
       '2026-04-19T03:12:00.000Z',
@@ -100,7 +100,7 @@ describe('HealthIncidentJournalService', () => {
         acknowledgedAt: '2026-04-19T03:11:00.000Z',
         acknowledgedBy: {
           id: 'ops-1',
-          fullName: 'Ops Mobilis',
+          fullName: 'Ops Orbi',
           role: 'OPS',
         },
       }),
@@ -110,7 +110,7 @@ describe('HealthIncidentJournalService', () => {
         mutedAt: '2026-04-19T03:12:00.000Z',
         mutedBy: {
           id: 'admin-1',
-          fullName: 'Admin Mobilis',
+          fullName: 'Admin Orbi',
           role: 'ADMIN',
         },
       }),

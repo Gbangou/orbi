@@ -1,12 +1,12 @@
-import { buildRealtimeStreamUrl, createMobilisApiClient } from '@mobilis/api';
+import { buildRealtimeStreamUrl, createOrbiApiClient } from '@orbi/api';
 import {
-  mobilisRuntimeConfig,
-  resolveMobilisApiBaseUrlForRuntime,
-} from '@mobilis/config';
+  orbiRuntimeConfig,
+  resolveOrbiApiBaseUrlForRuntime,
+} from '@orbi/config';
 import {
   useRealtimeEventStream,
   type RealtimeStatusCallbacks,
-} from '@mobilis/ui/src/use-realtime-event-stream';
+} from '@orbi/ui/src/use-realtime-event-stream';
 
 const RIDER_REALTIME_EVENTS = [
   'trip.created',
@@ -32,10 +32,10 @@ export function useRiderRealtimeStream(
     callbacks,
     coalesceWindowMs: 350,
     buildStreamUrl: (token) => {
-      const client = createMobilisApiClient(
-        resolveMobilisApiBaseUrlForRuntime(),
+      const client = createOrbiApiClient(
+        resolveOrbiApiBaseUrlForRuntime(),
         {
-          version: mobilisRuntimeConfig.apiVersion,
+          version: orbiRuntimeConfig.apiVersion,
         },
       );
 

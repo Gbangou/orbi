@@ -1,5 +1,5 @@
-export const mobilisBrand = {
-  name: 'Mobilis',
+export const orbiBrand = {
+  name: 'Orbi',
   launchMarket: 'Burkina Faso',
   launchLocale: 'fr-BF',
   promise: 'Se deplacer avec confiance, vite et clairement.',

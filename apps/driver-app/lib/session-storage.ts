@@ -1,8 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import type { SessionStorageAdapter } from '@mobilis/api';
+import type { SessionStorageAdapter } from '@orbi/api';
 
-export const driverSessionStorageKey = 'mobilis.driver.session-token';
+export const driverSessionStorageKey = 'orbi.driver.session-token';
 
 async function getWebItem(key: string) {
   if (typeof localStorage === 'undefined') {

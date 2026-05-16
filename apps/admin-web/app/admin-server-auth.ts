@@ -1,22 +1,22 @@
 import 'server-only';
 
 import {
-  createMobilisApiClient,
+  createOrbiApiClient,
   fetchCurrentUser,
   signInWithApi,
-  type MobilisApiClient,
-} from '@mobilis/api';
+  type OrbiApiClient,
+} from '@orbi/api';
 import {
-  mobilisDemoAccessEnabled,
-  mobilisDemoAccounts,
-  mobilisRuntimeConfig,
-} from '@mobilis/config';
+  orbiDemoAccessEnabled,
+  orbiDemoAccounts,
+  orbiRuntimeConfig,
+} from '@orbi/config';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { createNoStoreAdminHeaders } from './admin-server-security';
 
-const legacyAdminSessionCookieName = 'mobilis_admin_session';
-const hardenedAdminSessionCookieName = '__Host-mobilis_admin_session';
+const legacyAdminSessionCookieName = 'orbi_admin_session';
+const hardenedAdminSessionCookieName = '__Host-orbi_admin_session';
 const adminSessionMaxAgeSeconds = 60 * 60 * 8;
 const adminRoles = new Set(['ADMIN', 'OPS', 'SUPPORT']);
 
@@ -49,7 +49,7 @@ export function buildAdminSessionCookieOptions() {
 }
 
 export function canUseAdminDemoAccess() {
-  return mobilisDemoAccessEnabled;
+  return orbiDemoAccessEnabled;
 }
 
 export function isAdminServerAuthRequiredError(
@@ -76,12 +76,12 @@ export function createAdminServerAuthErrorResponse(
 }
 
 function createAdminBaseClient() {
-  return createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-    version: mobilisRuntimeConfig.apiVersion,
+  return createOrbiApiClient(orbiRuntimeConfig.apiBaseUrl, {
+    version: orbiRuntimeConfig.apiVersion,
   });
 }
 
-async function isUsableAdminSession(authClient: MobilisApiClient) {
+async function isUsableAdminSession(authClient: OrbiApiClient) {
   try {
     const me = await fetchCurrentUser(authClient);
 
@@ -122,7 +122,7 @@ export async function getAdminServerAuthSession() {
     throw new AdminServerAuthRequiredError();
   }
 
-  const session = await signInWithApi(baseClient, mobilisDemoAccounts.admin);
+  const session = await signInWithApi(baseClient, orbiDemoAccounts.admin);
 
   if (isProductionRuntime() && legacyToken) {
     cookieStore.delete(legacyAdminSessionCookieName);

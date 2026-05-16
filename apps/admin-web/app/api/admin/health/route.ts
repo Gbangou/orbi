@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
-import { createMobilisApiClient, fetchHealthCheck } from '@mobilis/api';
-import { mobilisRuntimeConfig } from '@mobilis/config';
+import { createOrbiApiClient, fetchHealthCheck } from '@orbi/api';
+import { orbiRuntimeConfig } from '@orbi/config';
 import { createNoStoreAdminHeaders } from '../../../admin-server-security';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const client = createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-      version: mobilisRuntimeConfig.apiVersion,
+    const client = createOrbiApiClient(orbiRuntimeConfig.apiBaseUrl, {
+      version: orbiRuntimeConfig.apiVersion,
     });
     const response = await fetchHealthCheck(client);
 

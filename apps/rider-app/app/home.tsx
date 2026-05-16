@@ -7,15 +7,15 @@ import {
   riderRideOptions,
   type MyTripsResponse,
   type RideOption,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
   describeRealtimeEvent,
   describeRealtimeConnection,
   formatRealtimeBadgeLabel,
   formatXof,
-  mobilisCopy,
-  mobilisTheme,
-} from '@mobilis/ui';
+  orbiCopy,
+  orbiTheme,
+} from '@orbi/ui';
 import {
   DashboardMetricCard,
   LiveHeroCard,
@@ -27,11 +27,11 @@ import { RiderJourneySection } from '../lib/rider-journey';
 import { restoreRiderSession } from '../lib/auth';
 import { useLiveRefresh } from '../lib/use-live-refresh';
 import { useRiderRealtimeStream } from '../lib/use-rider-realtime-stream';
-import { createMobilisApiClient } from '@mobilis/api';
+import { createOrbiApiClient } from '@orbi/api';
 import {
-  mobilisRuntimeConfig,
-  resolveMobilisApiBaseUrlForRuntime,
-} from '@mobilis/config';
+  orbiRuntimeConfig,
+  resolveOrbiApiBaseUrlForRuntime,
+} from '@orbi/config';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import {
   buildRiderFlowTransitionLabel,
@@ -91,8 +91,8 @@ export default function RiderHomeScreen() {
   const previousFlowStateRef = useRef<string | null>(null);
 
   const loadHomeContext = useCallback(async (silent = false) => {
-    const client = createMobilisApiClient(resolveMobilisApiBaseUrlForRuntime(), {
-      version: mobilisRuntimeConfig.apiVersion,
+    const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
+      version: orbiRuntimeConfig.apiVersion,
     });
 
     if (!silent) {
@@ -200,8 +200,8 @@ export default function RiderHomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.eyebrow}>Mobilis Passager</Text>
-      <Text style={styles.title}>{mobilisCopy.riderHeadline}</Text>
+      <Text style={styles.eyebrow}>Orbi Passager</Text>
+      <Text style={styles.title}>{orbiCopy.riderHeadline}</Text>
       <Text style={styles.body}>
         Commandez moto et voiture depuis une seule experience premium pour Android, iPhone et web.
       </Text>
@@ -338,22 +338,22 @@ const styles = StyleSheet.create({
     paddingTop: 88,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     gap: 16,
   },
   eyebrow: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
   title: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 38,
     lineHeight: 40,
     fontWeight: '800',
   },
   body: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 23,
     marginBottom: 8,
   },
@@ -364,11 +364,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   heroSafety: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
     lineHeight: 19,
   },
   heroCode: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '800',
     fontSize: 18,
     letterSpacing: 2,
@@ -379,20 +379,20 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   inlineButtonDisabled: {
     opacity: 0.65,
   },
   inlineButtonLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
   sectionTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 20,
     fontWeight: '700',
     marginTop: 8,

@@ -6,7 +6,7 @@ describe('auth.presenter', () => {
 
     const result = serializeAuthenticatedUser({
       id: 'user-1',
-      email: 'rider@mobilis.app',
+      email: 'rider@orbi.app',
       fullName: 'Awa Rider',
       phoneNumber: '+22670112233',
       role: 'RIDER',
@@ -22,7 +22,7 @@ describe('auth.presenter', () => {
     expect(result).toEqual(
       expect.objectContaining({
         id: 'user-1',
-        email: 'rider@mobilis.app',
+        email: 'rider@orbi.app',
         role: 'RIDER',
         riderProfile: { id: 'rider-1' },
       }),

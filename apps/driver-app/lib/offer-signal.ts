@@ -1,5 +1,5 @@
-import { type DriverOffer } from '@mobilis/api';
-import { formatXof } from '@mobilis/ui';
+import { type DriverOffer } from '@orbi/api';
+import { formatXof } from '@orbi/ui';
 
 export type OfferSignalTone = 'teal' | 'amber' | 'sky' | 'rose';
 

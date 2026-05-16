@@ -5,7 +5,7 @@ import {
   type AdminDriverPayoutResponse,
   type AdminDriverWalletRecoveryAdjustmentResponse,
   type AdminDriverWalletsResponse,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
   adminMutationHeaderName,
   adminMutationHeaderValue,
@@ -284,7 +284,7 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `mobilis-driver-payout-settlement.${format}`;
+      link.download = `orbi-driver-payout-settlement.${format}`;
       link.click();
       URL.revokeObjectURL(url);
       setExportStatus(`Export ${format.toUpperCase()} pret.`);
@@ -303,7 +303,7 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
           <h2>Wallets et payouts</h2>
         </div>
         <p className="lede">
-          Suivi ops des soldes chauffeurs, commissions Mobilis et dernieres
+          Suivi ops des soldes chauffeurs, commissions Orbi et dernieres
           ecritures ledger issues des paiements reconciles.
         </p>
         <div className="ticket-actions">
@@ -341,7 +341,7 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
           <strong>{formatMoney(summaryState.totalPayouts)}</strong>
         </div>
         <div className="trip-meta-card">
-          <span>Commission Mobilis</span>
+          <span>Commission Orbi</span>
           <strong>{formatMoney(summaryState.totalCommission)}</strong>
         </div>
         <div className="trip-meta-card">

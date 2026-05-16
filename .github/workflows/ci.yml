@@ -20,11 +20,11 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: mobilis
+          POSTGRES_DB: orbi
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d mobilis"
+          --health-cmd "pg_isready -U postgres -d orbi"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
@@ -32,7 +32,7 @@ jobs:
       CI: true
       NODE_ENV: test
       SKIP_DB_CONNECT: true
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mobilis?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/orbi?schema=public
       NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
       NEXT_PUBLIC_API_VERSION: v1
 
@@ -89,7 +89,7 @@ jobs:
           NODE_ENV: development
           SKIP_DB_CONNECT: false
           PORT: 3000
-          PAYMENTS_WEBHOOK_SECRET: mobilis_dev_webhook_secret
+          PAYMENTS_WEBHOOK_SECRET: orbi_dev_webhook_secret
         run: |
           pnpm --filter backend start > backend-smoke.log 2>&1 &
           for i in {1..30}; do

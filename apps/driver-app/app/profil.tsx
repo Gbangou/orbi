@@ -15,9 +15,9 @@ import {
   type DriverProfileResponse,
   type MyTripsResponse,
   upsertDriverOnboarding,
-} from '@mobilis/api';
+} from '@orbi/api';
 import { router } from 'expo-router';
-import { formatOperationalStatus, mobilisTheme } from '@mobilis/ui';
+import { formatOperationalStatus, orbiTheme } from '@orbi/ui';
 import {
   InsightBadge,
   LiveStatusBanner,
@@ -113,7 +113,7 @@ const fallbackProfile: DriverProfileResponse = {
   profile: {
     id: 'fallback-driver',
     fullName: 'Issa Driver',
-    email: 'driver@mobilis.app',
+    email: 'driver@orbi.app',
     phoneNumber: null,
     status: 'ONLINE',
     verificationStatus: 'APPROVED',
@@ -890,7 +890,7 @@ export default function ProfilScreen() {
           value={form.phoneNumber}
           onChangeText={(value) => updateForm('phoneNumber', value)}
           placeholder="+22670000000"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           keyboardType="phone-pad"
           style={styles.input}
         />
@@ -900,7 +900,7 @@ export default function ProfilScreen() {
           value={form.licenseNumber}
           onChangeText={(value) => updateForm('licenseNumber', value)}
           placeholder="BF-12345"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           style={styles.input}
         />
 
@@ -934,7 +934,7 @@ export default function ProfilScreen() {
           value={form.serviceRadiusKm}
           onChangeText={(value) => updateForm('serviceRadiusKm', value)}
           placeholder="8"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           keyboardType="decimal-pad"
           style={styles.input}
         />
@@ -970,28 +970,28 @@ export default function ProfilScreen() {
           value={form.vehiclePlateNumber}
           onChangeText={(value) => updateForm('vehiclePlateNumber', value)}
           placeholder="Plaque d immatriculation"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           style={styles.input}
         />
         <TextInput
           value={form.vehicleMake}
           onChangeText={(value) => updateForm('vehicleMake', value)}
           placeholder="Marque"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           style={styles.input}
         />
         <TextInput
           value={form.vehicleModel}
           onChangeText={(value) => updateForm('vehicleModel', value)}
           placeholder="Modele"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           style={styles.input}
         />
         <TextInput
           value={form.vehicleColor}
           onChangeText={(value) => updateForm('vehicleColor', value)}
           placeholder="Couleur"
-          placeholderTextColor={mobilisTheme.colors.muted}
+          placeholderTextColor={orbiTheme.colors.muted}
           style={styles.input}
         />
 
@@ -1000,7 +1000,7 @@ export default function ProfilScreen() {
             value={form.vehicleYear}
             onChangeText={(value) => updateForm('vehicleYear', value)}
             placeholder="Annee"
-            placeholderTextColor={mobilisTheme.colors.muted}
+            placeholderTextColor={orbiTheme.colors.muted}
             keyboardType="number-pad"
             style={[styles.input, styles.inlineInput]}
           />
@@ -1008,7 +1008,7 @@ export default function ProfilScreen() {
             value={form.vehicleSeats}
             onChangeText={(value) => updateForm('vehicleSeats', value)}
             placeholder="Places"
-            placeholderTextColor={mobilisTheme.colors.muted}
+            placeholderTextColor={orbiTheme.colors.muted}
             keyboardType="number-pad"
             style={[styles.input, styles.inlineInput]}
           />
@@ -1049,7 +1049,7 @@ export default function ProfilScreen() {
               value={form.documentFileNames[document.type]}
               onChangeText={(value) => updateDocumentFileName(document.type, value)}
               placeholder={document.placeholder}
-              placeholderTextColor={mobilisTheme.colors.muted}
+              placeholderTextColor={orbiTheme.colors.muted}
               style={styles.input}
             />
             {preparedDocumentLinks[document.type] ? (
@@ -1210,16 +1210,16 @@ const styles = StyleSheet.create({
     paddingTop: 88,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     gap: 14,
   },
   title: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 32,
     fontWeight: '800',
   },
   subtitle: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   heroBadgeRow: {
     flexDirection: 'row',
@@ -1231,15 +1231,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   refreshButtonDisabled: {
     opacity: 0.65,
   },
   refreshButtonLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -1250,18 +1250,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: 'rgba(248, 113, 113, 0.12)',
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.danger,
+    borderColor: orbiTheme.colors.danger,
   },
   signOutButtonLabel: {
-    color: mobilisTheme.colors.danger,
+    color: orbiTheme.colors.danger,
     fontWeight: '700',
     fontSize: 13,
   },
   card: {
-    backgroundColor: mobilisTheme.colors.panel,
+    backgroundColor: orbiTheme.colors.panel,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     padding: 18,
     gap: 8,
   },
@@ -1277,55 +1277,55 @@ const styles = StyleSheet.create({
   metricCard: {
     flexGrow: 1,
     minWidth: 150,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     borderRadius: 22,
     padding: 18,
     gap: 6,
   },
   metricLabel: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     textTransform: 'uppercase',
     fontSize: 12,
     letterSpacing: 1.5,
   },
   metricValue: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '800',
     fontSize: 22,
   },
   name: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 18,
     fontWeight: '800',
   },
   sectionTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 16,
     fontWeight: '800',
     marginTop: 8,
   },
   fieldLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
     marginTop: 6,
   },
   meta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   transitionMeta: {
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '700',
     lineHeight: 19,
   },
   input: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
-    color: mobilisTheme.colors.text,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    color: orbiTheme.colors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -1341,12 +1341,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   pillActive: {
-    backgroundColor: mobilisTheme.colors.amber,
-    borderColor: mobilisTheme.colors.amber,
+    backgroundColor: orbiTheme.colors.amber,
+    borderColor: orbiTheme.colors.amber,
   },
   pillInactive: {
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
-    borderColor: mobilisTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderColor: orbiTheme.colors.border,
   },
   pillLabel: {
     fontWeight: '700',
@@ -1356,7 +1356,7 @@ const styles = StyleSheet.create({
     color: '#3b2205',
   },
   pillLabelInactive: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
   },
   inlineInputs: {
     flexDirection: 'row',
@@ -1369,7 +1369,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   documentHint: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
     fontSize: 12,
   },
   actionStack: {
@@ -1382,12 +1382,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   primaryButton: {
-    backgroundColor: mobilisTheme.colors.amber,
+    backgroundColor: orbiTheme.colors.amber,
   },
   secondaryButton: {
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -1398,46 +1398,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   secondaryButtonLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     textAlign: 'center',
   },
   vehicleRow: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: mobilisTheme.colors.border,
+    borderTopColor: orbiTheme.colors.border,
     gap: 4,
   },
   checklistRow: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: mobilisTheme.colors.border,
+    borderTopColor: orbiTheme.colors.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
   },
   checkLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     flex: 1,
   },
   checkValue: {
     fontWeight: '800',
   },
   checkValueDone: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
   },
   checkValuePending: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
   },
   vehicleTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 16,
   },
   documentStatusRow: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: mobilisTheme.colors.border,
+    borderTopColor: orbiTheme.colors.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
@@ -1455,7 +1455,7 @@ const styles = StyleSheet.create({
   },
   documentTransitionBadge: {
     alignSelf: 'flex-start',
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '800',
     fontSize: 11,
     textTransform: 'uppercase',
@@ -1472,20 +1472,20 @@ const styles = StyleSheet.create({
   },
   badgeSuccess: {
     backgroundColor: 'rgba(52, 211, 153, 0.18)',
-    color: mobilisTheme.colors.success,
+    color: orbiTheme.colors.success,
   },
   badgeDanger: {
     backgroundColor: 'rgba(248, 113, 113, 0.18)',
-    color: mobilisTheme.colors.danger,
+    color: orbiTheme.colors.danger,
   },
   badgePending: {
     backgroundColor: 'rgba(245, 158, 11, 0.18)',
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
   },
   timelineRow: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: mobilisTheme.colors.border,
+    borderTopColor: orbiTheme.colors.border,
     gap: 4,
   },
   timelineRowFresh: {
@@ -1496,6 +1496,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
   },
   warningText: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
   },
 });

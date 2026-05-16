@@ -317,7 +317,7 @@ describe('AdminController', () => {
     const { adminService, controller } = createController();
     const payload = {
       state: 'confirmed',
-      provider: 'mobilis-object-store',
+      provider: 'orbi-object-store',
       sizeBytes: 120000,
       sha256:
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -358,7 +358,7 @@ describe('AdminController', () => {
   it('delegates dispatch settings updates with the current auth context', async () => {
     const { adminService, controller } = createController();
     const auth = {
-      user: { id: 'admin-1', role: 'ADMIN', fullName: 'Admin Mobilis' },
+      user: { id: 'admin-1', role: 'ADMIN', fullName: 'Admin Orbi' },
     };
     const payload = {
       lookbackHours: 96,

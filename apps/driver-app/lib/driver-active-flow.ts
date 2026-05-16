@@ -1,5 +1,5 @@
-import { isActiveTripLifecycleStatus, type DriverOffer, type MyTripsResponse } from '@mobilis/api';
-import { formatOperationalStatus } from '@mobilis/ui';
+import { isActiveTripLifecycleStatus, type DriverOffer, type MyTripsResponse } from '@orbi/api';
+import { formatOperationalStatus } from '@orbi/ui';
 import { isOfferReservationActive } from './offer-reservation';
 
 export type DriverResolvedOperationalStatus =

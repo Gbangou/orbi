@@ -11,15 +11,15 @@ import {
   type DriverOffer,
   type MyTripsResponse,
   updateDriverAvailabilityWithApi,
-} from '@mobilis/api';
+} from '@orbi/api';
 import {
   describeRealtimeEvent,
   describeRealtimeConnection,
   formatRealtimeBadgeLabel,
   formatOperationalStatus,
-  mobilisCopy,
-  mobilisTheme,
-} from '@mobilis/ui';
+  orbiCopy,
+  orbiTheme,
+} from '@orbi/ui';
 import {
   DashboardMetricCard,
   LiveHeroCard,
@@ -264,8 +264,8 @@ export default function DriverHomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.eyebrow}>Mobilis Chauffeur</Text>
-      <Text style={styles.title}>{mobilisCopy.driverHeadline}</Text>
+      <Text style={styles.eyebrow}>Orbi Chauffeur</Text>
+      <Text style={styles.title}>{orbiCopy.driverHeadline}</Text>
       <Text style={styles.body}>
         Une application pensee pour les conducteurs au Burkina Faso, sur Android, iPhone et web.
       </Text>
@@ -454,7 +454,7 @@ export default function DriverHomeScreen() {
             badgeTone={freshOfferIds.includes(offer.id) ? 'sky' : 'amber'}
             title={offer.riderName}
             titleAside={formatDriverOfferFare(offer)}
-            titleAsideColor={mobilisTheme.colors.amber}
+            titleAsideColor={orbiTheme.colors.amber}
             description={`${offer.pickup} vers ${offer.destination}`}
             insights={buildDriverOfferInsights(offer)}
             detailLines={buildDriverOfferDetailLines(offer)}
@@ -496,22 +496,22 @@ const styles = StyleSheet.create({
     paddingTop: 88,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: mobilisTheme.colors.background,
+    backgroundColor: orbiTheme.colors.background,
     gap: 16,
   },
   eyebrow: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
   title: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 38,
     lineHeight: 40,
     fontWeight: '800',
   },
   body: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
     lineHeight: 22,
   },
   inlineButton: {
@@ -520,9 +520,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
   },
   signalGrid: {
     flexDirection: 'row',
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   inlineButtonLabel: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -544,9 +544,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   activeTripCard: {
-    backgroundColor: mobilisTheme.colors.backgroundAlt,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: mobilisTheme.colors.border,
+    borderColor: orbiTheme.colors.border,
     borderRadius: 24,
     padding: 20,
     gap: 8,
@@ -556,18 +556,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(56, 189, 248, 0.08)',
   },
   activeTripEyebrow: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     fontSize: 12,
   },
   activeTripTitle: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 22,
     fontWeight: '800',
   },
   activeTripStatus: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
     fontWeight: '800',
   },
   availabilityButton: {
@@ -579,43 +579,43 @@ const styles = StyleSheet.create({
   },
   availabilityButtonOnline: {
     backgroundColor: 'rgba(45, 212, 191, 0.16)',
-    borderColor: mobilisTheme.colors.teal,
+    borderColor: orbiTheme.colors.teal,
   },
   availabilityButtonOffline: {
     backgroundColor: 'rgba(245, 158, 11, 0.16)',
-    borderColor: mobilisTheme.colors.amber,
+    borderColor: orbiTheme.colors.amber,
   },
   availabilityButtonLabel: {
     fontWeight: '700',
     fontSize: 13,
   },
   availabilityButtonLabelOnline: {
-    color: mobilisTheme.colors.teal,
+    color: orbiTheme.colors.teal,
   },
   availabilityButtonLabelOffline: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
   },
   meta: {
-    color: mobilisTheme.colors.muted,
+    color: orbiTheme.colors.muted,
   },
   syncMeta: {
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '700',
   },
   transitionMeta: {
-    color: mobilisTheme.colors.sky,
+    color: orbiTheme.colors.sky,
     fontWeight: '700',
     lineHeight: 19,
   },
   transitionMetaMuted: {
-    color: mobilisTheme.colors.rose,
+    color: orbiTheme.colors.rose,
     lineHeight: 19,
   },
   safety: {
-    color: mobilisTheme.colors.amber,
+    color: orbiTheme.colors.amber,
   },
   section: {
-    color: mobilisTheme.colors.text,
+    color: orbiTheme.colors.text,
     fontSize: 20,
     fontWeight: '700',
   },

@@ -1,8 +1,8 @@
 import {
-  classifyMobilisClientError,
+  classifyOrbiClientError,
   extractApiErrorMessage,
-  type MobilisClientErrorSurface,
-} from '@mobilis/api';
+  type OrbiClientErrorSurface,
+} from '@orbi/api';
 import { router } from 'expo-router';
 import { clearDriverPersistedSession } from './auth';
 import { enqueueDriverMobileErrorReport } from './mobile-error-reporting';
@@ -16,7 +16,7 @@ type DriverErrorCopy = {
 export type DriverAppErrorFeedback = {
   message: string;
   code?: string;
-  surface?: MobilisClientErrorSurface;
+  surface?: OrbiClientErrorSurface;
   severity?: string;
   owner?: string;
   retryPolicy?: string;
@@ -34,13 +34,13 @@ const defaultDriverErrorCopy: DriverErrorCopy = {
 
 export async function resolveDriverAppError(
   error: unknown,
-  copy?: Partial<DriverErrorCopy> & { surface?: MobilisClientErrorSurface },
+  copy?: Partial<DriverErrorCopy> & { surface?: OrbiClientErrorSurface },
 ): Promise<DriverAppErrorFeedback> {
   const messages = {
     ...defaultDriverErrorCopy,
     ...copy,
   };
-  const classification = classifyMobilisClientError(error, {
+  const classification = classifyOrbiClientError(error, {
     surface: copy?.surface,
     fallbackMessage: messages.fallback,
   });
@@ -92,7 +92,7 @@ export async function resolveDriverAppError(
 
 async function safelyQueueDriverErrorReport(
   error: unknown,
-  classification: ReturnType<typeof classifyMobilisClientError>,
+  classification: ReturnType<typeof classifyOrbiClientError>,
 ) {
   if (!classification.reportable) {
     return;

@@ -1,6 +1,6 @@
-# Mobilis Local Development
+# Orbi Local Development
 
-Ce guide est la version la plus simple pour voir Mobilis evoluer en local avant un deploiement beta ou MVP.
+Ce guide est la version la plus simple pour voir Orbi evoluer en local avant un deploiement beta ou MVP.
 
 ## Ce qu il faut installer une seule fois
 
@@ -39,7 +39,7 @@ utiliser `pnpm prisma:migrate:dev` et verifier ensuite les invariants Prisma.
 
 Si `prisma:migrate` echoue, le premier reflexe est de verifier que Docker Desktop tourne bien et que le container PostgreSQL est demarre.
 
-Mobilis utilise le port `5433` pour PostgreSQL afin d eviter les conflits avec un PostgreSQL deja installe sur la machine.
+Orbi utilise le port `5433` pour PostgreSQL afin d eviter les conflits avec un PostgreSQL deja installe sur la machine.
 
 Le script `pnpm db:start` attend maintenant que PostgreSQL soit reellement pret avant de vous renvoyer la main.
 
@@ -117,10 +117,10 @@ pnpm mobile:lan -- -HostIp 192.168.1.20
 
 ## Comptes demo seedes
 
-- `admin@mobilis.app`
-- `driver@mobilis.app`
-- `rider@mobilis.app`
-- mot de passe commun: `Mobilis123!`
+- `admin@orbi.app`
+- `driver@orbi.app`
+- `rider@orbi.app`
+- mot de passe commun: `Orbi123!`
 
 Les raccourcis UI qui prechargent ces comptes sont actifs en dev/test. En
 production, ils sont masques par defaut; il faut definir explicitement
