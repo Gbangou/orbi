@@ -168,6 +168,9 @@ paiement provider, observabilite et runbooks verts.
   historique/export CSV, decisions ops, liens signes documents et verification
   provider utilisent maintenant la session HttpOnly, no-store, IDs bornes et
   garde mutation same-origin pour les actions sensibles.
+- Rafraichissement Live Ops admin migre derriere route serveur locale
+  `/api/admin/live-ops`, afin que le snapshot operations reste consulte via
+  session HttpOnly/no-store sans authentification backend depuis le navigateur.
 
 ## Architecture active
 
@@ -192,8 +195,8 @@ paiement provider, observabilite et runbooks verts.
 4. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
 5. Verifier qu il ne reste pas de surface admin sensible exposee en Bearer
    navigateur; wallet/payout, refund/replay paiement, support, health, jobs,
-   feature flags, dispatch et onboarding documents sont deja couverts cote
-   routes serveur locales.
+   feature flags, dispatch, onboarding documents et live ops sont deja couverts
+   cote routes serveur locales.
 6. Continuer le programme de tests securite iteratif:
    - API1/API5: IDOR/BOLA et function-level authorization sur onboarding
      documents, dispatch, support tickets et exports finance.

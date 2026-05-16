@@ -1,14 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  authenticateAndFetchCurrentUser,
-  createMobilisApiClient,
-  fetchAdminLiveOps,
-  type AdminLiveOpsResponse,
-} from '@mobilis/api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { type AdminLiveOpsResponse } from '@mobilis/api';
 import { describeRealtimeConnection, formatOperationalStatus } from '@mobilis/ui';
-import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
 import {
   adminSyncHighlightDurationMs,
   hasLiveOpsTripChanged,
@@ -22,6 +16,16 @@ type LiveOpsBoardProps = {
   initialLiveOps: AdminLiveOpsResponse;
 };
 
+async function fetchLiveOps() {
+  const response = await fetch('/api/admin/live-ops');
+
+  if (!response.ok) {
+    throw new Error('Live ops fetch failed');
+  }
+
+  return (await response.json()) as AdminLiveOpsResponse;
+}
+
 export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
   const [liveOps, setLiveOps] = useState(initialLiveOps);
   const [status, setStatus] = useState(
@@ -33,27 +37,15 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
   const previousTripsRef = useRef<AdminLiveOpsResponse['trips'] | null>(null);
   const previousAlertsRef = useRef<string[] | null>(null);
 
-  const client = useMemo(
-    () =>
-      createMobilisApiClient(mobilisRuntimeConfig.apiBaseUrl, {
-        version: mobilisRuntimeConfig.apiVersion,
-      }),
-    [],
-  );
-
   const refreshLiveOps = useCallback(async () => {
     try {
-      const { authClient } = await authenticateAndFetchCurrentUser(
-        client,
-        mobilisDemoAccounts.admin,
-      );
-      const response = await fetchAdminLiveOps(authClient);
+      const response = await fetchLiveOps();
       setLiveOps(response);
       setStatus(describeRealtimeConnection('admin-live-ops', 'connected'));
     } catch {
       setStatus("Le flux live ops n'a pas pu etre rafraichi.");
     }
-  }, [client]);
+  }, []);
 
   useEffect(() => {
     const stream = subscribeToAdminRealtime({
