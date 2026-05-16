@@ -109,6 +109,14 @@ export function PricingStrategyBoard({
               </strong>
             </div>
             <div className="pricing-row">
+              <span>Approche chauffeur</span>
+              <strong>
+                {scenario.estimate.trustAndPolicy.driverPickupDistanceIncludedInFare
+                  ? 'Incluse au prix'
+                  : 'Dispatch/ETA, hors frais cache'}
+              </strong>
+            </div>
+            <div className="pricing-row">
               <span>Ajustements contextuels</span>
               <strong>
                 {scenario.estimate.currency}{' '}
