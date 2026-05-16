@@ -2,12 +2,12 @@ import { InMemoryRateLimitStore } from './in-memory-rate-limit.store';
 import { RateLimitService } from './rate-limit.service';
 
 describe('RateLimitService', () => {
-  it('blocks requests that exceed the configured limit inside the window', () => {
+  it('blocks requests that exceed the configured limit inside the window', async () => {
     const service = new RateLimitService(new InMemoryRateLimitStore());
 
-    const first = service.consume('key', 2, 60_000);
-    const second = service.consume('key', 2, 60_000);
-    const third = service.consume('key', 2, 60_000);
+    const first = await service.consume('key', 2, 60_000);
+    const second = await service.consume('key', 2, 60_000);
+    const third = await service.consume('key', 2, 60_000);
 
     expect(first.allowed).toBe(true);
     expect(second.allowed).toBe(true);

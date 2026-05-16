@@ -6,8 +6,8 @@ describe('HealthService', () => {
       $queryRaw: jest.fn(),
     };
     const configService = {
-      get: jest.fn((key: string) => {
-        const values: Record<string, string> = {
+      get: jest.fn((key: string): string | number | boolean | undefined => {
+        const values: Record<string, string | number | boolean> = {
           'infrastructure.rateLimitAdapter': 'in-memory',
           'infrastructure.rateLimit.strict': 'false',
           'infrastructure.realtimeAdapter': 'in-memory',

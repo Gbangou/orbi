@@ -3,6 +3,12 @@ import { firstValueFrom, take, timeout, toArray } from 'rxjs';
 import { InMemoryRealtimeTransport } from './in-memory-realtime.transport';
 import { RealtimeService } from './realtime.service';
 
+function expectRealtimeEventData(value: string | object) {
+  expect(typeof value).toBe('object');
+
+  return value as { id: string };
+}
+
 describe('RealtimeService', () => {
   it('filters rider events to the matching rider identity', async () => {
     const service = new RealtimeService(new InMemoryRealtimeTransport(), {
@@ -172,8 +178,10 @@ describe('RealtimeService', () => {
     });
 
     const events = await eventPromise;
+    const firstEventData = expectRealtimeEventData(events[0]?.data ?? '');
+    const secondEventData = expectRealtimeEventData(events[1]?.data ?? '');
 
-    expect(events[0]?.data.id).not.toBe(events[1]?.data.id);
+    expect(firstEventData.id).not.toBe(secondEventData.id);
   });
 
   it('rejects streaming when realtime is disabled for the actor', () => {

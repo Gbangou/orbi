@@ -163,7 +163,7 @@ describe('DriverReservationExpiryService', () => {
   });
 
   it('prevents overlapping sweeps when a previous run is still in flight', async () => {
-    let resolveSweep: ((value: number) => void) | null = null;
+    let resolveSweep!: (value: number) => void;
     const { dispatchCoordinator, service } = createService();
 
     dispatchCoordinator.expireStaleReservations.mockReturnValue(
@@ -179,7 +179,7 @@ describe('DriverReservationExpiryService', () => {
       1,
     );
 
-    resolveSweep?.(1);
+    resolveSweep(1);
     await Promise.all([firstRun, secondRun]);
 
     await service.runSweep();
