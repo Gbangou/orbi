@@ -75,6 +75,18 @@ checks the wallet reversal plus live ops refund counter.
 Run it against a freshly seeded local database. If a previous active trip or
 ride blocks the flow, reseed first with `pnpm prisma:seed`.
 
+For provider webhook fixture regression, especially before a payment/refund
+field session:
+
+```powershell
+pnpm test:payments:fixtures
+```
+
+This keeps the local Flutterwave refund fixtures executable. The `processing`
+fixture must journal a pending refund without moving wallet money; the
+`completed` fixture must finalize the refund and write the driver wallet
+reversal idempotently.
+
 If the backend watch mode is blocked by the local Windows shell, run the backend
 without watch for the smoke:
 
