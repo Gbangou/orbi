@@ -87,4 +87,71 @@ describe('ConfigurableRateLimitStore', () => {
       trackedKeys: 4,
     });
   });
+
+  it('normalizes configured adapter casing and whitespace before resolving postgres', async () => {
+    const configService = {
+      get: jest.fn((key: string) => {
+        const values: Record<string, string> = {
+          'infrastructure.rateLimit.adapter': ' PostgreSQL ',
+        };
+
+        return values[key];
+      }),
+    };
+    const postgresStore = {
+      consume: jest.fn(),
+      snapshot: jest.fn().mockResolvedValue({
+        adapter: 'postgres',
+        sharedBackplane: true,
+        degraded: false,
+        degradeReason: null,
+        trackedKeys: 2,
+      }),
+    };
+    const store = new ConfigurableRateLimitStore(
+      configService as never,
+      new InMemoryRateLimitStore(),
+      postgresStore as never,
+    );
+
+    await expect(store.snapshot()).resolves.toEqual({
+      adapter: 'postgres',
+      sharedBackplane: true,
+      degraded: false,
+      degradeReason: null,
+      trackedKeys: 2,
+    });
+  });
+
+  it('reports degradation when an unsupported adapter is configured', async () => {
+    const configService = {
+      get: jest.fn((key: string) => {
+        const values: Record<string, string> = {
+          'infrastructure.rateLimit.adapter': 'memcached',
+        };
+
+        return values[key];
+      }),
+    };
+    const store = new ConfigurableRateLimitStore(
+      configService as never,
+      new InMemoryRateLimitStore(),
+    );
+
+    await expect(store.snapshot()).resolves.toEqual(
+      expect.objectContaining({
+        adapter: 'in-memory',
+        sharedBackplane: false,
+        degraded: true,
+        trackedKeys: 0,
+      }),
+    );
+    await expect(store.snapshot()).resolves.toEqual(
+      expect.objectContaining({
+        degradeReason: expect.stringContaining(
+          'RATE_LIMIT_ADAPTER=memcached n est pas supporte',
+        ),
+      }),
+    );
+  });
 });

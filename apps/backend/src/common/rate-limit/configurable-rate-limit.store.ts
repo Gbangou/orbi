@@ -48,9 +48,7 @@ export class ConfigurableRateLimitStore implements RateLimitStore {
   }
 
   async snapshot(): Promise<RateLimitSnapshot> {
-    const configuredAdapter =
-      this.configService.get<string>('infrastructure.rateLimit.adapter') ??
-      'in-memory';
+    const configuredAdapter = this.getConfiguredAdapter();
 
     try {
       const delegateSnapshot = await this.resolveActiveStore().snapshot();
@@ -66,9 +64,7 @@ export class ConfigurableRateLimitStore implements RateLimitStore {
   }
 
   private resolveDelegate(): RateLimitStore {
-    const configuredAdapter =
-      this.configService.get<string>('infrastructure.rateLimit.adapter') ??
-      'in-memory';
+    const configuredAdapter = this.getConfiguredAdapter();
 
     if (
       configuredAdapter === 'postgres' ||
@@ -93,7 +89,9 @@ export class ConfigurableRateLimitStore implements RateLimitStore {
         ? 'RATE_LIMIT_ADAPTER=redis est configure, mais le store Redis n est pas encore branche. Utiliser RATE_LIMIT_ADAPTER=postgres pour un backplane partage sans nouvelle dependance.'
         : configuredAdapter.startsWith('postgres') && !this.postgresStore
           ? 'RATE_LIMIT_ADAPTER=postgres est configure, mais le store PostgreSQL n est pas disponible.'
-          : null;
+          : !this.isSupportedAdapter(configuredAdapter)
+            ? `RATE_LIMIT_ADAPTER=${configuredAdapter} n est pas supporte. Utiliser in-memory ou postgres.`
+            : null;
     const degradeReason = this.combineReasons(
       snapshot.degradeReason,
       this.runtimeDegradeReason,
@@ -117,6 +115,24 @@ export class ConfigurableRateLimitStore implements RateLimitStore {
     );
 
     return uniqueReasons.length > 0 ? uniqueReasons.join(' | ') : null;
+  }
+
+  private getConfiguredAdapter() {
+    return (
+      this.configService
+        .get<string>('infrastructure.rateLimit.adapter')
+        ?.trim()
+        .toLowerCase() || 'in-memory'
+    );
+  }
+
+  private isSupportedAdapter(configuredAdapter: string) {
+    return (
+      configuredAdapter === 'in-memory' ||
+      configuredAdapter === 'redis' ||
+      configuredAdapter === 'postgres' ||
+      configuredAdapter === 'postgresql'
+    );
   }
 
   private activateFallback(operation: 'consume' | 'snapshot', error: unknown) {
