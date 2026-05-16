@@ -240,7 +240,9 @@ async function main() {
     });
   }
 
-  console.log(`Seeded Mobilis foundation data for admin ${admin.email} with demo password Mobilis123!`);
+  console.log(
+    `Seeded Mobilis foundation data for admin ${admin.email}. Demo credentials are documented in the local runbook.`,
+  );
 }
 
 main()
