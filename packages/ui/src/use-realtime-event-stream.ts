@@ -27,13 +27,22 @@ export function useRealtimeEventStream(
 ) {
   const realtimeUpdateRef = useRef(options.onRealtimeUpdate);
   const callbacksRef = useRef(options.callbacks);
+  const buildStreamUrlRef = useRef(options.buildStreamUrl);
+  const eventTypesRef = useRef(options.eventTypes);
   const latestEventTypeRef = useRef<string | null>(null);
   const flushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     realtimeUpdateRef.current = options.onRealtimeUpdate;
     callbacksRef.current = options.callbacks;
-  }, [options.callbacks, options.onRealtimeUpdate]);
+    buildStreamUrlRef.current = options.buildStreamUrl;
+    eventTypesRef.current = options.eventTypes;
+  }, [
+    options.buildStreamUrl,
+    options.callbacks,
+    options.eventTypes,
+    options.onRealtimeUpdate,
+  ]);
 
   useEffect(() => {
     if (!sessionToken) {
@@ -51,7 +60,7 @@ export function useRealtimeEventStream(
     }
 
     const coalesceWindowMs = options.coalesceWindowMs ?? 350;
-    const stream = new EventSourceCtor(options.buildStreamUrl(sessionToken));
+    const stream = new EventSourceCtor(buildStreamUrlRef.current(sessionToken));
 
     function scheduleRealtimeUpdate(eventType: string) {
       latestEventTypeRef.current = eventType;
@@ -73,7 +82,7 @@ export function useRealtimeEventStream(
       }, coalesceWindowMs);
     }
 
-    for (const eventType of options.eventTypes) {
+    for (const eventType of eventTypesRef.current) {
       stream.addEventListener(eventType, () => {
         scheduleRealtimeUpdate(eventType);
       });
@@ -101,9 +110,7 @@ export function useRealtimeEventStream(
       stream.close();
     };
   }, [
-    options.buildStreamUrl,
     options.coalesceWindowMs,
-    options.eventTypes,
     sessionToken,
   ]);
 }

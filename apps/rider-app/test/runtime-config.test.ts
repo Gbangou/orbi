@@ -65,4 +65,16 @@ describe('Mobilis runtime config', () => {
       expect(source).not.toContain('mobilisRuntimeConfig.apiBaseUrl');
     }
   });
+
+  it('keeps realtime EventSource stable across render-only callback changes', () => {
+    const source = readFileSync(
+      join(process.cwd(), '../../packages/ui/src/use-realtime-event-stream.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain('buildStreamUrlRef');
+    expect(source).toContain('eventTypesRef');
+    expect(source).not.toContain('options.buildStreamUrl(sessionToken)');
+    expect(source).not.toContain('options.eventTypes) {');
+  });
 });
