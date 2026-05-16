@@ -16,6 +16,7 @@ import {
 import { describeRealtimeConnection } from '@mobilis/ui';
 import {
   adminSyncHighlightDurationMs,
+  formatAdminDateTime,
   resolveDriverOnboardingDelta,
   resolveVisibleDriverOnboardingQueue,
   type DriverOnboardingGuidanceFilter,
@@ -137,12 +138,12 @@ function formatShaPreview(sha256: string | null) {
 }
 
 function formatReviewDate(value: string) {
-  return new Intl.DateTimeFormat('fr-FR', {
+  return formatAdminDateTime(value, 'Date indisponible', {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(new Date(value));
+  });
 }
 
 function formatExportFilterLabel(

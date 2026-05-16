@@ -9,6 +9,7 @@ import type {
 
 import {
   canAttemptJobRequeue,
+  formatAdminDateTime,
   hasLiveOpsTripChanged,
   resolveCollectionDelta,
   resolveDriverOnboardingDelta,
@@ -216,6 +217,20 @@ function createHealth(
 }
 
 describe('admin-ops-kernel', () => {
+  it('formats dirty admin timestamps without leaking Invalid Date', () => {
+    expect(formatAdminDateTime(null, 'Aucun signal')).toBe('Aucun signal');
+    expect(formatAdminDateTime('not-a-date')).toBe('Date indisponible');
+    expect(
+      formatAdminDateTime('2026-05-15T08:05:00.000Z', 'Aucun signal', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'UTC',
+      }),
+    ).toBe('15/05 08:05');
+  });
+
   it('detects live ops route monitoring signal changes', () => {
     expect(hasLiveOpsTripChanged(createLiveOpsTrip(), createLiveOpsTrip())).toBe(
       false,

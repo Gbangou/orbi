@@ -11,6 +11,7 @@ import { describeRealtimeConnection } from '@mobilis/ui';
 import {
   adminSyncHighlightDurationMs,
   canAttemptJobRequeue,
+  formatAdminDateTime,
   type JobQueueKindFilter,
   resolveHealthTransitionLabel,
   resolveJobQueueFilterSummary,
@@ -237,11 +238,7 @@ function describeReadinessCheckState(state: string) {
 }
 
 function formatTimestamp(value: string | null) {
-  if (!value) {
-    return 'Aucun signal';
-  }
-
-  return new Date(value).toLocaleString('fr-FR', {
+  return formatAdminDateTime(value, 'Aucun signal', {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',

@@ -10,6 +10,7 @@ import {
   adminMutationHeaderName,
   adminMutationHeaderValue,
 } from './admin-server-security';
+import { formatAdminDateTime } from './admin-ops-kernel';
 
 type DriverWalletsBoardProps = {
   wallets: AdminDriverWalletsResponse;
@@ -366,10 +367,7 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
             <p>
               Statut chauffeur: {wallet.driverStatus ?? 'non renseigne'} -
               derniere activite{' '}
-              {new Date(wallet.lastActivityAt).toLocaleString('fr-FR', {
-                dateStyle: 'short',
-                timeStyle: 'short',
-              })}
+              {formatAdminDateTime(wallet.lastActivityAt)}
             </p>
             <div className="trip-meta-grid">
               <div className="trip-meta-card">

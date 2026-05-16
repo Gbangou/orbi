@@ -12,6 +12,7 @@ import {
   adminMutationHeaderName,
   adminMutationHeaderValue,
 } from './admin-server-security';
+import { formatAdminDateTime } from './admin-ops-kernel';
 
 type PaymentWebhookJournalBoardProps = {
   journal: AdminPaymentWebhookEventsResponse;
@@ -444,13 +445,7 @@ export function PaymentWebhookJournalBoard({
                   'fr-FR',
                 )}{' '}
                 - MAJ{' '}
-                {new Date(event.paymentAttempt.updatedAt).toLocaleString(
-                  'fr-FR',
-                  {
-                    dateStyle: 'short',
-                    timeStyle: 'short',
-                  },
-                )}
+                {formatAdminDateTime(event.paymentAttempt.updatedAt)}
               </p>
             ) : null}
             <p>{formatPayloadPreview(event.payloadPreview)}</p>
@@ -506,10 +501,7 @@ export function PaymentWebhookJournalBoard({
               ) : null}
             </div>
             <p>
-              {new Date(event.createdAt).toLocaleString('fr-FR', {
-                dateStyle: 'short',
-                timeStyle: 'short',
-              })}
+              {formatAdminDateTime(event.createdAt)}
             </p>
           </article>
         ))}

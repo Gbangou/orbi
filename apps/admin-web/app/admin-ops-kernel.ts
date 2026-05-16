@@ -18,6 +18,27 @@ export type JobQueueKindFilter =
   | 'NOTIFICATION'
   | 'DRIVER_RESERVATION_EXPIRY';
 
+export function formatAdminDateTime(
+  value: string | null | undefined,
+  fallback = 'Date indisponible',
+  options: Intl.DateTimeFormatOptions = {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  },
+) {
+  if (!value) {
+    return fallback;
+  }
+
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return fallback;
+  }
+
+  return new Intl.DateTimeFormat('fr-FR', options).format(date);
+}
+
 export function resolveLiveOpsRouteMonitoringCopy(
   routeMonitoring: LiveOpsRouteMonitoring,
 ) {

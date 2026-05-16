@@ -9,6 +9,7 @@ import {
   type AdminDispatchSettingsResponse,
 } from '@mobilis/api';
 import { mobilisDemoAccounts, mobilisRuntimeConfig } from '@mobilis/config';
+import { formatAdminDateTime } from './admin-ops-kernel';
 
 type DispatchControlBoardProps = {
   initialSettings: AdminDispatchSettingsResponse;
@@ -514,9 +515,7 @@ export function DispatchControlBoard({
             <span>Derniere action admin</span>
             <strong>
               {liveSettings.settings.updatedAt
-                ? new Date(liveSettings.settings.updatedAt).toLocaleString(
-                    'fr-FR',
-                  )
+                ? formatAdminDateTime(liveSettings.settings.updatedAt)
                 : 'jamais'}
             </strong>
           </div>
@@ -739,7 +738,7 @@ export function DispatchControlBoard({
                     </span>
                   )}
                   <span className="dispatch-control-note">
-                    {new Date(entry.createdAt).toLocaleString('fr-FR')}
+                    {formatAdminDateTime(entry.createdAt)}
                   </span>
                 </article>
               );

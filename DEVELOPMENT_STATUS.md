@@ -150,6 +150,10 @@ paiement provider, observabilite et runbooks verts.
 - Completion/failure des jobs durables durcie par verrou `lockedAt`: un worker
   ancien ne peut plus marquer comme reussi ou echoue un job deja recupere,
   remis en attente ou repris par un autre tick apres interruption.
+- Horodatages admin ops durcis: System Health, journal jobs, onboarding,
+  dispatch, webhooks paiement et wallets chauffeurs affichent un fallback
+  operationnel quand une date provider/backend est absente ou malformee, au
+  lieu de laisser remonter `Invalid Date` dans la console.
 
 ## Architecture active
 
