@@ -197,6 +197,10 @@ export class PricingService {
             demandMultiplier: estimate.fareBreakdown.demandMultiplier,
             priceWindow: estimate.fareBreakdown.priceWindow,
             reasons: estimate.fareBreakdown.reasons,
+            driverPickupDistanceIncludedInFare:
+              estimate.trustAndPolicy.driverPickupDistanceIncludedInFare,
+            driverPickupDistancePolicy:
+              estimate.trustAndPolicy.driverPickupDistancePolicy,
           },
         };
       }),

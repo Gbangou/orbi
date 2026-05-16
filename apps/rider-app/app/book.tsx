@@ -964,6 +964,15 @@ export default function BookingScreen() {
                     {option.fareBreakdown.reasons[0]}
                   </Text>
                 ) : null}
+                {option.fareBreakdown.driverPickupDistancePolicy ? (
+                  <Text style={styles.breakdownHint}>
+                    {option.fareBreakdown.driverPickupDistancePolicy}
+                  </Text>
+                ) : option.fareBreakdown.reasons?.[1] ? (
+                  <Text style={styles.breakdownHint}>
+                    {option.fareBreakdown.reasons[1]}
+                  </Text>
+                ) : null}
               </View>
             ) : null}
             {option.safetyNote ? (

@@ -462,6 +462,8 @@ export type RideOption = {
       max: number;
     };
     reasons?: string[];
+    driverPickupDistanceIncludedInFare?: boolean;
+    driverPickupDistancePolicy?: string;
   };
 };
 

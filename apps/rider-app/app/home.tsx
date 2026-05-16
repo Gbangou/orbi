@@ -68,6 +68,9 @@ function buildRideOptionDetailLines(option: RideOption) {
     option.fareBreakdown
       ? `Base ${formatXof(option.fareBreakdown.baseFare)} + frais ${formatXof(option.fareBreakdown.bookingFee)}`
       : null,
+    option.fareBreakdown?.driverPickupDistanceIncludedInFare === false
+      ? 'Approche chauffeur: dispatch et ETA, sans frais cache'
+      : null,
   ];
 
   return lines.filter((line): line is string => Boolean(line));

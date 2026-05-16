@@ -182,4 +182,24 @@ describe('PricingService', () => {
       quote.fareBreakdown.reasons.some((reason) => reason.includes('trafic')),
     ).toBe(true);
   });
+
+  it('carries driver approach policy into rider option estimates', async () => {
+    const { service } = createService();
+
+    const preview = await service.estimateRideOptions({
+      vehicleType: 'MOTORCYCLE',
+      distanceKm: 5.8,
+      durationMinutes: 16,
+    } as never);
+
+    expect(preview.options[0]?.fareBreakdown).toMatchObject({
+      driverPickupDistanceIncludedInFare: false,
+      driverPickupDistancePolicy: expect.stringContaining('distance chauffeur'),
+    });
+    expect(preview.options[0]?.fareBreakdown?.reasons).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('distance d approche chauffeur'),
+      ]),
+    );
+  });
 });
