@@ -7,18 +7,23 @@ const mockClientOn = jest.fn();
 const mockClientConnect = jest.fn();
 const mockClientQuery = jest.fn();
 const mockClientEnd = jest.fn();
+const mockClientConfigs: unknown[] = [];
 
 jest.mock('pg', () => ({
   Pool: jest.fn().mockImplementation(() => ({
     query: mockPoolQuery,
     end: mockPoolEnd,
   })),
-  Client: jest.fn().mockImplementation(() => ({
-    on: mockClientOn,
-    connect: mockClientConnect,
-    query: mockClientQuery,
-    end: mockClientEnd,
-  })),
+  Client: jest.fn().mockImplementation((config: unknown) => {
+    mockClientConfigs.push(config);
+
+    return {
+      on: mockClientOn,
+      connect: mockClientConnect,
+      query: mockClientQuery,
+      end: mockClientEnd,
+    };
+  }),
 }));
 
 describe('PostgresRealtimeTransport', () => {
@@ -34,6 +39,7 @@ describe('PostgresRealtimeTransport', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockClientConfigs.length = 0;
     mockPoolQuery.mockResolvedValue({ rows: [] });
     mockPoolEnd.mockResolvedValue(undefined);
     mockClientConnect.mockResolvedValue(undefined);
@@ -199,6 +205,20 @@ describe('PostgresRealtimeTransport', () => {
     expect(transport.snapshot().degradeReason).toContain(
       'Postgres realtime parse failed',
     );
+  });
+
+  it('uses the local default database URL for the listener when config is absent', async () => {
+    const transport = new PostgresRealtimeTransport({
+      get: jest.fn().mockReturnValue(undefined),
+    } as never);
+
+    transport.snapshot();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(mockClientConfigs).toContainEqual({
+      connectionString:
+        'postgresql://postgres:postgres@localhost:5433/mobilis?schema=public',
+    });
   });
 
   it('rejects structurally invalid notification events before streaming them', async () => {

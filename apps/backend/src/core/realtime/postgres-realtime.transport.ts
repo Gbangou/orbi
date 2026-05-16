@@ -26,6 +26,7 @@ const maxNotifyPayloadBytes = 7_500;
 export class PostgresRealtimeTransport
   implements RealtimeTransport, OnModuleDestroy
 {
+  private readonly connectionString: string;
   private readonly events$ = new Subject<RealtimeEvent>();
   private readonly pool: Pool;
   private listenerClient: Client | null = null;
@@ -35,12 +36,12 @@ export class PostgresRealtimeTransport
   private degradeReason: string | null = null;
 
   constructor(private readonly configService: ConfigService) {
-    const connectionString =
+    this.connectionString =
       this.configService.get<string>('database.url') ??
       process.env.DATABASE_URL ??
       'postgresql://postgres:postgres@localhost:5433/mobilis?schema=public';
     const poolConfig: PoolConfig = {
-      connectionString,
+      connectionString: this.connectionString,
       max: 4,
       min: 0,
       idleTimeoutMillis: 10_000,
@@ -131,9 +132,7 @@ export class PostgresRealtimeTransport
 
   private async connectListener() {
     const client = new Client({
-      connectionString:
-        this.configService.get<string>('database.url') ??
-        process.env.DATABASE_URL,
+      connectionString: this.connectionString,
     });
 
     client.on('notification', (message) => {
