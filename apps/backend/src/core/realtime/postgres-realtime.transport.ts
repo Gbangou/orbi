@@ -13,6 +13,7 @@ import {
 } from 'rxjs';
 import {
   canReceiveRealtimeEvent,
+  parseRealtimeEvent,
   type RealtimeEvent,
   type RealtimeEventFilter,
   type RealtimeTransport,
@@ -141,7 +142,13 @@ export class PostgresRealtimeTransport
       }
 
       try {
-        this.events$.next(JSON.parse(message.payload) as RealtimeEvent);
+        const event = parseRealtimeEvent(JSON.parse(message.payload));
+
+        if (!event) {
+          throw new Error('invalid realtime event payload');
+        }
+
+        this.events$.next(event);
       } catch (error) {
         this.markDegraded(error, 'parse');
       }

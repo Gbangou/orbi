@@ -201,6 +201,58 @@ describe('PostgresRealtimeTransport', () => {
     );
   });
 
+  it('rejects structurally invalid notification events before streaming them', async () => {
+    const notificationHandlers: Array<
+      (message: { channel: string; payload?: string }) => void
+    > = [];
+    mockClientOn.mockImplementation(
+      (
+        event: string,
+        handler: (message: { channel: string; payload?: string }) => void,
+      ) => {
+        if (event === 'notification') {
+          notificationHandlers.push(handler);
+        }
+      },
+    );
+    const transport = new PostgresRealtimeTransport(configService as never);
+    const receivedEvents: string[] = [];
+    const subscription = transport
+      .stream({
+        role: 'ADMIN',
+        actorId: 'admin-1',
+        riderId: null,
+        driverId: null,
+      })
+      .subscribe((event) => {
+        receivedEvents.push(event.type ?? 'message');
+      });
+
+    await Promise.resolve();
+    notificationHandlers[0]?.({
+      channel: 'mobilis_realtime_events',
+      payload: JSON.stringify({
+        id: 'trip:trip.updated:trip-1:2026-05-15T10:00:00.000Z:0',
+        channel: 'trip',
+        type: 'trip.updated',
+        createdAt: '2026-05-15T10:00:00.000Z',
+        payload: [],
+      }),
+    });
+
+    expect(receivedEvents).toEqual([]);
+    expect(transport.snapshot()).toEqual(
+      expect.objectContaining({
+        degraded: true,
+      }),
+    );
+    expect(transport.snapshot().degradeReason).toContain(
+      'invalid realtime event payload',
+    );
+
+    subscription.unsubscribe();
+  });
+
   it('closes listener and pool resources on module destroy', async () => {
     const transport = new PostgresRealtimeTransport(configService as never);
 
