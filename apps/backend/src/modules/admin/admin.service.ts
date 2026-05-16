@@ -139,6 +139,17 @@ type LaunchFieldQualitySignal = {
   nextStep: string;
 };
 
+type LaunchAssuranceGate = {
+  id: string;
+  label: string;
+  status: 'covered' | 'partial' | 'missing';
+  priority: 'critical' | 'high' | 'medium';
+  owner: 'ops' | 'engineering' | 'support' | 'finance';
+  frameworks: string[];
+  currentSignal: string;
+  nextStep: string;
+};
+
 type DriverDocumentIntegritySignal = {
   state: 'complete' | 'partial' | 'missing';
   score: number;
@@ -1084,6 +1095,13 @@ function resolveLaunchReadinessNextActions(
         'Prioriser SOS, partage trajet, route monitoring et contacts de confiance avant toute extension hors pilote limite.',
       runbookAnchor: 'securite-et-benchmark-concurrents',
     },
+    'security-assurance': {
+      checkId: 'security-assurance',
+      owner: 'engineering',
+      action:
+        'Completer les gates OWASP/NIST critiques: API/BOLA, mobile MASVS, paiements, admin RBAC, fraude GPS et resilience.',
+      runbookAnchor: 'assurance-securite-owasp-nist',
+    },
   };
 
   return checks
@@ -1095,6 +1113,125 @@ function resolveLaunchReadinessNextActions(
     .filter((action): action is LaunchReadinessNextAction =>
       Boolean(action.checkId),
     );
+}
+
+function resolveLaunchSecurityAssurance(input: {
+  productionRiskLevel: 'low' | 'medium' | 'high';
+  serviceLevelPosture?: 'healthy' | 'watch' | 'breached';
+  realtimeDegraded: boolean;
+  urgentSupportTickets: number;
+  pendingDocuments: number;
+  refundPendingPayments: number;
+  ignoredPaymentWebhooks: number;
+  recoveryWallets: number;
+  safetyParityRate: number;
+  criticalSafetyGaps: number;
+}) {
+  const runtimeCovered =
+    input.productionRiskLevel === 'low' &&
+    input.serviceLevelPosture !== 'breached';
+  const moneyCovered =
+    input.refundPendingPayments === 0 &&
+    input.ignoredPaymentWebhooks === 0 &&
+    input.recoveryWallets === 0;
+  const safetyCovered =
+    input.criticalSafetyGaps === 0 && input.safetyParityRate >= 95;
+  const opsCovered =
+    input.urgentSupportTickets === 0 && input.pendingDocuments === 0;
+  const gates: LaunchAssuranceGate[] = [
+    {
+      id: 'api-bola-rbac',
+      label: 'API BOLA/RBAC/ABAC',
+      status: runtimeCovered ? 'covered' : 'partial',
+      priority: 'critical',
+      owner: 'engineering',
+      frameworks: ['OWASP API Top 10', 'OWASP WSTG', 'NIST SSDF'],
+      currentSignal: `Runtime ${input.productionRiskLevel}; SLO ${input.serviceLevelPosture ?? 'non expose'}.`,
+      nextStep:
+        'Etendre les tests d autorisation par objet sur trips, factures, KYC, admin et paiements avec cas cross-role.',
+    },
+    {
+      id: 'mobile-masvs',
+      label: 'Mobile MASVS/MASTG',
+      status: runtimeCovered && !input.realtimeDegraded ? 'partial' : 'missing',
+      priority: 'critical',
+      owner: 'engineering',
+      frameworks: ['OWASP MASVS', 'OWASP MASTG', 'NIST SSDF'],
+      currentSignal: input.realtimeDegraded
+        ? 'Realtime degrade: reprise mobile a valider avant pilote large.'
+        : 'Smoke mobile et taxonomie MOB-* disponibles; hardening natif a completer.',
+      nextStep:
+        'Ajouter checks stockage tokens, deep links, screenshots sensibles, reprise offline et detection environnement compromis.',
+    },
+    {
+      id: 'payments-mobile-money',
+      label: 'Paiements et Mobile Money',
+      status: moneyCovered ? 'covered' : 'partial',
+      priority: 'critical',
+      owner: 'finance',
+      frameworks: ['OWASP API Top 10', 'OWASP WSTG', 'PCI-DSS scoping'],
+      currentSignal: `${input.refundPendingPayments} refund(s), ${input.ignoredPaymentWebhooks} webhook(s) ignore(s), ${input.recoveryWallets} wallet(s) en recouvrement.`,
+      nextStep:
+        'Couvrir signature webhook, replay, double paiement, XOF rounding, reconciliation et rollback provider.',
+    },
+    {
+      id: 'gps-fraud-realtime',
+      label: 'GPS, fraude et temps reel',
+      status: safetyCovered && !input.realtimeDegraded ? 'covered' : 'partial',
+      priority: 'critical',
+      owner: 'ops',
+      frameworks: ['OWASP API Top 10', 'OWASP WSTG', 'NIST SSDF'],
+      currentSignal: `${input.safetyParityRate}% parite securite; realtime ${input.realtimeDegraded ? 'degrade' : 'stable'}.`,
+      nextStep:
+        'Ajouter scenarios faux GPS, trajets impossibles, replay events WebSocket et alertes fraude route.',
+    },
+    {
+      id: 'admin-data-governance',
+      label: 'Admin, KYC et donnees personnelles',
+      status: opsCovered ? 'covered' : 'partial',
+      priority: 'critical',
+      owner: 'support',
+      frameworks: ['OWASP WSTG', 'OWASP API Top 10', 'NIST SSDF'],
+      currentSignal: `${input.urgentSupportTickets} P3; ${input.pendingDocuments} document(s) chauffeur en attente.`,
+      nextStep:
+        'Tester MFA admin, double validation actions critiques, exports CSV, KYC, retention logs et audit trail immuable.',
+    },
+    {
+      id: 'resilience-devsecops',
+      label: 'Resilience et chaine de dev',
+      status: runtimeCovered && moneyCovered ? 'partial' : 'missing',
+      priority: 'high',
+      owner: 'engineering',
+      frameworks: ['NIST SSDF', 'OWASP WSTG'],
+      currentSignal: `Runtime ${input.productionRiskLevel}; argent ${moneyCovered ? 'stable' : 'surveillance'}.`,
+      nextStep:
+        'Brancher SAST, SCA, secret scanning, container/IaC scanning, sauvegarde/restauration et exercices incident.',
+    },
+  ];
+  const coveredGates = gates.filter((gate) => gate.status === 'covered').length;
+  const partialGates = gates.filter((gate) => gate.status === 'partial').length;
+  const missingGates = gates.filter((gate) => gate.status === 'missing').length;
+  const criticalOpenGates = gates.filter(
+    (gate) => gate.priority === 'critical' && gate.status !== 'covered',
+  ).length;
+  const coverageRate = safeRate(coveredGates + partialGates * 0.5, gates.length);
+
+  return {
+    summary: {
+      totalGates: gates.length,
+      coveredGates,
+      partialGates,
+      missingGates,
+      criticalOpenGates,
+      coverageRate,
+      launchPosture: criticalOpenGates
+        ? ('limited' as const)
+        : coverageRate >= 85
+          ? ('ready' as const)
+          : ('limited' as const),
+    },
+    gates,
+  };
 }
 
 function serializeLaunchReadinessAcknowledgements(
@@ -2238,6 +2375,18 @@ export class AdminService {
       safetyParityRate: safetyBenchmark.summary.competitorParityRate,
       criticalSafetyGaps: safetyBenchmark.summary.criticalGaps,
     });
+    const securityAssurance = resolveLaunchSecurityAssurance({
+      productionRiskLevel: productionReadiness.riskLevel,
+      serviceLevelPosture: serviceLevelObjectives?.posture,
+      realtimeDegraded: health.infrastructure.realtime.degraded,
+      urgentSupportTickets,
+      pendingDocuments,
+      refundPendingPayments,
+      ignoredPaymentWebhooks,
+      recoveryWallets,
+      safetyParityRate: safetyBenchmark.summary.competitorParityRate,
+      criticalSafetyGaps: safetyBenchmark.summary.criticalGaps,
+    });
     const checks: LaunchReadinessCheck[] = [
       {
         id: 'runtime-production-readiness',
@@ -2306,6 +2455,16 @@ export class AdminService {
             : 'warn',
         detail: `${safetyBenchmark.summary.activeCapabilities}/${safetyBenchmark.summary.totalCapabilities} capacite(s) actives, ${safetyBenchmark.summary.criticalGaps} gap(s) critiques face aux leaders.`,
       },
+      {
+        id: 'security-assurance',
+        label: 'Assurance OWASP/NIST',
+        state:
+          securityAssurance.summary.criticalOpenGates === 0 &&
+          securityAssurance.summary.coverageRate >= 85
+            ? 'pass'
+            : 'warn',
+        detail: `${securityAssurance.summary.coveredGates}/${securityAssurance.summary.totalGates} gate(s) couverts, ${securityAssurance.summary.criticalOpenGates} critique(s) encore ouverts.`,
+      },
     ];
     const failedChecks = checks.filter(
       (check) => check.state === 'fail',
@@ -2361,6 +2520,7 @@ export class AdminService {
         acknowledgements,
       ),
       safetyBenchmark,
+      securityAssurance,
       fieldQuality,
       productionReadiness,
     };

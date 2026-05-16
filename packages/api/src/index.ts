@@ -1317,6 +1317,27 @@ export type AdminLaunchReadinessResponse = {
       nextStep: string;
     }>;
   };
+  securityAssurance?: {
+    summary: {
+      totalGates: number;
+      coveredGates: number;
+      partialGates: number;
+      missingGates: number;
+      criticalOpenGates: number;
+      coverageRate: number;
+      launchPosture: 'ready' | 'limited';
+    };
+    gates: Array<{
+      id: string;
+      label: string;
+      status: 'covered' | 'partial' | 'missing';
+      priority: 'critical' | 'high' | 'medium';
+      owner: 'ops' | 'engineering' | 'support' | 'finance';
+      frameworks: string[];
+      currentSignal: string;
+      nextStep: string;
+    }>;
+  };
   fieldQuality?: {
     score: number;
     state: 'excellent' | 'watch' | 'blocked';

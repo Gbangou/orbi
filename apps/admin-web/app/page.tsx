@@ -403,6 +403,31 @@ const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
       },
     ],
   },
+  securityAssurance: {
+    summary: {
+      totalGates: 6,
+      coveredGates: 0,
+      partialGates: 1,
+      missingGates: 5,
+      criticalOpenGates: 5,
+      coverageRate: 8.3,
+      launchPosture: 'limited',
+    },
+    gates: [
+      {
+        id: 'fallback-security-assurance',
+        label: 'Assurance OWASP/NIST',
+        status: 'missing',
+        priority: 'critical',
+        owner: 'engineering',
+        frameworks: ['OWASP API Top 10', 'OWASP MASVS', 'NIST SSDF'],
+        currentSignal:
+          'Fallback admin: reconnecter le backend pour obtenir les gates officiels.',
+        nextStep:
+          'Restaurer launch-readiness puis assigner API/BOLA, mobile MASVS, paiements, GPS/fraude et resilience.',
+      },
+    ],
+  },
   fieldQuality: {
     score: 72,
     state: 'watch',

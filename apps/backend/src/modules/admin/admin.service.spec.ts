@@ -507,25 +507,31 @@ describe('AdminService', () => {
     expect(result.job.status).toBe('PENDING');
   });
 
-  it('approves launch readiness when safety benchmark clears competitor threshold', async () => {
+  it('keeps launch readiness limited until OWASP/NIST assurance gates are covered', async () => {
     const { service } = createService();
 
     const result = await service.launchReadiness();
 
     expect(result.decision).toMatchObject({
-      state: 'approved',
-      label: 'pilot autorise',
+      state: 'limited',
+      label: 'pilote limite seulement',
     });
     expect(result.summary).toMatchObject({
       failedChecks: 0,
-      warningChecks: 0,
-      totalChecks: 10,
+      warningChecks: 1,
+      totalChecks: 11,
     });
-    expect(result.nextActions).toEqual([]);
+    expect(result.nextActions).toEqual([
+      expect.objectContaining({
+        checkId: 'security-assurance',
+        severity: 'warning',
+        owner: 'engineering',
+      }),
+    ]);
     expect(result.actionSummary).toMatchObject({
-      totalActions: 0,
+      totalActions: 1,
       acknowledgedActions: 0,
-      remainingActions: 0,
+      remainingActions: 1,
       completionRate: 0,
     });
     expect(result.safetyBenchmark.summary).toMatchObject({
@@ -535,6 +541,29 @@ describe('AdminService', () => {
       criticalGaps: 0,
       competitorParityRate: 100,
     });
+    expect(result.securityAssurance.summary).toMatchObject({
+      totalGates: 6,
+      coveredGates: 4,
+      partialGates: 2,
+      missingGates: 0,
+      criticalOpenGates: 1,
+      coverageRate: 83.3,
+      launchPosture: 'limited',
+    });
+    expect(result.securityAssurance.gates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'api-bola-rbac',
+          status: 'covered',
+          frameworks: expect.arrayContaining(['OWASP API Top 10']),
+        }),
+        expect.objectContaining({
+          id: 'mobile-masvs',
+          status: 'partial',
+          frameworks: expect.arrayContaining(['OWASP MASVS']),
+        }),
+      ]),
+    );
     expect(result.fieldQuality).toMatchObject({
       state: 'excellent',
       score: expect.any(Number),
@@ -565,6 +594,10 @@ describe('AdminService', () => {
         expect.objectContaining({
           id: 'safety-benchmark',
           state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'security-assurance',
+          state: 'warn',
         }),
       ]),
     );
@@ -616,9 +649,9 @@ describe('AdminService', () => {
       ]),
     );
     expect(result.actionSummary).toMatchObject({
-      totalActions: 1,
+      totalActions: 2,
       acknowledgedActions: 0,
-      remainingActions: 1,
+      remainingActions: 2,
       blockingActions: 1,
       remainingBlockingActions: 1,
     });
@@ -627,6 +660,10 @@ describe('AdminService', () => {
         expect.objectContaining({
           id: 'runtime-production-readiness',
           state: 'fail',
+        }),
+        expect.objectContaining({
+          id: 'security-assurance',
+          state: 'warn',
         }),
       ]),
     );
@@ -688,13 +725,13 @@ describe('AdminService', () => {
       },
     ]);
     expect(result.actionSummary).toMatchObject({
-      totalActions: 1,
+      totalActions: 2,
       acknowledgedActions: 1,
-      remainingActions: 0,
+      remainingActions: 1,
       blockingActions: 1,
       acknowledgedBlockingActions: 1,
       remainingBlockingActions: 0,
-      completionRate: 100,
+      completionRate: 50,
     });
   });
 

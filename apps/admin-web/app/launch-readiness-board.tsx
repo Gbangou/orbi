@@ -90,6 +90,30 @@ function describeFieldQualityState(state: string) {
   return 'surveillance';
 }
 
+function describeAssuranceGateStatus(status: string) {
+  if (status === 'covered') {
+    return 'couvert';
+  }
+
+  if (status === 'partial') {
+    return 'partiel';
+  }
+
+  return 'manquant';
+}
+
+function resolveAssuranceGateTone(status: string) {
+  if (status === 'covered') {
+    return 'good';
+  }
+
+  if (status === 'partial') {
+    return 'warn';
+  }
+
+  return 'bad';
+}
+
 function resolveFieldQualityTone(state: string) {
   if (state === 'excellent') {
     return 'good';
@@ -345,6 +369,7 @@ export function LaunchReadinessBoard({
   const actionSummary = currentLaunchReadiness?.actionSummary;
   const actionCompletionRate = actionSummary?.completionRate ?? 0;
   const safetyBenchmark = currentLaunchReadiness?.safetyBenchmark;
+  const securityAssurance = currentLaunchReadiness?.securityAssurance;
   const fieldQuality = currentLaunchReadiness?.fieldQuality;
   const safetyBenchmarkItems =
     safetyBenchmark?.capabilities
@@ -353,6 +378,12 @@ export function LaunchReadinessBoard({
           capability.priority === 'critical' || capability.status !== 'active',
       )
       .slice(0, 5) ?? [];
+  const assuranceGateItems =
+    securityAssurance?.gates
+      .filter(
+        (gate) => gate.priority === 'critical' || gate.status !== 'covered',
+      )
+      .slice(0, 6) ?? [];
   const acknowledgementsByCheckId = useMemo(
     () =>
       new Map(
@@ -618,6 +649,64 @@ export function LaunchReadinessBoard({
                 </div>
                 <p>{capability.mobilisSignal}</p>
                 <small>{capability.nextStep}</small>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {securityAssurance ? (
+        <div className="launch-assurance">
+          <div className="launch-next-actions-heading">
+            <div>
+              <span>Assurance securite</span>
+              <strong>Gates OWASP, MASVS et NIST SSDF</strong>
+            </div>
+            <p>
+              {securityAssurance.summary.criticalOpenGates} gate(s)
+              critique(s) encore ouverts
+            </p>
+          </div>
+          <div className="launch-assurance-score">
+            <div>
+              <span>couverture</span>
+              <strong>{securityAssurance.summary.coverageRate}%</strong>
+              <p>
+                {securityAssurance.summary.coveredGates} couvert(s),{' '}
+                {securityAssurance.summary.partialGates} partiel(s),{' '}
+                {securityAssurance.summary.missingGates} manquant(s)
+              </p>
+            </div>
+            <div className="launch-action-progress-track">
+              <span
+                style={{
+                  width: `${Math.min(
+                    100,
+                    securityAssurance.summary.coverageRate,
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+          <div className="launch-assurance-list">
+            {assuranceGateItems.map((gate) => (
+              <article className="launch-assurance-card" key={gate.id}>
+                <div className="ticket-topline">
+                  <span
+                    className={`readiness-pill readiness-pill-${resolveAssuranceGateTone(
+                      gate.status,
+                    )}`}
+                  >
+                    {describeAssuranceGateStatus(gate.status)}
+                  </span>
+                  <span className="launch-action launch-action-warning">
+                    {gate.owner}
+                  </span>
+                </div>
+                <h3>{gate.label}</h3>
+                <p>{gate.currentSignal}</p>
+                <small>{gate.frameworks.join(' / ')}</small>
+                <em>{gate.nextStep}</em>
               </article>
             ))}
           </div>
