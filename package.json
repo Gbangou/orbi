@@ -24,6 +24,7 @@
     "typecheck": "pnpm --filter @mobilis/domain build && pnpm --filter @mobilis/api build && pnpm --filter @mobilis/config build && pnpm --filter @mobilis/ui build && pnpm --filter @mobilis/admin-web build && pnpm --filter @mobilis/rider-app typecheck && pnpm --filter @mobilis/driver-app typecheck && pnpm --filter backend build",
     "test:admin:smoke": "pnpm --filter @mobilis/admin-web test:smoke",
     "test:mobile:smoke": "pnpm --filter @mobilis/rider-app test:smoke && pnpm --filter @mobilis/driver-app test:smoke",
+    "test:payments:fixtures": "pnpm --filter backend test -- payments.service.spec.ts --runInBand",
     "test:security:local": "powershell -ExecutionPolicy Bypass -File .\\scripts\\testing\\security-local-gate.ps1",
     "e2e:local-checklist": "powershell -ExecutionPolicy Bypass -File .\\scripts\\testing\\local-e2e-field-session.ps1",
     "e2e:local-api": "powershell -ExecutionPolicy Bypass -File .\\scripts\\testing\\local-api-e2e-smoke.ps1",

@@ -154,6 +154,10 @@ paiement provider, observabilite et runbooks verts.
   dispatch, webhooks paiement et wallets chauffeurs affichent un fallback
   operationnel quand une date provider/backend est absente ou malformee, au
   lieu de laisser remonter `Invalid Date` dans la console.
+- Preuve locale paiement/refund explicitee: les fixtures Flutterwave refund
+  `processing` et `completed` sont conservees dans le repo et executees par
+  `pnpm test:payments:fixtures`, afin de verifier que le webhook pending ne
+  deplace pas d argent et que le webhook processed finalise la reversal wallet.
 
 ## Architecture active
 
@@ -168,7 +172,9 @@ paiement provider, observabilite et runbooks verts.
 
 ## Priorite d'execution
 
-1. Capturer fixtures provider paiement sandbox, surtout refund/reconciliation.
+1. Capturer des fixtures provider paiement sandbox reelles en plus des fixtures
+   locales deja executables: checkout, success, failed, refund pending,
+   refund processed et references inconnues.
 2. Brancher providers externes au worker durable: replay paiement strictement
    controle, antivirus/anti-fraude documentaire et push/SMS/email reels derriere
    les frontieres provider deja testees.
@@ -215,8 +221,9 @@ git diff --check
   provider locale et quarantaine locale; il faut encore adapter S3/GCS
   production et brancher un scan documentaire externe.
 - Les flux argent sont audites et idempotents sur les fondations, mais les
-  workers webhooks/retries/dead-letter doivent etre prouves avec fixtures
-  provider.
+  workers webhooks/retries/dead-letter doivent etre prouves avec captures
+  provider sandbox reelles en plus des fixtures locales executees par
+  `pnpm test:payments:fixtures`.
 - La production ne doit pas etre declaree "large" sans CI verte, observabilite,
   rollback pratique, secrets production, URLs externes HTTPS et validation
   terrain repetee.
