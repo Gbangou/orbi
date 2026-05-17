@@ -1,9 +1,18 @@
+import { Logger } from '@nestjs/common';
 import { ConfigurableRealtimeTransport } from './configurable-realtime.transport';
 import { InMemoryRealtimeTransport } from './in-memory-realtime.transport';
 import { firstValueFrom, take, timeout } from 'rxjs';
 import type { RealtimeTransport } from './realtime.types';
 
 describe('ConfigurableRealtimeTransport', () => {
+  beforeEach(() => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   class TestableConfigurableRealtimeTransport extends ConfigurableRealtimeTransport {
     constructor(
       configService: { get: jest.Mock },

@@ -193,6 +193,9 @@ paiement provider, observabilite et runbooks verts.
 - Launch readiness backend enrichie: `/health.operations.productionReadiness`
   signale explicitement si le collector d erreurs mobiles externe est absent,
   local ou non HTTPS avant un pilote production.
+- Gate production local ajoute: `pnpm test:production:gate` regroupe diff
+  check, audit dependances, Prisma, specs readiness/backplane/collector, smokes
+  admin/mobile et typecheck pour rendre les controles pre-lancement repetables.
 
 ## Architecture active
 

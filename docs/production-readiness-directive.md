@@ -41,7 +41,8 @@ The repo is in local MVP verification, not broad production.
 
 - Local MVP: ready for repeatable local and LAN testing now, provided
   `pnpm e2e:local-api`, `pnpm test:mobile:smoke`, `pnpm test:admin:smoke`,
-  Prisma validation, dependency audit and `pnpm typecheck` stay green.
+  `pnpm test:production:gate`, Prisma validation, dependency audit and
+  `pnpm typecheck` stay green.
 - Controlled field beta: earliest realistic window is 22 May 2026 to
   29 May 2026 if real-device rider/driver sessions and Flutterwave sandbox
   payment/refund webhook fixtures pass repeatedly starting now.
