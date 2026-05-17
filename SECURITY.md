@@ -1,6 +1,6 @@
 # Orbi Security Policy & Vulnerability Management
 
-*Last updated: May 9, 2026*
+*Last updated: May 17, 2026*
 
 ## Current Security Status
 
@@ -9,19 +9,21 @@ Authentication uses scrypt and timing-safe session-token comparison. Input
 validation uses class-validator with whitelist mode. Authorization is RBAC with
 session-based guards. Security headers are configured in the backend.
 
-Dependency vulnerabilities require ongoing review:
-- 1 CRITICAL (Handlebars.js)
-- Multiple HIGH (tar, minimatch, serialize-javascript, etc.)
-- Mostly in dev/test dependencies (ts-jest, @babel plugins)
+Dependency vulnerabilities require ongoing review. The current local dependency
+gate is clean as of May 17, 2026:
+
+```bash
+pnpm audit --audit-level moderate
+```
+
+Result: no known vulnerabilities found.
 
 ## Vulnerability Assessment
 
-### Critical Issues (MUST FIX)
+### Critical Issues
 
-| Package | Severity | Issue | Impact | Fix |
-|---------|----------|-------|--------|-----|
-| handlebars | CRITICAL | JavaScript Injection via AST | Dev/build tool | Upgrade >=4.7.9 |
-| tar | HIGH | File overwrite via hardlink | Expo CLI dependency | Upgrade >=7.5.7 |
+No active critical or high dependency advisories are currently reported by the
+local `pnpm audit --audit-level moderate` gate.
 
 ### Strategy
 
@@ -39,9 +41,11 @@ Dependency vulnerabilities require ongoing review:
 
 1. OK Fix Prisma migration invariants (COMPLETED)
 2. OK Document architecture & security (COMPLETED)
-3. Add .npmrc security overrides for critical packages
-4. Run full test suite (should still pass)
-5. Commit with security focus
+3. OK Add pnpm security overrides and patched dependencies for vulnerable
+   transitive packages (COMPLETED)
+4. OK Re-run dependency audit after overrides (COMPLETED)
+5. OK Run SCA in CI with `pnpm audit --audit-level moderate` (COMPLETED)
+6. Continue scheduled SCA before production release gates
 
 ## Security Best Practices for Orbi
 
@@ -84,6 +88,10 @@ OK Implemented:
 - Persisted mobile error-report queues are normalized before replay: rider and
   driver apps discard malformed or cross-role reports and redact tokens,
   emails and phone numbers from queued text/context before backend submission.
+- Rider and driver sessions use Expo `SecureStore` on native platforms and
+  browser `sessionStorage` on Expo web. The web path does not fall back to
+  persistent `localStorage` and ignores blocked storage APIs without crashing the
+  auth surface.
 
 Planned Next Phase:
 - 2FA support (TOTP)

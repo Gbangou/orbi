@@ -4,28 +4,58 @@ import type { SessionStorageAdapter } from '@orbi/api';
 
 export const riderSessionStorageKey = 'orbi.rider.session-token';
 
-async function getWebItem(key: string) {
-  if (typeof localStorage === 'undefined') {
+function getWebSessionStorage() {
+  if (typeof globalThis.sessionStorage === 'undefined') {
     return null;
   }
 
-  return localStorage.getItem(key);
+  try {
+    return globalThis.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+async function getWebItem(key: string) {
+  const storage = getWebSessionStorage();
+
+  if (!storage) {
+    return null;
+  }
+
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
 async function setWebItem(key: string, value: string) {
-  if (typeof localStorage === 'undefined') {
+  const storage = getWebSessionStorage();
+
+  if (!storage) {
     return;
   }
 
-  localStorage.setItem(key, value);
+  try {
+    storage.setItem(key, value);
+  } catch {
+    return;
+  }
 }
 
 async function removeWebItem(key: string) {
-  if (typeof localStorage === 'undefined') {
+  const storage = getWebSessionStorage();
+
+  if (!storage) {
     return;
   }
 
-  localStorage.removeItem(key);
+  try {
+    storage.removeItem(key);
+  } catch {
+    return;
+  }
 }
 
 export const riderSessionStorage: SessionStorageAdapter = {

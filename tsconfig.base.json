@@ -3,6 +3,16 @@
     "target": "ES2023",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "paths": {
+      "@orbi/api": ["./packages/api/src/index.ts"],
+      "@orbi/api/*": ["./packages/api/src/*"],
+      "@orbi/config": ["./packages/config/src/index.ts"],
+      "@orbi/config/*": ["./packages/config/src/*"],
+      "@orbi/domain": ["./packages/domain/src/index.ts"],
+      "@orbi/domain/*": ["./packages/domain/src/*"],
+      "@orbi/ui": ["./packages/ui/src/index.ts"],
+      "@orbi/ui/*": ["./packages/ui/src/*"]
+    },
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,

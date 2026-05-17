@@ -1,6 +1,6 @@
 # Orbi Development Status
 
-Date de reference: 9 mai 2026
+Date de reference: 17 mai 2026
 
 ## Etat court
 
@@ -177,6 +177,13 @@ paiement provider, observabilite et runbooks verts.
   valides avant proxy backend.
 - Refresh System Health admin migre derriere `/api/admin/health` no-store, ce
   qui retire le dernier client API direct du board health cote navigateur.
+- Stockage session mobile/web durci: les apps rider et driver conservent les
+  sessions natives dans `SecureStore`, utilisent `sessionStorage` non persistant
+  sur Expo web, ne retombent jamais vers `localStorage`, et tolerent les
+  navigateurs qui bloquent le stockage web sans crash.
+- CI GitHub renforcee avec audit de dependances `pnpm audit --audit-level
+  moderate` et `git diff --check`, afin de bloquer les regressions de securite
+  connues et les erreurs de whitespace avant merge.
 
 ## Architecture active
 
@@ -250,8 +257,9 @@ git diff --check
   terrain repetee.
 - Les clients mobiles conservent le modele Bearer token pour Expo; l'admin web
   a migre plusieurs surfaces sensibles vers routes serveur + cookie HttpOnly,
-  avec contrat de regression sur les mutations locales; il faut continuer a
-  scanner les nouvelles surfaces admin avant exposition publique large.
+  et les previews Expo web rider/driver evitent maintenant le stockage persistant
+  du token; il faut continuer les checks MASVS sur deep links, screenshots
+  sensibles, pinning et reprise reseau avant exposition publique large.
 - Le backend refuse maintenant les identifiants admin et mobiles malformes
   avant Prisma; les controles IDOR metier restent assures par les requetes
   scoping existantes, et doivent continuer a etre testes par role.

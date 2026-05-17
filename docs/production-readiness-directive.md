@@ -56,6 +56,27 @@ The repo is in local MVP verification, not broad production.
 If any blocking launch-readiness check returns to red, the calendar resets from
 the day that check is corrected and verified.
 
+## Full-Stack Production Reality Map
+
+The repo already treats production as more than frontend plus backend, but some
+layers are implemented locally while others still need external infrastructure
+proof before broad launch.
+
+| Layer | Current coverage | Production gate |
+| --- | --- | --- |
+| Frontend | Admin Next.js plus Expo rider/driver flows, typed contracts, loading/error states and mobile smoke tests. | Real-device rider/driver sessions and accessibility/performance passes. |
+| API and backend logic | NestJS modules for auth, dispatch, trips, payments, wallet, admin, support, health and mobile observability. Business invariants live in services, Prisma constraints and shared domain/API packages. | Full backend suite plus local API money-path smoke in CI. |
+| Database and storage | PostgreSQL schema, migrations, partial unique indexes, audit logs, durable job queue and local document object verification. | Managed PostgreSQL backups/restore drill and S3/GCS-compatible document storage. |
+| Auth and permissions | Session tokens, password hashing, RBAC, profile scoping, admin HttpOnly session routes and CSRF gate for local admin mutations. | MFA/admin hardening and external security review before broad launch. |
+| Hosting and deployment | Runbooks define live/ready probes, rolling deploys and draining semantics. | At least two backend instances behind a load balancer using `/health/ready`. |
+| Cloud and compute | Production startup guards reject unsafe public config; strict adapters can fail readiness when shared runtime dependencies are missing. | Cloud provider, secrets manager, backups, rollback and capacity limits configured. |
+| CI/CD and version control | Monorepo scripts cover typecheck, Prisma validation, smoke tests and audit. GitHub `main` is the source branch. | Required CI gates on every merge and release tag discipline. |
+| Security and RLS-equivalent controls | DTO validation, dirty-data tests, RBAC, profile scoping, no raw SQL path, headers, CORS allow-list, audit logs and SCA overrides. | Pentest, MASVS mobile checks, privacy/retention process and legal review. |
+| Rate limiting | Configurable rate-limit guard with in-memory dev mode and PostgreSQL shared backplane for multi-instance. | `RATE_LIMIT_ADAPTER=postgres` and `RATE_LIMIT_STRICT=true` in preprod/prod. |
+| Caching and CDN | Browser cache is disabled on auth/admin/payment-sensitive responses; public CDN strategy is not a core dependency yet. | CDN only for safe static assets, with no sensitive API caching. |
+| Load balancing and scaling | Readiness/liveness endpoints, graceful shutdown, PostgreSQL realtime/rate-limit backplanes and runbook instructions for multi-instance rollout. | Load balancer routes only ready instances; chaos test instance drain/restart. |
+| Error tracking and logs | Mobile `MOB-*` classification, sanitized local queues, backend `/mobile/error-reports`, critical audit/support ticket creation and Nest worker logging. | External collector such as Sentry/Crashlytics plus alert routing and retention policy. |
+
 ## Non-Negotiable Build Rules
 
 1. No feature ships without a clear invariant, API contract and owner surface.
