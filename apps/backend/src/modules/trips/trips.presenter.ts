@@ -123,6 +123,7 @@ export function serializeTripDetail(trip: {
     verificationStatus: string;
     averageRating: unknown;
     completedTripsCount: number;
+    profilePhotoUrl?: string | null;
     user: { fullName: string; isPhoneVerified: boolean };
   };
   vehicle: {
@@ -200,7 +201,7 @@ export function serializeTripDetail(trip: {
             ? null
             : toAmount(trip.driver.averageRating),
         completedTripsCount: trip.driver.completedTripsCount,
-        profilePhotoUrl: null,
+        profilePhotoUrl: trip.driver.profilePhotoUrl ?? null,
         vehicle: {
           plateNumber: trip.vehicle.plateNumber,
           color: trip.vehicle.color,

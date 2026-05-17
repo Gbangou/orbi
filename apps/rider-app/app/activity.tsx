@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, Share, Text, StyleSheet, View } from 'react-native';
+import {
+  Image,
+  Linking,
+  Pressable,
+  ScrollView,
+  Share,
+  Text,
+  StyleSheet,
+  View,
+} from 'react-native';
 import {
   cancelRideRequestWithApi,
   createTripShareLinkWithApi,
@@ -658,11 +667,18 @@ export default function ActivityScreen() {
           {driverTrustSnapshot ? (
             <View style={styles.trustCard}>
               <View style={styles.identityRow}>
-                <View style={styles.avatarFallback}>
-                  <Text style={styles.avatarInitials}>
-                    {driverTrustSnapshot.initials}
-                  </Text>
-                </View>
+                {driverTrustSnapshot.profilePhotoUrl ? (
+                  <Image
+                    source={{ uri: driverTrustSnapshot.profilePhotoUrl }}
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Text style={styles.avatarInitials}>
+                      {driverTrustSnapshot.initials}
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.identityCopy}>
                   <Text style={styles.identityTitle}>
                     {driverTrustSnapshot.driverName}
@@ -866,6 +882,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(45, 212, 191, 0.16)',
     borderWidth: 1,
     borderColor: 'rgba(45, 212, 191, 0.36)',
+  },
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(45, 212, 191, 0.36)',
+    backgroundColor: orbiTheme.colors.backgroundAlt,
   },
   avatarInitials: {
     color: orbiTheme.colors.teal,

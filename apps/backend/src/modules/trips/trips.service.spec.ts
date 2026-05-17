@@ -38,6 +38,12 @@ describe('TripsService', () => {
     const realtimeService = {
       publish: jest.fn(),
     };
+    const documentLinksService = {
+      createViewLink: jest.fn().mockReturnValue({
+        signedUrl: 'https://storage.orbi.local/view/selfie.jpg?signed=1',
+        expiresAt: '2026-04-17T08:18:00.000Z',
+      }),
+    };
 
     prisma.$transaction.mockImplementation(
       async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
@@ -46,7 +52,12 @@ describe('TripsService', () => {
     return {
       prisma,
       realtimeService,
-      service: new TripsService(prisma as never, realtimeService as never),
+      documentLinksService,
+      service: new TripsService(
+        prisma as never,
+        realtimeService as never,
+        documentLinksService as never,
+      ),
     };
   }
 
@@ -1324,6 +1335,10 @@ describe('TripsService', () => {
         make: 'Yamaha',
         model: 'Crypton',
         color: 'rouge',
+        year: 2023,
+        seats: 2,
+        type: 'MOTORCYCLE',
+        tier: 'MOTO_STANDARD',
       },
       rideRequest: {
         pickupLatitude: 12.3714,
@@ -1388,11 +1403,16 @@ describe('TripsService', () => {
       phoneVerified: true,
       averageRating: 4.7,
       completedTripsCount: 84,
+      profilePhotoUrl: null,
       vehicle: {
         plateNumber: '11 AA 1234',
         color: 'rouge',
         make: 'Yamaha',
         model: 'Crypton',
+        year: 2023,
+        seats: 2,
+        type: 'MOTORCYCLE',
+        tier: 'MOTO_STANDARD',
       },
     });
     expect(result.trip.routeMonitoring).toEqual({
@@ -1418,6 +1438,84 @@ describe('TripsService', () => {
       expect.objectContaining({ label: 'Position trajet recue' }),
       expect.objectContaining({ label: 'Alerte monitoring trajet' }),
     ]);
+  });
+
+  it('exposes a signed driver profile photo only from an approved verified selfie', async () => {
+    const { documentLinksService, prisma, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-detail-1',
+      rideRequestId: 'request-detail-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'DRIVER_ARRIVING',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      destinationAddress: 'Ouaga 2000',
+      actualFare: 1600,
+      currency: 'XOF',
+      startedAt: null,
+      completedAt: null,
+      createdAt: new Date('2026-04-17T08:00:00.000Z'),
+      rider: {
+        user: {
+          fullName: 'Awa Rider',
+        },
+      },
+      driver: {
+        id: 'driver-1',
+        verificationStatus: 'APPROVED',
+        averageRating: 4.7,
+        completedTripsCount: 84,
+        user: {
+          fullName: 'Issa Driver',
+          isPhoneVerified: true,
+        },
+        onboardingDocuments: [
+          {
+            id: 'selfie-doc-1',
+            driverProfileId: 'driver-1',
+            type: 'SELFIE_VERIFICATION',
+            status: 'APPROVED',
+            storageKey: 'driver-1/selfie_verification/selfie.jpg',
+            metadata: {
+              objectVerification: {
+                state: 'confirmed',
+              },
+            },
+          },
+        ],
+      },
+      vehicle: {
+        plateNumber: '11 AA 1234',
+        make: 'Yamaha',
+        model: 'Crypton',
+        color: 'rouge',
+      },
+      rideRequest: null,
+      events: [],
+    });
+
+    const result = await service.getTripDetail(
+      {
+        user: {
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      'trip-detail-1',
+    );
+
+    expect(result.trip.driverVerification.profilePhotoUrl).toBe(
+      'https://storage.orbi.local/view/selfie.jpg?signed=1',
+    );
+    expect(documentLinksService.createViewLink).toHaveBeenCalledWith({
+      documentId: 'selfie-doc-1',
+      driverProfileId: 'driver-1',
+      storageKey: 'driver-1/selfie_verification/selfie.jpg',
+      actorRole: 'RIDER',
+    });
   });
 
   it('does not reveal trip detail to another rider', async () => {

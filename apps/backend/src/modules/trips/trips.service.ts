@@ -4,9 +4,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
-import { Prisma, TripStatus, UserRole } from '@prisma/client';
+import {
+  DriverDocumentStatus,
+  DriverDocumentType,
+  Prisma,
+  TripStatus,
+  UserRole,
+} from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
+import { DocumentLinksService } from '../../common/document-links/document-links.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import {
   ACTIVE_RIDE_REQUEST_STATUSES,
@@ -46,6 +53,15 @@ function hashShareToken(token: string) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isConfirmedDocumentObject(metadata: unknown) {
+  const metadataRecord = isRecord(metadata) ? metadata : {};
+  const objectVerification = isRecord(metadataRecord.objectVerification)
+    ? metadataRecord.objectVerification
+    : {};
+
+  return objectVerification.state === 'confirmed';
 }
 
 function toNumber(value: unknown) {
@@ -130,12 +146,21 @@ export class TripsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
+    private readonly documentLinksService: DocumentLinksService,
   ) {}
 
   async getTripDetail(auth: RequestAuthContext, tripId: string) {
     const trip = await this.findTripWithDetail(tripId);
     this.assertTripAccess(auth, trip);
-    return serializeTripDetail(trip);
+    const profilePhotoUrl = this.resolveDriverProfilePhotoUrl(trip, auth);
+
+    return serializeTripDetail({
+      ...trip,
+      driver: {
+        ...trip.driver,
+        profilePhotoUrl,
+      },
+    });
   }
 
   async createShareLink(auth: RequestAuthContext, tripId: string) {
@@ -1528,6 +1553,16 @@ export class TripsService {
         driver: {
           include: {
             user: true,
+            onboardingDocuments: {
+              where: {
+                type: DriverDocumentType.SELFIE_VERIFICATION,
+                status: DriverDocumentStatus.APPROVED,
+              },
+              orderBy: {
+                uploadedAt: 'desc',
+              },
+              take: 1,
+            },
           },
         },
         vehicle: true,
@@ -1752,6 +1787,41 @@ export class TripsService {
     ) {
       throw new NotFoundException('Trip not found.');
     }
+  }
+
+  private resolveDriverProfilePhotoUrl(
+    trip: {
+      driver: {
+        id: string;
+        onboardingDocuments?: Array<{
+          id: string;
+          driverProfileId: string;
+          type: DriverDocumentType;
+          status: DriverDocumentStatus;
+          storageKey: string;
+          metadata?: unknown;
+        }>;
+      };
+    },
+    auth: RequestAuthContext,
+  ) {
+    const selfieDocument = trip.driver.onboardingDocuments?.[0];
+
+    if (
+      !selfieDocument ||
+      selfieDocument.type !== DriverDocumentType.SELFIE_VERIFICATION ||
+      selfieDocument.status !== DriverDocumentStatus.APPROVED ||
+      !isConfirmedDocumentObject(selfieDocument.metadata)
+    ) {
+      return null;
+    }
+
+    return this.documentLinksService.createViewLink({
+      documentId: selfieDocument.id,
+      driverProfileId: selfieDocument.driverProfileId,
+      storageKey: selfieDocument.storageKey,
+      actorRole: auth.user.role,
+    }).signedUrl;
   }
 
   private assertDriverOwnsTrip(auth: RequestAuthContext, tripDriverId: string) {
