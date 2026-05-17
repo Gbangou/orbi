@@ -5,6 +5,7 @@ import {
   recordTripRoutePositionWithApi,
 } from "@orbi/api";
 import { restoreRiderSession } from "./auth";
+import { buildRiderPositionSyncedNote } from "./rider-position-signal";
 
 type RiderPositionStatus =
   | "idle"
@@ -106,9 +107,10 @@ export function useRiderPosition(input: {
           setLatestPosition(nextPosition);
 
           try {
+            let routePosition = null;
             if (input.activeTripId) {
               const { authClient } = await restoreRiderSession();
-              await recordTripRoutePositionWithApi(
+              routePosition = await recordTripRoutePositionWithApi(
                 authClient,
                 input.activeTripId,
                 {
@@ -126,9 +128,12 @@ export function useRiderPosition(input: {
 
             setPositionStatus("live");
             setPositionNote(
-              `Position passager synchronisee. Precision ${Math.round(
-                nextPosition.accuracyMeters ?? 0,
-              )} m.`,
+              buildRiderPositionSyncedNote({
+                accuracyMeters: nextPosition.accuracyMeters,
+                activeTripId: input.activeTripId,
+                latestPosition:
+                  routePosition?.routeMonitoring.latestPosition ?? null,
+              }),
             );
           } catch (error) {
             if (isDisposed) {

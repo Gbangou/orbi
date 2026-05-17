@@ -93,13 +93,13 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
               latitude: payload.latitude,
               longitude: payload.longitude,
             });
-            if (activeTripId) {
-              await recordTripRoutePositionWithApi(
-                authClient,
-                activeTripId,
-                payload,
-              );
-            }
+            const routePosition = activeTripId
+              ? await recordTripRoutePositionWithApi(
+                  authClient,
+                  activeTripId,
+                  payload,
+                )
+              : null;
 
             if (isDisposed) {
               return;
@@ -110,6 +110,8 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
               buildDriverPresenceSyncedNote({
                 accuracyMeters: payload.accuracyMeters,
                 activeTripId,
+                latestPosition:
+                  routePosition?.routeMonitoring.latestPosition ?? null,
               }),
             );
           } catch (error) {
