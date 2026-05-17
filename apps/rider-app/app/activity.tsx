@@ -73,11 +73,15 @@ function LiveApproachPreview({
   title,
   distanceLabel,
   stateLabel,
+  etaLabel,
+  freshnessLabel,
 }: {
   progressPercent: number;
   title: string;
   distanceLabel: string;
   stateLabel: string;
+  etaLabel?: string;
+  freshnessLabel: string;
 }) {
   const boundedProgress = Math.max(12, Math.min(88, progressPercent));
   const motion = useRef(new Animated.Value(0)).current;
@@ -124,6 +128,10 @@ function LiveApproachPreview({
 
   return (
     <View style={styles.approachMap}>
+      <View style={styles.approachGridLayer}>
+        <View style={styles.approachGridLine} />
+        <View style={[styles.approachGridLine, styles.approachGridLineLower]} />
+      </View>
       <View style={styles.approachRoad} />
       <Animated.View
         style={[
@@ -145,6 +153,11 @@ function LiveApproachPreview({
         ]}
       />
       <View style={styles.approachRoadMuted} />
+      <View style={styles.approachTrail}>
+        <View style={styles.approachTrailDot} />
+        <View style={[styles.approachTrailDot, styles.approachTrailDotMuted]} />
+        <View style={[styles.approachTrailDot, styles.approachTrailDotSoft]} />
+      </View>
       <Animated.View
         style={[
           styles.approachVehiclePin,
@@ -167,6 +180,10 @@ function LiveApproachPreview({
         <Text style={styles.approachPinLabel}>A</Text>
       </View>
       <View style={styles.approachMapCopy}>
+        <View style={styles.approachHudRow}>
+          <Text style={styles.approachHudLabel}>{etaLabel ?? "ETA live"}</Text>
+          <Text style={styles.approachHudLabel}>{freshnessLabel}</Text>
+        </View>
         <Text style={styles.approachMapTitle}>{title}</Text>
         <Text style={styles.approachMapMeta}>
           {distanceLabel} - {stateLabel}
@@ -847,6 +864,8 @@ export default function ActivityScreen() {
                 title={riderRouteProgress.title}
                 distanceLabel={riderRouteProgress.distanceLabel}
                 stateLabel={riderRouteProgress.stateLabel}
+                etaLabel={riderRouteProgress.etaLabel}
+                freshnessLabel={riderRouteProgress.freshnessLabel}
               />
               <LiveRouteProgressCard {...riderRouteProgress} />
             </>
@@ -1067,6 +1086,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 16,
   },
+  approachGridLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  approachGridLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 34,
+    height: 1,
+    backgroundColor: "rgba(148, 163, 184, 0.12)",
+  },
+  approachGridLineLower: {
+    top: 112,
+  },
   approachRoad: {
     position: "absolute",
     left: 24,
@@ -1093,6 +1126,28 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: 999,
     backgroundColor: "rgba(148, 163, 184, 0.28)",
+  },
+  approachTrail: {
+    position: "absolute",
+    left: 54,
+    right: 54,
+    top: 66,
+    height: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+  },
+  approachTrailDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "rgba(45, 212, 191, 0.7)",
+  },
+  approachTrailDotMuted: {
+    opacity: 0.46,
+  },
+  approachTrailDotSoft: {
+    opacity: 0.28,
   },
   approachVehiclePin: {
     position: "absolute",
@@ -1160,6 +1215,22 @@ const styles = StyleSheet.create({
   approachMapCopy: {
     marginTop: 78,
     gap: 3,
+  },
+  approachHudRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 2,
+  },
+  approachHudLabel: {
+    overflow: "hidden",
+    borderRadius: 999,
+    backgroundColor: "rgba(15, 23, 42, 0.5)",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    color: orbiTheme.colors.text,
+    fontSize: 11,
+    fontWeight: "800",
   },
   approachMapTitle: {
     color: orbiTheme.colors.text,

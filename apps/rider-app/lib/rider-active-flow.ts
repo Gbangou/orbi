@@ -2,12 +2,12 @@ import {
   isActiveTripLifecycleStatus,
   type MyTripsResponse,
   type TripDetailResponse,
-} from '@orbi/api';
-import { formatOperationalStatus, formatXof } from '@orbi/ui';
+} from "@orbi/api";
+import { formatOperationalStatus, formatXof } from "@orbi/ui";
 
 export type RiderActiveFlowSummary = {
-  activeTrip: MyTripsResponse['recentTrips'][number] | null;
-  activeRequest: MyTripsResponse['pendingRequests'][number] | null;
+  activeTrip: MyTripsResponse["recentTrips"][number] | null;
+  activeRequest: MyTripsResponse["pendingRequests"][number] | null;
   activeFlowState: string | null;
   hasOpenFlow: boolean;
   primaryStatusLabel: string;
@@ -18,8 +18,9 @@ export function resolveRiderActiveFlow(
   history: MyTripsResponse | null | undefined,
 ): RiderActiveFlowSummary {
   const activeTrip =
-    history?.recentTrips.find((trip) => isActiveTripLifecycleStatus(trip.status)) ??
-    null;
+    history?.recentTrips.find((trip) =>
+      isActiveTripLifecycleStatus(trip.status),
+    ) ?? null;
   const activeRequest = history?.pendingRequests[0] ?? null;
   const activeFlowState = activeTrip
     ? `TRIP:${activeTrip.status}`
@@ -36,7 +37,7 @@ export function resolveRiderActiveFlow(
       ? formatOperationalStatus(activeTrip.status)
       : activeRequest
         ? formatOperationalStatus(activeRequest.status)
-        : 'Aucun flux actif',
+        : "Aucun flux actif",
     primaryRouteLabel: activeTrip
       ? `${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`
       : activeRequest
@@ -51,7 +52,7 @@ export function buildRiderHomeStatusLabel(input: {
   optionCount: number;
 }) {
   if (input.flow.activeTrip) {
-    return `Course ${input.flow.activeTrip.status} avec ${input.flow.activeTrip.counterpartyName ?? 'votre chauffeur'}.`;
+    return `Course ${input.flow.activeTrip.status} avec ${input.flow.activeTrip.counterpartyName ?? "votre chauffeur"}.`;
   }
 
   if (input.flow.activeRequest) {
@@ -62,29 +63,29 @@ export function buildRiderHomeStatusLabel(input: {
 }
 
 export function buildRiderNextActionHint(flow: RiderActiveFlowSummary) {
-  if (flow.activeTrip?.status === 'MATCHED') {
-    return 'Verifiez le chauffeur, le vehicule et la plaque avant de monter.';
+  if (flow.activeTrip?.status === "MATCHED") {
+    return "Verifiez le chauffeur, le vehicule et la plaque avant de monter.";
   }
 
-  if (flow.activeTrip?.status === 'DRIVER_ARRIVING') {
+  if (flow.activeTrip?.status === "DRIVER_ARRIVING") {
     return flow.activeTrip.pickupCode
-      ? 'Gardez le code pickup pret et ne le donnez qu au bon chauffeur.'
-      : 'Attendez le chauffeur au point de depart confirme.';
+      ? "Gardez le code pickup pret et ne le donnez qu au bon chauffeur."
+      : "Attendez le chauffeur au point de depart confirme.";
   }
 
-  if (flow.activeTrip?.status === 'IN_PROGRESS') {
-    return 'Suivez le trajet live et utilisez SOS ou partage si la course devient sensible.';
+  if (flow.activeTrip?.status === "IN_PROGRESS") {
+    return "Suivez le trajet live et utilisez SOS ou partage si la course devient sensible.";
   }
 
   if (flow.activeTrip) {
-    return 'Le flux actif est en transition, actualisez le suivi si besoin.';
+    return "Le flux actif est en transition, actualisez le suivi si besoin.";
   }
 
   if (flow.activeRequest) {
-    return 'Restez joignable: le dispatch cherche un chauffeur compatible.';
+    return "Restez joignable: le dispatch cherche un chauffeur compatible.";
   }
 
-  return 'Aucune action urgente: vous pouvez preparer une nouvelle reservation.';
+  return "Aucune action urgente: vous pouvez preparer une nouvelle reservation.";
 }
 
 export function buildRiderMissionSnapshot(input: {
@@ -103,53 +104,53 @@ export function buildRiderMissionSnapshot(input: {
   const latestPosition = routeMonitoring?.latestPosition ?? null;
   const pickupCode = detail?.pickupCode ?? activeTrip.pickupCode ?? null;
   const approachDistance =
-    activeTrip.status === 'IN_PROGRESS'
+    activeTrip.status === "IN_PROGRESS"
       ? latestPosition?.distanceToDestinationKm
       : latestPosition?.distanceToPickupKm;
 
   return [
     {
-      label: 'Action',
+      label: "Action",
       value: input.flow.primaryStatusLabel,
       helper: buildRiderNextActionHint(input.flow),
     },
     {
-      label: 'Chauffeur',
+      label: "Chauffeur",
       value: verification
         ? formatOperationalStatus(verification.verificationStatus)
-        : activeTrip.counterpartyName ?? 'Assigne',
+        : (activeTrip.counterpartyName ?? "Assigne"),
       helper: verification
         ? `${verification.vehicle.color} ${verification.vehicle.make} ${verification.vehicle.model}`
-        : activeTrip.vehicleLabel ?? 'Details vehicule en attente',
+        : (activeTrip.vehicleLabel ?? "Details vehicule en attente"),
     },
     {
-      label: activeTrip.status === 'IN_PROGRESS' ? 'Destination' : 'Approche',
+      label: activeTrip.status === "IN_PROGRESS" ? "Destination" : "Approche",
       value:
-        typeof approachDistance === 'number'
+        typeof approachDistance === "number"
           ? `${approachDistance.toFixed(1)} km`
           : routeMonitoring
             ? formatOperationalStatus(routeMonitoring.state)
-            : 'Position',
+            : "Position",
       helper:
-        typeof approachDistance === 'number'
+        typeof approachDistance === "number"
           ? latestPosition?.observedAt
             ? `Dernier signal ${formatTimeLabel(latestPosition.observedAt)}`
-            : 'Position chauffeur recue'
+            : "Position chauffeur recue"
           : routeMonitoring
             ? routeMonitoring.alertCount > 0
               ? `${routeMonitoring.alertCount} signal route`
-              : 'Trajet coherent'
-            : 'En attente du premier signal route',
+              : "Trajet coherent"
+            : "En attente du premier signal route",
     },
     {
-      label: 'Code',
-      value: pickupCode ? pickupCode : 'Attente',
+      label: "Code",
+      value: pickupCode ? pickupCode : "Attente",
       helper: pickupCode
-        ? 'A communiquer uniquement au bon chauffeur'
-        : 'Code visible quand le chauffeur arrive',
+        ? "A communiquer uniquement au bon chauffeur"
+        : "Code visible quand le chauffeur arrive",
     },
     {
-      label: 'Tarif',
+      label: "Tarif",
       value: formatXof(detail?.actualFare ?? activeTrip.amount),
       helper: activeTrip.currency,
     },
@@ -169,7 +170,7 @@ export function buildRiderLiveRouteProgress(input: {
     return null;
   }
 
-  const isHeadingToDestination = activeTrip.status === 'IN_PROGRESS';
+  const isHeadingToDestination = activeTrip.status === "IN_PROGRESS";
   const remainingDistanceKm = isHeadingToDestination
     ? latestPosition.distanceToDestinationKm
     : latestPosition.distanceToPickupKm;
@@ -179,39 +180,43 @@ export function buildRiderLiveRouteProgress(input: {
     now: input.now,
   });
   const etaLabel =
-    typeof remainingDistanceKm === 'number'
+    typeof remainingDistanceKm === "number"
       ? estimateArrivalLabel({
           remainingDistanceKm,
           speedKph: latestPosition.speedKph,
           isHeadingToDestination,
         })
-      : 'ETA en attente';
+      : "ETA en attente";
 
   return {
     title: isHeadingToDestination
-      ? 'Trajet vers destination'
-      : 'Chauffeur en approche',
+      ? "Trajet vers destination"
+      : "Chauffeur en approche",
     stateLabel: formatOperationalStatus(routeMonitoring.state),
     distanceLabel:
-      typeof remainingDistanceKm === 'number'
+      typeof remainingDistanceKm === "number"
         ? `${remainingDistanceKm.toFixed(1)} km restant`
-        : 'Distance en attente',
+        : "Distance en attente",
     progressPercent:
-      typeof remainingDistanceKm === 'number'
+      typeof remainingDistanceKm === "number"
         ? estimateRouteProgressPercent(remainingDistanceKm)
-        : routeMonitoring.state === 'clear'
+        : routeMonitoring.state === "clear"
           ? 42
           : 18,
     freshnessLabel: signalHealth.freshnessLabel,
-    coordinateLabel: `${latestPosition.latitude.toFixed(5)}, ${latestPosition.longitude.toFixed(5)}`,
+    coordinateLabel: formatApproxCoordinateLabel(
+      latestPosition.latitude,
+      latestPosition.longitude,
+      "Zone chauffeur",
+    ),
     accuracyLabel:
-      typeof latestPosition.accuracyMeters === 'number'
+      typeof latestPosition.accuracyMeters === "number"
         ? `Precision ${Math.round(latestPosition.accuracyMeters)} m`
-        : 'Precision inconnue',
+        : "Precision inconnue",
     speedLabel:
-      typeof latestPosition.speedKph === 'number'
+      typeof latestPosition.speedKph === "number"
         ? `${Math.round(latestPosition.speedKph)} km/h`
-        : 'Vitesse indisponible',
+        : "Vitesse indisponible",
     etaLabel,
     note: signalHealth.note,
     tone: signalHealth.tone,
@@ -229,51 +234,51 @@ export function buildRiderRouteSignalHealth(input: {
 
   if (Number.isNaN(observedAt.getTime()) || Number.isNaN(now.getTime())) {
     return {
-      freshnessLabel: 'Signal recent',
-      note: 'Signal route recu, horodatage a verifier.',
-      tone: 'amber' as const,
+      freshnessLabel: "Signal recent",
+      note: "Signal route recu, horodatage a verifier.",
+      tone: "amber" as const,
     };
   }
 
   const ageSeconds = Math.max(0, Math.round(ageMs / 1000));
   const freshnessLabel =
     ageSeconds < 45
-      ? 'Signal maintenant'
+      ? "Signal maintenant"
       : ageSeconds < 120
         ? `Signal il y a ${Math.round(ageSeconds / 60)} min`
         : `Signal ancien ${Math.round(ageSeconds / 60)} min`;
 
-  if (input.routeState === 'critical') {
+  if (input.routeState === "critical") {
     return {
       freshnessLabel,
-      note: 'Alerte route critique: restez attentif et gardez le partage actif.',
-      tone: 'rose' as const,
+      note: "Alerte route critique: restez attentif et gardez le partage actif.",
+      tone: "rose" as const,
     };
   }
 
-  if (input.routeState === 'warning') {
+  if (input.routeState === "warning") {
     return {
       freshnessLabel,
-      note: 'Signal route a surveiller: les operations voient aussi cette anomalie.',
-      tone: 'amber' as const,
+      note: "Signal route a surveiller: les operations voient aussi cette anomalie.",
+      tone: "amber" as const,
     };
   }
 
   if (ageSeconds >= 120) {
     return {
       freshnessLabel,
-      note: 'Signal chauffeur ancien: Orbi garde le dernier point et attend une nouvelle position.',
-      tone: 'amber' as const,
+      note: "Signal chauffeur ancien: Orbi garde le dernier point et attend une nouvelle position.",
+      tone: "amber" as const,
     };
   }
 
   return {
     freshnessLabel,
     note:
-      input.routeState === 'unknown'
-        ? 'Le premier signal route est attendu.'
-        : 'Le dernier signal route est coherent.',
-    tone: 'sky' as const,
+      input.routeState === "unknown"
+        ? "Le premier signal route est attendu."
+        : "Le dernier signal route est coherent.",
+    tone: "sky" as const,
   };
 }
 
@@ -305,14 +310,14 @@ export function buildRiderDriverTrustSnapshot(input: {
         ? `${verification.completedTripsCount} courses`
         : `${verification.averageRating.toFixed(1)}/5, ${verification.completedTripsCount} courses`,
     phoneLabel: verification.phoneVerified
-      ? 'Telephone verifie'
-      : 'Telephone non verifie',
+      ? "Telephone verifie"
+      : "Telephone non verifie",
     vehicleLabel: `${vehicle.color} ${vehicle.make} ${vehicle.model}`,
     plateLabel: vehicle.plateNumber,
     vehicleMeta,
     photoLabel: verification.profilePhotoUrl
-      ? 'Photo chauffeur verifiee'
-      : 'Photo chauffeur pas encore exposee',
+      ? "Photo chauffeur verifiee"
+      : "Photo chauffeur pas encore exposee",
   };
 }
 
@@ -343,7 +348,7 @@ function estimateArrivalLabel(input: {
 }) {
   const fallbackSpeedKph = input.isHeadingToDestination ? 24 : 18;
   const speedKph =
-    typeof input.speedKph === 'number' && input.speedKph >= 6
+    typeof input.speedKph === "number" && input.speedKph >= 6
       ? input.speedKph
       : fallbackSpeedKph;
   const etaMinutes = Math.max(
@@ -356,96 +361,131 @@ function estimateArrivalLabel(input: {
     : `Pickup ~${etaMinutes} min`;
 }
 
+function formatApproxCoordinateLabel(
+  latitude: number,
+  longitude: number,
+  label: string,
+) {
+  return `${label} approx. ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+}
+
 function buildInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('') || 'OR';
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "OR"
+  );
 }
 
 function formatTimeLabel(value: string) {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return 'recent';
+    return "recent";
   }
 
-  return date.toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit',
+  return date.toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
 export function buildRiderFlowTransitionLabel(
   previousFlowState: string | null,
   nextFlowState: string | null,
-  surface: 'home' | 'booking' | 'activity' | 'account' | 'voice',
+  surface: "home" | "booking" | "activity" | "account" | "voice",
 ) {
   const nextStatus = extractStatusFromFlowState(nextFlowState);
 
-  if (surface === 'home') {
-    if (previousFlowState && nextFlowState && previousFlowState !== nextFlowState && nextStatus) {
+  if (surface === "home") {
+    if (
+      previousFlowState &&
+      nextFlowState &&
+      previousFlowState !== nextFlowState &&
+      nextStatus
+    ) {
       return `Evolution live: ${formatOperationalStatus(nextStatus)}.`;
     }
 
     if (previousFlowState && !nextFlowState) {
-      return 'Le flux actif a disparu de la vue principale.';
+      return "Le flux actif a disparu de la vue principale.";
     }
 
     return null;
   }
 
-  if (surface === 'booking') {
+  if (surface === "booking") {
     if (!previousFlowState && nextFlowState) {
-      return 'Une reservation active vient d apparaitre dans le flux live.';
+      return "Une reservation active vient d apparaitre dans le flux live.";
     }
 
-    if (previousFlowState && nextFlowState && previousFlowState !== nextFlowState && nextStatus) {
+    if (
+      previousFlowState &&
+      nextFlowState &&
+      previousFlowState !== nextFlowState &&
+      nextStatus
+    ) {
       return `La reservation a change de phase: ${formatOperationalStatus(nextStatus)}.`;
     }
 
     if (previousFlowState && !nextFlowState) {
-      return 'Le flux actif a ete nettoye de cette reservation.';
+      return "Le flux actif a ete nettoye de cette reservation.";
     }
 
     return null;
   }
 
-  if (surface === 'account') {
+  if (surface === "account") {
     if (!previousFlowState && nextFlowState && nextStatus) {
       return `Le compte reflete maintenant un flux actif: ${formatOperationalStatus(nextStatus)}.`;
     }
 
-    if (previousFlowState && nextFlowState && previousFlowState !== nextFlowState && nextStatus) {
+    if (
+      previousFlowState &&
+      nextFlowState &&
+      previousFlowState !== nextFlowState &&
+      nextStatus
+    ) {
       return `Le compte a resynchronise le flux actif: ${formatOperationalStatus(nextStatus)}.`;
     }
 
     if (previousFlowState && !nextFlowState) {
-      return 'Le compte ne detecte plus de reservation active.';
+      return "Le compte ne detecte plus de reservation active.";
     }
 
     return null;
   }
 
-  if (surface === 'voice') {
+  if (surface === "voice") {
     if (!previousFlowState && nextFlowState && nextStatus) {
       return `La voix detecte maintenant un flux actif: ${formatOperationalStatus(nextStatus)}.`;
     }
 
-    if (previousFlowState && nextFlowState && previousFlowState !== nextFlowState && nextStatus) {
+    if (
+      previousFlowState &&
+      nextFlowState &&
+      previousFlowState !== nextFlowState &&
+      nextStatus
+    ) {
       return `Le contexte vocal a change de phase: ${formatOperationalStatus(nextStatus)}.`;
     }
 
     if (previousFlowState && !nextFlowState) {
-      return 'Le contexte vocal n a plus de reservation active a rattacher.';
+      return "Le contexte vocal n a plus de reservation active a rattacher.";
     }
 
     return null;
   }
 
-  if (previousFlowState && nextFlowState && previousFlowState !== nextFlowState && nextStatus) {
+  if (
+    previousFlowState &&
+    nextFlowState &&
+    previousFlowState !== nextFlowState &&
+    nextStatus
+  ) {
     return `Changement critique: ${formatOperationalStatus(nextStatus)}.`;
   }
 
@@ -454,28 +494,28 @@ export function buildRiderFlowTransitionLabel(
 
 export function buildRiderPeripheralStatusLabel(input: {
   flow: RiderActiveFlowSummary;
-  surface: 'account' | 'voice';
+  surface: "account" | "voice";
   fullName?: string;
 }) {
   if (input.flow.activeTrip) {
-    return input.surface === 'account'
+    return input.surface === "account"
       ? `Profil charge. Course ${input.flow.activeTrip.status} en cours.`
       : `Contexte vocal charge. Course ${input.flow.activeTrip.status} en cours.`;
   }
 
   if (input.flow.activeRequest) {
-    return input.surface === 'account'
+    return input.surface === "account"
       ? `Profil charge. Demande ${input.flow.activeRequest.status} en cours.`
       : `Contexte vocal charge. Demande ${input.flow.activeRequest.status} en cours.`;
   }
 
-  if (input.surface === 'account') {
+  if (input.surface === "account") {
     return input.fullName
       ? `Profil charge pour ${input.fullName}.`
-      : 'Profil charge depuis la session reelle.';
+      : "Profil charge depuis la session reelle.";
   }
 
-  return 'Contexte vocal charge depuis la session reelle.';
+  return "Contexte vocal charge depuis la session reelle.";
 }
 
 function extractStatusFromFlowState(flowState: string | null) {
@@ -483,7 +523,7 @@ function extractStatusFromFlowState(flowState: string | null) {
     return null;
   }
 
-  const [, status] = flowState.split(':');
+  const [, status] = flowState.split(":");
 
   return status ?? null;
 }

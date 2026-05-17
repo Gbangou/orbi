@@ -3,23 +3,23 @@ import {
   type DriverOffer,
   type MyTripsResponse,
   type TripDetailResponse,
-} from '@orbi/api';
-import { formatOperationalStatus, formatXof } from '@orbi/ui';
-import { isOfferReservationActive } from './offer-reservation';
+} from "@orbi/api";
+import { formatOperationalStatus, formatXof } from "@orbi/ui";
+import { isOfferReservationActive } from "./offer-reservation";
 
 export type DriverResolvedOperationalStatus =
-  | 'ONLINE'
-  | 'OFFLINE'
-  | 'BUSY'
-  | 'SUSPENDED';
+  | "ONLINE"
+  | "OFFLINE"
+  | "BUSY"
+  | "SUSPENDED";
 
 export type DriverActiveFlowSummary = {
-  activeTrip: MyTripsResponse['recentTrips'][number] | null;
+  activeTrip: MyTripsResponse["recentTrips"][number] | null;
   activeFlowState: string | null;
   primaryStatusLabel: string;
   primaryRouteLabel: string | null;
   operationalStatus: DriverResolvedOperationalStatus;
-  availabilityStatus: 'ONLINE' | 'OFFLINE';
+  availabilityStatus: "ONLINE" | "OFFLINE";
   heroTitle: string;
   visibleOffers: DriverOffer[];
   visibleOfferCount: number;
@@ -34,14 +34,20 @@ export function resolveDriverActiveFlow(input: {
   driverProfileStatus: string | null | undefined;
 }): DriverActiveFlowSummary {
   const activeTrip =
-    input.history?.recentTrips.find((trip) => isActiveTripLifecycleStatus(trip.status)) ??
-    null;
-  const normalizedProfileStatus = normalizeDriverProfileStatus(input.driverProfileStatus);
-  const operationalStatus = activeTrip ? 'BUSY' : normalizedProfileStatus;
-  const availabilityStatus = normalizedProfileStatus === 'ONLINE' ? 'ONLINE' : 'OFFLINE';
-  const canReceiveOffers = availabilityStatus === 'ONLINE' && !activeTrip;
+    input.history?.recentTrips.find((trip) =>
+      isActiveTripLifecycleStatus(trip.status),
+    ) ?? null;
+  const normalizedProfileStatus = normalizeDriverProfileStatus(
+    input.driverProfileStatus,
+  );
+  const operationalStatus = activeTrip ? "BUSY" : normalizedProfileStatus;
+  const availabilityStatus =
+    normalizedProfileStatus === "ONLINE" ? "ONLINE" : "OFFLINE";
+  const canReceiveOffers = availabilityStatus === "ONLINE" && !activeTrip;
   const visibleOffers = canReceiveOffers
-    ? input.offers.filter((offer) => isOfferReservationActive(offer, input.reservationNow))
+    ? input.offers.filter((offer) =>
+        isOfferReservationActive(offer, input.reservationNow),
+      )
     : [];
 
   return {
@@ -56,17 +62,18 @@ export function resolveDriverActiveFlow(input: {
     operationalStatus,
     availabilityStatus,
     heroTitle:
-      operationalStatus === 'BUSY'
-        ? 'Occupe'
-        : operationalStatus === 'ONLINE'
-          ? 'En ligne'
-          : operationalStatus === 'SUSPENDED'
-            ? 'Suspendu'
-            : 'Hors ligne',
+      operationalStatus === "BUSY"
+        ? "Occupe"
+        : operationalStatus === "ONLINE"
+          ? "En ligne"
+          : operationalStatus === "SUSPENDED"
+            ? "Suspendu"
+            : "Hors ligne",
     visibleOffers,
     visibleOfferCount: visibleOffers.length,
     canReceiveOffers,
-    availabilityLocked: Boolean(activeTrip) || operationalStatus === 'SUSPENDED',
+    availabilityLocked:
+      Boolean(activeTrip) || operationalStatus === "SUSPENDED",
   };
 }
 
@@ -75,11 +82,11 @@ export function buildDriverHomeStatusLabel(input: {
   fullName: string;
 }) {
   if (input.flow.activeTrip) {
-    return `Course ${input.flow.activeTrip.status} avec ${input.flow.activeTrip.counterpartyName ?? 'votre client'}.`;
+    return `Course ${input.flow.activeTrip.status} avec ${input.flow.activeTrip.counterpartyName ?? "votre client"}.`;
   }
 
-  if (input.flow.operationalStatus === 'SUSPENDED') {
-    return 'Compte suspendu. Contactez les operations pour reprendre le direct.';
+  if (input.flow.operationalStatus === "SUSPENDED") {
+    return "Compte suspendu. Contactez les operations pour reprendre le direct.";
   }
 
   return `Connecte comme ${input.fullName}. Statut ${input.flow.availabilityStatus}. ${input.flow.visibleOfferCount} offres disponibles et 0 course active.`;
@@ -89,40 +96,40 @@ export function buildDriverDispatchStatusLabel(input: {
   flow: DriverActiveFlowSummary;
 }) {
   if (input.flow.activeTrip) {
-    return `Course ${input.flow.activeTrip.status} avec ${input.flow.activeTrip.counterpartyName ?? 'votre client'}.`;
+    return `Course ${input.flow.activeTrip.status} avec ${input.flow.activeTrip.counterpartyName ?? "votre client"}.`;
   }
 
-  if (input.flow.operationalStatus === 'SUSPENDED') {
-    return 'Compte suspendu. Le dispatch reste bloque tant que les operations n ont pas reactive le profil.';
+  if (input.flow.operationalStatus === "SUSPENDED") {
+    return "Compte suspendu. Le dispatch reste bloque tant que les operations n ont pas reactive le profil.";
   }
 
   return `${input.flow.visibleOfferCount} offres chargees. Statut chauffeur ${input.flow.availabilityStatus}.`;
 }
 
 export function buildDriverNextActionHint(flow: DriverActiveFlowSummary) {
-  if (flow.activeTrip?.status === 'MATCHED') {
-    return 'Rejoignez le point de depart et signalez votre arrivee uniquement sur place.';
+  if (flow.activeTrip?.status === "MATCHED") {
+    return "Rejoignez le point de depart et signalez votre arrivee uniquement sur place.";
   }
 
-  if (flow.activeTrip?.status === 'DRIVER_ARRIVING') {
-    return 'Demandez le code pickup au passager avant de demarrer la course.';
+  if (flow.activeTrip?.status === "DRIVER_ARRIVING") {
+    return "Demandez le code pickup au passager avant de demarrer la course.";
   }
 
-  if (flow.activeTrip?.status === 'IN_PROGRESS') {
-    return 'Terminez la course seulement apres depot au point confirme.';
+  if (flow.activeTrip?.status === "IN_PROGRESS") {
+    return "Terminez la course seulement apres depot au point confirme.";
   }
 
-  if (flow.operationalStatus === 'SUSPENDED') {
-    return 'Aucune action terrain: attendez la reactivation par les operations.';
+  if (flow.operationalStatus === "SUSPENDED") {
+    return "Aucune action terrain: attendez la reactivation par les operations.";
   }
 
-  if (flow.availabilityStatus === 'ONLINE') {
+  if (flow.availabilityStatus === "ONLINE") {
     return flow.visibleOfferCount > 0
-      ? 'Traitez les offres reservees avant expiration.'
-      : 'Restez proche de votre zone et gardez la presence active.';
+      ? "Traitez les offres reservees avant expiration."
+      : "Restez proche de votre zone et gardez la presence active.";
   }
 
-  return 'Passez en ligne quand vous etes pret a recevoir des offres.';
+  return "Passez en ligne quand vous etes pret a recevoir des offres.";
 }
 
 export function buildDriverMissionSnapshot(input: {
@@ -140,49 +147,49 @@ export function buildDriverMissionSnapshot(input: {
   const latestPosition = routeMonitoring?.latestPosition ?? null;
   const pickupCode = detail?.pickupCode ?? activeTrip.pickupCode ?? null;
   const approachDistance =
-    activeTrip.status === 'IN_PROGRESS'
+    activeTrip.status === "IN_PROGRESS"
       ? latestPosition?.distanceToDestinationKm
       : latestPosition?.distanceToPickupKm;
 
   return [
     {
-      label: 'Action',
+      label: "Action",
       value: input.flow.primaryStatusLabel,
       helper: buildDriverNextActionHint(input.flow),
     },
     {
-      label: 'Passager',
-      value: activeTrip.counterpartyName ?? detail?.riderName ?? 'Assigne',
+      label: "Passager",
+      value: activeTrip.counterpartyName ?? detail?.riderName ?? "Assigne",
       helper: pickupCode
         ? `Code attendu: ${pickupCode}`
-        : 'Verifier le passager avant depart',
+        : "Verifier le passager avant depart",
     },
     {
-      label: activeTrip.status === 'IN_PROGRESS' ? 'Destination' : 'Pickup',
+      label: activeTrip.status === "IN_PROGRESS" ? "Destination" : "Pickup",
       value:
-        typeof approachDistance === 'number'
+        typeof approachDistance === "number"
           ? `${approachDistance.toFixed(1)} km`
           : routeMonitoring
             ? formatOperationalStatus(routeMonitoring.state)
-            : 'En attente',
+            : "En attente",
       helper:
-        typeof approachDistance === 'number'
+        typeof approachDistance === "number"
           ? latestPosition?.observedAt
             ? `Dernier signal ${formatTimeLabel(latestPosition.observedAt)}`
-            : 'Position mission recue'
+            : "Position mission recue"
           : routeMonitoring
             ? routeMonitoring.alertCount > 0
               ? `${routeMonitoring.alertCount} signal route`
-              : 'Trajet coherent'
-            : 'Premier signal route attendu',
+              : "Trajet coherent"
+            : "Premier signal route attendu",
     },
     {
-      label: 'Vehicule',
-      value: activeTrip.vehicleLabel ?? detail?.vehicleLabel ?? 'Actif',
-      helper: 'Profil verrouille pendant la mission',
+      label: "Vehicule",
+      value: activeTrip.vehicleLabel ?? detail?.vehicleLabel ?? "Actif",
+      helper: "Profil verrouille pendant la mission",
     },
     {
-      label: 'Tarif',
+      label: "Tarif",
       value: formatXof(detail?.actualFare ?? activeTrip.amount),
       helper: activeTrip.currency,
     },
@@ -201,46 +208,60 @@ export function buildDriverLiveRouteProgress(input: {
     return null;
   }
 
-  const isHeadingToDestination = activeTrip.status === 'IN_PROGRESS';
+  const isHeadingToDestination = activeTrip.status === "IN_PROGRESS";
   const remainingDistanceKm = isHeadingToDestination
     ? latestPosition.distanceToDestinationKm
     : latestPosition.distanceToPickupKm;
 
   return {
-    title: isHeadingToDestination ? 'Progression destination' : 'Approche pickup',
+    title: isHeadingToDestination
+      ? "Progression destination"
+      : "Approche pickup",
     stateLabel: formatOperationalStatus(routeMonitoring.state),
     distanceLabel:
-      typeof remainingDistanceKm === 'number'
+      typeof remainingDistanceKm === "number"
         ? `${remainingDistanceKm.toFixed(1)} km restant`
-        : 'Distance en attente',
+        : "Distance en attente",
     progressPercent:
-      typeof remainingDistanceKm === 'number'
+      typeof remainingDistanceKm === "number"
         ? estimateRouteProgressPercent(remainingDistanceKm)
-        : routeMonitoring.state === 'clear'
+        : routeMonitoring.state === "clear"
           ? 42
           : 18,
     freshnessLabel: `Signal ${formatTimeLabel(latestPosition.observedAt)}`,
-    coordinateLabel: `${latestPosition.latitude.toFixed(5)}, ${latestPosition.longitude.toFixed(5)}`,
+    coordinateLabel: formatApproxCoordinateLabel(
+      latestPosition.latitude,
+      latestPosition.longitude,
+      "Zone mission",
+    ),
     accuracyLabel:
-      typeof latestPosition.accuracyMeters === 'number'
+      typeof latestPosition.accuracyMeters === "number"
         ? `Precision ${Math.round(latestPosition.accuracyMeters)} m`
-        : 'Precision inconnue',
+        : "Precision inconnue",
     speedLabel:
-      typeof latestPosition.speedKph === 'number'
+      typeof latestPosition.speedKph === "number"
         ? `${Math.round(latestPosition.speedKph)} km/h`
-        : 'Vitesse indisponible',
+        : "Vitesse indisponible",
+    etaLabel:
+      typeof remainingDistanceKm === "number"
+        ? estimateArrivalLabel({
+            remainingDistanceKm,
+            speedKph: latestPosition.speedKph,
+            isHeadingToDestination,
+          })
+        : "ETA en attente",
     note:
-      routeMonitoring.state === 'unknown'
-        ? 'Premier signal route attendu par les operations.'
-        : routeMonitoring.state === 'clear'
-          ? 'Route coherente sur le dernier signal.'
-          : 'Une anomalie route est visible cote operations.',
+      routeMonitoring.state === "unknown"
+        ? "Premier signal route attendu par les operations."
+        : routeMonitoring.state === "clear"
+          ? "Route coherente sur le dernier signal."
+          : "Une anomalie route est visible cote operations.",
     tone:
-      routeMonitoring.state === 'critical'
-        ? 'rose'
-        : routeMonitoring.state === 'warning'
-          ? 'amber'
-          : 'sky',
+      routeMonitoring.state === "critical"
+        ? "rose"
+        : routeMonitoring.state === "warning"
+          ? "amber"
+          : "sky",
   } as const;
 }
 
@@ -282,25 +303,55 @@ function estimateRouteProgressPercent(remainingDistanceKm: number) {
   return 18;
 }
 
+function estimateArrivalLabel(input: {
+  remainingDistanceKm: number;
+  speedKph?: number | null;
+  isHeadingToDestination: boolean;
+}) {
+  const fallbackSpeedKph = input.isHeadingToDestination ? 24 : 18;
+  const speedKph =
+    typeof input.speedKph === "number" && input.speedKph >= 6
+      ? input.speedKph
+      : fallbackSpeedKph;
+  const etaMinutes = Math.max(
+    1,
+    Math.round((input.remainingDistanceKm / speedKph) * 60),
+  );
+
+  return input.isHeadingToDestination
+    ? `Arrivee ~${etaMinutes} min`
+    : `Pickup ~${etaMinutes} min`;
+}
+
 function buildInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('') || 'OR';
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "OR"
+  );
+}
+
+function formatApproxCoordinateLabel(
+  latitude: number,
+  longitude: number,
+  label: string,
+) {
+  return `${label} approx. ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 }
 
 function formatTimeLabel(value: string) {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return 'recent';
+    return "recent";
   }
 
-  return date.toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit',
+  return date.toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -311,13 +362,13 @@ export function buildDriverEarningsStatusLabel(input: {
     return `Revenus synchronises. Mission ${input.flow.primaryStatusLabel} en cours.`;
   }
 
-  if (input.flow.operationalStatus === 'SUSPENDED') {
-    return 'Revenus synchronises. Compte suspendu, reprise du direct en attente des operations.';
+  if (input.flow.operationalStatus === "SUSPENDED") {
+    return "Revenus synchronises. Compte suspendu, reprise du direct en attente des operations.";
   }
 
-  return input.flow.availabilityStatus === 'ONLINE'
-    ? 'Revenus charges depuis le flux protege. Chauffeur en ligne pour le dispatch.'
-    : 'Revenus charges depuis le flux protege. Chauffeur hors ligne, historique toujours disponible.';
+  return input.flow.availabilityStatus === "ONLINE"
+    ? "Revenus charges depuis le flux protege. Chauffeur en ligne pour le dispatch."
+    : "Revenus charges depuis le flux protege. Chauffeur hors ligne, historique toujours disponible.";
 }
 
 export function buildDriverProfileStatusLabel(input: {
@@ -327,33 +378,38 @@ export function buildDriverProfileStatusLabel(input: {
     return `Profil charge. Mission ${input.flow.primaryStatusLabel} en cours.`;
   }
 
-  if (input.flow.operationalStatus === 'SUSPENDED') {
-    return 'Profil charge. Compte suspendu, revue operations requise.';
+  if (input.flow.operationalStatus === "SUSPENDED") {
+    return "Profil charge. Compte suspendu, revue operations requise.";
   }
 
-  return input.flow.availabilityStatus === 'ONLINE'
-    ? 'Profil charge depuis la session reelle. Chauffeur en ligne.'
-    : 'Profil charge depuis la session reelle. Chauffeur hors ligne.';
+  return input.flow.availabilityStatus === "ONLINE"
+    ? "Profil charge depuis la session reelle. Chauffeur en ligne."
+    : "Profil charge depuis la session reelle. Chauffeur hors ligne.";
 }
 
 export function buildDriverFlowTransitionLabel(
   previousFlowState: string | null,
   nextFlowState: string | null,
-  surface: 'home' | 'offers',
+  surface: "home" | "offers",
 ) {
   const nextStatus = extractStatusFromFlowState(nextFlowState);
 
-  if (surface === 'home') {
+  if (surface === "home") {
     if (!previousFlowState && nextFlowState && nextStatus) {
       return `Mission active ouverte: ${formatOperationalStatus(nextStatus)}.`;
     }
 
-    if (previousFlowState && nextFlowState && previousFlowState !== nextFlowState && nextStatus) {
+    if (
+      previousFlowState &&
+      nextFlowState &&
+      previousFlowState !== nextFlowState &&
+      nextStatus
+    ) {
       return `Evolution live: ${formatOperationalStatus(nextStatus)}.`;
     }
 
     if (previousFlowState && !nextFlowState) {
-      return 'La mission active a quitte le cockpit.';
+      return "La mission active a quitte le cockpit.";
     }
 
     return null;
@@ -363,12 +419,17 @@ export function buildDriverFlowTransitionLabel(
     return `Mission live ouverte: ${formatOperationalStatus(nextStatus)}.`;
   }
 
-  if (previousFlowState && nextFlowState && previousFlowState !== nextFlowState && nextStatus) {
+  if (
+    previousFlowState &&
+    nextFlowState &&
+    previousFlowState !== nextFlowState &&
+    nextStatus
+  ) {
     return `Statut critique mis a jour: ${formatOperationalStatus(nextStatus)}.`;
   }
 
   if (previousFlowState && !nextFlowState) {
-    return 'La mission active a quitte le flux live.';
+    return "La mission active a quitte le flux live.";
   }
 
   return null;
@@ -395,20 +456,22 @@ export function resolveDriverReservationChangeSet(
   };
 }
 
-function normalizeDriverProfileStatus(status: string | null | undefined): DriverResolvedOperationalStatus {
-  if (status === 'ONLINE') {
-    return 'ONLINE';
+function normalizeDriverProfileStatus(
+  status: string | null | undefined,
+): DriverResolvedOperationalStatus {
+  if (status === "ONLINE") {
+    return "ONLINE";
   }
 
-  if (status === 'BUSY') {
-    return 'BUSY';
+  if (status === "BUSY") {
+    return "BUSY";
   }
 
-  if (status === 'SUSPENDED') {
-    return 'SUSPENDED';
+  if (status === "SUSPENDED") {
+    return "SUSPENDED";
   }
 
-  return 'OFFLINE';
+  return "OFFLINE";
 }
 
 function extractStatusFromFlowState(flowState: string | null) {
@@ -416,7 +479,7 @@ function extractStatusFromFlowState(flowState: string | null) {
     return null;
   }
 
-  const [, status] = flowState.split(':');
+  const [, status] = flowState.split(":");
 
   return status ?? null;
 }

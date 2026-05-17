@@ -2,10 +2,10 @@ import {
   buildDriverPresenceSyncedNote,
   buildDriverRoutePositionPayload,
   resolveDriverPresenceTrackingOptions,
-} from '../lib/driver-presence-signal';
+} from "../lib/driver-presence-signal";
 
-describe('driver-presence-signal', () => {
-  it('builds a bounded route position payload from native GPS coordinates', () => {
+describe("driver-presence-signal", () => {
+  it("builds a bounded route position payload from native GPS coordinates", () => {
     expect(
       buildDriverRoutePositionPayload({
         coords: {
@@ -38,10 +38,10 @@ describe('driver-presence-signal', () => {
     });
   });
 
-  it('uses tighter GPS tracking while a trip is active', () => {
-    expect(resolveDriverPresenceTrackingOptions('trip-1')).toEqual({
-      distanceInterval: 45,
-      timeInterval: 10000,
+  it("uses tighter GPS tracking while a trip is active", () => {
+    expect(resolveDriverPresenceTrackingOptions("trip-1")).toEqual({
+      distanceInterval: 25,
+      timeInterval: 5000,
     });
     expect(resolveDriverPresenceTrackingOptions(null)).toEqual({
       distanceInterval: 120,
@@ -49,17 +49,17 @@ describe('driver-presence-signal', () => {
     });
   });
 
-  it('labels active mission position separately from idle dispatch presence', () => {
+  it("labels active mission position separately from idle dispatch presence", () => {
     expect(
       buildDriverPresenceSyncedNote({
         accuracyMeters: 18.2,
-        activeTripId: 'trip-1',
+        activeTripId: "trip-1",
       }),
-    ).toBe('Position mission synchronisee. Precision 18 m.');
+    ).toBe("Position mission synchronisee. Precision 18 m.");
     expect(
       buildDriverPresenceSyncedNote({
         accuracyMeters: 18.2,
       }),
-    ).toBe('Presence GPS synchronisee. Precision 18 m.');
+    ).toBe("Presence GPS synchronisee. Precision 18 m.");
   });
 });

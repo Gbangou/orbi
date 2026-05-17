@@ -157,12 +157,16 @@ function ActiveMissionMap({
   distanceLabel,
   stateLabel,
   isInProgress,
+  etaLabel,
+  freshnessLabel,
 }: {
   progressPercent: number;
   title: string;
   distanceLabel: string;
   stateLabel: string;
   isInProgress: boolean;
+  etaLabel?: string;
+  freshnessLabel: string;
 }) {
   const boundedProgress = Math.max(12, Math.min(88, progressPercent));
   const accent = isInProgress ? orbiTheme.colors.sky : orbiTheme.colors.amber;
@@ -211,6 +215,12 @@ function ActiveMissionMap({
   return (
     <View style={styles.activeMissionMap}>
       <View style={styles.activeMissionGridLine} />
+      <View
+        style={[
+          styles.activeMissionGridLine,
+          styles.activeMissionGridLineLower,
+        ]}
+      />
       <View style={[styles.activeMissionRoad, { backgroundColor: accent }]} />
       <Animated.View
         style={[
@@ -233,6 +243,25 @@ function ActiveMissionMap({
         ]}
       />
       <View style={styles.activeMissionRoadShadow} />
+      <View style={styles.activeMissionTrail}>
+        <View
+          style={[styles.activeMissionTrailDot, { backgroundColor: accent }]}
+        />
+        <View
+          style={[
+            styles.activeMissionTrailDot,
+            styles.activeMissionTrailDotMuted,
+            { backgroundColor: accent },
+          ]}
+        />
+        <View
+          style={[
+            styles.activeMissionTrailDot,
+            styles.activeMissionTrailDotSoft,
+            { backgroundColor: accent },
+          ]}
+        />
+      </View>
       <View style={styles.activeMissionPickupPin}>
         <Text style={styles.activeMissionPinLabel}>P</Text>
       </View>
@@ -266,6 +295,12 @@ function ActiveMissionMap({
         </View>
       </Animated.View>
       <View style={styles.activeMissionMapCopy}>
+        <View style={styles.activeMissionHudRow}>
+          <Text style={styles.activeMissionHudLabel}>
+            {etaLabel ?? "ETA mission"}
+          </Text>
+          <Text style={styles.activeMissionHudLabel}>{freshnessLabel}</Text>
+        </View>
         <Text style={styles.activeMissionMapTitle}>{title}</Text>
         <Text style={styles.activeMissionMapMeta}>
           {distanceLabel} - {stateLabel}
@@ -1129,6 +1164,8 @@ export default function OffersScreen() {
                 distanceLabel={driverRouteProgress.distanceLabel}
                 stateLabel={driverRouteProgress.stateLabel}
                 isInProgress={activeTrip.status === "IN_PROGRESS"}
+                etaLabel={driverRouteProgress.etaLabel}
+                freshnessLabel={driverRouteProgress.freshnessLabel}
               />
               <LiveRouteProgressCard {...driverRouteProgress} />
             </>
@@ -1454,6 +1491,9 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "rgba(148, 163, 184, 0.13)",
   },
+  activeMissionGridLineLower: {
+    top: 116,
+  },
   activeMissionRoad: {
     position: "absolute",
     left: 24,
@@ -1479,6 +1519,27 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: 999,
     backgroundColor: "rgba(148, 163, 184, 0.28)",
+  },
+  activeMissionTrail: {
+    position: "absolute",
+    left: 54,
+    right: 54,
+    top: 68,
+    height: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+  },
+  activeMissionTrailDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  activeMissionTrailDotMuted: {
+    opacity: 0.46,
+  },
+  activeMissionTrailDotSoft: {
+    opacity: 0.28,
   },
   activeMissionPickupPin: {
     position: "absolute",
@@ -1553,6 +1614,22 @@ const styles = StyleSheet.create({
   activeMissionMapCopy: {
     marginTop: 88,
     gap: 3,
+  },
+  activeMissionHudRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 2,
+  },
+  activeMissionHudLabel: {
+    overflow: "hidden",
+    borderRadius: 999,
+    backgroundColor: "rgba(15, 23, 42, 0.5)",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    color: orbiTheme.colors.text,
+    fontSize: 11,
+    fontWeight: "800",
   },
   activeMissionMapTitle: {
     color: orbiTheme.colors.text,
