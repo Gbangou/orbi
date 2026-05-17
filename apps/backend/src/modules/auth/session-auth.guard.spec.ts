@@ -33,7 +33,7 @@ describe('SessionAuthGuard', () => {
         authorization: 'Bearer session-token-123',
       },
     };
-    const now = new Date('2026-04-17T10:00:00.000Z');
+    const now = new Date();
 
     prisma.userSession.findUnique.mockResolvedValue({
       id: 'session-1',
@@ -41,7 +41,7 @@ describe('SessionAuthGuard', () => {
       tokenHash: hashSessionToken('session-token-123'),
       createdAt: now,
       lastSeenAt: now,
-      expiresAt: new Date('2026-05-17T10:00:00.000Z'),
+      expiresAt: new Date(now.getTime() + 1000 * 60 * 60),
       revokedAt: null,
       userAgent: 'jest',
       ipAddress: '127.0.0.1',
@@ -130,7 +130,7 @@ describe('SessionAuthGuard', () => {
         sessionToken: 'session-token-sse-456',
       },
     };
-    const now = new Date('2026-04-17T10:00:00.000Z');
+    const now = new Date();
 
     prisma.userSession.findUnique.mockResolvedValue({
       id: 'session-2',
@@ -138,7 +138,7 @@ describe('SessionAuthGuard', () => {
       tokenHash: hashSessionToken('session-token-sse-456'),
       createdAt: now,
       lastSeenAt: now,
-      expiresAt: new Date('2026-05-17T10:00:00.000Z'),
+      expiresAt: new Date(now.getTime() + 1000 * 60 * 60),
       revokedAt: null,
       userAgent: 'jest',
       ipAddress: '127.0.0.1',

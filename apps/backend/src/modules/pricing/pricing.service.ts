@@ -236,8 +236,7 @@ export class PricingService {
     const onlineDrivers = Math.max(
       vehicleType === 'MOTORCYCLE' ? 2 : 1,
       Math.round(
-        (activeDriverCount ?? 6) *
-          (vehicleType === 'MOTORCYCLE' ? 0.62 : 0.38),
+        (activeDriverCount ?? 6) * (vehicleType === 'MOTORCYCLE' ? 0.62 : 0.38),
       ),
     );
     const pickupRadiusKm = Number(

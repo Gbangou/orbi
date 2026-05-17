@@ -48,13 +48,11 @@ function resolveRouteMonitoringSummary(
     (event) => event.eventType === 'ROUTE_POSITION_RECORDED',
   );
   const latestRoutePosition =
-    [...routePositionEvents]
-      .reverse()
-      .find((event) => {
-        const payload = isRecord(event.payload) ? event.payload : {};
+    [...routePositionEvents].reverse().find((event) => {
+      const payload = isRecord(event.payload) ? event.payload : {};
 
-        return payload.sourceRole !== 'RIDER';
-      }) ?? null;
+      return payload.sourceRole !== 'RIDER';
+    }) ?? null;
   const routeAlertEvents = events.filter(
     (event) => event.eventType === 'ROUTE_MONITORING_ALERT',
   );
@@ -160,7 +158,9 @@ export function serializeTripDetail(trip: {
   const routeMonitoring = resolveRouteMonitoringSummary(trip.events);
   const pickupLatitude = toFiniteNumber(trip.rideRequest?.pickupLatitude);
   const pickupLongitude = toFiniteNumber(trip.rideRequest?.pickupLongitude);
-  const destinationLatitude = toFiniteNumber(trip.rideRequest?.destinationLatitude);
+  const destinationLatitude = toFiniteNumber(
+    trip.rideRequest?.destinationLatitude,
+  );
   const destinationLongitude = toFiniteNumber(
     trip.rideRequest?.destinationLongitude,
   );

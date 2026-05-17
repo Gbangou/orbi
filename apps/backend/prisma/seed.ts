@@ -13,7 +13,8 @@ import { hashPassword } from '../src/modules/auth/auth-crypto';
 
 const pool = new Pool({
   connectionString:
-    process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5433/orbi?schema=public',
+    process.env.DATABASE_URL ??
+    'postgresql://postgres:postgres@localhost:5433/orbi?schema=public',
 });
 
 const prisma = new PrismaClient({
@@ -82,6 +83,12 @@ async function main() {
     },
   });
 
+  const existingDemoDriverProfile = await prisma.driverProfile.findUnique({
+    where: {
+      licenseNumber: 'DRV-BF-001',
+    },
+  });
+
   const driverUser = await prisma.user.upsert({
     where: { email: 'driver@orbi.app' },
     update: {
@@ -95,54 +102,100 @@ async function main() {
       fullName: 'Issa Driver',
       role: UserRole.DRIVER,
       passwordHash: demoPasswordHash,
-      driverProfile: {
-        create: {
-          licenseNumber: 'DRV-BF-001',
-          verificationStatus: VerificationStatus.APPROVED,
-          status: DriverStatus.ONLINE,
-          serviceRadiusKm: 8,
-          vehicles: {
-            create: [
-              {
-                plateNumber: '11 KJ 2260',
-                make: 'Yamaha',
-                model: 'Crypton',
-                color: 'Black',
-                type: VehicleType.MOTORCYCLE,
-                tier: ServiceTier.MOTO_STANDARD,
-              },
-              {
-                plateNumber: '11 JD 9021',
-                make: 'Toyota',
-                model: 'Corolla',
-                color: 'White',
-                seats: 4,
-                type: VehicleType.CAR,
-                tier: ServiceTier.CAR_STANDARD,
-              },
-            ],
-          },
-        },
-      },
       wallets: {
         create: {
           currency: 'XOF',
         },
       },
     },
-    include: {
-      driverProfile: {
-        include: {
-          vehicles: true,
-        },
-      },
+  });
+
+  const driverProfile =
+    existingDemoDriverProfile?.userId === driverUser.id
+      ? await prisma.driverProfile.update({
+          where: {
+            id: existingDemoDriverProfile.id,
+          },
+          data: {
+            verificationStatus: VerificationStatus.APPROVED,
+            status: DriverStatus.OFFLINE,
+            serviceRadiusKm: 8,
+          },
+        })
+      : await prisma.driverProfile.upsert({
+          where: {
+            userId: driverUser.id,
+          },
+          update: {
+            verificationStatus: VerificationStatus.APPROVED,
+            status: DriverStatus.OFFLINE,
+            serviceRadiusKm: 8,
+          },
+          create: {
+            userId: driverUser.id,
+            licenseNumber: existingDemoDriverProfile
+              ? `DRV-BF-001-${driverUser.id.slice(-6).toUpperCase()}`
+              : 'DRV-BF-001',
+            verificationStatus: VerificationStatus.APPROVED,
+            status: DriverStatus.OFFLINE,
+            serviceRadiusKm: 8,
+          },
+        });
+
+  await prisma.vehicle.upsert({
+    where: {
+      plateNumber: '11 KJ 2260',
+    },
+    update: {
+      driverId: driverProfile.id,
+      make: 'Yamaha',
+      model: 'Crypton',
+      color: 'Black',
+      type: VehicleType.MOTORCYCLE,
+      tier: ServiceTier.MOTO_STANDARD,
+      isActive: true,
+    },
+    create: {
+      driverId: driverProfile.id,
+      plateNumber: '11 KJ 2260',
+      make: 'Yamaha',
+      model: 'Crypton',
+      color: 'Black',
+      type: VehicleType.MOTORCYCLE,
+      tier: ServiceTier.MOTO_STANDARD,
     },
   });
 
-  if (driverUser.driverProfile) {
+  await prisma.vehicle.upsert({
+    where: {
+      plateNumber: '11 JD 9021',
+    },
+    update: {
+      driverId: driverProfile.id,
+      make: 'Toyota',
+      model: 'Corolla',
+      color: 'White',
+      seats: 4,
+      type: VehicleType.CAR,
+      tier: ServiceTier.CAR_STANDARD,
+      isActive: true,
+    },
+    create: {
+      driverId: driverProfile.id,
+      plateNumber: '11 JD 9021',
+      make: 'Toyota',
+      model: 'Corolla',
+      color: 'White',
+      seats: 4,
+      type: VehicleType.CAR,
+      tier: ServiceTier.CAR_STANDARD,
+    },
+  });
+
+  if (driverProfile) {
     await prisma.driverProfile.update({
       where: {
-        id: driverUser.driverProfile.id,
+        id: driverProfile.id,
       },
       data: {
         verificationStatus: VerificationStatus.APPROVED,
