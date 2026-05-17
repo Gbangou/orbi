@@ -17,6 +17,7 @@ import {
   resolveJobQueueFilterSummary,
   resolveJobQueueOwnerRows,
   resolveLiveOpsRouteMonitoringCopy,
+  resolveLiveOpsRouteProgressLabel,
   resolveLiveOpsRouteSignalAge,
   resolveLiveOpsTripTriage,
   resolveVisibleDriverOnboardingQueue,
@@ -123,6 +124,7 @@ function createLiveOpsTrip(
       lastAlertType: 'LONG_STOP',
       lastAlertAt: '2026-04-19T08:03:00.000Z',
       lastPositionAt: '2026-04-19T08:02:30.000Z',
+      latestPosition: null,
     },
     lastEvent: {
       label: 'Course demarree',
@@ -235,6 +237,7 @@ describe('admin-ops-kernel', () => {
             lastAlertType: 'ROUTE_DEVIATION',
             lastAlertAt: '2026-04-19T08:04:00.000Z',
             lastPositionAt: '2026-04-19T08:03:30.000Z',
+            latestPosition: null,
           },
         }),
       ),
@@ -249,10 +252,12 @@ describe('admin-ops-kernel', () => {
         lastAlertType: null,
         lastAlertAt: null,
         lastPositionAt: null,
+        latestPosition: null,
       }),
     ).toEqual({
       statusLabel: 'En attente',
       lastSignalLabel: null,
+      progressLabel: null,
     });
 
     expect(
@@ -262,10 +267,12 @@ describe('admin-ops-kernel', () => {
         lastAlertType: null,
         lastAlertAt: null,
         lastPositionAt: '2026-04-19T08:02:30.000Z',
+        latestPosition: null,
       }, { now: '2026-04-19T08:03:00.000Z' }),
     ).toEqual({
       statusLabel: 'Clair',
       lastSignalLabel: 'GPS il y a 1 min',
+      progressLabel: null,
     });
 
     expect(
@@ -275,11 +282,35 @@ describe('admin-ops-kernel', () => {
         lastAlertType: 'ROUTE_DEVIATION',
         lastAlertAt: '2026-04-19T08:03:00.000Z',
         lastPositionAt: '2026-04-19T08:02:30.000Z',
+        latestPosition: null,
       }),
     ).toEqual({
       statusLabel: 'Critical (2)',
       lastSignalLabel: 'Route Deviation',
+      progressLabel: null,
     });
+  });
+
+  it('formats live ops route progress without exposing raw coordinates', () => {
+    expect(
+      resolveLiveOpsRouteProgressLabel({
+        state: 'clear',
+        alertCount: 0,
+        lastAlertType: null,
+        lastAlertAt: null,
+        lastPositionAt: '2026-04-19T08:02:30.000Z',
+        latestPosition: {
+          latitude: 12.371,
+          longitude: -1.519,
+          accuracyMeters: 18,
+          speedKph: 22,
+          distanceToPickupKm: 0.24,
+          distanceToDestinationKm: 5.18,
+          observedAt: '2026-04-19T08:02:30.000Z',
+          sourceRole: 'DRIVER',
+        },
+      }),
+    ).toBe('Depart 240 m - destination 5.2 km');
   });
 
   it('marks stale live ops GPS signals for dispatch triage', () => {
@@ -302,12 +333,14 @@ describe('admin-ops-kernel', () => {
           lastAlertType: null,
           lastAlertAt: null,
           lastPositionAt: '2026-04-19T08:00:00.000Z',
+          latestPosition: null,
         },
         { now: '2026-04-19T08:03:30.000Z' },
       ),
     ).toEqual({
       statusLabel: 'Signal GPS ancien',
       lastSignalLabel: 'Dernier GPS il y a 4 min',
+      progressLabel: null,
     });
 
     expect(
@@ -319,6 +352,7 @@ describe('admin-ops-kernel', () => {
             lastAlertType: null,
             lastAlertAt: null,
             lastPositionAt: '2026-04-19T08:00:00.000Z',
+            latestPosition: null,
           },
         }),
         { now: '2026-04-19T08:03:30.000Z' },
@@ -344,6 +378,7 @@ describe('admin-ops-kernel', () => {
             lastAlertType: null,
             lastAlertAt: null,
             lastPositionAt: '2026-04-19T08:02:30.000Z',
+            latestPosition: null,
           },
         }),
       ),
@@ -365,6 +400,7 @@ describe('admin-ops-kernel', () => {
             lastAlertType: 'ROUTE_DEVIATION',
             lastAlertAt: '2026-04-19T08:03:00.000Z',
             lastPositionAt: '2026-04-19T08:02:30.000Z',
+            latestPosition: null,
           },
         }),
       ),
@@ -385,6 +421,7 @@ describe('admin-ops-kernel', () => {
             lastAlertType: null,
             lastAlertAt: null,
             lastPositionAt: null,
+            latestPosition: null,
           },
         }),
       ),

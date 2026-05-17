@@ -62,7 +62,33 @@ export function resolveLiveOpsRouteMonitoringCopy(
       routeMonitoring.lastAlertType
         ? formatOperationalStatus(routeMonitoring.lastAlertType)
         : signalAge.label,
+    progressLabel: resolveLiveOpsRouteProgressLabel(routeMonitoring),
   };
+}
+
+export function resolveLiveOpsRouteProgressLabel(
+  routeMonitoring: LiveOpsRouteMonitoring,
+) {
+  const pickupDistance = formatLiveOpsRouteDistance(
+    routeMonitoring.latestPosition?.distanceToPickupKm,
+  );
+  const destinationDistance = formatLiveOpsRouteDistance(
+    routeMonitoring.latestPosition?.distanceToDestinationKm,
+  );
+
+  if (pickupDistance && destinationDistance) {
+    return `Depart ${pickupDistance} - destination ${destinationDistance}`;
+  }
+
+  if (pickupDistance) {
+    return `Depart ${pickupDistance}`;
+  }
+
+  if (destinationDistance) {
+    return `Destination ${destinationDistance}`;
+  }
+
+  return null;
 }
 
 export function resolveLiveOpsTripTriage(
@@ -188,8 +214,26 @@ export function hasLiveOpsTripChanged(
     previousTrip.routeMonitoring.lastAlertAt !==
       nextTrip.routeMonitoring.lastAlertAt ||
     previousTrip.routeMonitoring.lastPositionAt !==
-      nextTrip.routeMonitoring.lastPositionAt
+      nextTrip.routeMonitoring.lastPositionAt ||
+    previousTrip.routeMonitoring.latestPosition?.observedAt !==
+      nextTrip.routeMonitoring.latestPosition?.observedAt ||
+    previousTrip.routeMonitoring.latestPosition?.distanceToPickupKm !==
+      nextTrip.routeMonitoring.latestPosition?.distanceToPickupKm ||
+    previousTrip.routeMonitoring.latestPosition?.distanceToDestinationKm !==
+      nextTrip.routeMonitoring.latestPosition?.distanceToDestinationKm
   );
+}
+
+function formatLiveOpsRouteDistance(distanceKm: number | null | undefined) {
+  if (typeof distanceKm !== 'number' || !Number.isFinite(distanceKm)) {
+    return null;
+  }
+
+  if (distanceKm < 1) {
+    return `${Math.max(0, Math.round(distanceKm * 1000))} m`;
+  }
+
+  return `${distanceKm.toFixed(1)} km`;
 }
 
 export function resolveJobQueueFilterSummary(

@@ -1264,6 +1264,16 @@ export type AdminLiveOpsResponse = {
       lastAlertType: string | null;
       lastAlertAt: string | null;
       lastPositionAt: string | null;
+      latestPosition: {
+        latitude: number;
+        longitude: number;
+        accuracyMeters: number | null;
+        speedKph: number | null;
+        distanceToPickupKm: number | null;
+        distanceToDestinationKm: number | null;
+        observedAt: string;
+        sourceRole: string | null;
+      } | null;
     };
     lastEvent: {
       label: string;

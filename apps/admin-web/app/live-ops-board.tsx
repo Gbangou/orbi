@@ -307,6 +307,9 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
                   {routeMonitoringCopy.lastSignalLabel ? (
                     <small>{routeMonitoringCopy.lastSignalLabel}</small>
                   ) : null}
+                  {routeMonitoringCopy.progressLabel ? (
+                    <small>{routeMonitoringCopy.progressLabel}</small>
+                  ) : null}
                 </div>
               </div>
             </article>

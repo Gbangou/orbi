@@ -865,6 +865,108 @@ function isDispatchSettingsRecord(
   return Boolean(value) && !Array.isArray(value) && typeof value === 'object';
 }
 
+function toFiniteNumber(value: unknown) {
+  const numeric = Number(value);
+
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function haversineKm(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number },
+) {
+  const earthRadiusKm = 6371;
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const latDelta = toRadians(to.latitude - from.latitude);
+  const lonDelta = toRadians(to.longitude - from.longitude);
+  const fromLat = toRadians(from.latitude);
+  const toLat = toRadians(to.latitude);
+  const a =
+    Math.sin(latDelta / 2) ** 2 +
+    Math.cos(fromLat) * Math.cos(toLat) * Math.sin(lonDelta / 2) ** 2;
+
+  return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
+}
+
+function roundKm(distanceKm: number) {
+  return Number(distanceKm.toFixed(2));
+}
+
+function resolveLiveOpsRoutePosition(input: {
+  event:
+    | {
+        payload?: unknown;
+        createdAt: Date;
+      }
+    | undefined;
+  rideRequest?: {
+    pickupLatitude?: unknown;
+    pickupLongitude?: unknown;
+    destinationLatitude?: unknown;
+    destinationLongitude?: unknown;
+  } | null;
+}) {
+  const payload = isDispatchSettingsRecord(input.event?.payload)
+    ? input.event.payload
+    : {};
+  const latitude = toFiniteNumber(payload.latitude);
+  const longitude = toFiniteNumber(payload.longitude);
+
+  if (!input.event || latitude === null || longitude === null) {
+    return null;
+  }
+
+  const pickupLatitude = toFiniteNumber(input.rideRequest?.pickupLatitude);
+  const pickupLongitude = toFiniteNumber(input.rideRequest?.pickupLongitude);
+  const destinationLatitude = toFiniteNumber(
+    input.rideRequest?.destinationLatitude,
+  );
+  const destinationLongitude = toFiniteNumber(
+    input.rideRequest?.destinationLongitude,
+  );
+  let distanceToPickupKm: number | null = null;
+  let distanceToDestinationKm = toFiniteNumber(
+    payload.distanceToDestinationKm,
+  );
+
+  if (pickupLatitude !== null && pickupLongitude !== null) {
+    distanceToPickupKm = roundKm(
+      haversineKm(
+        { latitude, longitude },
+        { latitude: pickupLatitude, longitude: pickupLongitude },
+      ),
+    );
+  }
+
+  if (
+    distanceToDestinationKm === null &&
+    destinationLatitude !== null &&
+    destinationLongitude !== null
+  ) {
+    distanceToDestinationKm = roundKm(
+      haversineKm(
+        { latitude, longitude },
+        { latitude: destinationLatitude, longitude: destinationLongitude },
+      ),
+    );
+  }
+
+  return {
+    latitude,
+    longitude,
+    accuracyMeters: toFiniteNumber(payload.accuracyMeters),
+    speedKph: toFiniteNumber(payload.speedKph),
+    distanceToPickupKm,
+    distanceToDestinationKm,
+    observedAt:
+      typeof payload.observedAt === 'string'
+        ? payload.observedAt
+        : input.event.createdAt.toISOString(),
+    sourceRole:
+      typeof payload.sourceRole === 'string' ? payload.sourceRole : null,
+  };
+}
+
 function isLaunchReadinessOwner(
   value: unknown,
 ): value is LaunchReadinessAcknowledgement['owner'] {
@@ -2076,6 +2178,7 @@ export class AdminService {
             },
           },
           vehicle: true,
+          rideRequest: true,
           events: {
             orderBy: {
               createdAt: 'asc',
@@ -2196,9 +2299,23 @@ export class AdminService {
         )
           ? latestRouteAlert.payload
           : {};
-        const latestRoutePosition = trip.events
-          .filter((event) => event.eventType === 'ROUTE_POSITION_RECORDED')
-          .at(-1);
+        const latestRoutePosition = [...trip.events]
+          .reverse()
+          .find((event) => {
+            if (event.eventType !== 'ROUTE_POSITION_RECORDED') {
+              return false;
+            }
+
+            const payload = isDispatchSettingsRecord(event.payload)
+              ? event.payload
+              : {};
+
+            return payload.sourceRole !== 'RIDER';
+          });
+        const latestPosition = resolveLiveOpsRoutePosition({
+          event: latestRoutePosition,
+          rideRequest: trip.rideRequest,
+        });
 
         return {
           id: trip.id,
@@ -2234,6 +2351,7 @@ export class AdminService {
             lastAlertAt: latestRouteAlert?.createdAt.toISOString() ?? null,
             lastPositionAt:
               latestRoutePosition?.createdAt.toISOString() ?? null,
+            latestPosition,
           },
           lastEvent: lastEvent
             ? {

@@ -379,6 +379,12 @@ describe('AdminService', () => {
         rider: { user: { fullName: 'Awa Rider' } },
         driver: { user: { fullName: 'Issa Driver' } },
         vehicle: { make: 'Yamaha', model: 'Crypton' },
+        rideRequest: {
+          pickupLatitude: 12.3783,
+          pickupLongitude: -1.4994,
+          destinationLatitude: 12.3032,
+          destinationLongitude: -1.5241,
+        },
         events: [
           {
             id: 'event-1',
@@ -394,6 +400,32 @@ describe('AdminService', () => {
             id: 'event-3',
             eventType: 'INCIDENT_REPORTED',
             createdAt: new Date('2026-04-17T08:03:00.000Z'),
+          },
+          {
+            id: 'event-4',
+            eventType: 'ROUTE_POSITION_RECORDED',
+            payload: {
+              latitude: 12.3776,
+              longitude: -1.501,
+              accuracyMeters: 12,
+              speedKph: 18,
+              observedAt: '2026-04-17T08:04:00.000Z',
+              sourceRole: 'DRIVER',
+            },
+            createdAt: new Date('2026-04-17T08:04:00.000Z'),
+          },
+          {
+            id: 'event-5',
+            eventType: 'ROUTE_POSITION_RECORDED',
+            payload: {
+              latitude: 12.3783,
+              longitude: -1.4994,
+              accuracyMeters: 8,
+              speedKph: 0,
+              observedAt: '2026-04-17T08:05:00.000Z',
+              sourceRole: 'RIDER',
+            },
+            createdAt: new Date('2026-04-17T08:05:00.000Z'),
           },
         ],
       },
@@ -433,12 +465,19 @@ describe('AdminService', () => {
         hasIncident: true,
         incidentCount: 1,
         routeMonitoring: expect.objectContaining({
-          state: 'unknown',
+          state: 'clear',
           alertCount: 0,
+          latestPosition: expect.objectContaining({
+            latitude: 12.3776,
+            longitude: -1.501,
+            distanceToPickupKm: expect.any(Number),
+            distanceToDestinationKm: expect.any(Number),
+            sourceRole: 'DRIVER',
+          }),
         }),
       }),
     );
-    expect(result.trips[0].lastEvent?.label).toBe('Incident signale');
+    expect(result.trips[0].lastEvent?.label).toBe('Position route recue');
     expect(result.summary.payments.refunded).toBe(1);
     expect(result.summary.payments.refundPending).toBe(1);
     expect(result.summary.payments.reconciled).toBe(3);
