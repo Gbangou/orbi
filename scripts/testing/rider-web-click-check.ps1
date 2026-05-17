@@ -115,7 +115,7 @@ function Invoke-JavaScript {
   return $result.result.value
 }
 
-function Assert-PageHealthy {
+function Test-PageHealth {
   param(
     [System.Net.WebSockets.ClientWebSocket]$Socket,
     [string]$ExpectedText
@@ -191,20 +191,20 @@ try {
   Wait-CdpEvent -Socket $socket -Method 'Page.loadEventFired' | Out-Null
   Start-Sleep -Milliseconds 800
   Invoke-JavaScript -Socket $socket -Expression "localStorage.removeItem('orbi.rider.session-token'); true" | Out-Null
-  Assert-PageHealthy -Socket $socket -ExpectedText 'Connexion et compte'
+  Test-PageHealth -Socket $socket -ExpectedText 'Connexion et compte'
 
   Click-Text -Socket $socket -Label 'Inscription'
   Start-Sleep -Milliseconds 300
-  Assert-PageHealthy -Socket $socket -ExpectedText 'Creer un compte passager'
+  Test-PageHealth -Socket $socket -ExpectedText 'Creer un compte passager'
 
   Click-Text -Socket $socket -Label 'Connexion'
   Start-Sleep -Milliseconds 300
-  Assert-PageHealthy -Socket $socket -ExpectedText 'Reprendre votre session'
+  Test-PageHealth -Socket $socket -ExpectedText 'Reprendre votre session'
 
   Invoke-Cdp -Socket $socket -Method 'Page.navigate' -Params @{ url = "$BaseUrl/" } | Out-Null
   Wait-CdpEvent -Socket $socket -Method 'Page.loadEventFired' | Out-Null
   Start-Sleep -Milliseconds 1000
-  Assert-PageHealthy -Socket $socket -ExpectedText 'Connexion et compte'
+  Test-PageHealth -Socket $socket -ExpectedText 'Connexion et compte'
 
   Write-Host "Rider web click check passed for $BaseUrl"
 } finally {

@@ -32,7 +32,7 @@ function Read-EnvValue {
   return ($match -replace "^$([regex]::Escape($Key))=", "").Trim()
 }
 
-function Assert-MobileApiUrl {
+function Test-MobileApiUrl {
   param(
     [string]$Name,
     [string]$Url
@@ -79,8 +79,8 @@ Write-Host "Rider API:  $riderApiBaseUrl ($riderApiVersion)"
 Write-Host "Driver API: $driverApiBaseUrl ($driverApiVersion)"
 
 Write-Section "Environment"
-Assert-MobileApiUrl -Name "Rider" -Url $riderApiBaseUrl
-Assert-MobileApiUrl -Name "Driver" -Url $driverApiBaseUrl
+Test-MobileApiUrl -Name "Rider" -Url $riderApiBaseUrl
+Test-MobileApiUrl -Name "Driver" -Url $driverApiBaseUrl
 
 if ($riderApiBaseUrl -ne $driverApiBaseUrl) {
   throw "Rider and driver apps point to different API URLs. Run pnpm mobile:lan again."

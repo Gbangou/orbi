@@ -1,27 +1,15 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": "../../..",
-    "ignoreDeprecations": "5.0",
     "jsx": "react-jsx",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "noEmit": true,
     "types": ["jest", "node", "react"],
     "typeRoots": [
       "../../../apps/rider-app/node_modules/@types",
       "../../../apps/backend/node_modules/@types"
-    ],
-    "paths": {
-      "react": ["apps/rider-app/node_modules/react"],
-      "react/*": ["apps/rider-app/node_modules/react/*"],
-      "react-test-renderer": [
-        "apps/rider-app/node_modules/react-test-renderer"
-      ],
-      "react-test-renderer/*": [
-        "apps/rider-app/node_modules/react-test-renderer/*"
-      ]
-    }
+    ]
   },
   "include": ["./*.ts", "./*.tsx"]
 }

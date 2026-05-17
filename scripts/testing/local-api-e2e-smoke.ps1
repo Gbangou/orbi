@@ -74,7 +74,7 @@ function Request-SessionToken {
   return $response.sessionToken
 }
 
-function Assert-Equals {
+function Test-ExpectedValue {
   param(
     [object]$Actual,
     [object]$Expected,
@@ -145,23 +145,23 @@ if (!$tripId -or !$pickupCode) {
   Stop-LocalApiE2E "accept response did not include trip id and pickup code"
 }
 
-Assert-Equals -Actual $accepted.trip.status -Expected "MATCHED" -Message "trip should be matched after accept"
+Test-ExpectedValue -Actual $accepted.trip.status -Expected "MATCHED" -Message "trip should be matched after accept"
 
 Write-Step "Advancing trip lifecycle"
 $arriving = Invoke-Json -Method "PATCH" -Path "/trips/$tripId/status" -Token $driverToken -Body @{
   status = "DRIVER_ARRIVING"
 }
-Assert-Equals -Actual $arriving.trip.status -Expected "DRIVER_ARRIVING" -Message "trip should move to arriving"
+Test-ExpectedValue -Actual $arriving.trip.status -Expected "DRIVER_ARRIVING" -Message "trip should move to arriving"
 
 $verified = Invoke-Json -Method "POST" -Path "/trips/$tripId/verify-pickup-code" -Token $driverToken -Body @{
   pickupCode = $pickupCode
 }
-Assert-Equals -Actual $verified.trip.status -Expected "IN_PROGRESS" -Message "pickup code should start trip"
+Test-ExpectedValue -Actual $verified.trip.status -Expected "IN_PROGRESS" -Message "pickup code should start trip"
 
 $completed = Invoke-Json -Method "PATCH" -Path "/trips/$tripId/status" -Token $driverToken -Body @{
   status = "COMPLETED"
 }
-Assert-Equals -Actual $completed.trip.status -Expected "COMPLETED" -Message "trip should complete"
+Test-ExpectedValue -Actual $completed.trip.status -Expected "COMPLETED" -Message "trip should complete"
 
 Write-Step "Creating checkout intent"
 $checkout = Invoke-Json -Method "POST" -Path "/payments/checkout-intents" -Token $riderToken -Body @{
@@ -191,7 +191,7 @@ $webhook = Invoke-Json -Method "POST" -Path "/payments/webhooks" -ExtraHeaders @
   }
 }
 
-Assert-Equals -Actual $webhook.nextAction -Expected "persisted_and_reconciled" -Message "webhook should reconcile"
+Test-ExpectedValue -Actual $webhook.nextAction -Expected "persisted_and_reconciled" -Message "webhook should reconcile"
 
 Write-Step "Loading webhook journal"
 $journal = Invoke-Json -Method "GET" -Path "/admin/payment-webhook-events?page=1&pageSize=10&transactionRef=$($checkout.transactionRef)" -Token $adminToken
@@ -201,7 +201,7 @@ if (!$webhookEvent -or !$webhookEvent.paymentAttemptId) {
   Stop-LocalApiE2E "webhook journal did not expose linked payment attempt"
 }
 
-Assert-Equals -Actual $webhookEvent.paymentAttempt.status -Expected "SUCCEEDED" -Message "payment attempt should be succeeded"
+Test-ExpectedValue -Actual $webhookEvent.paymentAttempt.status -Expected "SUCCEEDED" -Message "payment attempt should be succeeded"
 
 Write-Step "Checking wallet credit"
 $wallets = Invoke-Json -Method "GET" -Path "/admin/driver-wallets?page=1&pageSize=20" -Token $adminToken
@@ -235,7 +235,7 @@ $refund = Invoke-Json -Method "POST" -Path "/admin/payment-attempts/$($webhookEv
   reason = "Local API E2E refund $RunId"
 }
 
-Assert-Equals -Actual $refund.refund.paymentAttempt.status -Expected "REFUNDED" -Message "payment attempt should be refunded"
+Test-ExpectedValue -Actual $refund.refund.paymentAttempt.status -Expected "REFUNDED" -Message "payment attempt should be refunded"
 
 Write-Step "Checking refund reversal in wallet"
 $walletsAfterRefund = Invoke-Json -Method "GET" -Path "/admin/driver-wallets?page=1&pageSize=20" -Token $adminToken
@@ -260,7 +260,7 @@ $recovery = Invoke-Json -Method "POST" -Path "/admin/driver-wallets/$($wallet.id
   idempotencyKey = "local-api-e2e-$RunId"
 }
 
-Assert-Equals -Actual $recovery.wallet.recoveryDue -Expected 0 -Message "recovery adjustment should clear recovery due"
+Test-ExpectedValue -Actual $recovery.wallet.recoveryDue -Expected 0 -Message "recovery adjustment should clear recovery due"
 
 Write-Step "Checking live ops refund counter"
 $liveOps = Invoke-Json -Method "GET" -Path "/admin/live-ops" -Token $adminToken
