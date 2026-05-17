@@ -66,6 +66,48 @@ const fallbackHistory: MyTripsResponse = {
   recentTrips: [],
 };
 
+function LiveApproachPreview({
+  progressPercent,
+  title,
+  distanceLabel,
+  stateLabel,
+}: {
+  progressPercent: number;
+  title: string;
+  distanceLabel: string;
+  stateLabel: string;
+}) {
+  const boundedProgress = Math.max(12, Math.min(88, progressPercent));
+
+  return (
+    <View style={styles.approachMap}>
+      <View style={styles.approachRoad} />
+      <View style={styles.approachRoadMuted} />
+      <View style={[styles.approachVehiclePin, { left: `${boundedProgress}%` }]}>
+        <View style={styles.approachVehicleBody}>
+          <View style={styles.approachVehicleCabin} />
+          <View style={styles.approachVehicleWheelRow}>
+            <View style={styles.approachVehicleWheel} />
+            <View style={styles.approachVehicleWheel} />
+          </View>
+        </View>
+      </View>
+      <View style={styles.approachOriginPin}>
+        <Text style={styles.approachPinLabel}>P</Text>
+      </View>
+      <View style={styles.approachDestinationPin}>
+        <Text style={styles.approachPinLabel}>A</Text>
+      </View>
+      <View style={styles.approachMapCopy}>
+        <Text style={styles.approachMapTitle}>{title}</Text>
+        <Text style={styles.approachMapMeta}>
+          {distanceLabel} - {stateLabel}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 export default function ActivityScreen() {
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
   const [activeTripDetail, setActiveTripDetail] = useState<TripDetailResponse | null>(null);
@@ -706,7 +748,15 @@ export default function ActivityScreen() {
             </View>
           ) : null}
           {riderRouteProgress ? (
-            <LiveRouteProgressCard {...riderRouteProgress} />
+            <>
+              <LiveApproachPreview
+                progressPercent={riderRouteProgress.progressPercent}
+                title={riderRouteProgress.title}
+                distanceLabel={riderRouteProgress.distanceLabel}
+                stateLabel={riderRouteProgress.stateLabel}
+              />
+              <LiveRouteProgressCard {...riderRouteProgress} />
+            </>
           ) : null}
           {activityTransitionLabel ? (
             <Text style={styles.transitionMeta}>{activityTransitionLabel}</Text>
@@ -913,6 +963,110 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  approachMap: {
+    minHeight: 142,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.32)',
+    backgroundColor: 'rgba(8, 47, 73, 0.18)',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  approachRoad: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    top: 70,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(56, 189, 248, 0.34)',
+  },
+  approachRoadMuted: {
+    position: 'absolute',
+    left: 34,
+    right: 34,
+    top: 84,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: 'rgba(148, 163, 184, 0.28)',
+  },
+  approachVehiclePin: {
+    position: 'absolute',
+    top: 42,
+    width: 50,
+    marginLeft: -25,
+    alignItems: 'center',
+  },
+  approachVehicleBody: {
+    width: 44,
+    height: 25,
+    borderRadius: 9,
+    backgroundColor: orbiTheme.colors.teal,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 3,
+  },
+  approachVehicleCabin: {
+    position: 'absolute',
+    top: -8,
+    width: 24,
+    height: 12,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    backgroundColor: 'rgba(45, 212, 191, 0.7)',
+  },
+  approachVehicleWheelRow: {
+    width: 36,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  approachVehicleWheel: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: orbiTheme.colors.background,
+  },
+  approachOriginPin: {
+    position: 'absolute',
+    left: 18,
+    top: 56,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: orbiTheme.colors.sky,
+  },
+  approachDestinationPin: {
+    position: 'absolute',
+    right: 18,
+    top: 56,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: orbiTheme.colors.amber,
+  },
+  approachPinLabel: {
+    color: '#082f49',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  approachMapCopy: {
+    marginTop: 78,
+    gap: 3,
+  },
+  approachMapTitle: {
+    color: orbiTheme.colors.text,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  approachMapMeta: {
+    color: orbiTheme.colors.sky,
+    fontWeight: '700',
   },
   actionButtonDisabled: {
     opacity: 0.6,

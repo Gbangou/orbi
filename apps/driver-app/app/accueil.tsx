@@ -66,6 +66,71 @@ const fallbackFatigue: DriverFatigueStatus = {
   reason: 'Aucun signal fatigue bloquant sur la fenetre recente.',
 };
 
+function buildInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'OR';
+}
+
+function OfferMissionPreview({ offer }: { offer: DriverOffer }) {
+  const isMoto = offer.category === 'motorcycle';
+  const accent = isMoto ? orbiTheme.colors.teal : orbiTheme.colors.amber;
+
+  return (
+    <View style={styles.offerMission}>
+      <View style={styles.offerMissionTop}>
+        <View style={[styles.offerAvatar, { borderColor: accent }]}>
+          <Text style={[styles.offerAvatarText, { color: accent }]}>
+            {buildInitials(offer.riderName)}
+          </Text>
+        </View>
+        <View style={styles.offerRoutePreview}>
+          <View style={[styles.offerRouteDot, { backgroundColor: orbiTheme.colors.sky }]} />
+          <View style={styles.offerRouteLine} />
+          <View style={[styles.offerRouteDot, { backgroundColor: orbiTheme.colors.amber }]} />
+        </View>
+        <View style={styles.offerVehicleBadge}>
+          <View
+            style={[
+              styles.offerVehicleBody,
+              isMoto ? styles.offerMotoBody : styles.offerCarBody,
+              { backgroundColor: accent },
+            ]}
+          />
+          <View style={styles.offerVehicleWheelRow}>
+            <View style={[styles.offerVehicleWheel, { borderColor: accent }]} />
+            <View style={[styles.offerVehicleWheel, { borderColor: accent }]} />
+          </View>
+        </View>
+      </View>
+      <View style={styles.offerMissionMetrics}>
+        <MetricTile
+          label="Approche"
+          value={
+            typeof offer.pickupDistanceKm === 'number'
+              ? `${offer.pickupDistanceKm.toFixed(1)} km`
+              : `${offer.etaToPickupMinutes} min`
+          }
+          helper="Vers pickup"
+        />
+        <MetricTile
+          label="Trajet"
+          value={`${offer.distanceKm.toFixed(1)} km`}
+          helper={isMoto ? 'Mission moto' : 'Mission voiture'}
+        />
+        <MetricTile
+          label="Net"
+          value={formatDriverEarningsAmount(offer.driverPayout ?? offer.fare)}
+          helper="Gain chauffeur"
+        />
+      </View>
+    </View>
+  );
+}
+
 export default function DriverHomeScreen() {
   const router = useRouter();
   const [offers, setOffers] = useState<DriverOffer[]>(driverOffers);
@@ -493,7 +558,9 @@ export default function DriverHomeScreen() {
             note={offerNote?.text}
             noteTone={offerNote?.tone ?? 'sky'}
             isHighlighted={freshOfferIds.includes(offer.id)}
-          />
+          >
+            <OfferMissionPreview offer={offer} />
+          </RouteSignalCard>
         );
       })}
       {flow.canReceiveOffers && visibleOffers.length === 0 ? (
@@ -650,6 +717,86 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.text,
     fontSize: 20,
     fontWeight: '700',
+  },
+  offerMission: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    padding: 14,
+    gap: 12,
+  },
+  offerMissionTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  offerAvatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: orbiTheme.colors.panel,
+  },
+  offerAvatarText: {
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  offerRoutePreview: {
+    flex: 1,
+    minHeight: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  offerRouteDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  offerRouteLine: {
+    flex: 1,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(148, 163, 184, 0.28)',
+  },
+  offerVehicleBadge: {
+    width: 58,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  offerVehicleBody: {
+    borderRadius: 8,
+  },
+  offerMotoBody: {
+    width: 34,
+    height: 9,
+    transform: [{ rotate: '-8deg' }],
+  },
+  offerCarBody: {
+    width: 44,
+    height: 18,
+  },
+  offerVehicleWheelRow: {
+    width: 46,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: -4,
+  },
+  offerVehicleWheel: {
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    borderWidth: 3,
+    backgroundColor: orbiTheme.colors.background,
+  },
+  offerMissionMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   actions: {
     gap: 12,

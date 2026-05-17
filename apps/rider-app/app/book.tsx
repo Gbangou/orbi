@@ -202,14 +202,46 @@ function buildRideOptionVisual(option: RideOption) {
   } as const;
 }
 
+function buildRideOptionDesignSignals(option: RideOption) {
+  const isMoto = option.category === 'motorcycle';
+  const paymentCount = option.paymentMethods?.length ?? 0;
+
+  return [
+    isMoto ? 'Slalom urbain' : 'Habitacle ferme',
+    option.tier === 'car-xl'
+      ? 'Bagages + groupe'
+      : option.tier === 'car-comfort'
+        ? 'Trajet calme'
+        : option.tier === 'moto-plus'
+          ? 'Casque + confort'
+          : 'Pickup rapide',
+    paymentCount > 1 ? `${paymentCount} paiements` : 'Mobile Money pret',
+  ];
+}
+
+function formatPaymentMethodLabel(method: PaymentMethod) {
+  switch (method) {
+    case 'mobile-money':
+      return 'Mobile Money';
+    case 'cash':
+      return 'Cash';
+    case 'wallet':
+      return 'Wallet';
+    default:
+      return method;
+  }
+}
+
 function VehicleOptionAvatar({
   category,
   isSelected,
   tone,
+  tier,
 }: {
   category: RideOption['category'];
   isSelected: boolean;
   tone: 'teal' | 'sky' | 'amber';
+  tier: RideOption['tier'];
 }) {
   const isMoto = category === 'motorcycle';
   const accent =
@@ -218,6 +250,7 @@ function VehicleOptionAvatar({
       : tone === 'sky'
         ? orbiTheme.colors.sky
         : orbiTheme.colors.amber;
+  const isPremium = tier === 'moto-plus' || tier === 'car-comfort' || tier === 'car-xl';
 
   return (
     <View
@@ -227,25 +260,39 @@ function VehicleOptionAvatar({
         { borderColor: isSelected ? accent : orbiTheme.colors.border },
       ]}
     >
+      <View style={[styles.vehicleGlow, { backgroundColor: accent }]} />
       {isMoto ? (
         <View style={styles.motoDrawing}>
-          <View style={[styles.motoHandle, { backgroundColor: accent }]} />
+          <View style={styles.motoHandlebarRow}>
+            <View style={[styles.motoHandle, { backgroundColor: accent }]} />
+            <View style={[styles.motoMirror, { borderColor: accent }]} />
+          </View>
           <View style={[styles.motoSeat, { backgroundColor: accent }]} />
+          <View style={[styles.motoFrame, { borderColor: accent }]} />
           <View style={styles.motoWheelRow}>
             <View style={[styles.vehicleWheel, { borderColor: accent }]} />
+            <View style={[styles.motoFootboard, { backgroundColor: accent }]} />
             <View style={[styles.vehicleWheel, { borderColor: accent }]} />
           </View>
         </View>
       ) : (
         <View style={styles.carDrawing}>
-          <View style={[styles.carCabin, { borderBottomColor: accent }]} />
+          <View style={[styles.carCabin, { borderBottomColor: accent }]}>
+            <View style={styles.carWindow} />
+          </View>
           <View style={[styles.carBody, { backgroundColor: accent }]} />
+          <View style={styles.carLightRow}>
+            <View style={styles.carLight} />
+            <View style={styles.carLight} />
+          </View>
           <View style={styles.carWheelRow}>
             <View style={[styles.vehicleWheel, { borderColor: accent }]} />
             <View style={[styles.vehicleWheel, { borderColor: accent }]} />
           </View>
+          {isPremium ? <View style={[styles.carRoofSignal, { backgroundColor: accent }]} /> : null}
         </View>
       )}
+      <View style={styles.vehicleRoad} />
     </View>
   );
 }
@@ -1076,6 +1123,7 @@ export default function BookingScreen() {
                 category={option.category}
                 isSelected={isSelected}
                 tone={visual.tone}
+                tier={option.tier}
               />
               <View style={styles.optionCopy}>
                 <View style={styles.optionTop}>
@@ -1095,12 +1143,21 @@ export default function BookingScreen() {
                 <View style={styles.optionChipRow}>
                   <Text style={styles.optionChip}>{visual.capacityLabel}</Text>
                   <Text style={styles.optionChip}>{option.badge}</Text>
-                  <Text style={styles.optionChip}>{selectedPaymentMethod}</Text>
+                  <Text style={styles.optionChip}>
+                    {formatPaymentMethodLabel(selectedPaymentMethod)}
+                  </Text>
                 </View>
               </View>
             </View>
+            <View style={styles.optionSignalRow}>
+              {buildRideOptionDesignSignals(option).map((signal) => (
+                <Text key={`${option.id}:${signal}`} style={styles.optionSignal}>
+                  {signal}
+                </Text>
+              ))}
+            </View>
             <Text style={styles.optionMeta}>
-              Tarif upfront estime, service {visual.categoryLabel.toLowerCase()} compatible avec ce trajet.
+              Tarif upfront estime, ETA separe et service {visual.categoryLabel.toLowerCase()} compatible avec ce trajet.
             </Text>
             {option.fareBreakdown ? (
               <View style={styles.breakdownBlock}>
@@ -1492,6 +1549,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textTransform: 'uppercase',
   },
+  optionSignalRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingLeft: 86,
+  },
+  optionSignal: {
+    color: orbiTheme.colors.text,
+    backgroundColor: 'rgba(15, 23, 42, 0.34)',
+    borderColor: orbiTheme.colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    fontSize: 11,
+    fontWeight: '700',
+  },
   vehicleAvatar: {
     width: 72,
     height: 72,
@@ -1500,20 +1575,43 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.panel,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   vehicleAvatarSelected: {
     backgroundColor: 'rgba(45, 212, 191, 0.1)',
+  },
+  vehicleGlow: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    opacity: 0.16,
   },
   motoDrawing: {
     width: 54,
     height: 38,
     justifyContent: 'flex-end',
   },
+  motoHandlebarRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 3,
+  },
   motoHandle: {
     width: 18,
     height: 4,
     borderRadius: 999,
     alignSelf: 'flex-end',
+    transform: [{ rotate: '-18deg' }],
+  },
+  motoMirror: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 2,
     transform: [{ rotate: '-18deg' }],
   },
   motoSeat: {
@@ -1523,9 +1621,27 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     marginBottom: 5,
   },
+  motoFrame: {
+    position: 'absolute',
+    left: 15,
+    bottom: 8,
+    width: 25,
+    height: 15,
+    borderLeftWidth: 3,
+    borderBottomWidth: 3,
+    borderRadius: 4,
+    transform: [{ rotate: '-12deg' }],
+  },
   motoWheelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  motoFootboard: {
+    width: 16,
+    height: 4,
+    borderRadius: 999,
+    alignSelf: 'center',
+    marginTop: 7,
   },
   carDrawing: {
     width: 56,
@@ -1541,12 +1657,35 @@ const styles = StyleSheet.create({
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
   },
+  carWindow: {
+    position: 'absolute',
+    top: 5,
+    left: -1,
+    right: -1,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15, 23, 42, 0.34)',
+  },
   carBody: {
     width: 52,
     height: 15,
     borderRadius: 8,
     alignSelf: 'center',
     marginTop: -1,
+  },
+  carLightRow: {
+    width: 46,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignSelf: 'center',
+    marginTop: -11,
+    paddingHorizontal: 3,
+  },
+  carLight: {
+    width: 6,
+    height: 4,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.78)',
   },
   carWheelRow: {
     width: 46,
@@ -1555,12 +1694,28 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: -5,
   },
+  carRoofSignal: {
+    position: 'absolute',
+    top: 4,
+    alignSelf: 'center',
+    width: 14,
+    height: 4,
+    borderRadius: 999,
+  },
   vehicleWheel: {
     width: 14,
     height: 14,
     borderRadius: 7,
     borderWidth: 3,
     backgroundColor: orbiTheme.colors.background,
+  },
+  vehicleRoad: {
+    position: 'absolute',
+    bottom: 10,
+    width: 46,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: 'rgba(148, 163, 184, 0.24)',
   },
   badge: {
     fontWeight: '800',
