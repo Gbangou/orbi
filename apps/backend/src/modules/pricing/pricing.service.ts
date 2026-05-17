@@ -114,6 +114,7 @@ export class PricingService {
       accent: string;
       etaMinutes: number;
       paymentMethods: Array<'mobile-money' | 'cash' | 'wallet'>;
+      vehicleExamples: string[];
     }> = [
       {
         vehicleType: 'MOTORCYCLE',
@@ -124,6 +125,7 @@ export class PricingService {
         accent: '#2dd4bf',
         etaMinutes: 3,
         paymentMethods: ['mobile-money', 'cash', 'wallet'],
+        vehicleExamples: ['Yamaha Crypton', 'TVS HLX', 'Bajaj Boxer'],
       },
       {
         vehicleType: 'CAR',
@@ -134,6 +136,7 @@ export class PricingService {
         accent: '#f59e0b',
         etaMinutes: 6,
         paymentMethods: ['mobile-money', 'cash', 'wallet'],
+        vehicleExamples: ['Toyota Corolla', 'Hyundai Accent', 'Suzuki Dzire'],
       },
       {
         vehicleType: 'CAR',
@@ -144,6 +147,7 @@ export class PricingService {
         accent: '#38bdf8',
         etaMinutes: 8,
         paymentMethods: ['mobile-money', 'wallet'],
+        vehicleExamples: ['Toyota Yaris', 'Hyundai Elantra', 'Kia Rio'],
       },
     ];
 
@@ -191,6 +195,13 @@ export class PricingService {
           badge: configuration.badge,
           paymentMethods: configuration.paymentMethods,
           safetyNote: 'Code de prise en charge et partage de trajet inclus.',
+          marketplace: this.buildRideOptionMarketplace(
+            configuration.vehicleType,
+            configuration.etaMinutes,
+            query.activeDriverCount,
+            estimate.operatingContext.availabilityScore,
+            configuration.vehicleExamples,
+          ),
           fareBreakdown: {
             baseFare: estimate.fareBreakdown.baseFare,
             bookingFee: estimate.fareBreakdown.bookingFee,
@@ -212,6 +223,49 @@ export class PricingService {
         durationMinutes: query.durationMinutes,
       },
       options,
+    };
+  }
+
+  private buildRideOptionMarketplace(
+    vehicleType: 'MOTORCYCLE' | 'CAR',
+    baseEtaMinutes: number,
+    activeDriverCount: number | undefined,
+    availabilityScore: number,
+    vehicleExamples: string[],
+  ) {
+    const onlineDrivers = Math.max(
+      vehicleType === 'MOTORCYCLE' ? 2 : 1,
+      Math.round(
+        (activeDriverCount ?? 6) *
+          (vehicleType === 'MOTORCYCLE' ? 0.62 : 0.38),
+      ),
+    );
+    const pickupRadiusKm = Number(
+      Math.max(
+        vehicleType === 'MOTORCYCLE' ? 0.9 : 1.4,
+        baseEtaMinutes * (vehicleType === 'MOTORCYCLE' ? 0.42 : 0.5),
+      ).toFixed(1),
+    );
+    const etaConfidence =
+      availabilityScore >= 78
+        ? 'HIGH'
+        : availabilityScore >= 54
+          ? 'MEDIUM'
+          : 'LOW';
+
+    return {
+      availabilityLabel:
+        etaConfidence === 'HIGH'
+          ? 'Tres disponible'
+          : etaConfidence === 'MEDIUM'
+            ? 'Disponible'
+            : 'Selection limitee',
+      nearbyDrivers: onlineDrivers,
+      pickupRadiusKm,
+      etaConfidence,
+      vehicleExamples,
+      pricePromise:
+        'Prix upfront affiche avant confirmation; approche chauffeur utilisee pour l ETA sans frais caches.',
     };
   }
 

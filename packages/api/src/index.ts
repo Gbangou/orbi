@@ -998,6 +998,14 @@ export const riderRideOptions: RideOption[] = [
     badge: 'Le plus rapide',
     paymentMethods: ['mobile-money', 'cash', 'wallet'],
     safetyNote: 'Code de prise en charge et partage du trajet actifs.',
+    marketplace: {
+      availabilityLabel: 'Tres disponible',
+      nearbyDrivers: 9,
+      pickupRadiusKm: 1.8,
+      etaConfidence: 'HIGH',
+      vehicleExamples: ['Yamaha Crypton', 'TVS HLX', 'Bajaj Boxer'],
+      pricePromise: 'Prix upfront verrouille avant confirmation.',
+    },
     fareBreakdown: {
       baseFare: 600,
       bookingFee: 150,
@@ -1016,6 +1024,14 @@ export const riderRideOptions: RideOption[] = [
     badge: 'Le plus populaire',
     paymentMethods: ['mobile-money', 'cash', 'wallet'],
     safetyNote: 'Tarif transparent avant confirmation et suivi partageable.',
+    marketplace: {
+      availabilityLabel: 'Disponible',
+      nearbyDrivers: 5,
+      pickupRadiusKm: 2.6,
+      etaConfidence: 'MEDIUM',
+      vehicleExamples: ['Toyota Corolla', 'Hyundai Accent', 'Suzuki Dzire'],
+      pricePromise: 'Prix upfront affiche sans frais de pickup caches.',
+    },
     fareBreakdown: {
       baseFare: 1200,
       bookingFee: 250,
@@ -1034,6 +1050,14 @@ export const riderRideOptions: RideOption[] = [
     badge: 'Premium',
     paymentMethods: ['mobile-money', 'wallet'],
     safetyNote: 'Verification chauffeur renforcee et experience plus calme.',
+    marketplace: {
+      availabilityLabel: 'Selection limitee',
+      nearbyDrivers: 3,
+      pickupRadiusKm: 3.4,
+      etaConfidence: 'MEDIUM',
+      vehicleExamples: ['Toyota Yaris', 'Hyundai Elantra', 'Kia Rio'],
+      pricePromise: 'Prix upfront avec confort et verification renforces.',
+    },
     fareBreakdown: {
       baseFare: 1500,
       bookingFee: 300,

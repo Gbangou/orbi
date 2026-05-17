@@ -65,6 +65,12 @@ function buildRideOptionInsights(option: RideOption): Array<{
 
 function buildRideOptionDetailLines(option: RideOption) {
   const lines = [
+    option.marketplace
+      ? `${option.marketplace.availabilityLabel}: ${option.marketplace.nearbyDrivers} chauffeurs proches dans ${option.marketplace.pickupRadiusKm.toFixed(1)} km`
+      : null,
+    option.marketplace?.vehicleExamples.length
+      ? `Exemples: ${option.marketplace.vehicleExamples.join(', ')}`
+      : null,
     option.paymentMethods?.length
       ? `Paiement: ${option.paymentMethods.join(', ')}`
       : null,
@@ -307,7 +313,7 @@ export default function RiderHomeScreen() {
           description={`Trajet estime avec ${option.category === 'motorcycle' ? 'moto' : 'voiture'} premium, disponible rapidement depuis votre zone.`}
           insights={buildRideOptionInsights(option)}
           detailLines={buildRideOptionDetailLines(option)}
-          note={option.safetyNote}
+          note={option.marketplace?.pricePromise ?? option.safetyNote}
           noteTone="teal"
         />
       ))}

@@ -453,6 +453,14 @@ export type RideOption = {
   badge?: string;
   paymentMethods?: PaymentMethod[];
   safetyNote?: string;
+  marketplace?: {
+    availabilityLabel: string;
+    nearbyDrivers: number;
+    pickupRadiusKm: number;
+    etaConfidence: 'LOW' | 'MEDIUM' | 'HIGH';
+    vehicleExamples: string[];
+    pricePromise: string;
+  };
   fareBreakdown?: {
     baseFare: number;
     bookingFee: number;

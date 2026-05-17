@@ -216,7 +216,25 @@ function buildRideOptionDesignSignals(option: RideOption) {
           ? 'Casque + confort'
           : 'Pickup rapide',
     paymentCount > 1 ? `${paymentCount} paiements` : 'Mobile Money pret',
+    option.marketplace
+      ? `${option.marketplace.nearbyDrivers} proches`
+      : 'Disponibilite live',
   ];
+}
+
+function formatEtaConfidenceLabel(
+  confidence: NonNullable<RideOption['marketplace']>['etaConfidence'],
+) {
+  switch (confidence) {
+    case 'HIGH':
+      return 'ETA fiable';
+    case 'MEDIUM':
+      return 'ETA stable';
+    case 'LOW':
+      return 'ETA prudent';
+    default:
+      return 'ETA calcule';
+  }
 }
 
 function formatPaymentMethodLabel(method: PaymentMethod) {
@@ -860,6 +878,13 @@ export default function BookingScreen() {
             value={String(options.length)}
             helper="options pricees disponibles"
           />
+          {selectedOption?.marketplace ? (
+            <MetricTile
+              label="Chauffeurs"
+              value={String(selectedOption.marketplace.nearbyDrivers)}
+              helper={`${selectedOption.marketplace.pickupRadiusKm.toFixed(1)} km autour du depart`}
+            />
+          ) : null}
         </View>
       </SectionCard>
 
@@ -1143,6 +1168,11 @@ export default function BookingScreen() {
                 <View style={styles.optionChipRow}>
                   <Text style={styles.optionChip}>{visual.capacityLabel}</Text>
                   <Text style={styles.optionChip}>{option.badge}</Text>
+                  {option.marketplace ? (
+                    <Text style={styles.optionChip}>
+                      {formatEtaConfidenceLabel(option.marketplace.etaConfidence)}
+                    </Text>
+                  ) : null}
                   <Text style={styles.optionChip}>
                     {formatPaymentMethodLabel(selectedPaymentMethod)}
                   </Text>
@@ -1159,6 +1189,25 @@ export default function BookingScreen() {
             <Text style={styles.optionMeta}>
               Tarif upfront estime, ETA separe et service {visual.categoryLabel.toLowerCase()} compatible avec ce trajet.
             </Text>
+            {option.marketplace ? (
+              <View style={styles.marketplaceBlock}>
+                <View style={styles.marketplaceTopRow}>
+                  <Text style={styles.marketplaceTitle}>
+                    {option.marketplace.availabilityLabel}
+                  </Text>
+                  <Text style={styles.marketplaceMeta}>
+                    {option.marketplace.nearbyDrivers} proches - rayon{' '}
+                    {option.marketplace.pickupRadiusKm.toFixed(1)} km
+                  </Text>
+                </View>
+                <Text style={styles.marketplaceText}>
+                  Vehicules possibles: {option.marketplace.vehicleExamples.join(', ')}
+                </Text>
+                <Text style={styles.marketplacePromise}>
+                  {option.marketplace.pricePromise}
+                </Text>
+              </View>
+            ) : null}
             {option.fareBreakdown ? (
               <View style={styles.breakdownBlock}>
                 <Text style={styles.breakdown}>
@@ -1736,6 +1785,41 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.muted,
     fontSize: 12,
     lineHeight: 17,
+  },
+  marketplaceBlock: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.28)',
+    backgroundColor: 'rgba(8, 47, 73, 0.16)',
+    padding: 12,
+    gap: 5,
+  },
+  marketplaceTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  marketplaceTitle: {
+    color: orbiTheme.colors.text,
+    fontWeight: '900',
+    fontSize: 13,
+  },
+  marketplaceMeta: {
+    color: orbiTheme.colors.sky,
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  marketplaceText: {
+    color: orbiTheme.colors.muted,
+    lineHeight: 18,
+    fontSize: 12,
+  },
+  marketplacePromise: {
+    color: orbiTheme.colors.teal,
+    lineHeight: 18,
+    fontSize: 12,
+    fontWeight: '700',
   },
   safety: {
     color: orbiTheme.colors.teal,

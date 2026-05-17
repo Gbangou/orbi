@@ -202,4 +202,25 @@ describe('PricingService', () => {
       ]),
     );
   });
+
+  it('exposes marketplace availability and vehicle examples for rider choice', async () => {
+    const { service } = createService();
+
+    const preview = await service.estimateRideOptions({
+      vehicleType: 'MOTORCYCLE',
+      distanceKm: 5.8,
+      durationMinutes: 16,
+      activeDriverCount: 8,
+      openRequestCount: 6,
+    } as never);
+
+    expect(preview.options[0]?.marketplace).toMatchObject({
+      availabilityLabel: expect.any(String),
+      nearbyDrivers: expect.any(Number),
+      pickupRadiusKm: expect.any(Number),
+      etaConfidence: expect.stringMatching(/HIGH|MEDIUM|LOW/),
+      vehicleExamples: expect.arrayContaining(['Yamaha Crypton']),
+      pricePromise: expect.stringContaining('Prix upfront'),
+    });
+  });
 });
