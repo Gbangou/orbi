@@ -11,6 +11,7 @@ export const adminSyncHighlightDurationMs = 5000;
 type AdminJobQueueEntry = AdminJobQueueResponse['jobs'][number];
 type LiveOpsRouteMonitoring = AdminLiveOpsResponse['trips'][number]['routeMonitoring'];
 type LiveOpsTrip = AdminLiveOpsResponse['trips'][number];
+const liveOpsStaleGpsThresholdMs = 2 * 60 * 1000;
 export type JobQueueKindFilter =
   | 'ALL'
   | 'PAYMENT_WEBHOOK'
@@ -42,9 +43,14 @@ export function formatAdminDateTime(
 
 export function resolveLiveOpsRouteMonitoringCopy(
   routeMonitoring: LiveOpsRouteMonitoring,
+  options: { now?: string | Date } = {},
 ) {
+  const signalAge = resolveLiveOpsRouteSignalAge(routeMonitoring.lastPositionAt, options.now);
+  const isStale = signalAge.isStale && routeMonitoring.state === 'clear';
   const statusLabel =
-    routeMonitoring.state === 'unknown'
+    isStale
+      ? 'Signal GPS ancien'
+      : routeMonitoring.state === 'unknown'
       ? 'En attente'
       : routeMonitoring.state === 'clear'
         ? 'Clair'
@@ -52,13 +58,17 @@ export function resolveLiveOpsRouteMonitoringCopy(
 
   return {
     statusLabel,
-    lastSignalLabel: routeMonitoring.lastAlertType
-      ? formatOperationalStatus(routeMonitoring.lastAlertType)
-      : null,
+    lastSignalLabel:
+      routeMonitoring.lastAlertType
+        ? formatOperationalStatus(routeMonitoring.lastAlertType)
+        : signalAge.label,
   };
 }
 
-export function resolveLiveOpsTripTriage(trip: LiveOpsTrip) {
+export function resolveLiveOpsTripTriage(
+  trip: LiveOpsTrip,
+  options: { now?: string | Date } = {},
+) {
   if (trip.hasIncident) {
     return {
       level: 'critical' as const,
@@ -99,11 +109,65 @@ export function resolveLiveOpsTripTriage(trip: LiveOpsTrip) {
     };
   }
 
+  const routeSignalAge = resolveLiveOpsRouteSignalAge(
+    trip.routeMonitoring.lastPositionAt,
+    options.now,
+  );
+
+  if (routeSignalAge.isStale) {
+    return {
+      level: 'watch' as const,
+      label: 'Signal GPS ancien',
+      owner: 'dispatch',
+      action:
+        'Contacter le chauffeur si le prochain ping ne revient pas et garder le rider informe.',
+    };
+  }
+
   return {
     level: 'clear' as const,
     label: 'Stable',
     owner: 'ops',
     action: 'Aucune action immediate, garder le suivi live ouvert.',
+  };
+}
+
+export function resolveLiveOpsRouteSignalAge(
+  lastPositionAt: string | null,
+  nowInput?: string | Date,
+) {
+  if (!lastPositionAt) {
+    return {
+      ageSeconds: null,
+      isStale: false,
+      label: null,
+    };
+  }
+
+  const observedAt = new Date(lastPositionAt);
+  const now = nowInput ? new Date(nowInput) : new Date();
+
+  if (!Number.isFinite(observedAt.getTime()) || !Number.isFinite(now.getTime())) {
+    return {
+      ageSeconds: null,
+      isStale: false,
+      label: 'Horodatage GPS a verifier',
+    };
+  }
+
+  const ageSeconds = Math.max(
+    0,
+    Math.round((now.getTime() - observedAt.getTime()) / 1000),
+  );
+  const ageMinutes = Math.max(1, Math.round(ageSeconds / 60));
+
+  return {
+    ageSeconds,
+    isStale: ageSeconds * 1000 >= liveOpsStaleGpsThresholdMs,
+    label:
+      ageSeconds * 1000 >= liveOpsStaleGpsThresholdMs
+        ? `Dernier GPS il y a ${ageMinutes} min`
+        : `GPS il y a ${ageMinutes} min`,
   };
 }
 

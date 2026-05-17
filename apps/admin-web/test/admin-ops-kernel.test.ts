@@ -17,6 +17,7 @@ import {
   resolveJobQueueFilterSummary,
   resolveJobQueueOwnerRows,
   resolveLiveOpsRouteMonitoringCopy,
+  resolveLiveOpsRouteSignalAge,
   resolveLiveOpsTripTriage,
   resolveVisibleDriverOnboardingQueue,
 } from '../app/admin-ops-kernel';
@@ -261,10 +262,10 @@ describe('admin-ops-kernel', () => {
         lastAlertType: null,
         lastAlertAt: null,
         lastPositionAt: '2026-04-19T08:02:30.000Z',
-      }),
+      }, { now: '2026-04-19T08:03:00.000Z' }),
     ).toEqual({
       statusLabel: 'Clair',
-      lastSignalLabel: null,
+      lastSignalLabel: 'GPS il y a 1 min',
     });
 
     expect(
@@ -279,6 +280,56 @@ describe('admin-ops-kernel', () => {
       statusLabel: 'Critical (2)',
       lastSignalLabel: 'Route Deviation',
     });
+  });
+
+  it('marks stale live ops GPS signals for dispatch triage', () => {
+    expect(
+      resolveLiveOpsRouteSignalAge(
+        '2026-04-19T08:00:00.000Z',
+        '2026-04-19T08:03:30.000Z',
+      ),
+    ).toEqual({
+      ageSeconds: 210,
+      isStale: true,
+      label: 'Dernier GPS il y a 4 min',
+    });
+
+    expect(
+      resolveLiveOpsRouteMonitoringCopy(
+        {
+          state: 'clear',
+          alertCount: 0,
+          lastAlertType: null,
+          lastAlertAt: null,
+          lastPositionAt: '2026-04-19T08:00:00.000Z',
+        },
+        { now: '2026-04-19T08:03:30.000Z' },
+      ),
+    ).toEqual({
+      statusLabel: 'Signal GPS ancien',
+      lastSignalLabel: 'Dernier GPS il y a 4 min',
+    });
+
+    expect(
+      resolveLiveOpsTripTriage(
+        createLiveOpsTrip({
+          routeMonitoring: {
+            state: 'clear',
+            alertCount: 0,
+            lastAlertType: null,
+            lastAlertAt: null,
+            lastPositionAt: '2026-04-19T08:00:00.000Z',
+          },
+        }),
+        { now: '2026-04-19T08:03:30.000Z' },
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        level: 'watch',
+        label: 'Signal GPS ancien',
+        owner: 'dispatch',
+      }),
+    );
   });
 
   it('prioritizes live ops trip triage by incident and route monitoring risk', () => {

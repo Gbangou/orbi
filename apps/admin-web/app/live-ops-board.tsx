@@ -75,6 +75,14 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
   }, [refreshLiveOps]);
 
   useEffect(() => {
+    const interval = window.setInterval(() => {
+      void refreshLiveOps();
+    }, 30000);
+
+    return () => window.clearInterval(interval);
+  }, [refreshLiveOps]);
+
+  useEffect(() => {
     const previousTrips = previousTripsRef.current;
 
     if (previousTrips) {
