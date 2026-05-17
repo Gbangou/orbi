@@ -12,8 +12,27 @@ function Invoke-NativeCommand {
     [string]$FailureMessage
   )
 
-  $output = & $Command
-  if ($LASTEXITCODE -ne 0) {
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $output = & $Command 2>&1
+    $exitCode = $LASTEXITCODE
+  }
+  finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+
+  if ($exitCode -ne 0) {
+    $details = ($output | Out-String).Trim()
+
+    if ($details -match 'Access is denied' -and $details -match 'dockerDesktopLinuxEngine') {
+      throw "$FailureMessage Docker Desktop denied access to its Linux engine. Open Docker Desktop, wait until it is fully running, then rerun pnpm db:start from a PowerShell session that can access Docker."
+    }
+
+    if ($details) {
+      throw "$FailureMessage`n$details"
+    }
+
     throw $FailureMessage
   }
 
@@ -67,6 +86,10 @@ try {
   }
 
   throw 'PostgreSQL did not become healthy in time. Check Docker Desktop and container logs.'
+}
+catch {
+  Write-Host $_.Exception.Message -ForegroundColor Red
+  exit 1
 }
 finally {
   Pop-Location

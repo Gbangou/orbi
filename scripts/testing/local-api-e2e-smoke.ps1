@@ -74,6 +74,24 @@ function Request-SessionToken {
   return $response.sessionToken
 }
 
+function Request-E2ERiderSessionToken {
+  param([string]$RunId)
+
+  $email = "local-api-e2e-$RunId@orbi.test"
+  $response = Invoke-Json -Method "POST" -Path "/auth/sign-up" -Body @{
+    fullName = "Awa Test"
+    email = $email
+    password = "Orbi123!"
+    role = "RIDER"
+  }
+
+  if (!$response.sessionToken) {
+    Stop-LocalApiE2E "sign-up returned no session token for $email"
+  }
+
+  return $response.sessionToken
+}
+
 function Test-ExpectedValue {
   param(
     [object]$Actual,
@@ -101,7 +119,7 @@ try {
 
 Write-Step "Signing in demo accounts"
 $adminToken = Request-SessionToken -Email "admin@orbi.app"
-$riderToken = Request-SessionToken -Email "rider@orbi.app"
+$riderToken = Request-E2ERiderSessionToken -RunId $RunId
 $driverToken = Request-SessionToken -Email "driver@orbi.app"
 
 Write-Step "Putting driver online and updating presence"
@@ -114,7 +132,14 @@ Invoke-Json -Method "PATCH" -Path "/drivers/presence" -Token $driverToken -Body 
 } | Out-Null
 
 Write-Step "Creating rider request"
-$rideRequest = Invoke-Json -Method "POST" -Path "/ride-requests" -Token $riderToken -Body @{
+$rideRequest = Invoke-Json `
+  -Method "POST" `
+  -Path "/ride-requests" `
+  -Token $riderToken `
+  -ExtraHeaders @{
+    "Idempotency-Key" = "local-api-e2e-ride-request-$RunId"
+  } `
+  -Body @{
   pickupAddress = "Universite Joseph Ki-Zerbo, Ouagadougou"
   pickupLatitude = 12.3783
   pickupLongitude = -1.4994
