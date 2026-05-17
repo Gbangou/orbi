@@ -93,6 +93,52 @@ const fallbackFatigue: DriverFatigueStatus = {
   reason: 'Aucun signal fatigue bloquant sur la fenetre recente.',
 };
 
+function buildInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'OR';
+}
+
+function formatOfferDistance(value: number | null | undefined) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? `${value.toFixed(1)} km`
+    : 'Distance ND';
+}
+
+function MissionVehicleMark({
+  category,
+}: {
+  category: DriverOffer['category'];
+}) {
+  const isMoto = category === 'motorcycle';
+  const accent = isMoto ? orbiTheme.colors.teal : orbiTheme.colors.sky;
+
+  return (
+    <View style={[styles.missionVehicleMark, { borderColor: accent }]}>
+      {isMoto ? (
+        <View style={styles.missionMoto}>
+          <View style={[styles.missionMotoSeat, { backgroundColor: accent }]} />
+          <View style={styles.missionWheelRow}>
+            <View style={[styles.missionWheel, { borderColor: accent }]} />
+            <View style={[styles.missionWheel, { borderColor: accent }]} />
+          </View>
+        </View>
+      ) : (
+        <View style={styles.missionCar}>
+          <View style={[styles.missionCarBody, { backgroundColor: accent }]} />
+          <View style={styles.missionWheelRow}>
+            <View style={[styles.missionWheel, { borderColor: accent }]} />
+            <View style={[styles.missionWheel, { borderColor: accent }]} />
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function OffersScreen() {
   const [offers, setOffers] = useState<DriverOffer[]>(driverOffers);
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
@@ -933,6 +979,7 @@ export default function OffersScreen() {
       ) : null}
       {visibleOffers.map((offer) => {
         const offerNote = buildDriverOfferNote(offer);
+        const riderInitials = buildInitials(offer.riderName);
 
         return (
           <RouteSignalCard
@@ -954,6 +1001,46 @@ export default function OffersScreen() {
             noteTone={offerNote?.tone ?? 'sky'}
             isHighlighted={freshOfferIds.includes(offer.id)}
           >
+            <View style={styles.offerMissionCard}>
+              <View style={styles.offerMissionTop}>
+                <View style={styles.offerRiderAvatar}>
+                  <Text style={styles.offerRiderInitials}>{riderInitials}</Text>
+                </View>
+                <View style={styles.offerMissionCopy}>
+                  <Text style={styles.offerMissionTitle}>{offer.riderName}</Text>
+                  <Text style={styles.offerMissionMeta}>
+                    {offer.pickup} vers {offer.destination}
+                  </Text>
+                </View>
+                <MissionVehicleMark category={offer.category} />
+              </View>
+              <View style={styles.offerMissionRail}>
+                <View style={styles.offerMissionDot} />
+                <View style={styles.offerMissionLine} />
+                <View style={[styles.offerMissionDot, styles.offerMissionDotEnd]} />
+              </View>
+              <View style={styles.offerMissionMetrics}>
+                <MetricTile
+                  label="Pickup"
+                  value={formatOfferDistance(offer.pickupDistanceKm)}
+                  helper={`${Math.round(offer.etaToPickupMinutes)} min estime`}
+                />
+                <MetricTile
+                  label="Trajet"
+                  value={formatOfferDistance(offer.distanceKm)}
+                  helper={offer.category === 'motorcycle' ? 'Mission moto' : 'Mission voiture'}
+                />
+                <MetricTile
+                  label="Net"
+                  value={
+                    typeof offer.driverPayout === 'number'
+                      ? formatXof(offer.driverPayout)
+                      : formatDriverOfferFare(offer)
+                  }
+                  helper="Gain chauffeur estime"
+                />
+              </View>
+            </View>
             <View style={styles.offerActionRow}>
               <FlowActionButton
                 disabled={isSubmitting || Boolean(activeTrip)}
@@ -1138,6 +1225,116 @@ const styles = StyleSheet.create({
   },
   meta: {
     color: orbiTheme.colors.muted,
+  },
+  offerMissionCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    padding: 14,
+    gap: 12,
+  },
+  offerMissionTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  offerRiderAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.34)',
+  },
+  offerRiderInitials: {
+    color: orbiTheme.colors.amber,
+    fontWeight: '900',
+    fontSize: 16,
+  },
+  offerMissionCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  offerMissionTitle: {
+    color: orbiTheme.colors.text,
+    fontWeight: '900',
+    fontSize: 17,
+  },
+  offerMissionMeta: {
+    color: orbiTheme.colors.muted,
+    lineHeight: 18,
+  },
+  missionVehicleMark: {
+    width: 52,
+    height: 44,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: orbiTheme.colors.panel,
+  },
+  missionMoto: {
+    width: 36,
+    height: 24,
+    justifyContent: 'flex-end',
+  },
+  missionMotoSeat: {
+    width: 24,
+    height: 7,
+    borderRadius: 999,
+    marginLeft: 6,
+    marginBottom: 3,
+  },
+  missionCar: {
+    width: 38,
+    height: 24,
+    justifyContent: 'flex-end',
+  },
+  missionCarBody: {
+    width: 36,
+    height: 13,
+    borderRadius: 7,
+    alignSelf: 'center',
+    marginBottom: -3,
+  },
+  missionWheelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  missionWheel: {
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    borderWidth: 2,
+    backgroundColor: orbiTheme.colors.background,
+  },
+  offerMissionRail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  offerMissionDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  offerMissionDotEnd: {
+    backgroundColor: orbiTheme.colors.sky,
+  },
+  offerMissionLine: {
+    flex: 1,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: orbiTheme.colors.border,
+  },
+  offerMissionMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   offerActionRow: {
     flexDirection: 'row',
