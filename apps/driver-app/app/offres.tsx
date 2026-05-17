@@ -139,6 +139,61 @@ function MissionVehicleMark({
   );
 }
 
+function ActiveMissionMap({
+  progressPercent,
+  title,
+  distanceLabel,
+  stateLabel,
+  isInProgress,
+}: {
+  progressPercent: number;
+  title: string;
+  distanceLabel: string;
+  stateLabel: string;
+  isInProgress: boolean;
+}) {
+  const boundedProgress = Math.max(12, Math.min(88, progressPercent));
+  const accent = isInProgress ? orbiTheme.colors.sky : orbiTheme.colors.amber;
+
+  return (
+    <View style={styles.activeMissionMap}>
+      <View style={styles.activeMissionGridLine} />
+      <View style={[styles.activeMissionRoad, { backgroundColor: accent }]} />
+      <View style={styles.activeMissionRoadShadow} />
+      <View style={styles.activeMissionPickupPin}>
+        <Text style={styles.activeMissionPinLabel}>P</Text>
+      </View>
+      <View style={styles.activeMissionDestinationPin}>
+        <Text style={styles.activeMissionPinLabel}>
+          {isInProgress ? 'D' : 'A'}
+        </Text>
+      </View>
+      <View
+        style={[
+          styles.activeMissionVehiclePin,
+          { left: `${boundedProgress}%` },
+        ]}
+      >
+        <View style={[styles.activeMissionVehicleCabin, { backgroundColor: accent }]} />
+        <View style={[styles.activeMissionVehicleBody, { backgroundColor: accent }]}>
+          <View style={styles.activeMissionVehicleLight} />
+          <View style={styles.activeMissionVehicleLight} />
+        </View>
+        <View style={styles.activeMissionWheelRow}>
+          <View style={[styles.activeMissionWheel, { borderColor: accent }]} />
+          <View style={[styles.activeMissionWheel, { borderColor: accent }]} />
+        </View>
+      </View>
+      <View style={styles.activeMissionMapCopy}>
+        <Text style={styles.activeMissionMapTitle}>{title}</Text>
+        <Text style={styles.activeMissionMapMeta}>
+          {distanceLabel} - {stateLabel}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 export default function OffersScreen() {
   const [offers, setOffers] = useState<DriverOffer[]>(driverOffers);
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
@@ -917,7 +972,16 @@ export default function OffersScreen() {
             </View>
           ) : null}
           {driverRouteProgress ? (
-            <LiveRouteProgressCard {...driverRouteProgress} />
+            <>
+              <ActiveMissionMap
+                progressPercent={driverRouteProgress.progressPercent}
+                title={driverRouteProgress.title}
+                distanceLabel={driverRouteProgress.distanceLabel}
+                stateLabel={driverRouteProgress.stateLabel}
+                isInProgress={activeTrip.status === 'IN_PROGRESS'}
+              />
+              <LiveRouteProgressCard {...driverRouteProgress} />
+            </>
           ) : null}
           {activeTripTransitionLabel ? (
             <Text style={styles.transitionInlineLabel}>{activeTripTransitionLabel}</Text>
@@ -1207,6 +1271,125 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  activeMissionMap: {
+    minHeight: 154,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.32)',
+    backgroundColor: 'rgba(8, 47, 73, 0.18)',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  activeMissionGridLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 34,
+    height: 1,
+    backgroundColor: 'rgba(148, 163, 184, 0.13)',
+  },
+  activeMissionRoad: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    top: 72,
+    height: 8,
+    borderRadius: 999,
+    opacity: 0.45,
+  },
+  activeMissionRoadShadow: {
+    position: 'absolute',
+    left: 34,
+    right: 34,
+    top: 88,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: 'rgba(148, 163, 184, 0.28)',
+  },
+  activeMissionPickupPin: {
+    position: 'absolute',
+    left: 18,
+    top: 58,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  activeMissionDestinationPin: {
+    position: 'absolute',
+    right: 18,
+    top: 58,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: orbiTheme.colors.amber,
+  },
+  activeMissionPinLabel: {
+    color: '#052a28',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  activeMissionVehiclePin: {
+    position: 'absolute',
+    top: 42,
+    width: 52,
+    marginLeft: -26,
+    alignItems: 'center',
+  },
+  activeMissionVehicleCabin: {
+    width: 24,
+    height: 12,
+    borderTopLeftRadius: 9,
+    borderTopRightRadius: 9,
+    opacity: 0.74,
+    marginBottom: -2,
+  },
+  activeMissionVehicleBody: {
+    width: 46,
+    height: 24,
+    borderRadius: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 6,
+  },
+  activeMissionVehicleLight: {
+    width: 6,
+    height: 4,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.76)',
+  },
+  activeMissionWheelRow: {
+    width: 38,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: -5,
+  },
+  activeMissionWheel: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    backgroundColor: orbiTheme.colors.background,
+  },
+  activeMissionMapCopy: {
+    marginTop: 88,
+    gap: 3,
+  },
+  activeMissionMapTitle: {
+    color: orbiTheme.colors.text,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  activeMissionMapMeta: {
+    color: orbiTheme.colors.sky,
+    fontWeight: '700',
   },
   codeBlock: {
     gap: 10,
