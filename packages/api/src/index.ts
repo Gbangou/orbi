@@ -1066,6 +1066,10 @@ export const riderRideOptions: RideOption[] = [
   },
 ];
 
+function createPreviewReservationExpiry(windowSeconds: number) {
+  return new Date(Date.now() + windowSeconds * 1000).toISOString();
+}
+
 export const driverOffers: DriverOffer[] = [
   {
     id: 'offer-001',
@@ -1080,7 +1084,7 @@ export const driverOffers: DriverOffer[] = [
     pickupCodeRequired: true,
     pickupDistanceKm: 1.2,
     pickupDistanceSource: 'DRIVER_AND_PICKUP_COORDINATES',
-    reservationExpiresAt: new Date('2026-04-18T08:00:30.000Z').toISOString(),
+    reservationExpiresAt: createPreviewReservationExpiry(45),
     serviceRadiusKm: 8,
     dispatchScore: 86,
     matchedTier: 'MOTO_STANDARD',
@@ -1104,7 +1108,7 @@ export const driverOffers: DriverOffer[] = [
     pickupCodeRequired: true,
     pickupDistanceKm: 2.8,
     pickupDistanceSource: 'DRIVER_AND_PICKUP_COORDINATES',
-    reservationExpiresAt: new Date('2026-04-18T08:00:30.000Z').toISOString(),
+    reservationExpiresAt: createPreviewReservationExpiry(35),
     serviceRadiusKm: 8,
     dispatchScore: 71,
     matchedTier: 'CAR_STANDARD',
