@@ -155,6 +155,16 @@ export default () => ({
       10,
     ),
   },
+  observability: {
+    mobileErrorCollector: {
+      provider: process.env.MOBILE_ERROR_COLLECTOR_PROVIDER ?? 'local',
+      webhookUrl: process.env.MOBILE_ERROR_COLLECTOR_WEBHOOK_URL ?? '',
+      timeoutMs: Number.parseInt(
+        process.env.MOBILE_ERROR_COLLECTOR_TIMEOUT_MS ?? '1500',
+        10,
+      ),
+    },
+  },
   documents: {
     signingSecret:
       process.env.DOCUMENT_SIGNING_SECRET ?? 'orbi_dev_document_secret',

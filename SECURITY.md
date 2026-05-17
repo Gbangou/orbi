@@ -92,6 +92,9 @@ OK Implemented:
   browser `sessionStorage` on Expo web. The web path does not fall back to
   persistent `localStorage` and ignores blocked storage APIs without crashing the
   auth surface.
+- Mobile error reports can be relayed to an external HTTPS webhook collector
+  after server-side redaction. Production startup now rejects the local-only
+  collector mode so mobile crash/error monitoring cannot be forgotten silently.
 
 Planned Next Phase:
 - 2FA support (TOTP)

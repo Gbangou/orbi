@@ -187,6 +187,9 @@ paiement provider, observabilite et runbooks verts.
 - Ingestion `/mobile/error-reports` durcie cote backend: les payloads mixtes
   rider/driver sont rejetes avant tout audit log, ticket support ou evenement
   realtime, et le signal admin publie maintenant un `appRole` mobile normalise.
+- Frontiere collector d erreurs mobiles ajoutee: le backend garde le mode local
+  par defaut, peut relayer les rapports rediges vers un webhook externe borne,
+  et refuse le demarrage production sans collector mobile HTTPS non local.
 
 ## Architecture active
 

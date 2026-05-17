@@ -4,6 +4,10 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import type { SubmitMobileErrorReportsDto } from './dto/submit-mobile-error-reports.dto';
+import {
+  MobileErrorCollectorService,
+  type MobileErrorCollectorReport,
+} from './mobile-error-collector.service';
 
 const sensitiveMobileErrorPattern =
   /\b(sessiontoken|session|token|authorization|password|secret)\s*[=:]\s*(?:bearer\s+)?["']?[^"'&\s,;)]+["']?/gi;
@@ -16,6 +20,7 @@ export class MobileObservabilityService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
+    private readonly mobileErrorCollectorService: MobileErrorCollectorService,
   ) {}
 
   async submitErrorReports(
@@ -30,6 +35,7 @@ export class MobileObservabilityService {
     let ignoredReports = 0;
     let duplicateReports = 0;
     let supportTicketCount = 0;
+    const collectorReports: MobileErrorCollectorReport[] = [];
 
     for (const report of payload.reports ?? []) {
       if (!report.classification.reportable) {
@@ -54,26 +60,39 @@ export class MobileObservabilityService {
         continue;
       }
 
+      const metadata = {
+        appRole: report.appRole,
+        appVersion: report.appVersion ?? null,
+        occurredAt: report.occurredAt,
+        fingerprint: report.fingerprint,
+        errorName: report.errorName,
+        errorMessage: this.redactMobileErrorText(report.errorMessage),
+        sessionId: auth.session.id,
+        classification: report.classification,
+        context: this.boundContext(report.context),
+      };
+
       await this.prisma.auditLog.create({
         data: {
           userId: auth.user.id,
           action: 'MOBILE_CLIENT_ERROR_REPORTED',
           entityType: 'MOBILE_ERROR_REPORT',
           entityId: report.id,
-          metadata: {
-            appRole: report.appRole,
-            appVersion: report.appVersion ?? null,
-            occurredAt: report.occurredAt,
-            fingerprint: report.fingerprint,
-            errorName: report.errorName,
-            errorMessage: this.redactMobileErrorText(report.errorMessage),
-            sessionId: auth.session.id,
-            classification: report.classification,
-            context: this.boundContext(report.context),
-          } as unknown as Prisma.InputJsonValue,
+          metadata: metadata as unknown as Prisma.InputJsonValue,
         },
       });
       acceptedReports += 1;
+      collectorReports.push({
+        id: report.id,
+        appRole: metadata.appRole,
+        appVersion: report.appVersion,
+        occurredAt: metadata.occurredAt,
+        fingerprint: metadata.fingerprint,
+        errorName: metadata.errorName,
+        errorMessage: metadata.errorMessage,
+        classification: metadata.classification,
+        context: metadata.context,
+      });
 
       if (report.classification.severity === 'critical') {
         const createdTicket = await this.ensureCriticalSupportTicket(
@@ -87,6 +106,11 @@ export class MobileObservabilityService {
     }
 
     if (acceptedReports > 0 || supportTicketCount > 0) {
+      await this.mobileErrorCollectorService.dispatchReports(
+        auth,
+        collectorReports,
+      );
+
       this.realtimeService.publish({
         channel: 'admin',
         type: 'mobile.error-reports-submitted',

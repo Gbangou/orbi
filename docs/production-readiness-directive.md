@@ -75,7 +75,7 @@ proof before broad launch.
 | Rate limiting | Configurable rate-limit guard with in-memory dev mode and PostgreSQL shared backplane for multi-instance. | `RATE_LIMIT_ADAPTER=postgres` and `RATE_LIMIT_STRICT=true` in preprod/prod. |
 | Caching and CDN | Browser cache is disabled on auth/admin/payment-sensitive responses; public CDN strategy is not a core dependency yet. | CDN only for safe static assets, with no sensitive API caching. |
 | Load balancing and scaling | Readiness/liveness endpoints, graceful shutdown, PostgreSQL realtime/rate-limit backplanes and runbook instructions for multi-instance rollout. | Load balancer routes only ready instances; chaos test instance drain/restart. |
-| Error tracking and logs | Mobile `MOB-*` classification, sanitized local queues, backend `/mobile/error-reports`, critical audit/support ticket creation and Nest worker logging. | External collector such as Sentry/Crashlytics plus alert routing and retention policy. |
+| Error tracking and logs | Mobile `MOB-*` classification, sanitized local queues, backend `/mobile/error-reports`, webhook collector boundary, critical audit/support ticket creation and Nest worker logging. | Configure the HTTPS collector endpoint, alert routing and retention policy before production. |
 
 ## Non-Negotiable Build Rules
 

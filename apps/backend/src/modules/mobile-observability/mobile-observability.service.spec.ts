@@ -17,14 +17,19 @@ describe('MobileObservabilityService', () => {
     const realtimeService = {
       publish: jest.fn(),
     };
+    const mobileErrorCollectorService = {
+      dispatchReports: jest.fn().mockResolvedValue(undefined),
+    };
 
     return {
       service: new MobileObservabilityService(
         prisma as never,
         realtimeService as never,
+        mobileErrorCollectorService as never,
       ),
       prisma,
       realtimeService,
+      mobileErrorCollectorService,
     };
   }
 
@@ -70,7 +75,8 @@ describe('MobileObservabilityService', () => {
   }
 
   it('audits reportable mobile errors and opens a support ticket for critical signals', async () => {
-    const { service, prisma, realtimeService } = createService();
+    const { service, prisma, realtimeService, mobileErrorCollectorService } =
+      createService();
 
     const result = await service.submitErrorReports(riderAuth(), {
       reports: [buildReport()],
@@ -106,10 +112,25 @@ describe('MobileObservabilityService', () => {
         }),
       }),
     );
+    expect(mobileErrorCollectorService.dispatchReports).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: expect.objectContaining({ id: 'rider-user-1' }),
+      }),
+      [
+        expect.objectContaining({
+          id: 'moberr-1',
+          appRole: 'rider',
+          errorMessage: 'dispatch timeout',
+          context: {
+            screen: 'book',
+          },
+        }),
+      ],
+    );
   });
 
   it('redacts secrets from mobile error metadata on the server boundary', async () => {
-    const { service, prisma } = createService();
+    const { service, prisma, mobileErrorCollectorService } = createService();
 
     await service.submitErrorReports(riderAuth(), {
       reports: [
@@ -139,10 +160,24 @@ describe('MobileObservabilityService', () => {
         }),
       }),
     });
+    expect(mobileErrorCollectorService.dispatchReports).toHaveBeenCalledWith(
+      expect.anything(),
+      [
+        expect.objectContaining({
+          errorMessage:
+            'Authorization=[redacted] failed for [email] and [phone]',
+          context: {
+            sessionToken: 'sessionToken=[redacted]',
+            callbackUrl: 'https://orbi.local/callback?token=[redacted]&ok=true',
+            password: 'password=[redacted]',
+          },
+        }),
+      ],
+    );
   });
 
   it('keeps non-reportable mobile errors out of audit and support queues', async () => {
-    const { service, prisma } = createService();
+    const { service, prisma, mobileErrorCollectorService } = createService();
 
     const result = await service.submitErrorReports(riderAuth(), {
       reports: [
@@ -165,10 +200,11 @@ describe('MobileObservabilityService', () => {
     });
     expect(prisma.auditLog.create).not.toHaveBeenCalled();
     expect(prisma.supportTicket.create).not.toHaveBeenCalled();
+    expect(mobileErrorCollectorService.dispatchReports).not.toHaveBeenCalled();
   });
 
   it('deduplicates already audited report ids', async () => {
-    const { service, prisma } = createService();
+    const { service, prisma, mobileErrorCollectorService } = createService();
     prisma.auditLog.findFirst.mockResolvedValueOnce({ id: 'audit-1' });
 
     const result = await service.submitErrorReports(riderAuth(), {
@@ -182,6 +218,7 @@ describe('MobileObservabilityService', () => {
     });
     expect(prisma.auditLog.create).not.toHaveBeenCalled();
     expect(prisma.supportTicket.create).not.toHaveBeenCalled();
+    expect(mobileErrorCollectorService.dispatchReports).not.toHaveBeenCalled();
   });
 
   it('rejects reports that do not match the authenticated app role', async () => {
@@ -195,7 +232,8 @@ describe('MobileObservabilityService', () => {
   });
 
   it('rejects mixed-role payloads before writing audit or support side effects', async () => {
-    const { service, prisma, realtimeService } = createService();
+    const { service, prisma, realtimeService, mobileErrorCollectorService } =
+      createService();
 
     await expect(
       service.submitErrorReports(riderAuth(), {
@@ -210,5 +248,6 @@ describe('MobileObservabilityService', () => {
     expect(prisma.auditLog.create).not.toHaveBeenCalled();
     expect(prisma.supportTicket.create).not.toHaveBeenCalled();
     expect(realtimeService.publish).not.toHaveBeenCalled();
+    expect(mobileErrorCollectorService.dispatchReports).not.toHaveBeenCalled();
   });
 });

@@ -12,6 +12,9 @@ describe('validateEnvironment', () => {
     DOCUMENT_SIGNING_SECRET: 'prod_document_secret',
     DOCUMENT_UPLOAD_BASE_URL: 'https://storage.orbi.app/upload',
     DOCUMENT_VIEW_BASE_URL: 'https://storage.orbi.app/view',
+    MOBILE_ERROR_COLLECTOR_PROVIDER: 'webhook',
+    MOBILE_ERROR_COLLECTOR_WEBHOOK_URL:
+      'https://observability.orbi.app/mobile-errors',
     ENABLE_SWAGGER: 'false',
   };
 
@@ -40,6 +43,7 @@ describe('validateEnvironment', () => {
 
     expect(env.NODE_ENV).toBe('production');
     expect(env.PAYMENTS_WEBHOOK_SECRET).toBe('prod_webhook_secret');
+    expect(env.MOBILE_ERROR_COLLECTOR_PROVIDER).toBe('webhook');
   });
 
   it('rejects a production configuration that relies on local adapter defaults', () => {
@@ -166,6 +170,24 @@ describe('validateEnvironment', () => {
         PAYMENTS_REFUND_MODE: 'provider',
       },
       'FLUTTERWAVE_SECRET_KEY is required for provider refunds in production.',
+    ],
+    [
+      'local mobile error collector',
+      { MOBILE_ERROR_COLLECTOR_PROVIDER: 'local' },
+      'MOBILE_ERROR_COLLECTOR_PROVIDER must be webhook in production until another external collector is implemented.',
+    ],
+    [
+      'non-HTTPS mobile error collector webhook',
+      {
+        MOBILE_ERROR_COLLECTOR_WEBHOOK_URL:
+          'http://observability.orbi.app/errors',
+      },
+      'MOBILE_ERROR_COLLECTOR_WEBHOOK_URL must be HTTPS in production.',
+    ],
+    [
+      'localhost mobile error collector webhook',
+      { MOBILE_ERROR_COLLECTOR_WEBHOOK_URL: 'https://localhost:9001/errors' },
+      'MOBILE_ERROR_COLLECTOR_WEBHOOK_URL must not use localhost in production.',
     ],
   ])('rejects production config with %s', (_label, override, message) => {
     expect(() =>

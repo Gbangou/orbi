@@ -53,6 +53,9 @@ type EnvironmentVariables = {
   CINETPAY_SECRET_KEY?: string;
   NOTIFICATIONS_PROVIDER?: string;
   NOTIFICATIONS_PROVIDER_TIMEOUT_MS?: string;
+  MOBILE_ERROR_COLLECTOR_PROVIDER?: string;
+  MOBILE_ERROR_COLLECTOR_WEBHOOK_URL?: string;
+  MOBILE_ERROR_COLLECTOR_TIMEOUT_MS?: string;
   DOCUMENT_SIGNING_SECRET?: string;
   DOCUMENT_SAFETY_SCANNER_PROVIDER?: string;
   DOCUMENT_UPLOAD_BASE_URL?: string;
@@ -152,6 +155,12 @@ export function validateEnvironment(config: EnvironmentVariables) {
     NOTIFICATIONS_PROVIDER: config.NOTIFICATIONS_PROVIDER ?? 'local',
     NOTIFICATIONS_PROVIDER_TIMEOUT_MS:
       config.NOTIFICATIONS_PROVIDER_TIMEOUT_MS ?? '5000',
+    MOBILE_ERROR_COLLECTOR_PROVIDER:
+      config.MOBILE_ERROR_COLLECTOR_PROVIDER ?? 'local',
+    MOBILE_ERROR_COLLECTOR_WEBHOOK_URL:
+      config.MOBILE_ERROR_COLLECTOR_WEBHOOK_URL ?? '',
+    MOBILE_ERROR_COLLECTOR_TIMEOUT_MS:
+      config.MOBILE_ERROR_COLLECTOR_TIMEOUT_MS ?? '1500',
     DOCUMENT_SIGNING_SECRET:
       config.DOCUMENT_SIGNING_SECRET ?? 'orbi_dev_document_secret',
     DOCUMENT_SAFETY_SCANNER_PROVIDER:
@@ -176,6 +185,10 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   const defaultWebhookUrl = config.PAYMENTS_DEFAULT_WEBHOOK_URL ?? '';
   const documentUploadBaseUrl = config.DOCUMENT_UPLOAD_BASE_URL ?? '';
   const documentViewBaseUrl = config.DOCUMENT_VIEW_BASE_URL ?? '';
+  const mobileErrorCollectorProvider =
+    config.MOBILE_ERROR_COLLECTOR_PROVIDER ?? '';
+  const mobileErrorCollectorWebhookUrl =
+    config.MOBILE_ERROR_COLLECTOR_WEBHOOK_URL ?? '';
   const databaseUrl = config.DATABASE_URL ?? '';
 
   if (config.ENABLE_SWAGGER !== 'false') {
@@ -268,6 +281,24 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
 
   if (config.REALTIME_STRICT !== 'true') {
     throw new Error('REALTIME_STRICT must be true in production.');
+  }
+
+  if (mobileErrorCollectorProvider !== 'webhook') {
+    throw new Error(
+      'MOBILE_ERROR_COLLECTOR_PROVIDER must be webhook in production until another external collector is implemented.',
+    );
+  }
+
+  if (!isHttpsUrl(mobileErrorCollectorWebhookUrl)) {
+    throw new Error(
+      'MOBILE_ERROR_COLLECTOR_WEBHOOK_URL must be HTTPS in production.',
+    );
+  }
+
+  if (containsLocalhost(mobileErrorCollectorWebhookUrl)) {
+    throw new Error(
+      'MOBILE_ERROR_COLLECTOR_WEBHOOK_URL must not use localhost in production.',
+    );
   }
 
   if (
