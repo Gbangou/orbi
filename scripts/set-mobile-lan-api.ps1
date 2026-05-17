@@ -4,6 +4,26 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Test-IPv4Address {
+  param([string]$Address)
+
+  $parsedAddress = $null
+  if (-not [System.Net.IPAddress]::TryParse($Address, [ref]$parsedAddress)) {
+    return $false
+  }
+
+  return $parsedAddress.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetwork
+}
+
+function Test-MobileLanIp {
+  param([string]$Address)
+
+  return (Test-IPv4Address -Address $Address) -and
+    $Address -notlike '0.*' -and
+    $Address -notlike '127.*' -and
+    $Address -notlike '169.254.*'
+}
+
 function Resolve-LanIp {
   try {
     $addresses = Get-NetIPAddress -AddressFamily IPv4 |
@@ -42,8 +62,8 @@ function Resolve-LanIp {
     }
   }
 
-  $matches = $ipconfig | Select-String -Pattern 'IPv4.*?:\s*(\d+\.\d+\.\d+\.\d+)'
-  $candidate = $matches |
+  $ipAddressMatches = $ipconfig | Select-String -Pattern 'IPv4.*?:\s*(\d+\.\d+\.\d+\.\d+)'
+  $candidate = $ipAddressMatches |
     ForEach-Object { $_.Matches[0].Groups[1].Value } |
     Where-Object {
       $_ -notlike '127.*' -and
@@ -96,6 +116,11 @@ function Set-EnvValue {
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $ip = if ($HostIp) { $HostIp } else { Resolve-LanIp }
+if (-not (Test-MobileLanIp -Address $ip)) {
+  Write-Host "HostIp must be a phone-reachable IPv4 address, got: $ip" -ForegroundColor Red
+  exit 1
+}
+
 $apiBaseUrl = "http://${ip}:3000"
 
 $mobileEnvFiles = @(
