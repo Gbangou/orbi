@@ -166,7 +166,7 @@ describe('HealthService', () => {
         environment: 'test',
         riskLevel: 'medium',
         failedChecks: 0,
-        warningChecks: 4,
+        warningChecks: 5,
       }),
     );
     expect(result.operations.productionReadiness.checks).toEqual(
@@ -177,6 +177,10 @@ describe('HealthService', () => {
         }),
         expect.objectContaining({
           id: 'provider-refunds',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'mobile-error-collector',
           state: 'warn',
         }),
       ]),
@@ -413,6 +417,8 @@ describe('HealthService', () => {
         'payments.defaultRedirectUrl': 'http://localhost:8081/book',
         'payments.defaultWebhookUrl':
           'http://localhost:3000/api/v1/payments/webhooks',
+        'observability.mobileErrorCollector.provider': 'local',
+        'observability.mobileErrorCollector.webhookUrl': '',
       };
 
       return values[key];
@@ -437,7 +443,7 @@ describe('HealthService', () => {
     const result = await service.check();
 
     expect(result.operations.productionReadiness.riskLevel).toBe('high');
-    expect(result.operations.productionReadiness.failedChecks).toBe(6);
+    expect(result.operations.productionReadiness.failedChecks).toBe(7);
     expect(result.operations.productionReadiness.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -448,6 +454,46 @@ describe('HealthService', () => {
         expect.objectContaining({
           id: 'provider-refunds',
           state: 'fail',
+        }),
+        expect.objectContaining({
+          id: 'mobile-error-collector',
+          state: 'fail',
+        }),
+      ]),
+    );
+  });
+
+  it('passes mobile error collector readiness when an external HTTPS webhook is configured', async () => {
+    const { configService, prisma, service } = createService();
+
+    configService.get = jest.fn((key: string) => {
+      const values: Record<string, string | boolean> = {
+        'app.environment': 'production',
+        'infrastructure.rateLimitAdapter': 'postgres',
+        'infrastructure.rateLimit.strict': true,
+        'infrastructure.realtimeAdapter': 'postgres',
+        'infrastructure.realtime.strict': true,
+        'payments.webhookSecret': 'prod_webhook_secret',
+        'documents.signingSecret': 'prod_document_secret',
+        'payments.defaultRedirectUrl': 'https://orbi.app/book',
+        'payments.defaultWebhookUrl':
+          'https://api.orbi.app/api/v1/payments/webhooks',
+        'observability.mobileErrorCollector.provider': 'webhook',
+        'observability.mobileErrorCollector.webhookUrl':
+          'https://observability.orbi.app/mobile-errors',
+      };
+
+      return values[key];
+    });
+    prisma.$queryRaw.mockResolvedValue([{ '?column?': 1 }]);
+
+    const result = await service.check();
+
+    expect(result.operations.productionReadiness.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'mobile-error-collector',
+          state: 'pass',
         }),
       ]),
     );

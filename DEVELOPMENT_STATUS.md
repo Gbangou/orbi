@@ -190,6 +190,9 @@ paiement provider, observabilite et runbooks verts.
 - Frontiere collector d erreurs mobiles ajoutee: le backend garde le mode local
   par defaut, peut relayer les rapports rediges vers un webhook externe borne,
   et refuse le demarrage production sans collector mobile HTTPS non local.
+- Launch readiness backend enrichie: `/health.operations.productionReadiness`
+  signale explicitement si le collector d erreurs mobiles externe est absent,
+  local ou non HTTPS avant un pilote production.
 
 ## Architecture active
 

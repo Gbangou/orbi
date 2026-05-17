@@ -148,6 +148,8 @@ Initial acquisition channels:
    taxonomy before adding new client-side flows, and queue reportable mobile
    errors locally with sanitized context. The apps now drain those reports to
    `/mobile/error-reports`; critical reports write audit logs and open support
-   tickets before any external collector is configured.
+   tickets. Before production, `/health.operations.productionReadiness` must
+   show the mobile error collector check as passing with an external HTTPS
+   collector endpoint.
 8. Validate one real pilot zone before expanding UI scope.
 9. Keep CI green with Prisma migrations plus the local API money-path smoke.

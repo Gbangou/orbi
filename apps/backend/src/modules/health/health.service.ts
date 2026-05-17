@@ -205,6 +205,14 @@ export class HealthService {
       this.configService.get<string>('payments.refunds.mode') ?? 'manual';
     const flutterwaveSecretKey =
       this.configService.get<string>('payments.flutterwave.secretKey') ?? '';
+    const mobileErrorCollectorProvider =
+      this.configService.get<string>(
+        'observability.mobileErrorCollector.provider',
+      ) ?? 'local';
+    const mobileErrorCollectorWebhookUrl =
+      this.configService.get<string>(
+        'observability.mobileErrorCollector.webhookUrl',
+      ) ?? '';
     const checks = [
       {
         id: 'rate-limit-backplane',
@@ -299,6 +307,24 @@ export class HealthService {
           refundMode === 'provider'
             ? 'Refund provider actif; verifier les fixtures sandbox.'
             : 'Refunds en mode manual/console; acceptable avant provider live.',
+      },
+      {
+        id: 'mobile-error-collector',
+        label: 'Collector erreurs mobiles',
+        state:
+          mobileErrorCollectorProvider === 'webhook' &&
+          isHttpsUrl(mobileErrorCollectorWebhookUrl) &&
+          !containsLocalhost(mobileErrorCollectorWebhookUrl)
+            ? ('pass' as const)
+            : environment === 'production'
+              ? ('fail' as const)
+              : ('warn' as const),
+        detail:
+          mobileErrorCollectorProvider === 'webhook' &&
+          isHttpsUrl(mobileErrorCollectorWebhookUrl) &&
+          !containsLocalhost(mobileErrorCollectorWebhookUrl)
+            ? 'Collector mobile externe HTTPS configure.'
+            : 'Collector mobile local ou incomplet; interdit en production.',
       },
     ];
     const failedChecks = checks.filter(
@@ -485,4 +511,12 @@ export class HealthService {
 
 function containsLocalhost(value: string) {
   return /localhost|127\.0\.0\.1|\[::1\]/i.test(value);
+}
+
+function isHttpsUrl(value: string) {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
