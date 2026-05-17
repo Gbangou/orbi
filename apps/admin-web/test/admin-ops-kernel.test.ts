@@ -93,20 +93,7 @@ function createDriver(
         uploadedAt: '2026-04-25T08:00:00.000Z',
         expiresAt: null,
         rejectionReason: null,
-        integrity: {
-          state: 'complete',
-          score: 100,
-          sizeBytes: 120000,
-          sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-          uploadSource: 'driver-app',
-          capturedAt: '2026-04-25T08:00:01.000Z',
-          guidance: {
-            level: 'clear',
-            label: 'Preuves completes',
-            detail: 'Preuves presentes.',
-          },
-          checks: [],
-        },
+        integrity: createDocumentIntegrity(),
       },
     ],
     ...overrides,
@@ -477,21 +464,7 @@ describe('admin-ops-kernel', () => {
             uploadedAt: '2026-04-25T08:00:00.000Z',
             expiresAt: null,
             rejectionReason: null,
-            integrity: {
-              state: 'complete',
-              score: 100,
-              sizeBytes: 120000,
-              sha256:
-                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-              uploadSource: 'driver-app',
-              capturedAt: '2026-04-25T08:00:01.000Z',
-              guidance: {
-                level: 'clear',
-                label: 'Preuves completes',
-                detail: 'Preuves presentes.',
-              },
-              checks: [],
-            },
+            integrity: createDocumentIntegrity(),
           },
         ],
       }),
@@ -607,3 +580,36 @@ describe('admin-ops-kernel', () => {
     ).toBe('La cause de degradation realtime vient d evoluer.');
   });
 });
+
+function createDocumentIntegrity(): DriverOnboardingQueueResponse['drivers'][number]['documents'][number]['integrity'] {
+  return {
+    state: 'complete',
+    score: 100,
+    sizeBytes: 120000,
+    sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    uploadSource: 'driver-app',
+    capturedAt: '2026-04-25T08:00:01.000Z',
+    objectVerification: {
+      state: 'confirmed',
+      provider: 'local',
+      objectId: 'driver-1/document-1.pdf',
+      verifiedAt: '2026-04-25T08:00:02.000Z',
+      sizeBytes: 120000,
+      sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      failureReason: null,
+    },
+    safetyScan: {
+      state: 'clear',
+      engine: 'local',
+      scannedAt: '2026-04-25T08:00:03.000Z',
+      findings: [],
+      quarantineReason: null,
+    },
+    guidance: {
+      level: 'clear',
+      label: 'Preuves completes',
+      detail: 'Preuves presentes.',
+    },
+    checks: [],
+  };
+}

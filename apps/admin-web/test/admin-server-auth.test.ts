@@ -12,11 +12,11 @@ describe('admin server auth cookie hardening', () => {
   const originalNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    setNodeEnv(originalNodeEnv);
   });
 
   it('keeps local development cookies usable on plain localhost', () => {
-    process.env.NODE_ENV = 'development';
+    setNodeEnv('development');
 
     expect(getAdminSessionCookieName()).toBe('orbi_admin_session');
     expect(buildAdminSessionCookieOptions()).toMatchObject({
@@ -30,7 +30,7 @@ describe('admin server auth cookie hardening', () => {
   });
 
   it('uses a host-bound secure cookie name in production', () => {
-    process.env.NODE_ENV = 'production';
+    setNodeEnv('production');
 
     expect(getAdminSessionCookieName()).toBe('__Host-orbi_admin_session');
     expect(buildAdminSessionCookieOptions()).toMatchObject({
@@ -73,3 +73,8 @@ describe('admin server auth cookie hardening', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store, max-age=0');
   });
 });
+
+function setNodeEnv(value: NodeJS.ProcessEnv['NODE_ENV']) {
+  const mutableEnv = process.env as Record<string, string | undefined>;
+  mutableEnv.NODE_ENV = value;
+}
