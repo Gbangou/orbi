@@ -6,6 +6,12 @@ import {
   updateDriverPresenceWithApi,
 } from '@orbi/api';
 import { restoreDriverSession } from './auth';
+import {
+  buildDriverPresenceSyncedNote,
+  buildDriverRoutePositionPayload,
+  resolveDriverPresenceTrackingOptions,
+  type DriverPresencePosition,
+} from './driver-presence-signal';
 
 type DriverPresenceStatus =
   | 'idle'
@@ -15,9 +21,6 @@ type DriverPresenceStatus =
   | 'permission-denied'
   | 'unavailable'
   | 'error';
-
-const PRESENCE_DISTANCE_INTERVAL_METERS = 120;
-const PRESENCE_TIME_INTERVAL_MS = 30000;
 
 export function useDriverPresence(enabled: boolean, activeTripId?: string | null) {
   const [presenceStatus, setPresenceStatus] =
@@ -72,62 +75,74 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
         }
 
         setPresenceStatus('syncing');
-        setPresenceNote('Synchronisation de votre position avec le dispatch...');
+        setPresenceNote(
+          activeTripId
+            ? 'Synchronisation immediate de votre position mission...'
+            : 'Synchronisation de votre position avec le dispatch...',
+        );
 
-        subscription = await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.Balanced,
-            distanceInterval: PRESENCE_DISTANCE_INTERVAL_METERS,
-            timeInterval: PRESENCE_TIME_INTERVAL_MS,
-          },
-          async (position) => {
+        const syncPosition = async (position: DriverPresencePosition) => {
+          if (isDisposed) {
+            return;
+          }
+
+          try {
+            const payload = buildDriverRoutePositionPayload(position);
+            const { authClient } = await restoreDriverSession();
+            await updateDriverPresenceWithApi(authClient, {
+              latitude: payload.latitude,
+              longitude: payload.longitude,
+            });
+            if (activeTripId) {
+              await recordTripRoutePositionWithApi(
+                authClient,
+                activeTripId,
+                payload,
+              );
+            }
+
             if (isDisposed) {
               return;
             }
 
-            try {
-              const { authClient } = await restoreDriverSession();
-              await updateDriverPresenceWithApi(authClient, {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-              });
-              if (activeTripId) {
-                await recordTripRoutePositionWithApi(authClient, activeTripId, {
-                  latitude: position.coords.latitude,
-                  longitude: position.coords.longitude,
-                  accuracyMeters: position.coords.accuracy ?? undefined,
-                  speedKph:
-                    typeof position.coords.speed === 'number' &&
-                    Number.isFinite(position.coords.speed)
-                      ? Math.max(0, position.coords.speed * 3.6)
-                      : undefined,
-                });
-              }
-
-              if (isDisposed) {
-                return;
-              }
-
-              setPresenceStatus('live');
-              setPresenceNote(
-                `Presence GPS synchronisee. Precision ${Math.round(
-                  position.coords.accuracy ?? 0,
-                )} m.`,
-              );
-            } catch (error) {
-              if (isDisposed) {
-                return;
-              }
-
-              setPresenceStatus('error');
-              setPresenceNote(
-                extractApiErrorMessage(
-                  error,
-                  'Synchronisation GPS impossible pour le moment.',
-                ),
-              );
+            setPresenceStatus('live');
+            setPresenceNote(
+              buildDriverPresenceSyncedNote({
+                accuracyMeters: payload.accuracyMeters,
+                activeTripId,
+              }),
+            );
+          } catch (error) {
+            if (isDisposed) {
+              return;
             }
+
+            setPresenceStatus('error');
+            setPresenceNote(
+              extractApiErrorMessage(
+                error,
+                'Synchronisation GPS impossible pour le moment.',
+              ),
+            );
+          }
+        };
+
+        const currentPosition = await Location.getCurrentPositionAsync({
+          accuracy: activeTripId
+            ? Location.Accuracy.High
+            : Location.Accuracy.Balanced,
+        });
+
+        await syncPosition(currentPosition);
+
+        subscription = await Location.watchPositionAsync(
+          {
+            accuracy: activeTripId
+              ? Location.Accuracy.High
+              : Location.Accuracy.Balanced,
+            ...resolveDriverPresenceTrackingOptions(activeTripId),
           },
+          syncPosition,
         );
       } catch (error) {
         if (isDisposed) {
