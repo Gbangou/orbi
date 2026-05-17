@@ -58,6 +58,55 @@ export function resolveLiveOpsRouteMonitoringCopy(
   };
 }
 
+export function resolveLiveOpsTripTriage(trip: LiveOpsTrip) {
+  if (trip.hasIncident) {
+    return {
+      level: 'critical' as const,
+      label: 'Support prioritaire',
+      owner: 'support',
+      action:
+        'Ouvrir le ticket support, appeler si besoin et garder la course en surveillance.',
+    };
+  }
+
+  if (trip.routeMonitoring.state === 'critical') {
+    return {
+      level: 'critical' as const,
+      label: 'Route critique',
+      owner: 'ops',
+      action:
+        'Verifier deviation route, contacter chauffeur et preparer escalade securite.',
+    };
+  }
+
+  if (trip.routeMonitoring.state === 'warning') {
+    return {
+      level: 'warning' as const,
+      label: 'Route a surveiller',
+      owner: 'ops',
+      action:
+        'Surveiller la prochaine position et confirmer que la mission progresse.',
+    };
+  }
+
+  if (!trip.routeMonitoring.lastPositionAt) {
+    return {
+      level: 'watch' as const,
+      label: 'Signal attendu',
+      owner: 'dispatch',
+      action:
+        'Attendre le premier ping GPS ou verifier la presence chauffeur si la course stagne.',
+    };
+  }
+
+  return {
+    level: 'clear' as const,
+    label: 'Stable',
+    owner: 'ops',
+    action: 'Aucune action immediate, garder le suivi live ouvert.',
+  };
+}
+
 export function hasLiveOpsTripChanged(
   previousTrip: LiveOpsTrip,
   nextTrip: LiveOpsTrip,

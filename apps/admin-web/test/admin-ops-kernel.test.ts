@@ -17,6 +17,7 @@ import {
   resolveJobQueueFilterSummary,
   resolveJobQueueOwnerRows,
   resolveLiveOpsRouteMonitoringCopy,
+  resolveLiveOpsTripTriage,
   resolveVisibleDriverOnboardingQueue,
 } from '../app/admin-ops-kernel';
 
@@ -278,6 +279,71 @@ describe('admin-ops-kernel', () => {
       statusLabel: 'Critical (2)',
       lastSignalLabel: 'Route Deviation',
     });
+  });
+
+  it('prioritizes live ops trip triage by incident and route monitoring risk', () => {
+    expect(
+      resolveLiveOpsTripTriage(
+        createLiveOpsTrip({
+          hasIncident: true,
+          incidentCount: 1,
+          routeMonitoring: {
+            state: 'clear',
+            alertCount: 0,
+            lastAlertType: null,
+            lastAlertAt: null,
+            lastPositionAt: '2026-04-19T08:02:30.000Z',
+          },
+        }),
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        level: 'critical',
+        label: 'Support prioritaire',
+        owner: 'support',
+      }),
+    );
+
+    expect(
+      resolveLiveOpsTripTriage(
+        createLiveOpsTrip({
+          hasIncident: false,
+          routeMonitoring: {
+            state: 'critical',
+            alertCount: 1,
+            lastAlertType: 'ROUTE_DEVIATION',
+            lastAlertAt: '2026-04-19T08:03:00.000Z',
+            lastPositionAt: '2026-04-19T08:02:30.000Z',
+          },
+        }),
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        level: 'critical',
+        label: 'Route critique',
+        owner: 'ops',
+      }),
+    );
+
+    expect(
+      resolveLiveOpsTripTriage(
+        createLiveOpsTrip({
+          routeMonitoring: {
+            state: 'unknown',
+            alertCount: 0,
+            lastAlertType: null,
+            lastAlertAt: null,
+            lastPositionAt: null,
+          },
+        }),
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        level: 'watch',
+        label: 'Signal attendu',
+        owner: 'dispatch',
+      }),
+    );
   });
 
   it('summarizes job queue filters without reading raw payloads', () => {

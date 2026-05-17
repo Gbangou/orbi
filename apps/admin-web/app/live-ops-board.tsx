@@ -8,6 +8,7 @@ import {
   hasLiveOpsTripChanged,
   resolveCollectionDelta,
   resolveLiveOpsRouteMonitoringCopy,
+  resolveLiveOpsTripTriage,
   resolveStringFeedDelta,
 } from './admin-ops-kernel';
 import { fetchAdminJson } from './admin-client-fetch';
@@ -235,6 +236,7 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
           const routeMonitoringCopy = resolveLiveOpsRouteMonitoringCopy(
             trip.routeMonitoring,
           );
+          const triage = resolveLiveOpsTripTriage(trip);
 
           return (
             <article
@@ -258,6 +260,13 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
               <p>
                 {trip.riderName} avec {trip.driverName} - {trip.vehicleLabel}
               </p>
+              <div
+                className={`live-trip-triage live-trip-triage-${triage.level}`}
+              >
+                <span>{triage.label}</span>
+                <strong>{triage.owner}</strong>
+                <p>{triage.action}</p>
+              </div>
               <p>
                 Dernier evenement:{' '}
                 {trip.lastEvent
