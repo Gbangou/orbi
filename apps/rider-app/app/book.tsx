@@ -183,6 +183,73 @@ function findCityPresetForPlace(place: Place) {
   return resolveBurkinaPricingPresetForPlace(place);
 }
 
+function buildRideOptionVisual(option: RideOption) {
+  const isMoto = option.category === 'motorcycle';
+
+  return {
+    categoryLabel: isMoto ? 'Moto' : 'Voiture',
+    promiseLabel: isMoto ? 'Rapide en ville' : 'Confort protege',
+    capacityLabel: isMoto
+      ? option.tier === 'moto-plus'
+        ? 'Casque premium'
+        : 'Solo agile'
+      : option.tier === 'car-xl'
+        ? 'Groupe'
+        : option.tier === 'car-comfort'
+          ? 'Clim + confort'
+          : '4 places',
+    tone: isMoto ? 'teal' : option.tier === 'car-comfort' ? 'sky' : 'amber',
+  } as const;
+}
+
+function VehicleOptionAvatar({
+  category,
+  isSelected,
+  tone,
+}: {
+  category: RideOption['category'];
+  isSelected: boolean;
+  tone: 'teal' | 'sky' | 'amber';
+}) {
+  const isMoto = category === 'motorcycle';
+  const accent =
+    tone === 'teal'
+      ? orbiTheme.colors.teal
+      : tone === 'sky'
+        ? orbiTheme.colors.sky
+        : orbiTheme.colors.amber;
+
+  return (
+    <View
+      style={[
+        styles.vehicleAvatar,
+        isSelected ? styles.vehicleAvatarSelected : null,
+        { borderColor: isSelected ? accent : orbiTheme.colors.border },
+      ]}
+    >
+      {isMoto ? (
+        <View style={styles.motoDrawing}>
+          <View style={[styles.motoHandle, { backgroundColor: accent }]} />
+          <View style={[styles.motoSeat, { backgroundColor: accent }]} />
+          <View style={styles.motoWheelRow}>
+            <View style={[styles.vehicleWheel, { borderColor: accent }]} />
+            <View style={[styles.vehicleWheel, { borderColor: accent }]} />
+          </View>
+        </View>
+      ) : (
+        <View style={styles.carDrawing}>
+          <View style={[styles.carCabin, { borderBottomColor: accent }]} />
+          <View style={[styles.carBody, { backgroundColor: accent }]} />
+          <View style={styles.carWheelRow}>
+            <View style={[styles.vehicleWheel, { borderColor: accent }]} />
+            <View style={[styles.vehicleWheel, { borderColor: accent }]} />
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function BookingScreen() {
   const router = useRouter();
   const [options, setOptions] = useState<RideOption[]>(riderRideOptions);
@@ -991,6 +1058,7 @@ export default function BookingScreen() {
       <Text style={styles.section}>Choisissez votre service</Text>
       {options.map((option) => {
         const isSelected = option.id === selectedOption?.id;
+        const visual = buildRideOptionVisual(option);
 
         return (
           <Pressable
@@ -1003,14 +1071,36 @@ export default function BookingScreen() {
             }}
             style={[styles.option, isSelected ? styles.optionSelected : null]}
           >
-            <View style={styles.optionTop}>
-              <Text style={styles.optionTitle}>{option.title}</Text>
-              <Text style={[styles.badge, { color: option.accent }]}>
-                {option.badge}
-              </Text>
+            <View style={styles.optionHeader}>
+              <VehicleOptionAvatar
+                category={option.category}
+                isSelected={isSelected}
+                tone={visual.tone}
+              />
+              <View style={styles.optionCopy}>
+                <View style={styles.optionTop}>
+                  <View style={styles.optionTitleBlock}>
+                    <Text style={styles.optionTitle}>{option.title}</Text>
+                    <Text style={styles.optionCategory}>
+                      {visual.categoryLabel} - {visual.promiseLabel}
+                    </Text>
+                  </View>
+                  <View style={styles.optionPriceBlock}>
+                    <Text style={styles.optionPrice}>
+                      {formatXof(option.fare)}
+                    </Text>
+                    <Text style={styles.optionEta}>{option.etaMinutes} min</Text>
+                  </View>
+                </View>
+                <View style={styles.optionChipRow}>
+                  <Text style={styles.optionChip}>{visual.capacityLabel}</Text>
+                  <Text style={styles.optionChip}>{option.badge}</Text>
+                  <Text style={styles.optionChip}>{selectedPaymentMethod}</Text>
+                </View>
+              </View>
             </View>
             <Text style={styles.optionMeta}>
-              ETA {option.etaMinutes} min, tarif estime {formatXof(option.fare)}
+              Tarif upfront estime, service {visual.categoryLabel.toLowerCase()} compatible avec ce trajet.
             </Text>
             {option.fareBreakdown ? (
               <View style={styles.breakdownBlock}>
@@ -1334,22 +1424,143 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
     borderRadius: 20,
-    padding: 18,
-    gap: 6,
+    padding: 16,
+    gap: 10,
   },
   optionSelected: {
     borderColor: orbiTheme.colors.teal,
     backgroundColor: orbiTheme.colors.panel,
   },
+  optionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  optionCopy: {
+    flex: 1,
+    gap: 10,
+  },
   optionTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
     gap: 12,
+  },
+  optionTitleBlock: {
+    flex: 1,
+    gap: 3,
   },
   optionTitle: {
     color: orbiTheme.colors.text,
     fontWeight: '800',
     fontSize: 18,
+  },
+  optionCategory: {
+    color: orbiTheme.colors.muted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  optionPriceBlock: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  optionPrice: {
+    color: orbiTheme.colors.text,
+    fontWeight: '900',
+    fontSize: 17,
+  },
+  optionEta: {
+    color: orbiTheme.colors.sky,
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  optionChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionChip: {
+    overflow: 'hidden',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.panel,
+    color: orbiTheme.colors.text,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  vehicleAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    borderWidth: 1,
+    backgroundColor: orbiTheme.colors.panel,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vehicleAvatarSelected: {
+    backgroundColor: 'rgba(45, 212, 191, 0.1)',
+  },
+  motoDrawing: {
+    width: 54,
+    height: 38,
+    justifyContent: 'flex-end',
+  },
+  motoHandle: {
+    width: 18,
+    height: 4,
+    borderRadius: 999,
+    alignSelf: 'flex-end',
+    transform: [{ rotate: '-18deg' }],
+  },
+  motoSeat: {
+    width: 31,
+    height: 8,
+    borderRadius: 999,
+    marginLeft: 10,
+    marginBottom: 5,
+  },
+  motoWheelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  carDrawing: {
+    width: 56,
+    height: 38,
+    justifyContent: 'flex-end',
+  },
+  carCabin: {
+    width: 30,
+    alignSelf: 'center',
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 12,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
+  carBody: {
+    width: 52,
+    height: 15,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginTop: -1,
+  },
+  carWheelRow: {
+    width: 46,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignSelf: 'center',
+    marginTop: -5,
+  },
+  vehicleWheel: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 3,
+    backgroundColor: orbiTheme.colors.background,
   },
   badge: {
     fontWeight: '800',
