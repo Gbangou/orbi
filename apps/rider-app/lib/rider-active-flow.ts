@@ -1,5 +1,9 @@
-import { isActiveTripLifecycleStatus, type MyTripsResponse } from '@orbi/api';
-import { formatOperationalStatus } from '@orbi/ui';
+import {
+  isActiveTripLifecycleStatus,
+  type MyTripsResponse,
+  type TripDetailResponse,
+} from '@orbi/api';
+import { formatOperationalStatus, formatXof } from '@orbi/ui';
 
 export type RiderActiveFlowSummary = {
   activeTrip: MyTripsResponse['recentTrips'][number] | null;
@@ -55,6 +59,114 @@ export function buildRiderHomeStatusLabel(input: {
   }
 
   return `Connecte comme ${input.fullName}. ${input.optionCount} options tarifees disponibles.`;
+}
+
+export function buildRiderNextActionHint(flow: RiderActiveFlowSummary) {
+  if (flow.activeTrip?.status === 'MATCHED') {
+    return 'Verifiez le chauffeur, le vehicule et la plaque avant de monter.';
+  }
+
+  if (flow.activeTrip?.status === 'DRIVER_ARRIVING') {
+    return flow.activeTrip.pickupCode
+      ? 'Gardez le code pickup pret et ne le donnez qu au bon chauffeur.'
+      : 'Attendez le chauffeur au point de depart confirme.';
+  }
+
+  if (flow.activeTrip?.status === 'IN_PROGRESS') {
+    return 'Suivez le trajet live et utilisez SOS ou partage si la course devient sensible.';
+  }
+
+  if (flow.activeTrip) {
+    return 'Le flux actif est en transition, actualisez le suivi si besoin.';
+  }
+
+  if (flow.activeRequest) {
+    return 'Restez joignable: le dispatch cherche un chauffeur compatible.';
+  }
+
+  return 'Aucune action urgente: vous pouvez preparer une nouvelle reservation.';
+}
+
+export function buildRiderMissionSnapshot(input: {
+  flow: RiderActiveFlowSummary;
+  tripDetail?: TripDetailResponse | null;
+}) {
+  const { activeTrip } = input.flow;
+
+  if (!activeTrip) {
+    return [];
+  }
+
+  const detail = input.tripDetail?.trip ?? null;
+  const verification = detail?.driverVerification ?? null;
+  const routeMonitoring = detail?.routeMonitoring ?? null;
+  const latestPosition = routeMonitoring?.latestPosition ?? null;
+  const pickupCode = detail?.pickupCode ?? activeTrip.pickupCode ?? null;
+  const approachDistance =
+    activeTrip.status === 'IN_PROGRESS'
+      ? latestPosition?.distanceToDestinationKm
+      : latestPosition?.distanceToPickupKm;
+
+  return [
+    {
+      label: 'Action',
+      value: input.flow.primaryStatusLabel,
+      helper: buildRiderNextActionHint(input.flow),
+    },
+    {
+      label: 'Chauffeur',
+      value: verification
+        ? formatOperationalStatus(verification.verificationStatus)
+        : activeTrip.counterpartyName ?? 'Assigne',
+      helper: verification
+        ? `${verification.vehicle.color} ${verification.vehicle.make} ${verification.vehicle.model}`
+        : activeTrip.vehicleLabel ?? 'Details vehicule en attente',
+    },
+    {
+      label: activeTrip.status === 'IN_PROGRESS' ? 'Destination' : 'Approche',
+      value:
+        typeof approachDistance === 'number'
+          ? `${approachDistance.toFixed(1)} km`
+          : routeMonitoring
+            ? formatOperationalStatus(routeMonitoring.state)
+            : 'Position',
+      helper:
+        typeof approachDistance === 'number'
+          ? latestPosition?.observedAt
+            ? `Dernier signal ${formatTimeLabel(latestPosition.observedAt)}`
+            : 'Position chauffeur recue'
+          : routeMonitoring
+            ? routeMonitoring.alertCount > 0
+              ? `${routeMonitoring.alertCount} signal route`
+              : 'Trajet coherent'
+            : 'En attente du premier signal route',
+    },
+    {
+      label: 'Code',
+      value: pickupCode ? pickupCode : 'Attente',
+      helper: pickupCode
+        ? 'A communiquer uniquement au bon chauffeur'
+        : 'Code visible quand le chauffeur arrive',
+    },
+    {
+      label: 'Tarif',
+      value: formatXof(detail?.actualFare ?? activeTrip.amount),
+      helper: activeTrip.currency,
+    },
+  ];
+}
+
+function formatTimeLabel(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'recent';
+  }
+
+  return date.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function buildRiderFlowTransitionLabel(

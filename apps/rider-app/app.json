@@ -8,6 +8,19 @@
     "userInterfaceStyle": "dark",
     "platforms": ["ios", "android", "web"],
     "assetBundlePatterns": ["**/*"],
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Orbi Passager utilise votre position pour definir le depart, partager les signaux securite et suivre la course active."
+        }
+      ]
+    ],
+    "ios": {
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Orbi Passager utilise votre position pour definir le depart, partager les signaux securite et suivre la course active."
+      }
+    },
     "web": {
       "bundler": "metro"
     }

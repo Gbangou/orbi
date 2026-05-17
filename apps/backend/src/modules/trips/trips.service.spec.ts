@@ -1325,6 +1325,12 @@ describe('TripsService', () => {
         model: 'Crypton',
         color: 'rouge',
       },
+      rideRequest: {
+        pickupLatitude: 12.3714,
+        pickupLongitude: -1.5197,
+        destinationLatitude: 12.359,
+        destinationLongitude: -1.536,
+      },
       events: [
         {
           id: 'event-1',
@@ -1345,7 +1351,10 @@ describe('TripsService', () => {
           payload: {
             latitude: 12.34,
             longitude: -1.53,
+            accuracyMeters: 14,
+            speedKph: 18,
             observedAt: '2026-04-17T08:03:00.000Z',
+            sourceRole: 'DRIVER',
           },
           createdAt: new Date('2026-04-17T08:03:00.000Z'),
         },
@@ -1392,6 +1401,16 @@ describe('TripsService', () => {
       lastAlertType: 'ROUTE_DEVIATION',
       lastAlertAt: '2026-04-17T08:04:00.000Z',
       lastPositionAt: '2026-04-17T08:03:00.000Z',
+      latestPosition: {
+        latitude: 12.34,
+        longitude: -1.53,
+        accuracyMeters: 14,
+        speedKph: 18,
+        distanceToPickupKm: expect.any(Number),
+        distanceToDestinationKm: expect.any(Number),
+        observedAt: '2026-04-17T08:03:00.000Z',
+        sourceRole: 'DRIVER',
+      },
     });
     expect(result.trip.timeline).toEqual([
       expect.objectContaining({ label: 'Course acceptee par le chauffeur' }),

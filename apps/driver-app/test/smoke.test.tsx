@@ -284,6 +284,16 @@ function buildDriverTripDetail(eventIds: string[], labels: string[]) {
         lastAlertType: 'LONG_STOP',
         lastAlertAt: '2026-04-19T08:03:00.000Z',
         lastPositionAt: '2026-04-19T08:02:30.000Z',
+        latestPosition: {
+          latitude: 12.37,
+          longitude: -1.52,
+          accuracyMeters: 12,
+          speedKph: 18,
+          distanceToPickupKm: 0.4,
+          distanceToDestinationKm: 5.1,
+          observedAt: '2026-04-19T08:02:30.000Z',
+          sourceRole: 'DRIVER',
+        },
       },
       pickupCode: '1234',
       actualFare: 3500,
@@ -806,6 +816,32 @@ describe('driver smoke flows', () => {
 
     expectText(renderer, 'Statut critique mis a jour: Driver Arriving.');
     expectText(renderer, 'Chauffeur en approche');
+    expectText(renderer, 'Mission en direct');
+    expectText(renderer, 'Pickup');
+    expectText(renderer, '0.4 km');
+    expectText(
+      renderer,
+      'Demandez le code pickup au passager avant de demarrer la course.',
+    );
+  });
+
+  it('keeps driver dispatch usable when trip detail is temporarily unavailable', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers.mockResolvedValue([] as never);
+    mockedFetchMyTrips.mockResolvedValue(buildDriverTripsWithStatus('DRIVER_ARRIVING') as never);
+    mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
+    mockedFetchTripDetail.mockRejectedValue(new TypeError('Network request failed'));
+
+    const renderer = await renderScreen(<OffersScreen />);
+    await pressByText(renderer, 'Actualiser le direct');
+
+    expectText(renderer, 'Course active');
+    expectText(renderer, 'Mission en direct');
+    expectText(
+      renderer,
+      'Detail de mission indisponible: le dispatch principal reste actif.',
+    );
+    expectText(renderer, 'Verifier le code et demarrer');
   });
 
   it('toggles driver availability from home', async () => {

@@ -44,6 +44,8 @@ import {
 import {
   buildDriverDispatchStatusLabel,
   buildDriverFlowTransitionLabel,
+  buildDriverMissionSnapshot,
+  buildDriverNextActionHint,
   resolveDriverActiveFlow,
   resolveDriverReservationChangeSet,
 } from '../lib/driver-active-flow';
@@ -103,6 +105,7 @@ export default function OffersScreen() {
   const [driverProfileStatus, setDriverProfileStatus] = useState<string>('OFFLINE');
   const [driverFatigue, setDriverFatigue] = useState<DriverFatigueStatus>(fallbackFatigue);
   const [pickupCodeInput, setPickupCodeInput] = useState('');
+  const [tripDetailStatus, setTripDetailStatus] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
@@ -135,10 +138,19 @@ export default function OffersScreen() {
       const activeTrip = flow.activeTrip;
 
       if (activeTrip) {
-        const detail = await fetchTripDetail(authClient, activeTrip.id);
-        setActiveTripDetail(detail);
+        try {
+          const detail = await fetchTripDetail(authClient, activeTrip.id);
+          setActiveTripDetail(detail);
+          setTripDetailStatus(null);
+        } catch {
+          setActiveTripDetail(null);
+          setTripDetailStatus(
+            'Detail de mission indisponible: le dispatch principal reste actif.',
+          );
+        }
       } else {
         setActiveTripDetail(null);
+        setTripDetailStatus(null);
       }
 
       if (!silent) {
@@ -203,6 +215,11 @@ export default function OffersScreen() {
     [driverProfileStatus, history, offers, reservationNow],
   );
   const { activeTrip, activeFlowState, visibleOffers } = flow;
+  const driverNextActionHint = buildDriverNextActionHint(flow);
+  const driverMissionSnapshot = buildDriverMissionSnapshot({
+    flow,
+    tripDetail: activeTripDetail,
+  });
   const shiftReadiness = useMemo(
     () =>
       buildDriverShiftReadiness({
@@ -213,6 +230,7 @@ export default function OffersScreen() {
   );
   const { presenceNote } = useDriverPresence(
     flow.availabilityStatus === 'ONLINE' || Boolean(activeTrip),
+    activeTrip?.id,
   );
   useReservationExpiryRefresh(
     visibleOffers,
@@ -785,6 +803,29 @@ export default function OffersScreen() {
           noteTone="amber"
           isHighlighted={Boolean(activeTripTransitionLabel || freshTimelineEventIds.length)}
         >
+          <TransitionNoticeCard
+            label="Prochaine action"
+            message={driverNextActionHint}
+            tone={activeTrip.status === 'IN_PROGRESS' ? 'sky' : 'amber'}
+          />
+          <Text style={styles.snapshotTitle}>Mission en direct</Text>
+          <View style={styles.snapshotStrip}>
+            {driverMissionSnapshot.map((item) => (
+              <MetricTile
+                key={`${item.label}:${item.value}`}
+                label={item.label}
+                value={item.value}
+                helper={item.helper}
+              />
+            ))}
+          </View>
+          {tripDetailStatus ? (
+            <TransitionNoticeCard
+              label="Mode degrade"
+              message={tripDetailStatus}
+              tone="amber"
+            />
+          ) : null}
           {activeTripTransitionLabel ? (
             <Text style={styles.transitionInlineLabel}>{activeTripTransitionLabel}</Text>
           ) : null}
@@ -976,6 +1017,16 @@ const styles = StyleSheet.create({
   transitionInlineLabel: {
     color: orbiTheme.colors.sky,
     fontWeight: '700',
+  },
+  snapshotTitle: {
+    color: orbiTheme.colors.text,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  snapshotStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   codeBlock: {
     gap: 10,

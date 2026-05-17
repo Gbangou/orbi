@@ -55,6 +55,7 @@ import {
   buildRiderFlowTransitionLabel,
   resolveRiderActiveFlow,
 } from '../lib/rider-active-flow';
+import { useRiderPosition } from '../lib/use-rider-position';
 
 const cityPresets = burkinaPricingCityPresets;
 
@@ -163,6 +164,21 @@ function arePlacesEquivalent(left: Place, right: Place) {
   return normalizePlaceText(left.address) === normalizePlaceText(right.address);
 }
 
+function buildCurrentPositionPlace(position: {
+  latitude: number;
+  longitude: number;
+}): Place {
+  return {
+    id: 'current-position',
+    label: 'Ma position',
+    address: 'Position GPS actuelle',
+    coordinates: {
+      latitude: position.latitude,
+      longitude: position.longitude,
+    },
+  };
+}
+
 function findCityPresetForPlace(place: Place) {
   return resolveBurkinaPricingPresetForPlace(place);
 }
@@ -202,8 +218,12 @@ export default function BookingScreen() {
     supportedNetworks: string[];
     channel: string;
   } | null>(null);
+  const [autoAppliedRiderPosition, setAutoAppliedRiderPosition] = useState(false);
   const previousFlowStateRef = useRef<string | null>(null);
   const bookingMutationInFlightRef = useRef(false);
+  const riderPosition = useRiderPosition({
+    enabled: true,
+  });
 
   const selectedOption = useMemo(
     () =>
@@ -264,6 +284,24 @@ export default function BookingScreen() {
   useEffect(() => {
     void loadBookingContext();
   }, [pickupPlace, destinationPlace, selectedCityId]);
+
+  useEffect(() => {
+    if (autoAppliedRiderPosition || !riderPosition.latestPosition) {
+      return;
+    }
+
+    if (!arePlacesEquivalent(pickupPlace, selectedCity.pickup)) {
+      return;
+    }
+
+    setPickupPlace(buildCurrentPositionPlace(riderPosition.latestPosition));
+    setAutoAppliedRiderPosition(true);
+  }, [
+    autoAppliedRiderPosition,
+    pickupPlace,
+    riderPosition.latestPosition,
+    selectedCity.pickup,
+  ]);
 
   async function loadBookingContext() {
     const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
@@ -418,6 +456,18 @@ export default function BookingScreen() {
     setSelectedCityId(city.id);
     setPickupPlace(city.pickup);
     setDestinationPlace(city.destination);
+    setAutoAppliedRiderPosition(false);
+  }
+
+  function handleUseCurrentPositionAsPickup() {
+    if (!riderPosition.latestPosition) {
+      setStatus('Position GPS passager pas encore disponible.');
+      return;
+    }
+
+    setPickupPlace(buildCurrentPositionPlace(riderPosition.latestPosition));
+    setAutoAppliedRiderPosition(true);
+    setStatus('Depart mis a jour avec votre position GPS actuelle.');
   }
 
   async function handleSaveCurrentPlace(target: 'pickup' | 'destination') {
@@ -549,8 +599,12 @@ export default function BookingScreen() {
         authClient,
         {
           pickupAddress: pickupPlace.address,
-          pickupLatitude: pickupPlace.coordinates?.latitude,
-          pickupLongitude: pickupPlace.coordinates?.longitude,
+          pickupLatitude:
+            pickupPlace.coordinates?.latitude ??
+            riderPosition.latestPosition?.latitude,
+          pickupLongitude:
+            pickupPlace.coordinates?.longitude ??
+            riderPosition.latestPosition?.longitude,
           destinationAddress: destinationPlace.address,
           destinationLatitude: destinationPlace.coordinates?.latitude,
           destinationLongitude: destinationPlace.coordinates?.longitude,
@@ -755,6 +809,9 @@ export default function BookingScreen() {
         detailLines={[
           `Depart: ${pickupPlace.address}`,
           `Destination: ${destinationPlace.address}`,
+          riderPosition.latestPosition
+            ? `Position passager: precision ${Math.round(riderPosition.latestPosition.accuracyMeters ?? 0)} m.`
+            : riderPosition.positionNote,
           `Source du calcul: ${tripEstimate.source === 'coordinates' ? 'coordonnees reelles' : 'preset local'}.`,
           selectedOption
             ? `Selection: ${selectedOption.title}, ${formatXof(selectedOption.fare)}, paiement ${selectedPaymentMethod}, ville ${selectedCity.label}`
@@ -785,6 +842,13 @@ export default function BookingScreen() {
           />
         ) : (
           <View style={styles.routeActionStack}>
+            <FlowActionButton
+              onPress={() => handleUseCurrentPositionAsPickup()}
+              disabled={isSubmitting || !riderPosition.latestPosition}
+              label="Utiliser ma position"
+              emphasis="secondary"
+              style={isSubmitting || !riderPosition.latestPosition ? styles.confirmButtonDisabled : null}
+            />
             <FlowActionButton
               onPress={() => void handleSaveCurrentPlace('pickup')}
               disabled={isSubmitting || !pickupPlace.coordinates}

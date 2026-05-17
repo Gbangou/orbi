@@ -2460,6 +2460,16 @@ export type TripDetailResponse = {
       lastAlertType: 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS' | null;
       lastAlertAt: string | null;
       lastPositionAt: string | null;
+      latestPosition: {
+        latitude: number;
+        longitude: number;
+        accuracyMeters: number | null;
+        speedKph: number | null;
+        distanceToPickupKm: number | null;
+        distanceToDestinationKm: number | null;
+        observedAt: string;
+        sourceRole: string | null;
+      } | null;
     };
     pickupCode?: string | null;
     actualFare: number;

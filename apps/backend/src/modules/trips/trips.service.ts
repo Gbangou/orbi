@@ -1531,6 +1531,7 @@ export class TripsService {
           },
         },
         vehicle: true,
+        rideRequest: true,
         events: {
           orderBy: {
             createdAt: 'asc',

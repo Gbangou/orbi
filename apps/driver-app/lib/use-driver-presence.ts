@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
 import {
   extractApiErrorMessage,
+  recordTripRoutePositionWithApi,
   updateDriverPresenceWithApi,
 } from '@orbi/api';
 import { restoreDriverSession } from './auth';
@@ -18,7 +19,7 @@ type DriverPresenceStatus =
 const PRESENCE_DISTANCE_INTERVAL_METERS = 120;
 const PRESENCE_TIME_INTERVAL_MS = 30000;
 
-export function useDriverPresence(enabled: boolean) {
+export function useDriverPresence(enabled: boolean, activeTripId?: string | null) {
   const [presenceStatus, setPresenceStatus] =
     useState<DriverPresenceStatus>('idle');
   const [presenceNote, setPresenceNote] = useState(
@@ -90,6 +91,18 @@ export function useDriverPresence(enabled: boolean) {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
               });
+              if (activeTripId) {
+                await recordTripRoutePositionWithApi(authClient, activeTripId, {
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                  accuracyMeters: position.coords.accuracy ?? undefined,
+                  speedKph:
+                    typeof position.coords.speed === 'number' &&
+                    Number.isFinite(position.coords.speed)
+                      ? Math.max(0, position.coords.speed * 3.6)
+                      : undefined,
+                });
+              }
 
               if (isDisposed) {
                 return;
@@ -137,7 +150,7 @@ export function useDriverPresence(enabled: boolean) {
       isDisposed = true;
       subscription?.remove();
     };
-  }, [enabled]);
+  }, [activeTripId, enabled]);
 
   return {
     presenceStatus,

@@ -11,6 +11,7 @@ import {
   fetchRideOptionsPreview,
   fetchRiderProfile,
   fetchTripDetail,
+  recordTripRoutePositionWithApi,
   reportTripIncidentWithApi,
   resolveVoiceLocationIntentWithApi,
   riderRideOptions,
@@ -55,6 +56,19 @@ jest.mock('../lib/use-live-refresh', () => ({
   useLiveRefresh: jest.fn(),
 }));
 
+const riderPositionState = {
+  latestPosition: null as null | {
+    latitude: number;
+    longitude: number;
+    accuracyMeters: number | null;
+  },
+  positionNote: 'Position passager en attente.',
+};
+
+jest.mock('../lib/use-rider-position', () => ({
+  useRiderPosition: jest.fn(() => riderPositionState),
+}));
+
 const riderRealtimeState: {
   eventHandler: ((eventType: string) => void) | null;
   options:
@@ -97,6 +111,7 @@ jest.mock('@orbi/api', () => {
     fetchMyTrips: jest.fn(),
     fetchRiderProfile: jest.fn(),
     fetchTripDetail: jest.fn(),
+    recordTripRoutePositionWithApi: jest.fn(),
     reportTripIncidentWithApi: jest.fn(),
     triggerTripSafetySosWithApi: jest.fn(),
     resolveVoiceLocationIntentWithApi: jest.fn(),
@@ -116,6 +131,7 @@ const mockedFetchRideOptionsPreview = jest.mocked(fetchRideOptionsPreview);
 const mockedFetchMyTrips = jest.mocked(fetchMyTrips);
 const mockedFetchRiderProfile = jest.mocked(fetchRiderProfile);
 const mockedFetchTripDetail = jest.mocked(fetchTripDetail);
+const mockedRecordTripRoutePositionWithApi = jest.mocked(recordTripRoutePositionWithApi);
 const mockedReportTripIncidentWithApi = jest.mocked(reportTripIncidentWithApi);
 const mockedTriggerTripSafetySosWithApi = jest.mocked(triggerTripSafetySosWithApi);
 const mockedResolveVoiceLocationIntentWithApi = jest.mocked(resolveVoiceLocationIntentWithApi);
@@ -238,6 +254,16 @@ function buildTripDetail(eventIds: string[], labels: string[]) {
         lastAlertType: 'ROUTE_DEVIATION',
         lastAlertAt: '2026-04-19T08:03:00.000Z',
         lastPositionAt: '2026-04-19T08:02:30.000Z',
+        latestPosition: {
+          latitude: 12.37,
+          longitude: -1.52,
+          accuracyMeters: 12,
+          speedKph: 18,
+          distanceToPickupKm: 0.4,
+          distanceToDestinationKm: 5.1,
+          observedAt: '2026-04-19T08:02:30.000Z',
+          sourceRole: 'DRIVER',
+        },
       },
       pickupCode: '1234',
       actualFare: 2500,
@@ -298,6 +324,9 @@ beforeEach(() => {
   mockedFetchMyTrips.mockReset();
   mockedFetchRiderProfile.mockReset();
   mockedFetchTripDetail.mockReset();
+  mockedRecordTripRoutePositionWithApi.mockReset();
+  riderPositionState.latestPosition = null;
+  riderPositionState.positionNote = 'Position passager en attente.';
   mockedReportTripIncidentWithApi.mockReset();
   mockedTriggerTripSafetySosWithApi.mockReset();
   mockedResolveVoiceLocationIntentWithApi.mockReset();
@@ -474,6 +503,52 @@ describe('rider smoke flows', () => {
       {
         idempotencyKey: 'checkout-ride-request-12345678-mobile-money',
       },
+    );
+  });
+
+  it('uses rider GPS as the pickup coordinates when available', async () => {
+    riderPositionState.latestPosition = {
+      latitude: 12.365,
+      longitude: -1.533,
+      accuracyMeters: 18,
+    };
+    riderPositionState.positionNote = 'Position passager synchronisee. Precision 18 m.';
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+    mockedCreateRideRequestWithApi.mockResolvedValue({
+      id: 'ride-request-gps',
+      routeMetricsSource: 'SERVER_COORDINATES',
+    } as never);
+    mockedCreateCheckoutIntentWithApi.mockResolvedValue({
+      provider: 'Orange Money',
+      transactionRef: 'txn-gps',
+      supportedMobileMoneyNetworks: ['ORANGE_MONEY'],
+      channel: 'MOBILE_MONEY',
+    } as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Position passager: precision 18 m.');
+    await pressByText(renderer, `Confirmer ${riderRideOptions[0]?.title}`);
+    await flushMicrotasks();
+
+    expect(mockedCreateRideRequestWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      expect.objectContaining({
+        pickupAddress: 'Position GPS actuelle',
+        pickupLatitude: 12.365,
+        pickupLongitude: -1.533,
+      }),
+      expect.any(Object),
     );
   });
 
@@ -682,6 +757,30 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Note 4.8/5 - 126 courses terminees');
     expectText(renderer, 'Ride Check: Critical (1)');
     expectText(renderer, 'Dernier signal: Route Deviation');
+    expectText(renderer, 'Mission en direct');
+    expectText(renderer, 'Approche');
+    expectText(renderer, '0.4 km');
+    expectText(
+      renderer,
+      'Gardez le code pickup pret et ne le donnez qu au bon chauffeur.',
+    );
+  });
+
+  it('keeps rider activity usable when trip detail is temporarily unavailable', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderRealtimeHistory('DRIVER_ARRIVING') as never);
+    mockedFetchTripDetail.mockRejectedValue(new TypeError('Network request failed'));
+
+    const renderer = await renderScreen(<ActivityScreen />);
+    await pressByText(renderer, 'Actualiser le suivi');
+
+    expectText(renderer, 'Course active');
+    expectText(renderer, 'Mission en direct');
+    expectText(
+      renderer,
+      'Detail de course indisponible: le suivi principal reste actif.',
+    );
+    expectText(renderer, 'Annuler avant depart');
   });
 
   it('cancels a pending rider request from activity', async () => {

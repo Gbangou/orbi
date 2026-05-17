@@ -1,5 +1,10 @@
-import { isActiveTripLifecycleStatus, type DriverOffer, type MyTripsResponse } from '@orbi/api';
-import { formatOperationalStatus } from '@orbi/ui';
+import {
+  isActiveTripLifecycleStatus,
+  type DriverOffer,
+  type MyTripsResponse,
+  type TripDetailResponse,
+} from '@orbi/api';
+import { formatOperationalStatus, formatXof } from '@orbi/ui';
 import { isOfferReservationActive } from './offer-reservation';
 
 export type DriverResolvedOperationalStatus =
@@ -92,6 +97,109 @@ export function buildDriverDispatchStatusLabel(input: {
   }
 
   return `${input.flow.visibleOfferCount} offres chargees. Statut chauffeur ${input.flow.availabilityStatus}.`;
+}
+
+export function buildDriverNextActionHint(flow: DriverActiveFlowSummary) {
+  if (flow.activeTrip?.status === 'MATCHED') {
+    return 'Rejoignez le point de depart et signalez votre arrivee uniquement sur place.';
+  }
+
+  if (flow.activeTrip?.status === 'DRIVER_ARRIVING') {
+    return 'Demandez le code pickup au passager avant de demarrer la course.';
+  }
+
+  if (flow.activeTrip?.status === 'IN_PROGRESS') {
+    return 'Terminez la course seulement apres depot au point confirme.';
+  }
+
+  if (flow.operationalStatus === 'SUSPENDED') {
+    return 'Aucune action terrain: attendez la reactivation par les operations.';
+  }
+
+  if (flow.availabilityStatus === 'ONLINE') {
+    return flow.visibleOfferCount > 0
+      ? 'Traitez les offres reservees avant expiration.'
+      : 'Restez proche de votre zone et gardez la presence active.';
+  }
+
+  return 'Passez en ligne quand vous etes pret a recevoir des offres.';
+}
+
+export function buildDriverMissionSnapshot(input: {
+  flow: DriverActiveFlowSummary;
+  tripDetail?: TripDetailResponse | null;
+}) {
+  const { activeTrip } = input.flow;
+
+  if (!activeTrip) {
+    return [];
+  }
+
+  const detail = input.tripDetail?.trip ?? null;
+  const routeMonitoring = detail?.routeMonitoring ?? null;
+  const latestPosition = routeMonitoring?.latestPosition ?? null;
+  const pickupCode = detail?.pickupCode ?? activeTrip.pickupCode ?? null;
+  const approachDistance =
+    activeTrip.status === 'IN_PROGRESS'
+      ? latestPosition?.distanceToDestinationKm
+      : latestPosition?.distanceToPickupKm;
+
+  return [
+    {
+      label: 'Action',
+      value: input.flow.primaryStatusLabel,
+      helper: buildDriverNextActionHint(input.flow),
+    },
+    {
+      label: 'Passager',
+      value: activeTrip.counterpartyName ?? detail?.riderName ?? 'Assigne',
+      helper: pickupCode
+        ? `Code attendu: ${pickupCode}`
+        : 'Verifier le passager avant depart',
+    },
+    {
+      label: activeTrip.status === 'IN_PROGRESS' ? 'Destination' : 'Pickup',
+      value:
+        typeof approachDistance === 'number'
+          ? `${approachDistance.toFixed(1)} km`
+          : routeMonitoring
+            ? formatOperationalStatus(routeMonitoring.state)
+            : 'En attente',
+      helper:
+        typeof approachDistance === 'number'
+          ? latestPosition?.observedAt
+            ? `Dernier signal ${formatTimeLabel(latestPosition.observedAt)}`
+            : 'Position mission recue'
+          : routeMonitoring
+            ? routeMonitoring.alertCount > 0
+              ? `${routeMonitoring.alertCount} signal route`
+              : 'Trajet coherent'
+            : 'Premier signal route attendu',
+    },
+    {
+      label: 'Vehicule',
+      value: activeTrip.vehicleLabel ?? detail?.vehicleLabel ?? 'Actif',
+      helper: 'Profil verrouille pendant la mission',
+    },
+    {
+      label: 'Tarif',
+      value: formatXof(detail?.actualFare ?? activeTrip.amount),
+      helper: activeTrip.currency,
+    },
+  ];
+}
+
+function formatTimeLabel(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'recent';
+  }
+
+  return date.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function buildDriverEarningsStatusLabel(input: {

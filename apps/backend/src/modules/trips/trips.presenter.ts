@@ -14,6 +14,29 @@ function isPickupCodeVisibleStatus(status: string) {
   return (PICKUP_CODE_VISIBLE_STATUSES as readonly string[]).includes(status);
 }
 
+function toFiniteNumber(value: unknown) {
+  const numeric = Number(value);
+
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function haversineKm(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number },
+) {
+  const earthRadiusKm = 6371;
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const latDelta = toRadians(to.latitude - from.latitude);
+  const lonDelta = toRadians(to.longitude - from.longitude);
+  const fromLat = toRadians(from.latitude);
+  const toLat = toRadians(to.latitude);
+  const a =
+    Math.sin(latDelta / 2) ** 2 +
+    Math.cos(fromLat) * Math.cos(toLat) * Math.sin(lonDelta / 2) ** 2;
+
+  return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
+}
+
 function resolveRouteMonitoringSummary(
   events: Array<{
     eventType: string;
@@ -31,10 +54,18 @@ function resolveRouteMonitoringSummary(
   const latestRouteAlertPayload = isRecord(latestRouteAlert?.payload)
     ? latestRouteAlert.payload
     : {};
+  const latestRoutePositionPayload = isRecord(latestRoutePosition?.payload)
+    ? latestRoutePosition.payload
+    : {};
   const latestAlertType =
     typeof latestRouteAlertPayload.alertType === 'string'
       ? latestRouteAlertPayload.alertType
       : null;
+  const latitude = toFiniteNumber(latestRoutePositionPayload.latitude);
+  const longitude = toFiniteNumber(latestRoutePositionPayload.longitude);
+  const distanceToDestinationKm = toFiniteNumber(
+    latestRoutePositionPayload.distanceToDestinationKm,
+  );
 
   return {
     state: latestRouteAlert
@@ -52,6 +83,27 @@ function resolveRouteMonitoringSummary(
       : null,
     lastAlertAt: latestRouteAlert?.createdAt.toISOString() ?? null,
     lastPositionAt: latestRoutePosition?.createdAt.toISOString() ?? null,
+    latestPosition:
+      latestRoutePosition && latitude !== null && longitude !== null
+        ? {
+            latitude,
+            longitude,
+            accuracyMeters: toFiniteNumber(
+              latestRoutePositionPayload.accuracyMeters,
+            ),
+            speedKph: toFiniteNumber(latestRoutePositionPayload.speedKph),
+            distanceToPickupKm: null as number | null,
+            distanceToDestinationKm,
+            observedAt:
+              typeof latestRoutePositionPayload.observedAt === 'string'
+                ? latestRoutePositionPayload.observedAt
+                : latestRoutePosition.createdAt.toISOString(),
+            sourceRole:
+              typeof latestRoutePositionPayload.sourceRole === 'string'
+                ? latestRoutePositionPayload.sourceRole
+                : null,
+          }
+        : null,
   };
 }
 
@@ -79,6 +131,12 @@ export function serializeTripDetail(trip: {
     model: string;
     color: string;
   };
+  rideRequest?: {
+    pickupLatitude?: unknown;
+    pickupLongitude?: unknown;
+    destinationLatitude?: unknown;
+    destinationLongitude?: unknown;
+  } | null;
   events: Array<{
     id: string;
     eventType: string;
@@ -86,6 +144,39 @@ export function serializeTripDetail(trip: {
     createdAt: Date;
   }>;
 }) {
+  const routeMonitoring = resolveRouteMonitoringSummary(trip.events);
+  const pickupLatitude = toFiniteNumber(trip.rideRequest?.pickupLatitude);
+  const pickupLongitude = toFiniteNumber(trip.rideRequest?.pickupLongitude);
+  const destinationLatitude = toFiniteNumber(trip.rideRequest?.destinationLatitude);
+  const destinationLongitude = toFiniteNumber(
+    trip.rideRequest?.destinationLongitude,
+  );
+  const latestPosition = routeMonitoring.latestPosition;
+
+  if (latestPosition) {
+    if (pickupLatitude !== null && pickupLongitude !== null) {
+      latestPosition.distanceToPickupKm = Number(
+        haversineKm(latestPosition, {
+          latitude: pickupLatitude,
+          longitude: pickupLongitude,
+        }).toFixed(2),
+      );
+    }
+
+    if (
+      latestPosition.distanceToDestinationKm === null &&
+      destinationLatitude !== null &&
+      destinationLongitude !== null
+    ) {
+      latestPosition.distanceToDestinationKm = Number(
+        haversineKm(latestPosition, {
+          latitude: destinationLatitude,
+          longitude: destinationLongitude,
+        }).toFixed(2),
+      );
+    }
+  }
+
   return {
     trip: {
       id: trip.id,
@@ -112,7 +203,7 @@ export function serializeTripDetail(trip: {
           model: trip.vehicle.model,
         },
       },
-      routeMonitoring: resolveRouteMonitoringSummary(trip.events),
+      routeMonitoring,
       pickupCode: isPickupCodeVisibleStatus(trip.status)
         ? extractPickupCode(trip.events)
         : null,

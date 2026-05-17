@@ -29,6 +29,7 @@ describe('driver operational signal helpers', () => {
         lastAlertType: 'LONG_STOP',
         lastAlertAt: null,
         lastPositionAt: null,
+        latestPosition: null,
       }),
     ).toEqual(['Ride Check: Warning (ND)', 'Dernier signal: Long Stop']);
   });

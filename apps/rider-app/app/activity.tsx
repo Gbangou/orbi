@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, Share, Text, StyleSheet } from 'react-native';
+import { Linking, Pressable, ScrollView, Share, Text, StyleSheet, View } from 'react-native';
 import {
   cancelRideRequestWithApi,
   createTripShareLinkWithApi,
@@ -23,6 +23,7 @@ import {
   FlowActionButton,
   LiveStatusBanner,
   LiveTimeline,
+  MetricTile,
   RouteSignalCard,
   TransitionNoticeCard,
 } from '../lib/realtime-widgets';
@@ -30,10 +31,13 @@ import { restoreRiderSession } from '../lib/auth';
 import { RiderJourneySection } from '../lib/rider-journey';
 import {
   buildRiderFlowTransitionLabel,
+  buildRiderMissionSnapshot,
+  buildRiderNextActionHint,
   resolveRiderActiveFlow,
 } from '../lib/rider-active-flow';
 import { useLiveRefresh } from '../lib/use-live-refresh';
 import { useRiderRealtimeStream } from '../lib/use-rider-realtime-stream';
+import { useRiderPosition } from '../lib/use-rider-position';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import { resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
 
@@ -60,6 +64,7 @@ export default function ActivityScreen() {
   const [activityTransitionLabel, setActivityTransitionLabel] = useState<string | null>(null);
   const [freshTimelineEventIds, setFreshTimelineEventIds] = useState<string[]>([]);
   const [recentlyClearedRequestCount, setRecentlyClearedRequestCount] = useState(0);
+  const [tripDetailStatus, setTripDetailStatus] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const previousActiveTripStatusRef = useRef<string | null>(null);
   const previousTimelineEventIdsRef = useRef<string[] | null>(null);
@@ -82,10 +87,19 @@ export default function ActivityScreen() {
       );
 
       if (activeTrip) {
-        const detail = await fetchTripDetail(authClient, activeTrip.id);
-        setActiveTripDetail(detail);
+        try {
+          const detail = await fetchTripDetail(authClient, activeTrip.id);
+          setActiveTripDetail(detail);
+          setTripDetailStatus(null);
+        } catch {
+          setActiveTripDetail(null);
+          setTripDetailStatus(
+            'Detail de course indisponible: le suivi principal reste actif.',
+          );
+        }
       } else {
         setActiveTripDetail(null);
+        setTripDetailStatus(null);
       }
 
       if (!silent) {
@@ -140,6 +154,15 @@ export default function ActivityScreen() {
 
   const flow = resolveRiderActiveFlow(history);
   const { activeTrip, primaryStatusLabel } = flow;
+  const riderPosition = useRiderPosition({
+    enabled: Boolean(activeTrip),
+    activeTripId: activeTrip?.id,
+  });
+  const riderNextActionHint = buildRiderNextActionHint(flow);
+  const riderMissionSnapshot = buildRiderMissionSnapshot({
+    flow,
+    tripDetail: activeTripDetail,
+  });
 
   useEffect(() => {
     const previousPendingRequestIds = previousPendingRequestIdsRef.current;
@@ -369,6 +392,9 @@ export default function ActivityScreen() {
       const { authClient } = await restoreRiderSession();
       const response = await triggerTripSafetySosWithApi(authClient, tripId, {
         details: 'SOS declenche depuis le cockpit passager.',
+        latitude: riderPosition.latestPosition?.latitude,
+        longitude: riderPosition.latestPosition?.longitude,
+        accuracyMeters: riderPosition.latestPosition?.accuracyMeters ?? undefined,
       });
 
       setStatus(
@@ -493,6 +519,9 @@ export default function ActivityScreen() {
           Resynchronisation silencieuse en cours apres evenement live.
         </Text>
       ) : null}
+      {activeTrip ? (
+        <Text style={styles.syncMeta}>{riderPosition.positionNote}</Text>
+      ) : null}
       <Pressable
         disabled={isRefreshing || isSubmitting}
         onPress={() => void loadHistory()}
@@ -593,6 +622,29 @@ export default function ActivityScreen() {
           noteTone="amber"
           isHighlighted={Boolean(activityTransitionLabel || freshTimelineEventIds.length)}
         >
+          <TransitionNoticeCard
+            label="Prochaine action"
+            message={riderNextActionHint}
+            tone={activeTrip.status === 'IN_PROGRESS' ? 'sky' : 'amber'}
+          />
+          <Text style={styles.snapshotTitle}>Mission en direct</Text>
+          <View style={styles.snapshotStrip}>
+            {riderMissionSnapshot.map((item) => (
+              <MetricTile
+                key={`${item.label}:${item.value}`}
+                label={item.label}
+                value={item.value}
+                helper={item.helper}
+              />
+            ))}
+          </View>
+          {tripDetailStatus ? (
+            <TransitionNoticeCard
+              label="Mode degrade"
+              message={tripDetailStatus}
+              tone="amber"
+            />
+          ) : null}
           {activityTransitionLabel ? (
             <Text style={styles.transitionMeta}>{activityTransitionLabel}</Text>
           ) : null}
@@ -734,6 +786,16 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.sky,
     fontWeight: '700',
     lineHeight: 19,
+  },
+  snapshotTitle: {
+    color: orbiTheme.colors.text,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  snapshotStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   actionButtonDisabled: {
     opacity: 0.6,
