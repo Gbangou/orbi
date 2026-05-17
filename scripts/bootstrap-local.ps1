@@ -1,12 +1,16 @@
 $ErrorActionPreference = 'Stop'
 
-function Ensure-FileFromExample {
+function Copy-ExampleFileIfMissing {
   param(
     [string]$TargetPath,
     [string]$ExamplePath
   )
 
   if (-not (Test-Path -LiteralPath $TargetPath)) {
+    if (-not (Test-Path -LiteralPath $ExamplePath)) {
+      throw "Missing example file: $ExamplePath"
+    }
+
     Copy-Item -LiteralPath $ExamplePath -Destination $TargetPath
     Write-Host "Created $TargetPath from example."
   }
@@ -17,23 +21,23 @@ function Ensure-FileFromExample {
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-Ensure-FileFromExample `
+Copy-ExampleFileIfMissing `
   -TargetPath (Join-Path $repoRoot 'apps\backend\.env') `
   -ExamplePath (Join-Path $repoRoot 'apps\backend\.env.example')
 
-Ensure-FileFromExample `
+Copy-ExampleFileIfMissing `
   -TargetPath (Join-Path $repoRoot 'apps\backend\prisma\.env') `
   -ExamplePath (Join-Path $repoRoot 'apps\backend\prisma\.env.example')
 
-Ensure-FileFromExample `
+Copy-ExampleFileIfMissing `
   -TargetPath (Join-Path $repoRoot 'apps\admin-web\.env.local') `
   -ExamplePath (Join-Path $repoRoot 'apps\admin-web\.env.example')
 
-Ensure-FileFromExample `
+Copy-ExampleFileIfMissing `
   -TargetPath (Join-Path $repoRoot 'apps\rider-app\.env') `
   -ExamplePath (Join-Path $repoRoot 'apps\rider-app\.env.example')
 
-Ensure-FileFromExample `
+Copy-ExampleFileIfMissing `
   -TargetPath (Join-Path $repoRoot 'apps\driver-app\.env') `
   -ExamplePath (Join-Path $repoRoot 'apps\driver-app\.env.example')
 
