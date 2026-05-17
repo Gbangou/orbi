@@ -1,8 +1,8 @@
-import React from 'react';
+import React from "react";
 
-import { cleanupRenderers } from './test-utils';
+import { cleanupRenderers } from "./test-utils";
 
-let pathname = '/';
+let pathname = "/";
 
 const router = {
   replace: jest.fn(),
@@ -11,37 +11,65 @@ const router = {
 };
 
 jest.mock(
-  'react-native',
-  () => ({
-    ScrollView: 'ScrollView',
-    View: 'View',
-    Text: 'Text',
-    Pressable: 'Pressable',
-    TextInput: 'TextInput',
-    StyleSheet: {
-      create: <T,>(styles: T) => styles,
-    },
-    Alert: {
-      alert: jest.fn(),
-    },
-    Platform: {
-      OS: 'test',
-      select: <T,>(values: { test?: T; default?: T }) => values.test ?? values.default,
-    },
-  }),
+  "react-native",
+  () => {
+    class AnimatedValue {
+      constructor(private readonly value: number) {}
+
+      interpolate() {
+        return this.value;
+      }
+    }
+
+    const animation = {
+      start: jest.fn(),
+      stop: jest.fn(),
+    };
+
+    return {
+      Animated: {
+        View: "AnimatedView",
+        Value: AnimatedValue,
+        loop: jest.fn(() => animation),
+        sequence: jest.fn(() => animation),
+        timing: jest.fn(() => animation),
+      },
+      Easing: {
+        inOut: jest.fn((value) => value),
+        quad: jest.fn((value) => value),
+      },
+      ScrollView: "ScrollView",
+      View: "View",
+      Text: "Text",
+      Pressable: "Pressable",
+      TextInput: "TextInput",
+      StyleSheet: {
+        create: <T>(styles: T) => styles,
+      },
+      Alert: {
+        alert: jest.fn(),
+      },
+      Platform: {
+        OS: "test",
+        select: <T>(values: { test?: T; default?: T }) =>
+          values.test ?? values.default,
+      },
+    };
+  },
   { virtual: true },
 );
 
 jest.mock(
-  'expo-router',
+  "expo-router",
   () => {
     const link = ({ children }: { children: React.ReactElement }) =>
       React.Children.only(children);
 
     const stack = Object.assign(
-      (props: unknown) => React.createElement('Stack', props as object),
+      (props: unknown) => React.createElement("Stack", props as object),
       {
-        Screen: (props: unknown) => React.createElement('StackScreen', props as object),
+        Screen: (props: unknown) =>
+          React.createElement("StackScreen", props as object),
       },
     );
 
@@ -60,15 +88,15 @@ jest.mock(
 );
 
 jest.mock(
-  'expo-status-bar',
+  "expo-status-bar",
   () => ({
-    StatusBar: 'StatusBar',
+    StatusBar: "StatusBar",
   }),
   { virtual: true },
 );
 
 beforeEach(() => {
-  pathname = '/';
+  pathname = "/";
   router.replace.mockReset();
   router.push.mockReset();
   router.back.mockReset();

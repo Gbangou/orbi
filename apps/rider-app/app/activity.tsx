@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   Image,
   Linking,
   Pressable,
@@ -8,7 +10,7 @@ import {
   Text,
   StyleSheet,
   View,
-} from 'react-native';
+} from "react-native";
 import {
   cancelRideRequestWithApi,
   createTripShareLinkWithApi,
@@ -20,14 +22,14 @@ import {
   type MyTripsResponse,
   type TripDetailResponse,
   updateTripStatusWithApi,
-} from '@orbi/api';
+} from "@orbi/api";
 import {
   describeRealtimeEvent,
   describeRealtimeConnection,
   formatOperationalStatus,
   formatXof,
   orbiTheme,
-} from '@orbi/ui';
+} from "@orbi/ui";
 import {
   FlowActionButton,
   LiveStatusBanner,
@@ -36,9 +38,9 @@ import {
   MetricTile,
   RouteSignalCard,
   TransitionNoticeCard,
-} from '../lib/realtime-widgets';
-import { restoreRiderSession } from '../lib/auth';
-import { RiderJourneySection } from '../lib/rider-journey';
+} from "../lib/realtime-widgets";
+import { restoreRiderSession } from "../lib/auth";
+import { RiderJourneySection } from "../lib/rider-journey";
 import {
   buildRiderFlowTransitionLabel,
   buildRiderDriverTrustSnapshot,
@@ -46,21 +48,21 @@ import {
   buildRiderMissionSnapshot,
   buildRiderNextActionHint,
   resolveRiderActiveFlow,
-} from '../lib/rider-active-flow';
-import { useLiveRefresh } from '../lib/use-live-refresh';
-import { useRiderRealtimeStream } from '../lib/use-rider-realtime-stream';
-import { useRiderPosition } from '../lib/use-rider-position';
-import { resolveRiderAppError } from '../lib/session-feedback';
-import { resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
+} from "../lib/rider-active-flow";
+import { useLiveRefresh } from "../lib/use-live-refresh";
+import { useRiderRealtimeStream } from "../lib/use-rider-realtime-stream";
+import { useRiderPosition } from "../lib/use-rider-position";
+import { resolveRiderAppError } from "../lib/session-feedback";
+import { resolveOrbiApiBaseUrlForRuntime } from "@orbi/config";
 
 const fallbackHistory: MyTripsResponse = {
-  role: 'RIDER',
+  role: "RIDER",
   stats: {
     activeTrips: 0,
     completedTrips: 0,
     cancelledTrips: 0,
     totalAmount: 0,
-    currency: 'XOF',
+    currency: "XOF",
   },
   pendingRequests: [],
   recentTrips: [],
@@ -78,12 +80,78 @@ function LiveApproachPreview({
   stateLabel: string;
 }) {
   const boundedProgress = Math.max(12, Math.min(88, progressPercent));
+  const motion = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(motion, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(motion, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [motion]);
+
+  const vehicleMotion = {
+    transform: [
+      {
+        translateY: motion.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -4],
+        }),
+      },
+      {
+        scale: motion.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 1.035],
+        }),
+      },
+    ],
+  };
 
   return (
     <View style={styles.approachMap}>
       <View style={styles.approachRoad} />
+      <Animated.View
+        style={[
+          styles.approachRoadPulse,
+          {
+            opacity: motion.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.18, 0.55],
+            }),
+            transform: [
+              {
+                translateX: motion.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-18, 22],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
       <View style={styles.approachRoadMuted} />
-      <View style={[styles.approachVehiclePin, { left: `${boundedProgress}%` }]}>
+      <Animated.View
+        style={[
+          styles.approachVehiclePin,
+          { left: `${boundedProgress}%` },
+          vehicleMotion,
+        ]}
+      >
         <View style={styles.approachVehicleBody}>
           <View style={styles.approachVehicleCabin} />
           <View style={styles.approachVehicleWheelRow}>
@@ -91,7 +159,7 @@ function LiveApproachPreview({
             <View style={styles.approachVehicleWheel} />
           </View>
         </View>
-      </View>
+      </Animated.View>
       <View style={styles.approachOriginPin}>
         <Text style={styles.approachPinLabel}>P</Text>
       </View>
@@ -110,14 +178,20 @@ function LiveApproachPreview({
 
 export default function ActivityScreen() {
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
-  const [activeTripDetail, setActiveTripDetail] = useState<TripDetailResponse | null>(null);
-  const [status, setStatus] = useState('Chargement de l historique...');
+  const [activeTripDetail, setActiveTripDetail] =
+    useState<TripDetailResponse | null>(null);
+  const [status, setStatus] = useState("Chargement de l historique...");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
-  const [activityTransitionLabel, setActivityTransitionLabel] = useState<string | null>(null);
-  const [freshTimelineEventIds, setFreshTimelineEventIds] = useState<string[]>([]);
-  const [recentlyClearedRequestCount, setRecentlyClearedRequestCount] = useState(0);
+  const [activityTransitionLabel, setActivityTransitionLabel] = useState<
+    string | null
+  >(null);
+  const [freshTimelineEventIds, setFreshTimelineEventIds] = useState<string[]>(
+    [],
+  );
+  const [recentlyClearedRequestCount, setRecentlyClearedRequestCount] =
+    useState(0);
   const [tripDetailStatus, setTripDetailStatus] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const previousActiveTripStatusRef = useRef<string | null>(null);
@@ -148,7 +222,7 @@ export default function ActivityScreen() {
         } catch {
           setActiveTripDetail(null);
           setTripDetailStatus(
-            'Detail de course indisponible: le suivi principal reste actif.',
+            "Detail de course indisponible: le suivi principal reste actif.",
           );
         }
       } else {
@@ -157,13 +231,13 @@ export default function ActivityScreen() {
       }
 
       if (!silent) {
-        setStatus('Historique charge depuis le flux protege.');
+        setStatus("Historique charge depuis le flux protege.");
       }
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        surface: 'active-trip',
-        network: 'Historique vide de secours en attendant la connexion API.',
-        fallback: 'Historique vide de secours en attendant la connexion API.',
+        surface: "active-trip",
+        network: "Historique vide de secours en attendant la connexion API.",
+        fallback: "Historique vide de secours en attendant la connexion API.",
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -188,20 +262,20 @@ export default function ActivityScreen() {
     sessionToken,
     (eventType) => {
       setIsRealtimeSyncing(true);
-      setStatus(describeRealtimeEvent('rider', eventType));
+      setStatus(describeRealtimeEvent("rider", eventType));
       void loadHistory(true);
     },
     {
       onHeartbeat: () => {
-        setStatus(describeRealtimeConnection('rider', 'active'));
+        setStatus(describeRealtimeConnection("rider", "active"));
       },
       onOpen: () => {
         setIsRealtimeSyncing(false);
-        setStatus(describeRealtimeConnection('rider', 'connected'));
+        setStatus(describeRealtimeConnection("rider", "connected"));
       },
       onError: () => {
         setIsRealtimeSyncing(false);
-        setStatus(describeRealtimeConnection('rider', 'reconnecting'));
+        setStatus(describeRealtimeConnection("rider", "reconnecting"));
       },
     },
   );
@@ -227,7 +301,9 @@ export default function ActivityScreen() {
 
   useEffect(() => {
     const previousPendingRequestIds = previousPendingRequestIdsRef.current;
-    const nextPendingRequestIds = history.pendingRequests.map((request) => request.id);
+    const nextPendingRequestIds = history.pendingRequests.map(
+      (request) => request.id,
+    );
 
     if (previousPendingRequestIds) {
       const clearedRequestIds = previousPendingRequestIds.filter(
@@ -255,7 +331,7 @@ export default function ActivityScreen() {
       buildRiderFlowTransitionLabel(
         previousStatus ? `TRIP:${previousStatus}` : null,
         `TRIP:${activeTrip.status}`,
-        'activity',
+        "activity",
       ),
     );
 
@@ -263,7 +339,8 @@ export default function ActivityScreen() {
   }, [activeTrip]);
 
   useEffect(() => {
-    const timelineEventIds = activeTripDetail?.trip.timeline.map((event) => event.id) ?? [];
+    const timelineEventIds =
+      activeTripDetail?.trip.timeline.map((event) => event.id) ?? [];
     const previousTimelineEventIds = previousTimelineEventIdsRef.current;
 
     if (previousTimelineEventIds) {
@@ -311,16 +388,16 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus('Annulation de la demande en cours...');
+    setStatus("Annulation de la demande en cours...");
 
     try {
       const { authClient } = await restoreRiderSession();
       await cancelRideRequestWithApi(authClient, rideRequestId);
-      setStatus('Demande annulee avec succes.');
+      setStatus("Demande annulee avec succes.");
       await loadHistory();
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        surface: 'booking',
+        surface: "booking",
         fallback: "L'annulation de la demande a echoue.",
       });
 
@@ -342,16 +419,16 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus('Annulation de la course avant depart...');
+    setStatus("Annulation de la course avant depart...");
 
     try {
       const { authClient } = await restoreRiderSession();
-      await updateTripStatusWithApi(authClient, tripId, 'CANCELLED');
-      setStatus('Course annulee. Vous pouvez reserver a nouveau.');
+      await updateTripStatusWithApi(authClient, tripId, "CANCELLED");
+      setStatus("Course annulee. Vous pouvez reserver a nouveau.");
       await loadHistory();
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        surface: 'active-trip',
+        surface: "active-trip",
         fallback: "L'annulation de la course a echoue.",
       });
 
@@ -373,20 +450,20 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus('Signalement de l incident a l equipe support...');
+    setStatus("Signalement de l incident a l equipe support...");
 
     try {
       const { authClient } = await restoreRiderSession();
       await reportTripIncidentWithApi(authClient, tripId, {
-        incidentType: 'SAFETY_ALERT',
-        details: 'Signalement rapide envoye depuis l ecran passager.',
+        incidentType: "SAFETY_ALERT",
+        details: "Signalement rapide envoye depuis l ecran passager.",
         priority: 3,
       });
-      setStatus('Incident signale. L equipe operations est notifiee.');
+      setStatus("Incident signale. L equipe operations est notifiee.");
       await loadHistory();
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        surface: 'safety',
+        surface: "safety",
         fallback: "Le signalement n'a pas pu etre envoye.",
       });
 
@@ -408,24 +485,26 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus('Declaration de preuve volontaire avec consentement...');
+    setStatus("Declaration de preuve volontaire avec consentement...");
 
     try {
       const { authClient } = await restoreRiderSession();
       await reportTripIncidentWithApi(authClient, tripId, {
-        incidentType: 'VOLUNTARY_EVIDENCE',
+        incidentType: "VOLUNTARY_EVIDENCE",
         details:
-          'Preuve conservee localement par le passager. Upload support uniquement sur action explicite.',
+          "Preuve conservee localement par le passager. Upload support uniquement sur action explicite.",
         priority: 3,
         evidenceConsent: true,
-        evidenceType: 'AUDIO',
+        evidenceType: "AUDIO",
         evidenceRetentionHours: 24,
       });
-      setStatus('Preuve volontaire declaree. Aucun fichier n a ete envoye automatiquement.');
+      setStatus(
+        "Preuve volontaire declaree. Aucun fichier n a ete envoye automatiquement.",
+      );
       await loadHistory();
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        surface: 'safety',
+        surface: "safety",
         fallback: "La preuve volontaire n'a pas pu etre declaree.",
       });
 
@@ -447,15 +526,16 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus('SOS en cours: creation du ticket prioritaire...');
+    setStatus("SOS en cours: creation du ticket prioritaire...");
 
     try {
       const { authClient } = await restoreRiderSession();
       const response = await triggerTripSafetySosWithApi(authClient, tripId, {
-        details: 'SOS declenche depuis le cockpit passager.',
+        details: "SOS declenche depuis le cockpit passager.",
         latitude: riderPosition.latestPosition?.latitude,
         longitude: riderPosition.latestPosition?.longitude,
-        accuracyMeters: riderPosition.latestPosition?.accuracyMeters ?? undefined,
+        accuracyMeters:
+          riderPosition.latestPosition?.accuracyMeters ?? undefined,
       });
 
       setStatus(
@@ -465,7 +545,7 @@ export default function ActivityScreen() {
       await loadHistory();
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        surface: 'safety',
+        surface: "safety",
         fallback: "Le SOS n'a pas pu etre envoye.",
       });
 
@@ -487,7 +567,7 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus('Creation du lien de partage securise...');
+    setStatus("Creation du lien de partage securise...");
 
     try {
       const { authClient } = await restoreRiderSession();
@@ -501,11 +581,11 @@ export default function ActivityScreen() {
         message: `Suivi securise de ma course Orbi: ${shareUrl}`,
         url: shareUrl,
       });
-      setStatus('Lien de partage pret. Il expire automatiquement.');
+      setStatus("Lien de partage pret. Il expire automatiquement.");
       await loadHistory();
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        surface: 'safety',
+        surface: "safety",
         fallback: "Le lien de partage n'a pas pu etre cree.",
       });
 
@@ -529,7 +609,7 @@ export default function ActivityScreen() {
 
     return [
       `Chauffeur verifie: ${formatOperationalStatus(verification.verificationStatus)}`,
-      `Telephone chauffeur: ${verification.phoneVerified ? 'verifie' : 'non verifie'}`,
+      `Telephone chauffeur: ${verification.phoneVerified ? "verifie" : "non verifie"}`,
       `Vehicule: ${verification.vehicle.color} ${verification.vehicle.make} ${verification.vehicle.model}`,
       `Plaque a verifier: ${verification.vehicle.plateNumber}`,
       verification.averageRating === null
@@ -545,19 +625,19 @@ export default function ActivityScreen() {
       return [];
     }
 
-    if (routeMonitoring.state === 'unknown') {
-      return ['Ride Check: en attente du premier signal route.'];
+    if (routeMonitoring.state === "unknown") {
+      return ["Ride Check: en attente du premier signal route."];
     }
 
-    if (routeMonitoring.state === 'clear') {
-      return ['Ride Check: trajet coherent sur le dernier signal route.'];
+    if (routeMonitoring.state === "clear") {
+      return ["Ride Check: trajet coherent sur le dernier signal route."];
     }
 
     return [
       `Ride Check: ${formatOperationalStatus(routeMonitoring.state)} (${routeMonitoring.alertCount})`,
       routeMonitoring.lastAlertType
         ? `Dernier signal: ${formatOperationalStatus(routeMonitoring.lastAlertType)}`
-        : 'Dernier signal: anomalie route',
+        : "Dernier signal: anomalie route",
     ];
   }
 
@@ -568,12 +648,12 @@ export default function ActivityScreen() {
         label="Suivi direct"
         message={status}
         secondaryMessage={
-          activityTransitionLabel
-            ?? (recentlyClearedRequestCount
-              ? `${recentlyClearedRequestCount} demande${recentlyClearedRequestCount > 1 ? 's' : ''} a disparu du flux actif.`
-              : null)
+          activityTransitionLabel ??
+          (recentlyClearedRequestCount
+            ? `${recentlyClearedRequestCount} demande${recentlyClearedRequestCount > 1 ? "s" : ""} a disparu du flux actif.`
+            : null)
         }
-        tone={isRealtimeSyncing || activityTransitionLabel ? 'sky' : 'teal'}
+        tone={isRealtimeSyncing || activityTransitionLabel ? "sky" : "teal"}
       />
       {isRealtimeSyncing ? (
         <Text style={styles.syncMeta}>
@@ -586,10 +666,13 @@ export default function ActivityScreen() {
       <Pressable
         disabled={isRefreshing || isSubmitting}
         onPress={() => void loadHistory()}
-        style={[styles.refreshButton, isRefreshing || isSubmitting ? styles.actionButtonDisabled : null]}
+        style={[
+          styles.refreshButton,
+          isRefreshing || isSubmitting ? styles.actionButtonDisabled : null,
+        ]}
       >
         <Text style={styles.refreshButtonLabel}>
-          {isRefreshing ? 'Actualisation...' : 'Actualiser le suivi'}
+          {isRefreshing ? "Actualisation..." : "Actualiser le suivi"}
         </Text>
       </Pressable>
 
@@ -603,34 +686,34 @@ export default function ActivityScreen() {
           label={
             recentlyClearedRequestCount > 1
               ? `${recentlyClearedRequestCount} demandes mises a jour`
-              : 'Demande mise a jour'
+              : "Demande mise a jour"
           }
-          message={`${recentlyClearedRequestCount} demande${recentlyClearedRequestCount > 1 ? 's' : ''} a disparu du flux actif.`}
+          message={`${recentlyClearedRequestCount} demande${recentlyClearedRequestCount > 1 ? "s" : ""} a disparu du flux actif.`}
           tone="rose"
         />
       ) : null}
 
       <RouteSignalCard
         eyebrow="Vue rapide"
-        badgeLabel={isRealtimeSyncing ? 'Sync live' : 'Cockpit'}
-        badgeTone={isRealtimeSyncing ? 'sky' : 'teal'}
+        badgeLabel={isRealtimeSyncing ? "Sync live" : "Cockpit"}
+        badgeTone={isRealtimeSyncing ? "sky" : "teal"}
         title="Pilotage des trajets"
         description="Vue unifiee du flux passager, des demandes actives et du suivi de course."
         insights={[
           {
-            label: 'Demandes',
+            label: "Demandes",
             value: String(history.pendingRequests.length),
-            tone: history.pendingRequests.length ? 'amber' : 'sky',
+            tone: history.pendingRequests.length ? "amber" : "sky",
           },
           {
-            label: 'Completes',
+            label: "Completes",
             value: String(history.stats.completedTrips),
-            tone: 'teal',
+            tone: "teal",
           },
           {
-            label: 'Total',
+            label: "Total",
             value: formatXof(history.stats.totalAmount),
-            tone: 'sky',
+            tone: "sky",
           },
         ]}
         detailLines={[
@@ -648,28 +731,32 @@ export default function ActivityScreen() {
             freshTimelineEventIds.length
               ? freshTimelineEventIds.length > 1
                 ? `${freshTimelineEventIds.length} evenements live`
-                : 'Evenement live'
+                : "Evenement live"
               : activityTransitionLabel
-                ? 'Transition live'
+                ? "Transition live"
                 : primaryStatusLabel
           }
-          badgeTone={activityTransitionLabel || freshTimelineEventIds.length ? 'sky' : 'teal'}
+          badgeTone={
+            activityTransitionLabel || freshTimelineEventIds.length
+              ? "sky"
+              : "teal"
+          }
           title={`${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`}
-          description={`Chauffeur: ${activeTrip.counterpartyName ?? 'Assigne'}`}
+          description={`Chauffeur: ${activeTrip.counterpartyName ?? "Assigne"}`}
           insights={[
             {
-              label: 'Statut',
+              label: "Statut",
               value: primaryStatusLabel,
-              tone: 'teal',
+              tone: "teal",
             },
             {
-              label: 'Support',
-              value: 'Actif',
-              tone: 'sky',
+              label: "Support",
+              value: "Actif",
+              tone: "sky",
             },
           ]}
           detailLines={[
-            'Partage, code pickup et monitoring route connectes aux operations.',
+            "Partage, code pickup et monitoring route connectes aux operations.",
             ...buildDriverVerificationLines(),
             ...buildRouteMonitoringLines(),
             activeTrip.status,
@@ -681,12 +768,14 @@ export default function ActivityScreen() {
               : null
           }
           noteTone="amber"
-          isHighlighted={Boolean(activityTransitionLabel || freshTimelineEventIds.length)}
+          isHighlighted={Boolean(
+            activityTransitionLabel || freshTimelineEventIds.length,
+          )}
         >
           <TransitionNoticeCard
             label="Prochaine action"
             message={riderNextActionHint}
-            tone={activeTrip.status === 'IN_PROGRESS' ? 'sky' : 'amber'}
+            tone={activeTrip.status === "IN_PROGRESS" ? "sky" : "amber"}
           />
           <Text style={styles.snapshotTitle}>Mission en direct</Text>
           <View style={styles.snapshotStrip}>
@@ -726,7 +815,8 @@ export default function ActivityScreen() {
                     {driverTrustSnapshot.driverName}
                   </Text>
                   <Text style={styles.identityMeta}>
-                    {driverTrustSnapshot.verificationLabel} - {driverTrustSnapshot.ratingLabel}
+                    {driverTrustSnapshot.verificationLabel} -{" "}
+                    {driverTrustSnapshot.ratingLabel}
                   </Text>
                   <Text style={styles.identityMeta}>
                     {driverTrustSnapshot.photoLabel}
@@ -737,7 +827,10 @@ export default function ActivityScreen() {
                 <MetricTile
                   label="Vehicule"
                   value={driverTrustSnapshot.vehicleLabel}
-                  helper={driverTrustSnapshot.vehicleMeta.join(' - ') || 'Type confirme par dossier'}
+                  helper={
+                    driverTrustSnapshot.vehicleMeta.join(" - ") ||
+                    "Type confirme par dossier"
+                  }
                 />
                 <MetricTile
                   label="Plaque"
@@ -767,7 +860,7 @@ export default function ActivityScreen() {
               freshEventIds={freshTimelineEventIds}
             />
           ) : null}
-          {['MATCHED', 'DRIVER_ARRIVING'].includes(activeTrip.status) ? (
+          {["MATCHED", "DRIVER_ARRIVING"].includes(activeTrip.status) ? (
             <FlowActionButton
               disabled={isSubmitting}
               label="Annuler avant depart"
@@ -812,14 +905,14 @@ export default function ActivityScreen() {
           key={request.id}
           eyebrow="Demande active"
           badgeLabel={`Demande ${formatOperationalStatus(request.status)}`}
-          badgeTone={request.status === 'REQUESTED' ? 'amber' : 'sky'}
+          badgeTone={request.status === "REQUESTED" ? "amber" : "sky"}
           title={`${request.pickupAddress} vers ${request.destinationAddress}`}
           description={`Estimation: ${formatXof(request.estimatedFare)}`}
           insights={[
             {
-              label: 'Statut',
+              label: "Statut",
               value: formatOperationalStatus(request.status),
-              tone: request.status === 'REQUESTED' ? 'amber' : 'sky',
+              tone: request.status === "REQUESTED" ? "amber" : "sky",
             },
           ]}
           detailLines={[
@@ -827,7 +920,7 @@ export default function ActivityScreen() {
             `Demande ${request.status}`,
           ]}
         >
-          {request.status === 'REQUESTED' ? (
+          {request.status === "REQUESTED" ? (
             <FlowActionButton
               disabled={isSubmitting}
               label="Annuler cette demande"
@@ -844,19 +937,19 @@ export default function ActivityScreen() {
           key={trip.id}
           eyebrow="Trajet recent"
           badgeLabel={formatOperationalStatus(trip.status)}
-          badgeTone={trip.status === 'COMPLETED' ? 'teal' : 'amber'}
+          badgeTone={trip.status === "COMPLETED" ? "teal" : "amber"}
           title={`${trip.pickupAddress} vers ${trip.destinationAddress}`}
           titleAside={formatXof(trip.amount)}
-          description={`Chauffeur: ${trip.counterpartyName ?? 'Attribue automatiquement'}`}
+          description={`Chauffeur: ${trip.counterpartyName ?? "Attribue automatiquement"}`}
           insights={[
             {
-              label: 'Statut',
+              label: "Statut",
               value: formatOperationalStatus(trip.status),
-              tone: trip.status === 'COMPLETED' ? 'teal' : 'amber',
+              tone: trip.status === "COMPLETED" ? "teal" : "amber",
             },
           ]}
           detailLines={[
-            `Chauffeur: ${trip.counterpartyName ?? 'Attribue automatiquement'}`,
+            `Chauffeur: ${trip.counterpartyName ?? "Attribue automatiquement"}`,
           ]}
         />
       ))}
@@ -875,14 +968,14 @@ const styles = StyleSheet.create({
   title: {
     color: orbiTheme.colors.text,
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   syncMeta: {
     color: orbiTheme.colors.sky,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   refreshButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
@@ -892,22 +985,22 @@ const styles = StyleSheet.create({
   },
   refreshButtonLabel: {
     color: orbiTheme.colors.text,
-    fontWeight: '700',
+    fontWeight: "700",
     fontSize: 13,
   },
   transitionMeta: {
     color: orbiTheme.colors.sky,
-    fontWeight: '700',
+    fontWeight: "700",
     lineHeight: 19,
   },
   snapshotTitle: {
     color: orbiTheme.colors.text,
-    fontWeight: '800',
+    fontWeight: "800",
     marginTop: 4,
   },
   snapshotStrip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   trustCard: {
@@ -919,31 +1012,31 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   identityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   avatarFallback: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(45, 212, 191, 0.16)',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(45, 212, 191, 0.16)",
     borderWidth: 1,
-    borderColor: 'rgba(45, 212, 191, 0.36)',
+    borderColor: "rgba(45, 212, 191, 0.36)",
   },
   avatarImage: {
     width: 56,
     height: 56,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(45, 212, 191, 0.36)',
+    borderColor: "rgba(45, 212, 191, 0.36)",
     backgroundColor: orbiTheme.colors.backgroundAlt,
   },
   avatarInitials: {
     color: orbiTheme.colors.teal,
-    fontWeight: '900',
+    fontWeight: "900",
     fontSize: 18,
   },
   identityCopy: {
@@ -952,7 +1045,7 @@ const styles = StyleSheet.create({
   },
   identityTitle: {
     color: orbiTheme.colors.text,
-    fontWeight: '800',
+    fontWeight: "800",
     fontSize: 17,
   },
   identityMeta: {
@@ -960,67 +1053,76 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   identityDetails: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   approachMap: {
     minHeight: 142,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.32)',
-    backgroundColor: 'rgba(8, 47, 73, 0.18)',
-    overflow: 'hidden',
-    justifyContent: 'center',
+    borderColor: "rgba(56, 189, 248, 0.32)",
+    backgroundColor: "rgba(8, 47, 73, 0.18)",
+    overflow: "hidden",
+    justifyContent: "center",
     padding: 16,
   },
   approachRoad: {
-    position: 'absolute',
+    position: "absolute",
     left: 24,
     right: 24,
     top: 70,
     height: 8,
     borderRadius: 999,
-    backgroundColor: 'rgba(56, 189, 248, 0.34)',
+    backgroundColor: "rgba(56, 189, 248, 0.34)",
+  },
+  approachRoadPulse: {
+    position: "absolute",
+    left: 56,
+    top: 69,
+    width: 64,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(45, 212, 191, 0.72)",
   },
   approachRoadMuted: {
-    position: 'absolute',
+    position: "absolute",
     left: 34,
     right: 34,
     top: 84,
     height: 2,
     borderRadius: 999,
-    backgroundColor: 'rgba(148, 163, 184, 0.28)',
+    backgroundColor: "rgba(148, 163, 184, 0.28)",
   },
   approachVehiclePin: {
-    position: 'absolute',
+    position: "absolute",
     top: 42,
     width: 50,
     marginLeft: -25,
-    alignItems: 'center',
+    alignItems: "center",
   },
   approachVehicleBody: {
     width: 44,
     height: 25,
     borderRadius: 9,
     backgroundColor: orbiTheme.colors.teal,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    alignItems: "center",
+    justifyContent: "flex-end",
     paddingBottom: 3,
   },
   approachVehicleCabin: {
-    position: 'absolute',
+    position: "absolute",
     top: -8,
     width: 24,
     height: 12,
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
-    backgroundColor: 'rgba(45, 212, 191, 0.7)',
+    backgroundColor: "rgba(45, 212, 191, 0.7)",
   },
   approachVehicleWheelRow: {
     width: 36,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   approachVehicleWheel: {
     width: 8,
@@ -1029,31 +1131,31 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.background,
   },
   approachOriginPin: {
-    position: 'absolute',
+    position: "absolute",
     left: 18,
     top: 56,
     width: 28,
     height: 28,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: orbiTheme.colors.sky,
   },
   approachDestinationPin: {
-    position: 'absolute',
+    position: "absolute",
     right: 18,
     top: 56,
     width: 28,
     height: 28,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: orbiTheme.colors.amber,
   },
   approachPinLabel: {
-    color: '#082f49',
+    color: "#082f49",
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: "900",
   },
   approachMapCopy: {
     marginTop: 78,
@@ -1062,11 +1164,11 @@ const styles = StyleSheet.create({
   approachMapTitle: {
     color: orbiTheme.colors.text,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   approachMapMeta: {
     color: orbiTheme.colors.sky,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   actionButtonDisabled: {
     opacity: 0.6,

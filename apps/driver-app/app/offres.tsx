@@ -1,5 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  Easing,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import {
   acceptRideRequestWithApi,
   declineDriverOfferWithApi,
@@ -17,7 +27,7 @@ import {
   updateTripStatusWithApi,
   updateDriverAvailabilityWithApi,
   verifyPickupCodeWithApi,
-} from '@orbi/api';
+} from "@orbi/api";
 import {
   describeRealtimeEvent,
   describeRealtimeConnection,
@@ -25,7 +35,7 @@ import {
   formatOperationalStatus,
   formatXof,
   orbiTheme,
-} from '@orbi/ui';
+} from "@orbi/ui";
 import {
   FlowActionButton,
   LiveRouteProgressCard,
@@ -34,14 +44,14 @@ import {
   MetricTile,
   RouteSignalCard,
   TransitionNoticeCard,
-} from '../lib/realtime-widgets';
-import { restoreDriverSession } from '../lib/auth';
-import { resolveDriverAppError } from '../lib/session-feedback';
+} from "../lib/realtime-widgets";
+import { restoreDriverSession } from "../lib/auth";
+import { resolveDriverAppError } from "../lib/session-feedback";
 import {
   formatReservationCountdown,
   useReservationExpiryRefresh,
   useReservationClock,
-} from '../lib/offer-reservation';
+} from "../lib/offer-reservation";
 import {
   buildDriverDispatchStatusLabel,
   buildDriverFlowTransitionLabel,
@@ -51,38 +61,38 @@ import {
   buildDriverRiderTrustSnapshot,
   resolveDriverActiveFlow,
   resolveDriverReservationChangeSet,
-} from '../lib/driver-active-flow';
+} from "../lib/driver-active-flow";
 import {
   buildDriverFatigueMessage,
   buildDriverRouteMonitoringLines,
-} from '../lib/driver-operational-signal';
+} from "../lib/driver-operational-signal";
 import {
   buildDriverOfferDetailLines,
   formatDriverOfferFare,
   buildDriverOfferInsights,
   buildDriverOfferNote,
-} from '../lib/offer-signal';
-import { useDriverPresence } from '../lib/use-driver-presence';
-import { useDriverRealtimeStream } from '../lib/use-driver-realtime-stream';
-import { useLiveRefresh } from '../lib/use-live-refresh';
-import { DriverJourneySection } from '../lib/driver-journey';
-import { buildDriverShiftReadiness } from '../lib/driver-shift-readiness';
+} from "../lib/offer-signal";
+import { useDriverPresence } from "../lib/use-driver-presence";
+import { useDriverRealtimeStream } from "../lib/use-driver-realtime-stream";
+import { useLiveRefresh } from "../lib/use-live-refresh";
+import { DriverJourneySection } from "../lib/driver-journey";
+import { buildDriverShiftReadiness } from "../lib/driver-shift-readiness";
 
 const fallbackHistory: MyTripsResponse = {
-  role: 'DRIVER',
+  role: "DRIVER",
   stats: {
     activeTrips: 0,
     completedTrips: 0,
     cancelledTrips: 0,
     totalAmount: 0,
-    currency: 'XOF',
+    currency: "XOF",
   },
   pendingRequests: [],
   recentTrips: [],
 };
 
 const fallbackFatigue: DriverFatigueStatus = {
-  state: 'clear',
+  state: "clear",
   completedTrips: 0,
   drivingMinutes: 0,
   windowHours: 8,
@@ -90,30 +100,32 @@ const fallbackFatigue: DriverFatigueStatus = {
   maxDrivingMinutes: 300,
   restMinutes: 30,
   restUntil: null,
-  reason: 'Aucun signal fatigue bloquant sur la fenetre recente.',
+  reason: "Aucun signal fatigue bloquant sur la fenetre recente.",
 };
 
 function buildInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('') || 'OR';
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "OR"
+  );
 }
 
 function formatOfferDistance(value: number | null | undefined) {
-  return typeof value === 'number' && Number.isFinite(value)
+  return typeof value === "number" && Number.isFinite(value)
     ? `${value.toFixed(1)} km`
-    : 'Distance ND';
+    : "Distance ND";
 }
 
 function MissionVehicleMark({
   category,
 }: {
-  category: DriverOffer['category'];
+  category: DriverOffer["category"];
 }) {
-  const isMoto = category === 'motorcycle';
+  const isMoto = category === "motorcycle";
   const accent = isMoto ? orbiTheme.colors.teal : orbiTheme.colors.sky;
 
   return (
@@ -154,28 +166,97 @@ function ActiveMissionMap({
 }) {
   const boundedProgress = Math.max(12, Math.min(88, progressPercent));
   const accent = isInProgress ? orbiTheme.colors.sky : orbiTheme.colors.amber;
+  const motion = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(motion, {
+          toValue: 1,
+          duration: 850,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(motion, {
+          toValue: 0,
+          duration: 850,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [motion]);
+
+  const vehicleMotion = {
+    transform: [
+      {
+        translateY: motion.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -4],
+        }),
+      },
+      {
+        scale: motion.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 1.03],
+        }),
+      },
+    ],
+  };
 
   return (
     <View style={styles.activeMissionMap}>
       <View style={styles.activeMissionGridLine} />
       <View style={[styles.activeMissionRoad, { backgroundColor: accent }]} />
+      <Animated.View
+        style={[
+          styles.activeMissionRoadPulse,
+          {
+            backgroundColor: accent,
+            opacity: motion.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.2, 0.58],
+            }),
+            transform: [
+              {
+                translateX: motion.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-16, 24],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
       <View style={styles.activeMissionRoadShadow} />
       <View style={styles.activeMissionPickupPin}>
         <Text style={styles.activeMissionPinLabel}>P</Text>
       </View>
       <View style={styles.activeMissionDestinationPin}>
         <Text style={styles.activeMissionPinLabel}>
-          {isInProgress ? 'D' : 'A'}
+          {isInProgress ? "D" : "A"}
         </Text>
       </View>
-      <View
+      <Animated.View
         style={[
           styles.activeMissionVehiclePin,
           { left: `${boundedProgress}%` },
+          vehicleMotion,
         ]}
       >
-        <View style={[styles.activeMissionVehicleCabin, { backgroundColor: accent }]} />
-        <View style={[styles.activeMissionVehicleBody, { backgroundColor: accent }]}>
+        <View
+          style={[
+            styles.activeMissionVehicleCabin,
+            { backgroundColor: accent },
+          ]}
+        />
+        <View
+          style={[styles.activeMissionVehicleBody, { backgroundColor: accent }]}
+        >
           <View style={styles.activeMissionVehicleLight} />
           <View style={styles.activeMissionVehicleLight} />
         </View>
@@ -183,7 +264,7 @@ function ActiveMissionMap({
           <View style={[styles.activeMissionWheel, { borderColor: accent }]} />
           <View style={[styles.activeMissionWheel, { borderColor: accent }]} />
         </View>
-      </View>
+      </Animated.View>
       <View style={styles.activeMissionMapCopy}>
         <Text style={styles.activeMissionMapTitle}>{title}</Text>
         <Text style={styles.activeMissionMapMeta}>
@@ -197,18 +278,25 @@ function ActiveMissionMap({
 export default function OffersScreen() {
   const [offers, setOffers] = useState<DriverOffer[]>(driverOffers);
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
-  const [activeTripDetail, setActiveTripDetail] = useState<TripDetailResponse | null>(null);
-  const [status, setStatus] = useState('Connexion au compte chauffeur...');
+  const [activeTripDetail, setActiveTripDetail] =
+    useState<TripDetailResponse | null>(null);
+  const [status, setStatus] = useState("Connexion au compte chauffeur...");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
   const [freshOfferIds, setFreshOfferIds] = useState<string[]>([]);
   const [recentlyExpiredCount, setRecentlyExpiredCount] = useState(0);
-  const [activeTripTransitionLabel, setActiveTripTransitionLabel] = useState<string | null>(null);
-  const [freshTimelineEventIds, setFreshTimelineEventIds] = useState<string[]>([]);
-  const [driverProfileStatus, setDriverProfileStatus] = useState<string>('OFFLINE');
-  const [driverFatigue, setDriverFatigue] = useState<DriverFatigueStatus>(fallbackFatigue);
-  const [pickupCodeInput, setPickupCodeInput] = useState('');
+  const [activeTripTransitionLabel, setActiveTripTransitionLabel] = useState<
+    string | null
+  >(null);
+  const [freshTimelineEventIds, setFreshTimelineEventIds] = useState<string[]>(
+    [],
+  );
+  const [driverProfileStatus, setDriverProfileStatus] =
+    useState<string>("OFFLINE");
+  const [driverFatigue, setDriverFatigue] =
+    useState<DriverFatigueStatus>(fallbackFatigue);
+  const [pickupCodeInput, setPickupCodeInput] = useState("");
   const [tripDetailStatus, setTripDetailStatus] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
@@ -224,11 +312,12 @@ export default function OffersScreen() {
     try {
       const { authClient, session } = await restoreDriverSession();
       setSessionToken(session.sessionToken);
-      const [offersResponse, historyResponse, profileResponse] = await Promise.all([
-        fetchDriverOffers(authClient),
-        fetchMyTrips(authClient),
-        fetchDriverProfile(authClient),
-      ]);
+      const [offersResponse, historyResponse, profileResponse] =
+        await Promise.all([
+          fetchDriverOffers(authClient),
+          fetchMyTrips(authClient),
+          fetchDriverProfile(authClient),
+        ]);
       setOffers(offersResponse);
       setHistory(historyResponse);
       setDriverProfileStatus(profileResponse.profile.status);
@@ -249,7 +338,7 @@ export default function OffersScreen() {
         } catch {
           setActiveTripDetail(null);
           setTripDetailStatus(
-            'Detail de mission indisponible: le dispatch principal reste actif.',
+            "Detail de mission indisponible: le dispatch principal reste actif.",
           );
         }
       } else {
@@ -262,9 +351,9 @@ export default function OffersScreen() {
       }
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
-        surface: 'active-trip',
-        network: 'Preview locale active en attendant la connexion API.',
-        fallback: 'Preview locale active en attendant la connexion API.',
+        surface: "active-trip",
+        network: "Preview locale active en attendant la connexion API.",
+        fallback: "Preview locale active en attendant la connexion API.",
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -289,20 +378,20 @@ export default function OffersScreen() {
     sessionToken,
     (eventType) => {
       setIsRealtimeSyncing(true);
-      setStatus(describeRealtimeEvent('driver', eventType));
+      setStatus(describeRealtimeEvent("driver", eventType));
       void loadDriverData(true);
     },
     {
       onHeartbeat: () => {
-        setStatus(describeRealtimeConnection('driver', 'active'));
+        setStatus(describeRealtimeConnection("driver", "active"));
       },
       onOpen: () => {
         setIsRealtimeSyncing(false);
-        setStatus(describeRealtimeConnection('driver', 'connected'));
+        setStatus(describeRealtimeConnection("driver", "connected"));
       },
       onError: () => {
         setIsRealtimeSyncing(false);
-        setStatus(describeRealtimeConnection('driver', 'reconnecting'));
+        setStatus(describeRealtimeConnection("driver", "reconnecting"));
       },
     },
   );
@@ -340,7 +429,7 @@ export default function OffersScreen() {
     [driverFatigue, flow],
   );
   const { presenceNote } = useDriverPresence(
-    flow.availabilityStatus === 'ONLINE' || Boolean(activeTrip),
+    flow.availabilityStatus === "ONLINE" || Boolean(activeTrip),
     activeTrip?.id,
   );
   useReservationExpiryRefresh(
@@ -355,7 +444,10 @@ export default function OffersScreen() {
 
     if (previousVisibleOfferIds && flow.canReceiveOffers) {
       const { freshOfferIds: nextFreshOfferIds, expiredOfferIds } =
-        resolveDriverReservationChangeSet(previousVisibleOfferIds, nextVisibleOfferIds);
+        resolveDriverReservationChangeSet(
+          previousVisibleOfferIds,
+          nextVisibleOfferIds,
+        );
 
       if (nextFreshOfferIds.length > 0) {
         setFreshOfferIds(nextFreshOfferIds);
@@ -396,7 +488,11 @@ export default function OffersScreen() {
   useEffect(() => {
     const previousFlowState = previousFlowStateRef.current;
     setActiveTripTransitionLabel(
-      buildDriverFlowTransitionLabel(previousFlowState, activeFlowState, 'offers'),
+      buildDriverFlowTransitionLabel(
+        previousFlowState,
+        activeFlowState,
+        "offers",
+      ),
     );
 
     previousFlowStateRef.current = activeFlowState;
@@ -415,7 +511,8 @@ export default function OffersScreen() {
   }, [activeTripTransitionLabel]);
 
   useEffect(() => {
-    const timelineEventIds = activeTripDetail?.trip.timeline.map((event) => event.id) ?? [];
+    const timelineEventIds =
+      activeTripDetail?.trip.timeline.map((event) => event.id) ?? [];
     const previousTimelineEventIds = previousTimelineEventIdsRef.current;
 
     if (previousTimelineEventIds) {
@@ -462,11 +559,12 @@ export default function OffersScreen() {
 
   async function handleToggleAvailability() {
     await runExclusiveDriverAction(async () => {
-      const nextStatus = flow.availabilityStatus === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
+      const nextStatus =
+        flow.availabilityStatus === "ONLINE" ? "OFFLINE" : "ONLINE";
       setStatus(
-        nextStatus === 'ONLINE'
-          ? 'Passage en ligne du compte chauffeur...'
-          : 'Passage hors ligne du compte chauffeur...',
+        nextStatus === "ONLINE"
+          ? "Passage en ligne du compte chauffeur..."
+          : "Passage hors ligne du compte chauffeur...",
       );
 
       try {
@@ -479,7 +577,7 @@ export default function OffersScreen() {
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
-          surface: 'driver-availability',
+          surface: "driver-availability",
           fallback: "Le changement de disponibilite a echoue.",
         });
 
@@ -494,16 +592,21 @@ export default function OffersScreen() {
 
   async function handleAcceptOffer(rideRequestId: string) {
     await runExclusiveDriverAction(async () => {
-      setStatus('Acceptation de l offre et creation du trajet...');
+      setStatus("Acceptation de l offre et creation du trajet...");
 
       try {
         const { authClient } = await restoreDriverSession();
-        const response = await acceptRideRequestWithApi(authClient, rideRequestId);
-        setStatus(`Trajet ${response.trip.id.slice(0, 8)} cree avec statut ${response.trip.status}.`);
+        const response = await acceptRideRequestWithApi(
+          authClient,
+          rideRequestId,
+        );
+        setStatus(
+          `Trajet ${response.trip.id.slice(0, 8)} cree avec statut ${response.trip.status}.`,
+        );
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
-          surface: 'booking',
+          surface: "booking",
           fallback: "L'acceptation de l'offre a echoue.",
         });
 
@@ -518,18 +621,23 @@ export default function OffersScreen() {
 
   async function handleDeclineOffer(rideRequestId: string) {
     await runExclusiveDriverAction(async () => {
-      setStatus('Refus explicite de l offre et liberation de la reservation...');
+      setStatus(
+        "Refus explicite de l offre et liberation de la reservation...",
+      );
 
       try {
         const { authClient } = await restoreDriverSession();
-        const response = await declineDriverOfferWithApi(authClient, rideRequestId);
+        const response = await declineDriverOfferWithApi(
+          authClient,
+          rideRequestId,
+        );
         setStatus(
           `Offre ${response.offer.rideRequestId.slice(0, 8)} refusee. Le dispatch memorise ce signal.`,
         );
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
-          surface: 'booking',
+          surface: "booking",
           fallback: "Le refus explicite de l'offre a echoue.",
         });
 
@@ -544,20 +652,26 @@ export default function OffersScreen() {
 
   async function handleAdvanceTrip(
     tripId: string,
-    nextStatus: 'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED',
+    nextStatus: "DRIVER_ARRIVING" | "IN_PROGRESS" | "COMPLETED",
   ) {
     await runExclusiveDriverAction(async () => {
       setStatus(`Mise a jour du trajet vers ${nextStatus}...`);
 
       try {
         const { authClient } = await restoreDriverSession();
-        const response = await updateTripStatusWithApi(authClient, tripId, nextStatus);
-        setStatus(`Trajet ${response.trip.id.slice(0, 8)} mis a jour: ${response.trip.status}.`);
+        const response = await updateTripStatusWithApi(
+          authClient,
+          tripId,
+          nextStatus,
+        );
+        setStatus(
+          `Trajet ${response.trip.id.slice(0, 8)} mis a jour: ${response.trip.status}.`,
+        );
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
-          surface: 'active-trip',
-          fallback: 'La mise a jour du trajet a echoue.',
+          surface: "active-trip",
+          fallback: "La mise a jour du trajet a echoue.",
         });
 
         if (feedback.shouldClearSessionToken) {
@@ -571,18 +685,24 @@ export default function OffersScreen() {
 
   async function handleVerifyPickupCode(tripId: string, pickupCode: string) {
     await runExclusiveDriverAction(async () => {
-      setStatus('Verification du code de prise en charge...');
+      setStatus("Verification du code de prise en charge...");
 
       try {
         const { authClient } = await restoreDriverSession();
-        const response = await verifyPickupCodeWithApi(authClient, tripId, pickupCode);
-        setPickupCodeInput('');
-        setStatus(`Code valide. Trajet ${response.trip.id.slice(0, 8)} demarre.`);
+        const response = await verifyPickupCodeWithApi(
+          authClient,
+          tripId,
+          pickupCode,
+        );
+        setPickupCodeInput("");
+        setStatus(
+          `Code valide. Trajet ${response.trip.id.slice(0, 8)} demarre.`,
+        );
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
-          surface: 'active-trip',
-          fallback: 'Code incorrect ou verification impossible.',
+          surface: "active-trip",
+          fallback: "Code incorrect ou verification impossible.",
         });
 
         if (feedback.shouldClearSessionToken) {
@@ -595,25 +715,25 @@ export default function OffersScreen() {
   }
 
   function handlePickupCodeChange(value: string) {
-    setPickupCodeInput(value.replace(/\D/g, '').slice(0, 4));
+    setPickupCodeInput(value.replace(/\D/g, "").slice(0, 4));
   }
 
   async function handleReportIncident(tripId: string) {
     await runExclusiveDriverAction(async () => {
-      setStatus('Signalement de l incident a l equipe operations...');
+      setStatus("Signalement de l incident a l equipe operations...");
 
       try {
         const { authClient } = await restoreDriverSession();
         await reportTripIncidentWithApi(authClient, tripId, {
-          incidentType: 'DRIVER_ALERT',
-          details: 'Signalement rapide envoye depuis l ecran chauffeur.',
+          incidentType: "DRIVER_ALERT",
+          details: "Signalement rapide envoye depuis l ecran chauffeur.",
           priority: 3,
         });
-        setStatus('Incident signale. Le support live a ete notifie.');
+        setStatus("Incident signale. Le support live a ete notifie.");
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
-          surface: 'safety',
+          surface: "safety",
           fallback: "Le signalement de l'incident a echoue.",
         });
 
@@ -628,24 +748,26 @@ export default function OffersScreen() {
 
   async function handleDeclareIncidentEvidence(tripId: string) {
     await runExclusiveDriverAction(async () => {
-      setStatus('Declaration de preuve volontaire chauffeur...');
+      setStatus("Declaration de preuve volontaire chauffeur...");
 
       try {
         const { authClient } = await restoreDriverSession();
         await reportTripIncidentWithApi(authClient, tripId, {
-          incidentType: 'DRIVER_VOLUNTARY_EVIDENCE',
+          incidentType: "DRIVER_VOLUNTARY_EVIDENCE",
           details:
-            'Preuve conservee localement par le chauffeur. Upload support uniquement sur action explicite.',
+            "Preuve conservee localement par le chauffeur. Upload support uniquement sur action explicite.",
           priority: 3,
           evidenceConsent: true,
-          evidenceType: 'AUDIO',
+          evidenceType: "AUDIO",
           evidenceRetentionHours: 24,
         });
-        setStatus('Preuve volontaire declaree. Aucun fichier n a ete envoye automatiquement.');
+        setStatus(
+          "Preuve volontaire declaree. Aucun fichier n a ete envoye automatiquement.",
+        );
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
-          surface: 'safety',
+          surface: "safety",
           fallback: "La preuve volontaire chauffeur n'a pas pu etre declaree.",
         });
 
@@ -660,12 +782,12 @@ export default function OffersScreen() {
 
   async function handleTriggerSos(tripId: string) {
     await runExclusiveDriverAction(async () => {
-      setStatus('SOS chauffeur en cours: notification operations...');
+      setStatus("SOS chauffeur en cours: notification operations...");
 
       try {
         const { authClient } = await restoreDriverSession();
         const response = await triggerTripSafetySosWithApi(authClient, tripId, {
-          details: 'SOS declenche depuis le cockpit chauffeur.',
+          details: "SOS declenche depuis le cockpit chauffeur.",
         });
 
         setStatus(
@@ -675,7 +797,7 @@ export default function OffersScreen() {
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
-          surface: 'safety',
+          surface: "safety",
           fallback: "Le SOS chauffeur n'a pas pu etre envoye.",
         });
 
@@ -693,12 +815,12 @@ export default function OffersScreen() {
       return null;
     }
 
-    if (activeTrip.status === 'MATCHED') {
+    if (activeTrip.status === "MATCHED") {
       return (
         <FlowActionButton
           disabled={isSubmitting}
           label="Signaler l arrivee"
-          onPress={() => handleAdvanceTrip(activeTrip.id, 'DRIVER_ARRIVING')}
+          onPress={() => handleAdvanceTrip(activeTrip.id, "DRIVER_ARRIVING")}
           tone="amber"
           emphasis="primary"
           style={isSubmitting ? styles.disabled : null}
@@ -706,10 +828,12 @@ export default function OffersScreen() {
       );
     }
 
-    if (activeTrip.status === 'DRIVER_ARRIVING') {
+    if (activeTrip.status === "DRIVER_ARRIVING") {
       return (
         <View style={styles.codeBlock}>
-          <Text style={styles.meta}>Saisir le code donne par le passager avant de demarrer.</Text>
+          <Text style={styles.meta}>
+            Saisir le code donne par le passager avant de demarrer.
+          </Text>
           <TextInput
             value={pickupCodeInput}
             onChangeText={handlePickupCodeChange}
@@ -722,21 +846,27 @@ export default function OffersScreen() {
           <FlowActionButton
             disabled={isSubmitting || pickupCodeInput.length !== 4}
             label="Verifier le code et demarrer"
-            onPress={() => handleVerifyPickupCode(activeTrip.id, pickupCodeInput)}
+            onPress={() =>
+              handleVerifyPickupCode(activeTrip.id, pickupCodeInput)
+            }
             tone="amber"
             emphasis="primary"
-            style={isSubmitting || pickupCodeInput.length !== 4 ? styles.disabled : null}
+            style={
+              isSubmitting || pickupCodeInput.length !== 4
+                ? styles.disabled
+                : null
+            }
           />
         </View>
       );
     }
 
-    if (activeTrip.status === 'IN_PROGRESS') {
+    if (activeTrip.status === "IN_PROGRESS") {
       return (
         <FlowActionButton
           disabled={isSubmitting}
           label="Terminer la course"
-          onPress={() => handleAdvanceTrip(activeTrip.id, 'COMPLETED')}
+          onPress={() => handleAdvanceTrip(activeTrip.id, "COMPLETED")}
           tone="amber"
           emphasis="primary"
           style={isSubmitting ? styles.disabled : null}
@@ -751,20 +881,17 @@ export default function OffersScreen() {
     <ScrollView contentContainerStyle={styles.screen}>
       <Text style={styles.title}>Offres de course</Text>
       <LiveStatusBanner
-        label={formatRealtimeBadgeLabel('Direct', isRealtimeSyncing)}
+        label={formatRealtimeBadgeLabel("Direct", isRealtimeSyncing)}
         message={status}
         secondaryMessage={
           isRealtimeSyncing
-            ? 'Mise a jour silencieuse en cours pour absorber les derniers evenements.'
+            ? "Mise a jour silencieuse en cours pour absorber les derniers evenements."
             : presenceNote
         }
-        tone={isRealtimeSyncing ? 'sky' : 'teal'}
+        tone={isRealtimeSyncing ? "sky" : "teal"}
       />
       <View style={styles.snapshotRow}>
-        <MetricTile
-          label="Mission"
-          value={flow.primaryStatusLabel}
-        />
+        <MetricTile label="Mission" value={flow.primaryStatusLabel} />
         <MetricTile
           label="Reservations"
           value={String(flow.visibleOfferCount)}
@@ -775,14 +902,24 @@ export default function OffersScreen() {
         />
         <MetricTile
           label="Fatigue"
-          value={driverFatigue.state === 'blocked' ? 'Pause' : driverFatigue.state === 'warning' ? 'A surveiller' : 'OK'}
+          value={
+            driverFatigue.state === "blocked"
+              ? "Pause"
+              : driverFatigue.state === "warning"
+                ? "A surveiller"
+                : "OK"
+          }
         />
       </View>
-      {driverFatigue.state !== 'clear' ? (
+      {driverFatigue.state !== "clear" ? (
         <TransitionNoticeCard
-          label={driverFatigue.state === 'blocked' ? 'Pause obligatoire' : 'Pause conseillee'}
+          label={
+            driverFatigue.state === "blocked"
+              ? "Pause obligatoire"
+              : "Pause conseillee"
+          }
           message={buildDriverFatigueMessage(driverFatigue)}
-          tone={driverFatigue.state === 'blocked' ? 'rose' : 'amber'}
+          tone={driverFatigue.state === "blocked" ? "rose" : "amber"}
         />
       ) : null}
       <RouteSignalCard
@@ -800,7 +937,7 @@ export default function OffersScreen() {
           label={
             freshOfferIds.length > 1
               ? `${freshOfferIds.length} nouvelles offres live`
-              : 'Nouvelle offre live'
+              : "Nouvelle offre live"
           }
           message="Les cartes fraichement resynchronisees restent surlignees quelques secondes."
           tone="sky"
@@ -811,7 +948,7 @@ export default function OffersScreen() {
           label={
             recentlyExpiredCount > 1
               ? `${recentlyExpiredCount} reservations ont expire`
-              : 'Une reservation a expire'
+              : "Une reservation a expire"
           }
           message="Les elements sortis du flux live ont ete retires pour garder la liste fiable."
           tone="rose"
@@ -824,20 +961,26 @@ export default function OffersScreen() {
           tone="sky"
         />
       ) : null}
-      {flow.operationalStatus === 'SUSPENDED' ? (
+      {flow.operationalStatus === "SUSPENDED" ? (
         <Text style={styles.subtitle}>
-          Le compte est suspendu. Les actions dispatch sont verrouillees jusqu a reactivation operations.
+          Le compte est suspendu. Les actions dispatch sont verrouillees jusqu a
+          reactivation operations.
         </Text>
-      ) : driverProfileStatus === 'BUSY' ? (
-        <Text style={styles.subtitle}>Le chauffeur reste visible pour le suivi course avec un statut occupe.</Text>
+      ) : driverProfileStatus === "BUSY" ? (
+        <Text style={styles.subtitle}>
+          Le chauffeur reste visible pour le suivi course avec un statut occupe.
+        </Text>
       ) : null}
       <Pressable
         onPress={() => void loadDriverData()}
         disabled={isRefreshing || isSubmitting}
-        style={[styles.refreshButton, isRefreshing || isSubmitting ? styles.disabled : null]}
+        style={[
+          styles.refreshButton,
+          isRefreshing || isSubmitting ? styles.disabled : null,
+        ]}
       >
         <Text style={styles.refreshButtonLabel}>
-          {isRefreshing ? 'Actualisation...' : 'Actualiser le direct'}
+          {isRefreshing ? "Actualisation..." : "Actualiser le direct"}
         </Text>
       </Pressable>
       <Pressable
@@ -845,7 +988,7 @@ export default function OffersScreen() {
         disabled={isSubmitting || flow.availabilityLocked}
         style={[
           styles.toggleButton,
-          flow.availabilityStatus === 'ONLINE'
+          flow.availabilityStatus === "ONLINE"
             ? styles.toggleButtonOffline
             : styles.toggleButtonOnline,
           isSubmitting || flow.availabilityLocked ? styles.disabled : null,
@@ -854,18 +997,18 @@ export default function OffersScreen() {
         <Text
           style={[
             styles.toggleButtonLabel,
-            flow.availabilityStatus === 'ONLINE'
+            flow.availabilityStatus === "ONLINE"
               ? styles.toggleButtonLabelOffline
               : styles.toggleButtonLabelOnline,
           ]}
         >
           {activeTrip
-            ? 'Disponibilite verrouillee pendant la course'
-            : flow.operationalStatus === 'SUSPENDED'
-              ? 'Suspension geree par les operations'
-              : flow.availabilityStatus === 'ONLINE'
-              ? 'Passer hors ligne'
-              : 'Passer en ligne'}
+            ? "Disponibilite verrouillee pendant la course"
+            : flow.operationalStatus === "SUSPENDED"
+              ? "Suspension geree par les operations"
+              : flow.availabilityStatus === "ONLINE"
+                ? "Passer hors ligne"
+                : "Passer en ligne"}
         </Text>
       </Pressable>
 
@@ -881,43 +1024,50 @@ export default function OffersScreen() {
             freshTimelineEventIds.length
               ? freshTimelineEventIds.length > 1
                 ? `${freshTimelineEventIds.length} evenements live`
-                : 'Evenement live'
+                : "Evenement live"
               : activeTripTransitionLabel
-                ? 'Transition live'
+                ? "Transition live"
                 : null
           }
           badgeTone="sky"
-          title={flow.primaryRouteLabel ?? `${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`}
-          description={`Client: ${activeTrip.counterpartyName ?? 'Affecte'}${activeTrip.vehicleLabel ? ` - Vehicule: ${activeTrip.vehicleLabel}` : ''}`}
+          title={
+            flow.primaryRouteLabel ??
+            `${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`
+          }
+          description={`Client: ${activeTrip.counterpartyName ?? "Affecte"}${activeTrip.vehicleLabel ? ` - Vehicule: ${activeTrip.vehicleLabel}` : ""}`}
           insights={[
             {
-              label: 'Statut',
+              label: "Statut",
               value: flow.primaryStatusLabel,
-              tone: 'amber',
+              tone: "amber",
             },
             {
-              label: 'Profil',
+              label: "Profil",
               value: formatOperationalStatus(driverProfileStatus),
-              tone: 'teal',
+              tone: "teal",
             },
           ]}
           detailLines={[
             `Statut: ${activeTrip.status}`,
-            'Monitoring route actif cote operations pendant la mission.',
-            ...buildDriverRouteMonitoringLines(activeTripDetail?.trip.routeMonitoring),
+            "Monitoring route actif cote operations pendant la mission.",
+            ...buildDriverRouteMonitoringLines(
+              activeTripDetail?.trip.routeMonitoring,
+            ),
           ]}
           note={
             activeTrip.pickupCode
-              ? 'Le passager doit vous communiquer un code a 4 chiffres.'
+              ? "Le passager doit vous communiquer un code a 4 chiffres."
               : null
           }
           noteTone="amber"
-          isHighlighted={Boolean(activeTripTransitionLabel || freshTimelineEventIds.length)}
+          isHighlighted={Boolean(
+            activeTripTransitionLabel || freshTimelineEventIds.length,
+          )}
         >
           <TransitionNoticeCard
             label="Prochaine action"
             message={driverNextActionHint}
-            tone={activeTrip.status === 'IN_PROGRESS' ? 'sky' : 'amber'}
+            tone={activeTrip.status === "IN_PROGRESS" ? "sky" : "amber"}
           />
           <Text style={styles.snapshotTitle}>Mission en direct</Text>
           <View style={styles.snapshotStrip}>
@@ -978,13 +1128,15 @@ export default function OffersScreen() {
                 title={driverRouteProgress.title}
                 distanceLabel={driverRouteProgress.distanceLabel}
                 stateLabel={driverRouteProgress.stateLabel}
-                isInProgress={activeTrip.status === 'IN_PROGRESS'}
+                isInProgress={activeTrip.status === "IN_PROGRESS"}
               />
               <LiveRouteProgressCard {...driverRouteProgress} />
             </>
           ) : null}
           {activeTripTransitionLabel ? (
-            <Text style={styles.transitionInlineLabel}>{activeTripTransitionLabel}</Text>
+            <Text style={styles.transitionInlineLabel}>
+              {activeTripTransitionLabel}
+            </Text>
           ) : null}
           {activeTripDetail ? (
             <LiveTimeline
@@ -1016,26 +1168,26 @@ export default function OffersScreen() {
           />
         </RouteSignalCard>
       ) : null}
-      {flow.operationalStatus === 'SUSPENDED' && !activeTrip ? (
+      {flow.operationalStatus === "SUSPENDED" && !activeTrip ? (
         <RouteSignalCard
           eyebrow="Dispatch"
           title="Compte suspendu"
           description="Le dispatch reste coupe pendant que les operations traitent la suspension du compte."
           insights={[
-            { label: 'Profil', value: 'Suspendu', tone: 'rose' },
-            { label: 'Flux', value: 'Bloque', tone: 'amber' },
+            { label: "Profil", value: "Suspendu", tone: "rose" },
+            { label: "Flux", value: "Bloque", tone: "amber" },
           ]}
           note="Les reservations reapparaitront automatiquement apres reactivation."
           noteTone="rose"
         />
-      ) : flow.availabilityStatus !== 'ONLINE' && !activeTrip ? (
+      ) : flow.availabilityStatus !== "ONLINE" && !activeTrip ? (
         <RouteSignalCard
           eyebrow="Dispatch"
           title="Mode hors ligne"
           description="Activez votre disponibilite pour voir et accepter les demandes."
           insights={[
-            { label: 'Statut', value: 'Hors ligne', tone: 'amber' },
-            { label: 'Flux', value: 'Suspendu', tone: 'rose' },
+            { label: "Statut", value: "Hors ligne", tone: "amber" },
+            { label: "Flux", value: "Suspendu", tone: "rose" },
           ]}
           note="Les reservations reviendront automatiquement dans cette liste apres reactivation."
           noteTone="amber"
@@ -1048,13 +1200,17 @@ export default function OffersScreen() {
         return (
           <RouteSignalCard
             key={offer.id}
-            eyebrow={freshOfferIds.includes(offer.id) ? 'Nouvelle reservation live' : 'Offre reservee'}
+            eyebrow={
+              freshOfferIds.includes(offer.id)
+                ? "Nouvelle reservation live"
+                : "Offre reservee"
+            }
             badgeLabel={
               offer.reservationExpiresAt
                 ? `Reservation ${formatReservationCountdown(offer.reservationExpiresAt, reservationNow)}`
                 : null
             }
-            badgeTone={freshOfferIds.includes(offer.id) ? 'sky' : 'amber'}
+            badgeTone={freshOfferIds.includes(offer.id) ? "sky" : "amber"}
             title={offer.riderName}
             titleAside={formatDriverOfferFare(offer)}
             titleAsideColor={orbiTheme.colors.amber}
@@ -1062,7 +1218,7 @@ export default function OffersScreen() {
             insights={buildDriverOfferInsights(offer)}
             detailLines={buildDriverOfferDetailLines(offer)}
             note={offerNote?.text}
-            noteTone={offerNote?.tone ?? 'sky'}
+            noteTone={offerNote?.tone ?? "sky"}
             isHighlighted={freshOfferIds.includes(offer.id)}
           >
             <View style={styles.offerMissionCard}>
@@ -1071,7 +1227,9 @@ export default function OffersScreen() {
                   <Text style={styles.offerRiderInitials}>{riderInitials}</Text>
                 </View>
                 <View style={styles.offerMissionCopy}>
-                  <Text style={styles.offerMissionTitle}>{offer.riderName}</Text>
+                  <Text style={styles.offerMissionTitle}>
+                    {offer.riderName}
+                  </Text>
                   <Text style={styles.offerMissionMeta}>
                     {offer.pickup} vers {offer.destination}
                   </Text>
@@ -1081,7 +1239,9 @@ export default function OffersScreen() {
               <View style={styles.offerMissionRail}>
                 <View style={styles.offerMissionDot} />
                 <View style={styles.offerMissionLine} />
-                <View style={[styles.offerMissionDot, styles.offerMissionDotEnd]} />
+                <View
+                  style={[styles.offerMissionDot, styles.offerMissionDotEnd]}
+                />
               </View>
               <View style={styles.offerMissionMetrics}>
                 <MetricTile
@@ -1092,12 +1252,16 @@ export default function OffersScreen() {
                 <MetricTile
                   label="Trajet"
                   value={formatOfferDistance(offer.distanceKm)}
-                  helper={offer.category === 'motorcycle' ? 'Mission moto' : 'Mission voiture'}
+                  helper={
+                    offer.category === "motorcycle"
+                      ? "Mission moto"
+                      : "Mission voiture"
+                  }
                 />
                 <MetricTile
                   label="Net"
                   value={
-                    typeof offer.driverPayout === 'number'
+                    typeof offer.driverPayout === "number"
                       ? formatXof(offer.driverPayout)
                       : formatDriverOfferFare(offer)
                   }
@@ -1110,8 +1274,8 @@ export default function OffersScreen() {
                 disabled={isSubmitting || Boolean(activeTrip)}
                 label={
                   activeTrip
-                    ? 'Une course est deja en cours'
-                    : 'Accepter cette offre'
+                    ? "Une course est deja en cours"
+                    : "Accepter cette offre"
                 }
                 onPress={() => handleAcceptOffer(offer.id)}
                 style={[
@@ -1141,8 +1305,8 @@ export default function OffersScreen() {
           title="Aucune reservation active"
           description="Le dispatch n a pas encore verrouille de demande pour vous ou la fenetre vient d expirer."
           insights={[
-            { label: 'Statut', value: 'En ligne', tone: 'teal' },
-            { label: 'Attente', value: 'Aucune offre', tone: 'sky' },
+            { label: "Statut", value: "En ligne", tone: "teal" },
+            { label: "Attente", value: "Aucune offre", tone: "sky" },
           ]}
           note="Le flux live reste branche et mettra en avant la prochaine reservation compatible."
           noteTone="sky"
@@ -1163,18 +1327,18 @@ const styles = StyleSheet.create({
   title: {
     color: orbiTheme.colors.text,
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   subtitle: {
     color: orbiTheme.colors.muted,
   },
   snapshotRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   refreshButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -1184,26 +1348,26 @@ const styles = StyleSheet.create({
   },
   refreshButtonLabel: {
     color: orbiTheme.colors.text,
-    fontWeight: '700',
+    fontWeight: "700",
     fontSize: 13,
   },
   toggleButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 1,
   },
   toggleButtonOnline: {
-    backgroundColor: 'rgba(45, 212, 191, 0.16)',
+    backgroundColor: "rgba(45, 212, 191, 0.16)",
     borderColor: orbiTheme.colors.teal,
   },
   toggleButtonOffline: {
-    backgroundColor: 'rgba(245, 158, 11, 0.16)',
+    backgroundColor: "rgba(245, 158, 11, 0.16)",
     borderColor: orbiTheme.colors.amber,
   },
   toggleButtonLabel: {
-    fontWeight: '700',
+    fontWeight: "700",
     fontSize: 13,
   },
   toggleButtonLabelOnline: {
@@ -1214,16 +1378,16 @@ const styles = StyleSheet.create({
   },
   transitionInlineLabel: {
     color: orbiTheme.colors.sky,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   snapshotTitle: {
     color: orbiTheme.colors.text,
-    fontWeight: '800',
+    fontWeight: "800",
     marginTop: 4,
   },
   snapshotStrip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   trustCard: {
@@ -1235,23 +1399,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   identityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   avatarFallback: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(56, 189, 248, 0.16)',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(56, 189, 248, 0.16)",
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.36)',
+    borderColor: "rgba(56, 189, 248, 0.36)",
   },
   avatarInitials: {
     color: orbiTheme.colors.sky,
-    fontWeight: '900',
+    fontWeight: "900",
     fontSize: 18,
   },
   identityCopy: {
@@ -1260,7 +1424,7 @@ const styles = StyleSheet.create({
   },
   identityTitle: {
     color: orbiTheme.colors.text,
-    fontWeight: '800',
+    fontWeight: "800",
     fontSize: 17,
   },
   identityMeta: {
@@ -1268,30 +1432,30 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   identityDetails: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   activeMissionMap: {
     minHeight: 154,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.32)',
-    backgroundColor: 'rgba(8, 47, 73, 0.18)',
-    overflow: 'hidden',
-    justifyContent: 'center',
+    borderColor: "rgba(56, 189, 248, 0.32)",
+    backgroundColor: "rgba(8, 47, 73, 0.18)",
+    overflow: "hidden",
+    justifyContent: "center",
     padding: 16,
   },
   activeMissionGridLine: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     top: 34,
     height: 1,
-    backgroundColor: 'rgba(148, 163, 184, 0.13)',
+    backgroundColor: "rgba(148, 163, 184, 0.13)",
   },
   activeMissionRoad: {
-    position: 'absolute',
+    position: "absolute",
     left: 24,
     right: 24,
     top: 72,
@@ -1299,48 +1463,56 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     opacity: 0.45,
   },
+  activeMissionRoadPulse: {
+    position: "absolute",
+    left: 56,
+    top: 71,
+    width: 68,
+    height: 10,
+    borderRadius: 999,
+  },
   activeMissionRoadShadow: {
-    position: 'absolute',
+    position: "absolute",
     left: 34,
     right: 34,
     top: 88,
     height: 2,
     borderRadius: 999,
-    backgroundColor: 'rgba(148, 163, 184, 0.28)',
+    backgroundColor: "rgba(148, 163, 184, 0.28)",
   },
   activeMissionPickupPin: {
-    position: 'absolute',
+    position: "absolute",
     left: 18,
     top: 58,
     width: 28,
     height: 28,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: orbiTheme.colors.teal,
   },
   activeMissionDestinationPin: {
-    position: 'absolute',
+    position: "absolute",
     right: 18,
     top: 58,
     width: 28,
     height: 28,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: orbiTheme.colors.amber,
   },
   activeMissionPinLabel: {
-    color: '#052a28',
+    color: "#052a28",
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: "900",
   },
   activeMissionVehiclePin: {
-    position: 'absolute',
+    position: "absolute",
     top: 42,
     width: 52,
     marginLeft: -26,
-    alignItems: 'center',
+    alignItems: "center",
   },
   activeMissionVehicleCabin: {
     width: 24,
@@ -1354,21 +1526,21 @@ const styles = StyleSheet.create({
     width: 46,
     height: 24,
     borderRadius: 9,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 6,
   },
   activeMissionVehicleLight: {
     width: 6,
     height: 4,
     borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.76)',
+    backgroundColor: "rgba(255, 255, 255, 0.76)",
   },
   activeMissionWheelRow: {
     width: 38,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: -5,
   },
   activeMissionWheel: {
@@ -1385,11 +1557,11 @@ const styles = StyleSheet.create({
   activeMissionMapTitle: {
     color: orbiTheme.colors.text,
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: "900",
   },
   activeMissionMapMeta: {
     color: orbiTheme.colors.sky,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   codeBlock: {
     gap: 10,
@@ -1403,7 +1575,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 4,
   },
   meta: {
@@ -1418,23 +1590,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   offerMissionTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   offerRiderAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.14)',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(245, 158, 11, 0.14)",
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.34)',
+    borderColor: "rgba(245, 158, 11, 0.34)",
   },
   offerRiderInitials: {
     color: orbiTheme.colors.amber,
-    fontWeight: '900',
+    fontWeight: "900",
     fontSize: 16,
   },
   offerMissionCopy: {
@@ -1443,7 +1615,7 @@ const styles = StyleSheet.create({
   },
   offerMissionTitle: {
     color: orbiTheme.colors.text,
-    fontWeight: '900',
+    fontWeight: "900",
     fontSize: 17,
   },
   offerMissionMeta: {
@@ -1455,14 +1627,14 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 16,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: orbiTheme.colors.panel,
   },
   missionMoto: {
     width: 36,
     height: 24,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   missionMotoSeat: {
     width: 24,
@@ -1474,18 +1646,18 @@ const styles = StyleSheet.create({
   missionCar: {
     width: 38,
     height: 24,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   missionCarBody: {
     width: 36,
     height: 13,
     borderRadius: 7,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: -3,
   },
   missionWheelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   missionWheel: {
     width: 11,
@@ -1495,8 +1667,8 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.background,
   },
   offerMissionRail: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 7,
   },
   offerMissionDot: {
@@ -1515,12 +1687,12 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.border,
   },
   offerMissionMetrics: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   offerActionRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   offerAction: {
