@@ -10,6 +10,7 @@ import {
   resolveLiveOpsRouteMonitoringCopy,
   resolveStringFeedDelta,
 } from './admin-ops-kernel';
+import { fetchAdminJson } from './admin-client-fetch';
 import { subscribeToAdminRealtime } from './admin-realtime';
 
 type LiveOpsBoardProps = {
@@ -17,18 +18,7 @@ type LiveOpsBoardProps = {
 };
 
 async function fetchLiveOps() {
-  const response = await fetch('/api/admin/live-ops', {
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Live ops fetch failed');
-  }
-
-  return (await response.json()) as AdminLiveOpsResponse;
+  return fetchAdminJson<AdminLiveOpsResponse>('/api/admin/live-ops');
 }
 
 export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {

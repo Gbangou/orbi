@@ -5,6 +5,7 @@ import {
   type AdminFeatureFlagsResponse,
 } from '@orbi/api';
 import { describeRealtimeConnection } from '@orbi/ui';
+import { fetchAdminJson } from './admin-client-fetch';
 import { subscribeToAdminRealtime } from './admin-realtime';
 
 type FeatureFlagsBoardProps = {
@@ -12,18 +13,7 @@ type FeatureFlagsBoardProps = {
 };
 
 async function fetchFeatureFlags() {
-  const response = await fetch('/api/admin/feature-flags', {
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Feature flags fetch failed');
-  }
-
-  return (await response.json()) as AdminFeatureFlagsResponse;
+  return fetchAdminJson<AdminFeatureFlagsResponse>('/api/admin/feature-flags');
 }
 
 export function FeatureFlagsBoard({
