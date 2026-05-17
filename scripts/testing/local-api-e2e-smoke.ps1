@@ -104,6 +104,34 @@ function Test-ExpectedValue {
   }
 }
 
+function Test-NumberLessThan {
+  param(
+    [double]$Actual,
+    [double]$ExpectedUpperBound,
+    [string]$Message
+  )
+
+  if ($Actual -ge $ExpectedUpperBound) {
+    Stop-LocalApiE2E "$Message. Expected less than '$ExpectedUpperBound', got '$Actual'."
+  }
+}
+
+function Clear-DriverActiveTrips {
+  param([string]$DriverToken)
+
+  $driverTrips = Invoke-Json -Method "GET" -Path "/trips/mine" -Token $DriverToken
+  $activeTrips = @($driverTrips.recentTrips | Where-Object {
+      @("MATCHED", "DRIVER_ARRIVING", "IN_PROGRESS") -contains $_.status
+    })
+
+  foreach ($trip in $activeTrips) {
+    Write-Step "Cancelling leftover active trip $($trip.id)"
+    Invoke-Json -Method "PATCH" -Path "/trips/$($trip.id)/status" -Token $DriverToken -Body @{
+      status = "CANCELLED"
+    } | Out-Null
+  }
+}
+
 Write-Step "Checking backend health at $ApiRoot/health"
 try {
   Invoke-Json -Method "GET" -Path "/health" | Out-Null
@@ -121,6 +149,7 @@ Write-Step "Signing in demo accounts"
 $adminToken = Request-SessionToken -Email "admin@orbi.app"
 $riderToken = Request-E2ERiderSessionToken -RunId $RunId
 $driverToken = Request-SessionToken -Email "driver@orbi.app"
+Clear-DriverActiveTrips -DriverToken $driverToken
 
 Write-Step "Putting driver online and updating presence"
 Invoke-Json -Method "PATCH" -Path "/drivers/availability" -Token $driverToken -Body @{
@@ -178,10 +207,67 @@ $arriving = Invoke-Json -Method "PATCH" -Path "/trips/$tripId/status" -Token $dr
 }
 Test-ExpectedValue -Actual $arriving.trip.status -Expected "DRIVER_ARRIVING" -Message "trip should move to arriving"
 
+Write-Step "Recording live approach positions"
+Invoke-Json -Method "POST" -Path "/trips/$tripId/route-position" -Token $driverToken -Body @{
+  latitude = 12.3714
+  longitude = -1.5197
+  accuracyMeters = 18
+  speedKph = 22
+} | Out-Null
+
+$approachFarDetail = Invoke-Json -Method "GET" -Path "/trips/$tripId" -Token $riderToken
+
+Invoke-Json -Method "POST" -Path "/trips/$tripId/route-position" -Token $driverToken -Body @{
+  latitude = 12.3776
+  longitude = -1.5010
+  accuracyMeters = 12
+  speedKph = 18
+} | Out-Null
+
+$approachNearDetail = Invoke-Json -Method "GET" -Path "/trips/$tripId" -Token $riderToken
+
+if ($null -eq $approachFarDetail.trip.routeMonitoring.latestPosition.distanceToPickupKm) {
+  Stop-LocalApiE2E "first route position did not expose distance to pickup"
+}
+
+if ($null -eq $approachNearDetail.trip.routeMonitoring.latestPosition.distanceToPickupKm) {
+  Stop-LocalApiE2E "route position did not expose distance to pickup"
+}
+
+Test-NumberLessThan `
+  -Actual ([double]$approachNearDetail.trip.routeMonitoring.latestPosition.distanceToPickupKm) `
+  -ExpectedUpperBound ([double]$approachFarDetail.trip.routeMonitoring.latestPosition.distanceToPickupKm) `
+  -Message "driver should move closer to pickup"
+
+Test-ExpectedValue -Actual $approachNearDetail.trip.routeMonitoring.latestPosition.sourceRole -Expected "DRIVER" -Message "rider trip detail should expose latest driver position"
+Test-NumberLessThan `
+  -Actual ([double]$approachNearDetail.trip.routeMonitoring.latestPosition.distanceToPickupKm) `
+  -ExpectedUpperBound 0.3 `
+  -Message "rider should see the driver close to pickup"
+
 $verified = Invoke-Json -Method "POST" -Path "/trips/$tripId/verify-pickup-code" -Token $driverToken -Body @{
   pickupCode = $pickupCode
 }
 Test-ExpectedValue -Actual $verified.trip.status -Expected "IN_PROGRESS" -Message "pickup code should start trip"
+
+Write-Step "Recording in-progress destination movement"
+Invoke-Json -Method "POST" -Path "/trips/$tripId/route-position" -Token $driverToken -Body @{
+  latitude = 12.3400
+  longitude = -1.5150
+  accuracyMeters = 15
+  speedKph = 28
+} | Out-Null
+
+$driverTripDetail = Invoke-Json -Method "GET" -Path "/trips/$tripId" -Token $driverToken
+if ($null -eq $driverTripDetail.trip.routeMonitoring.latestPosition.distanceToDestinationKm) {
+  Stop-LocalApiE2E "in-progress route position did not expose distance to destination"
+}
+
+Test-ExpectedValue -Actual $driverTripDetail.trip.routeMonitoring.latestPosition.sourceRole -Expected "DRIVER" -Message "driver trip detail should expose latest driver route signal"
+Test-NumberLessThan `
+  -Actual ([double]$driverTripDetail.trip.routeMonitoring.latestPosition.distanceToDestinationKm) `
+  -ExpectedUpperBound 5 `
+  -Message "driver should see remaining destination distance"
 
 $completed = Invoke-Json -Method "PATCH" -Path "/trips/$tripId/status" -Token $driverToken -Body @{
   status = "COMPLETED"

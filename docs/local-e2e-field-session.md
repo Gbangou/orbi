@@ -9,11 +9,12 @@ Prove that one full ride can survive the critical path:
 1. rider booking
 2. driver acceptance
 3. pickup code and trip lifecycle
-4. mobile money checkout and webhook reconciliation
-5. admin live ops visibility
-6. driver wallet credit
-7. payout preparation and settlement
-8. refund and wallet reversal
+4. live driver movement toward pickup and destination
+5. mobile money checkout and webhook reconciliation
+6. admin live ops visibility
+7. driver wallet credit
+8. payout preparation and settlement
+9. refund and wallet reversal
 
 ## Start
 
@@ -68,12 +69,14 @@ pnpm e2e:local-api
 ```
 
 This command signs in the demo accounts, creates a ride request, accepts and
-completes a trip, creates a checkout intent, posts a local webhook, verifies
-wallet credit, prepares and pays a payout, refunds the payment attempt, and
-checks the wallet reversal plus live ops refund counter.
+completes a trip, records driver route positions, verifies pickup/destination
+distance progress in trip detail, creates a checkout intent, posts a local
+webhook, verifies wallet credit, prepares and pays a payout, refunds the payment
+attempt, and checks the wallet reversal plus live ops refund counter.
 
-Run it against a freshly seeded local database. If a previous active trip or
-ride blocks the flow, reseed first with `pnpm prisma:seed`.
+Run it against a freshly seeded local database when possible. The smoke cancels
+leftover active trips for the demo driver before starting; if an old ride still
+blocks the flow, reseed first with `pnpm prisma:seed`.
 
 For provider webhook fixture regression, especially before a payment/refund
 field session:
@@ -114,8 +117,12 @@ pnpm --filter backend start
 ### 3. Trip Lifecycle
 
 - Advance to driver arriving.
+- Record driver route positions before pickup.
+- Confirm rider trip detail shows the driver signal moving closer to pickup.
 - Verify pickup code.
 - Start the trip.
+- Record another driver route position during the ride.
+- Confirm trip detail exposes remaining destination distance.
 - Complete the trip.
 - Expected: no invalid transition is accepted; admin timeline stays readable.
 
