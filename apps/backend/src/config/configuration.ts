@@ -2,6 +2,7 @@ export default () => ({
   app: {
     name: 'Orbi',
     port: Number.parseInt(process.env.PORT ?? '3000', 10),
+    host: process.env.HOST ?? '0.0.0.0',
     environment: process.env.NODE_ENV ?? 'development',
     frontendOrigins: process.env.FRONTEND_ALLOWED_ORIGINS?.split(',')
       .map((origin) => origin.trim())

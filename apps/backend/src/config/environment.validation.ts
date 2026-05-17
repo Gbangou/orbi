@@ -1,5 +1,6 @@
 type EnvironmentVariables = {
   PORT?: string;
+  HOST?: string;
   NODE_ENV?: string;
   DATABASE_URL?: string;
   FRONTEND_ALLOWED_ORIGINS?: string;
@@ -79,6 +80,7 @@ export function validateEnvironment(config: EnvironmentVariables) {
 
   return {
     PORT: config.PORT ?? '3000',
+    HOST: config.HOST ?? '0.0.0.0',
     NODE_ENV: config.NODE_ENV ?? 'development',
     DATABASE_URL:
       config.DATABASE_URL ??

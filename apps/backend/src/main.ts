@@ -134,7 +134,10 @@ async function bootstrap() {
     SwaggerModule.setup('docs', app, document);
   }
 
-  await app.listen(configService.get<number>('app.port') ?? 3000);
+  await app.listen(
+    configService.get<number>('app.port') ?? 3000,
+    configService.get<string>('app.host') ?? '0.0.0.0',
+  );
   appLifecycleService.markReady();
   const server = app.getHttpServer() as {
     keepAliveTimeout?: number;

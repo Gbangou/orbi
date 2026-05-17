@@ -26,6 +26,7 @@ describe('validateEnvironment', () => {
 
     expect(env.PAYMENTS_WEBHOOK_SECRET).toBe('orbi_dev_webhook_secret');
     expect(env.DOCUMENT_SIGNING_SECRET).toBe('orbi_dev_document_secret');
+    expect(env.HOST).toBe('0.0.0.0');
   });
 
   const productionSharedBackplanes = {
