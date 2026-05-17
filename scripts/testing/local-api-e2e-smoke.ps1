@@ -208,23 +208,36 @@ $arriving = Invoke-Json -Method "PATCH" -Path "/trips/$tripId/status" -Token $dr
 Test-ExpectedValue -Actual $arriving.trip.status -Expected "DRIVER_ARRIVING" -Message "trip should move to arriving"
 
 Write-Step "Recording live approach positions"
-Invoke-Json -Method "POST" -Path "/trips/$tripId/route-position" -Token $driverToken -Body @{
+$approachFarSignal = Invoke-Json -Method "POST" -Path "/trips/$tripId/route-position" -Token $driverToken -Body @{
   latitude = 12.3714
   longitude = -1.5197
   accuracyMeters = 18
   speedKph = 22
-} | Out-Null
+}
 
 $approachFarDetail = Invoke-Json -Method "GET" -Path "/trips/$tripId" -Token $riderToken
 
-Invoke-Json -Method "POST" -Path "/trips/$tripId/route-position" -Token $driverToken -Body @{
+$approachNearSignal = Invoke-Json -Method "POST" -Path "/trips/$tripId/route-position" -Token $driverToken -Body @{
   latitude = 12.3776
   longitude = -1.5010
   accuracyMeters = 12
   speedKph = 18
-} | Out-Null
+}
 
 $approachNearDetail = Invoke-Json -Method "GET" -Path "/trips/$tripId" -Token $riderToken
+
+if ($null -eq $approachFarSignal.routeMonitoring.latestPosition.distanceToPickupKm) {
+  Stop-LocalApiE2E "route position response did not expose first distance to pickup"
+}
+
+if ($null -eq $approachNearSignal.routeMonitoring.latestPosition.distanceToPickupKm) {
+  Stop-LocalApiE2E "route position response did not expose updated distance to pickup"
+}
+
+Test-NumberLessThan `
+  -Actual ([double]$approachNearSignal.routeMonitoring.latestPosition.distanceToPickupKm) `
+  -ExpectedUpperBound ([double]$approachFarSignal.routeMonitoring.latestPosition.distanceToPickupKm) `
+  -Message "route position response should show driver moving closer to pickup"
 
 if ($null -eq $approachFarDetail.trip.routeMonitoring.latestPosition.distanceToPickupKm) {
   Stop-LocalApiE2E "first route position did not expose distance to pickup"
@@ -240,6 +253,7 @@ Test-NumberLessThan `
   -Message "driver should move closer to pickup"
 
 Test-ExpectedValue -Actual $approachNearDetail.trip.routeMonitoring.latestPosition.sourceRole -Expected "DRIVER" -Message "rider trip detail should expose latest driver position"
+Test-ExpectedValue -Actual $approachNearSignal.routeMonitoring.latestPosition.sourceRole -Expected "DRIVER" -Message "route position response should expose latest driver position"
 Test-NumberLessThan `
   -Actual ([double]$approachNearDetail.trip.routeMonitoring.latestPosition.distanceToPickupKm) `
   -ExpectedUpperBound 0.3 `
@@ -251,23 +265,32 @@ $verified = Invoke-Json -Method "POST" -Path "/trips/$tripId/verify-pickup-code"
 Test-ExpectedValue -Actual $verified.trip.status -Expected "IN_PROGRESS" -Message "pickup code should start trip"
 
 Write-Step "Recording in-progress destination movement"
-Invoke-Json -Method "POST" -Path "/trips/$tripId/route-position" -Token $driverToken -Body @{
+$destinationSignal = Invoke-Json -Method "POST" -Path "/trips/$tripId/route-position" -Token $driverToken -Body @{
   latitude = 12.3400
   longitude = -1.5150
   accuracyMeters = 15
   speedKph = 28
-} | Out-Null
+}
 
 $driverTripDetail = Invoke-Json -Method "GET" -Path "/trips/$tripId" -Token $driverToken
+if ($null -eq $destinationSignal.routeMonitoring.latestPosition.distanceToDestinationKm) {
+  Stop-LocalApiE2E "route position response did not expose distance to destination"
+}
+
 if ($null -eq $driverTripDetail.trip.routeMonitoring.latestPosition.distanceToDestinationKm) {
   Stop-LocalApiE2E "in-progress route position did not expose distance to destination"
 }
 
 Test-ExpectedValue -Actual $driverTripDetail.trip.routeMonitoring.latestPosition.sourceRole -Expected "DRIVER" -Message "driver trip detail should expose latest driver route signal"
+Test-ExpectedValue -Actual $destinationSignal.routeMonitoring.latestPosition.sourceRole -Expected "DRIVER" -Message "destination route position response should expose latest driver route signal"
 Test-NumberLessThan `
   -Actual ([double]$driverTripDetail.trip.routeMonitoring.latestPosition.distanceToDestinationKm) `
   -ExpectedUpperBound 5 `
   -Message "driver should see remaining destination distance"
+Test-NumberLessThan `
+  -Actual ([double]$destinationSignal.routeMonitoring.latestPosition.distanceToDestinationKm) `
+  -ExpectedUpperBound 5 `
+  -Message "route position response should show remaining destination distance"
 
 $completed = Invoke-Json -Method "PATCH" -Path "/trips/$tripId/status" -Token $driverToken -Body @{
   status = "COMPLETED"

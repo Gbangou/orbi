@@ -1260,6 +1260,16 @@ describe('TripsService', () => {
     expect(result.routeMonitoring).toMatchObject({
       tripId: 'trip-route-1',
       state: 'alert',
+      latestPosition: {
+        latitude: 12.39,
+        longitude: -1.58,
+        accuracyMeters: 12,
+        speedKph: 24,
+        distanceToPickupKm: expect.any(Number),
+        distanceToDestinationKm: 7,
+        observedAt: expect.any(String),
+        sourceRole: 'DRIVER',
+      },
       ticketIds: ['ticket-route-1'],
       alerts: [
         expect.objectContaining({
@@ -1342,6 +1352,16 @@ describe('TripsService', () => {
     expect(result.routeMonitoring).toMatchObject({
       tripId: 'trip-route-rider-1',
       state: 'clear',
+      latestPosition: {
+        latitude: 12.39,
+        longitude: -1.58,
+        accuracyMeters: 12,
+        speedKph: 4,
+        distanceToPickupKm: expect.any(Number),
+        distanceToDestinationKm: expect.any(Number),
+        observedAt: expect.any(String),
+        sourceRole: 'RIDER',
+      },
       alerts: [],
       ticketIds: [],
     });

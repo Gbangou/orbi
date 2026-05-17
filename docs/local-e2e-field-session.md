@@ -70,9 +70,10 @@ pnpm e2e:local-api
 
 This command signs in the demo accounts, creates a ride request, accepts and
 completes a trip, records driver route positions, verifies pickup/destination
-distance progress in trip detail, creates a checkout intent, posts a local
-webhook, verifies wallet credit, prepares and pays a payout, refunds the payment
-attempt, and checks the wallet reversal plus live ops refund counter.
+distance progress from both the route-position response and trip detail, creates
+a checkout intent, posts a local webhook, verifies wallet credit, prepares and
+pays a payout, refunds the payment attempt, and checks the wallet reversal plus
+live ops refund counter.
 
 Run it against a freshly seeded local database when possible. The smoke cancels
 leftover active trips for the demo driver before starting; if an old ride still
@@ -118,11 +119,13 @@ pnpm --filter backend start
 
 - Advance to driver arriving.
 - Record driver route positions before pickup.
-- Confirm rider trip detail shows the driver signal moving closer to pickup.
+- Confirm the route-position response and rider trip detail show the driver
+  signal moving closer to pickup.
 - Verify pickup code.
 - Start the trip.
 - Record another driver route position during the ride.
-- Confirm trip detail exposes remaining destination distance.
+- Confirm the route-position response and trip detail expose remaining
+  destination distance.
 - Complete the trip.
 - Expected: no invalid transition is accepted; admin timeline stays readable.
 

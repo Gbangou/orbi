@@ -120,6 +120,68 @@ function distanceToRouteKm(
   return Math.hypot(px - closestX, py - closestY);
 }
 
+function roundKm(distanceKm: number) {
+  return Number(distanceKm.toFixed(2));
+}
+
+function resolveRoutePositionSnapshot(input: {
+  position: {
+    latitude: number;
+    longitude: number;
+    accuracyMeters: number | null;
+    speedKph: number | null;
+    distanceToDestinationKm: number | null;
+  };
+  rideRequest: {
+    pickupLatitude: unknown;
+    pickupLongitude: unknown;
+    destinationLatitude: unknown;
+    destinationLongitude: unknown;
+  };
+  observedAt: Date;
+  sourceRole: UserRole;
+}) {
+  const pickupLatitude = toNumber(input.rideRequest.pickupLatitude);
+  const pickupLongitude = toNumber(input.rideRequest.pickupLongitude);
+  const destinationLatitude = toNumber(input.rideRequest.destinationLatitude);
+  const destinationLongitude = toNumber(input.rideRequest.destinationLongitude);
+  let distanceToPickupKm: number | null = null;
+  let distanceToDestinationKm = input.position.distanceToDestinationKm;
+
+  if (pickupLatitude !== null && pickupLongitude !== null) {
+    distanceToPickupKm = roundKm(
+      haversineKm(input.position, {
+        latitude: pickupLatitude,
+        longitude: pickupLongitude,
+      }),
+    );
+  }
+
+  if (
+    distanceToDestinationKm === null &&
+    destinationLatitude !== null &&
+    destinationLongitude !== null
+  ) {
+    distanceToDestinationKm = roundKm(
+      haversineKm(input.position, {
+        latitude: destinationLatitude,
+        longitude: destinationLongitude,
+      }),
+    );
+  }
+
+  return {
+    latitude: input.position.latitude,
+    longitude: input.position.longitude,
+    accuracyMeters: input.position.accuracyMeters,
+    speedKph: input.position.speedKph,
+    distanceToPickupKm,
+    distanceToDestinationKm,
+    observedAt: input.observedAt.toISOString(),
+    sourceRole: input.sourceRole,
+  };
+}
+
 function getRoutePositionPayload(event: {
   payload?: unknown;
   createdAt: Date;
@@ -370,6 +432,9 @@ export class TripsService {
       speedKph: payload.speedKph ?? null,
       distanceToDestinationKm: payload.distanceToDestinationKm ?? null,
     };
+    let latestPosition:
+      | ReturnType<typeof resolveRoutePositionSnapshot>
+      | null = null;
 
     const { trip, alerts, ticketIds } = await this.prisma.$transaction(
       async (tx) => {
@@ -398,6 +463,13 @@ export class TripsService {
             'Route monitoring is only available for active trips.',
           );
         }
+
+        latestPosition = resolveRoutePositionSnapshot({
+          position,
+          rideRequest: trip.rideRequest,
+          observedAt,
+          sourceRole: auth.user.role,
+        });
 
         await tx.trip.update({
           where: {
@@ -530,6 +602,7 @@ export class TripsService {
         tripId: trip.id,
         state: alerts.length ? 'alert' : 'clear',
         checkedAt: observedAt.toISOString(),
+        latestPosition,
         alerts,
         ticketIds,
       },

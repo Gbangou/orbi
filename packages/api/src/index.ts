@@ -2534,6 +2534,16 @@ export type TripRoutePositionResponse = {
     tripId: string;
     state: 'clear' | 'alert';
     checkedAt: string;
+    latestPosition: {
+      latitude: number;
+      longitude: number;
+      accuracyMeters: number | null;
+      speedKph: number | null;
+      distanceToPickupKm: number | null;
+      distanceToDestinationKm: number | null;
+      observedAt: string;
+      sourceRole: string | null;
+    } | null;
     alerts: Array<{
       alertType: 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS';
       severity: 'warning' | 'critical';
