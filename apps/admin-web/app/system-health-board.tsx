@@ -15,11 +15,11 @@ import {
   resolveJobQueueFilterSummary,
   resolveJobQueueOwnerRows,
 } from './admin-ops-kernel';
-import { subscribeToAdminRealtime } from './admin-realtime';
 import {
-  adminMutationHeaderName,
-  adminMutationHeaderValue,
-} from './admin-server-security';
+  createAdminMutationHeaders,
+  fetchAdminJson,
+} from './admin-client-fetch';
+import { subscribeToAdminRealtime } from './admin-realtime';
 
 type SystemHealthBoardProps = {
   initialHealth: HealthCheckResponse;
@@ -357,31 +357,8 @@ function matchesAuditFilter(
   return event.tone === 'acknowledged' || event.tone === 'muted';
 }
 
-async function fetchAdminJson<TResponse>(path: string, init?: RequestInit) {
-  const response = await fetch(path, {
-    ...init,
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Admin request failed with ${response.status}.`);
-  }
-
-  return (await response.json()) as TResponse;
-}
-
 async function fetchSystemHealth() {
   return fetchAdminJson<HealthCheckResponse>('/api/admin/health');
-}
-
-function adminMutationHeaders() {
-  return {
-    [adminMutationHeaderName]: adminMutationHeaderValue,
-  };
 }
 
 async function fetchAdminJobQueueFromServer(input: {
@@ -612,7 +589,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
           `/api/admin/health-incidents/${encodeURIComponent(
             incidentId,
           )}/acknowledge`,
-          { method: 'PATCH', headers: adminMutationHeaders() },
+          { method: 'PATCH', headers: createAdminMutationHeaders() },
         );
         await refreshHealth('Incident health reconnu par les operations.');
       } catch {
@@ -631,7 +608,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
 
         await fetchAdminJson(
           `/api/admin/health-incidents/${encodeURIComponent(incidentId)}/mute`,
-          { method: 'PATCH', headers: adminMutationHeaders() },
+          { method: 'PATCH', headers: createAdminMutationHeaders() },
         );
         await refreshHealth(
           'Incident health masque pour toutes les consoles ops.',
@@ -663,7 +640,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
 
         await fetchAdminJson(
           `/api/admin/job-queue/${encodeURIComponent(job.id)}/requeue`,
-          { method: 'POST', headers: adminMutationHeaders() },
+          { method: 'POST', headers: createAdminMutationHeaders() },
         );
         await refreshHealth('Job dead-letter remis en file.');
         await refreshJobQueue();

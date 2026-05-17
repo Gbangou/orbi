@@ -8,10 +8,7 @@ import {
   type AdminPaymentWebhookInvestigationResponse,
   type AdminPaymentWebhookReplayResponse,
 } from '@orbi/api';
-import {
-  adminMutationHeaderName,
-  adminMutationHeaderValue,
-} from './admin-server-security';
+import { fetchAdminJson, postAdminMutation } from './admin-client-fetch';
 import { formatAdminDateTime } from './admin-ops-kernel';
 
 type PaymentWebhookJournalBoardProps = {
@@ -85,36 +82,6 @@ function formatPaymentAttemptStatus(
 
 function canRefundPaymentAttempt(event: PaymentWebhookJournalEvent) {
   return event.paymentAttempt?.status === 'SUCCEEDED';
-}
-
-async function fetchAdminJson<TResponse>(path: string) {
-  const response = await fetch(path, {
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Admin request failed');
-  }
-
-  return (await response.json()) as TResponse;
-}
-
-async function postAdminMutation<TResponse>(path: string) {
-  const response = await fetch(path, {
-    method: 'POST',
-    headers: {
-      [adminMutationHeaderName]: adminMutationHeaderValue,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Admin mutation failed');
-  }
-
-  return (await response.json()) as TResponse;
 }
 
 export function PaymentWebhookJournalBoard({
