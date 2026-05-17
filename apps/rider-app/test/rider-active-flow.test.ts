@@ -6,6 +6,7 @@ import {
   buildRiderLiveRouteProgress,
   buildRiderMissionSnapshot,
   buildRiderNextActionHint,
+  buildRiderRouteSignalHealth,
   resolveRiderActiveFlow,
 } from '../lib/rider-active-flow';
 
@@ -353,11 +354,19 @@ describe('rider-active-flow', () => {
       },
     };
 
-    expect(buildRiderLiveRouteProgress({ flow, tripDetail })).toEqual(
+    expect(
+      buildRiderLiveRouteProgress({
+        flow,
+        tripDetail,
+        now: '2026-04-19T08:02:40.000Z',
+      }),
+    ).toEqual(
       expect.objectContaining({
         title: 'Chauffeur en approche',
         distanceLabel: '0.4 km restant',
         progressPercent: 78,
+        etaLabel: 'Pickup ~1 min',
+        freshnessLabel: 'Signal maintenant',
       }),
     );
     expect(buildRiderDriverTrustSnapshot({ tripDetail })).toEqual(
@@ -367,5 +376,31 @@ describe('rider-active-flow', () => {
         plateLabel: '11 AA 1234',
       }),
     );
+  });
+
+  it('downgrades rider route confidence when the driver signal becomes stale', () => {
+    expect(
+      buildRiderRouteSignalHealth({
+        observedAt: '2026-04-19T08:00:00.000Z',
+        routeState: 'clear',
+        now: '2026-04-19T08:03:20.000Z',
+      }),
+    ).toEqual({
+      freshnessLabel: 'Signal ancien 3 min',
+      note: 'Signal chauffeur ancien: Orbi garde le dernier point et attend une nouvelle position.',
+      tone: 'amber',
+    });
+
+    expect(
+      buildRiderRouteSignalHealth({
+        observedAt: '2026-04-19T08:03:15.000Z',
+        routeState: 'critical',
+        now: '2026-04-19T08:03:20.000Z',
+      }),
+    ).toEqual({
+      freshnessLabel: 'Signal maintenant',
+      note: 'Alerte route critique: restez attentif et gardez le partage actif.',
+      tone: 'rose',
+    });
   });
 });

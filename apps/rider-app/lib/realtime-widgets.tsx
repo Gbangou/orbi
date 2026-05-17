@@ -460,6 +460,7 @@ export function LiveRouteProgressCard({
   coordinateLabel,
   accuracyLabel,
   speedLabel,
+  etaLabel,
   note,
   tone = 'sky',
 }: {
@@ -471,6 +472,7 @@ export function LiveRouteProgressCard({
   coordinateLabel: string;
   accuracyLabel: string;
   speedLabel: string;
+  etaLabel?: string;
   note: string;
   tone?: Tone;
 }) {
@@ -510,6 +512,9 @@ export function LiveRouteProgressCard({
       <View style={styles.liveRouteMetrics}>
         <MetricTile label="Distance" value={distanceLabel} helper={freshnessLabel} />
         <MetricTile label="Signal" value={speedLabel} helper={accuracyLabel} />
+        {etaLabel ? (
+          <MetricTile label="ETA" value={etaLabel} helper="Estimation live" />
+        ) : null}
       </View>
       <Text style={styles.liveRouteCoordinates}>{coordinateLabel}</Text>
       <Text style={styles.liveRouteNote}>{note}</Text>

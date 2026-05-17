@@ -159,6 +159,7 @@ export function buildRiderMissionSnapshot(input: {
 export function buildRiderLiveRouteProgress(input: {
   flow: RiderActiveFlowSummary;
   tripDetail?: TripDetailResponse | null;
+  now?: string | Date;
 }) {
   const { activeTrip } = input.flow;
   const routeMonitoring = input.tripDetail?.trip.routeMonitoring ?? null;
@@ -172,6 +173,19 @@ export function buildRiderLiveRouteProgress(input: {
   const remainingDistanceKm = isHeadingToDestination
     ? latestPosition.distanceToDestinationKm
     : latestPosition.distanceToPickupKm;
+  const signalHealth = buildRiderRouteSignalHealth({
+    observedAt: latestPosition.observedAt,
+    routeState: routeMonitoring.state,
+    now: input.now,
+  });
+  const etaLabel =
+    typeof remainingDistanceKm === 'number'
+      ? estimateArrivalLabel({
+          remainingDistanceKm,
+          speedKph: latestPosition.speedKph,
+          isHeadingToDestination,
+        })
+      : 'ETA en attente';
 
   return {
     title: isHeadingToDestination
@@ -188,7 +202,7 @@ export function buildRiderLiveRouteProgress(input: {
         : routeMonitoring.state === 'clear'
           ? 42
           : 18,
-    freshnessLabel: `Signal ${formatTimeLabel(latestPosition.observedAt)}`,
+    freshnessLabel: signalHealth.freshnessLabel,
     coordinateLabel: `${latestPosition.latitude.toFixed(5)}, ${latestPosition.longitude.toFixed(5)}`,
     accuracyLabel:
       typeof latestPosition.accuracyMeters === 'number'
@@ -198,19 +212,69 @@ export function buildRiderLiveRouteProgress(input: {
       typeof latestPosition.speedKph === 'number'
         ? `${Math.round(latestPosition.speedKph)} km/h`
         : 'Vitesse indisponible',
-    note:
-      routeMonitoring.state === 'unknown'
-        ? 'Le premier signal route est attendu.'
-        : routeMonitoring.state === 'clear'
-          ? 'Le dernier signal route est coherent.'
-          : 'Les operations surveillent une anomalie route.',
-    tone:
-      routeMonitoring.state === 'critical'
-        ? 'rose'
-        : routeMonitoring.state === 'warning'
-          ? 'amber'
-          : 'sky',
+    etaLabel,
+    note: signalHealth.note,
+    tone: signalHealth.tone,
   } as const;
+}
+
+export function buildRiderRouteSignalHealth(input: {
+  observedAt: string;
+  routeState: string;
+  now?: string | Date;
+}) {
+  const observedAt = new Date(input.observedAt);
+  const now = input.now ? new Date(input.now) : new Date();
+  const ageMs = now.getTime() - observedAt.getTime();
+
+  if (Number.isNaN(observedAt.getTime()) || Number.isNaN(now.getTime())) {
+    return {
+      freshnessLabel: 'Signal recent',
+      note: 'Signal route recu, horodatage a verifier.',
+      tone: 'amber' as const,
+    };
+  }
+
+  const ageSeconds = Math.max(0, Math.round(ageMs / 1000));
+  const freshnessLabel =
+    ageSeconds < 45
+      ? 'Signal maintenant'
+      : ageSeconds < 120
+        ? `Signal il y a ${Math.round(ageSeconds / 60)} min`
+        : `Signal ancien ${Math.round(ageSeconds / 60)} min`;
+
+  if (input.routeState === 'critical') {
+    return {
+      freshnessLabel,
+      note: 'Alerte route critique: restez attentif et gardez le partage actif.',
+      tone: 'rose' as const,
+    };
+  }
+
+  if (input.routeState === 'warning') {
+    return {
+      freshnessLabel,
+      note: 'Signal route a surveiller: les operations voient aussi cette anomalie.',
+      tone: 'amber' as const,
+    };
+  }
+
+  if (ageSeconds >= 120) {
+    return {
+      freshnessLabel,
+      note: 'Signal chauffeur ancien: Orbi garde le dernier point et attend une nouvelle position.',
+      tone: 'amber' as const,
+    };
+  }
+
+  return {
+    freshnessLabel,
+    note:
+      input.routeState === 'unknown'
+        ? 'Le premier signal route est attendu.'
+        : 'Le dernier signal route est coherent.',
+    tone: 'sky' as const,
+  };
 }
 
 export function buildRiderDriverTrustSnapshot(input: {
@@ -270,6 +334,26 @@ function estimateRouteProgressPercent(remainingDistanceKm: number) {
   }
 
   return 18;
+}
+
+function estimateArrivalLabel(input: {
+  remainingDistanceKm: number;
+  speedKph?: number | null;
+  isHeadingToDestination: boolean;
+}) {
+  const fallbackSpeedKph = input.isHeadingToDestination ? 24 : 18;
+  const speedKph =
+    typeof input.speedKph === 'number' && input.speedKph >= 6
+      ? input.speedKph
+      : fallbackSpeedKph;
+  const etaMinutes = Math.max(
+    1,
+    Math.round((input.remainingDistanceKm / speedKph) * 60),
+  );
+
+  return input.isHeadingToDestination
+    ? `Arrivee ~${etaMinutes} min`
+    : `Pickup ~${etaMinutes} min`;
 }
 
 function buildInitials(name: string) {
