@@ -1300,6 +1300,67 @@ describe('TripsService', () => {
     );
   });
 
+  it('records rider location without creating driver route alerts', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-route-rider-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+      distanceKm: 5,
+      durationMinutes: 12,
+      rideRequest: {
+        pickupLatitude: 12.3714,
+        pickupLongitude: -1.5197,
+        destinationLatitude: 12.359,
+        destinationLongitude: -1.536,
+      },
+      events: [],
+    });
+    prisma.trip.update.mockResolvedValue({ id: 'trip-route-rider-1' });
+
+    const result = await service.recordRoutePosition(
+      {
+        user: {
+          id: 'user-rider-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      'trip-route-rider-1',
+      {
+        latitude: 12.39,
+        longitude: -1.58,
+        accuracyMeters: 12,
+        speedKph: 4,
+      },
+    );
+
+    expect(result.routeMonitoring).toMatchObject({
+      tripId: 'trip-route-rider-1',
+      state: 'clear',
+      alerts: [],
+      ticketIds: [],
+    });
+    expect(prisma.supportTicket.create).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'TRIP_ROUTE_MONITORING_ALERT_CREATED',
+        }),
+      }),
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.route-position',
+        entityId: 'trip-route-rider-1',
+      }),
+    );
+  });
+
   it('returns a trip detail timeline for the authenticated rider', async () => {
     const { prisma, service } = createService();
 
@@ -1438,6 +1499,105 @@ describe('TripsService', () => {
       expect.objectContaining({ label: 'Position trajet recue' }),
       expect.objectContaining({ label: 'Alerte monitoring trajet' }),
     ]);
+  });
+
+  it('keeps the rider position from replacing the driver live vehicle signal', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-detail-rider-signal-1',
+      rideRequestId: 'request-detail-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'DRIVER_ARRIVING',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      destinationAddress: 'Ouaga 2000',
+      actualFare: 1600,
+      currency: 'XOF',
+      startedAt: null,
+      completedAt: null,
+      createdAt: new Date('2026-04-17T08:00:00.000Z'),
+      rider: {
+        user: {
+          fullName: 'Awa Rider',
+        },
+      },
+      driver: {
+        verificationStatus: 'APPROVED',
+        averageRating: 4.7,
+        completedTripsCount: 84,
+        user: {
+          fullName: 'Issa Driver',
+          isPhoneVerified: true,
+        },
+      },
+      vehicle: {
+        plateNumber: '11 AA 1234',
+        make: 'Yamaha',
+        model: 'Crypton',
+        color: 'rouge',
+        year: 2023,
+        seats: 2,
+        type: 'MOTORCYCLE',
+        tier: 'MOTO_STANDARD',
+      },
+      rideRequest: {
+        pickupLatitude: 12.3714,
+        pickupLongitude: -1.5197,
+        destinationLatitude: 12.359,
+        destinationLongitude: -1.536,
+      },
+      events: [
+        {
+          id: 'event-driver-position',
+          eventType: 'ROUTE_POSITION_RECORDED',
+          payload: {
+            latitude: 12.34,
+            longitude: -1.53,
+            accuracyMeters: 14,
+            speedKph: 18,
+            observedAt: '2026-04-17T08:03:00.000Z',
+            sourceRole: 'DRIVER',
+          },
+          createdAt: new Date('2026-04-17T08:03:00.000Z'),
+        },
+        {
+          id: 'event-rider-position',
+          eventType: 'ROUTE_POSITION_RECORDED',
+          payload: {
+            latitude: 12.3714,
+            longitude: -1.5197,
+            accuracyMeters: 8,
+            speedKph: 0,
+            observedAt: '2026-04-17T08:04:00.000Z',
+            sourceRole: 'RIDER',
+          },
+          createdAt: new Date('2026-04-17T08:04:00.000Z'),
+        },
+      ],
+    });
+
+    const result = await service.getTripDetail(
+      {
+        user: {
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      'trip-detail-rider-signal-1',
+    );
+
+    expect(result.trip.routeMonitoring.latestPosition).toMatchObject({
+      latitude: 12.34,
+      longitude: -1.53,
+      sourceRole: 'DRIVER',
+      observedAt: '2026-04-17T08:03:00.000Z',
+    });
+    expect(result.trip.routeMonitoring.lastPositionAt).toBe(
+      '2026-04-17T08:03:00.000Z',
+    );
   });
 
   it('exposes a signed driver profile photo only from an approved verified selfie', async () => {

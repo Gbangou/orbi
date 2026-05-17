@@ -418,11 +418,14 @@ export class TripsService {
           },
         });
 
-        const alerts = this.evaluateRouteMonitoringAlerts({
-          trip,
-          position,
-          observedAt,
-        });
+        const alerts =
+          auth.user.role === UserRole.RIDER
+            ? []
+            : this.evaluateRouteMonitoringAlerts({
+                trip,
+                position,
+                observedAt,
+              });
         const recentAlertTypes = new Set(
           trip.events
             .filter((event) => {

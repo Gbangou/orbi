@@ -44,9 +44,17 @@ function resolveRouteMonitoringSummary(
     createdAt: Date;
   }>,
 ) {
-  const latestRoutePosition = events
-    .filter((event) => event.eventType === 'ROUTE_POSITION_RECORDED')
-    .at(-1);
+  const routePositionEvents = events.filter(
+    (event) => event.eventType === 'ROUTE_POSITION_RECORDED',
+  );
+  const latestRoutePosition =
+    [...routePositionEvents]
+      .reverse()
+      .find((event) => {
+        const payload = isRecord(event.payload) ? event.payload : {};
+
+        return payload.sourceRole !== 'RIDER';
+      }) ?? null;
   const routeAlertEvents = events.filter(
     (event) => event.eventType === 'ROUTE_MONITORING_ALERT',
   );
