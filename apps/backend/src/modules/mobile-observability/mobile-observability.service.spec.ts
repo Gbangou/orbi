@@ -101,6 +101,9 @@ describe('MobileObservabilityService', () => {
       expect.objectContaining({
         channel: 'admin',
         type: 'mobile.error-reports-submitted',
+        payload: expect.objectContaining({
+          appRole: 'rider',
+        }),
       }),
     );
   });
@@ -189,5 +192,23 @@ describe('MobileObservabilityService', () => {
         reports: [buildReport({ appRole: 'driver' })],
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects mixed-role payloads before writing audit or support side effects', async () => {
+    const { service, prisma, realtimeService } = createService();
+
+    await expect(
+      service.submitErrorReports(riderAuth(), {
+        reports: [
+          buildReport(),
+          buildReport({ id: 'moberr-2', appRole: 'driver' }),
+        ],
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(prisma.auditLog.findFirst).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
+    expect(prisma.supportTicket.create).not.toHaveBeenCalled();
+    expect(realtimeService.publish).not.toHaveBeenCalled();
   });
 });

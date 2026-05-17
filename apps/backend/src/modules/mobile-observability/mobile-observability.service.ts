@@ -22,14 +22,16 @@ export class MobileObservabilityService {
     auth: RequestAuthContext,
     payload: SubmitMobileErrorReportsDto,
   ) {
+    for (const report of payload.reports ?? []) {
+      this.assertReportMatchesActor(auth, report.appRole);
+    }
+
     let acceptedReports = 0;
     let ignoredReports = 0;
     let duplicateReports = 0;
     let supportTicketCount = 0;
 
     for (const report of payload.reports ?? []) {
-      this.assertReportMatchesActor(auth, report.appRole);
-
       if (!report.classification.reportable) {
         ignoredReports += 1;
         continue;
@@ -93,7 +95,7 @@ export class MobileObservabilityService {
         payload: {
           acceptedReports,
           supportTicketCount,
-          appRole: auth.user.role,
+          appRole: this.resolveAuthenticatedAppRole(auth),
         },
       });
     }
@@ -118,6 +120,10 @@ export class MobileObservabilityService {
         'Mobile error report role does not match the authenticated session.',
       );
     }
+  }
+
+  private resolveAuthenticatedAppRole(auth: RequestAuthContext) {
+    return auth.user.role === 'DRIVER' ? 'driver' : 'rider';
   }
 
   private async ensureCriticalSupportTicket(

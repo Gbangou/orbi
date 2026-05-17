@@ -184,6 +184,9 @@ paiement provider, observabilite et runbooks verts.
 - CI GitHub renforcee avec audit de dependances `pnpm audit --audit-level
   moderate` et `git diff --check`, afin de bloquer les regressions de securite
   connues et les erreurs de whitespace avant merge.
+- Ingestion `/mobile/error-reports` durcie cote backend: les payloads mixtes
+  rider/driver sont rejetes avant tout audit log, ticket support ou evenement
+  realtime, et le signal admin publie maintenant un `appRole` mobile normalise.
 
 ## Architecture active
 
