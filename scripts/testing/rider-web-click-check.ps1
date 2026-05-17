@@ -115,19 +115,27 @@ function Invoke-JavaScript {
   return $result.result.value
 }
 
+function ConvertTo-JavaScriptLiteral {
+  param([string]$Value)
+
+  return $Value | ConvertTo-Json -Compress
+}
+
 function Test-PageHealth {
   param(
     [System.Net.WebSockets.ClientWebSocket]$Socket,
     [string]$ExpectedText
   )
 
+  $expectedTextLiteral = ConvertTo-JavaScriptLiteral -Value $ExpectedText
   $state = Invoke-JavaScript -Socket $Socket -Expression @"
 (() => {
   const text = document.body?.innerText || '';
+  const expectedText = $expectedTextLiteral;
   return {
     url: location.href,
     hasOverlay: text.includes('Uncaught Error') || text.includes('Component is not a function'),
-    hasExpectedText: text.includes('$ExpectedText'),
+    hasExpectedText: text.includes(expectedText),
     text: text.slice(0, 1000)
   };
 })()
@@ -142,21 +150,22 @@ function Test-PageHealth {
   }
 }
 
-function Click-Text {
+function Invoke-TextClick {
   param(
     [System.Net.WebSockets.ClientWebSocket]$Socket,
     [string]$Label
   )
 
-  $escapedLabel = $Label.Replace('\', '\\').Replace("'", "\'")
+  $labelLiteral = ConvertTo-JavaScriptLiteral -Value $Label
   $result = Invoke-JavaScript -Socket $Socket -Expression @"
 (() => {
+  const label = $labelLiteral;
   const matches = Array.from(document.querySelectorAll('button, [role="button"], a, input, textarea, div'))
     .map((element) => {
       const text = (element.innerText || element.value || '').trim();
       return { element, text };
     })
-    .filter((item) => item.text.includes('$escapedLabel'))
+    .filter((item) => item.text.includes(label))
     .sort((left, right) => left.text.length - right.text.length);
   const element = matches[0]?.element;
   if (!element) {
@@ -193,11 +202,11 @@ try {
   Invoke-JavaScript -Socket $socket -Expression "localStorage.removeItem('orbi.rider.session-token'); true" | Out-Null
   Test-PageHealth -Socket $socket -ExpectedText 'Connexion et compte'
 
-  Click-Text -Socket $socket -Label 'Inscription'
+  Invoke-TextClick -Socket $socket -Label 'Inscription'
   Start-Sleep -Milliseconds 300
   Test-PageHealth -Socket $socket -ExpectedText 'Creer un compte passager'
 
-  Click-Text -Socket $socket -Label 'Connexion'
+  Invoke-TextClick -Socket $socket -Label 'Connexion'
   Start-Sleep -Milliseconds 300
   Test-PageHealth -Socket $socket -ExpectedText 'Reprendre votre session'
 
