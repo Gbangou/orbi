@@ -17,9 +17,10 @@ import {
   type DriverOnboardingGuidanceFilter,
 } from './admin-ops-kernel';
 import {
-  adminMutationHeaderName,
-  adminMutationHeaderValue,
-} from './admin-server-security';
+  createAdminMutationHeaders,
+  fetchAdminJson,
+  postAdminMutation,
+} from './admin-client-fetch';
 import { subscribeToAdminRealtime } from './admin-realtime';
 import { resolveSafeDocumentUrl } from './admin-url-security';
 
@@ -158,36 +159,15 @@ function formatExportFilterLabel(
 }
 
 async function fetchDriverOnboardingQueue() {
-  const response = await fetch('/api/admin/driver-onboarding-queue', {
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Driver onboarding queue fetch failed');
-  }
-
-  return (await response.json()) as DriverOnboardingQueueResponse;
+  return fetchAdminJson<DriverOnboardingQueueResponse>(
+    '/api/admin/driver-onboarding-queue',
+  );
 }
 
 async function fetchDriverOnboardingExportHistory() {
-  const response = await fetch(
+  return fetchAdminJson<DriverOnboardingExportHistoryResponse>(
     '/api/admin/driver-onboarding/export-history?page=1&pageSize=6',
-    {
-      cache: 'no-store',
-      headers: {
-        Accept: 'application/json',
-      },
-    },
   );
-
-  if (!response.ok) {
-    throw new Error('Driver onboarding export history fetch failed');
-  }
-
-  return (await response.json()) as DriverOnboardingExportHistoryResponse;
 }
 
 async function fetchDriverOnboardingExportCsv(query: {
@@ -230,62 +210,35 @@ async function updateDriverOnboardingReview(
     }>;
   },
 ) {
-  const response = await fetch(`/api/admin/driver-onboarding/${driverId}/review`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      [adminMutationHeaderName]: adminMutationHeaderValue,
+  return fetchAdminJson<DriverOnboardingReviewUpdateResponse>(
+    `/api/admin/driver-onboarding/${driverId}/review`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...createAdminMutationHeaders(),
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error('Driver onboarding review update failed');
-  }
-
-  return (await response.json()) as DriverOnboardingReviewUpdateResponse;
+  );
 }
 
 async function fetchDriverDocumentViewLink(
   driverId: string,
   documentId: string,
 ) {
-  const response = await fetch(
+  return fetchAdminJson<DriverDocumentViewLinkResponse>(
     `/api/admin/driver-onboarding/${driverId}/documents/${documentId}/view-link`,
-    {
-      cache: 'no-store',
-      headers: {
-        Accept: 'application/json',
-      },
-    },
   );
-
-  if (!response.ok) {
-    throw new Error('Driver document view link fetch failed');
-  }
-
-  return (await response.json()) as DriverDocumentViewLinkResponse;
 }
 
 async function verifyDriverDocumentObjectWithProvider(
   driverId: string,
   documentId: string,
 ) {
-  const response = await fetch(
+  return postAdminMutation<DriverDocumentObjectVerificationResponse>(
     `/api/admin/driver-onboarding/${driverId}/documents/${documentId}/object-verification/verify-provider`,
-    {
-      method: 'POST',
-      headers: {
-        [adminMutationHeaderName]: adminMutationHeaderValue,
-      },
-    },
   );
-
-  if (!response.ok) {
-    throw new Error('Driver document object verification failed');
-  }
-
-  return (await response.json()) as DriverDocumentObjectVerificationResponse;
 }
 
 export function DriverOnboardingReviewBoard({

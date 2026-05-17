@@ -13,9 +13,9 @@ import type {
   SupportTicketQueueResponse,
 } from '@orbi/api';
 import {
-  adminMutationHeaderName,
-  adminMutationHeaderValue,
-} from './admin-server-security';
+  fetchAdminJson,
+  postAdminMutation,
+} from './admin-client-fetch';
 import {
   describeProductionReadiness,
   describeReadinessState,
@@ -45,18 +45,9 @@ type ReadinessCheck = {
 };
 
 async function fetchLaunchReadiness() {
-  const response = await fetch('/api/admin/launch-readiness', {
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Launch readiness fetch failed');
-  }
-
-  return (await response.json()) as AdminLaunchReadinessResponse;
+  return fetchAdminJson<AdminLaunchReadinessResponse>(
+    '/api/admin/launch-readiness',
+  );
 }
 
 async function acknowledgeLaunchReadinessAction(
@@ -67,23 +58,15 @@ async function acknowledgeLaunchReadinessAction(
     idempotencyKey: string;
   },
 ) {
-  const response = await fetch(
+  return postAdminMutation<AdminLaunchReadinessActionAcknowledgementResponse>(
     `/api/admin/launch-readiness/actions/${checkId}/acknowledge`,
     {
-      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        [adminMutationHeaderName]: adminMutationHeaderValue,
       },
       body: JSON.stringify(payload),
     },
   );
-
-  if (!response.ok) {
-    throw new Error('Launch readiness acknowledgement failed');
-  }
-
-  return (await response.json()) as AdminLaunchReadinessActionAcknowledgementResponse;
 }
 
 function describeActionOwner(owner: string) {
