@@ -3,9 +3,11 @@ import {
   buildDriverEarningsStatusLabel,
   buildDriverFlowTransitionLabel,
   buildDriverHomeStatusLabel,
+  buildDriverLiveRouteProgress,
   buildDriverMissionSnapshot,
   buildDriverNextActionHint,
   buildDriverProfileStatusLabel,
+  buildDriverRiderTrustSnapshot,
   resolveDriverActiveFlow,
   resolveDriverReservationChangeSet,
 } from '../lib/driver-active-flow';
@@ -294,6 +296,104 @@ describe('driver-active-flow', () => {
           value: 'Yamaha Crypton',
         }),
       ]),
+    );
+  });
+
+  it('builds driver live route and rider trust signals from trip detail', () => {
+    const flow = resolveDriverActiveFlow({
+      history: {
+        role: 'DRIVER',
+        stats: {
+          activeTrips: 1,
+          completedTrips: 6,
+          cancelledTrips: 1,
+          totalAmount: 68500,
+          currency: 'XOF',
+        },
+        pendingRequests: [],
+        recentTrips: [
+          {
+            id: 'trip-driver-1',
+            pickupAddress: 'Universite Joseph Ki-Zerbo',
+            destinationAddress: 'Ouaga 2000',
+            status: 'IN_PROGRESS',
+            amount: 3500,
+            currency: 'XOF',
+            counterpartyName: 'Awa Ouedraogo',
+            vehicleLabel: 'Yamaha Crypton',
+            pickupCode: '1234',
+            completedAt: null,
+            createdAt: '2026-04-19T08:00:00.000Z',
+          },
+        ],
+      },
+      offers: [],
+      reservationNow: Date.parse('2026-04-19T10:00:00.000Z'),
+      driverProfileStatus: 'BUSY',
+    });
+    const tripDetail = {
+      trip: {
+        id: 'trip-driver-1',
+        rideRequestId: 'request-1',
+        status: 'IN_PROGRESS',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        riderName: 'Awa Ouedraogo',
+        driverName: 'Issa Driver',
+        vehicleLabel: 'Yamaha Crypton',
+        driverVerification: {
+          verificationStatus: 'APPROVED',
+          phoneVerified: true,
+          averageRating: 4.8,
+          completedTripsCount: 126,
+          profilePhotoUrl: null,
+          vehicle: {
+            plateNumber: '11 AA 1234',
+            color: 'rouge',
+            make: 'Yamaha',
+            model: 'Crypton',
+          },
+        },
+        routeMonitoring: {
+          state: 'clear' as const,
+          alertCount: 0,
+          lastAlertType: null,
+          lastAlertAt: null,
+          lastPositionAt: '2026-04-19T08:02:30.000Z',
+          latestPosition: {
+            latitude: 12.37,
+            longitude: -1.52,
+            accuracyMeters: 12,
+            speedKph: 18,
+            distanceToPickupKm: 0.4,
+            distanceToDestinationKm: 5.1,
+            observedAt: '2026-04-19T08:02:30.000Z',
+            sourceRole: 'DRIVER',
+          },
+        },
+        pickupCode: '1234',
+        actualFare: 3500,
+        currency: 'XOF',
+        startedAt: '2026-04-19T08:05:00.000Z',
+        completedAt: null,
+        createdAt: '2026-04-19T08:00:00.000Z',
+        timeline: [],
+      },
+    };
+
+    expect(buildDriverLiveRouteProgress({ flow, tripDetail })).toEqual(
+      expect.objectContaining({
+        title: 'Progression destination',
+        distanceLabel: '5.1 km restant',
+        progressPercent: 18,
+      }),
+    );
+    expect(buildDriverRiderTrustSnapshot({ tripDetail })).toEqual(
+      expect.objectContaining({
+        riderName: 'Awa Ouedraogo',
+        initials: 'AO',
+        fareLabel: expect.stringContaining('500'),
+      }),
     );
   });
 });

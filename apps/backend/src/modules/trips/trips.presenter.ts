@@ -130,6 +130,10 @@ export function serializeTripDetail(trip: {
     make: string;
     model: string;
     color: string;
+    year?: number | null;
+    seats?: number | null;
+    type?: string;
+    tier?: string;
   };
   rideRequest?: {
     pickupLatitude?: unknown;
@@ -196,11 +200,16 @@ export function serializeTripDetail(trip: {
             ? null
             : toAmount(trip.driver.averageRating),
         completedTripsCount: trip.driver.completedTripsCount,
+        profilePhotoUrl: null,
         vehicle: {
           plateNumber: trip.vehicle.plateNumber,
           color: trip.vehicle.color,
           make: trip.vehicle.make,
           model: trip.vehicle.model,
+          year: trip.vehicle.year ?? null,
+          seats: trip.vehicle.seats ?? null,
+          type: trip.vehicle.type,
+          tier: trip.vehicle.tier,
         },
       },
       routeMonitoring,

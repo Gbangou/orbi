@@ -451,6 +451,72 @@ export function LiveTimeline({
   );
 }
 
+export function LiveRouteProgressCard({
+  title,
+  stateLabel,
+  distanceLabel,
+  progressPercent,
+  freshnessLabel,
+  coordinateLabel,
+  accuracyLabel,
+  speedLabel,
+  note,
+  tone = 'sky',
+}: {
+  title: string;
+  stateLabel: string;
+  distanceLabel: string;
+  progressPercent: number;
+  freshnessLabel: string;
+  coordinateLabel: string;
+  accuracyLabel: string;
+  speedLabel: string;
+  note: string;
+  tone?: Tone;
+}) {
+  const toneStyle = toneStyles[tone];
+  const boundedProgress = Math.max(8, Math.min(100, progressPercent));
+
+  return (
+    <View
+      style={[
+        styles.liveRouteCard,
+        {
+          backgroundColor: toneStyle.backgroundColor,
+          borderColor: toneStyle.borderColor,
+        },
+      ]}
+    >
+      <View style={styles.liveRouteHeader}>
+        <View>
+          <Text style={styles.liveRouteEyebrow}>Position live</Text>
+          <Text style={styles.liveRouteTitle}>{title}</Text>
+        </View>
+        <Text style={[styles.liveRouteState, { color: toneStyle.textColor }]}>
+          {stateLabel}
+        </Text>
+      </View>
+      <View style={styles.liveRouteRail}>
+        <View
+          style={[
+            styles.liveRouteProgress,
+            {
+              width: `${boundedProgress}%`,
+              backgroundColor: toneStyle.textColor,
+            },
+          ]}
+        />
+      </View>
+      <View style={styles.liveRouteMetrics}>
+        <MetricTile label="Distance" value={distanceLabel} helper={freshnessLabel} />
+        <MetricTile label="Signal" value={speedLabel} helper={accuracyLabel} />
+      </View>
+      <Text style={styles.liveRouteCoordinates}>{coordinateLabel}</Text>
+      <Text style={styles.liveRouteNote}>{note}</Text>
+    </View>
+  );
+}
+
 export function FlowActionButton({
   label,
   tone = 'sky',
@@ -851,6 +917,60 @@ const styles = StyleSheet.create({
   timelineMeta: {
     color: orbiTheme.colors.muted,
     fontSize: 12,
+  },
+  liveRouteCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 14,
+    gap: 10,
+  },
+  liveRouteHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  liveRouteEyebrow: {
+    color: orbiTheme.colors.textSoft,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    fontWeight: '800',
+  },
+  liveRouteTitle: {
+    color: orbiTheme.colors.text,
+    fontWeight: '800',
+    fontSize: 17,
+    marginTop: 2,
+  },
+  liveRouteState: {
+    fontWeight: '800',
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  liveRouteRail: {
+    height: 9,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15, 23, 42, 0.44)',
+    overflow: 'hidden',
+  },
+  liveRouteProgress: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  liveRouteMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  liveRouteCoordinates: {
+    color: orbiTheme.colors.text,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  liveRouteNote: {
+    color: orbiTheme.colors.muted,
+    lineHeight: 18,
   },
   flowActionButton: {
     marginTop: 8,

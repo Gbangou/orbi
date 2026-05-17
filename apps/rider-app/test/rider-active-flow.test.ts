@@ -1,7 +1,9 @@
 import {
   buildRiderPeripheralStatusLabel,
   buildRiderFlowTransitionLabel,
+  buildRiderDriverTrustSnapshot,
   buildRiderHomeStatusLabel,
+  buildRiderLiveRouteProgress,
   buildRiderMissionSnapshot,
   buildRiderNextActionHint,
   resolveRiderActiveFlow,
@@ -267,6 +269,103 @@ describe('rider-active-flow', () => {
           value: '1234',
         }),
       ]),
+    );
+  });
+
+  it('builds rider live route and trust signals from trip detail', () => {
+    const flow = resolveRiderActiveFlow({
+      role: 'RIDER',
+      stats: {
+        activeTrips: 1,
+        completedTrips: 4,
+        cancelledTrips: 0,
+        totalAmount: 18500,
+        currency: 'XOF',
+      },
+      pendingRequests: [],
+      recentTrips: [
+        {
+          id: 'trip-1',
+          pickupAddress: 'Universite Joseph Ki-Zerbo',
+          destinationAddress: 'Ouaga 2000',
+          status: 'DRIVER_ARRIVING',
+          amount: 2500,
+          currency: 'XOF',
+          counterpartyName: 'Issa Driver',
+          vehicleLabel: 'Yamaha Crypton',
+          pickupCode: '1234',
+          completedAt: null,
+          createdAt: '2026-04-19T08:00:00.000Z',
+        },
+      ],
+    });
+    const tripDetail = {
+      trip: {
+        id: 'trip-1',
+        rideRequestId: 'request-1',
+        status: 'DRIVER_ARRIVING',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        riderName: 'Awa Ouedraogo',
+        driverName: 'Issa Driver',
+        vehicleLabel: 'Yamaha Crypton',
+        driverVerification: {
+          verificationStatus: 'APPROVED',
+          phoneVerified: true,
+          averageRating: 4.8,
+          completedTripsCount: 126,
+          profilePhotoUrl: null,
+          vehicle: {
+            plateNumber: '11 AA 1234',
+            color: 'rouge',
+            make: 'Yamaha',
+            model: 'Crypton',
+            type: 'MOTORCYCLE',
+            tier: 'MOTO_STANDARD',
+            year: 2023,
+            seats: 2,
+          },
+        },
+        routeMonitoring: {
+          state: 'clear' as const,
+          alertCount: 0,
+          lastAlertType: null,
+          lastAlertAt: null,
+          lastPositionAt: '2026-04-19T08:02:30.000Z',
+          latestPosition: {
+            latitude: 12.37,
+            longitude: -1.52,
+            accuracyMeters: 12,
+            speedKph: 18,
+            distanceToPickupKm: 0.4,
+            distanceToDestinationKm: 5.1,
+            observedAt: '2026-04-19T08:02:30.000Z',
+            sourceRole: 'DRIVER',
+          },
+        },
+        pickupCode: '1234',
+        actualFare: 2500,
+        currency: 'XOF',
+        startedAt: null,
+        completedAt: null,
+        createdAt: '2026-04-19T08:00:00.000Z',
+        timeline: [],
+      },
+    };
+
+    expect(buildRiderLiveRouteProgress({ flow, tripDetail })).toEqual(
+      expect.objectContaining({
+        title: 'Chauffeur en approche',
+        distanceLabel: '0.4 km restant',
+        progressPercent: 78,
+      }),
+    );
+    expect(buildRiderDriverTrustSnapshot({ tripDetail })).toEqual(
+      expect.objectContaining({
+        driverName: 'Issa Driver',
+        initials: 'ID',
+        plateLabel: '11 AA 1234',
+      }),
     );
   });
 });

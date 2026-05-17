@@ -189,6 +189,108 @@ export function buildDriverMissionSnapshot(input: {
   ];
 }
 
+export function buildDriverLiveRouteProgress(input: {
+  flow: DriverActiveFlowSummary;
+  tripDetail?: TripDetailResponse | null;
+}) {
+  const { activeTrip } = input.flow;
+  const routeMonitoring = input.tripDetail?.trip.routeMonitoring ?? null;
+  const latestPosition = routeMonitoring?.latestPosition ?? null;
+
+  if (!activeTrip || !routeMonitoring || !latestPosition) {
+    return null;
+  }
+
+  const isHeadingToDestination = activeTrip.status === 'IN_PROGRESS';
+  const remainingDistanceKm = isHeadingToDestination
+    ? latestPosition.distanceToDestinationKm
+    : latestPosition.distanceToPickupKm;
+
+  return {
+    title: isHeadingToDestination ? 'Progression destination' : 'Approche pickup',
+    stateLabel: formatOperationalStatus(routeMonitoring.state),
+    distanceLabel:
+      typeof remainingDistanceKm === 'number'
+        ? `${remainingDistanceKm.toFixed(1)} km restant`
+        : 'Distance en attente',
+    progressPercent:
+      typeof remainingDistanceKm === 'number'
+        ? estimateRouteProgressPercent(remainingDistanceKm)
+        : routeMonitoring.state === 'clear'
+          ? 42
+          : 18,
+    freshnessLabel: `Signal ${formatTimeLabel(latestPosition.observedAt)}`,
+    coordinateLabel: `${latestPosition.latitude.toFixed(5)}, ${latestPosition.longitude.toFixed(5)}`,
+    accuracyLabel:
+      typeof latestPosition.accuracyMeters === 'number'
+        ? `Precision ${Math.round(latestPosition.accuracyMeters)} m`
+        : 'Precision inconnue',
+    speedLabel:
+      typeof latestPosition.speedKph === 'number'
+        ? `${Math.round(latestPosition.speedKph)} km/h`
+        : 'Vitesse indisponible',
+    note:
+      routeMonitoring.state === 'unknown'
+        ? 'Premier signal route attendu par les operations.'
+        : routeMonitoring.state === 'clear'
+          ? 'Route coherente sur le dernier signal.'
+          : 'Une anomalie route est visible cote operations.',
+    tone:
+      routeMonitoring.state === 'critical'
+        ? 'rose'
+        : routeMonitoring.state === 'warning'
+          ? 'amber'
+          : 'sky',
+  } as const;
+}
+
+export function buildDriverRiderTrustSnapshot(input: {
+  tripDetail?: TripDetailResponse | null;
+}) {
+  const detail = input.tripDetail?.trip ?? null;
+
+  if (!detail) {
+    return null;
+  }
+
+  return {
+    riderName: detail.riderName,
+    initials: buildInitials(detail.riderName),
+    routeLabel: `${detail.pickupAddress} vers ${detail.destinationAddress}`,
+    fareLabel: formatXof(detail.actualFare),
+    vehicleLabel: detail.vehicleLabel,
+  };
+}
+
+function estimateRouteProgressPercent(remainingDistanceKm: number) {
+  if (remainingDistanceKm <= 0.1) {
+    return 96;
+  }
+
+  if (remainingDistanceKm <= 0.5) {
+    return 78;
+  }
+
+  if (remainingDistanceKm <= 1) {
+    return 62;
+  }
+
+  if (remainingDistanceKm <= 3) {
+    return 38;
+  }
+
+  return 18;
+}
+
+function buildInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'OR';
+}
+
 function formatTimeLabel(value: string) {
   const date = new Date(value);
 

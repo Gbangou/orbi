@@ -2447,11 +2447,16 @@ export type TripDetailResponse = {
       phoneVerified: boolean;
       averageRating: number | null;
       completedTripsCount: number;
+      profilePhotoUrl?: string | null;
       vehicle: {
         plateNumber: string;
         color: string;
         make: string;
         model: string;
+        year?: number | null;
+        seats?: number | null;
+        type?: ApiVehicleType | string;
+        tier?: ApiServiceTier | string;
       };
     };
     routeMonitoring: {

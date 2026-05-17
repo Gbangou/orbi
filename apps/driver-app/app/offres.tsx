@@ -28,6 +28,7 @@ import {
 } from '@orbi/ui';
 import {
   FlowActionButton,
+  LiveRouteProgressCard,
   LiveStatusBanner,
   LiveTimeline,
   MetricTile,
@@ -44,8 +45,10 @@ import {
 import {
   buildDriverDispatchStatusLabel,
   buildDriverFlowTransitionLabel,
+  buildDriverLiveRouteProgress,
   buildDriverMissionSnapshot,
   buildDriverNextActionHint,
+  buildDriverRiderTrustSnapshot,
   resolveDriverActiveFlow,
   resolveDriverReservationChangeSet,
 } from '../lib/driver-active-flow';
@@ -218,6 +221,13 @@ export default function OffersScreen() {
   const driverNextActionHint = buildDriverNextActionHint(flow);
   const driverMissionSnapshot = buildDriverMissionSnapshot({
     flow,
+    tripDetail: activeTripDetail,
+  });
+  const driverRouteProgress = buildDriverLiveRouteProgress({
+    flow,
+    tripDetail: activeTripDetail,
+  });
+  const riderTrustSnapshot = buildDriverRiderTrustSnapshot({
     tripDetail: activeTripDetail,
   });
   const shiftReadiness = useMemo(
@@ -826,6 +836,43 @@ export default function OffersScreen() {
               tone="amber"
             />
           ) : null}
+          {riderTrustSnapshot ? (
+            <View style={styles.trustCard}>
+              <View style={styles.identityRow}>
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarInitials}>
+                    {riderTrustSnapshot.initials}
+                  </Text>
+                </View>
+                <View style={styles.identityCopy}>
+                  <Text style={styles.identityTitle}>
+                    {riderTrustSnapshot.riderName}
+                  </Text>
+                  <Text style={styles.identityMeta}>
+                    {riderTrustSnapshot.routeLabel}
+                  </Text>
+                  <Text style={styles.identityMeta}>
+                    Vehicule mission: {riderTrustSnapshot.vehicleLabel}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.identityDetails}>
+                <MetricTile
+                  label="Tarif"
+                  value={riderTrustSnapshot.fareLabel}
+                  helper="Montant verrouille sur la mission"
+                />
+                <MetricTile
+                  label="Client"
+                  value="Verifie"
+                  helper="Compte passager authentifie"
+                />
+              </View>
+            </View>
+          ) : null}
+          {driverRouteProgress ? (
+            <LiveRouteProgressCard {...driverRouteProgress} />
+          ) : null}
           {activeTripTransitionLabel ? (
             <Text style={styles.transitionInlineLabel}>{activeTripTransitionLabel}</Text>
           ) : null}
@@ -1024,6 +1071,52 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   snapshotStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  trustCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    padding: 14,
+    gap: 12,
+  },
+  identityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatarFallback: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(56, 189, 248, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.36)',
+  },
+  avatarInitials: {
+    color: orbiTheme.colors.sky,
+    fontWeight: '900',
+    fontSize: 18,
+  },
+  identityCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  identityTitle: {
+    color: orbiTheme.colors.text,
+    fontWeight: '800',
+    fontSize: 17,
+  },
+  identityMeta: {
+    color: orbiTheme.colors.muted,
+    lineHeight: 18,
+  },
+  identityDetails: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,

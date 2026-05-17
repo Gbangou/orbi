@@ -22,6 +22,7 @@ import {
 import {
   FlowActionButton,
   LiveStatusBanner,
+  LiveRouteProgressCard,
   LiveTimeline,
   MetricTile,
   RouteSignalCard,
@@ -31,6 +32,8 @@ import { restoreRiderSession } from '../lib/auth';
 import { RiderJourneySection } from '../lib/rider-journey';
 import {
   buildRiderFlowTransitionLabel,
+  buildRiderDriverTrustSnapshot,
+  buildRiderLiveRouteProgress,
   buildRiderMissionSnapshot,
   buildRiderNextActionHint,
   resolveRiderActiveFlow,
@@ -161,6 +164,13 @@ export default function ActivityScreen() {
   const riderNextActionHint = buildRiderNextActionHint(flow);
   const riderMissionSnapshot = buildRiderMissionSnapshot({
     flow,
+    tripDetail: activeTripDetail,
+  });
+  const riderRouteProgress = buildRiderLiveRouteProgress({
+    flow,
+    tripDetail: activeTripDetail,
+  });
+  const driverTrustSnapshot = buildRiderDriverTrustSnapshot({
     tripDetail: activeTripDetail,
   });
 
@@ -645,6 +655,43 @@ export default function ActivityScreen() {
               tone="amber"
             />
           ) : null}
+          {driverTrustSnapshot ? (
+            <View style={styles.trustCard}>
+              <View style={styles.identityRow}>
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarInitials}>
+                    {driverTrustSnapshot.initials}
+                  </Text>
+                </View>
+                <View style={styles.identityCopy}>
+                  <Text style={styles.identityTitle}>
+                    {driverTrustSnapshot.driverName}
+                  </Text>
+                  <Text style={styles.identityMeta}>
+                    {driverTrustSnapshot.verificationLabel} - {driverTrustSnapshot.ratingLabel}
+                  </Text>
+                  <Text style={styles.identityMeta}>
+                    {driverTrustSnapshot.photoLabel}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.identityDetails}>
+                <MetricTile
+                  label="Vehicule"
+                  value={driverTrustSnapshot.vehicleLabel}
+                  helper={driverTrustSnapshot.vehicleMeta.join(' - ') || 'Type confirme par dossier'}
+                />
+                <MetricTile
+                  label="Plaque"
+                  value={driverTrustSnapshot.plateLabel}
+                  helper={driverTrustSnapshot.phoneLabel}
+                />
+              </View>
+            </View>
+          ) : null}
+          {riderRouteProgress ? (
+            <LiveRouteProgressCard {...riderRouteProgress} />
+          ) : null}
           {activityTransitionLabel ? (
             <Text style={styles.transitionMeta}>{activityTransitionLabel}</Text>
           ) : null}
@@ -793,6 +840,52 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   snapshotStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  trustCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    padding: 14,
+    gap: 12,
+  },
+  identityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatarFallback: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(45, 212, 191, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(45, 212, 191, 0.36)',
+  },
+  avatarInitials: {
+    color: orbiTheme.colors.teal,
+    fontWeight: '900',
+    fontSize: 18,
+  },
+  identityCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  identityTitle: {
+    color: orbiTheme.colors.text,
+    fontWeight: '800',
+    fontSize: 17,
+  },
+  identityMeta: {
+    color: orbiTheme.colors.muted,
+    lineHeight: 18,
+  },
+  identityDetails: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,

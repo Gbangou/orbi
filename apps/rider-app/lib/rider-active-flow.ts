@@ -156,6 +156,131 @@ export function buildRiderMissionSnapshot(input: {
   ];
 }
 
+export function buildRiderLiveRouteProgress(input: {
+  flow: RiderActiveFlowSummary;
+  tripDetail?: TripDetailResponse | null;
+}) {
+  const { activeTrip } = input.flow;
+  const routeMonitoring = input.tripDetail?.trip.routeMonitoring ?? null;
+  const latestPosition = routeMonitoring?.latestPosition ?? null;
+
+  if (!activeTrip || !routeMonitoring || !latestPosition) {
+    return null;
+  }
+
+  const isHeadingToDestination = activeTrip.status === 'IN_PROGRESS';
+  const remainingDistanceKm = isHeadingToDestination
+    ? latestPosition.distanceToDestinationKm
+    : latestPosition.distanceToPickupKm;
+
+  return {
+    title: isHeadingToDestination
+      ? 'Trajet vers destination'
+      : 'Chauffeur en approche',
+    stateLabel: formatOperationalStatus(routeMonitoring.state),
+    distanceLabel:
+      typeof remainingDistanceKm === 'number'
+        ? `${remainingDistanceKm.toFixed(1)} km restant`
+        : 'Distance en attente',
+    progressPercent:
+      typeof remainingDistanceKm === 'number'
+        ? estimateRouteProgressPercent(remainingDistanceKm)
+        : routeMonitoring.state === 'clear'
+          ? 42
+          : 18,
+    freshnessLabel: `Signal ${formatTimeLabel(latestPosition.observedAt)}`,
+    coordinateLabel: `${latestPosition.latitude.toFixed(5)}, ${latestPosition.longitude.toFixed(5)}`,
+    accuracyLabel:
+      typeof latestPosition.accuracyMeters === 'number'
+        ? `Precision ${Math.round(latestPosition.accuracyMeters)} m`
+        : 'Precision inconnue',
+    speedLabel:
+      typeof latestPosition.speedKph === 'number'
+        ? `${Math.round(latestPosition.speedKph)} km/h`
+        : 'Vitesse indisponible',
+    note:
+      routeMonitoring.state === 'unknown'
+        ? 'Le premier signal route est attendu.'
+        : routeMonitoring.state === 'clear'
+          ? 'Le dernier signal route est coherent.'
+          : 'Les operations surveillent une anomalie route.',
+    tone:
+      routeMonitoring.state === 'critical'
+        ? 'rose'
+        : routeMonitoring.state === 'warning'
+          ? 'amber'
+          : 'sky',
+  } as const;
+}
+
+export function buildRiderDriverTrustSnapshot(input: {
+  tripDetail?: TripDetailResponse | null;
+}) {
+  const detail = input.tripDetail?.trip ?? null;
+  const verification = detail?.driverVerification ?? null;
+
+  if (!detail || !verification) {
+    return null;
+  }
+
+  const vehicle = verification.vehicle;
+  const vehicleMeta = [
+    vehicle.type ? formatOperationalStatus(vehicle.type) : null,
+    vehicle.tier ? formatOperationalStatus(vehicle.tier) : null,
+    vehicle.year ? String(vehicle.year) : null,
+    vehicle.seats ? `${vehicle.seats} places` : null,
+  ].filter((item): item is string => Boolean(item));
+
+  return {
+    driverName: detail.driverName,
+    initials: buildInitials(detail.driverName),
+    profilePhotoUrl: verification.profilePhotoUrl ?? null,
+    verificationLabel: formatOperationalStatus(verification.verificationStatus),
+    ratingLabel:
+      verification.averageRating === null
+        ? `${verification.completedTripsCount} courses`
+        : `${verification.averageRating.toFixed(1)}/5, ${verification.completedTripsCount} courses`,
+    phoneLabel: verification.phoneVerified
+      ? 'Telephone verifie'
+      : 'Telephone non verifie',
+    vehicleLabel: `${vehicle.color} ${vehicle.make} ${vehicle.model}`,
+    plateLabel: vehicle.plateNumber,
+    vehicleMeta,
+    photoLabel: verification.profilePhotoUrl
+      ? 'Photo chauffeur verifiee'
+      : 'Photo chauffeur pas encore exposee',
+  };
+}
+
+function estimateRouteProgressPercent(remainingDistanceKm: number) {
+  if (remainingDistanceKm <= 0.1) {
+    return 96;
+  }
+
+  if (remainingDistanceKm <= 0.5) {
+    return 78;
+  }
+
+  if (remainingDistanceKm <= 1) {
+    return 62;
+  }
+
+  if (remainingDistanceKm <= 3) {
+    return 38;
+  }
+
+  return 18;
+}
+
+function buildInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'OR';
+}
+
 function formatTimeLabel(value: string) {
   const date = new Date(value);
 
