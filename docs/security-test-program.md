@@ -74,6 +74,15 @@ Le gate local agregé est:
 pnpm test:security:local
 ```
 
+La preuve production portable est:
+
+```powershell
+pnpm test:production:gate
+```
+
+Elle est aussi appelee par le workflow GitHub Actions `Production Readiness Gate`
+sur les pull requests et sur `main`.
+
 Sur un poste ou `next build` est bloque par `spawn EPERM`, executer le gate avec
 le build separe hors sandbox ou utiliser directement:
 

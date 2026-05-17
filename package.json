@@ -26,7 +26,7 @@
     "test:mobile:smoke": "pnpm --filter @orbi/rider-app test:smoke && pnpm --filter @orbi/driver-app test:smoke",
     "test:payments:fixtures": "pnpm --filter backend test -- payments.service.spec.ts --runInBand",
     "test:security:local": "powershell -ExecutionPolicy Bypass -File .\\scripts\\testing\\security-local-gate.ps1",
-    "test:production:gate": "powershell -ExecutionPolicy Bypass -File .\\scripts\\testing\\production-readiness-gate.ps1",
+    "test:production:gate": "node ./scripts/testing/production-readiness-gate.mjs",
     "e2e:local-checklist": "powershell -ExecutionPolicy Bypass -File .\\scripts\\testing\\local-e2e-field-session.ps1",
     "e2e:local-api": "powershell -ExecutionPolicy Bypass -File .\\scripts\\testing\\local-api-e2e-smoke.ps1",
     "test": "pnpm --filter backend test",

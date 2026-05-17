@@ -61,6 +61,7 @@ import { useDriverPresence } from '../lib/use-driver-presence';
 import { useDriverRealtimeStream } from '../lib/use-driver-realtime-stream';
 import { useLiveRefresh } from '../lib/use-live-refresh';
 import { DriverJourneySection } from '../lib/driver-journey';
+import { buildDriverShiftReadiness } from '../lib/driver-shift-readiness';
 
 const fallbackHistory: MyTripsResponse = {
   role: 'DRIVER',
@@ -202,6 +203,14 @@ export default function OffersScreen() {
     [driverProfileStatus, history, offers, reservationNow],
   );
   const { activeTrip, activeFlowState, visibleOffers } = flow;
+  const shiftReadiness = useMemo(
+    () =>
+      buildDriverShiftReadiness({
+        flow,
+        fatigue: driverFatigue,
+      }),
+    [driverFatigue, flow],
+  );
   const { presenceNote } = useDriverPresence(
     flow.availabilityStatus === 'ONLINE' || Boolean(activeTrip),
   );
@@ -647,6 +656,16 @@ export default function OffersScreen() {
           tone={driverFatigue.state === 'blocked' ? 'rose' : 'amber'}
         />
       ) : null}
+      <RouteSignalCard
+        eyebrow={shiftReadiness.eyebrow}
+        badgeLabel={shiftReadiness.scoreLabel}
+        badgeTone={shiftReadiness.tone}
+        title={shiftReadiness.title}
+        description={shiftReadiness.description}
+        insights={shiftReadiness.insights}
+        note={shiftReadiness.note}
+        noteTone={shiftReadiness.noteTone}
+      />
       {freshOfferIds.length ? (
         <TransitionNoticeCard
           label={

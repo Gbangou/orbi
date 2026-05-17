@@ -7,6 +7,7 @@ import {
   fetchDriverOffers,
   fetchDriverProfile,
   fetchMyTrips,
+  type DriverFatigueStatus,
   type DriverEarningsResponse,
   type DriverOffer,
   type MyTripsResponse,
@@ -51,6 +52,19 @@ import {
 import { useDriverPresence } from '../lib/use-driver-presence';
 import { useDriverRealtimeStream } from '../lib/use-driver-realtime-stream';
 import { useLiveRefresh } from '../lib/use-live-refresh';
+import { buildDriverShiftReadiness } from '../lib/driver-shift-readiness';
+
+const fallbackFatigue: DriverFatigueStatus = {
+  state: 'clear',
+  completedTrips: 0,
+  drivingMinutes: 0,
+  windowHours: 8,
+  maxCompletedTrips: 8,
+  maxDrivingMinutes: 300,
+  restMinutes: 30,
+  restUntil: null,
+  reason: 'Aucun signal fatigue bloquant sur la fenetre recente.',
+};
 
 export default function DriverHomeScreen() {
   const router = useRouter();
@@ -64,6 +78,7 @@ export default function DriverHomeScreen() {
   const [recentlyExpiredCount, setRecentlyExpiredCount] = useState(0);
   const [activeTripTransitionLabel, setActiveTripTransitionLabel] = useState<string | null>(null);
   const [driverProfileStatus, setDriverProfileStatus] = useState<string>('OFFLINE');
+  const [driverFatigue, setDriverFatigue] = useState<DriverFatigueStatus>(fallbackFatigue);
   const [isTogglingAvailability, setIsTogglingAvailability] = useState(false);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
@@ -87,6 +102,7 @@ export default function DriverHomeScreen() {
       setHistory(historyResponse);
       setEarnings(earningsResponse);
       setDriverProfileStatus(profileResponse.profile.status);
+      setDriverFatigue(profileResponse.profile.fatigue);
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: offersResponse,
@@ -150,6 +166,11 @@ export default function DriverHomeScreen() {
     driverProfileStatus,
   });
   const { activeTrip, activeFlowState, visibleOffers } = flow;
+  const shiftReadiness = buildDriverShiftReadiness({
+    flow,
+    fatigue: driverFatigue,
+    earningsToday: earnings?.summary.today,
+  });
   const { presenceNote } = useDriverPresence(
     flow.availabilityStatus === 'ONLINE' || Boolean(activeTrip),
   );
@@ -366,6 +387,17 @@ export default function DriverHomeScreen() {
           </Text>
         </Pressable>
       </LiveHeroCard>
+
+      <RouteSignalCard
+        eyebrow={shiftReadiness.eyebrow}
+        badgeLabel={shiftReadiness.scoreLabel}
+        badgeTone={shiftReadiness.tone}
+        title={shiftReadiness.title}
+        description={shiftReadiness.description}
+        insights={shiftReadiness.insights}
+        note={shiftReadiness.note}
+        noteTone={shiftReadiness.noteTone}
+      />
 
       <View style={styles.metricsGrid}>
         <DashboardMetricCard

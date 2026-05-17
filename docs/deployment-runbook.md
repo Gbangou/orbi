@@ -101,6 +101,7 @@ Cela evite qu un cluster multi-instance expose des limites incoherentes selon le
 ## Checklist avant de deployer
 
 - `pnpm test:production:gate`
+- GitHub Actions `Production Readiness Gate` vert sur la branche candidate
 - `pnpm typecheck`
 - `pnpm --filter backend test -- --runInBand`
 - verifier que `DATABASE_URL` authentifie reellement contre PostgreSQL avant toute migration Prisma
