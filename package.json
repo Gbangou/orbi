@@ -23,6 +23,7 @@
     "lint": "pnpm -r --workspace-concurrency=1 lint",
     "typecheck": "pnpm --filter @orbi/domain build && pnpm --filter @orbi/api build && pnpm --filter @orbi/config build && pnpm --filter @orbi/ui build && pnpm --filter @orbi/admin-web build && pnpm --filter @orbi/rider-app typecheck && pnpm --filter @orbi/driver-app typecheck && pnpm --filter backend build",
     "test:admin:smoke": "pnpm --filter @orbi/admin-web test:smoke",
+    "test:mobile:helpers": "pnpm --filter @orbi/rider-app exec tsc -p ../../scripts/testing/mobile/tsconfig.json",
     "test:mobile:smoke": "pnpm --filter @orbi/rider-app test:smoke && pnpm --filter @orbi/driver-app test:smoke",
     "test:payments:fixtures": "pnpm --filter backend test -- payments.service.spec.ts --runInBand",
     "test:security:local": "powershell -ExecutionPolicy Bypass -File .\\scripts\\testing\\security-local-gate.ps1",

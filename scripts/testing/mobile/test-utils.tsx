@@ -39,7 +39,7 @@ export function collectText(node: ReactTestInstance): string {
 
 export function getTexts(renderer: TestRenderer.ReactTestRenderer) {
   return renderer.root
-    .findAll((node) => node.type === 'Text')
+    .findAll((node) => isHostType(node, 'Text'))
     .map((node) => collectText(node))
     .filter(Boolean);
 }
@@ -60,7 +60,7 @@ export async function pressByText(
   expectedText: string,
 ) {
   const pressable = renderer.root.find(
-    (node) => node.type === 'Pressable' && nodeContainsText(node, expectedText),
+    (node) => isHostType(node, 'Pressable') && nodeContainsText(node, expectedText),
   );
 
   await act(async () => {
@@ -87,7 +87,7 @@ export async function changeInputByPlaceholder(
   value: string,
 ) {
   const input = renderer.root.find(
-    (node) => node.type === 'TextInput' && node.props.placeholder === placeholder,
+    (node) => isHostType(node, 'TextInput') && node.props.placeholder === placeholder,
   );
 
   await act(async () => {
@@ -97,6 +97,10 @@ export async function changeInputByPlaceholder(
       await Promise.resolve();
     }
   });
+}
+
+function isHostType(node: ReactTestInstance, type: string) {
+  return (node.type as unknown) === type;
 }
 
 export async function cleanupRenderers() {

@@ -12,7 +12,7 @@ function Write-Step {
   Write-Host "[e2e] $Message" -ForegroundColor Cyan
 }
 
-function Fail-E2E {
+function Stop-LocalApiE2E {
   param([string]$Message)
   throw "Local API E2E failed: $Message"
 }
@@ -55,11 +55,11 @@ function Invoke-Json {
       $message = $_.ErrorDetails.Message
     }
 
-    Fail-E2E "$Method $Path -> $message"
+    Stop-LocalApiE2E "$Method $Path -> $message"
   }
 }
 
-function Sign-In {
+function Request-SessionToken {
   param([string]$Email)
 
   $response = Invoke-Json -Method "POST" -Path "/auth/sign-in" -Body @{
@@ -68,7 +68,7 @@ function Sign-In {
   }
 
   if (!$response.sessionToken) {
-    Fail-E2E "sign-in returned no session token for $Email"
+    Stop-LocalApiE2E "sign-in returned no session token for $Email"
   }
 
   return $response.sessionToken
@@ -82,7 +82,7 @@ function Assert-Equals {
   )
 
   if ($Actual -ne $Expected) {
-    Fail-E2E "$Message. Expected '$Expected', got '$Actual'."
+    Stop-LocalApiE2E "$Message. Expected '$Expected', got '$Actual'."
   }
 }
 
@@ -100,9 +100,9 @@ try {
 }
 
 Write-Step "Signing in demo accounts"
-$adminToken = Sign-In -Email "admin@orbi.app"
-$riderToken = Sign-In -Email "rider@orbi.app"
-$driverToken = Sign-In -Email "driver@orbi.app"
+$adminToken = Request-SessionToken -Email "admin@orbi.app"
+$riderToken = Request-SessionToken -Email "rider@orbi.app"
+$driverToken = Request-SessionToken -Email "driver@orbi.app"
 
 Write-Step "Putting driver online and updating presence"
 Invoke-Json -Method "PATCH" -Path "/drivers/availability" -Token $driverToken -Body @{
@@ -133,7 +133,7 @@ $rideRequest = Invoke-Json -Method "POST" -Path "/ride-requests" -Token $riderTo
 }
 
 if (!$rideRequest.id) {
-  Fail-E2E "ride request response did not include id"
+  Stop-LocalApiE2E "ride request response did not include id"
 }
 
 Write-Step "Accepting ride request as driver"
@@ -142,7 +142,7 @@ $tripId = $accepted.trip.id
 $pickupCode = $accepted.trip.pickupCode
 
 if (!$tripId -or !$pickupCode) {
-  Fail-E2E "accept response did not include trip id and pickup code"
+  Stop-LocalApiE2E "accept response did not include trip id and pickup code"
 }
 
 Assert-Equals -Actual $accepted.trip.status -Expected "MATCHED" -Message "trip should be matched after accept"
@@ -172,7 +172,7 @@ $checkout = Invoke-Json -Method "POST" -Path "/payments/checkout-intents" -Token
 }
 
 if (!$checkout.transactionRef -or !$checkout.amount) {
-  Fail-E2E "checkout response did not include transactionRef and amount"
+  Stop-LocalApiE2E "checkout response did not include transactionRef and amount"
 }
 
 Write-Step "Posting local success webhook"
@@ -195,22 +195,22 @@ Assert-Equals -Actual $webhook.nextAction -Expected "persisted_and_reconciled" -
 
 Write-Step "Loading webhook journal"
 $journal = Invoke-Json -Method "GET" -Path "/admin/payment-webhook-events?page=1&pageSize=10&transactionRef=$($checkout.transactionRef)" -Token $adminToken
-$event = $journal.events | Select-Object -First 1
+$webhookEvent = $journal.events | Select-Object -First 1
 
-if (!$event -or !$event.paymentAttemptId) {
-  Fail-E2E "webhook journal did not expose linked payment attempt"
+if (!$webhookEvent -or !$webhookEvent.paymentAttemptId) {
+  Stop-LocalApiE2E "webhook journal did not expose linked payment attempt"
 }
 
-Assert-Equals -Actual $event.paymentAttempt.status -Expected "SUCCEEDED" -Message "payment attempt should be succeeded"
+Assert-Equals -Actual $webhookEvent.paymentAttempt.status -Expected "SUCCEEDED" -Message "payment attempt should be succeeded"
 
 Write-Step "Checking wallet credit"
 $wallets = Invoke-Json -Method "GET" -Path "/admin/driver-wallets?page=1&pageSize=20" -Token $adminToken
 $wallet = $wallets.wallets | Where-Object {
-  $_.recentTransactions | Where-Object { $_.paymentAttemptId -eq $event.paymentAttemptId -and $_.type -eq "CREDIT" }
+  $_.recentTransactions | Where-Object { $_.paymentAttemptId -eq $webhookEvent.paymentAttemptId -and $_.type -eq "CREDIT" }
 } | Select-Object -First 1
 
 if (!$wallet) {
-  Fail-E2E "driver wallet credit was not visible in admin wallets"
+  Stop-LocalApiE2E "driver wallet credit was not visible in admin wallets"
 }
 
 Write-Step "Preparing and marking payout paid"
@@ -219,7 +219,7 @@ $prepared = Invoke-Json -Method "POST" -Path "/admin/driver-wallets/$($wallet.id
 }
 
 if (!$prepared.payout.id) {
-  Fail-E2E "payout preparation returned no payout id"
+  Stop-LocalApiE2E "payout preparation returned no payout id"
 }
 
 $paid = Invoke-Json -Method "POST" -Path "/admin/driver-payouts/$($prepared.payout.id)/paid" -Token $adminToken -Body @{
@@ -227,11 +227,11 @@ $paid = Invoke-Json -Method "POST" -Path "/admin/driver-payouts/$($prepared.payo
 }
 
 if (@("paid", "already_paid", "already_finalized") -notcontains $paid.action) {
-  Fail-E2E "unexpected payout paid action '$($paid.action)'"
+  Stop-LocalApiE2E "unexpected payout paid action '$($paid.action)'"
 }
 
 Write-Step "Refunding payment attempt"
-$refund = Invoke-Json -Method "POST" -Path "/admin/payment-attempts/$($event.paymentAttemptId)/refund" -Token $adminToken -Body @{
+$refund = Invoke-Json -Method "POST" -Path "/admin/payment-attempts/$($webhookEvent.paymentAttemptId)/refund" -Token $adminToken -Body @{
   reason = "Local API E2E refund $RunId"
 }
 
@@ -239,19 +239,19 @@ Assert-Equals -Actual $refund.refund.paymentAttempt.status -Expected "REFUNDED" 
 
 Write-Step "Checking refund reversal in wallet"
 $walletsAfterRefund = Invoke-Json -Method "GET" -Path "/admin/driver-wallets?page=1&pageSize=20" -Token $adminToken
-$refundReference = "payment:$($event.paymentAttemptId):driver-payout-refund"
+$refundReference = "payment:$($webhookEvent.paymentAttemptId):driver-payout-refund"
 $refundTransaction = $walletsAfterRefund.wallets.recentTransactions | ForEach-Object { $_ } | Where-Object {
   $_.reference -eq $refundReference -and $_.type -eq "REFUND"
 } | Select-Object -First 1
 
 if (!$refundTransaction) {
-  Fail-E2E "refund wallet reversal was not visible in admin wallets"
+  Stop-LocalApiE2E "refund wallet reversal was not visible in admin wallets"
 }
 
 Write-Step "Recording recovery adjustment"
 $recoveryWallet = $walletsAfterRefund.wallets | Where-Object { $_.id -eq $wallet.id } | Select-Object -First 1
 if (!$recoveryWallet -or $recoveryWallet.recoveryDue -le 0) {
-  Fail-E2E "wallet did not expose recovery due after refund"
+  Stop-LocalApiE2E "wallet did not expose recovery due after refund"
 }
 
 $recovery = Invoke-Json -Method "POST" -Path "/admin/driver-wallets/$($wallet.id)/recovery-adjustments" -Token $adminToken -Body @{
@@ -265,14 +265,14 @@ Assert-Equals -Actual $recovery.wallet.recoveryDue -Expected 0 -Message "recover
 Write-Step "Checking live ops refund counter"
 $liveOps = Invoke-Json -Method "GET" -Path "/admin/live-ops" -Token $adminToken
 if ($liveOps.summary.payments.refunded -lt 1) {
-  Fail-E2E "live ops refunded counter did not include the refund"
+  Stop-LocalApiE2E "live ops refunded counter did not include the refund"
 }
 
 Write-Host ""
 Write-Host "Local API E2E smoke passed." -ForegroundColor Green
 Write-Host "RideRequest:     $($rideRequest.id)"
 Write-Host "Trip:            $tripId"
-Write-Host "PaymentAttempt:  $($event.paymentAttemptId)"
+Write-Host "PaymentAttempt:  $($webhookEvent.paymentAttemptId)"
 Write-Host "TransactionRef:  $($checkout.transactionRef)"
 Write-Host "ProviderRef:     $providerReference"
 Write-Host "Wallet:          $($wallet.id)"

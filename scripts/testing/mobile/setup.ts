@@ -39,9 +39,9 @@ jest.mock(
       React.Children.only(children);
 
     const stack = Object.assign(
-      (props: unknown) => React.createElement('Stack', props),
+      (props: unknown) => React.createElement('Stack', props as object),
       {
-        Screen: (props: unknown) => React.createElement('StackScreen', props),
+        Screen: (props: unknown) => React.createElement('StackScreen', props as object),
       },
     );
 

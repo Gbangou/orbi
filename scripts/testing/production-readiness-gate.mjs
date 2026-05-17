@@ -97,6 +97,10 @@ try {
   }
 
   if (!isSkipped('--skip-mobile-smoke')) {
+    runGate('Mobile shared test helpers typecheck', 'pnpm', [
+      'test:mobile:helpers',
+    ]);
+
     runGate('Mobile smoke tests', 'pnpm', ['test:mobile:smoke']);
   }
 
