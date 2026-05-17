@@ -11,9 +11,9 @@ import {
   resolveCollectionDelta,
 } from './admin-ops-kernel';
 import {
-  adminMutationHeaderName,
-  adminMutationHeaderValue,
-} from './admin-server-security';
+  createAdminMutationHeaders,
+  fetchAdminJson,
+} from './admin-client-fetch';
 import { subscribeToAdminRealtime } from './admin-realtime';
 
 type SupportQueueProps = {
@@ -33,18 +33,7 @@ function getTicketStatusClass(status: string) {
 }
 
 async function fetchSupportTickets() {
-  const response = await fetch('/api/admin/support-tickets', {
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Support queue fetch failed');
-  }
-
-  return (await response.json()) as SupportTicketQueueResponse;
+  return fetchAdminJson<SupportTicketQueueResponse>('/api/admin/support-tickets');
 }
 
 async function updateSupportTicket(
@@ -54,20 +43,17 @@ async function updateSupportTicket(
     priority?: number;
   },
 ) {
-  const response = await fetch(`/api/admin/support-tickets/${ticketId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      [adminMutationHeaderName]: adminMutationHeaderValue,
+  return fetchAdminJson<SupportTicketUpdateResponse>(
+    `/api/admin/support-tickets/${ticketId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...createAdminMutationHeaders(),
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error('Support ticket update failed');
-  }
-
-  return (await response.json()) as SupportTicketUpdateResponse;
+  );
 }
 
 export function SupportQueue({ initialTickets }: SupportQueueProps) {

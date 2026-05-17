@@ -6,10 +6,7 @@ import {
   type AdminDriverWalletRecoveryAdjustmentResponse,
   type AdminDriverWalletsResponse,
 } from '@orbi/api';
-import {
-  adminMutationHeaderName,
-  adminMutationHeaderValue,
-} from './admin-server-security';
+import { postAdminMutation } from './admin-client-fetch';
 import { formatAdminDateTime } from './admin-ops-kernel';
 
 type DriverWalletsBoardProps = {
@@ -18,23 +15,6 @@ type DriverWalletsBoardProps = {
 
 function formatMoney(amount: number, currency = 'XOF') {
   return `${currency} ${Math.round(amount).toLocaleString('fr-FR')}`;
-}
-
-async function postAdminMutation<TResponse>(path: string, body?: unknown) {
-  const response = await fetch(path, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      [adminMutationHeaderName]: adminMutationHeaderValue,
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    throw new Error('Admin mutation failed');
-  }
-
-  return (await response.json()) as TResponse;
 }
 
 export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
@@ -189,9 +169,16 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
         await postAdminMutation<AdminDriverWalletRecoveryAdjustmentResponse>(
           `/api/admin/driver-wallets/${walletId}/recovery-adjustments`,
           {
-            amount: recoveryDue,
-            notes: 'Recouvrement terrain confirme depuis la console ops.',
-            idempotencyKey: `recovery-${walletId}-${Math.round(recoveryDue)}`,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              amount: recoveryDue,
+              notes: 'Recouvrement terrain confirme depuis la console ops.',
+              idempotencyKey: `recovery-${walletId}-${Math.round(
+                recoveryDue,
+              )}`,
+            }),
           },
       );
 

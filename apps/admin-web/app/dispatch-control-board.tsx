@@ -4,11 +4,11 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   type AdminDispatchSettingsResponse,
 } from '@orbi/api';
-import { formatAdminDateTime } from './admin-ops-kernel';
 import {
-  adminMutationHeaderName,
-  adminMutationHeaderValue,
-} from './admin-server-security';
+  createAdminMutationHeaders,
+  fetchAdminJson,
+} from './admin-client-fetch';
+import { formatAdminDateTime } from './admin-ops-kernel';
 
 type DispatchControlBoardProps = {
   initialSettings: AdminDispatchSettingsResponse;
@@ -128,18 +128,9 @@ function resolveActorRole(entry: DispatchHistoryEntry) {
 }
 
 async function fetchDispatchSettings() {
-  const response = await fetch('/api/admin/dispatch-settings', {
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Dispatch settings fetch failed');
-  }
-
-  return (await response.json()) as AdminDispatchSettingsResponse;
+  return fetchAdminJson<AdminDispatchSettingsResponse>(
+    '/api/admin/dispatch-settings',
+  );
 }
 
 async function updateDispatchSettings(
@@ -151,20 +142,17 @@ async function updateDispatchSettings(
     resetToDefaults?: boolean;
   },
 ) {
-  const response = await fetch('/api/admin/dispatch-settings', {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      [adminMutationHeaderName]: adminMutationHeaderValue,
+  return fetchAdminJson<AdminDispatchSettingsResponse>(
+    '/api/admin/dispatch-settings',
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...createAdminMutationHeaders(),
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error('Dispatch settings update failed');
-  }
-
-  return (await response.json()) as AdminDispatchSettingsResponse;
+  );
 }
 
 export function DispatchControlBoard({
