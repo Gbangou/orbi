@@ -115,6 +115,7 @@ describe('RideRequestsService', () => {
         destinationAddress: 'Ouaga 2000',
         destinationLatitude: 12.3274,
         destinationLongitude: -1.5339,
+        paymentMethod: 'MOBILE_MONEY',
         pricingCity: 'OUAGADOUGOU',
         districtProfile: 'UNIVERSITY',
         estimatedDistanceKm: expect.any(Number),
@@ -153,7 +154,7 @@ describe('RideRequestsService', () => {
     const { prisma, pricingService, service } = createService();
 
     pricingService.quote.mockResolvedValue({
-      estimatedFare: 2150,
+      estimatedFare: 2350,
     });
     prisma.rideRequest.findFirst.mockResolvedValue(null);
     prisma.trip.findFirst.mockResolvedValue(null);
@@ -236,6 +237,7 @@ describe('RideRequestsService', () => {
       destinationLongitude: -1.5339,
       requestedVehicleType: 'MOTORCYCLE',
       requestedServiceTier: 'MOTO_STANDARD',
+      paymentMethod: 'MOBILE_MONEY',
       pricingCity: 'OUAGADOUGOU',
       districtProfile: 'UNIVERSITY',
       estimatedFare: 2150,
@@ -264,8 +266,59 @@ describe('RideRequestsService', () => {
     });
 
     expect(result.id).toBe('request-active-1');
+    expect(result.estimatedFare).toBe(2150);
     expect(prisma.rideRequest.create).not.toHaveBeenCalled();
     expect(realtimeService.publish).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a changed payment method as a duplicate booking retry', async () => {
+    const { prisma, pricingService, service } = createService();
+
+    pricingService.quote.mockResolvedValue({
+      estimatedFare: 2150,
+    });
+    prisma.rideRequest.findFirst.mockResolvedValue({
+      id: 'request-active-1',
+      riderId: 'rider-1',
+      status: 'REQUESTED',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      pickupLatitude: 12.3714,
+      pickupLongitude: -1.5197,
+      destinationAddress: 'Ouaga 2000',
+      destinationLatitude: 12.3274,
+      destinationLongitude: -1.5339,
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      paymentMethod: 'MOBILE_MONEY',
+      pricingCity: 'OUAGADOUGOU',
+      districtProfile: 'UNIVERSITY',
+      estimatedFare: 2150,
+      estimatedDistanceKm: 5.1,
+      estimatedDurationMinutes: 18,
+      createdAt: new Date('2026-05-10T09:00:00.000Z'),
+    });
+    prisma.trip.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.create({
+        riderId: 'rider-1',
+        pickupAddress: ' Universite Joseph Ki-Zerbo ',
+        pickupLatitude: 12.3714,
+        pickupLongitude: -1.5197,
+        destinationAddress: ' Ouaga 2000 ',
+        destinationLatitude: 12.3274,
+        destinationLongitude: -1.5339,
+        requestedVehicleType: 'MOTORCYCLE',
+        requestedServiceTier: 'MOTO_STANDARD',
+        estimatedDistanceKm: 99,
+        estimatedDurationMinutes: 99,
+        paymentMethod: 'CASH',
+        pickupAreaType: 'URBAN_CORE',
+        city: 'OUAGADOUGOU',
+        districtProfile: 'UNIVERSITY',
+      }),
+    ).rejects.toThrow('The rider already has an active ride request.');
+    expect(prisma.rideRequest.create).not.toHaveBeenCalled();
   });
 
   it('falls back to client route estimates when coordinates are absent', async () => {

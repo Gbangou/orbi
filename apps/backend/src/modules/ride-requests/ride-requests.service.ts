@@ -105,6 +105,7 @@ export class RideRequestsService {
               destinationLongitude: true,
               requestedVehicleType: true,
               requestedServiceTier: true,
+              paymentMethod: true,
               pricingCity: true,
               districtProfile: true,
               estimatedFare: true,
@@ -214,6 +215,7 @@ export class RideRequestsService {
       destinationLongitude?: unknown;
       requestedVehicleType: string;
       requestedServiceTier?: string | null;
+      paymentMethod?: string | null;
       pricingCity?: string | null;
       districtProfile?: string | null;
       estimatedFare?: unknown;
@@ -240,9 +242,10 @@ export class RideRequestsService {
       existing.requestedVehicleType === next.requestedVehicleType &&
       (existing.requestedServiceTier ?? null) ===
         (next.requestedServiceTier ?? null) &&
+      (existing.paymentMethod ?? 'MOBILE_MONEY') ===
+        (next.paymentMethod ?? 'MOBILE_MONEY') &&
       (existing.pricingCity ?? null) === (next.pricingCity ?? null) &&
       (existing.districtProfile ?? null) === (next.districtProfile ?? null) &&
-      this.sameRoundedNumber(existing.estimatedFare, next.estimatedFare) &&
       this.sameRoundedNumber(
         existing.estimatedDistanceKm,
         next.estimatedDistanceKm,

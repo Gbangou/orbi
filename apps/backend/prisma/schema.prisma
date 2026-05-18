@@ -118,6 +118,12 @@ enum PaymentChannel {
   WALLET
 }
 
+enum RidePaymentMethod {
+  MOBILE_MONEY
+  CASH
+  WALLET
+}
+
 enum PaymentAttemptStatus {
   INITIATED
   PENDING
@@ -347,6 +353,7 @@ model RideRequest {
   assignmentExpiresAt      DateTime?         @map("assignment_expires_at")
   requestedVehicleType     VehicleType       @map("requested_vehicle_type")
   requestedServiceTier     ServiceTier?      @map("requested_service_tier")
+  paymentMethod            RidePaymentMethod @default(MOBILE_MONEY) @map("payment_method")
   pricingCity              PricingCity       @default(OUAGADOUGOU) @map("pricing_city")
   districtProfile          DistrictProfile   @default(RESIDENTIAL_STANDARD) @map("district_profile")
   pickupAddress            String            @map("pickup_address")

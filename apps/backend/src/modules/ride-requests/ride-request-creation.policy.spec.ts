@@ -165,6 +165,7 @@ describe('ride-request-creation.policy', () => {
         destinationAddress: 'Ouaga 2000',
         pricingCity: 'BOBO_DIOULASSO',
         districtProfile: 'MARKET_DENSE',
+        paymentMethod: 'MOBILE_MONEY',
         estimatedFare: 2150,
         estimatedDistanceKm: 5.1,
         estimatedDurationMinutes: 18,

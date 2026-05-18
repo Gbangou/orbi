@@ -2629,6 +2629,7 @@ export type RideRequestResponse = {
   routeMetricsSource?: 'SERVER_COORDINATES' | 'CLIENT_ESTIMATE';
   requestedVehicleType: 'MOTORCYCLE' | 'CAR';
   requestedServiceTier?: string | null;
+  paymentMethod?: 'MOBILE_MONEY' | 'CASH' | 'WALLET' | string | null;
   city?: string | null;
   districtProfile?: string | null;
   createdAt?: string;

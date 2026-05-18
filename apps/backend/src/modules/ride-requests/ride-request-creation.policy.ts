@@ -242,6 +242,7 @@ export function buildRideRequestCreateData(
     destinationLongitude: payload.destinationLongitude,
     requestedVehicleType: payload.requestedVehicleType,
     requestedServiceTier: payload.requestedServiceTier,
+    paymentMethod: payload.paymentMethod ?? 'MOBILE_MONEY',
     pricingCity: pricingGeography.city,
     districtProfile: pricingGeography.districtProfile,
     estimatedFare,

@@ -21,6 +21,7 @@ export class RideRequestProjector {
       estimatedDurationMinutes?: number | null;
       requestedVehicleType: 'MOTORCYCLE' | 'CAR';
       requestedServiceTier?: string | null;
+      paymentMethod?: string | null;
       pricingCity?: string | null;
       districtProfile?: string | null;
       createdAt?: Date;
@@ -47,6 +48,7 @@ export class RideRequestProjector {
       routeMetricsSource: input.routeMetrics.source,
       requestedVehicleType: input.rideRequest.requestedVehicleType,
       requestedServiceTier: input.rideRequest.requestedServiceTier ?? null,
+      paymentMethod: input.rideRequest.paymentMethod ?? 'MOBILE_MONEY',
       city: input.rideRequest.pricingCity ?? null,
       districtProfile: input.rideRequest.districtProfile ?? null,
       createdAt: input.rideRequest.createdAt?.toISOString(),

@@ -261,6 +261,11 @@ de securite ou de confiance.
   offres expirees ou bloquees par course active, normalisation stricte du code
   pickup, rejet des codes incomplets avant appel API et blocage de finalisation
   directement dans l action quand Ride Check interdit la completion.
+- Demandes de course backend durcies sur l invariant paiement: `paymentMethod`
+  est maintenant persiste sur `RideRequest`, expose dans le contrat partage et
+  pris en compte dans la deduplication de retry, afin qu un retry identique
+  recupere la demande existante sans recalculer le prix verrouille tandis qu un
+  changement de paiement ne se fait jamais passer pour le meme booking.
 
 ## Architecture active
 
