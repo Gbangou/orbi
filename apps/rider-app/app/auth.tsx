@@ -26,6 +26,19 @@ export default function RiderAuthScreen() {
     Boolean(email.trim()) &&
     password.length >= 8 &&
     (mode === 'sign-in' || Boolean(fullName.trim()));
+  const authChecklist = [
+    email.trim()
+      ? 'Email pret'
+      : 'Saisissez un email pour ouvrir une session reelle.',
+    password.length >= 8
+      ? 'Mot de passe pret'
+      : 'Le mot de passe doit contenir au moins 8 caracteres.',
+    mode === 'sign-in' || fullName.trim()
+      ? mode === 'sign-in'
+        ? 'Connexion prete'
+        : 'Nom complet pret'
+      : 'Ajoutez le nom complet pour creer le compte.',
+  ];
 
   function applyDemoAccount() {
     setFullName('Awa Ouedraogo');
@@ -240,6 +253,14 @@ export default function RiderAuthScreen() {
           </Pressable>
         ) : null}
 
+        <View style={styles.formReadiness}>
+          {authChecklist.map((item) => (
+            <Text key={item} style={styles.formReadinessText}>
+              {item}
+            </Text>
+          ))}
+        </View>
+
         <Pressable
           disabled={isSubmitting || !canSubmit}
           onPress={() => void handleSubmit()}
@@ -402,6 +423,19 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.text,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  formReadiness: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: 'rgba(15, 23, 42, 0.32)',
+    padding: 12,
+    gap: 4,
+  },
+  formReadinessText: {
+    color: orbiTheme.colors.muted,
+    fontSize: 12,
+    fontWeight: '700',
   },
   buttonDisabled: {
     opacity: 0.65,

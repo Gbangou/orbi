@@ -359,7 +359,10 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<DriverAuthScreen />);
 
+    expectText(renderer, 'Saisissez un email pour ouvrir une session reelle.');
     await pressByText(renderer, 'Utiliser le compte demo');
+    expectText(renderer, 'Email pret');
+    expectText(renderer, 'Mot de passe pret');
     await pressByText(renderer, 'Se connecter');
 
     expect(mockedSignInDriverAccount).toHaveBeenCalledWith({

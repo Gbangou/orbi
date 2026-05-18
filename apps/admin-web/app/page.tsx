@@ -1,8 +1,8 @@
 import {
   adminMetrics,
-  authenticateAndFetchCurrentUser,
   burkinaPricingCityPresets,
   createOrbiApiClient,
+  fetchCurrentUser,
   fetchHealthCheck,
   fetchPricingEstimate,
   fetchAdminLiveOps,
@@ -35,6 +35,12 @@ import {
   orbiDemoAccounts,
   orbiRuntimeConfig,
 } from '@orbi/config';
+import { redirect } from 'next/navigation';
+import {
+  clearAdminServerSession,
+  createAdminServerSessionFromCredentials,
+  getAdminServerAuthSession,
+} from './admin-server-auth';
 import { LiveOpsBoard } from './live-ops-board';
 import { PricingStrategyBoard } from './pricing-strategy-board';
 import { DriverOnboardingReviewBoard } from './driver-onboarding-review-board';
@@ -345,6 +351,83 @@ function shouldShowDemoPasswords() {
   return process.env.NODE_ENV !== 'production';
 }
 
+type AdminAuthNotice = {
+  tone: 'success' | 'warning';
+  message: string;
+} | null;
+
+async function signInAdminAction(formData: FormData) {
+  'use server';
+
+  try {
+    await createAdminServerSessionFromCredentials({
+      email: String(formData.get('email') ?? ''),
+      password: String(formData.get('password') ?? ''),
+    });
+  } catch {
+    redirect('/?adminAuth=failed');
+  }
+
+  redirect('/?adminAuth=signed-in');
+}
+
+async function signInDemoAdminAction() {
+  'use server';
+
+  try {
+    await createAdminServerSessionFromCredentials(orbiDemoAccounts.admin);
+  } catch {
+    redirect('/?adminAuth=demo-failed');
+  }
+
+  redirect('/?adminAuth=signed-in');
+}
+
+async function signOutAdminAction() {
+  'use server';
+
+  await clearAdminServerSession();
+  redirect('/?adminAuth=signed-out');
+}
+
+function resolveAdminAuthNotice(
+  value: string | string[] | undefined,
+): AdminAuthNotice {
+  const code = Array.isArray(value) ? value[0] : value;
+
+  if (code === 'signed-in') {
+    return {
+      tone: 'success',
+      message: 'Session admin ouverte avec succes.',
+    };
+  }
+
+  if (code === 'signed-out') {
+    return {
+      tone: 'success',
+      message: 'Session admin fermee sur cette console.',
+    };
+  }
+
+  if (code === 'demo-failed') {
+    return {
+      tone: 'warning',
+      message:
+        'Connexion demo admin indisponible. Verifiez le backend et les identifiants seed.',
+    };
+  }
+
+  if (code === 'failed') {
+    return {
+      tone: 'warning',
+      message:
+        'Connexion admin refusee. Utilisez un compte ADMIN, OPS ou SUPPORT valide.',
+    };
+  }
+
+  return null;
+}
+
 const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
   generatedAt: new Date('2026-04-19T00:00:00.000Z').toISOString(),
   environment: 'development',
@@ -493,10 +576,8 @@ async function loadAdminData(): Promise<{
     burkinaPricingCityPresets[burkinaPricingCityPresets.length - 1];
 
   try {
-    const { authClient, me } = await authenticateAndFetchCurrentUser(
-      client,
-      orbiDemoAccounts.admin,
-    );
+    const { authClient } = await getAdminServerAuthSession();
+    const me = await fetchCurrentUser(authClient);
     const [
       overview,
       liveOps,
@@ -734,7 +815,12 @@ async function loadAdminData(): Promise<{
   }
 }
 
-export default async function AdminHomePage() {
+export default async function AdminHomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
   const {
     preview,
     liveOps,
@@ -750,9 +836,75 @@ export default async function AdminHomePage() {
     pricingScenarios,
   } = await loadAdminData();
   const showDemoPasswords = shouldShowDemoPasswords();
+  const adminAuthNotice = resolveAdminAuthNotice(resolvedSearchParams.adminAuth);
 
   return (
     <main className="shell">
+      <section className="admin-session-panel">
+        <div className="admin-session-copy">
+          <p className="eyebrow">Session admin</p>
+          <h2>Connexion operations reelle</h2>
+          <p>
+            Ouvrez une session ADMIN, OPS ou SUPPORT pour piloter les actions
+            sensibles. Le bouton demo utilise les memes routes auth que le
+            backend local.
+          </p>
+          {adminAuthNotice ? (
+            <p
+              className={`admin-auth-notice admin-auth-notice-${adminAuthNotice.tone}`}
+            >
+              {adminAuthNotice.message}
+            </p>
+          ) : null}
+        </div>
+        <form className="admin-auth-form" action={signInAdminAction}>
+          <label>
+            Email
+            <input
+              name="email"
+              type="email"
+              defaultValue={orbiDemoAccounts.admin.email}
+              autoComplete="email"
+              required
+            />
+          </label>
+          <label>
+            Mot de passe
+            <input
+              name="password"
+              type="password"
+              defaultValue={
+                showDemoPasswords ? orbiDemoAccounts.admin.password : undefined
+              }
+              autoComplete="current-password"
+              minLength={8}
+              required
+            />
+          </label>
+          <div className="admin-auth-actions">
+            <button className="admin-auth-primary" type="submit">
+              Se connecter
+            </button>
+            <button
+              className="admin-auth-secondary"
+              formAction={signInDemoAdminAction}
+              formNoValidate
+              type="submit"
+            >
+              Demo admin
+            </button>
+            <button
+              className="admin-auth-ghost"
+              formAction={signOutAdminAction}
+              formNoValidate
+              type="submit"
+            >
+              Deconnexion
+            </button>
+          </div>
+        </form>
+      </section>
+
       <section className="hero hero-grid">
         <div className="hero-copy">
           <p className="eyebrow">Orbi Operations Burkina Faso</p>

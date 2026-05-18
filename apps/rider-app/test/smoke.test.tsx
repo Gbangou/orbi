@@ -438,7 +438,10 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
 
+    expectText(renderer, 'Saisissez un email pour ouvrir une session reelle.');
     await pressByText(renderer, 'Utiliser le compte demo');
+    expectText(renderer, 'Email pret');
+    expectText(renderer, 'Mot de passe pret');
     await pressByText(renderer, 'Se connecter');
 
     expect(mockedSignInRiderAccount).toHaveBeenCalledWith({

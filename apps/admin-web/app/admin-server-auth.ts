@@ -52,6 +52,10 @@ export function canUseAdminDemoAccess() {
   return orbiDemoAccessEnabled;
 }
 
+export function isAdminRole(role: string) {
+  return adminRoles.has(role);
+}
+
 export function isAdminServerAuthRequiredError(
   error: unknown,
 ): error is AdminServerAuthRequiredError {
@@ -138,6 +142,47 @@ export async function getAdminServerAuthSession() {
     authClient: baseClient.withAuthToken(session.sessionToken),
     sessionToken: session.sessionToken,
   };
+}
+
+export async function createAdminServerSessionFromCredentials(payload: {
+  email: string;
+  password: string;
+}) {
+  const email = payload.email.trim().toLowerCase();
+  const password = payload.password;
+
+  if (!email || password.length < 8) {
+    throw new AdminServerAuthRequiredError();
+  }
+
+  const cookieStore = await cookies();
+  const baseClient = createAdminBaseClient();
+  const session = await signInWithApi(baseClient, { email, password });
+  const authClient = baseClient.withAuthToken(session.sessionToken);
+  const me = await fetchCurrentUser(authClient);
+
+  if (!isAdminRole(me.user.role)) {
+    throw new AdminServerAuthRequiredError();
+  }
+
+  cookieStore.set(
+    getAdminSessionCookieName(),
+    session.sessionToken,
+    buildAdminSessionCookieOptions(),
+  );
+
+  return {
+    authClient,
+    sessionToken: session.sessionToken,
+    me,
+  };
+}
+
+export async function clearAdminServerSession() {
+  const cookieStore = await cookies();
+
+  cookieStore.delete(getAdminSessionCookieName());
+  cookieStore.delete(legacyAdminSessionCookieName);
 }
 
 export async function getAdminServerAuthClient() {

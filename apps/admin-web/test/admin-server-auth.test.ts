@@ -6,6 +6,7 @@ import {
   canUseAdminDemoAccess,
   createAdminServerAuthErrorResponse,
   getAdminSessionCookieName,
+  isAdminRole,
 } from '../app/admin-server-auth';
 
 describe('admin server auth cookie hardening', () => {
@@ -45,6 +46,14 @@ describe('admin server auth cookie hardening', () => {
 
   it('keeps demo auto sign-in behind the shared runtime flag', () => {
     expect(canUseAdminDemoAccess()).toBe(true);
+  });
+
+  it('allows only operational admin roles for explicit admin sessions', () => {
+    expect(isAdminRole('ADMIN')).toBe(true);
+    expect(isAdminRole('OPS')).toBe(true);
+    expect(isAdminRole('SUPPORT')).toBe(true);
+    expect(isAdminRole('DRIVER')).toBe(false);
+    expect(isAdminRole('RIDER')).toBe(false);
   });
 
   it('maps missing admin session errors to no-store 401 responses', async () => {

@@ -32,6 +32,107 @@ body {
   margin: 0 auto;
 }
 
+.admin-session-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+  gap: 18px;
+  align-items: end;
+  margin-bottom: 24px;
+  padding: 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(61, 215, 192, 0.24);
+  background:
+    linear-gradient(180deg, rgba(61, 215, 192, 0.08), rgba(11, 21, 35, 0.74)),
+    var(--panel);
+}
+
+.admin-session-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-session-copy h2,
+.admin-session-copy p {
+  margin: 0;
+}
+
+.admin-session-copy p {
+  color: var(--muted);
+}
+
+.admin-auth-notice {
+  width: fit-content;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.admin-auth-notice-success {
+  color: #8cf1e1;
+  background: rgba(61, 215, 192, 0.12);
+}
+
+.admin-auth-notice-warning {
+  color: #ffd08a;
+  background: rgba(255, 182, 72, 0.12);
+}
+
+.admin-auth-form {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr);
+  gap: 12px;
+}
+
+.admin-auth-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.admin-auth-form input {
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: rgba(7, 17, 29, 0.66);
+  color: var(--text);
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.admin-auth-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-auth-actions button {
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-auth-primary {
+  color: #052a28;
+  background: var(--accent);
+}
+
+.admin-auth-secondary {
+  color: #3b2205;
+  background: var(--accent-warm);
+}
+
+.admin-auth-ghost {
+  color: var(--text);
+  background: transparent;
+  border-color: var(--panel-border) !important;
+}
+
 .hero {
   margin-bottom: 32px;
 }
@@ -2479,7 +2580,12 @@ body {
 @media (max-width: 900px) {
   .hero-grid,
   .roadmap-heading,
+  .admin-session-panel,
   .test-access-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-auth-form {
     grid-template-columns: 1fr;
   }
 
