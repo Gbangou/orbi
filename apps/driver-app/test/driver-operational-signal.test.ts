@@ -1,5 +1,6 @@
 import {
   buildDriverFatigueMessage,
+  buildDriverRouteSafetyBrief,
   buildDriverRouteMonitoringLines,
 } from '../lib/driver-operational-signal';
 
@@ -31,5 +32,74 @@ describe('driver operational signal helpers', () => {
         latestPosition: null,
       }),
     ).toEqual(['Ride Check: Warning (ND)', 'Dernier signal: Long Stop']);
+  });
+
+  it('marks impossible route signals as blocking before sensitive trip actions', () => {
+    const brief = buildDriverRouteSafetyBrief({
+      now: Date.parse('2026-04-19T08:15:00.000Z'),
+      routeMonitoring: {
+        state: 'clear',
+        alertCount: 0,
+        lastAlertType: null,
+        lastAlertAt: null,
+        lastPositionAt: '2026-04-19T08:02:30.000Z',
+        latestPosition: {
+          latitude: 12.37,
+          longitude: -1.52,
+          accuracyMeters: 380,
+          speedKph: 128,
+          distanceToPickupKm: 0.2,
+          distanceToDestinationKm: 6.1,
+          observedAt: '2026-04-19T08:02:30.000Z',
+          sourceRole: 'DRIVER',
+        },
+      },
+    });
+
+    expect(brief).toEqual(
+      expect.objectContaining({
+        tone: 'rose',
+        blocksCompletion: true,
+        title: 'Mission a verifier avant action sensible',
+      }),
+    );
+    expect(brief.insights).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Fraicheur', value: '13 min' }),
+        expect.objectContaining({ label: 'Precision', value: '380 m' }),
+        expect.objectContaining({ label: 'Vitesse', value: '128 km/h' }),
+      ]),
+    );
+  });
+
+  it('keeps a fresh coherent route as non-blocking driver guidance', () => {
+    expect(
+      buildDriverRouteSafetyBrief({
+        now: Date.parse('2026-04-19T08:03:00.000Z'),
+        routeMonitoring: {
+          state: 'clear',
+          alertCount: 0,
+          lastAlertType: null,
+          lastAlertAt: null,
+          lastPositionAt: '2026-04-19T08:02:30.000Z',
+          latestPosition: {
+            latitude: 12.37,
+            longitude: -1.52,
+            accuracyMeters: 18,
+            speedKph: 22,
+            distanceToPickupKm: 0.2,
+            distanceToDestinationKm: 6.1,
+            observedAt: '2026-04-19T08:02:30.000Z',
+            sourceRole: 'DRIVER',
+          },
+        },
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        tone: 'teal',
+        blocksCompletion: false,
+        actionLabel: 'Continuez la mission normalement.',
+      }),
+    );
   });
 });

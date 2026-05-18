@@ -64,6 +64,7 @@ import {
 } from "../lib/driver-active-flow";
 import {
   buildDriverFatigueMessage,
+  buildDriverRouteSafetyBrief,
   buildDriverRouteMonitoringLines,
 } from "../lib/driver-operational-signal";
 import {
@@ -452,6 +453,14 @@ export default function OffersScreen() {
     flow,
     tripDetail: activeTripDetail,
   });
+  const driverRouteSafetyBrief = useMemo(
+    () =>
+      buildDriverRouteSafetyBrief({
+        routeMonitoring: activeTripDetail?.trip.routeMonitoring,
+        now: reservationNow,
+      }),
+    [activeTripDetail, reservationNow],
+  );
   const riderTrustSnapshot = buildDriverRiderTrustSnapshot({
     tripDetail: activeTripDetail,
   });
@@ -898,14 +907,29 @@ export default function OffersScreen() {
 
     if (activeTrip.status === "IN_PROGRESS") {
       return (
-        <FlowActionButton
-          disabled={isSubmitting}
-          label="Terminer la course"
-          onPress={() => handleAdvanceTrip(activeTrip.id, "COMPLETED")}
-          tone="amber"
-          emphasis="primary"
-          style={isSubmitting ? styles.disabled : null}
-        />
+        <View style={styles.codeBlock}>
+          <FlowActionButton
+            disabled={isSubmitting || driverRouteSafetyBrief.blocksCompletion}
+            label={
+              driverRouteSafetyBrief.blocksCompletion
+                ? "Finalisation bloquee par Ride Check"
+                : "Terminer la course"
+            }
+            onPress={() => handleAdvanceTrip(activeTrip.id, "COMPLETED")}
+            tone="amber"
+            emphasis="primary"
+            style={
+              isSubmitting || driverRouteSafetyBrief.blocksCompletion
+                ? styles.disabled
+                : null
+            }
+          />
+          {driverRouteSafetyBrief.blocksCompletion ? (
+            <Text style={styles.routeSafetyBlockNote}>
+              Resolution support requise avant finalisation de la course.
+            </Text>
+          ) : null}
+        </View>
       );
     }
 
@@ -1103,6 +1127,21 @@ export default function OffersScreen() {
             label="Prochaine action"
             message={driverNextActionHint}
             tone={activeTrip.status === "IN_PROGRESS" ? "sky" : "amber"}
+          />
+          <RouteSignalCard
+            eyebrow={driverRouteSafetyBrief.eyebrow}
+            badgeLabel={
+              driverRouteSafetyBrief.blocksCompletion
+                ? "Finalisation bloquee"
+                : "Controle actif"
+            }
+            badgeTone={driverRouteSafetyBrief.tone}
+            title={driverRouteSafetyBrief.title}
+            description={driverRouteSafetyBrief.description}
+            insights={driverRouteSafetyBrief.insights}
+            note={driverRouteSafetyBrief.actionLabel}
+            noteTone={driverRouteSafetyBrief.tone}
+            isHighlighted={driverRouteSafetyBrief.blocksCompletion}
           />
           <Text style={styles.snapshotTitle}>Mission en direct</Text>
           <View style={styles.snapshotStrip}>
@@ -1657,6 +1696,11 @@ const styles = StyleSheet.create({
   },
   meta: {
     color: orbiTheme.colors.muted,
+  },
+  routeSafetyBlockNote: {
+    color: orbiTheme.colors.rose,
+    fontWeight: "700",
+    lineHeight: 19,
   },
   offerMissionCard: {
     borderRadius: 20,

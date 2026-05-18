@@ -256,6 +256,8 @@ function buildDriverTripsWithStatus(status: string) {
 }
 
 function buildDriverTripDetail(eventIds: string[], labels: string[]) {
+  const latestRouteSignalAt = new Date().toISOString();
+
   return {
     trip: {
       id: 'trip-driver-1',
@@ -282,8 +284,8 @@ function buildDriverTripDetail(eventIds: string[], labels: string[]) {
         state: 'warning',
         alertCount: 1,
         lastAlertType: 'LONG_STOP',
-        lastAlertAt: '2026-04-19T08:03:00.000Z',
-        lastPositionAt: '2026-04-19T08:02:30.000Z',
+        lastAlertAt: latestRouteSignalAt,
+        lastPositionAt: latestRouteSignalAt,
         latestPosition: {
           latitude: 12.37,
           longitude: -1.52,
@@ -291,7 +293,7 @@ function buildDriverTripDetail(eventIds: string[], labels: string[]) {
           speedKph: 18,
           distanceToPickupKm: 0.4,
           distanceToDestinationKm: 5.1,
-          observedAt: '2026-04-19T08:02:30.000Z',
+          observedAt: latestRouteSignalAt,
           sourceRole: 'DRIVER',
         },
       },
@@ -1016,6 +1018,34 @@ describe('driver smoke flows', () => {
       'COMPLETED',
     );
     expectText(renderer, 'Aucune reservation active');
+  });
+
+  it('blocks trip completion when route safety is critical', async () => {
+    const criticalRouteDetail = buildDriverTripDetail(
+      ['driver-timeline-1'],
+      ['Course demarree'],
+    );
+    criticalRouteDetail.trip.routeMonitoring.state = 'critical';
+    criticalRouteDetail.trip.routeMonitoring.latestPosition = {
+      ...criticalRouteDetail.trip.routeMonitoring.latestPosition,
+      accuracyMeters: 420,
+      speedKph: 126,
+    };
+
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers.mockResolvedValue([] as never);
+    mockedFetchMyTrips.mockResolvedValue(
+      buildDriverTripsWithStatus('IN_PROGRESS') as never,
+    );
+    mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
+    mockedFetchTripDetail.mockResolvedValue(criticalRouteDetail as never);
+
+    const renderer = await renderScreen(<OffersScreen />);
+    await pressByText(renderer, 'Actualiser le direct');
+
+    expectText(renderer, 'Finalisation bloquee par Ride Check');
+    expectText(renderer, 'Resolution support requise avant finalisation de la course.');
+    expect(mockedUpdateTripStatusWithApi).not.toHaveBeenCalled();
   });
 
   it('reports a driver incident from offers', async () => {
