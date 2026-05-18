@@ -212,16 +212,19 @@ function buildRideOptionVisual(option: RideOption) {
 function buildRideOptionDesignSignals(option: RideOption) {
   const isMoto = option.category === 'motorcycle';
   const paymentCount = option.paymentMethods?.length ?? 0;
+  let rideSignal = 'Pickup rapide';
+
+  if (option.tier === 'car-xl') {
+    rideSignal = 'Bagages + groupe';
+  } else if (option.tier === 'car-comfort') {
+    rideSignal = 'Trajet calme';
+  } else if (option.tier === 'moto-plus') {
+    rideSignal = 'Casque + confort';
+  }
 
   return [
     isMoto ? 'Slalom urbain' : 'Habitacle ferme',
-    option.tier === 'car-xl'
-      ? 'Bagages + groupe'
-      : option.tier === 'car-comfort'
-        ? 'Trajet calme'
-        : option.tier === 'moto-plus'
-          ? 'Casque + confort'
-          : 'Pickup rapide',
+    rideSignal,
     paymentCount > 1 ? `${paymentCount} paiements` : 'Mobile Money pret',
     option.marketplace
       ? `${option.marketplace.nearbyDrivers} proches`
