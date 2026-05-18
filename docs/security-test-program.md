@@ -91,7 +91,7 @@ Sur un poste ou `next build` est bloque par `spawn EPERM`, executer le gate avec
 le build separe hors sandbox ou utiliser directement:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.ps1 -SkipTypecheck
+pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.ps1 -SkipTypecheck
 ```
 
 ## Matrice Des Tests Demandes

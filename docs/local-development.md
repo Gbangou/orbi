@@ -7,7 +7,19 @@ Ce guide est la version la plus simple pour voir Orbi evoluer en local avant un 
 - Node.js
 - pnpm
 - Docker Desktop
+- PowerShell 7 (`pwsh`)
 - Expo Go sur votre telephone Android si vous voulez voir les apps mobiles sur vrai appareil
+
+Les scripts npm Orbi utilisent PowerShell 7 (`pwsh`) plutot que le
+`powershell.exe` Windows historique. Si Windows affiche une erreur
+`powershell.exe 0xc0000142`, ouvrez un nouveau terminal et verifiez:
+
+```powershell
+pwsh -NoLogo -NoProfile -Command "$PSVersionTable.PSVersion"
+```
+
+Si `pwsh` n est pas trouve, installez PowerShell 7 puis relancez la commande
+Orbi (`pnpm db:start`, `pnpm mobile:lan`, `pnpm dev:full-web`, etc.).
 
 ## Premiere preparation
 
