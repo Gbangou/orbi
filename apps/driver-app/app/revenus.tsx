@@ -15,6 +15,7 @@ import {
   resolveDriverActiveFlow,
 } from '../lib/driver-active-flow';
 import {
+  buildDriverEarningsTrustSummary,
   buildDriverEarningsDeltaLabel,
   formatDriverEarningsAmount,
   formatDriverEarningsCount,
@@ -165,6 +166,7 @@ export default function RevenusScreen() {
     reservationNow: 0,
     driverProfileStatus,
   });
+  const earningsTrustSummary = buildDriverEarningsTrustSummary(earnings);
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
@@ -273,6 +275,36 @@ export default function RevenusScreen() {
         currentStep="revenus"
         description="Le suivi financier partage maintenant le meme tunnel que l acces, le cockpit, le dispatch et le dossier operations."
       />
+
+      <SectionCard tone={earningsTrustSummary.settlementTone}>
+        <SectionHeading
+          eyebrow="Controle payout"
+          title="Gains nets rapproches"
+          description={earningsTrustSummary.note}
+        />
+        <View style={styles.settlementGrid}>
+          <MetricTile
+            label="Statut"
+            value={earningsTrustSummary.settlementStateLabel}
+            helper="controle local avant lecture chauffeur"
+          />
+          <MetricTile
+            label="Part chauffeur"
+            value={earningsTrustSummary.payoutRateLabel}
+            helper="base actuelle du payout net"
+          />
+          <MetricTile
+            label="Net recent"
+            value={earningsTrustSummary.recentNetPayoutLabel}
+            helper="courses visibles dans l historique"
+          />
+          <MetricTile
+            label="Plateforme estimee"
+            value={earningsTrustSummary.estimatedPlatformFeeLabel}
+            helper="ecart brut/net indicatif"
+          />
+        </View>
+      </SectionCard>
 
       <SectionCard tone="sky">
         <SectionHeading
@@ -406,6 +438,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  settlementGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   card: {
     flexGrow: 1,

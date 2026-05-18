@@ -439,6 +439,9 @@ describe('driver smoke flows', () => {
 
     expectText(renderer, 'Revenus synchronises. Mission Matched en cours.');
     expectText(renderer, 'Universite Joseph Ki-Zerbo vers Ouaga 2000');
+    expectText(renderer, 'Controle payout');
+    expectText(renderer, '82% chauffeur');
+    expectText(renderer, 'Plateforme estimee');
     expectText(renderer, 'Completed');
   });
 
