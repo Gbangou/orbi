@@ -926,7 +926,7 @@ export default function OffersScreen() {
           />
           {driverRouteSafetyBrief.blocksCompletion ? (
             <Text style={styles.routeSafetyBlockNote}>
-              Resolution support requise avant finalisation de la course.
+              {driverRouteSafetyBrief.actionLabel}
             </Text>
           ) : null}
         </View>

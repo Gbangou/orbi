@@ -138,6 +138,10 @@ pnpm --filter backend start
 - Confirm Live Ops keeps using the driver vehicle signal even if a newer rider
   ping arrives, and flags active trips still waiting for the first driver GPS
   signal.
+- Before completing, temporarily simulate a missing or stale driver route signal
+  when possible. Expected: the driver cockpit shows `Finalisation bloquee par
+  Ride Check` and does not send the completion request until a fresh driver
+  route signal is visible.
 - Complete the trip.
 - Expected: no invalid transition is accepted; admin timeline stays readable.
 

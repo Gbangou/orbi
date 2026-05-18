@@ -72,6 +72,47 @@ describe('driver operational signal helpers', () => {
     );
   });
 
+  it('blocks completion when route detail is unavailable', () => {
+    expect(
+      buildDriverRouteSafetyBrief({
+        now: Date.parse('2026-04-19T08:15:00.000Z'),
+        routeMonitoring: null,
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        tone: 'rose',
+        blocksCompletion: true,
+        title: 'Signal route indisponible',
+        actionLabel:
+          'Actualisez le direct, gardez le telephone ouvert et contactez le support si le signal ne revient pas.',
+      }),
+    );
+  });
+
+  it('blocks completion while the first driver GPS signal is still missing', () => {
+    expect(
+      buildDriverRouteSafetyBrief({
+        now: Date.parse('2026-04-19T08:15:00.000Z'),
+        routeMonitoring: {
+          state: 'unknown',
+          alertCount: 0,
+          lastAlertType: null,
+          lastAlertAt: null,
+          lastPositionAt: null,
+          latestPosition: null,
+        },
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        tone: 'rose',
+        blocksCompletion: true,
+        title: 'Premier signal GPS attendu',
+        actionLabel:
+          'Restez dans l app, activez la localisation et attendez un signal avant finalisation.',
+      }),
+    );
+  });
+
   it('keeps a fresh coherent route as non-blocking driver guidance', () => {
     expect(
       buildDriverRouteSafetyBrief({

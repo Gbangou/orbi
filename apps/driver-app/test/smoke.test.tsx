@@ -848,6 +848,24 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Verifier le code et demarrer');
   });
 
+  it('blocks trip completion when trip detail is temporarily unavailable', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers.mockResolvedValue([] as never);
+    mockedFetchMyTrips.mockResolvedValue(buildDriverTripsWithStatus('IN_PROGRESS') as never);
+    mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
+    mockedFetchTripDetail.mockRejectedValue(new TypeError('Network request failed'));
+
+    const renderer = await renderScreen(<OffersScreen />);
+    await pressByText(renderer, 'Actualiser le direct');
+
+    expectText(renderer, 'Finalisation bloquee par Ride Check');
+    expectText(
+      renderer,
+      'Actualisez le direct, gardez le telephone ouvert et contactez le support si le signal ne revient pas.',
+    );
+    expect(mockedUpdateTripStatusWithApi).not.toHaveBeenCalled();
+  });
+
   it('toggles driver availability from home', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverOffers
@@ -1044,7 +1062,10 @@ describe('driver smoke flows', () => {
     await pressByText(renderer, 'Actualiser le direct');
 
     expectText(renderer, 'Finalisation bloquee par Ride Check');
-    expectText(renderer, 'Resolution support requise avant finalisation de la course.');
+    expectText(
+      renderer,
+      'Arretez les actions non urgentes, contactez le support ou utilisez SOS si necessaire.',
+    );
     expect(mockedUpdateTripStatusWithApi).not.toHaveBeenCalled();
   });
 

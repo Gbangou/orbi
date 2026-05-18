@@ -49,14 +49,14 @@ export function buildDriverRouteSafetyBrief(input: {
       eyebrow: 'Ride Check',
       title: 'Signal route indisponible',
       description:
-        'La mission reste visible, mais le detail route n est pas encore synchronise.',
-      tone: 'amber' as RouteTone,
+        'La mission reste visible, mais la finalisation attend un detail route synchronise.',
+      tone: 'rose' as RouteTone,
       actionLabel:
-        'Gardez le telephone ouvert et actualisez si le reseau revient.',
-      blocksCompletion: false,
+        'Actualisez le direct, gardez le telephone ouvert et contactez le support si le signal ne revient pas.',
+      blocksCompletion: true,
       insights: [
-        { label: 'GPS', value: 'Indisponible', tone: 'amber' as RouteTone },
-        { label: 'Etat', value: 'Degrade', tone: 'amber' as RouteTone },
+        { label: 'GPS', value: 'Indisponible', tone: 'rose' as RouteTone },
+        { label: 'Etat', value: 'Bloquant', tone: 'rose' as RouteTone },
       ],
     };
   }
@@ -68,12 +68,13 @@ export function buildDriverRouteSafetyBrief(input: {
       eyebrow: 'Ride Check',
       title: 'Premier signal GPS attendu',
       description:
-        'Le cockpit attend une position chauffeur pour confirmer la coherence terrain.',
-      tone: 'amber' as RouteTone,
-      actionLabel: 'Restez dans l app et evitez de terminer la mission sans signal.',
-      blocksCompletion: false,
+        'Le cockpit attend une position chauffeur recente avant toute action de fin de course.',
+      tone: 'rose' as RouteTone,
+      actionLabel:
+        'Restez dans l app, activez la localisation et attendez un signal avant finalisation.',
+      blocksCompletion: true,
       insights: [
-        { label: 'GPS', value: 'En attente', tone: 'amber' as RouteTone },
+        { label: 'GPS', value: 'En attente', tone: 'rose' as RouteTone },
         {
           label: 'Alertes',
           value: formatOperationalCount(routeMonitoring.alertCount),
