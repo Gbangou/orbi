@@ -1,6 +1,6 @@
 # Orbi Development Status
 
-Date de reference: 17 mai 2026
+Date de reference: 18 mai 2026
 
 ## Etat court
 
@@ -13,6 +13,53 @@ smokes locaux.
 Le produit n'est pas encore une production large. Le bon objectif actuel reste
 un pilote terrain controle avec operations manuelles de secours, preuves de
 paiement provider, observabilite et runbooks verts.
+
+## Snapshot MVP / Production - 18 mai 2026
+
+Mesure locale du repo suivi par Git, hors `node_modules`, `.next`, `dist`,
+`coverage`, `.expo` et artefacts de build:
+
+| Mesure | Valeur |
+| --- | ---: |
+| Fichiers suivis mesures | 430 |
+| Lignes totales repo suivies | 94 817 |
+| Lignes code/config executable principales | 76 562 |
+| Backend NestJS/Prisma | 41 246 |
+| Admin web Next.js | 11 969 |
+| Rider app Expo | 9 166 |
+| Driver app Expo | 8 925 |
+| Contrat API partage | 3 466 |
+| Domaine partage | 655 |
+
+Evaluation produit actuelle:
+
+| Niveau | Etat | Lecture |
+| --- | --- | --- |
+| Prototype UI | Depasse | Les surfaces rider, driver, admin, backend et contrats existent. |
+| MVP local | Avance | Les parcours auth, booking, driver, paiement local, admin ops, health, jobs et smokes sont testables. |
+| MVP terrain controle | Proche, pas encore signe | Il faut repeter sessions appareils reels, DB reelle, provider sandbox paiement/refund et runbook ops. |
+| Production pilote limitee | En preparation | Les garde-fous existent, mais il manque preuves preprod/cloud, observabilite externe, secrets, rollback et validations legales/ops. |
+| Production large type Uber/Yango/Bolt | Pas encore | Necessite charge, pentest externe, SOC/IR, resilience multi-zone, support terrain, fraude GPS/paiement a l echelle et preuves marche. |
+
+En pourcentage pragmatique, Orbi est environ:
+
+- 75-85% d'un MVP local technique credible;
+- 55-65% d'un pilote terrain controle;
+- 30-40% d'une production limitee exploitable avec clients reels;
+- 10-20% d'une plateforme VTC mature a grande echelle.
+
+Ces pourcentages ne mesurent pas seulement le code. Ils mesurent aussi les
+preuves manquantes: usage terrain, fournisseurs reels, cloud, monitoring,
+support, legal, securite offensive et resilience.
+
+Ordres de grandeur des competiteurs: les lignes de code exactes d'Uber, Lyft,
+Bolt ou Yango ne sont pas publiques et changent en continu. Une plateforme VTC
+globale mature represente generalement des millions a dizaines de millions de
+lignes si l'on inclut apps mobiles, backend, data, ML/fraude, cartes, paiements,
+outils internes, infra, tests et services historiques. Le bon benchmark pour
+Orbi maintenant n'est donc pas le nombre brut de lignes, mais la couverture des
+invariants critiques et la capacite a executer un pilote sans perte d argent,
+de securite ou de confiance.
 
 ## Capacites recentes
 
@@ -196,6 +243,11 @@ paiement provider, observabilite et runbooks verts.
 - Gate production local ajoute: `pnpm test:production:gate` regroupe diff
   check, audit dependances, Prisma, specs readiness/backplane/collector, smokes
   admin/mobile et typecheck pour rendre les controles pre-lancement repetables.
+- Ride Check chauffeur ajoute cote mobile, backend et admin live ops:
+  finalisation course bloquee si le signal GPS chauffeur est absent, ancien,
+  trop imprecis, physiquement impossible ou associe a une alerte route critique.
+  La console operations expose maintenant l'etat `completionGate` pour triage et
+  resolution manuelle auditee.
 
 ## Architecture active
 
