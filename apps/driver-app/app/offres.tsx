@@ -176,6 +176,7 @@ function ActiveMissionMap({
   freshnessLabel: string;
 }) {
   const boundedProgress = Math.max(12, Math.min(88, progressPercent));
+  const riderProgress = isInProgress ? 88 : 12;
   const accent = isInProgress ? orbiTheme.colors.sky : orbiTheme.colors.amber;
   const motion = useRef(new Animated.Value(0)).current;
 
@@ -277,6 +278,9 @@ function ActiveMissionMap({
           {isInProgress ? "D" : "A"}
         </Text>
       </View>
+      <View style={[styles.activeMissionRiderPin, { left: `${riderProgress}%` }]}>
+        <Text style={styles.activeMissionRiderLabel}>Rider</Text>
+      </View>
       <Animated.View
         style={[
           styles.activeMissionVehiclePin,
@@ -300,6 +304,15 @@ function ActiveMissionMap({
           <View style={[styles.activeMissionWheel, { borderColor: accent }]} />
           <View style={[styles.activeMissionWheel, { borderColor: accent }]} />
         </View>
+      </Animated.View>
+      <Animated.View
+        style={[
+          styles.activeMissionDriverLabel,
+          { left: `${boundedProgress}%` },
+          vehicleMotion,
+        ]}
+      >
+        <Text style={styles.activeMissionDriverLabelText}>Driver</Text>
       </Animated.View>
       <View style={styles.activeMissionMapCopy}>
         <View style={styles.activeMissionHudRow}>
@@ -1643,6 +1656,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: orbiTheme.colors.amber,
+  },
+  activeMissionRiderPin: {
+    position: "absolute",
+    top: 91,
+    minWidth: 48,
+    marginLeft: -24,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: "rgba(251, 191, 36, 0.92)",
+    alignItems: "center",
+  },
+  activeMissionRiderLabel: {
+    color: "#3b2205",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  activeMissionDriverLabel: {
+    position: "absolute",
+    top: 24,
+    minWidth: 52,
+    marginLeft: -26,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: "rgba(56, 189, 248, 0.94)",
+    alignItems: "center",
+  },
+  activeMissionDriverLabelText: {
+    color: "#082f49",
+    fontSize: 10,
+    fontWeight: "900",
   },
   activeMissionPinLabel: {
     color: "#052a28",

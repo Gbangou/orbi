@@ -266,6 +266,10 @@ de securite ou de confiance.
   pris en compte dans la deduplication de retry, afin qu un retry identique
   recupere la demande existante sans recalculer le prix verrouille tandis qu un
   changement de paiement ne se fait jamais passer pour le meme booking.
+- Surfaces locales rendues plus actionnables: l admin expose des liens directs
+  vers admin/rider/driver web, les ecrans auth rider et driver proposent une
+  connexion demo immediate, et les cartes de mission rider/driver affichent
+  explicitement les marqueurs `Rider` et `Driver` en progression sur le trajet.
 
 ## Architecture active
 

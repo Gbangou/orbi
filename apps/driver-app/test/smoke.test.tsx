@@ -370,6 +370,19 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Session chauffeur active.');
   });
 
+  it('opens the driver demo session from the top action', async () => {
+    mockedSignInDriverAccount.mockResolvedValue(buildDriverSession() as never);
+
+    const renderer = await renderScreen(<DriverAuthScreen />);
+    await pressByText(renderer, 'Demo driver');
+
+    expect(mockedSignInDriverAccount).toHaveBeenCalledWith({
+      email: 'driver@orbi.app',
+      password: 'Orbi123!',
+    });
+    expect(router.replace).toHaveBeenCalledWith('/accueil');
+  });
+
   it('loads the driver home cockpit', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverOffers.mockResolvedValue(driverOffers.slice(0, 2) as never);
@@ -821,6 +834,8 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Statut critique mis a jour: Driver Arriving.');
     expectText(renderer, 'Chauffeur en approche');
     expectText(renderer, 'Mission en direct');
+    expectText(renderer, 'Rider');
+    expectText(renderer, 'Driver');
     expectText(renderer, 'Pickup');
     expectText(renderer, '0.4 km');
     expectText(

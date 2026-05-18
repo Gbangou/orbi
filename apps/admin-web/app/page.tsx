@@ -800,11 +800,11 @@ export default async function AdminHomePage() {
       <section className="panel test-access-panel">
         <div>
           <p className="eyebrow">Acces test local</p>
-          <h2>Comptes de demonstration</h2>
+          <h2>Acces directs actionnables</h2>
           <p className="lede">
-            Cette console admin utilise automatiquement le compte admin demo.
-            Les identifiants rider et driver se saisissent dans les apps mobiles
-            Expo, pas sur cette page.
+            Ouvrez chaque surface locale depuis cette console, puis utilisez le
+            bouton demo dans l app cible pour entrer sans ressaisir les
+            identifiants.
           </p>
         </div>
         <div className="test-access-grid">
@@ -812,6 +812,9 @@ export default async function AdminHomePage() {
             <span>Admin web</span>
             <strong>{orbiDemoAccounts.admin.email}</strong>
             <p>Deja connecte sur cette console.</p>
+            <a className="test-access-link" href="http://localhost:3001">
+              Ouvrir admin
+            </a>
             {showDemoPasswords ? (
               <code>{orbiDemoAccounts.admin.password}</code>
             ) : null}
@@ -819,7 +822,10 @@ export default async function AdminHomePage() {
           <article className="test-access-card">
             <span>Rider app</span>
             <strong>{orbiDemoAccounts.rider.email}</strong>
-            <p>Ouvre l app rider avec `pnpm dev:rider`.</p>
+            <p>Connexion, inscription, reservation et suivi live.</p>
+            <a className="test-access-link" href="http://localhost:8081/auth">
+              Ouvrir rider
+            </a>
             {showDemoPasswords ? (
               <code>{orbiDemoAccounts.rider.password}</code>
             ) : null}
@@ -827,7 +833,10 @@ export default async function AdminHomePage() {
           <article className="test-access-card">
             <span>Driver app</span>
             <strong>{orbiDemoAccounts.driver.email}</strong>
-            <p>Ouvre l app driver avec `pnpm dev:driver`.</p>
+            <p>Connexion, onboarding, offres et carte mission.</p>
+            <a className="test-access-link" href="http://localhost:8082/auth">
+              Ouvrir driver
+            </a>
             {showDemoPasswords ? (
               <code>{orbiDemoAccounts.driver.password}</code>
             ) : null}

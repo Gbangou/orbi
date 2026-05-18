@@ -34,6 +34,28 @@ export default function DriverAuthScreen() {
     setStatus('Compte demo chauffeur precharge pour accelerer la connexion.');
   }
 
+  async function handleDemoSignIn() {
+    setFullName('Issa Driver');
+    setEmail(orbiDemoAccounts.driver.email);
+    setPassword(orbiDemoAccounts.driver.password);
+    setMode('sign-in');
+    setIsSubmitting(true);
+    setStatus('Connexion immediate du compte demo chauffeur...');
+
+    try {
+      await signInDriverAccount({
+        email: orbiDemoAccounts.driver.email,
+        password: orbiDemoAccounts.driver.password,
+      });
+      setStatus('Session chauffeur active.');
+      router.replace('/accueil');
+    } catch (error) {
+      setStatus(describeAuthError(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   function describeAuthError(error: unknown) {
     if (error instanceof TypeError) {
       return 'Connexion reseau indisponible. Verifiez le backend avant de relancer la session chauffeur.';
@@ -97,6 +119,25 @@ export default function DriverAuthScreen() {
         secondaryMessage="Le compte chauffeur ouvre l acces aux offres live, aux revenus et au pilotage du dossier operations."
         tone="amber"
       />
+      {orbiDemoAccessEnabled ? (
+        <View style={styles.quickActionPanel}>
+          <View style={styles.quickActionCopy}>
+            <Text style={styles.quickActionTitle}>Entrer maintenant</Text>
+            <Text style={styles.quickActionMeta}>
+              Lance une vraie session chauffeur demo puis ouvre le cockpit.
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => void handleDemoSignIn()}
+            disabled={isSubmitting}
+            style={[styles.quickActionButton, isSubmitting ? styles.buttonDisabled : null]}
+          >
+            <Text style={styles.quickActionButtonLabel}>
+              {isSubmitting ? 'Connexion...' : 'Demo driver'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <SectionCard tone="sky">
         <SectionHeading
@@ -242,6 +283,37 @@ const styles = StyleSheet.create({
   subtitle: {
     color: orbiTheme.colors.muted,
     lineHeight: 20,
+  },
+  quickActionPanel: {
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.34)',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    padding: 16,
+    gap: 12,
+  },
+  quickActionCopy: {
+    gap: 4,
+  },
+  quickActionTitle: {
+    color: orbiTheme.colors.text,
+    fontWeight: '900',
+    fontSize: 18,
+  },
+  quickActionMeta: {
+    color: orbiTheme.colors.muted,
+    lineHeight: 18,
+  },
+  quickActionButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    backgroundColor: orbiTheme.colors.amber,
+  },
+  quickActionButtonLabel: {
+    color: '#3b2205',
+    fontWeight: '900',
   },
   insightRow: {
     flexDirection: 'row',

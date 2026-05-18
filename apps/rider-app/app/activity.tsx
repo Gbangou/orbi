@@ -75,6 +75,7 @@ function LiveApproachPreview({
   stateLabel,
   etaLabel,
   freshnessLabel,
+  isInProgress,
 }: {
   progressPercent: number;
   title: string;
@@ -82,8 +83,10 @@ function LiveApproachPreview({
   stateLabel: string;
   etaLabel?: string;
   freshnessLabel: string;
+  isInProgress: boolean;
 }) {
   const boundedProgress = Math.max(12, Math.min(88, progressPercent));
+  const riderProgress = isInProgress ? 88 : 12;
   const motion = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -179,6 +182,18 @@ function LiveApproachPreview({
       <View style={styles.approachDestinationPin}>
         <Text style={styles.approachPinLabel}>A</Text>
       </View>
+      <View style={[styles.approachPersonPin, { left: `${riderProgress}%` }]}>
+        <Text style={styles.approachPersonLabel}>Rider</Text>
+      </View>
+      <Animated.View
+        style={[
+          styles.approachDriverLabel,
+          { left: `${boundedProgress}%` },
+          vehicleMotion,
+        ]}
+      >
+        <Text style={styles.approachDriverLabelText}>Driver</Text>
+      </Animated.View>
       <View style={styles.approachMapCopy}>
         <View style={styles.approachHudRow}>
           <Text style={styles.approachHudLabel}>{etaLabel ?? "ETA live"}</Text>
@@ -866,6 +881,7 @@ export default function ActivityScreen() {
                 stateLabel={riderRouteProgress.stateLabel}
                 etaLabel={riderRouteProgress.etaLabel}
                 freshnessLabel={riderRouteProgress.freshnessLabel}
+                isInProgress={activeTrip.status === "IN_PROGRESS"}
               />
               <LiveRouteProgressCard {...riderRouteProgress} />
             </>
@@ -1206,6 +1222,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: orbiTheme.colors.amber,
+  },
+  approachPersonPin: {
+    position: "absolute",
+    top: 91,
+    minWidth: 48,
+    marginLeft: -24,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: "rgba(251, 191, 36, 0.92)",
+    alignItems: "center",
+  },
+  approachPersonLabel: {
+    color: "#3b2205",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  approachDriverLabel: {
+    position: "absolute",
+    top: 24,
+    minWidth: 52,
+    marginLeft: -26,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: "rgba(45, 212, 191, 0.94)",
+    alignItems: "center",
+  },
+  approachDriverLabelText: {
+    color: "#052a28",
+    fontSize: 10,
+    fontWeight: "900",
   },
   approachPinLabel: {
     color: "#082f49",

@@ -212,6 +212,25 @@ body {
   color: #8cf1e1;
 }
 
+.test-access-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 38px;
+  border-radius: 999px;
+  padding: 9px 13px;
+  background: rgba(61, 215, 192, 0.14);
+  border: 1px solid rgba(61, 215, 192, 0.32);
+  color: #8cf1e1;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.test-access-link:hover {
+  background: rgba(61, 215, 192, 0.22);
+}
+
 .panel {
   border-radius: 24px;
   border: 1px solid var(--panel-border);

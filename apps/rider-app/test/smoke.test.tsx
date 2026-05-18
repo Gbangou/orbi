@@ -449,6 +449,19 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Session passager active.');
   });
 
+  it('opens the rider demo session from the top action', async () => {
+    mockedSignInRiderAccount.mockResolvedValue(buildRiderSession() as never);
+
+    const renderer = await renderScreen(<RiderAuthScreen />);
+    await pressByText(renderer, 'Demo rider');
+
+    expect(mockedSignInRiderAccount).toHaveBeenCalledWith({
+      email: 'rider@orbi.app',
+      password: 'Orbi123!',
+    });
+    expect(router.replace).toHaveBeenCalledWith('/home');
+  });
+
   it('surfaces a network-specific auth message', async () => {
     mockedSignInRiderAccount.mockRejectedValue(new TypeError('Network request failed'));
 
@@ -890,6 +903,8 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Ride Check: Critical (1)');
     expectText(renderer, 'Dernier signal: Route Deviation');
     expectText(renderer, 'Mission en direct');
+    expectText(renderer, 'Rider');
+    expectText(renderer, 'Driver');
     expectText(renderer, 'Approche');
     expectText(renderer, '0.4 km');
     expectText(
