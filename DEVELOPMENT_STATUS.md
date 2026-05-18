@@ -253,6 +253,10 @@ de securite ou de confiance.
   normalisation des coordonnees avec virgule decimale, blocage des modes de
   partage automatique sans numero Burkina et garde anti-double action sur les
   mutations compte.
+- Booking rider durci: validation locale du service/paiement avant creation,
+  idempotency keys centralisees, checkout non initialise pour cash,
+  recalcul de preview selon le paiement choisi et reutilisation de la validation
+  lieux favoris avant sauvegarde depuis le flux reservation.
 
 ## Architecture active
 

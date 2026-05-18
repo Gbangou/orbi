@@ -542,6 +542,46 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Reference txn-123');
   });
 
+  it('creates a cash ride request without initializing checkout', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+    mockedCreateRideRequestWithApi.mockResolvedValue({
+      id: 'ride-request-cash',
+      routeMetricsSource: 'SERVER_COORDINATES',
+    } as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+    await pressByText(renderer, 'Cash');
+    await flushMicrotasks();
+    await pressByText(renderer, `Confirmer ${riderRideOptions[0]?.title}`);
+
+    expect(mockedFetchRideOptionsPreview).toHaveBeenLastCalledWith(
+      { kind: 'mock-client' },
+      expect.objectContaining({
+        paymentMethod: 'CASH',
+      }),
+    );
+    expect(mockedCreateRideRequestWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      expect.objectContaining({
+        paymentMethod: 'CASH',
+      }),
+      expect.objectContaining({
+        idempotencyKey: expect.stringContaining('-cash-'),
+      }),
+    );
+    expect(mockedCreateCheckoutIntentWithApi).not.toHaveBeenCalled();
+  });
+
   it('uses rider GPS as the pickup coordinates when available', async () => {
     riderPositionState.latestPosition = {
       latitude: 12.365,

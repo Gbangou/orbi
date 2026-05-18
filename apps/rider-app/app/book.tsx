@@ -56,6 +56,14 @@ import {
   SectionHeading,
   TransitionNoticeCard,
 } from '../lib/realtime-widgets';
+import { buildSavedPlacePayload } from '../lib/account-safety';
+import {
+  areBookingPlacesEquivalent,
+  buildCheckoutIdempotencyKey,
+  buildRideRequestIdempotencyKey,
+  resolveCheckoutChannel,
+  validateBookingSelection,
+} from '../lib/booking-safety';
 import { useRiderRealtimeStream } from '../lib/use-rider-realtime-stream';
 import { RiderJourneySection } from '../lib/rider-journey';
 import {
@@ -129,12 +137,6 @@ function normalizePlaceText(value: string) {
   return value.trim().toLowerCase();
 }
 
-function toIdempotencySegment(value: string | null | undefined) {
-  return normalizePlaceText(value ?? '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'unknown';
-}
-
 function isSamePlace(
   left: Place,
   right: RiderProfileResponse['profile']['savedPlaces'][number],
@@ -156,19 +158,6 @@ function isSamePlace(
 function buildSavedPlaceLabel(target: 'pickup' | 'destination', place: Place) {
   const prefix = target === 'pickup' ? 'Depart' : 'Destination';
   return `${prefix} ${place.label}`;
-}
-
-function arePlacesEquivalent(left: Place, right: Place) {
-  if (
-    left.coordinates &&
-    right.coordinates &&
-    Math.abs(left.coordinates.latitude - right.coordinates.latitude) < 0.0001 &&
-    Math.abs(left.coordinates.longitude - right.coordinates.longitude) < 0.0001
-  ) {
-    return true;
-  }
-
-  return normalizePlaceText(left.address) === normalizePlaceText(right.address);
 }
 
 function buildCurrentPositionPlace(position: {
@@ -431,14 +420,14 @@ export default function BookingScreen() {
 
   useEffect(() => {
     void loadBookingContext();
-  }, [pickupPlace, destinationPlace, selectedCityId]);
+  }, [pickupPlace, destinationPlace, selectedCityId, selectedPaymentMethod]);
 
   useEffect(() => {
     if (autoAppliedRiderPosition || !riderPosition.latestPosition) {
       return;
     }
 
-    if (!arePlacesEquivalent(pickupPlace, selectedCity.pickup)) {
+    if (!areBookingPlacesEquivalent(pickupPlace, selectedCity.pickup)) {
       return;
     }
 
@@ -468,7 +457,7 @@ export default function BookingScreen() {
           distanceKm: tripEstimate.distanceKm,
           durationMinutes: tripEstimate.durationMinutes,
           vehicleType: 'MOTORCYCLE',
-          paymentMethod: 'MOBILE_MONEY',
+          paymentMethod: toApiPaymentMethod(selectedPaymentMethod),
           zone: selectedCity.zone,
           city: selectedCity.id,
           districtProfile: selectedCity.districtProfile,
@@ -655,12 +644,19 @@ export default function BookingScreen() {
 
     try {
       const { authClient } = await restoreRiderSession();
-      await createSavedPlaceWithApi(authClient, {
+      const validation = buildSavedPlacePayload({
         label: buildSavedPlaceLabel(target, place),
         address: place.address,
-        latitude: place.coordinates.latitude,
-        longitude: place.coordinates.longitude,
+        latitude: String(place.coordinates.latitude),
+        longitude: String(place.coordinates.longitude),
       });
+
+      if (!validation.ok) {
+        setStatus(validation.message);
+        return;
+      }
+
+      await createSavedPlaceWithApi(authClient, validation.payload);
       await loadBookingContext();
       setStatus('Lieu ajoute a vos favoris pour les prochaines reservations.');
     } catch (error) {
@@ -719,41 +715,35 @@ export default function BookingScreen() {
       return;
     }
 
-    if (!selectedOption) {
+    const bookingValidation = validateBookingSelection({
+      destinationPlace,
+      hasOpenFlow,
+      pickupPlace,
+      selectedOption,
+      selectedPaymentMethod,
+    });
+    if (!bookingValidation.ok) {
+      setStatus(bookingValidation.message);
       return;
     }
-
-    if (hasOpenFlow) {
-      setStatus(
-        'Une demande ou une course est deja active. Finalisez-la d abord.',
-      );
-      return;
-    }
-
-    if (arePlacesEquivalent(pickupPlace, destinationPlace)) {
-      setStatus('Le depart et la destination doivent etre differents.');
-      return;
-    }
+    const selectedValidatedOption = bookingValidation.option;
 
     bookingMutationInFlightRef.current = true;
     setIsSubmitting(true);
     setStatus(
-      `Creation authentifiee de la demande ${selectedOption.title}...`,
+      `Creation authentifiee de la demande ${selectedValidatedOption.title}...`,
     );
 
     try {
       const { authClient, me } = await restoreRiderSession();
-      const bookingIdempotencyKey = [
-        'ride-request',
-        toIdempotencySegment(me.user.id ?? 'rider'),
-        toIdempotencySegment(selectedCity.id),
-        toIdempotencySegment(selectedOption.id),
-        toIdempotencySegment(selectedPaymentMethod),
-        toIdempotencySegment(pickupPlace.address),
-        toIdempotencySegment(destinationPlace.address),
-      ]
-        .join('-')
-        .slice(0, 128);
+      const bookingIdempotencyKey = buildRideRequestIdempotencyKey({
+        destinationAddress: destinationPlace.address,
+        paymentMethod: selectedPaymentMethod,
+        pickupAddress: pickupPlace.address,
+        riderId: me.user.id,
+        selectedCityId: selectedCity.id,
+        selectedOptionId: selectedValidatedOption.id,
+      });
       const createdRequest = await createRideRequestWithApi(
         authClient,
         {
@@ -767,15 +757,15 @@ export default function BookingScreen() {
           destinationAddress: destinationPlace.address,
           destinationLatitude: destinationPlace.coordinates?.latitude,
           destinationLongitude: destinationPlace.coordinates?.longitude,
-          requestedVehicleType: toApiVehicleType(selectedOption.category),
-          requestedServiceTier: toApiServiceTier(selectedOption.tier),
+          requestedVehicleType: toApiVehicleType(selectedValidatedOption.category),
+          requestedServiceTier: toApiServiceTier(selectedValidatedOption.tier),
           estimatedDistanceKm: tripEstimate.distanceKm,
           estimatedDurationMinutes: tripEstimate.durationMinutes,
           paymentMethod: toApiPaymentMethod(selectedPaymentMethod),
           pickupAreaType: selectedCity.zone,
           city: selectedCity.id,
           districtProfile: selectedCity.districtProfile,
-          notes: `Flow authentifie depuis l'app rider pour ${me.user.fullName}, ville ${selectedCity.label}, profil ${selectedCity.districtProfile}, option ${selectedOption.title}, paiement ${selectedPaymentMethod}`,
+          notes: `Flow authentifie depuis l'app rider pour ${me.user.fullName}, ville ${selectedCity.label}, profil ${selectedCity.districtProfile}, option ${selectedValidatedOption.title}, paiement ${selectedPaymentMethod}`,
         },
         {
           idempotencyKey: bookingIdempotencyKey,
@@ -787,8 +777,7 @@ export default function BookingScreen() {
           authClient,
           {
             rideRequestId: createdRequest.id,
-            channel:
-              selectedPaymentMethod === 'wallet' ? 'WALLET' : 'MOBILE_MONEY',
+            channel: resolveCheckoutChannel(selectedPaymentMethod),
             mobileMoneyNetwork:
               selectedPaymentMethod === 'mobile-money'
                 ? 'ORANGE_MONEY'
@@ -797,7 +786,10 @@ export default function BookingScreen() {
             redirectUrl: orbiRuntimeConfig.paymentRedirectUrl,
           },
           {
-            idempotencyKey: `checkout-${createdRequest.id}-${selectedPaymentMethod}`,
+            idempotencyKey: buildCheckoutIdempotencyKey({
+              paymentMethod: selectedPaymentMethod,
+              rideRequestId: createdRequest.id,
+            }),
           },
         );
 
@@ -884,7 +876,7 @@ export default function BookingScreen() {
           <InsightBadge label="Ville" value={selectedCity.label} tone="sky" />
           <InsightBadge
             label="Paiement"
-            value={selectedPaymentMethod}
+            value={formatPaymentMethodLabel(selectedPaymentMethod)}
             tone="teal"
           />
           <InsightBadge
@@ -984,7 +976,7 @@ export default function BookingScreen() {
             : riderPosition.positionNote,
           `Source du calcul: ${tripEstimate.source === 'coordinates' ? 'coordonnees reelles' : 'preset local'}.`,
           selectedOption
-            ? `Selection: ${selectedOption.title}, ${formatXof(selectedOption.fare)}, paiement ${selectedPaymentMethod}, ville ${selectedCity.label}`
+            ? `Selection: ${selectedOption.title}, ${formatXof(selectedOption.fare)}, paiement ${formatPaymentMethodLabel(selectedPaymentMethod)}, ville ${selectedCity.label}`
             : `Ville ${selectedCity.label}`,
         ]}
         note={
@@ -1298,7 +1290,7 @@ export default function BookingScreen() {
                       isActive ? styles.paymentChipLabelActive : null,
                     ]}
                   >
-                    {method}
+                    {formatPaymentMethodLabel(method)}
                   </Text>
                 </Pressable>
               );
