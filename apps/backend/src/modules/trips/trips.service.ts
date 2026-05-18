@@ -46,6 +46,9 @@ const routeStopMinutesThreshold = 8;
 const routeNoProgressMinutesThreshold = 10;
 const routeDeviationKmThreshold = 0.75;
 const routeMinimumProgressKm = 0.2;
+const routeCompletionMaxSignalAgeMinutes = 10;
+const routeCompletionMaxAccuracyMeters = 250;
+const routeCompletionMaxSpeedKph = 110;
 
 function hashShareToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
@@ -197,10 +200,48 @@ function getRoutePositionPayload(event: {
   return {
     latitude,
     longitude,
+    accuracyMeters: toNumber(payload.accuracyMeters),
     distanceToDestinationKm: toNumber(payload.distanceToDestinationKm),
     speedKph: toNumber(payload.speedKph),
+    sourceRole:
+      typeof payload.sourceRole === 'string' ? payload.sourceRole : null,
     createdAt: event.createdAt,
   };
+}
+
+function resolveLatestDriverRoutePosition(
+  events: Array<{
+    eventType: string;
+    payload?: unknown;
+    createdAt: Date;
+  }>,
+) {
+  return (
+    [...events]
+      .reverse()
+      .filter((event) => event.eventType === 'ROUTE_POSITION_RECORDED')
+      .map((event) => getRoutePositionPayload(event))
+      .find((position) => position && position.sourceRole !== UserRole.RIDER) ??
+    null
+  );
+}
+
+function hasCriticalRouteMonitoringAlert(
+  events: Array<{
+    eventType: string;
+    payload?: unknown;
+    createdAt: Date;
+  }>,
+) {
+  return events.some((event) => {
+    if (event.eventType !== 'ROUTE_MONITORING_ALERT') {
+      return false;
+    }
+
+    const payload = isRecord(event.payload) ? event.payload : {};
+
+    return payload.severity === 'critical';
+  });
 }
 
 @Injectable()
@@ -1289,6 +1330,13 @@ export class TripsService {
         where: {
           id: tripId,
         },
+        include: {
+          events: {
+            orderBy: {
+              createdAt: 'asc',
+            },
+          },
+        },
       });
 
       if (!trip) {
@@ -1307,6 +1355,10 @@ export class TripsService {
         throw new BadRequestException(
           `Trip cannot move from ${trip.status} to ${nextStatus}.`,
         );
+      }
+
+      if (nextStatus === 'COMPLETED' && auth.user.role === UserRole.DRIVER) {
+        this.assertDriverRouteAllowsCompletion(trip.events, new Date());
       }
 
       const updateData: {
@@ -1903,6 +1955,56 @@ export class TripsService {
     if (tripDriverId !== auth.user.driverProfile?.id) {
       throw new BadRequestException(
         'This trip does not belong to the authenticated driver.',
+      );
+    }
+  }
+
+  private assertDriverRouteAllowsCompletion(
+    events: Array<{
+      eventType: string;
+      payload?: unknown;
+      createdAt: Date;
+    }>,
+    now: Date,
+  ) {
+    const latestPosition = resolveLatestDriverRoutePosition(events);
+
+    if (!latestPosition) {
+      throw new BadRequestException(
+        'Trip completion requires a recent driver route signal.',
+      );
+    }
+
+    const signalAgeMinutes =
+      (now.getTime() - latestPosition.createdAt.getTime()) / 60000;
+
+    if (signalAgeMinutes > routeCompletionMaxSignalAgeMinutes) {
+      throw new BadRequestException(
+        'Trip completion is blocked until the driver route signal refreshes.',
+      );
+    }
+
+    if (
+      typeof latestPosition.accuracyMeters === 'number' &&
+      latestPosition.accuracyMeters > routeCompletionMaxAccuracyMeters
+    ) {
+      throw new BadRequestException(
+        'Trip completion is blocked because the last GPS signal is too imprecise.',
+      );
+    }
+
+    if (
+      typeof latestPosition.speedKph === 'number' &&
+      latestPosition.speedKph > routeCompletionMaxSpeedKph
+    ) {
+      throw new BadRequestException(
+        'Trip completion is blocked because the last route speed is impossible.',
+      );
+    }
+
+    if (hasCriticalRouteMonitoringAlert(events)) {
+      throw new BadRequestException(
+        'Trip completion is blocked by a critical route monitoring alert.',
       );
     }
   }

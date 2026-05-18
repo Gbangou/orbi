@@ -1,9 +1,26 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { TripsService } from './trips.service';
 import { ACTIVE_TRIP_STATUSES } from './trips.constants';
 import { createHash } from 'crypto';
 
 describe('TripsService', () => {
+  function buildFreshDriverRouteEvent(overrides: Record<string, unknown> = {}) {
+    return {
+      eventType: 'ROUTE_POSITION_RECORDED',
+      payload: {
+        latitude: 12.37,
+        longitude: -1.52,
+        accuracyMeters: 18,
+        speedKph: 24,
+        distanceToDestinationKm: 0.2,
+        observedAt: new Date().toISOString(),
+        sourceRole: 'DRIVER',
+        ...overrides,
+      },
+      createdAt: new Date(),
+    };
+  }
+
   function createService() {
     const prisma = {
       $transaction: jest.fn(),
@@ -1758,6 +1775,7 @@ describe('TripsService', () => {
       completedAt: null,
       actualFare: 2200,
       currency: 'XOF',
+      events: [buildFreshDriverRouteEvent()],
     });
     prisma.trip.update.mockResolvedValue({
       id: 'trip-1',
@@ -1807,6 +1825,54 @@ describe('TripsService', () => {
       },
     });
     expect(result.trip.status).toBe('COMPLETED');
+  });
+
+  it('blocks driver trip completion when route monitoring is critical', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-1',
+      rideRequestId: 'request-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+      startedAt: new Date('2026-04-17T09:00:00.000Z'),
+      completedAt: null,
+      actualFare: 2200,
+      currency: 'XOF',
+      events: [
+        buildFreshDriverRouteEvent({
+          accuracyMeters: 18,
+          speedKph: 24,
+        }),
+        {
+          eventType: 'ROUTE_MONITORING_ALERT',
+          payload: {
+            alertType: 'ROUTE_DEVIATION',
+            severity: 'critical',
+          },
+          createdAt: new Date(),
+        },
+      ],
+    });
+
+    await expect(
+      service.updateStatus(
+        {
+          user: {
+            role: 'DRIVER',
+            driverProfile: {
+              id: 'driver-1',
+            },
+          },
+        } as never,
+        'trip-1',
+        'COMPLETED',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.trip.update).not.toHaveBeenCalled();
+    expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+    expect(realtimeService.publish).not.toHaveBeenCalled();
   });
 
   it('does not let another driver update trip status', async () => {
