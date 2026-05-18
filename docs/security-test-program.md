@@ -82,6 +82,10 @@ pnpm test:production:gate
 
 Elle est aussi appelee par le workflow GitHub Actions `Production Readiness Gate`
 sur les pull requests et sur `main`.
+Ce gate execute aussi `pnpm test:payments:fixtures` afin que les fixtures
+webhooks/refunds et leur manifeste restent executables avant toute decision de
+pilote. Utiliser `--skip-payment-fixtures` uniquement pour diagnostiquer un
+autre blocage du gate, pas pour valider une release.
 
 Sur un poste ou `next build` est bloque par `spawn EPERM`, executer le gate avec
 le build separe hors sandbox ou utiliser directement:

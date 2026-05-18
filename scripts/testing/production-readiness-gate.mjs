@@ -57,6 +57,7 @@ process.stdout.write('Orbi production readiness gate\n');
 process.stdout.write(`SkipAudit:            ${isSkipped('--skip-audit')}\n`);
 process.stdout.write(`SkipPrisma:           ${isSkipped('--skip-prisma')}\n`);
 process.stdout.write(`SkipBackendReadiness: ${isSkipped('--skip-backend-readiness')}\n`);
+process.stdout.write(`SkipPaymentFixtures:  ${isSkipped('--skip-payment-fixtures')}\n`);
 process.stdout.write(`SkipAdminSmoke:       ${isSkipped('--skip-admin-smoke')}\n`);
 process.stdout.write(`SkipMobileSmoke:      ${isSkipped('--skip-mobile-smoke')}\n`);
 process.stdout.write(`SkipTypecheck:        ${isSkipped('--skip-typecheck')}\n`);
@@ -89,6 +90,12 @@ try {
       'configurable-realtime.transport',
       'mobile-error-collector',
       '--runInBand',
+    ]);
+  }
+
+  if (!isSkipped('--skip-payment-fixtures')) {
+    runGate('Payment provider fixture evidence', 'pnpm', [
+      'test:payments:fixtures',
     ]);
   }
 
