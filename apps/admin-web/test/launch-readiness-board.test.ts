@@ -18,7 +18,44 @@ function buildProductionReadiness(
     riskLevel,
     failedChecks: riskLevel === 'high' ? 2 : 0,
     warningChecks: riskLevel === 'medium' ? 3 : 0,
-    checks: [],
+    checks:
+      riskLevel === 'high'
+        ? [
+            {
+              id: 'payment-provider-evidence',
+              label: 'Preuves provider paiement',
+              state: 'fail',
+              detail: 'Aucune capture sandbox.',
+            },
+            {
+              id: 'mobile-error-collector',
+              label: 'Collector erreurs mobiles',
+              state: 'fail',
+              detail: 'Collector absent.',
+            },
+          ]
+        : riskLevel === 'medium'
+          ? [
+              {
+                id: 'provider-refunds',
+                label: 'Refunds provider',
+                state: 'warn',
+                detail: 'Mode manual.',
+              },
+              {
+                id: 'payment-provider-evidence',
+                label: 'Preuves provider paiement',
+                state: 'warn',
+                detail: 'Capture sandbox absente.',
+              },
+              {
+                id: 'mobile-error-collector',
+                label: 'Collector erreurs mobiles',
+                state: 'warn',
+                detail: 'Collector local.',
+              },
+            ]
+          : [],
   };
 }
 
@@ -41,6 +78,7 @@ describe('launch readiness production decision', () => {
       state: 'bad',
       label: 'production pilot bloque',
       title: 'Production pilot refuse',
+      detail: expect.stringContaining('Preuves provider paiement'),
     });
   });
 
@@ -51,6 +89,7 @@ describe('launch readiness production decision', () => {
     expect(resolveProductionPilotDecision(readiness)).toMatchObject({
       state: 'warn',
       label: 'pilot limite seulement',
+      detail: expect.stringContaining('Refunds provider'),
     });
   });
 

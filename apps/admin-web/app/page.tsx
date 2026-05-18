@@ -169,7 +169,7 @@ const fallbackHealth: HealthCheckResponse = {
       environment: 'development',
       riskLevel: 'medium',
       failedChecks: 0,
-      warningChecks: 3,
+      warningChecks: 4,
       checks: [
         {
           id: 'rate-limit-backplane',
@@ -188,6 +188,13 @@ const fallbackHealth: HealthCheckResponse = {
           label: 'Refunds provider',
           state: 'warn',
           detail: 'Refunds en mode manual/console.',
+        },
+        {
+          id: 'payment-provider-evidence',
+          label: 'Preuves provider paiement',
+          state: 'warn',
+          detail:
+            'Aucune fixture paiement sandbox confirmee dans le fallback admin.',
         },
       ],
     },

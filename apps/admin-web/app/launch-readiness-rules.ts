@@ -65,11 +65,17 @@ export function describeProductionReadiness(
   }
 
   if (productionReadiness.riskLevel === 'high') {
-    return `${productionReadiness.failedChecks} check(s) runtime bloquant(s): production pilot refuse.`;
+    return `${productionReadiness.failedChecks} check(s) runtime bloquant(s): ${summarizeReadinessChecks(
+      productionReadiness,
+      'fail',
+    )}. Production pilot refuse.`;
   }
 
   if (productionReadiness.riskLevel === 'medium') {
-    return `${productionReadiness.warningChecks} warning(s) runtime a traiter avant extension du pilote.`;
+    return `${productionReadiness.warningChecks} warning(s) runtime a traiter: ${summarizeReadinessChecks(
+      productionReadiness,
+      'warn',
+    )}. Extension du pilote refusee.`;
   }
 
   return 'Aucun blocage runtime detecte pour un pilote production encadre.';
@@ -109,7 +115,10 @@ export function resolveProductionPilotDecision(
       state: 'bad',
       label: 'production pilot bloque',
       title: 'Production pilot refuse',
-      detail: `${productionReadiness.failedChecks} check(s) bloquant(s) doivent etre corriges avant d ouvrir un pilote production.`,
+      detail: `${productionReadiness.failedChecks} check(s) bloquant(s): ${summarizeReadinessChecks(
+        productionReadiness,
+        'fail',
+      )}. Corriger avant d ouvrir un pilote production.`,
     };
   }
 
@@ -118,7 +127,10 @@ export function resolveProductionPilotDecision(
       state: 'warn',
       label: 'pilot limite seulement',
       title: 'Pilote encadre possible, extension refusee',
-      detail: `${productionReadiness.warningChecks} warning(s) runtime restent a traiter avant une montee en charge.`,
+      detail: `${productionReadiness.warningChecks} warning(s) runtime: ${summarizeReadinessChecks(
+        productionReadiness,
+        'warn',
+      )}. A traiter avant une montee en charge.`,
     };
   }
 
@@ -139,4 +151,30 @@ export function resolveProductionPilotDecision(
     detail:
       'Les checks runtime essentiels sont au vert pour un pilote production limite avec supervision ops.',
   };
+}
+
+function summarizeReadinessChecks(
+  productionReadiness: NonNullable<
+    HealthCheckResponse['operations']['productionReadiness']
+  >,
+  state: 'fail' | 'warn',
+) {
+  const labels = productionReadiness.checks
+    .filter((check) => check.state === state)
+    .slice(0, 3)
+    .map((check) => check.label);
+
+  if (labels.length === 0) {
+    return 'aucun detail disponible';
+  }
+
+  const remainingCount =
+    state === 'fail'
+      ? productionReadiness.failedChecks - labels.length
+      : productionReadiness.warningChecks - labels.length;
+  const summary = labels.join(', ');
+
+  return remainingCount > 0
+    ? `${summary}, +${remainingCount} autre(s)`
+    : summary;
 }
