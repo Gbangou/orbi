@@ -57,6 +57,9 @@ Le script `pnpm db:start` attend maintenant que PostgreSQL soit reellement pret 
 
 ## Voir l application sur le web
 
+Pour un parcours clic par clic complet, utiliser aussi
+`docs/demo-local-click-by-click.md`.
+
 Le mode le plus simple:
 
 ```powershell
@@ -150,6 +153,7 @@ production, ils sont masques par defaut; il faut definir explicitement
 - `pnpm dev:web-driver-preview`
 - `pnpm mobile:lan`
 - `pnpm mobile:check`
+- `pnpm demo:local-live-session`
 - `pnpm e2e:local-checklist`
 - `pnpm e2e:local-api`
 - `pnpm typecheck`
@@ -183,6 +187,17 @@ pnpm e2e:local-api
 Ce smoke est le meilleur indicateur MVP backend local: il couvre login demo,
 booking rider, acceptation driver, trip complet, checkout mobile money, webhook,
 wallet driver, payout, refund, reversal wallet et compteur live ops.
+
+Pour creer une vraie course demo active visible dans les apps rider et driver,
+avec positions GPS successives du chauffeur:
+
+```powershell
+pnpm demo:local-live-session
+```
+
+Pendant que les apps sont ouvertes, relancer la commande pour poster de
+nouveaux signaux. Ajouter `-- -StartTrip` pour demarrer aussi la course et
+simuler le mouvement vers la destination.
 
 ## Ordre conseille pour suivre l evolution
 

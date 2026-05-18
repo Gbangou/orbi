@@ -39,6 +39,7 @@ packages/
 - feuille de route active: `EXECUTION_PLAN.md`
 - preview live web/mobile: `LIVE_PREVIEW.md`
 - guide local pas a pas: `docs/local-development.md`
+- demo locale clic par clic: `docs/demo-local-click-by-click.md`
 - runbook E2E terrain local: `docs/local-e2e-field-session.md`
 - carte du monorepo: `docs/architecture/repository-map.md`
 - diagramme de classes: `docs/architecture/class-diagram.md`
@@ -62,6 +63,7 @@ pnpm prisma:migrate
 pnpm prisma:seed
 pnpm dev:full-web
 pnpm dev:web-driver-preview
+pnpm demo:local-live-session
 pnpm e2e:local-checklist
 pnpm e2e:local-api
 pnpm typecheck

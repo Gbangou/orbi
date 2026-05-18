@@ -52,6 +52,9 @@ Demo accounts:
 - Rider: `rider@orbi.app` / `Orbi123!`
 - Driver: `driver@orbi.app` / `Orbi123!`
 
+For click-by-click computer and phone testing, use
+`docs/demo-local-click-by-click.md`.
+
 ## Checklist Command
 
 Run this before a session:
@@ -78,6 +81,17 @@ live ops refund counter.
 Run it against a freshly seeded local database when possible. The smoke cancels
 leftover active trips for the demo driver before starting; if an old ride still
 blocks the flow, reseed first with `pnpm prisma:seed`.
+
+For an interactive local demo that leaves a real active trip visible in rider
+and driver apps, run:
+
+```powershell
+pnpm demo:local-live-session
+```
+
+Run it while the apps are open to post fresh driver GPS signals. Add
+`-- -StartTrip` to verify movement toward destination after pickup-code
+verification.
 
 For provider webhook fixture regression, especially before a payment/refund
 field session:

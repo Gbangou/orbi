@@ -21,6 +21,7 @@ ce flux doit changer dans le meme travail.
 | Architecture runtime | `architecture/runtime-architecture.md` |
 | Runbook deploiement | `deployment-runbook.md` |
 | Onboarding chauffeur securise | `driver-onboarding-security.md` |
+| Demo locale clic par clic | `demo-local-click-by-click.md` |
 | Directive production | `production-readiness-directive.md` |
 | Programme de tests securite et fiabilite | `security-test-program.md` |
 | Roadmap world-class | `world-class-readiness-roadmap.md` |
@@ -37,6 +38,7 @@ invariants, limites entre apps et packages.
 Documents d'execution locale, terrain et production:
 
 - `local-development.md`
+- `demo-local-click-by-click.md`
 - `local-e2e-field-session.md`
 - `deployment-runbook.md`
 - `guide-pas-a-pas-web-android.md`
