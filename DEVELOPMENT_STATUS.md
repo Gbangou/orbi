@@ -257,6 +257,10 @@ de securite ou de confiance.
   idempotency keys centralisees, checkout non initialise pour cash,
   recalcul de preview selon le paiement choisi et reutilisation de la validation
   lieux favoris avant sauvegarde depuis le flux reservation.
+- Actions driver offres/trajet durcies cote mobile: validation handler des
+  offres expirees ou bloquees par course active, normalisation stricte du code
+  pickup, rejet des codes incomplets avant appel API et blocage de finalisation
+  directement dans l action quand Ride Check interdit la completion.
 
 ## Architecture active
 

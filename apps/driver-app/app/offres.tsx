@@ -78,6 +78,12 @@ import { useDriverRealtimeStream } from "../lib/use-driver-realtime-stream";
 import { useLiveRefresh } from "../lib/use-live-refresh";
 import { DriverJourneySection } from "../lib/driver-journey";
 import { buildDriverShiftReadiness } from "../lib/driver-shift-readiness";
+import {
+  normalizePickupCode,
+  validateOfferAction,
+  validatePickupCode,
+  validateTripAdvance,
+} from "../lib/driver-action-safety";
 
 const fallbackHistory: MyTripsResponse = {
   role: "DRIVER",
@@ -635,6 +641,16 @@ export default function OffersScreen() {
   }
 
   async function handleAcceptOffer(rideRequestId: string) {
+    const validation = validateOfferAction({
+      activeTripId: activeTrip?.id,
+      offer: visibleOffers.find((offer) => offer.id === rideRequestId),
+      now: reservationNow,
+    });
+    if (!validation.ok) {
+      setStatus(validation.message);
+      return;
+    }
+
     await runExclusiveDriverAction(async () => {
       setStatus("Acceptation de l offre et creation du trajet...");
 
@@ -664,6 +680,16 @@ export default function OffersScreen() {
   }
 
   async function handleDeclineOffer(rideRequestId: string) {
+    const validation = validateOfferAction({
+      activeTripId: activeTrip?.id,
+      offer: visibleOffers.find((offer) => offer.id === rideRequestId),
+      now: reservationNow,
+    });
+    if (!validation.ok) {
+      setStatus(validation.message);
+      return;
+    }
+
     await runExclusiveDriverAction(async () => {
       setStatus(
         "Refus explicite de l offre et liberation de la reservation...",
@@ -698,6 +724,15 @@ export default function OffersScreen() {
     tripId: string,
     nextStatus: "DRIVER_ARRIVING" | "IN_PROGRESS" | "COMPLETED",
   ) {
+    const validation = validateTripAdvance({
+      blocksCompletion: driverRouteSafetyBrief.blocksCompletion,
+      nextStatus,
+    });
+    if (!validation.ok) {
+      setStatus(validation.message);
+      return;
+    }
+
     await runExclusiveDriverAction(async () => {
       setStatus(`Mise a jour du trajet vers ${nextStatus}...`);
 
@@ -728,6 +763,13 @@ export default function OffersScreen() {
   }
 
   async function handleVerifyPickupCode(tripId: string, pickupCode: string) {
+    const normalizedPickupCode = normalizePickupCode(pickupCode);
+    const validation = validatePickupCode(normalizedPickupCode);
+    if (!validation.ok) {
+      setStatus(validation.message);
+      return;
+    }
+
     await runExclusiveDriverAction(async () => {
       setStatus("Verification du code de prise en charge...");
 
@@ -736,7 +778,7 @@ export default function OffersScreen() {
         const response = await verifyPickupCodeWithApi(
           authClient,
           tripId,
-          pickupCode,
+          normalizedPickupCode,
         );
         setPickupCodeInput("");
         setStatus(
@@ -759,7 +801,7 @@ export default function OffersScreen() {
   }
 
   function handlePickupCodeChange(value: string) {
-    setPickupCodeInput(value.replace(/\D/g, "").slice(0, 4));
+    setPickupCodeInput(normalizePickupCode(value));
   }
 
   async function handleReportIncident(tripId: string) {

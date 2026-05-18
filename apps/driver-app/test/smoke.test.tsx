@@ -1004,6 +1004,24 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Statut: IN_PROGRESS');
   });
 
+  it('rejects incomplete pickup code before driver API verification', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers.mockResolvedValue([] as never);
+    mockedFetchMyTrips.mockResolvedValue(buildDriverTripsWithStatus('DRIVER_ARRIVING') as never);
+    mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
+    mockedFetchTripDetail.mockResolvedValue(
+      buildDriverTripDetail(['driver-timeline-1'], ['Chauffeur en approche']) as never,
+    );
+
+    const renderer = await renderScreen(<OffersScreen />);
+    await pressByText(renderer, 'Actualiser le direct');
+    await changeInputByPlaceholder(renderer, 'Code a 4 chiffres', '12');
+    await pressByText(renderer, 'Verifier le code et demarrer');
+
+    expect(mockedVerifyPickupCodeWithApi).not.toHaveBeenCalled();
+    expectText(renderer, 'Le code pickup doit contenir exactement 4 chiffres.');
+  });
+
   it('completes an in-progress trip from offers', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverOffers
@@ -1060,11 +1078,12 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Finalisation bloquee par Ride Check');
 
     expectText(renderer, 'Finalisation bloquee par Ride Check');
     expectText(
       renderer,
-      'Arretez les actions non urgentes, contactez le support ou utilisez SOS si necessaire.',
+      'Finalisation bloquee par Ride Check. Actualisez le direct ou contactez le support.',
     );
     expect(mockedUpdateTripStatusWithApi).not.toHaveBeenCalled();
   });
