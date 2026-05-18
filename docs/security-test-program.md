@@ -125,6 +125,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\testing\security-local-gate.p
    signature, replay et refund doit rester idempotent et audite.
 3. Geo/fraude: un chauffeur ne doit pas pouvoir gagner argent/statut avec une
    position impossible, un trajet circulaire suspect ou une presence manipulee.
+   La finalisation chauffeur d'une course `IN_PROGRESS` est bloquee cote
+   mobile et cote API si le dernier signal route chauffeur est absent, trop
+   ancien, trop imprecis, physiquement impossible ou associe a une alerte route
+   critique; la resolution manuelle reste reservee aux operations/admin.
 4. Admin: toute action finance, onboarding, support, pricing ou incident doit
    etre role-bound, no-store, auditee et visible en realtime ops.
 5. Mobile: aucun token/session, mot de passe, secret ou header Authorization ne
