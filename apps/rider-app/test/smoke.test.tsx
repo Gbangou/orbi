@@ -6,7 +6,9 @@ import {
   cancelRideRequestWithApi,
   createCheckoutIntentWithApi,
   createRideRequestWithApi,
+  createSavedPlaceWithApi,
   createTripShareLinkWithApi,
+  deleteSavedPlaceWithApi,
   fetchMyTrips,
   fetchRideOptionsPreview,
   fetchRiderProfile,
@@ -16,6 +18,7 @@ import {
   resolveVoiceLocationIntentWithApi,
   riderRideOptions,
   triggerTripSafetySosWithApi,
+  updateSavedPlaceWithApi,
   updateTrustedContactWithApi,
   updateTripStatusWithApi,
 } from '@orbi/api';
@@ -118,6 +121,9 @@ jest.mock('@orbi/api', () => {
     createRideRequestWithApi: jest.fn(),
     createTripShareLinkWithApi: jest.fn(),
     createCheckoutIntentWithApi: jest.fn(),
+    createSavedPlaceWithApi: jest.fn(),
+    updateSavedPlaceWithApi: jest.fn(),
+    deleteSavedPlaceWithApi: jest.fn(),
     updateTrustedContactWithApi: jest.fn(),
     updateTripStatusWithApi: jest.fn(),
   };
@@ -138,6 +144,9 @@ const mockedResolveVoiceLocationIntentWithApi = jest.mocked(resolveVoiceLocation
 const mockedCreateRideRequestWithApi = jest.mocked(createRideRequestWithApi);
 const mockedCreateTripShareLinkWithApi = jest.mocked(createTripShareLinkWithApi);
 const mockedCreateCheckoutIntentWithApi = jest.mocked(createCheckoutIntentWithApi);
+const mockedCreateSavedPlaceWithApi = jest.mocked(createSavedPlaceWithApi);
+const mockedUpdateSavedPlaceWithApi = jest.mocked(updateSavedPlaceWithApi);
+const mockedDeleteSavedPlaceWithApi = jest.mocked(deleteSavedPlaceWithApi);
 const mockedUpdateTrustedContactWithApi = jest.mocked(updateTrustedContactWithApi);
 const mockedUpdateTripStatusWithApi = jest.mocked(updateTripStatusWithApi);
 const mockedResolveRiderAppError = jest.mocked(resolveRiderAppError);
@@ -333,6 +342,9 @@ beforeEach(() => {
   mockedCreateRideRequestWithApi.mockReset();
   mockedCreateTripShareLinkWithApi.mockReset();
   mockedCreateCheckoutIntentWithApi.mockReset();
+  mockedCreateSavedPlaceWithApi.mockReset();
+  mockedUpdateSavedPlaceWithApi.mockReset();
+  mockedDeleteSavedPlaceWithApi.mockReset();
   mockedUpdateTrustedContactWithApi.mockReset();
   mockedUpdateTripStatusWithApi.mockReset();
   mockedResolveRiderAppError.mockReset();
@@ -383,6 +395,28 @@ beforeEach(() => {
       expiresAt: '2026-05-02T12:00:00.000Z',
       ttlMinutes: 120,
     },
+  } as never);
+  mockedCreateSavedPlaceWithApi.mockResolvedValue({
+    savedPlace: {
+      id: 'saved-market',
+      label: 'Marche',
+      address: 'Grand Marche, Ouagadougou',
+      latitude: 12.365,
+      longitude: -1.534,
+    },
+  } as never);
+  mockedUpdateSavedPlaceWithApi.mockResolvedValue({
+    savedPlace: {
+      id: 'saved-home',
+      label: 'Maison',
+      address: 'Patte d Oie, Ouagadougou',
+      latitude: 12.3412,
+      longitude: -1.5601,
+    },
+  } as never);
+  mockedDeleteSavedPlaceWithApi.mockResolvedValue({
+    deleted: true,
+    savedPlaceId: 'saved-home',
   } as never);
   mockedUpdateTrustedContactWithApi.mockResolvedValue({
     trustedContact: {
@@ -709,6 +743,62 @@ describe('rider smoke flows', () => {
       }),
     );
     expectText(renderer, 'Contact de confiance configure et audite.');
+  });
+
+  it('blocks automatic trusted-contact sharing until a phone number is present', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+
+    const renderer = await renderScreen(<AccountScreen />);
+    await flushMicrotasks();
+    await pressByText(renderer, 'Nuit');
+    await pressByText(renderer, 'Enregistrer le contact');
+
+    expect(mockedUpdateTrustedContactWithApi).not.toHaveBeenCalled();
+    expectText(renderer, 'Ajoutez un numero Burkina avant d activer le partage automatique.');
+  });
+
+  it('creates a saved rider place from account with normalized coordinates', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+
+    const renderer = await renderScreen(<AccountScreen />);
+    await flushMicrotasks();
+    await changeInputByPlaceholder(renderer, 'Libelle du lieu', '  Marche  ');
+    await changeInputByPlaceholder(renderer, 'Adresse', ' Grand Marche, Ouagadougou ');
+    await changeInputByPlaceholder(renderer, 'Latitude', '12,365');
+    await changeInputByPlaceholder(renderer, 'Longitude', '-1,534');
+    await pressByText(renderer, 'Ajouter un lieu');
+
+    expect(mockedCreateSavedPlaceWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      {
+        label: 'Marche',
+        address: 'Grand Marche, Ouagadougou',
+        latitude: 12.365,
+        longitude: -1.534,
+      },
+    );
+    expectText(renderer, 'Lieu enregistre synchronise avec succes.');
+  });
+
+  it('rejects unsafe saved place text from account before API mutation', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+
+    const renderer = await renderScreen(<AccountScreen />);
+    await flushMicrotasks();
+    await changeInputByPlaceholder(renderer, 'Libelle du lieu', '<script>');
+    await changeInputByPlaceholder(renderer, 'Adresse', 'Grand Marche, Ouagadougou');
+    await changeInputByPlaceholder(renderer, 'Latitude', '12.365');
+    await changeInputByPlaceholder(renderer, 'Longitude', '-1.534');
+    await pressByText(renderer, 'Ajouter un lieu');
+
+    expect(mockedCreateSavedPlaceWithApi).not.toHaveBeenCalled();
+    expectText(renderer, 'Le lieu contient des caracteres non autorises.');
   });
 
   it('shows the active rider flow inside voice', async () => {

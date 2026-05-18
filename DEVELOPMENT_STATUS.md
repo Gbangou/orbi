@@ -248,6 +248,11 @@ de securite ou de confiance.
   trop imprecis, physiquement impossible ou associe a une alerte route critique.
   La console operations expose maintenant l'etat `completionGate` pour triage et
   resolution manuelle auditee.
+- Compte rider durci cote mobile: validation locale partagee pour contact de
+  confiance et lieux favoris, rejet des textes dangereux avant mutation API,
+  normalisation des coordonnees avec virgule decimale, blocage des modes de
+  partage automatique sans numero Burkina et garde anti-double action sur les
+  mutations compte.
 
 ## Architecture active
 

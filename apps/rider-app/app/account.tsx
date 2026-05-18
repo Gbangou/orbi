@@ -13,6 +13,11 @@ import {
 import { orbiTheme } from '@orbi/ui';
 import { router } from 'expo-router';
 import { restoreRiderSession, signOutRiderAccount } from '../lib/auth';
+import {
+  buildSavedPlacePayload,
+  buildTrustedContactPayload,
+  type TrustedContactShareMode,
+} from '../lib/account-safety';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import {
   buildRiderFlowTransitionLabel,
@@ -75,7 +80,7 @@ export default function AccountScreen() {
   });
   const [trustedContactForm, setTrustedContactForm] = useState({
     phoneNumber: '',
-    shareMode: 'MANUAL' as 'MANUAL' | 'NIGHT' | 'ALL_TRIPS',
+    shareMode: 'MANUAL' as TrustedContactShareMode,
     notes: '',
   });
   const previousSavedPlacesRef = useRef<RiderProfileResponse['profile']['savedPlaces'] | null>(null);
@@ -269,30 +274,13 @@ export default function AccountScreen() {
   }
 
   async function handleSavePlace() {
-    if (!placeForm.label.trim() || !placeForm.address.trim()) {
-      setStatus('Le libelle et l adresse du lieu sont obligatoires.');
+    if (isSavingPlace) {
       return;
     }
 
-    const latitude = placeForm.latitude.trim()
-      ? Number(placeForm.latitude)
-      : undefined;
-    const longitude = placeForm.longitude.trim()
-      ? Number(placeForm.longitude)
-      : undefined;
-
-    if (
-      latitude === undefined ||
-      longitude === undefined ||
-      Number.isNaN(latitude) ||
-      Number.isNaN(longitude)
-    ) {
-      setStatus('Les coordonnees sont obligatoires pour enregistrer un lieu.');
-      return;
-    }
-
-    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-      setStatus('Les coordonnees doivent rester dans des bornes GPS valides.');
+    const validation = buildSavedPlacePayload(placeForm);
+    if (!validation.ok) {
+      setStatus(validation.message);
       return;
     }
 
@@ -305,17 +293,10 @@ export default function AccountScreen() {
 
     try {
       const { authClient } = await restoreRiderSession();
-      const payload = {
-        label: placeForm.label.trim(),
-        address: placeForm.address.trim(),
-        latitude,
-        longitude,
-      };
-
       if (editingPlaceId) {
-        await updateSavedPlaceWithApi(authClient, editingPlaceId, payload);
+        await updateSavedPlaceWithApi(authClient, editingPlaceId, validation.payload);
       } else {
-        await createSavedPlaceWithApi(authClient, payload);
+        await createSavedPlaceWithApi(authClient, validation.payload);
       }
 
       resetPlaceForm();
@@ -332,30 +313,30 @@ export default function AccountScreen() {
   }
 
   async function handleSaveTrustedContact() {
-    const phoneNumber = trustedContactForm.phoneNumber.trim();
-
-    if (phoneNumber && !/^\+226[0-9]{8}$/.test(phoneNumber)) {
-      setStatus('Le contact de confiance doit etre un numero Burkina au format +226XXXXXXXX.');
+    if (isSavingTrustedContact) {
       return;
     }
 
+    const validation = buildTrustedContactPayload(trustedContactForm);
+    if (!validation.ok) {
+      setStatus(validation.message);
+      return;
+    }
+    const hasPhoneNumber = Boolean(validation.payload.phoneNumber);
+
     setIsSavingTrustedContact(true);
     setStatus(
-      phoneNumber
+      hasPhoneNumber
         ? 'Synchronisation du contact de confiance...'
         : 'Desactivation du contact de confiance...',
     );
 
     try {
       const { authClient } = await restoreRiderSession();
-      await updateTrustedContactWithApi(authClient, {
-        phoneNumber: phoneNumber || undefined,
-        shareMode: trustedContactForm.shareMode,
-        notes: trustedContactForm.notes.trim() || undefined,
-      });
+      await updateTrustedContactWithApi(authClient, validation.payload);
       await loadProfile();
       setStatus(
-        phoneNumber
+        hasPhoneNumber
           ? 'Contact de confiance configure et audite.'
           : 'Contact de confiance desactive.',
       );
@@ -370,6 +351,10 @@ export default function AccountScreen() {
   }
 
   async function handleDisableTrustedContact() {
+    if (isSavingTrustedContact) {
+      return;
+    }
+
     setTrustedContactForm({
       phoneNumber: '',
       shareMode: 'MANUAL',
@@ -396,6 +381,10 @@ export default function AccountScreen() {
   }
 
   async function handleDeletePlace(savedPlaceId: string) {
+    if (isSavingPlace) {
+      return;
+    }
+
     setIsSavingPlace(true);
     setStatus('Suppression du lieu enregistre...');
 
