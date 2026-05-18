@@ -121,11 +121,16 @@ pnpm --filter backend start
 - Record driver route positions before pickup.
 - Confirm the route-position response and rider trip detail show the driver
   signal moving closer to pickup.
+- Confirm Live Ops shows the driver route progress as pickup/destination
+  distances, and does not expose raw coordinates.
 - Verify pickup code.
 - Start the trip.
 - Record another driver route position during the ride.
 - Confirm the route-position response and trip detail expose remaining
   destination distance.
+- Confirm Live Ops keeps using the driver vehicle signal even if a newer rider
+  ping arrives, and flags active trips still waiting for the first driver GPS
+  signal.
 - Complete the trip.
 - Expected: no invalid transition is accepted; admin timeline stays readable.
 

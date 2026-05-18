@@ -487,6 +487,65 @@ describe('AdminService', () => {
     expect(result.alerts[0]).toContain('1 trajets actifs');
   });
 
+  it('flags active trips waiting for the first driver route position', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValue([
+      {
+        id: 'trip-1',
+        status: 'DRIVER_ARRIVING',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        actualFare: 1600,
+        currency: 'XOF',
+        rider: { user: { fullName: 'Awa Rider' } },
+        driver: { user: { fullName: 'Issa Driver' } },
+        vehicle: { make: 'Yamaha', model: 'Crypton' },
+        rideRequest: {
+          pickupLatitude: 12.3783,
+          pickupLongitude: -1.4994,
+          destinationLatitude: 12.3032,
+          destinationLongitude: -1.5241,
+        },
+        events: [
+          {
+            id: 'event-1',
+            eventType: 'TRIP_ACCEPTED',
+            createdAt: new Date('2026-04-17T08:01:00.000Z'),
+          },
+          {
+            id: 'event-2',
+            eventType: 'ROUTE_POSITION_RECORDED',
+            payload: {
+              latitude: 12.3783,
+              longitude: -1.4994,
+              accuracyMeters: 8,
+              speedKph: 0,
+              observedAt: '2026-04-17T08:05:00.000Z',
+              sourceRole: 'RIDER',
+            },
+            createdAt: new Date('2026-04-17T08:05:00.000Z'),
+          },
+        ],
+      },
+    ]);
+    prisma.supportTicket.count.mockResolvedValue(0);
+    prisma.rideRequest.count.mockResolvedValue(0);
+
+    const result = await service.liveOps();
+
+    expect(result.trips[0].routeMonitoring).toEqual(
+      expect.objectContaining({
+        state: 'unknown',
+        lastPositionAt: null,
+        latestPosition: null,
+      }),
+    );
+    expect(result.alerts).toContain(
+      '1 trajet(s) actif(s) attendent le premier signal GPS chauffeur.',
+    );
+  });
+
   it('lists job queue entries for operations triage', async () => {
     const { jobQueueService, service } = createService();
 

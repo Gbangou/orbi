@@ -2243,6 +2243,20 @@ export class AdminService {
     const routeMonitoringAlertTrips = activeTrips.filter((trip) =>
       trip.events.some((event) => event.eventType === 'ROUTE_MONITORING_ALERT'),
     ).length;
+    const activeTripsMissingDriverRoutePosition = activeTrips.filter(
+      (trip) =>
+        !trip.events.some((event) => {
+          if (event.eventType !== 'ROUTE_POSITION_RECORDED') {
+            return false;
+          }
+
+          const payload = isDispatchSettingsRecord(event.payload)
+            ? event.payload
+            : {};
+
+          return payload.sourceRole !== 'RIDER';
+        }),
+    ).length;
     const succeededPayments = paymentAttempts.filter(
       (attempt) => attempt.status === 'SUCCEEDED',
     ).length;
@@ -2372,6 +2386,8 @@ export class AdminService {
           : 'Aucun signalement d incident sur les trajets actifs.',
         routeMonitoringAlertTrips > 0
           ? `${routeMonitoringAlertTrips} trajet(s) actif(s) ont une alerte route monitoring.`
+          : activeTripsMissingDriverRoutePosition > 0
+            ? `${activeTripsMissingDriverRoutePosition} trajet(s) actif(s) attendent le premier signal GPS chauffeur.`
           : 'Route monitoring clair sur les trajets actifs instrumentes.',
         openRequests > 5
           ? 'La file de reservations ouvertes demande une attention immediate.'
