@@ -91,6 +91,13 @@ fixture must journal a pending refund without moving wallet money; the
 `completed` fixture must finalize the refund and write the driver wallet
 reversal idempotently.
 
+When a real sandbox webhook is captured, add the redacted JSON payload under
+`apps/backend/src/modules/payments/fixtures/`, register it in
+`payment-fixture-manifest.ts` with `sourceKind: "sandbox_capture"` and a
+concrete `capturedAt`, then extend `payments.service.spec.ts`. A fixture is not
+production evidence until the manifest and executable test both describe the
+same expected money movement.
+
 If the backend watch mode is blocked by the local Windows shell, run the backend
 without watch for the smoke:
 

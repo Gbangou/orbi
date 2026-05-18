@@ -148,8 +148,11 @@ Refund webhook fixtures live in
 `apps/backend/src/modules/payments/fixtures/`. The current Flutterwave refund
 fixtures are executable tests for processed and pending refunds. When sandbox
 payloads are captured, add them there first, then update
-`payments.service.spec.ts` so every provider payload format proves whether it
-does or does not move wallet money.
+`payment-fixture-manifest.ts` and `payments.service.spec.ts` so every provider
+payload format proves whether it does or does not move wallet money. The
+manifest records whether a fixture is still `local_policy` or a real
+`sandbox_capture`; production pilot remains blocked until at least one signed
+provider sandbox capture has been committed and made executable.
 
 If the driver payout was already marked paid before the refund, the wallet can
 become negative. Admin wallets expose this as `recoveryDue`: the amount Orbi

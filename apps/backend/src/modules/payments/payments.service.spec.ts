@@ -3,6 +3,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Prisma } from '@prisma/client';
 import { PaymentsService } from './payments.service';
+import {
+  paymentWebhookFixtureManifest,
+  resolvePaymentFixtureProductionReadiness,
+} from './payment-fixture-manifest';
 import type { PaymentWebhookPayload } from './payments.types';
 
 describe('PaymentsService', () => {
@@ -13,6 +17,18 @@ describe('PaymentsService', () => {
         'utf8',
       ),
     ) as PaymentWebhookPayload;
+  }
+
+  function fixtureById(id: string) {
+    const fixture = paymentWebhookFixtureManifest.find(
+      (entry) => entry.id === id,
+    );
+
+    if (!fixture) {
+      throw new Error(`Unknown payment fixture manifest entry: ${id}`);
+    }
+
+    return fixture;
   }
 
   function prismaUniqueConstraintError() {
@@ -1090,8 +1106,31 @@ describe('PaymentsService', () => {
     expect(result.reconciledAttemptCount).toBe(0);
   });
 
+  it('keeps every payment webhook fixture manifest entry readable', () => {
+    for (const fixture of paymentWebhookFixtureManifest) {
+      expect(() => loadWebhookFixture(fixture.fileName)).not.toThrow();
+      expect(fixture.notes.length).toBeGreaterThan(24);
+
+      if (fixture.sourceKind === 'sandbox_capture') {
+        expect(fixture.capturedAt).toEqual(expect.any(String));
+      }
+    }
+  });
+
+  it('summarizes payment fixture readiness before production pilot', () => {
+    expect(resolvePaymentFixtureProductionReadiness()).toEqual({
+      total: 2,
+      sandboxCaptures: 0,
+      localPolicyFixtures: 2,
+      isPilotReady: false,
+      summary:
+        'Aucune fixture paiement sandbox capturee: garder le pilote production bloque sur preuve provider.',
+    });
+  });
+
   it('keeps Flutterwave processed refund webhook fixtures executable', async () => {
     const { service, prisma } = createService('flutterwave');
+    const fixture = fixtureById('flutterwave-refund-processed-local-policy');
 
     prisma.paymentAttempt.findFirst.mockResolvedValue({
       id: 'payment-1',
@@ -1127,10 +1166,10 @@ describe('PaymentsService', () => {
 
     const result = await service.handleWebhook(
       'secret_123',
-      loadWebhookFixture('flutterwave-refund-processed-webhook.json'),
+      loadWebhookFixture(fixture.fileName),
     );
 
-    expect(result.nextAction).toBe('refund_processed');
+    expect(result.nextAction).toBe(fixture.expected.nextAction);
     expect(result.reconciledAttemptCount).toBe(1);
     expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -1139,6 +1178,7 @@ describe('PaymentsService', () => {
         paymentAttemptId: 'payment-1',
       }),
     });
+    expect(fixture.expected.moneyMovement).toBe('wallet_refund_reversal');
     expect(prisma.walletTransaction.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         type: 'REFUND',
@@ -1149,6 +1189,7 @@ describe('PaymentsService', () => {
 
   it('keeps Flutterwave pending refund webhook fixtures from moving money', async () => {
     const { service, prisma } = createService('flutterwave');
+    const fixture = fixtureById('flutterwave-refund-pending-local-policy');
 
     prisma.paymentAttempt.findFirst.mockResolvedValue({
       id: 'payment-1',
@@ -1158,11 +1199,12 @@ describe('PaymentsService', () => {
 
     const result = await service.handleWebhook(
       'secret_123',
-      loadWebhookFixture('flutterwave-refund-pending-webhook.json'),
+      loadWebhookFixture(fixture.fileName),
     );
 
-    expect(result.nextAction).toBe('refund_still_pending');
+    expect(result.nextAction).toBe(fixture.expected.nextAction);
     expect(result.reconciledAttemptCount).toBe(0);
+    expect(fixture.expected.moneyMovement).toBe('none');
     expect(prisma.paymentAttempt.update).not.toHaveBeenCalled();
     expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
     expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
