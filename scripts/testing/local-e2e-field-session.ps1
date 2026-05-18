@@ -57,6 +57,7 @@ Write-Host "  pnpm prisma:seed"
 Write-Host "  pnpm dev:full-web"
 Write-Host "  pnpm dev:web-driver-preview  # in a separate pass for driver web"
 Write-Host "  pnpm mobile:lan && pnpm dev:full-mobile  # for phone validation"
+Write-Host "  pnpm demo:local-live-session  # creates a real active demo trip with moving GPS signals"
 
 Write-Section "Demo Accounts"
 Write-Host "Admin:  admin@orbi.app / Orbi123!"
@@ -65,6 +66,7 @@ Write-Host "Driver: driver@orbi.app / Orbi123!"
 
 Write-Section "Critical Path"
 $items = @(
+  "Run pnpm demo:local-live-session while rider and driver apps are open; both maps must show the same active trip and latest DRIVER GPS signal.",
   "Rider signs in and creates a MOBILE_MONEY motorcycle ride request.",
   "Driver signs in, goes ONLINE, updates presence, receives or fetches the offer.",
   "Driver accepts the ride request; admin live ops shows the matched trip.",
