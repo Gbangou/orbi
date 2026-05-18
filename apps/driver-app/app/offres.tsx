@@ -166,6 +166,9 @@ function ActiveMissionMap({
   isInProgress,
   etaLabel,
   freshnessLabel,
+  coordinateLabel,
+  accuracyLabel,
+  speedLabel,
 }: {
   progressPercent: number;
   title: string;
@@ -174,6 +177,9 @@ function ActiveMissionMap({
   isInProgress: boolean;
   etaLabel?: string;
   freshnessLabel: string;
+  coordinateLabel: string;
+  accuracyLabel: string;
+  speedLabel: string;
 }) {
   const boundedProgress = Math.max(12, Math.min(88, progressPercent));
   const riderProgress = isInProgress ? 88 : 12;
@@ -320,11 +326,19 @@ function ActiveMissionMap({
             {etaLabel ?? "ETA mission"}
           </Text>
           <Text style={styles.activeMissionHudLabel}>{freshnessLabel}</Text>
+          <Text style={styles.activeMissionHudLabel}>{accuracyLabel}</Text>
         </View>
         <Text style={styles.activeMissionMapTitle}>{title}</Text>
         <Text style={styles.activeMissionMapMeta}>
           {distanceLabel} - {stateLabel}
         </Text>
+        <View style={styles.activeMissionSignalRow}>
+          <Text style={styles.activeMissionSignalText}>{coordinateLabel}</Text>
+          <Text style={styles.activeMissionSignalText}>
+            {isInProgress ? "Rider vers destination" : "Rider au pickup"} -{" "}
+            {speedLabel}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -1260,6 +1274,9 @@ export default function OffersScreen() {
                 isInProgress={activeTrip.status === "IN_PROGRESS"}
                 etaLabel={driverRouteProgress.etaLabel}
                 freshnessLabel={driverRouteProgress.freshnessLabel}
+                coordinateLabel={driverRouteProgress.coordinateLabel}
+                accuracyLabel={driverRouteProgress.accuracyLabel}
+                speedLabel={driverRouteProgress.speedLabel}
               />
               <LiveRouteProgressCard {...driverRouteProgress} />
             </>
@@ -1764,6 +1781,15 @@ const styles = StyleSheet.create({
   },
   activeMissionMapMeta: {
     color: orbiTheme.colors.sky,
+    fontWeight: "700",
+  },
+  activeMissionSignalRow: {
+    marginTop: 5,
+    gap: 2,
+  },
+  activeMissionSignalText: {
+    color: orbiTheme.colors.muted,
+    fontSize: 11,
     fontWeight: "700",
   },
   codeBlock: {

@@ -905,6 +905,9 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Mission en direct');
     expectText(renderer, 'Rider');
     expectText(renderer, 'Driver');
+    expectText(renderer, 'Zone chauffeur approx. 12.3700, -1.5200');
+    expectText(renderer, 'Precision 12 m');
+    expectText(renderer, 'Rider au pickup - 18 km/h');
     expectText(renderer, 'Approche');
     expectText(renderer, '0.4 km');
     expectText(

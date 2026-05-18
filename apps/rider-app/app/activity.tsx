@@ -75,6 +75,9 @@ function LiveApproachPreview({
   stateLabel,
   etaLabel,
   freshnessLabel,
+  coordinateLabel,
+  accuracyLabel,
+  speedLabel,
   isInProgress,
 }: {
   progressPercent: number;
@@ -83,6 +86,9 @@ function LiveApproachPreview({
   stateLabel: string;
   etaLabel?: string;
   freshnessLabel: string;
+  coordinateLabel: string;
+  accuracyLabel: string;
+  speedLabel: string;
   isInProgress: boolean;
 }) {
   const boundedProgress = Math.max(12, Math.min(88, progressPercent));
@@ -198,11 +204,19 @@ function LiveApproachPreview({
         <View style={styles.approachHudRow}>
           <Text style={styles.approachHudLabel}>{etaLabel ?? "ETA live"}</Text>
           <Text style={styles.approachHudLabel}>{freshnessLabel}</Text>
+          <Text style={styles.approachHudLabel}>{accuracyLabel}</Text>
         </View>
         <Text style={styles.approachMapTitle}>{title}</Text>
         <Text style={styles.approachMapMeta}>
           {distanceLabel} - {stateLabel}
         </Text>
+        <View style={styles.approachSignalRow}>
+          <Text style={styles.approachSignalText}>{coordinateLabel}</Text>
+          <Text style={styles.approachSignalText}>
+            {isInProgress ? "Rider vers destination" : "Rider au pickup"} -{" "}
+            {speedLabel}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -881,6 +895,9 @@ export default function ActivityScreen() {
                 stateLabel={riderRouteProgress.stateLabel}
                 etaLabel={riderRouteProgress.etaLabel}
                 freshnessLabel={riderRouteProgress.freshnessLabel}
+                coordinateLabel={riderRouteProgress.coordinateLabel}
+                accuracyLabel={riderRouteProgress.accuracyLabel}
+                speedLabel={riderRouteProgress.speedLabel}
                 isInProgress={activeTrip.status === "IN_PROGRESS"}
               />
               <LiveRouteProgressCard {...riderRouteProgress} />
@@ -1287,6 +1304,15 @@ const styles = StyleSheet.create({
   },
   approachMapMeta: {
     color: orbiTheme.colors.sky,
+    fontWeight: "700",
+  },
+  approachSignalRow: {
+    marginTop: 5,
+    gap: 2,
+  },
+  approachSignalText: {
+    color: orbiTheme.colors.muted,
+    fontSize: 11,
     fontWeight: "700",
   },
   actionButtonDisabled: {
