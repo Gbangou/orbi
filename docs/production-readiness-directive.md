@@ -139,6 +139,10 @@ Initial acquisition channels:
 
 1. Run real-device rider and driver MVP sessions on the same Wi-Fi/LAN setup.
 2. Capture Flutterwave sandbox payment and refund webhooks as fixtures.
+   `/health.operations.productionReadiness` exposes this as
+   `payment-provider-evidence`; without at least one sandbox capture, production
+   remains blocked on provider evidence instead of relying on local policy
+   fixtures.
 3. Harden input validation and dirty-data tests.
 4. Add observability dashboards for latency, failures, conversion and support.
 5. Keep `/health.operations.serviceLevelObjectives` green or explicitly

@@ -6,6 +6,7 @@ import { JobQueueService } from '../../common/job-queue/job-queue.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { AppLifecycleService } from '../../core/runtime/app-lifecycle.service';
 import { DriverReservationExpiryService } from '../drivers/driver-reservation-expiry.service';
+import { resolvePaymentFixtureProductionReadiness } from '../payments/payment-fixture-manifest';
 import { HealthIncidentJournalService } from './health-incident-journal.service';
 
 @Injectable()
@@ -213,6 +214,8 @@ export class HealthService {
       this.configService.get<string>(
         'observability.mobileErrorCollector.webhookUrl',
       ) ?? '';
+    const paymentFixtureReadiness =
+      resolvePaymentFixtureProductionReadiness();
     const checks = [
       {
         id: 'rate-limit-backplane',
@@ -307,6 +310,16 @@ export class HealthService {
           refundMode === 'provider'
             ? 'Refund provider actif; verifier les fixtures sandbox.'
             : 'Refunds en mode manual/console; acceptable avant provider live.',
+      },
+      {
+        id: 'payment-provider-evidence',
+        label: 'Preuves provider paiement',
+        state: paymentFixtureReadiness.isPilotReady
+          ? ('pass' as const)
+          : environment === 'production'
+            ? ('fail' as const)
+            : ('warn' as const),
+        detail: paymentFixtureReadiness.summary,
       },
       {
         id: 'mobile-error-collector',

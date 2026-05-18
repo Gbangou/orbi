@@ -166,7 +166,7 @@ describe('HealthService', () => {
         environment: 'test',
         riskLevel: 'medium',
         failedChecks: 0,
-        warningChecks: 5,
+        warningChecks: 6,
       }),
     );
     expect(result.operations.productionReadiness.checks).toEqual(
@@ -178,6 +178,12 @@ describe('HealthService', () => {
         expect.objectContaining({
           id: 'provider-refunds',
           state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'payment-provider-evidence',
+          state: 'warn',
+          detail:
+            'Aucune fixture paiement sandbox capturee: garder le pilote production bloque sur preuve provider.',
         }),
         expect.objectContaining({
           id: 'mobile-error-collector',
@@ -443,7 +449,7 @@ describe('HealthService', () => {
     const result = await service.check();
 
     expect(result.operations.productionReadiness.riskLevel).toBe('high');
-    expect(result.operations.productionReadiness.failedChecks).toBe(7);
+    expect(result.operations.productionReadiness.failedChecks).toBe(8);
     expect(result.operations.productionReadiness.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -454,6 +460,12 @@ describe('HealthService', () => {
         expect.objectContaining({
           id: 'provider-refunds',
           state: 'fail',
+        }),
+        expect.objectContaining({
+          id: 'payment-provider-evidence',
+          state: 'fail',
+          detail:
+            'Aucune fixture paiement sandbox capturee: garder le pilote production bloque sur preuve provider.',
         }),
         expect.objectContaining({
           id: 'mobile-error-collector',
