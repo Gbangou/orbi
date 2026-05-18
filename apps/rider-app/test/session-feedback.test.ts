@@ -1,4 +1,3 @@
-/// <reference path="../../backend/node_modules/@types/jest/index.d.ts" />
 import { router } from 'expo-router';
 import { OrbiApiError } from '@orbi/api';
 import { clearRiderPersistedSession } from '../lib/auth';

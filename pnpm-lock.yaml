@@ -291,6 +291,9 @@ importers:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
+      '@types/node':
+        specifier: ^22.10.7
+        version: 22.19.11
       '@types/react':
         specifier: 18.3.28
         version: 18.3.28
@@ -361,6 +364,9 @@ importers:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
+      '@types/node':
+        specifier: ^22.10.7
+        version: 22.19.11
       '@types/react':
         specifier: 18.3.28
         version: 18.3.28

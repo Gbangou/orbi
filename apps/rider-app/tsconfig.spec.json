@@ -1,10 +1,24 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "isolatedModules": true,
-    "types": ["jest", "node"]
+    "paths": {
+      "@orbi/api": ["../../packages/api/src/index.ts"],
+      "@orbi/api/*": ["../../packages/api/src/*"],
+      "@orbi/config": ["../../packages/config/src/index.ts"],
+      "@orbi/config/*": ["../../packages/config/src/*"],
+      "@orbi/domain": ["../../packages/domain/src/index.ts"],
+      "@orbi/domain/*": ["../../packages/domain/src/*"],
+      "@orbi/ui": ["../../packages/ui/src/index.ts"],
+      "@orbi/ui/*": ["../../packages/ui/src/*"],
+      "react": ["./node_modules/@types/react/index.d.ts"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime.d.ts"],
+      "react-test-renderer": ["./node_modules/@types/react-test-renderer/index.d.ts"]
+    },
+    "types": ["jest", "node", "react", "react-test-renderer"]
   },
-  "include": ["app/**/*.ts", "app/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx", "test/**/*.ts", "test/**/*.tsx"]
+  "include": ["app/**/*.ts", "app/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx", "test/**/*.ts", "test/**/*.tsx"],
+  "exclude": ["jest.config.cjs", "tsconfig.spec.json"]
 }

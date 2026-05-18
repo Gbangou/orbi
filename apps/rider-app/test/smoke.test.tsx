@@ -1,5 +1,5 @@
-/// <reference path="../../backend/node_modules/@types/jest/index.d.ts" />
 import React from 'react';
+import type { ReactTestInstance } from 'react-test-renderer';
 import { router } from 'expo-router';
 import {
   createOrbiApiClient,
@@ -566,7 +566,7 @@ describe('rider smoke flows', () => {
     mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
     mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
 
-    let resolveRideRequest: ((value: unknown) => void) | null = null;
+    let resolveRideRequest: (value: unknown) => void = () => {};
     mockedCreateRideRequestWithApi.mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -584,8 +584,8 @@ describe('rider smoke flows', () => {
 
     await pressByText(renderer, 'Bobo-Dioulasso');
     const confirmButton = renderer.root.find(
-      (node) =>
-        node.type === 'Pressable' &&
+      (node: ReactTestInstance) =>
+        (node.type as unknown) === 'Pressable' &&
         collectText(node).includes(`Confirmer ${riderRideOptions[0]?.title}`),
     );
 
@@ -596,7 +596,7 @@ describe('rider smoke flows', () => {
 
     expect(mockedCreateRideRequestWithApi).toHaveBeenCalledTimes(1);
 
-    resolveRideRequest?.({
+    resolveRideRequest({
       id: 'ride-request-12345678',
       routeMetricsSource: 'SERVER_COORDINATES',
     });
@@ -905,7 +905,7 @@ describe('rider smoke flows', () => {
       buildTripDetail(['timeline-1'], ['Course demarree']) as never,
     );
 
-    let resolveIncident: ((value: unknown) => void) | null = null;
+    let resolveIncident: (value: unknown) => void = () => {};
     mockedReportTripIncidentWithApi.mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -917,8 +917,8 @@ describe('rider smoke flows', () => {
     await pressByText(renderer, 'Actualiser le suivi');
 
     const incidentButton = renderer.root.find(
-      (node) =>
-        node.type === 'Pressable' &&
+      (node: ReactTestInstance) =>
+        (node.type as unknown) === 'Pressable' &&
         collectText(node).includes('Signaler un incident'),
     );
 
@@ -929,7 +929,7 @@ describe('rider smoke flows', () => {
 
     expect(mockedReportTripIncidentWithApi).toHaveBeenCalledTimes(1);
 
-    resolveIncident?.({
+    resolveIncident({
       incident: { ticketId: 'ticket-1' },
     });
     await flushMicrotasks();

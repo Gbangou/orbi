@@ -1,5 +1,5 @@
-/// <reference path="../../backend/node_modules/@types/jest/index.d.ts" />
 import React from 'react';
+import type { ReactTestInstance } from 'react-test-renderer';
 import { router } from 'expo-router';
 import {
   acceptRideRequestWithApi,
@@ -467,7 +467,7 @@ describe('driver smoke flows', () => {
     mockedFetchMyTrips.mockResolvedValue(buildDriverTrips() as never);
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
 
-    let resolveAccept: ((value: unknown) => void) | null = null;
+    let resolveAccept: (value: unknown) => void = () => {};
     mockedAcceptRideRequestWithApi.mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -479,7 +479,9 @@ describe('driver smoke flows', () => {
     await pressByText(renderer, 'Actualiser le direct');
 
     const acceptButton = renderer.root.find(
-      (node) => node.type === 'Pressable' && collectText(node).includes('Accepter cette offre'),
+      (node: ReactTestInstance) =>
+        (node.type as unknown) === 'Pressable' &&
+        collectText(node).includes('Accepter cette offre'),
     );
 
     await invokeInAct(() => {
@@ -489,7 +491,7 @@ describe('driver smoke flows', () => {
 
     expect(mockedAcceptRideRequestWithApi).toHaveBeenCalledTimes(1);
 
-    resolveAccept?.({
+    resolveAccept({
       trip: {
         id: 'trip-accepted-12345678',
         status: 'MATCHED',

@@ -1,4 +1,3 @@
-/// <reference path="../../backend/node_modules/@types/jest/index.d.ts" />
 import {
   buildDriverOfferDetailLines,
   buildDriverOfferInsights,

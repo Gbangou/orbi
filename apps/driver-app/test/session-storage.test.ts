@@ -1,4 +1,3 @@
-/// <reference path="../../backend/node_modules/@types/jest/index.d.ts" />
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import {
