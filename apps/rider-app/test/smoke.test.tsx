@@ -504,6 +504,8 @@ describe('rider smoke flows', () => {
         idempotencyKey: 'checkout-ride-request-12345678-mobile-money',
       },
     );
+    expectText(renderer, 'Orange Money');
+    expectText(renderer, 'Reference txn-123');
   });
 
   it('uses rider GPS as the pickup coordinates when available', async () => {

@@ -432,9 +432,8 @@ export class TripsService {
       speedKph: payload.speedKph ?? null,
       distanceToDestinationKm: payload.distanceToDestinationKm ?? null,
     };
-    let latestPosition:
-      | ReturnType<typeof resolveRoutePositionSnapshot>
-      | null = null;
+    let latestPosition: ReturnType<typeof resolveRoutePositionSnapshot> | null =
+      null;
 
     const { trip, alerts, ticketIds } = await this.prisma.$transaction(
       async (tx) => {

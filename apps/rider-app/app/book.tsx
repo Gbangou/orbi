@@ -1,6 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import {
   calculateDistanceKm,
   burkinaPricingCityPresets,
@@ -307,7 +314,9 @@ function VehicleOptionAvatar({
             <View style={[styles.vehicleWheel, { borderColor: accent }]} />
             <View style={[styles.vehicleWheel, { borderColor: accent }]} />
           </View>
-          {isPremium ? <View style={[styles.carRoofSignal, { backgroundColor: accent }]} /> : null}
+          {isPremium ? (
+            <View style={[styles.carRoofSignal, { backgroundColor: accent }]} />
+          ) : null}
         </View>
       )}
       <View style={styles.vehicleRoad} />
@@ -337,12 +346,15 @@ export default function BookingScreen() {
     cityPresets[0].destination,
   );
   const [voiceTranscript, setVoiceTranscript] = useState('Je vais a Ouaga 2000');
-  const [voiceResult, setVoiceResult] = useState<VoiceLocationIntentResponse | null>(null);
+  const [voiceResult, setVoiceResult] =
+    useState<VoiceLocationIntentResponse | null>(null);
   const [isResolvingVoice, setIsResolvingVoice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
-  const [bookingTransitionLabel, setBookingTransitionLabel] = useState<string | null>(null);
+  const [bookingTransitionLabel, setBookingTransitionLabel] = useState<
+    string | null
+  >(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [paymentPreview, setPaymentPreview] = useState<{
     provider: string;
@@ -350,7 +362,8 @@ export default function BookingScreen() {
     supportedNetworks: string[];
     channel: string;
   } | null>(null);
-  const [autoAppliedRiderPosition, setAutoAppliedRiderPosition] = useState(false);
+  const [autoAppliedRiderPosition, setAutoAppliedRiderPosition] =
+    useState(false);
   const previousFlowStateRef = useRef<string | null>(null);
   const bookingMutationInFlightRef = useRef(false);
   const riderPosition = useRiderPosition({
@@ -435,7 +448,9 @@ export default function BookingScreen() {
     selectedCity.pickup,
   ]);
 
-  async function loadBookingContext() {
+  async function loadBookingContext(
+    options: { resetPaymentPreview?: boolean } = {},
+  ) {
     const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
       version: orbiRuntimeConfig.apiVersion,
     });
@@ -465,7 +480,9 @@ export default function BookingScreen() {
       setOptions(response.options);
       setHistory(historyResponse);
       setProfile(profileResponse);
-      setPaymentPreview(null);
+      if (options.resetPaymentPreview ?? true) {
+        setPaymentPreview(null);
+      }
       const flow = resolveRiderActiveFlow(historyResponse);
 
       const firstOption = response.options[0];
@@ -661,8 +678,13 @@ export default function BookingScreen() {
   }
 
   const flow = resolveRiderActiveFlow(history);
-  const { activeTrip, activeRequest, activeFlowState, hasOpenFlow, primaryStatusLabel } =
-    flow;
+  const {
+    activeTrip,
+    activeRequest,
+    activeFlowState,
+    hasOpenFlow,
+    primaryStatusLabel,
+  } = flow;
 
   useEffect(() => {
     const previousFlowState = previousFlowStateRef.current;
@@ -699,7 +721,9 @@ export default function BookingScreen() {
     }
 
     if (hasOpenFlow) {
-      setStatus('Une demande ou une course est deja active. Finalisez-la d abord.');
+      setStatus(
+        'Une demande ou une course est deja active. Finalisez-la d abord.',
+      );
       return;
     }
 
@@ -756,19 +780,23 @@ export default function BookingScreen() {
       );
 
       if (selectedPaymentMethod !== 'cash') {
-        const paymentIntent = await createCheckoutIntentWithApi(authClient, {
-          rideRequestId: createdRequest.id,
-          channel:
-            selectedPaymentMethod === 'wallet' ? 'WALLET' : 'MOBILE_MONEY',
-          mobileMoneyNetwork:
-            selectedPaymentMethod === 'mobile-money'
-              ? 'ORANGE_MONEY'
-              : undefined,
-          customerPhoneNumber: me.user.phoneNumber ?? undefined,
-          redirectUrl: orbiRuntimeConfig.paymentRedirectUrl,
-        }, {
-          idempotencyKey: `checkout-${createdRequest.id}-${selectedPaymentMethod}`,
-        });
+        const paymentIntent = await createCheckoutIntentWithApi(
+          authClient,
+          {
+            rideRequestId: createdRequest.id,
+            channel:
+              selectedPaymentMethod === 'wallet' ? 'WALLET' : 'MOBILE_MONEY',
+            mobileMoneyNetwork:
+              selectedPaymentMethod === 'mobile-money'
+                ? 'ORANGE_MONEY'
+                : undefined,
+            customerPhoneNumber: me.user.phoneNumber ?? undefined,
+            redirectUrl: orbiRuntimeConfig.paymentRedirectUrl,
+          },
+          {
+            idempotencyKey: `checkout-${createdRequest.id}-${selectedPaymentMethod}`,
+          },
+        );
 
         setPaymentPreview({
           provider: paymentIntent.provider,
@@ -786,7 +814,7 @@ export default function BookingScreen() {
         );
       }
 
-      await loadBookingContext();
+      await loadBookingContext({ resetPaymentPreview: false });
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: selectedPaymentMethod === 'cash' ? 'booking' : 'payments',

@@ -925,9 +925,7 @@ function resolveLiveOpsRoutePosition(input: {
     input.rideRequest?.destinationLongitude,
   );
   let distanceToPickupKm: number | null = null;
-  let distanceToDestinationKm = toFiniteNumber(
-    payload.distanceToDestinationKm,
-  );
+  let distanceToDestinationKm = toFiniteNumber(payload.distanceToDestinationKm);
 
   if (pickupLatitude !== null && pickupLongitude !== null) {
     distanceToPickupKm = roundKm(
@@ -2313,19 +2311,17 @@ export class AdminService {
         )
           ? latestRouteAlert.payload
           : {};
-        const latestRoutePosition = [...trip.events]
-          .reverse()
-          .find((event) => {
-            if (event.eventType !== 'ROUTE_POSITION_RECORDED') {
-              return false;
-            }
+        const latestRoutePosition = [...trip.events].reverse().find((event) => {
+          if (event.eventType !== 'ROUTE_POSITION_RECORDED') {
+            return false;
+          }
 
-            const payload = isDispatchSettingsRecord(event.payload)
-              ? event.payload
-              : {};
+          const payload = isDispatchSettingsRecord(event.payload)
+            ? event.payload
+            : {};
 
-            return payload.sourceRole !== 'RIDER';
-          });
+          return payload.sourceRole !== 'RIDER';
+        });
         const latestPosition = resolveLiveOpsRoutePosition({
           event: latestRoutePosition,
           rideRequest: trip.rideRequest,
@@ -2388,7 +2384,7 @@ export class AdminService {
           ? `${routeMonitoringAlertTrips} trajet(s) actif(s) ont une alerte route monitoring.`
           : activeTripsMissingDriverRoutePosition > 0
             ? `${activeTripsMissingDriverRoutePosition} trajet(s) actif(s) attendent le premier signal GPS chauffeur.`
-          : 'Route monitoring clair sur les trajets actifs instrumentes.',
+            : 'Route monitoring clair sur les trajets actifs instrumentes.',
         openRequests > 5
           ? 'La file de reservations ouvertes demande une attention immediate.'
           : 'La file de reservations ouvertes reste sous controle.',
