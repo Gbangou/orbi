@@ -1275,6 +1275,13 @@ export type AdminLiveOpsResponse = {
         sourceRole: string | null;
       } | null;
     };
+    completionGate: {
+      state: 'ready' | 'blocked' | 'not_applicable';
+      label: string;
+      reason: string;
+      action: string;
+      canOpsOverride: boolean;
+    };
     lastEvent: {
       label: string;
       createdAt: string;

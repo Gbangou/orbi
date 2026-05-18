@@ -95,6 +95,14 @@ export function resolveLiveOpsTripTriage(
   trip: LiveOpsTrip,
   options: { now?: string | Date } = {},
 ) {
+  const completionGate = trip.completionGate ?? {
+    state: 'ready' as const,
+    label: 'Finalisation possible',
+    reason: 'Le signal route chauffeur est exploitable.',
+    action: 'Laisser le chauffeur finaliser ou assister le support si besoin.',
+    canOpsOverride: false,
+  };
+
   if (trip.hasIncident) {
     return {
       level: 'critical' as const,
@@ -102,6 +110,15 @@ export function resolveLiveOpsTripTriage(
       owner: 'support',
       action:
         'Ouvrir le ticket support, appeler si besoin et garder la course en surveillance.',
+    };
+  }
+
+  if (completionGate.state === 'blocked') {
+    return {
+      level: 'critical' as const,
+      label: 'Finalisation bloquee',
+      owner: 'ops',
+      action: completionGate.action,
     };
   }
 

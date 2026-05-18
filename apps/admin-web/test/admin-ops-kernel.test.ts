@@ -126,6 +126,13 @@ function createLiveOpsTrip(
       lastPositionAt: '2026-04-19T08:02:30.000Z',
       latestPosition: null,
     },
+    completionGate: {
+      state: 'ready',
+      label: 'Finalisation possible',
+      reason: 'Le signal route chauffeur est exploitable.',
+      action: 'Laisser le chauffeur finaliser ou assister le support si besoin.',
+      canOpsOverride: false,
+    },
     lastEvent: {
       label: 'Course demarree',
       createdAt: '2026-04-19T08:00:00.000Z',
@@ -409,6 +416,36 @@ describe('admin-ops-kernel', () => {
         level: 'critical',
         label: 'Route critique',
         owner: 'ops',
+      }),
+    );
+
+    expect(
+      resolveLiveOpsTripTriage(
+        createLiveOpsTrip({
+          hasIncident: false,
+          routeMonitoring: {
+            state: 'clear',
+            alertCount: 0,
+            lastAlertType: null,
+            lastAlertAt: null,
+            lastPositionAt: '2026-04-19T08:02:30.000Z',
+            latestPosition: null,
+          },
+          completionGate: {
+            state: 'blocked',
+            label: 'Finalisation bloquee',
+            reason: 'Signal GPS chauffeur ancien.',
+            action: 'Obtenir un nouveau ping chauffeur.',
+            canOpsOverride: true,
+          },
+        }),
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        level: 'critical',
+        label: 'Finalisation bloquee',
+        owner: 'ops',
+        action: 'Obtenir un nouveau ping chauffeur.',
       }),
     );
 

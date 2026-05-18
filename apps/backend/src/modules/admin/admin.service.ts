@@ -49,6 +49,9 @@ import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-d
 const reviewDecisionRoles = new Set(['ADMIN', 'OPS']);
 const pricingCalibrationLookbackDays = 14;
 const platformCommissionRate = 0.18;
+const routeCompletionMaxSignalAgeMinutes = 10;
+const routeCompletionMaxAccuracyMeters = 250;
+const routeCompletionMaxSpeedKph = 110;
 const csvFormulaPrefixPattern = /^[=+\-@\t\r]/;
 const requiredOnboardingDocumentTypes = [
   'IDENTITY_DOCUMENT',
@@ -962,6 +965,104 @@ function resolveLiveOpsRoutePosition(input: {
         : input.event.createdAt.toISOString(),
     sourceRole:
       typeof payload.sourceRole === 'string' ? payload.sourceRole : null,
+  };
+}
+
+function resolveLiveOpsCompletionGate(input: {
+  status: string;
+  routeMonitoring: {
+    state: 'clear' | 'warning' | 'critical' | 'unknown';
+    lastPositionAt: string | null;
+    latestPosition: {
+      accuracyMeters: number | null;
+      speedKph: number | null;
+    } | null;
+  };
+  now: Date;
+}) {
+  if (input.status !== 'IN_PROGRESS') {
+    return {
+      state: 'not_applicable' as const,
+      label: 'Finalisation non ouverte',
+      reason: 'La course n est pas encore en phase de depot.',
+      action: 'Suivre le prochain changement de statut.',
+      canOpsOverride: false,
+    };
+  }
+
+  if (!input.routeMonitoring.lastPositionAt || !input.routeMonitoring.latestPosition) {
+    return {
+      state: 'blocked' as const,
+      label: 'Finalisation bloquee',
+      reason: 'Aucun signal GPS chauffeur exploitable.',
+      action:
+        'Contacter le chauffeur, demander une actualisation GPS puis finaliser cote ops seulement apres verification.',
+      canOpsOverride: true,
+    };
+  }
+
+  const lastPositionAt = new Date(input.routeMonitoring.lastPositionAt);
+  const signalAgeMinutes =
+    (input.now.getTime() - lastPositionAt.getTime()) / 60000;
+
+  if (
+    Number.isFinite(signalAgeMinutes) &&
+    signalAgeMinutes > routeCompletionMaxSignalAgeMinutes
+  ) {
+    return {
+      state: 'blocked' as const,
+      label: 'Finalisation bloquee',
+      reason: `Signal GPS chauffeur ancien (${Math.round(signalAgeMinutes)} min).`,
+      action:
+        'Obtenir un nouveau ping chauffeur ou verifier manuellement le depot avant resolution ops.',
+      canOpsOverride: true,
+    };
+  }
+
+  if (input.routeMonitoring.state === 'critical') {
+    return {
+      state: 'blocked' as const,
+      label: 'Finalisation bloquee',
+      reason: 'Alerte route critique active.',
+      action:
+        'Verifier deviation, incident ou spoofing GPS avant toute resolution manuelle.',
+      canOpsOverride: true,
+    };
+  }
+
+  const { accuracyMeters, speedKph } = input.routeMonitoring.latestPosition;
+
+  if (
+    typeof accuracyMeters === 'number' &&
+    accuracyMeters > routeCompletionMaxAccuracyMeters
+  ) {
+    return {
+      state: 'blocked' as const,
+      label: 'Finalisation bloquee',
+      reason: `Precision GPS insuffisante (${Math.round(accuracyMeters)} m).`,
+      action:
+        'Demander au chauffeur de stabiliser le GPS avant finalisation ou documenter une resolution ops.',
+      canOpsOverride: true,
+    };
+  }
+
+  if (typeof speedKph === 'number' && speedKph > routeCompletionMaxSpeedKph) {
+    return {
+      state: 'blocked' as const,
+      label: 'Finalisation bloquee',
+      reason: `Vitesse route impossible (${Math.round(speedKph)} km/h).`,
+      action:
+        'Verifier la position et exclure une manipulation GPS avant resolution.',
+      canOpsOverride: true,
+    };
+  }
+
+  return {
+    state: 'ready' as const,
+    label: 'Finalisation possible',
+    reason: 'Le signal route chauffeur est exploitable.',
+    action: 'Laisser le chauffeur finaliser ou assister le support si besoin.',
+    canOpsOverride: false,
   };
 }
 
@@ -2270,6 +2371,7 @@ export class AdminService {
     const reconciledPayments = paymentAttempts.filter(
       (attempt) => attempt.providerReference,
     ).length;
+    const now = new Date();
 
     return {
       summary: {
@@ -2326,6 +2428,30 @@ export class AdminService {
           event: latestRoutePosition,
           rideRequest: trip.rideRequest,
         });
+        const routeMonitoring: {
+          state: 'clear' | 'warning' | 'critical' | 'unknown';
+          alertCount: number;
+          lastAlertType: string | null;
+          lastAlertAt: string | null;
+          lastPositionAt: string | null;
+          latestPosition: ReturnType<typeof resolveLiveOpsRoutePosition>;
+        } = {
+          state: latestRouteAlert
+            ? latestRouteAlertPayload.severity === 'critical'
+              ? 'critical'
+              : 'warning'
+            : latestRoutePosition
+              ? 'clear'
+              : 'unknown',
+          alertCount: routeAlertEvents.length,
+          lastAlertType:
+            typeof latestRouteAlertPayload.alertType === 'string'
+              ? latestRouteAlertPayload.alertType
+              : null,
+          lastAlertAt: latestRouteAlert?.createdAt.toISOString() ?? null,
+          lastPositionAt: latestRoutePosition?.createdAt.toISOString() ?? null,
+          latestPosition,
+        };
 
         return {
           id: trip.id,
@@ -2345,24 +2471,12 @@ export class AdminService {
           incidentCount: trip.events.filter(
             (event) => event.eventType === 'INCIDENT_REPORTED',
           ).length,
-          routeMonitoring: {
-            state: latestRouteAlert
-              ? latestRouteAlertPayload.severity === 'critical'
-                ? 'critical'
-                : 'warning'
-              : latestRoutePosition
-                ? 'clear'
-                : 'unknown',
-            alertCount: routeAlertEvents.length,
-            lastAlertType:
-              typeof latestRouteAlertPayload.alertType === 'string'
-                ? latestRouteAlertPayload.alertType
-                : null,
-            lastAlertAt: latestRouteAlert?.createdAt.toISOString() ?? null,
-            lastPositionAt:
-              latestRoutePosition?.createdAt.toISOString() ?? null,
-            latestPosition,
-          },
+          routeMonitoring,
+          completionGate: resolveLiveOpsCompletionGate({
+            status: trip.status,
+            routeMonitoring,
+            now,
+          }),
           lastEvent: lastEvent
             ? {
                 label: formatTripEventLabel(lastEvent.eventType),

@@ -245,6 +245,11 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
             trip.routeMonitoring,
           );
           const triage = resolveLiveOpsTripTriage(trip);
+          const completionGate = trip.completionGate ?? {
+            label: 'Finalisation possible',
+            reason: 'Signal route a confirmer.',
+            canOpsOverride: false,
+          };
 
           return (
             <article
@@ -309,6 +314,14 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
                   ) : null}
                   {routeMonitoringCopy.progressLabel ? (
                     <small>{routeMonitoringCopy.progressLabel}</small>
+                  ) : null}
+                </div>
+                <div className="trip-meta-card">
+                  <span>Finalisation</span>
+                  <strong>{completionGate.label}</strong>
+                  <small>{completionGate.reason}</small>
+                  {completionGate.canOpsOverride ? (
+                    <small>Resolution ops auditee requise</small>
                   ) : null}
                 </div>
               </div>

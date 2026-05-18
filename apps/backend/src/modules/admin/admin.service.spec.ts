@@ -475,6 +475,10 @@ describe('AdminService', () => {
             sourceRole: 'DRIVER',
           }),
         }),
+        completionGate: expect.objectContaining({
+          state: 'not_applicable',
+          canOpsOverride: false,
+        }),
       }),
     );
     expect(result.trips[0].lastEvent?.label).toBe('Position route recue');
@@ -544,6 +548,62 @@ describe('AdminService', () => {
     expect(result.alerts).toContain(
       '1 trajet(s) actif(s) attendent le premier signal GPS chauffeur.',
     );
+  });
+
+  it('exposes completion gate blockers for active in-progress trips', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValue([
+      {
+        id: 'trip-1',
+        status: 'IN_PROGRESS',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        actualFare: 1600,
+        currency: 'XOF',
+        rider: { user: { fullName: 'Awa Rider' } },
+        driver: { user: { fullName: 'Issa Driver' } },
+        vehicle: { make: 'Yamaha', model: 'Crypton' },
+        rideRequest: {
+          pickupLatitude: 12.3783,
+          pickupLongitude: -1.4994,
+          destinationLatitude: 12.3032,
+          destinationLongitude: -1.5241,
+        },
+        events: [
+          {
+            id: 'event-1',
+            eventType: 'TRIP_STARTED',
+            createdAt: new Date(),
+          },
+          {
+            id: 'event-2',
+            eventType: 'ROUTE_POSITION_RECORDED',
+            payload: {
+              latitude: 12.3776,
+              longitude: -1.501,
+              accuracyMeters: 420,
+              speedKph: 126,
+              observedAt: new Date().toISOString(),
+              sourceRole: 'DRIVER',
+            },
+            createdAt: new Date(),
+          },
+        ],
+      },
+    ]);
+    prisma.rideRequest.count.mockResolvedValue(0);
+
+    const result = await service.liveOps();
+
+    expect(result.trips[0].completionGate).toEqual(
+      expect.objectContaining({
+        state: 'blocked',
+        label: 'Finalisation bloquee',
+        canOpsOverride: true,
+      }),
+    );
+    expect(result.trips[0].completionGate.reason).toContain('Precision GPS');
   });
 
   it('lists job queue entries for operations triage', async () => {
