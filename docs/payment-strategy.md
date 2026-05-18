@@ -99,6 +99,11 @@ an internal driver payout ledger entry. The entry credits the driver's XOF
 wallet with the fare minus the platform commission, uses
 `payment:<paymentAttemptId>:driver-payout` as an idempotent reference, and keeps
 gross fare, commission, payout, provider and trip identifiers in metadata.
+The driver earnings API also returns a backend-owned `settlement` breakdown
+with payout rate, recent gross fare, recent net payout, platform fee, state,
+anomalies and calculation timestamp. Rider/driver clients must render this
+settlement object instead of recalculating commission locally, so demo, MVP and
+production surfaces share the same money truth.
 
 The admin live ops surface now exposes driver wallets and payout operations:
 ops can prepare a payout from the current positive wallet balance, then mark it

@@ -37,6 +37,9 @@ function toNumber(value: unknown) {
   return Number(value);
 }
 
+const driverPayoutRateBps = 8200;
+const driverPayoutRate = driverPayoutRateBps / 10_000;
+
 function normalizePlateNumber(value: string) {
   return value.trim().toUpperCase();
 }
@@ -490,7 +493,8 @@ export class DriversService {
 
     const payouts = trips.map((trip) => ({
       ...trip,
-      payout: Math.round(Number(trip.actualFare ?? 0) * 0.82),
+      payout: Math.round(Number(trip.actualFare ?? 0) * driverPayoutRate),
+      grossFare: Math.round(Number(trip.actualFare ?? 0)),
       effectiveDate: trip.completedAt ?? trip.createdAt,
     }));
 
@@ -504,6 +508,20 @@ export class DriversService {
       .filter((trip) => trip.effectiveDate.getTime() >= oneMonthAgo)
       .reduce((sum, trip) => sum + trip.payout, 0);
     const totalPayout = payouts.reduce((sum, trip) => sum + trip.payout, 0);
+    const recentTrips = payouts.slice(0, 8);
+    const recentGrossFare = recentTrips.reduce(
+      (sum, trip) => sum + trip.grossFare,
+      0,
+    );
+    const recentNetPayout = recentTrips.reduce(
+      (sum, trip) => sum + trip.payout,
+      0,
+    );
+    const recentPlatformFee = Math.max(0, recentGrossFare - recentNetPayout);
+    const settlementAnomalies = [
+      today > week ? 'today_exceeds_week' : null,
+      week > month ? 'week_exceeds_month' : null,
+    ].filter((item): item is string => Boolean(item));
 
     return {
       summary: {
@@ -516,10 +534,25 @@ export class DriversService {
           ? Math.round(totalPayout / payouts.length)
           : 0,
       },
-      recentTrips: payouts.slice(0, 8).map((trip) => ({
+      settlement: {
+        currency: 'XOF',
+        source: 'COMPLETED_TRIPS',
+        payoutRateBps: driverPayoutRateBps,
+        payoutRate: driverPayoutRate,
+        recentTripCount: recentTrips.length,
+        recentGrossFare,
+        recentNetPayout,
+        recentPlatformFee,
+        state: settlementAnomalies.length ? 'REVIEW_REQUIRED' : 'RECONCILED',
+        anomalies: settlementAnomalies,
+        calculatedAt: new Date(now).toISOString(),
+      },
+      recentTrips: recentTrips.map((trip) => ({
         id: trip.id,
         route: `${trip.pickupAddress} vers ${trip.destinationAddress}`,
         payout: trip.payout,
+        grossFare: trip.grossFare,
+        platformFee: Math.max(0, trip.grossFare - trip.payout),
         status: trip.status,
         completedAt: trip.completedAt?.toISOString() ?? null,
       })),

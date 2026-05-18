@@ -40,6 +40,19 @@ const fallbackEarnings: DriverEarningsResponse = {
     completedTrips: 0,
     averagePayout: 0,
   },
+  settlement: {
+    currency: 'XOF',
+    source: 'COMPLETED_TRIPS',
+    payoutRateBps: 8200,
+    payoutRate: 0.82,
+    recentTripCount: 0,
+    recentGrossFare: 0,
+    recentNetPayout: 0,
+    recentPlatformFee: 0,
+    state: 'RECONCILED',
+    anomalies: [],
+    calculatedAt: new Date('2026-04-19T00:00:00.000Z').toISOString(),
+  },
   recentTrips: [],
 };
 

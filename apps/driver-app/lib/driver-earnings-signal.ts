@@ -1,8 +1,6 @@
 import { formatXof } from '@orbi/ui';
 import type { DriverEarningsResponse } from '@orbi/api';
 
-const DRIVER_PAYOUT_RATE = 0.82;
-
 export function isFiniteEarningsNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
@@ -59,8 +57,26 @@ export function buildDriverEarningsTrustSummary(
   const hasDirtySummary = summaryValues.some(
     (value) => !isFiniteEarningsNumber(value) || value < 0,
   );
+  const settlement = earnings.settlement;
+  const settlementValues = [
+    settlement.payoutRateBps,
+    settlement.payoutRate,
+    settlement.recentTripCount,
+    settlement.recentGrossFare,
+    settlement.recentNetPayout,
+    settlement.recentPlatformFee,
+  ];
   const hasDirtyTrips = earnings.recentTrips.some(
-    (trip) => !isFiniteEarningsNumber(trip.payout) || trip.payout < 0,
+    (trip) =>
+      !isFiniteEarningsNumber(trip.payout) ||
+      trip.payout < 0 ||
+      !isFiniteEarningsNumber(trip.grossFare) ||
+      trip.grossFare < 0 ||
+      !isFiniteEarningsNumber(trip.platformFee) ||
+      trip.platformFee < 0,
+  );
+  const hasDirtySettlement = settlementValues.some(
+    (value) => !isFiniteEarningsNumber(value) || value < 0,
   );
   const hasInvertedWindow =
     isFiniteEarningsNumber(earnings.summary.today) &&
@@ -68,19 +84,21 @@ export function buildDriverEarningsTrustSummary(
     isFiniteEarningsNumber(earnings.summary.month) &&
     (earnings.summary.today > earnings.summary.week ||
       earnings.summary.week > earnings.summary.month);
-  const recentNetPayout = earnings.recentTrips.reduce(
-    (sum, trip) => sum + (isFiniteEarningsNumber(trip.payout) ? trip.payout : 0),
-    0,
-  );
-  const estimatedGross = Math.round(recentNetPayout / DRIVER_PAYOUT_RATE);
-  const estimatedPlatformFee = Math.max(0, estimatedGross - recentNetPayout);
   const hasAnomaly =
-    hasDirtySummary || hasDirtyTrips || hasInvertedWindow || earnings.summary.currency !== 'XOF';
+    hasDirtySummary ||
+    hasDirtyTrips ||
+    hasDirtySettlement ||
+    hasInvertedWindow ||
+    earnings.summary.currency !== settlement.currency ||
+    settlement.state === 'REVIEW_REQUIRED' ||
+    settlement.anomalies.length > 0;
 
   return {
-    payoutRateLabel: `${Math.round(DRIVER_PAYOUT_RATE * 100)}% chauffeur`,
-    recentNetPayoutLabel: formatDriverEarningsAmount(recentNetPayout),
-    estimatedPlatformFeeLabel: formatDriverEarningsAmount(estimatedPlatformFee),
+    payoutRateLabel: `${Math.round(settlement.payoutRate * 100)}% chauffeur`,
+    recentNetPayoutLabel: formatDriverEarningsAmount(settlement.recentNetPayout),
+    estimatedPlatformFeeLabel: formatDriverEarningsAmount(
+      settlement.recentPlatformFee,
+    ),
     settlementStateLabel: hasAnomaly
       ? 'A verifier'
       : earnings.recentTrips.length > 0

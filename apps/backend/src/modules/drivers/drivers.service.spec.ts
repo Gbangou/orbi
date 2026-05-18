@@ -1031,6 +1031,74 @@ describe('DriversService', () => {
     expect(result.links).toHaveLength(1);
   });
 
+  it('returns driver earnings with backend settlement breakdown', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValue([
+      {
+        id: 'trip-1',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        status: 'COMPLETED',
+        actualFare: 5000,
+        completedAt: new Date(Date.now() - 1000 * 60 * 30),
+        createdAt: new Date(Date.now() - 1000 * 60 * 60),
+      },
+      {
+        id: 'trip-2',
+        pickupAddress: 'Koulouba',
+        destinationAddress: 'Patte d Oie',
+        status: 'COMPLETED',
+        actualFare: 3500,
+        completedAt: new Date(Date.now() - 1000 * 60 * 90),
+        createdAt: new Date(Date.now() - 1000 * 60 * 120),
+      },
+    ]);
+
+    const result = await service.getEarnings({
+      user: {
+        driverProfile: { id: 'driver-1' },
+      },
+    } as never);
+
+    expect(prisma.trip.findMany).toHaveBeenCalledWith({
+      where: {
+        driverId: 'driver-1',
+        status: 'COMPLETED',
+      },
+      orderBy: {
+        completedAt: 'desc',
+      },
+      take: 25,
+    });
+    expect(result.summary).toMatchObject({
+      currency: 'XOF',
+      today: 6970,
+      week: 6970,
+      month: 6970,
+      completedTrips: 2,
+      averagePayout: 3485,
+    });
+    expect(result.settlement).toMatchObject({
+      currency: 'XOF',
+      source: 'COMPLETED_TRIPS',
+      payoutRateBps: 8200,
+      payoutRate: 0.82,
+      recentTripCount: 2,
+      recentGrossFare: 8500,
+      recentNetPayout: 6970,
+      recentPlatformFee: 1530,
+      state: 'RECONCILED',
+      anomalies: [],
+    });
+    expect(result.recentTrips[0]).toMatchObject({
+      id: 'trip-1',
+      payout: 4100,
+      grossFare: 5000,
+      platformFee: 900,
+    });
+  });
+
   it('rejects onboarding document artifacts outside the driver storage prefix', async () => {
     const { prisma, service } = createService();
 

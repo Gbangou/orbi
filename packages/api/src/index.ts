@@ -2411,10 +2411,25 @@ export type DriverEarningsResponse = {
     completedTrips: number;
     averagePayout: number;
   };
+  settlement: {
+    currency: string;
+    source: 'COMPLETED_TRIPS';
+    payoutRateBps: number;
+    payoutRate: number;
+    recentTripCount: number;
+    recentGrossFare: number;
+    recentNetPayout: number;
+    recentPlatformFee: number;
+    state: 'RECONCILED' | 'REVIEW_REQUIRED';
+    anomalies: string[];
+    calculatedAt: string;
+  };
   recentTrips: Array<{
     id: string;
     route: string;
     payout: number;
+    grossFare: number;
+    platformFee: number;
     status: string;
     completedAt: string | null;
   }>;

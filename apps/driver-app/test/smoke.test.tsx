@@ -168,6 +168,61 @@ function buildDriverTrips() {
   };
 }
 
+function buildDriverEarningsResponse(input: {
+  today?: number;
+  week?: number;
+  month?: number;
+  completedTrips?: number;
+  averagePayout?: number;
+  recentTrips?: Array<{
+    id: string;
+    route: string;
+    payout: number;
+    grossFare?: number;
+    platformFee?: number;
+    status: string;
+    completedAt: string | null;
+  }>;
+} = {}) {
+  const recentTrips = input.recentTrips ?? [];
+  const recentNetPayout = recentTrips.reduce((sum, trip) => sum + trip.payout, 0);
+  const recentGrossFare = recentTrips.reduce(
+    (sum, trip) => sum + (trip.grossFare ?? Math.round(trip.payout / 0.82)),
+    0,
+  );
+
+  return {
+    summary: {
+      currency: 'XOF',
+      today: input.today ?? 0,
+      week: input.week ?? 0,
+      month: input.month ?? 0,
+      completedTrips: input.completedTrips ?? 0,
+      averagePayout: input.averagePayout ?? 0,
+    },
+    settlement: {
+      currency: 'XOF',
+      source: 'COMPLETED_TRIPS',
+      payoutRateBps: 8200,
+      payoutRate: 0.82,
+      recentTripCount: recentTrips.length,
+      recentGrossFare,
+      recentNetPayout,
+      recentPlatformFee: Math.max(0, recentGrossFare - recentNetPayout),
+      state: 'RECONCILED',
+      anomalies: [],
+      calculatedAt: '2026-04-19T08:45:00.000Z',
+    },
+    recentTrips: recentTrips.map((trip) => ({
+      ...trip,
+      grossFare: trip.grossFare ?? Math.round(trip.payout / 0.82),
+      platformFee:
+        trip.platformFee ??
+        Math.max(0, Math.round(trip.payout / 0.82) - trip.payout),
+    })),
+  };
+}
+
 function buildDriverProfile() {
   return {
     profile: {
@@ -390,17 +445,15 @@ describe('driver smoke flows', () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverOffers.mockResolvedValue(driverOffers.slice(0, 2) as never);
     mockedFetchMyTrips.mockResolvedValue(buildDriverTrips() as never);
-    mockedFetchDriverEarnings.mockResolvedValue({
-      summary: {
-        currency: 'XOF',
+    mockedFetchDriverEarnings.mockResolvedValue(
+      buildDriverEarningsResponse({
         today: 12500,
         week: 48200,
         month: 160300,
         completedTrips: 6,
         averagePayout: 8033,
-      },
-      recentTrips: [],
-    } as never);
+      }) as never,
+    );
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
 
     const renderer = await renderScreen(<DriverHomeScreen />);
@@ -415,25 +468,26 @@ describe('driver smoke flows', () => {
 
   it('loads the driver earnings cockpit with active mission context', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
-    mockedFetchDriverEarnings.mockResolvedValue({
-      summary: {
-        currency: 'XOF',
+    mockedFetchDriverEarnings.mockResolvedValue(
+      buildDriverEarningsResponse({
         today: 12500,
         week: 48200,
         month: 160300,
         completedTrips: 6,
         averagePayout: 8033,
-      },
-      recentTrips: [
-        {
-          id: 'earning-trip-1',
-          route: 'Universite Joseph Ki-Zerbo vers Ouaga 2000',
-          payout: 3500,
-          status: 'COMPLETED',
-          completedAt: '2026-04-19T08:40:00.000Z',
-        },
-      ],
-    } as never);
+        recentTrips: [
+          {
+            id: 'earning-trip-1',
+            route: 'Universite Joseph Ki-Zerbo vers Ouaga 2000',
+            payout: 3500,
+            grossFare: 4268,
+            platformFee: 768,
+            status: 'COMPLETED',
+            completedAt: '2026-04-19T08:40:00.000Z',
+          },
+        ],
+      }) as never,
+    );
     mockedFetchMyTrips.mockResolvedValue(buildDriverTripsWithStatus('MATCHED') as never);
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
 
@@ -737,28 +791,24 @@ describe('driver smoke flows', () => {
       .mockResolvedValueOnce(buildDriverTrips() as never)
       .mockResolvedValueOnce(buildDriverTrips() as never);
     mockedFetchDriverEarnings
-      .mockResolvedValueOnce({
-        summary: {
-          currency: 'XOF',
+      .mockResolvedValueOnce(
+        buildDriverEarningsResponse({
           today: 12500,
           week: 48200,
           month: 160300,
           completedTrips: 6,
           averagePayout: 8033,
-        },
-        recentTrips: [],
-      } as never)
-      .mockResolvedValueOnce({
-        summary: {
-          currency: 'XOF',
+        }) as never,
+      )
+      .mockResolvedValueOnce(
+        buildDriverEarningsResponse({
           today: 12500,
           week: 48200,
           month: 160300,
           completedTrips: 6,
           averagePayout: 8033,
-        },
-        recentTrips: [],
-      } as never);
+        }) as never,
+      );
     mockedFetchDriverProfile
       .mockResolvedValueOnce(buildDriverProfile() as never)
       .mockResolvedValueOnce(buildDriverProfile() as never);
@@ -899,28 +949,24 @@ describe('driver smoke flows', () => {
       .mockResolvedValueOnce(buildDriverTrips() as never)
       .mockResolvedValueOnce(buildDriverTrips() as never);
     mockedFetchDriverEarnings
-      .mockResolvedValueOnce({
-        summary: {
-          currency: 'XOF',
+      .mockResolvedValueOnce(
+        buildDriverEarningsResponse({
           today: 12500,
           week: 48200,
           month: 160300,
           completedTrips: 6,
           averagePayout: 8033,
-        },
-        recentTrips: [],
-      } as never)
-      .mockResolvedValueOnce({
-        summary: {
-          currency: 'XOF',
+        }) as never,
+      )
+      .mockResolvedValueOnce(
+        buildDriverEarningsResponse({
           today: 12500,
           week: 48200,
           month: 160300,
           completedTrips: 6,
           averagePayout: 8033,
-        },
-        recentTrips: [],
-      } as never);
+        }) as never,
+      );
     mockedFetchDriverProfile
       .mockResolvedValueOnce(buildDriverProfile() as never)
       .mockResolvedValueOnce(buildDriverProfile() as never);
