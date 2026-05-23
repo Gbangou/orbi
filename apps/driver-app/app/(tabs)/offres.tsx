@@ -21,6 +21,7 @@ import {
   fetchTripDetail,
   reportTripIncidentWithApi,
   triggerTripSafetySosWithApi,
+  withNetworkRetry,
   type DriverFatigueStatus,
   type DriverOffer,
   type MyTripsResponse,
@@ -73,6 +74,7 @@ import {
   formatDriverOfferFare,
   buildDriverOfferInsights,
   buildDriverOfferNote,
+  buildDriverOfferConfidenceExplainer,
 } from "../../lib/offer-signal";
 import { useDriverPresence } from "../../lib/use-driver-presence";
 import { useDriverRealtimeStream } from "../../lib/use-driver-realtime-stream";
@@ -127,6 +129,52 @@ function formatOfferDistance(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value)
     ? `${value.toFixed(1)} km`
     : "Distance ND";
+}
+
+const confidenceToneColor: Record<string, string> = {
+  teal: orbiTheme.colors.teal,
+  amber: orbiTheme.colors.amber,
+  sky: orbiTheme.colors.sky,
+  rose: orbiTheme.colors.rose,
+};
+
+function ConfidenceExplainerCard({
+  badge,
+  score,
+  barPercent,
+  explanation,
+  windowLabel,
+  tone,
+}: {
+  badge: string;
+  score: number;
+  barPercent: number;
+  explanation: string;
+  windowLabel: string;
+  tone: string;
+}) {
+  const accent = confidenceToneColor[tone] ?? orbiTheme.colors.muted;
+
+  return (
+    <View style={[styles.confidenceCard, { borderColor: accent }]}>
+      <View style={styles.confidenceTopRow}>
+        <View style={[styles.confidenceBadge, { backgroundColor: `${accent}22`, borderColor: accent }]}>
+          <Text style={[styles.confidenceBadgeLabel, { color: accent }]}>{badge}</Text>
+        </View>
+        <Text style={[styles.confidenceScore, { color: accent }]}>{score}/100</Text>
+      </View>
+      <View style={styles.confidenceBarTrack}>
+        <View
+          style={[
+            styles.confidenceBarFill,
+            { width: `${barPercent}%` as `${number}%`, backgroundColor: accent },
+          ]}
+        />
+      </View>
+      <Text style={styles.confidenceExplanation}>{explanation}</Text>
+      <Text style={[styles.confidenceWindow, { color: accent }]}>{windowLabel}</Text>
+    </View>
+  );
 }
 
 function MissionVehicleMark({
@@ -387,11 +435,13 @@ export default function OffersScreen() {
     try {
       const { authClient, session } = await restoreDriverSession();
       setSessionToken(session.sessionToken);
+      const onRetry = (attempt: number, max: number) =>
+        setStatus(`Reconnexion... (tentative ${attempt}/${max})`);
       const [offersResponse, historyResponse, profileResponse] =
         await Promise.all([
-          fetchDriverOffers(authClient),
-          fetchMyTrips(authClient),
-          fetchDriverProfile(authClient),
+          withNetworkRetry(() => fetchDriverOffers(authClient), { maxAttempts: 3, onRetry }),
+          withNetworkRetry(() => fetchMyTrips(authClient), { maxAttempts: 3, onRetry }),
+          withNetworkRetry(() => fetchDriverProfile(authClient), { maxAttempts: 3, onRetry }),
         ]);
       setOffers(offersResponse);
       setHistory(historyResponse);
@@ -407,7 +457,14 @@ export default function OffersScreen() {
 
       if (activeTrip) {
         try {
-          const detail = await fetchTripDetail(authClient, activeTrip.id);
+          const detail = await withNetworkRetry(
+            () => fetchTripDetail(authClient, activeTrip.id),
+            {
+              maxAttempts: 3,
+              onRetry: (attempt, max) =>
+                setStatus(`Reconnexion mission... (tentative ${attempt}/${max})`),
+            },
+          );
           setActiveTripDetail(detail);
           setTripDetailStatus(null);
         } catch {
@@ -1485,6 +1542,8 @@ export default function OffersScreen() {
         const offerNote = buildDriverOfferNote(offer);
         const riderInitials = buildInitials(offer.riderName);
 
+        const confidenceExplainer = buildDriverOfferConfidenceExplainer(offer);
+
         return (
           <RouteSignalCard
             key={offer.id}
@@ -1557,6 +1616,16 @@ export default function OffersScreen() {
                 />
               </View>
             </View>
+            {confidenceExplainer ? (
+              <ConfidenceExplainerCard
+                badge={confidenceExplainer.badge}
+                score={confidenceExplainer.score}
+                barPercent={confidenceExplainer.barPercent}
+                explanation={confidenceExplainer.explanation}
+                windowLabel={confidenceExplainer.windowLabel}
+                tone={confidenceExplainer.tone}
+              />
+            ) : null}
             <View style={styles.offerActionRow}>
               <FlowActionButton
                 disabled={isSubmitting || Boolean(activeTrip)}
@@ -2142,5 +2211,51 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 14,
     marginBottom: 12,
+  },
+  confidenceCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    gap: 8,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+  },
+  confidenceTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  confidenceBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  confidenceBadgeLabel: {
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 0.5,
+  },
+  confidenceScore: {
+    fontWeight: "800",
+    fontSize: 13,
+  },
+  confidenceBarTrack: {
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: orbiTheme.colors.border,
+    overflow: "hidden",
+  },
+  confidenceBarFill: {
+    height: 5,
+    borderRadius: 999,
+  },
+  confidenceExplanation: {
+    color: orbiTheme.colors.muted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  confidenceWindow: {
+    fontWeight: "700",
+    fontSize: 12,
   },
 });

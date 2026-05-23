@@ -800,6 +800,46 @@ function buildOrbiClientErrorFingerprint(input: {
   return (hash >>> 0).toString(36);
 }
 
+export type NetworkRetryOptions = {
+  maxAttempts?: number;
+  onRetry?: (attempt: number, maxAttempts: number) => void;
+};
+
+function isNetworkLevelError(error: unknown): boolean {
+  return isLikelyOrbiNetworkError(error);
+}
+
+function retryDelayMs(attempt: number): number {
+  return Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+}
+
+export async function withNetworkRetry<T>(
+  fn: () => Promise<T>,
+  options: NetworkRetryOptions = {},
+): Promise<T> {
+  const maxAttempts = Math.max(1, options.maxAttempts ?? 3);
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      if (!isNetworkLevelError(error) || attempt === maxAttempts) {
+        throw error;
+      }
+
+      options.onRetry?.(attempt, maxAttempts);
+      await new Promise<void>((resolve) =>
+        setTimeout(resolve, retryDelayMs(attempt)),
+      );
+    }
+  }
+
+  throw lastError;
+}
+
 export class OrbiApiClient {
   private readonly version: string;
   private readonly headers: Record<string, string>;
@@ -853,6 +893,14 @@ export class OrbiApiClient {
     }
 
     return (await response.json()) as T;
+  }
+
+  async requestWithRetry<T>(
+    path: string,
+    options: RequestOptions = {},
+    retryOptions: NetworkRetryOptions = {},
+  ): Promise<T> {
+    return withNetworkRetry(() => this.request<T>(path, options), retryOptions);
   }
 
   async requestText(path: string, options: RequestOptions = {}) {
@@ -1306,6 +1354,17 @@ export type AdminLiveOpsResponse = {
     cancelledBy: string | null;
     cancellationReason: string | null;
     cancelledAt: string;
+  }>;
+  driverAcceptanceLeaderboard: Array<{
+    driverId: string;
+    driverName: string;
+    total: number;
+    accepted: number;
+    declined: number;
+    expired: number;
+    acceptanceRate: number;
+    declineRate: number;
+    expirationRate: number;
   }>;
 };
 

@@ -2254,6 +2254,9 @@ export class AdminService {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const cancellationLookbackMs = 2 * 60 * 60 * 1000;
     const recentCancellationSince = new Date(Date.now() - cancellationLookbackMs);
+    const dispatchLeaderboardSince = new Date(
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
+    );
     const [
       activeTrips,
       urgentSupportTickets,
@@ -2261,6 +2264,7 @@ export class AdminService {
       paymentAttempts,
       paymentWebhookEvents,
       recentlyCancelledTrips,
+      dispatchAuditLogs,
     ] = await Promise.all([
       this.prisma.trip.findMany({
         where: {
@@ -2353,6 +2357,23 @@ export class AdminService {
         orderBy: { updatedAt: 'desc' },
         take: 15,
       }),
+      this.prisma.auditLog.findMany({
+        where: {
+          action: {
+            in: [
+              'DISPATCH_RESERVATION_ACCEPTED',
+              'DISPATCH_RESERVATION_DECLINED',
+              'DISPATCH_RESERVATION_EXPIRED',
+            ],
+          },
+          createdAt: { gte: dispatchLeaderboardSince },
+        },
+        select: {
+          userId: true,
+          action: true,
+          user: { select: { fullName: true } },
+        },
+      }),
     ]);
 
     const tripsByStatus = {
@@ -2408,6 +2429,44 @@ export class AdminService {
       (attempt) => attempt.providerReference,
     ).length;
     const now = new Date();
+
+    const driverDispatchStats = new Map<
+      string,
+      { fullName: string | null; accepted: number; declined: number; expired: number }
+    >();
+    for (const log of dispatchAuditLogs) {
+      const entry = driverDispatchStats.get(log.userId) ?? {
+        fullName: log.user.fullName,
+        accepted: 0,
+        declined: 0,
+        expired: 0,
+      };
+      if (log.action === 'DISPATCH_RESERVATION_ACCEPTED') {
+        entry.accepted += 1;
+      } else if (log.action === 'DISPATCH_RESERVATION_DECLINED') {
+        entry.declined += 1;
+      } else if (log.action === 'DISPATCH_RESERVATION_EXPIRED') {
+        entry.expired += 1;
+      }
+      driverDispatchStats.set(log.userId, entry);
+    }
+    const driverAcceptanceLeaderboard = Array.from(driverDispatchStats.entries())
+      .map(([driverId, stats]) => {
+        const total = stats.accepted + stats.declined + stats.expired;
+        return {
+          driverId,
+          driverName: stats.fullName ?? 'Inconnu',
+          total,
+          accepted: stats.accepted,
+          declined: stats.declined,
+          expired: stats.expired,
+          acceptanceRate: safeRate(stats.accepted, total),
+          declineRate: safeRate(stats.declined, total),
+          expirationRate: safeRate(stats.expired, total),
+        };
+      })
+      .sort((a, b) => b.acceptanceRate - a.acceptanceRate)
+      .slice(0, 10);
 
     const recentCancellations = recentlyCancelledTrips.map((trip) => {
       const cancelEvent = trip.events[0];
@@ -2582,6 +2641,7 @@ export class AdminService {
           : 'Aucun remboursement provider en attente sur 24h.',
       ],
       recentCancellations,
+      driverAcceptanceLeaderboard,
     };
   }
 

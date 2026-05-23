@@ -121,6 +121,52 @@ export function buildDriverOfferDetailLines(offer: DriverOffer) {
   return lines.filter((line): line is string => Boolean(line));
 }
 
+export function buildDriverOfferConfidenceExplainer(offer: DriverOffer): {
+  badge: string;
+  score: number;
+  barPercent: number;
+  explanation: string;
+  windowLabel: string;
+  tone: OfferSignalTone;
+} | null {
+  if (!offer.offerConfidenceLabel) {
+    return null;
+  }
+
+  const score = isFiniteNumber(offer.offerConfidenceScore)
+    ? offer.offerConfidenceScore
+    : 50;
+  const windowSeconds = isFiniteNumber(offer.reservationWindowSeconds)
+    ? offer.reservationWindowSeconds
+    : null;
+  const windowLabel =
+    windowSeconds !== null && windowSeconds > 0
+      ? `${windowSeconds}s pour accepter`
+      : 'Fenetre limitee';
+
+  const explanations: Record<string, string> = {
+    PRIORITY:
+      'Votre historique recent est excellent. Le dispatch vous a selectionne en priorite pour ce trajet.',
+    HIGH:
+      'Votre comportement recent est positif. Vous etes le meilleur candidat disponible pour cette course.',
+    MEDIUM:
+      'Quelques expirations recentes detectees. Accepter renforce votre score pour les prochaines offres.',
+    LOW:
+      'Signal dispatch faible. Finaliser ce trajet redressera votre profil pour les prochaines assignations.',
+  };
+
+  return {
+    badge: resolveOfferPriorityLabel(offer.offerConfidenceLabel),
+    score,
+    barPercent: Math.max(5, Math.min(100, score)),
+    explanation:
+      explanations[offer.offerConfidenceLabel] ??
+      'Le dispatch a selectionne cette offre pour votre profil.',
+    windowLabel,
+    tone: resolveOfferPriorityTone(offer.offerConfidenceLabel),
+  };
+}
+
 export function buildDriverOfferNote(offer: DriverOffer) {
   if (offer.pickupCodeRequired) {
     return {
