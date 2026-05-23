@@ -1,12 +1,14 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { NotificationChannel, Prisma } from '@prisma/client';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { PricingService } from '../pricing/pricing.service';
 import { CreateRideRequestDto } from './dto/create-ride-request.dto';
@@ -28,11 +30,14 @@ import { RideRequestProjector } from './ride-request.projector';
 
 @Injectable()
 export class RideRequestsService {
+  private readonly logger = new Logger(RideRequestsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricingService: PricingService,
     private readonly realtimeService: RealtimeService,
     private readonly rideRequestProjector: RideRequestProjector,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(payload: CreateRideRequestDto) {
@@ -187,6 +192,11 @@ export class RideRequestsService {
           ),
           operatingContext,
         },
+      });
+
+      void this.notifyOnlineDriversOfNewRequest({
+        rideRequestId: rideRequest.id,
+        pickupAddress: rideRequest.pickupAddress,
       });
     }
 
@@ -362,5 +372,34 @@ export class RideRequestsService {
         updatedAt: cancelledRequest.updatedAt.toISOString(),
       },
     };
+  }
+
+  private async notifyOnlineDriversOfNewRequest(input: {
+    rideRequestId: string;
+    pickupAddress: string;
+  }): Promise<void> {
+    try {
+      const onlineDrivers = await this.prisma.driverProfile.findMany({
+        where: { status: 'ONLINE' },
+        select: { userId: true },
+        take: 100,
+      });
+
+      await Promise.allSettled(
+        onlineDrivers.map((driver) =>
+          this.notificationsService.enqueue({
+            userId: driver.userId,
+            title: 'Nouvelle course disponible !',
+            body: `Prise en charge : ${input.pickupAddress}`,
+            channel: NotificationChannel.PUSH,
+            dedupeKey: `new_request:${input.rideRequestId}:${driver.userId}`,
+          }),
+        ),
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to notify drivers of new request ${input.rideRequestId}: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+    }
   }
 }

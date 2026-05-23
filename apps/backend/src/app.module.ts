@@ -22,6 +22,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { VoiceModule } from './modules/voice/voice.module';
 import { MobileObservabilityModule } from './modules/mobile-observability/mobile-observability.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PushTokenModule } from './modules/notifications/push-token.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     VoiceModule,
     MobileObservabilityModule,
     NotificationsModule,
+    PushTokenModule,
   ],
 })
 export class AppModule {}

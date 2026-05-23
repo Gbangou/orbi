@@ -51,6 +51,11 @@ describe('TripsService', () => {
       auditLog: {
         create: jest.fn(),
       },
+      rating: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        aggregate: jest.fn(),
+      },
     };
     const realtimeService = {
       publish: jest.fn(),
@@ -66,14 +71,20 @@ describe('TripsService', () => {
       async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
     );
 
+    const notificationsService = {
+      enqueue: jest.fn().mockResolvedValue({ notification: { id: 'notif-1' } }),
+    };
+
     return {
       prisma,
       realtimeService,
       documentLinksService,
+      notificationsService,
       service: new TripsService(
         prisma as never,
         realtimeService as never,
         documentLinksService as never,
+        notificationsService as never,
       ),
     };
   }
@@ -2029,5 +2040,264 @@ describe('TripsService', () => {
       },
     });
     expect(result.trip.status).toBe('DRIVER_ARRIVING');
+  });
+
+  // ---------------------------------------------------------------------------
+  // rateTrip — notation d'une course par le passager
+  // ---------------------------------------------------------------------------
+  describe('rateTrip', () => {
+    function buildCompletedTrip(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'trip-rate-1',
+        riderId: 'rider-1',
+        driverId: 'driver-profile-1',
+        status: 'COMPLETED',
+        rider: { id: 'rider-1', user: { id: 'user-rider-1', fullName: 'Awa Test' } },
+        driver: { id: 'driver-profile-1', user: { id: 'user-driver-1', fullName: 'Boubacar Test' } },
+        ...overrides,
+      };
+    }
+
+    function buildRiderAuth(overrides: Record<string, unknown> = {}) {
+      return {
+        user: {
+          id: 'user-rider-1',
+          role: 'RIDER',
+          riderProfile: { id: 'rider-1' },
+          ...overrides,
+        },
+      } as never;
+    }
+
+    it('throws NotFoundException when the trip does not exist', async () => {
+      const { prisma, service } = createService();
+
+      prisma.trip.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.rateTrip(buildRiderAuth(), 'trip-rate-missing', { score: 4 }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws NotFoundException when the rider does not own the trip', async () => {
+      const { prisma, service } = createService();
+
+      // La course appartient à un autre passager
+      prisma.trip.findUnique.mockResolvedValue(
+        buildCompletedTrip({ riderId: 'rider-autre' }),
+      );
+
+      await expect(
+        service.rateTrip(buildRiderAuth(), 'trip-rate-1', { score: 5 }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws BadRequestException when the trip is not COMPLETED', async () => {
+      const { prisma, service } = createService();
+
+      prisma.trip.findUnique.mockResolvedValue(
+        buildCompletedTrip({ status: 'IN_PROGRESS' }),
+      );
+
+      await expect(
+        service.rateTrip(buildRiderAuth(), 'trip-rate-1', { score: 5 }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException when the trip has already been rated by this rider', async () => {
+      const { prisma, service } = createService();
+
+      prisma.trip.findUnique.mockResolvedValue(buildCompletedTrip());
+      // Notation existante trouvée dans la base
+      prisma.rating.findFirst.mockResolvedValue({
+        id: 'rating-existant',
+        tripId: 'trip-rate-1',
+        riderId: 'rider-1',
+        score: 3,
+        comment: null,
+        createdAt: new Date('2026-05-01T10:00:00.000Z'),
+      });
+
+      await expect(
+        service.rateTrip(buildRiderAuth(), 'trip-rate-1', { score: 5 }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('crée la notation et met à jour la note moyenne du chauffeur', async () => {
+      const { prisma, service } = createService();
+
+      const createdAt = new Date('2026-05-20T14:00:00.000Z');
+
+      prisma.trip.findUnique.mockResolvedValue(buildCompletedTrip());
+      prisma.rating.findFirst.mockResolvedValue(null);
+      prisma.rating.create.mockResolvedValue({
+        id: 'rating-new-1',
+        tripId: 'trip-rate-1',
+        riderId: 'rider-1',
+        driverId: 'driver-profile-1',
+        score: 4,
+        comment: 'Chauffeur ponctuel et courtois.',
+        createdAt,
+      });
+      prisma.rating.aggregate.mockResolvedValue({
+        _avg: { score: 4.25 },
+        _count: { score: 8 },
+      });
+      prisma.driverProfile.update.mockResolvedValue(undefined);
+
+      const result = await service.rateTrip(buildRiderAuth(), 'trip-rate-1', {
+        score: 4,
+        comment: 'Chauffeur ponctuel et courtois.',
+      });
+
+      // La note doit être persisée avec chauffeur et passager corrects
+      expect(prisma.rating.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            tripId: 'trip-rate-1',
+            riderId: 'rider-1',
+            driverId: 'driver-profile-1',
+            score: 4,
+            comment: 'Chauffeur ponctuel et courtois.',
+          }),
+        }),
+      );
+
+      // La note moyenne doit être mise à jour sur le profil chauffeur
+      expect(prisma.driverProfile.update).toHaveBeenCalledWith({
+        where: { id: 'driver-profile-1' },
+        data: { averageRating: 4.25 },
+      });
+
+      // Réponse correctement sérialisée
+      expect(result.rating.id).toBe('rating-new-1');
+      expect(result.rating.score).toBe(4);
+      expect(result.rating.comment).toBe('Chauffeur ponctuel et courtois.');
+      expect(result.rating.tripId).toBe('trip-rate-1');
+      expect(result.rating.createdAt).toBe(createdAt.toISOString());
+    });
+
+    it('stocke null comme commentaire quand aucun commentaire nest fourni', async () => {
+      const { prisma, service } = createService();
+
+      prisma.trip.findUnique.mockResolvedValue(buildCompletedTrip());
+      prisma.rating.findFirst.mockResolvedValue(null);
+      prisma.rating.create.mockResolvedValue({
+        id: 'rating-no-comment',
+        tripId: 'trip-rate-1',
+        riderId: 'rider-1',
+        driverId: 'driver-profile-1',
+        score: 5,
+        comment: null,
+        createdAt: new Date(),
+      });
+      prisma.rating.aggregate.mockResolvedValue({
+        _avg: { score: 4.8 },
+        _count: { score: 5 },
+      });
+      prisma.driverProfile.update.mockResolvedValue(undefined);
+
+      await service.rateTrip(buildRiderAuth(), 'trip-rate-1', { score: 5 });
+
+      expect(prisma.rating.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            score: 5,
+            comment: null,
+          }),
+        }),
+      );
+    });
+
+    it('ne met pas à jour driverProfile.averageRating quand laggrégat retourne null', async () => {
+      const { prisma, service } = createService();
+
+      prisma.trip.findUnique.mockResolvedValue(buildCompletedTrip());
+      prisma.rating.findFirst.mockResolvedValue(null);
+      prisma.rating.create.mockResolvedValue({
+        id: 'rating-first',
+        tripId: 'trip-rate-1',
+        riderId: 'rider-1',
+        driverId: 'driver-profile-1',
+        score: 3,
+        comment: null,
+        createdAt: new Date(),
+      });
+      // Premier rating : average peut être null si Prisma retourne null
+      prisma.rating.aggregate.mockResolvedValue({
+        _avg: { score: null },
+        _count: { score: 1 },
+      });
+
+      await service.rateTrip(buildRiderAuth(), 'trip-rate-1', { score: 3 });
+
+      // La note moyenne ne doit pas être écrasée avec null
+      expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+    });
+
+    it('vérifie la recherche de doublon sur le bon tripId et riderId', async () => {
+      const { prisma, service } = createService();
+
+      prisma.trip.findUnique.mockResolvedValue(buildCompletedTrip());
+      prisma.rating.findFirst.mockResolvedValue(null);
+      prisma.rating.create.mockResolvedValue({
+        id: 'rating-check',
+        tripId: 'trip-rate-1',
+        riderId: 'rider-1',
+        driverId: 'driver-profile-1',
+        score: 2,
+        comment: null,
+        createdAt: new Date(),
+      });
+      prisma.rating.aggregate.mockResolvedValue({
+        _avg: { score: 2 },
+        _count: { score: 1 },
+      });
+      prisma.driverProfile.update.mockResolvedValue(undefined);
+
+      await service.rateTrip(buildRiderAuth(), 'trip-rate-1', { score: 2 });
+
+      // La vérification de doublon doit cibler exactement ce trajet et ce passager
+      expect(prisma.rating.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            tripId: 'trip-rate-1',
+            riderId: 'rider-1',
+          }),
+        }),
+      );
+    });
+
+    it('agrège les notes sur le bon driverId', async () => {
+      const { prisma, service } = createService();
+
+      prisma.trip.findUnique.mockResolvedValue(buildCompletedTrip());
+      prisma.rating.findFirst.mockResolvedValue(null);
+      prisma.rating.create.mockResolvedValue({
+        id: 'rating-agg',
+        tripId: 'trip-rate-1',
+        riderId: 'rider-1',
+        driverId: 'driver-profile-1',
+        score: 5,
+        comment: null,
+        createdAt: new Date(),
+      });
+      prisma.rating.aggregate.mockResolvedValue({
+        _avg: { score: 4.5 },
+        _count: { score: 10 },
+      });
+      prisma.driverProfile.update.mockResolvedValue(undefined);
+
+      await service.rateTrip(buildRiderAuth(), 'trip-rate-1', { score: 5 });
+
+      // L'agrégat doit filtrer uniquement les notes du chauffeur concerné
+      expect(prisma.rating.aggregate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { driverId: 'driver-profile-1' },
+          _avg: { score: true },
+          _count: { score: true },
+        }),
+      );
+    });
   });
 });

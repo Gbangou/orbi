@@ -7,6 +7,7 @@ import { createHash, randomBytes } from 'crypto';
 import {
   DriverDocumentStatus,
   DriverDocumentType,
+  NotificationChannel,
   Prisma,
   TripStatus,
   UserRole,
@@ -14,6 +15,7 @@ import {
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { DocumentLinksService } from '../../common/document-links/document-links.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import {
   ACTIVE_RIDE_REQUEST_STATUSES,
@@ -250,6 +252,7 @@ export class TripsService {
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
     private readonly documentLinksService: DocumentLinksService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getTripDetail(auth: RequestAuthContext, tripId: string) {
@@ -881,6 +884,14 @@ export class TripsService {
       },
     });
 
+    void this.notificationsService.enqueue({
+      userId: trip.rider.user.id,
+      title: 'Chauffeur trouvé !',
+      body: 'Votre chauffeur est en route. Préparez-vous au point de ramassage.',
+      channel: NotificationChannel.PUSH,
+      dedupeKey: `trip_matched:${trip.id}`,
+    });
+
     return serializeTripLifecycle({
       ...trip,
       pickupCode,
@@ -1336,6 +1347,11 @@ export class TripsService {
               createdAt: 'asc',
             },
           },
+          rider: {
+            select: {
+              userId: true,
+            },
+          },
         },
       });
 
@@ -1438,6 +1454,7 @@ export class TripsService {
         ...updatedTrip,
         riderId: trip.riderId,
         driverId: trip.driverId,
+        riderUserId: trip.rider?.userId ?? null,
       };
     });
 
@@ -1453,7 +1470,120 @@ export class TripsService {
       },
     });
 
+    if (updatedTrip.riderUserId) {
+      if (nextStatus === 'DRIVER_ARRIVING') {
+        void this.notificationsService.enqueue({
+          userId: updatedTrip.riderUserId,
+          title: 'Votre chauffeur est arrivé !',
+          body: 'Votre chauffeur vous attend au point de prise en charge.',
+          channel: NotificationChannel.PUSH,
+          dedupeKey: `driver_arriving:${tripId}`,
+        });
+      } else if (nextStatus === 'COMPLETED') {
+        void this.notificationsService.enqueue({
+          userId: updatedTrip.riderUserId,
+          title: 'Course terminée',
+          body: 'Merci d\'avoir utilisé Orbi. Notez votre chauffeur !',
+          channel: NotificationChannel.PUSH,
+          dedupeKey: `trip_completed:${tripId}`,
+        });
+      }
+    }
+
     return serializeTripLifecycle(updatedTrip);
+  }
+
+  async rateTrip(
+    auth: RequestAuthContext,
+    tripId: string,
+    payload: { score: number; comment?: string },
+  ) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      include: { rider: true, driver: true },
+    });
+
+    if (!trip) {
+      throw new NotFoundException('Trip not found.');
+    }
+
+    this.assertTripAccess(auth, trip);
+
+    if (trip.status !== TripStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Only completed trips can be rated.',
+      );
+    }
+
+    const riderId = trip.riderId;
+    const driverId = trip.driverId;
+
+    const existing = await this.prisma.rating.findFirst({
+      where: {
+        tripId,
+        riderId,
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException(
+        'This trip has already been rated.',
+      );
+    }
+
+    const rating = await this.prisma.$transaction(async (tx) => {
+      const newRating = await tx.rating.create({
+        data: {
+          tripId,
+          riderId,
+          driverId,
+          score: payload.score,
+          comment: payload.comment ?? null,
+        },
+      });
+
+      const stats = await tx.rating.aggregate({
+        where: { driverId },
+        _avg: { score: true },
+        _count: { score: true },
+      });
+
+      const newAverage = stats._avg.score;
+
+      if (newAverage !== null) {
+        await tx.driverProfile.update({
+          where: { id: driverId },
+          data: { averageRating: newAverage },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'TRIP_RATED',
+          entityType: 'TRIP',
+          entityId: tripId,
+          metadata: {
+            score: payload.score,
+            hasComment: Boolean(payload.comment),
+            driverId,
+            newAverage: newAverage ?? null,
+          },
+        },
+      });
+
+      return newRating;
+    });
+
+    return {
+      rating: {
+        id: rating.id,
+        tripId: rating.tripId,
+        score: rating.score,
+        comment: rating.comment,
+        createdAt: rating.createdAt.toISOString(),
+      },
+    };
   }
 
   async dashboard() {

@@ -166,6 +166,7 @@ export const apiRoutes = {
     shareLink: '/trips',
     reportIncident: '/trips',
     safetySos: '/trips',
+    rate: '/trips',
   },
   pricing: {
     rules: '/pricing/rules',
@@ -178,6 +179,9 @@ export const apiRoutes = {
   },
   voice: {
     locationIntent: '/voice/location-intent',
+  },
+  users: {
+    pushToken: '/users/me/push-token',
   },
 } as const;
 
@@ -3638,6 +3642,30 @@ export async function triggerTripSafetySosWithApi(
   );
 }
 
+export type TripRatingResponse = {
+  rating: {
+    id: string;
+    tripId: string;
+    score: number;
+    comment: string | null;
+    createdAt: string;
+  };
+};
+
+export async function rateTripWithApi(
+  client: OrbiApiClient,
+  tripId: string,
+  payload: { score: number; comment?: string },
+) {
+  return client.request<TripRatingResponse>(
+    `${apiRoutes.trips.rate}/${tripId}/rate`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  );
+}
+
 export async function fetchRideOptionsPreview(
   client: OrbiApiClient,
   query: PricingEstimateQuery,
@@ -3703,6 +3731,16 @@ export async function resolveVoiceLocationIntentWithApi(
   return client.request<VoiceLocationIntentResponse>(apiRoutes.voice.locationIntent, {
     method: 'POST',
     body: payload,
+  });
+}
+
+export async function registerPushTokenWithApi(
+  client: OrbiApiClient,
+  token: string,
+): Promise<void> {
+  await client.requestText(apiRoutes.users.pushToken, {
+    method: 'POST',
+    body: { token },
   });
 }
 
