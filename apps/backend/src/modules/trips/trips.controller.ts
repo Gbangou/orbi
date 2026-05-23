@@ -131,7 +131,8 @@ export class TripsController {
   @Post(':tripId/route-position')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, RateLimitGuard)
+  @RateLimit({ limit: 60, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.RIDER, UserRole.DRIVER, UserRole.ADMIN, UserRole.OPS)
   recordRoutePosition(
     @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
