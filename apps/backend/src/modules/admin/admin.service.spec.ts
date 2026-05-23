@@ -606,6 +606,125 @@ describe('AdminService', () => {
     expect(result.trips[0].completionGate.reason).toContain('Precision GPS');
   });
 
+  it('stalledMatchedTrips is 0 when a MATCHED trip was just created', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValue([
+      {
+        id: 'trip-fresh',
+        status: 'MATCHED',
+        createdAt: new Date(),
+        pickupAddress: 'Gounghin',
+        destinationAddress: 'Patte d Oie',
+        actualFare: 1200,
+        currency: 'XOF',
+        rider: { user: { fullName: 'Rider A' } },
+        driver: { user: { fullName: 'Driver B' } },
+        vehicle: { make: 'Honda', model: 'Wave' },
+        rideRequest: {
+          pickupLatitude: 12.362,
+          pickupLongitude: -1.533,
+          destinationLatitude: 12.344,
+          destinationLongitude: -1.528,
+        },
+        events: [],
+      },
+    ]);
+    prisma.rideRequest.count.mockResolvedValue(0);
+
+    const result = await service.liveOps();
+
+    expect(result.summary.stalledMatchedTrips).toBe(0);
+    expect(result.alerts).toContain('Aucun trajet MATCHED en dépassement SLA.');
+  });
+
+  it('reports SLA breach when a MATCHED trip has no DRIVER_ARRIVING within 10 minutes', async () => {
+    const { prisma, service } = createService();
+
+    const stalledCreatedAt = new Date(Date.now() - 12 * 60 * 1000);
+
+    prisma.trip.findMany.mockResolvedValue([
+      {
+        id: 'trip-stalled',
+        status: 'MATCHED',
+        createdAt: stalledCreatedAt,
+        pickupAddress: 'Gounghin',
+        destinationAddress: 'Patte d Oie',
+        actualFare: 1200,
+        currency: 'XOF',
+        rider: { user: { fullName: 'Rider A' } },
+        driver: { user: { fullName: 'Driver B' } },
+        vehicle: { make: 'Honda', model: 'Wave' },
+        rideRequest: {
+          pickupLatitude: 12.362,
+          pickupLongitude: -1.533,
+          destinationLatitude: 12.344,
+          destinationLongitude: -1.528,
+        },
+        events: [
+          {
+            id: 'event-1',
+            eventType: 'TRIP_ACCEPTED',
+            createdAt: stalledCreatedAt,
+          },
+        ],
+      },
+    ]);
+    prisma.rideRequest.count.mockResolvedValue(0);
+
+    const result = await service.liveOps();
+
+    expect(result.summary.stalledMatchedTrips).toBe(1);
+    expect(result.alerts).toContain(
+      '1 trajet(s) MATCHED depuis plus de 10 min sans signal DRIVER_ARRIVING — vérifier disponibilité chauffeur.',
+    );
+  });
+
+  it('does not count a MATCHED trip as stalled when a DRIVER_ARRIVING event is present', async () => {
+    const { prisma, service } = createService();
+
+    const oldCreatedAt = new Date(Date.now() - 15 * 60 * 1000);
+
+    prisma.trip.findMany.mockResolvedValue([
+      {
+        id: 'trip-progressing',
+        status: 'MATCHED',
+        createdAt: oldCreatedAt,
+        pickupAddress: 'Gounghin',
+        destinationAddress: 'Patte d Oie',
+        actualFare: 1200,
+        currency: 'XOF',
+        rider: { user: { fullName: 'Rider A' } },
+        driver: { user: { fullName: 'Driver B' } },
+        vehicle: { make: 'Honda', model: 'Wave' },
+        rideRequest: {
+          pickupLatitude: 12.362,
+          pickupLongitude: -1.533,
+          destinationLatitude: 12.344,
+          destinationLongitude: -1.528,
+        },
+        events: [
+          {
+            id: 'event-1',
+            eventType: 'TRIP_ACCEPTED',
+            createdAt: oldCreatedAt,
+          },
+          {
+            id: 'event-2',
+            eventType: 'DRIVER_ARRIVING',
+            createdAt: new Date(Date.now() - 5 * 60 * 1000),
+          },
+        ],
+      },
+    ]);
+    prisma.rideRequest.count.mockResolvedValue(0);
+
+    const result = await service.liveOps();
+
+    expect(result.summary.stalledMatchedTrips).toBe(0);
+    expect(result.alerts).toContain('Aucun trajet MATCHED en dépassement SLA.');
+  });
+
   it('lists job queue entries for operations triage', async () => {
     const { jobQueueService, service } = createService();
 
