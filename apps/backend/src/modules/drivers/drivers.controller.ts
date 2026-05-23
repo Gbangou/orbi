@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { RateLimit } from '../../common/rate-limit/rate-limit.decorator';
+import { RateLimitGuard } from '../../common/rate-limit/rate-limit.guard';
 import { OpaqueIdPipe } from '../../common/pipes/opaque-id.pipe';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuthContext } from '../auth/auth.types';
@@ -76,7 +78,8 @@ export class DriversController {
   @Post('offers/:rideRequestId/decline')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard, RateLimitGuard)
+  @RateLimit({ limit: 30, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.DRIVER)
   @RequireProfile('driver')
   declineOffer(
@@ -90,7 +93,8 @@ export class DriversController {
   @Patch('availability')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard, RateLimitGuard)
+  @RateLimit({ limit: 20, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.DRIVER)
   @RequireProfile('driver')
   updateAvailability(
@@ -103,7 +107,8 @@ export class DriversController {
   @Patch('presence')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard, RateLimitGuard)
+  @RateLimit({ limit: 60, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.DRIVER)
   @RequireProfile('driver')
   updatePresence(
@@ -126,7 +131,8 @@ export class DriversController {
   @Patch('onboarding')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard, RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.DRIVER)
   @RequireProfile('driver')
   upsertOnboarding(
@@ -139,7 +145,8 @@ export class DriversController {
   @Patch('onboarding/document-upload-links')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard, RateLimitGuard)
+  @RateLimit({ limit: 5, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.DRIVER)
   @RequireProfile('driver')
   documentUploadLinks(

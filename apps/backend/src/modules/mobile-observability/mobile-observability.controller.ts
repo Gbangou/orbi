@@ -1,6 +1,8 @@
 import { Body, Controller, Post, UseGuards, Version } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { RateLimit } from '../../common/rate-limit/rate-limit.decorator';
+import { RateLimitGuard } from '../../common/rate-limit/rate-limit.guard';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { Roles } from '../auth/roles.decorator';
@@ -19,6 +21,8 @@ export class MobileObservabilityController {
 
   @Post('error-reports')
   @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 30, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.RIDER, UserRole.DRIVER)
   submitErrorReports(
     @CurrentAuth() auth: RequestAuthContext,

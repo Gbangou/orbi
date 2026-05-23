@@ -12,6 +12,8 @@ import {
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { PageQueryDto } from '../../common/dto/page-query.dto';
 import { UserRole } from '@prisma/client';
+import { RateLimit } from '../../common/rate-limit/rate-limit.decorator';
+import { RateLimitGuard } from '../../common/rate-limit/rate-limit.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
@@ -39,6 +41,8 @@ export class UsersController {
 
   @Post('me/push-token')
   @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000, scope: 'user' })
   @HttpCode(HttpStatus.NO_CONTENT)
   registerPushToken(
     @CurrentAuth() auth: RequestAuthContext,

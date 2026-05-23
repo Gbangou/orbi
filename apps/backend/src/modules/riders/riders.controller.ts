@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { RateLimit } from '../../common/rate-limit/rate-limit.decorator';
+import { RateLimitGuard } from '../../common/rate-limit/rate-limit.guard';
 import { OpaqueIdPipe } from '../../common/pipes/opaque-id.pipe';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuthContext } from '../auth/auth.types';
@@ -40,6 +42,8 @@ export class RidersController {
 
   @Post('saved-places')
   @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 20, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.RIDER)
   @RequireProfile('rider')
   createSavedPlace(
@@ -51,6 +55,8 @@ export class RidersController {
 
   @Patch('trusted-contact')
   @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.RIDER)
   @RequireProfile('rider')
   updateTrustedContact(
@@ -62,6 +68,8 @@ export class RidersController {
 
   @Patch('saved-places/:savedPlaceId')
   @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 20, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.RIDER)
   @RequireProfile('rider')
   updateSavedPlace(
@@ -75,6 +83,8 @@ export class RidersController {
 
   @Delete('saved-places/:savedPlaceId')
   @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.RIDER)
   @RequireProfile('rider')
   deleteSavedPlace(
