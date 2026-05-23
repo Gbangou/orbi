@@ -1739,4 +1739,132 @@ describe('DriversService', () => {
       'Signal plus ancien, a revalider sur le terrain.',
     );
   });
+
+  it('throws NotFoundException from getEarnings when driver profile is missing', async () => {
+    const { service } = createService();
+    const auth = { user: { driverProfile: null } };
+
+    await expect(service.getEarnings(auth as never)).rejects.toThrow(
+      'No driver profile found for the authenticated user.',
+    );
+  });
+
+  it('returns zero earnings summary when no completed trips exist', async () => {
+    const { prisma, service } = createService();
+    prisma.trip.findMany.mockResolvedValue([]);
+
+    const auth = { user: { driverProfile: { id: 'driver-1' } } };
+    const result = await service.getEarnings(auth as never);
+
+    expect(result.summary).toMatchObject({
+      currency: 'XOF',
+      today: 0,
+      week: 0,
+      month: 0,
+      completedTrips: 0,
+      averagePayout: 0,
+    });
+    expect(result.settlement.state).toBe('RECONCILED');
+    expect(result.settlement.anomalies).toHaveLength(0);
+    expect(result.recentTrips).toHaveLength(0);
+  });
+
+  it('aggregates earnings correctly by time window and applies 82% payout rate', async () => {
+    const now = Date.now();
+    const { prisma, service } = createService();
+
+    const trips = [
+      {
+        id: 'trip-today',
+        driverId: 'driver-1',
+        status: 'COMPLETED',
+        actualFare: 1500,
+        pickupAddress: 'Zone A',
+        destinationAddress: 'Zone B',
+        completedAt: new Date(now - 1000 * 60 * 30),
+        createdAt: new Date(now - 1000 * 60 * 60),
+      },
+      {
+        id: 'trip-week',
+        driverId: 'driver-1',
+        status: 'COMPLETED',
+        actualFare: 2000,
+        pickupAddress: 'Zone C',
+        destinationAddress: 'Zone D',
+        completedAt: new Date(now - 1000 * 60 * 60 * 48),
+        createdAt: new Date(now - 1000 * 60 * 60 * 49),
+      },
+      {
+        id: 'trip-month',
+        driverId: 'driver-1',
+        status: 'COMPLETED',
+        actualFare: 1000,
+        pickupAddress: 'Zone E',
+        destinationAddress: 'Zone F',
+        completedAt: new Date(now - 1000 * 60 * 60 * 24 * 10),
+        createdAt: new Date(now - 1000 * 60 * 60 * 24 * 11),
+      },
+    ];
+
+    prisma.trip.findMany.mockResolvedValue(trips);
+
+    const auth = { user: { driverProfile: { id: 'driver-1' } } };
+    const result = await service.getEarnings(auth as never);
+
+    const payoutRate = 8200 / 10_000;
+    const todayPayout = Math.round(1500 * payoutRate);
+    const weekPayout = todayPayout + Math.round(2000 * payoutRate);
+    const monthPayout = weekPayout + Math.round(1000 * payoutRate);
+
+    expect(result.summary.today).toBe(todayPayout);
+    expect(result.summary.week).toBe(weekPayout);
+    expect(result.summary.month).toBe(monthPayout);
+    expect(result.summary.completedTrips).toBe(3);
+    expect(result.summary.averagePayout).toBe(
+      Math.round(monthPayout / 3),
+    );
+    expect(result.settlement.payoutRateBps).toBe(8200);
+    expect(result.recentTrips).toHaveLength(3);
+    expect(result.recentTrips[0]?.id).toBe('trip-today');
+    expect(result.recentTrips[0]?.payout).toBe(todayPayout);
+    expect(result.recentTrips[0]?.platformFee).toBe(
+      Math.max(0, Math.round(1500) - todayPayout),
+    );
+  });
+
+  it('returns reconciled settlement with correct per-trip breakdown', async () => {
+    const now = Date.now();
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValue([
+      {
+        id: 'trip-a',
+        driverId: 'driver-1',
+        status: 'COMPLETED',
+        actualFare: 2500,
+        pickupAddress: 'Pissy',
+        destinationAddress: 'Secteur 30',
+        completedAt: new Date(now - 1000 * 60 * 20),
+        createdAt: new Date(now - 1000 * 60 * 45),
+      },
+    ]);
+
+    const auth = { user: { driverProfile: { id: 'driver-1' } } };
+    const result = await service.getEarnings(auth as never);
+
+    const payoutRate = 8200 / 10_000;
+    const payout = Math.round(2500 * payoutRate);
+    const platformFee = Math.max(0, 2500 - payout);
+
+    expect(result.settlement.state).toBe('RECONCILED');
+    expect(result.settlement.anomalies).toHaveLength(0);
+    expect(result.settlement.payoutRateBps).toBe(8200);
+    expect(result.recentTrips[0]).toMatchObject({
+      id: 'trip-a',
+      payout,
+      grossFare: 2500,
+      platformFee,
+      status: 'COMPLETED',
+    });
+  });
 });

@@ -71,6 +71,7 @@ import {
   resolveRiderActiveFlow,
 } from '../lib/rider-active-flow';
 import { useRiderPosition } from '../lib/use-rider-position';
+import { TripMapView } from '../lib/trip-map-view';
 
 const cityPresets = burkinaPricingCityPresets;
 
@@ -910,6 +911,25 @@ export default function BookingScreen() {
           ) : null}
         </View>
       </SectionCard>
+
+      {(pickupPlace.coordinates || riderPosition.latestPosition) &&
+      destinationPlace.coordinates ? (
+        <TripMapView
+          pickupLat={
+            pickupPlace.coordinates?.latitude ??
+            riderPosition.latestPosition?.latitude
+          }
+          pickupLng={
+            pickupPlace.coordinates?.longitude ??
+            riderPosition.latestPosition?.longitude
+          }
+          destLat={destinationPlace.coordinates.latitude}
+          destLng={destinationPlace.coordinates.longitude}
+          driverLat={null}
+          driverLng={null}
+          style={styles.bookingMap}
+        />
+      ) : null}
 
       <RiderJourneySection
         currentStep="book"
@@ -1891,5 +1911,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
     textAlign: 'center',
+  },
+  bookingMap: {
+    height: 200,
+    borderRadius: 14,
+    marginBottom: 4,
   },
 });
