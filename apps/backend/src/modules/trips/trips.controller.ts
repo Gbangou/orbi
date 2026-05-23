@@ -193,7 +193,12 @@ export class TripsController {
     @Body() payload: UpdateTripStatusDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.tripsService.updateStatus(auth, tripId, payload.status);
+    return this.tripsService.updateStatus(
+      auth,
+      tripId,
+      payload.status,
+      payload.cancellationReason,
+    );
   }
 
   @Post(':tripId/rate')

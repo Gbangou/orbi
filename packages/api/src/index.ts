@@ -3588,11 +3588,13 @@ export async function updateTripStatusWithApi(
   client: OrbiApiClient,
   tripId: string,
   status: 'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED',
+  cancellationReason?: string,
 ) {
   return client.request<TripLifecycleResponse>(`${apiRoutes.trips.root ?? '/trips'}/${tripId}/status`, {
     method: 'PATCH',
     body: {
       status,
+      ...(status === 'CANCELLED' && cancellationReason ? { cancellationReason } : {}),
     },
   });
 }

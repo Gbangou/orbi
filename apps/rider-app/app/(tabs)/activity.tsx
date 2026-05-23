@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   Easing,
   Image,
@@ -480,7 +481,27 @@ export default function ActivityScreen() {
     }
   }
 
-  async function handleCancelActiveTrip(tripId: string) {
+  function handleCancelActiveTrip(tripId: string) {
+    const REASONS = [
+      "Chauffeur en retard",
+      "Chauffeur ne repond pas",
+      "Changement de plan",
+    ];
+
+    Alert.alert(
+      "Annuler la course",
+      "Pourquoi souhaitez-vous annuler ?",
+      [
+        ...REASONS.map((reason) => ({
+          text: reason,
+          onPress: () => void doCancelActiveTrip(tripId, reason),
+        })),
+        { text: "Ne pas annuler", style: "cancel" as const },
+      ],
+    );
+  }
+
+  async function doCancelActiveTrip(tripId: string, reason: string) {
     if (submissionLockRef.current) {
       return;
     }
@@ -491,7 +512,7 @@ export default function ActivityScreen() {
 
     try {
       const { authClient } = await restoreRiderSession();
-      await updateTripStatusWithApi(authClient, tripId, "CANCELLED");
+      await updateTripStatusWithApi(authClient, tripId, "CANCELLED", reason);
       setStatus("Course annulee. Vous pouvez reserver a nouveau.");
       await loadHistory();
     } catch (error) {

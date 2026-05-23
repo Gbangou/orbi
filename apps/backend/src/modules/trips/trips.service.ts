@@ -1335,6 +1335,7 @@ export class TripsService {
     auth: RequestAuthContext,
     tripId: string,
     nextStatus: TripStatus,
+    cancellationReason?: string,
   ) {
     const updatedTrip = await this.prisma.$transaction(async (tx) => {
       const trip = await tx.trip.findUnique({
@@ -1413,6 +1414,9 @@ export class TripsService {
               payload: {
                 status: nextStatus,
                 actorRole: auth.user.role,
+                ...(nextStatus === 'CANCELLED' && cancellationReason
+                  ? { cancellationReason }
+                  : {}),
               },
             },
           },
