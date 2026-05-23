@@ -11,6 +11,7 @@ import { RealtimeService } from '../../core/realtime/realtime.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { PricingService } from '../pricing/pricing.service';
+import { DispatchCoordinator } from '../drivers/dispatch-coordinator.service';
 import { CreateRideRequestDto } from './dto/create-ride-request.dto';
 import {
   RIDE_REQUEST_ACTIVE_STATUSES,
@@ -38,6 +39,7 @@ export class RideRequestsService {
     private readonly realtimeService: RealtimeService,
     private readonly rideRequestProjector: RideRequestProjector,
     private readonly notificationsService: NotificationsService,
+    private readonly dispatchCoordinator: DispatchCoordinator,
   ) {}
 
   async create(payload: CreateRideRequestDto) {
@@ -194,9 +196,16 @@ export class RideRequestsService {
         },
       });
 
-      void this.notifyOnlineDriversOfNewRequest({
+      void this.dispatchAndNotify({
         rideRequestId: rideRequest.id,
+        requestedVehicleType: payload.requestedVehicleType,
+        requestedServiceTier: payload.requestedServiceTier ?? null,
+        estimatedDistanceKm: routeMetrics.distanceKm ?? 0,
+        estimatedDurationMinutes: routeMetrics.durationMinutes ?? 0,
+        pickupLatitude: payload.pickupLatitude ?? null,
+        pickupLongitude: payload.pickupLongitude ?? null,
         pickupAddress: rideRequest.pickupAddress,
+        createdAt: rideRequest.createdAt ?? new Date(),
       });
     }
 
@@ -374,7 +383,54 @@ export class RideRequestsService {
     };
   }
 
-  private async notifyOnlineDriversOfNewRequest(input: {
+  private async dispatchAndNotify(input: {
+    rideRequestId: string;
+    requestedVehicleType: string;
+    requestedServiceTier: string | null;
+    estimatedDistanceKm: number;
+    estimatedDurationMinutes: number;
+    pickupLatitude: number | null;
+    pickupLongitude: number | null;
+    pickupAddress: string;
+    createdAt: Date;
+  }): Promise<void> {
+    try {
+      const result = await this.dispatchCoordinator.proactiveDispatch({
+        rideRequestId: input.rideRequestId,
+        requestedVehicleType: input.requestedVehicleType as never,
+        requestedServiceTier: input.requestedServiceTier as never,
+        estimatedDistanceKm: input.estimatedDistanceKm,
+        estimatedDurationMinutes: input.estimatedDurationMinutes,
+        pickupLatitude: input.pickupLatitude,
+        pickupLongitude: input.pickupLongitude,
+        pickupAddress: input.pickupAddress,
+        createdAt: input.createdAt,
+      });
+
+      if (result.dispatched && result.assignedUserId) {
+        await this.notificationsService.enqueue({
+          userId: result.assignedUserId,
+          title: 'Course pour vous !',
+          body: `Prise en charge : ${input.pickupAddress}`,
+          channel: NotificationChannel.PUSH,
+          dedupeKey: `proactive:${input.rideRequestId}:${result.assignedDriverId}`,
+        });
+        return;
+      }
+
+      // fallback : broadcast si aucun driver sélectionné
+      await this.broadcastToOnlineDrivers({
+        rideRequestId: input.rideRequestId,
+        pickupAddress: input.pickupAddress,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Dispatch failed for request ${input.rideRequestId}: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+    }
+  }
+
+  private async broadcastToOnlineDrivers(input: {
     rideRequestId: string;
     pickupAddress: string;
   }): Promise<void> {
@@ -398,7 +454,7 @@ export class RideRequestsService {
       );
     } catch (error) {
       this.logger.error(
-        `Failed to notify drivers of new request ${input.rideRequestId}: ${error instanceof Error ? error.message : 'unknown'}`,
+        `Failed to broadcast request ${input.rideRequestId}: ${error instanceof Error ? error.message : 'unknown'}`,
       );
     }
   }

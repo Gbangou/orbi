@@ -37,6 +37,11 @@ describe('RideRequestsService', () => {
     const notificationsService = {
       enqueue: jest.fn().mockResolvedValue({ notification: { id: 'notif-1' } }),
     };
+    const dispatchCoordinator = {
+      proactiveDispatch: jest
+        .fn()
+        .mockResolvedValue({ dispatched: false, assignedDriverId: null, assignedUserId: null }),
+    };
 
     prisma.$transaction.mockImplementation(
       async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
@@ -48,12 +53,14 @@ describe('RideRequestsService', () => {
       realtimeService,
       rideRequestProjector,
       notificationsService,
+      dispatchCoordinator,
       service: new RideRequestsService(
         prisma as never,
         pricingService as never,
         realtimeService as never,
         rideRequestProjector as never,
         notificationsService as never,
+        dispatchCoordinator as never,
       ),
     };
   }

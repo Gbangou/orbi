@@ -9,6 +9,7 @@ import {
   Prisma,
   ServiceTier,
   VerificationStatus,
+  VehicleType,
 } from '@prisma/client';
 import {
   calculateDistanceKm,
@@ -18,6 +19,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { PricingService } from '../pricing/pricing.service';
+import { ACTIVE_TRIP_STATUSES } from '../trips/trips.constants';
 import {
   calculateDispatchScore,
   calculateOfferConfidenceScore,
@@ -619,6 +621,205 @@ export class DispatchCoordinator {
         rideRequestId,
         status: 'DECLINED' as const,
       },
+    };
+  }
+
+  async proactiveDispatch(input: {
+    rideRequestId: string;
+    requestedVehicleType: VehicleType;
+    requestedServiceTier: ServiceTier | null;
+    estimatedDistanceKm: number;
+    estimatedDurationMinutes: number;
+    pickupLatitude: number | null;
+    pickupLongitude: number | null;
+    pickupAddress: string;
+    createdAt: Date;
+  }): Promise<{
+    dispatched: boolean;
+    assignedDriverId: string | null;
+    assignedUserId: string | null;
+  }> {
+    const dispatchLearningSettings =
+      await this.resolveDispatchLearningSettingsValues();
+
+    const candidates = await this.prisma.driverProfile.findMany({
+      where: {
+        status: DriverStatus.ONLINE,
+        verificationStatus: VerificationStatus.APPROVED,
+        vehicles: {
+          some: {
+            isActive: true,
+            type: input.requestedVehicleType,
+          },
+        },
+      },
+      include: {
+        vehicles: { where: { isActive: true } },
+      },
+      take: 30,
+    });
+
+    if (!candidates.length) {
+      await this.recordDispatchAuditEvent({
+        userId: null,
+        action: 'DISPATCH_PROACTIVE_NO_CANDIDATE',
+        rideRequestId: input.rideRequestId,
+        metadata: { reason: 'no_online_driver_with_compatible_vehicle' },
+      });
+      return { dispatched: false, assignedDriverId: null, assignedUserId: null };
+    }
+
+    const activeTrips = await this.prisma.trip.findMany({
+      where: {
+        driverId: { in: candidates.map((c) => c.id) },
+        status: { in: ACTIVE_TRIP_STATUSES },
+      },
+      select: { driverId: true },
+    });
+    const busyDriverIds = new Set(activeTrips.map((t) => t.driverId));
+
+    const estimatedTripDistanceKm = input.estimatedDistanceKm;
+    const estimatedDurationMinutes = input.estimatedDurationMinutes;
+
+    const activeDriverCount = await this.prisma.driverProfile.count({
+      where: {
+        status: DriverStatus.ONLINE,
+        verificationStatus: VerificationStatus.APPROVED,
+      },
+    });
+
+    const operatingContext = this.pricingService.deriveOperatingContext({
+      vehicleType: input.requestedVehicleType,
+      zone: resolveDispatchZone(estimatedTripDistanceKm),
+      activeDriverCount,
+      openRequestCount: 1,
+      isPeakHour: isPeakTrafficWindow(input.createdAt),
+      trafficLevel: resolveDispatchTrafficLevel(
+        estimatedTripDistanceKm,
+        estimatedDurationMinutes,
+      ),
+      roadCondition: resolveDispatchRoadCondition(
+        estimatedTripDistanceKm,
+        estimatedDurationMinutes,
+      ),
+      weatherCondition: 'CLEAR',
+    });
+
+    const scored = candidates
+      .filter((c) => !busyDriverIds.has(c.id))
+      .map((driver) => {
+        const compatibleVehicle = driver.vehicles.find(
+          (v) =>
+            v.type === input.requestedVehicleType &&
+            (!input.requestedServiceTier ||
+              v.tier === input.requestedServiceTier),
+        );
+
+        if (!compatibleVehicle) {
+          return null;
+        }
+
+        const driverLat = toNumber(driver.currentLatitude);
+        const driverLng = toNumber(driver.currentLongitude);
+        const pickupDistanceKm =
+          hasDefinedCoordinates({ latitude: driverLat, longitude: driverLng }) &&
+          hasDefinedCoordinates({
+            latitude: input.pickupLatitude,
+            longitude: input.pickupLongitude,
+          })
+            ? calculateDistanceKm(
+                { latitude: driverLat as number, longitude: driverLng as number },
+                {
+                  latitude: input.pickupLatitude as number,
+                  longitude: input.pickupLongitude as number,
+                },
+              )
+            : null;
+
+        const dispatchScore = calculateDispatchScore({
+          pickupDistanceKm,
+          estimatedTripDistanceKm,
+          ageMinutes: 0,
+          hasExactTierMatch: Boolean(input.requestedServiceTier),
+          availabilityScore: operatingContext.availabilityScore,
+          supplyPressureLevel: operatingContext.supplyPressureLevel,
+          demandLevel: operatingContext.demandLevel,
+          trafficLevel: operatingContext.trafficLevel,
+          roadCondition: operatingContext.roadCondition,
+        });
+
+        return { driver, dispatchScore, pickupDistanceKm };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null)
+      .sort((a, b) => b.dispatchScore - a.dispatchScore);
+
+    const best = scored[0];
+
+    if (!best) {
+      await this.recordDispatchAuditEvent({
+        userId: null,
+        action: 'DISPATCH_PROACTIVE_NO_CANDIDATE',
+        rideRequestId: input.rideRequestId,
+        metadata: { reason: 'all_candidates_busy_or_incompatible' },
+      });
+      return { dispatched: false, assignedDriverId: null, assignedUserId: null };
+    }
+
+    const offerConfidenceScore = calculateOfferConfidenceScore({
+      dispatchScore: best.dispatchScore,
+      pickupDistanceKm: best.pickupDistanceKm,
+      availabilityScore: operatingContext.availabilityScore,
+      ageMinutes: 0,
+      hasExactTierMatch: Boolean(input.requestedServiceTier),
+      behavioralScore: 0.5,
+    });
+    const assignmentExpiresAt = new Date(
+      Date.now() + resolveAssignmentWindowMs(offerConfidenceScore),
+    );
+
+    const claimResult = await this.prisma.rideRequest.updateMany({
+      where: {
+        id: input.rideRequestId,
+        status: { in: ['REQUESTED', 'MATCHED'] },
+        assignedDriverId: null,
+      },
+      data: {
+        assignedDriverId: best.driver.id,
+        assignmentExpiresAt,
+      },
+    });
+
+    if (claimResult.count === 0) {
+      return { dispatched: false, assignedDriverId: null, assignedUserId: null };
+    }
+
+    await this.recordDispatchAuditEvent({
+      userId: best.driver.userId,
+      action: 'DISPATCH_PROACTIVE_ASSIGNMENT',
+      rideRequestId: input.rideRequestId,
+      metadata: {
+        dispatchScore: best.dispatchScore,
+        pickupDistanceKm: best.pickupDistanceKm,
+        assignmentExpiresAt: assignmentExpiresAt.toISOString(),
+        candidateCount: candidates.length,
+      },
+    });
+
+    this.realtimeService.publish({
+      channel: 'ride-request',
+      type: 'ride-request.created',
+      entityId: input.rideRequestId,
+      payload: {
+        proactiveAssignment: true,
+        assignedDriverId: best.driver.id,
+        pickupAddress: input.pickupAddress,
+      },
+    });
+
+    return {
+      dispatched: true,
+      assignedDriverId: best.driver.id,
+      assignedUserId: best.driver.userId ?? null,
     };
   }
 
