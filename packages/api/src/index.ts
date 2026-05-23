@@ -190,6 +190,7 @@ export type ApiClientOptions = {
   version?: string;
   defaultHeaders?: Record<string, string>;
   fetcher?: typeof fetch;
+  requestTimeoutMs?: number;
 };
 
 export type RequestOptions = {
@@ -840,15 +841,19 @@ export async function withNetworkRetry<T>(
   throw lastError;
 }
 
+const defaultRequestTimeoutMs = 30_000;
+
 export class OrbiApiClient {
   private readonly version: string;
   private readonly headers: Record<string, string>;
   private readonly fetcher: typeof fetch;
+  private readonly requestTimeoutMs: number;
 
   constructor(private readonly options: ApiClientOptions) {
     this.version = options.version ?? apiConfig.versionPrefix;
     this.headers = options.defaultHeaders ?? {};
     this.fetcher = options.fetcher ?? fetch;
+    this.requestTimeoutMs = options.requestTimeoutMs ?? defaultRequestTimeoutMs;
   }
 
   endpoint(path: string, query?: RequestOptions['query']) {
@@ -866,15 +871,28 @@ export class OrbiApiClient {
   }
 
   async request<T>(path: string, options: RequestOptions = {}) {
-    const response = await this.fetcher(this.endpoint(path, options.query), {
-      method: options.method ?? 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.headers,
-        ...options.headers,
-      },
-      body: options.body ? JSON.stringify(options.body) : undefined,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      this.requestTimeoutMs,
+    );
+
+    let response: Response;
+
+    try {
+      response = await this.fetcher(this.endpoint(path, options.query), {
+        method: options.method ?? 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.headers,
+          ...options.headers,
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       let errorPayload: unknown;
