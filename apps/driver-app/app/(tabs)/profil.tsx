@@ -24,18 +24,18 @@ import {
   MetricTile,
   SectionCard,
   SectionHeading,
-} from '../lib/realtime-widgets';
-import { DriverJourneySection } from '../lib/driver-journey';
+} from '../../lib/realtime-widgets';
+import { DriverJourneySection } from '../../lib/driver-journey';
 import {
   restoreDriverSession,
   signOutDriverAccount,
-} from '../lib/auth';
-import { useLiveRefresh } from '../lib/use-live-refresh';
-import { resolveDriverAppError } from '../lib/session-feedback';
+} from '../../lib/auth';
+import { useLiveRefresh } from '../../lib/use-live-refresh';
+import { resolveDriverAppError } from '../../lib/session-feedback';
 import {
   buildDriverProfileStatusLabel,
   resolveDriverActiveFlow,
-} from '../lib/driver-active-flow';
+} from '../../lib/driver-active-flow';
 import {
   formatDriverOnboardingProgress,
   formatDriverProfileBytes,
@@ -44,7 +44,7 @@ import {
   formatDriverProfileDistanceKm,
   formatDriverProfilePercent,
   formatDriverProfileRating,
-} from '../lib/driver-profile-signal';
+} from '../../lib/driver-profile-signal';
 
 const cityOptions = [
   'OUAGADOUGOU',

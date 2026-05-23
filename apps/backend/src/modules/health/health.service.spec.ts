@@ -183,7 +183,7 @@ describe('HealthService', () => {
           id: 'payment-provider-evidence',
           state: 'warn',
           detail:
-            'Aucune fixture paiement sandbox capturee: garder le pilote production bloque sur preuve provider.',
+            'Aucune fixture paiement sandbox capturee: 5 fixture(s) schema_compliant couvrent la structure provider mais ne remplacent pas les preuves sandbox reelles avant le pilote.',
         }),
         expect.objectContaining({
           id: 'mobile-error-collector',
@@ -465,7 +465,7 @@ describe('HealthService', () => {
           id: 'payment-provider-evidence',
           state: 'fail',
           detail:
-            'Aucune fixture paiement sandbox capturee: garder le pilote production bloque sur preuve provider.',
+            'Aucune fixture paiement sandbox capturee: 5 fixture(s) schema_compliant couvrent la structure provider mais ne remplacent pas les preuves sandbox reelles avant le pilote.',
         }),
         expect.objectContaining({
           id: 'mobile-error-collector',

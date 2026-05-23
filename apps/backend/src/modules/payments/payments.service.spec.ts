@@ -1119,12 +1119,13 @@ describe('PaymentsService', () => {
 
   it('summarizes payment fixture readiness before production pilot', () => {
     expect(resolvePaymentFixtureProductionReadiness()).toEqual({
-      total: 2,
+      total: 7,
       sandboxCaptures: 0,
+      schemaCompliantFixtures: 5,
       localPolicyFixtures: 2,
       isPilotReady: false,
       summary:
-        'Aucune fixture paiement sandbox capturee: garder le pilote production bloque sur preuve provider.',
+        'Aucune fixture paiement sandbox capturee: 5 fixture(s) schema_compliant couvrent la structure provider mais ne remplacent pas les preuves sandbox reelles avant le pilote.',
     });
   });
 
@@ -1212,6 +1213,134 @@ describe('PaymentsService', () => {
         action: 'refund_still_pending',
         providerReference: 'fw_refund_123',
         paymentAttemptId: 'payment-1',
+      }),
+    });
+  });
+
+  it('reconciles Flutterwave charge.completed schema-compliant fixture with known transactionRef', async () => {
+    const { service, prisma } = createService('flutterwave');
+    const fixture = fixtureById('flutterwave-charge-completed-schema-compliant');
+    const webhookPayload = loadWebhookFixture(fixture.fileName);
+
+    prisma.paymentAttempt.findFirst.mockResolvedValue(null);
+    prisma.paymentAttempt.findUnique.mockResolvedValue(null);
+    prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
+    prisma.walletTransaction.findUnique.mockResolvedValue(null);
+
+    const result = await service.handleWebhook(
+      'secret_123',
+      webhookPayload,
+    );
+
+    expect(result.nextAction).toBe('persisted_and_reconciled');
+    expect(fixture.expected.paymentAttemptStatus).toBe('SUCCEEDED');
+    expect(fixture.expected.moneyMovement).toBe('wallet_credit');
+    expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'persisted_and_reconciled',
+      }),
+    });
+    expect(prisma.paymentAttempt.update).not.toHaveBeenCalled();
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+  });
+
+  it('marks attempt FAILED for Flutterwave charge.failed schema-compliant fixture without moving money', async () => {
+    const { service, prisma } = createService('flutterwave');
+    const fixture = fixtureById('flutterwave-charge-failed-schema-compliant');
+    const webhookPayload = loadWebhookFixture(fixture.fileName);
+
+    prisma.paymentAttempt.findFirst.mockResolvedValue(null);
+    prisma.paymentAttempt.findUnique.mockResolvedValue(null);
+    prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await service.handleWebhook(
+      'secret_123',
+      webhookPayload,
+    );
+
+    expect(result.nextAction).toBe('persisted_and_reconciled');
+    expect(fixture.expected.paymentAttemptStatus).toBe('FAILED');
+    expect(fixture.expected.moneyMovement).toBe('none');
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'persisted_and_reconciled',
+      }),
+    });
+  });
+
+  it('ignores Flutterwave unknown-reference schema-compliant fixture without updating any attempt', async () => {
+    const { service, prisma } = createService('flutterwave');
+    const fixture = fixtureById('flutterwave-unknown-reference-schema-compliant');
+    const webhookPayload = loadWebhookFixture(fixture.fileName);
+
+    prisma.paymentAttempt.findFirst.mockResolvedValue(null);
+    prisma.paymentAttempt.findUnique.mockResolvedValue(null);
+    prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await service.handleWebhook(
+      'secret_123',
+      webhookPayload,
+    );
+
+    expect(result.nextAction).toBe('ignored_unknown_reference');
+    expect(fixture.expected.moneyMovement).toBe('none');
+    expect(fixture.expected.paymentAttemptStatus).toBeNull();
+    expect(prisma.paymentAttempt.update).not.toHaveBeenCalled();
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'ignored_unknown_reference',
+      }),
+    });
+  });
+
+  it('reconciles CinetPay payment.completed schema-compliant fixture with known cpm_trans_id', async () => {
+    const { service, prisma } = createService('cinetpay');
+    const fixture = fixtureById('cinetpay-payment-completed-schema-compliant');
+    const webhookPayload = loadWebhookFixture(fixture.fileName);
+
+    prisma.paymentAttempt.findFirst.mockResolvedValue(null);
+    prisma.paymentAttempt.findUnique.mockResolvedValue(null);
+    prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
+    prisma.walletTransaction.findUnique.mockResolvedValue(null);
+
+    const result = await service.handleWebhook(
+      'secret_123',
+      webhookPayload,
+    );
+
+    expect(result.nextAction).toBe('persisted_and_reconciled');
+    expect(fixture.expected.paymentAttemptStatus).toBe('SUCCEEDED');
+    expect(fixture.expected.moneyMovement).toBe('wallet_credit');
+    expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'persisted_and_reconciled',
+      }),
+    });
+  });
+
+  it('marks attempt FAILED for CinetPay payment.failed schema-compliant fixture without moving money', async () => {
+    const { service, prisma } = createService('cinetpay');
+    const fixture = fixtureById('cinetpay-payment-failed-schema-compliant');
+    const webhookPayload = loadWebhookFixture(fixture.fileName);
+
+    prisma.paymentAttempt.findFirst.mockResolvedValue(null);
+    prisma.paymentAttempt.findUnique.mockResolvedValue(null);
+    prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await service.handleWebhook(
+      'secret_123',
+      webhookPayload,
+    );
+
+    expect(result.nextAction).toBe('persisted_and_reconciled');
+    expect(fixture.expected.paymentAttemptStatus).toBe('FAILED');
+    expect(fixture.expected.moneyMovement).toBe('none');
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'persisted_and_reconciled',
       }),
     });
   });

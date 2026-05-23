@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -38,9 +39,9 @@ import {
   MetricTile,
   RouteSignalCard,
   TransitionNoticeCard,
-} from "../lib/realtime-widgets";
-import { restoreRiderSession } from "../lib/auth";
-import { RiderJourneySection } from "../lib/rider-journey";
+} from "../../lib/realtime-widgets";
+import { restoreRiderSession } from "../../lib/auth";
+import { RiderJourneySection } from "../../lib/rider-journey";
 import {
   buildRiderFlowTransitionLabel,
   buildRiderDriverTrustSnapshot,
@@ -48,11 +49,11 @@ import {
   buildRiderMissionSnapshot,
   buildRiderNextActionHint,
   resolveRiderActiveFlow,
-} from "../lib/rider-active-flow";
-import { useLiveRefresh } from "../lib/use-live-refresh";
-import { useRiderRealtimeStream } from "../lib/use-rider-realtime-stream";
-import { useRiderPosition } from "../lib/use-rider-position";
-import { resolveRiderAppError } from "../lib/session-feedback";
+} from "../../lib/rider-active-flow";
+import { useLiveRefresh } from "../../lib/use-live-refresh";
+import { useRiderRealtimeStream } from "../../lib/use-rider-realtime-stream";
+import { useRiderPosition } from "../../lib/use-rider-position";
+import { resolveRiderAppError } from "../../lib/session-feedback";
 import { resolveOrbiApiBaseUrlForRuntime } from "@orbi/config";
 
 const fallbackHistory: MyTripsResponse = {
@@ -223,6 +224,7 @@ function LiveApproachPreview({
 }
 
 export default function ActivityScreen() {
+  const router = useRouter();
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
   const [activeTripDetail, setActiveTripDetail] =
     useState<TripDetailResponse | null>(null);
@@ -241,6 +243,7 @@ export default function ActivityScreen() {
   const [tripDetailStatus, setTripDetailStatus] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const previousActiveTripStatusRef = useRef<string | null>(null);
+  const previousActiveTripIdRef = useRef<string | null>(null);
   const previousTimelineEventIdsRef = useRef<string[] | null>(null);
   const previousPendingRequestIdsRef = useRef<string[] | null>(null);
   const submissionLockRef = useRef(false);
@@ -382,7 +385,25 @@ export default function ActivityScreen() {
     );
 
     previousActiveTripStatusRef.current = activeTrip.status;
+    previousActiveTripIdRef.current = activeTrip.id;
   }, [activeTrip]);
+
+  useEffect(() => {
+    const previousActiveTripId = previousActiveTripIdRef.current;
+    if (!previousActiveTripId || activeTrip) {
+      return;
+    }
+    const justCompleted = history.recentTrips.find(
+      (trip) => trip.id === previousActiveTripId && trip.status === "COMPLETED",
+    );
+    if (justCompleted) {
+      previousActiveTripIdRef.current = null;
+      router.replace({
+        pathname: "/receipt",
+        params: { tripId: justCompleted.id },
+      });
+    }
+  }, [activeTrip, history.recentTrips, router]);
 
   useEffect(() => {
     const timelineEventIds =
@@ -1003,7 +1024,39 @@ export default function ActivityScreen() {
           detailLines={[
             `Chauffeur: ${trip.counterpartyName ?? "Attribue automatiquement"}`,
           ]}
-        />
+        >
+          {trip.status === "COMPLETED" ? (
+            <View style={styles.tripCompletedActions}>
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: "/receipt",
+                    params: { tripId: trip.id },
+                  })
+                }
+                style={styles.receiptButton}
+              >
+                <Text style={styles.receiptButtonLabel}>Voir le recu</Text>
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: "/rating",
+                    params: {
+                      tripId: trip.id,
+                      driverName: trip.counterpartyName ?? "",
+                      fare: String(trip.amount),
+                      destination: trip.destinationAddress,
+                    },
+                  })
+                }
+                style={styles.rateButton}
+              >
+                <Text style={styles.rateButtonLabel}>Evaluer</Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </RouteSignalCard>
       ))}
     </ScrollView>
   );
@@ -1317,5 +1370,37 @@ const styles = StyleSheet.create({
   },
   actionButtonDisabled: {
     opacity: 0.6,
+  },
+  tripCompletedActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
+  receiptButton: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    backgroundColor: "rgba(56, 189, 248, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.34)",
+  },
+  receiptButtonLabel: {
+    color: orbiTheme.colors.sky,
+    fontWeight: "800",
+    fontSize: 13,
+  },
+  rateButton: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    backgroundColor: "rgba(45, 212, 191, 0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(45, 212, 191, 0.38)",
+  },
+  rateButtonLabel: {
+    color: orbiTheme.colors.teal,
+    fontWeight: "800",
+    fontSize: 13,
   },
 });

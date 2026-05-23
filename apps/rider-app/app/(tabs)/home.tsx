@@ -22,22 +22,22 @@ import {
   MetricTile,
   QuickActionCard,
   RouteSignalCard,
-} from '../lib/realtime-widgets';
-import { RiderJourneySection } from '../lib/rider-journey';
-import { restoreRiderSession } from '../lib/auth';
-import { useLiveRefresh } from '../lib/use-live-refresh';
-import { useRiderRealtimeStream } from '../lib/use-rider-realtime-stream';
+} from '../../lib/realtime-widgets';
+import { RiderJourneySection } from '../../lib/rider-journey';
+import { restoreRiderSession } from '../../lib/auth';
+import { useLiveRefresh } from '../../lib/use-live-refresh';
+import { useRiderRealtimeStream } from '../../lib/use-rider-realtime-stream';
 import { createOrbiApiClient } from '@orbi/api';
 import {
   orbiRuntimeConfig,
   resolveOrbiApiBaseUrlForRuntime,
 } from '@orbi/config';
-import { resolveRiderAppError } from '../lib/session-feedback';
+import { resolveRiderAppError } from '../../lib/session-feedback';
 import {
   buildRiderFlowTransitionLabel,
   buildRiderHomeStatusLabel,
   resolveRiderActiveFlow,
-} from '../lib/rider-active-flow';
+} from '../../lib/rider-active-flow';
 
 function buildRideOptionInsights(option: RideOption): Array<{
   label: string;

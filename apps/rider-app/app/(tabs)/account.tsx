@@ -12,27 +12,27 @@ import {
 } from '@orbi/api';
 import { orbiTheme } from '@orbi/ui';
 import { router } from 'expo-router';
-import { restoreRiderSession, signOutRiderAccount } from '../lib/auth';
+import { restoreRiderSession, signOutRiderAccount } from '../../lib/auth';
 import {
   buildSavedPlacePayload,
   buildTrustedContactPayload,
   type TrustedContactShareMode,
-} from '../lib/account-safety';
-import { resolveRiderAppError } from '../lib/session-feedback';
+} from '../../lib/account-safety';
+import { resolveRiderAppError } from '../../lib/session-feedback';
 import {
   buildRiderFlowTransitionLabel,
   buildRiderPeripheralStatusLabel,
   resolveRiderActiveFlow,
-} from '../lib/rider-active-flow';
+} from '../../lib/rider-active-flow';
 import {
   InsightBadge,
   LiveStatusBanner,
   MetricTile,
   SectionCard,
   SectionHeading,
-} from '../lib/realtime-widgets';
-import { RiderJourneySection } from '../lib/rider-journey';
-import { useLiveRefresh } from '../lib/use-live-refresh';
+} from '../../lib/realtime-widgets';
+import { RiderJourneySection } from '../../lib/rider-journey';
+import { useLiveRefresh } from '../../lib/use-live-refresh';
 
 const fallbackProfile: RiderProfileResponse = {
   profile: {

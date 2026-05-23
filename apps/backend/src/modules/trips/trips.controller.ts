@@ -20,6 +20,7 @@ import type { RequestAuthContext } from '../auth/auth.types';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
+import { RateTripDto } from './dto/rate-trip.dto';
 import { ReportTripIncidentDto } from './dto/report-trip-incident.dto';
 import { ReportTripSosDto } from './dto/report-trip-sos.dto';
 import { RecordRoutePositionDto } from './dto/record-route-position.dto';
@@ -193,5 +194,18 @@ export class TripsController {
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.tripsService.updateStatus(auth, tripId, payload.status);
+  }
+
+  @Post(':tripId/rate')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.RIDER)
+  rateTrip(
+    @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
+    @Body() payload: RateTripDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.tripsService.rateTrip(auth, tripId, payload);
   }
 }

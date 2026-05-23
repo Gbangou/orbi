@@ -44,14 +44,14 @@ import {
   MetricTile,
   RouteSignalCard,
   TransitionNoticeCard,
-} from "../lib/realtime-widgets";
-import { restoreDriverSession } from "../lib/auth";
-import { resolveDriverAppError } from "../lib/session-feedback";
+} from "../../lib/realtime-widgets";
+import { restoreDriverSession } from "../../lib/auth";
+import { resolveDriverAppError } from "../../lib/session-feedback";
 import {
   formatReservationCountdown,
   useReservationExpiryRefresh,
   useReservationClock,
-} from "../lib/offer-reservation";
+} from "../../lib/offer-reservation";
 import {
   buildDriverDispatchStatusLabel,
   buildDriverFlowTransitionLabel,
@@ -61,29 +61,29 @@ import {
   buildDriverRiderTrustSnapshot,
   resolveDriverActiveFlow,
   resolveDriverReservationChangeSet,
-} from "../lib/driver-active-flow";
+} from "../../lib/driver-active-flow";
 import {
   buildDriverFatigueMessage,
   buildDriverRouteSafetyBrief,
   buildDriverRouteMonitoringLines,
-} from "../lib/driver-operational-signal";
+} from "../../lib/driver-operational-signal";
 import {
   buildDriverOfferDetailLines,
   formatDriverOfferFare,
   buildDriverOfferInsights,
   buildDriverOfferNote,
-} from "../lib/offer-signal";
-import { useDriverPresence } from "../lib/use-driver-presence";
-import { useDriverRealtimeStream } from "../lib/use-driver-realtime-stream";
-import { useLiveRefresh } from "../lib/use-live-refresh";
-import { DriverJourneySection } from "../lib/driver-journey";
-import { buildDriverShiftReadiness } from "../lib/driver-shift-readiness";
+} from "../../lib/offer-signal";
+import { useDriverPresence } from "../../lib/use-driver-presence";
+import { useDriverRealtimeStream } from "../../lib/use-driver-realtime-stream";
+import { useLiveRefresh } from "../../lib/use-live-refresh";
+import { DriverJourneySection } from "../../lib/driver-journey";
+import { buildDriverShiftReadiness } from "../../lib/driver-shift-readiness";
 import {
   normalizePickupCode,
   validateOfferAction,
   validatePickupCode,
   validateTripAdvance,
-} from "../lib/driver-action-safety";
+} from "../../lib/driver-action-safety";
 
 const fallbackHistory: MyTripsResponse = {
   role: "DRIVER",
@@ -368,6 +368,10 @@ export default function OffersScreen() {
   const [pickupCodeInput, setPickupCodeInput] = useState("");
   const [tripDetailStatus, setTripDetailStatus] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [completionFlash, setCompletionFlash] = useState<{
+    fareLabel: string;
+    netLabel: string;
+  } | null>(null);
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
   const previousTimelineEventIdsRef = useRef<string[] | null>(null);
@@ -618,6 +622,18 @@ export default function OffersScreen() {
     return () => clearTimeout(timeout);
   }, [freshTimelineEventIds]);
 
+  useEffect(() => {
+    if (!completionFlash) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setCompletionFlash(null);
+    }, 12000);
+
+    return () => clearTimeout(timeout);
+  }, [completionFlash]);
+
   async function runExclusiveDriverAction(action: () => Promise<void>) {
     if (submissionLockRef.current) {
       return;
@@ -773,6 +789,14 @@ export default function OffersScreen() {
         setStatus(
           `Trajet ${response.trip.id.slice(0, 8)} mis a jour: ${response.trip.status}.`,
         );
+        if (nextStatus === "COMPLETED" && typeof response.trip.actualFare === "number") {
+          const gross = response.trip.actualFare;
+          const net = Math.round(gross * 0.82);
+          setCompletionFlash({
+            fareLabel: formatXof(gross),
+            netLabel: formatXof(net),
+          });
+        }
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
@@ -1008,6 +1032,34 @@ export default function OffersScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <Text style={styles.title}>Offres de course</Text>
+      {completionFlash ? (
+        <View style={styles.completionFlash}>
+          <View style={styles.completionFlashCheck}>
+            <View style={styles.completionFlashCheckInner} />
+          </View>
+          <View style={styles.completionFlashCopy}>
+            <Text style={styles.completionFlashTitle}>Course terminee !</Text>
+            <Text style={styles.completionFlashMeta}>
+              Tarif passager: {completionFlash.fareLabel}
+            </Text>
+            <Text style={styles.completionFlashNet}>
+              Votre gain net estime: {completionFlash.netLabel}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => setCompletionFlash(null)}
+            style={styles.completionFlashClose}
+          >
+            <View style={styles.completionFlashCloseBar} />
+            <View
+              style={[
+                styles.completionFlashCloseBar,
+                styles.completionFlashCloseBarAlt,
+              ]}
+            />
+          </Pressable>
+        </View>
+      ) : null}
       <LiveStatusBanner
         label={formatRealtimeBadgeLabel("Direct", isRealtimeSyncing)}
         message={status}
@@ -1934,5 +1986,68 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.6,
+  },
+  completionFlash: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.36)",
+    borderRadius: 20,
+    padding: 16,
+  },
+  completionFlashCheck: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "rgba(245, 158, 11, 0.2)",
+    borderWidth: 1.5,
+    borderColor: orbiTheme.colors.amber,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  completionFlashCheckInner: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: orbiTheme.colors.amber,
+  },
+  completionFlashCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  completionFlashTitle: {
+    color: orbiTheme.colors.amber,
+    fontWeight: "900",
+    fontSize: 15,
+  },
+  completionFlashMeta: {
+    color: orbiTheme.colors.muted,
+    fontSize: 13,
+  },
+  completionFlashNet: {
+    color: orbiTheme.colors.text,
+    fontWeight: "800",
+    fontSize: 14,
+  },
+  completionFlashClose: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  completionFlashCloseBar: {
+    position: "absolute",
+    width: 14,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: orbiTheme.colors.muted,
+    transform: [{ rotate: "45deg" }],
+  },
+  completionFlashCloseBarAlt: {
+    transform: [{ rotate: "-45deg" }],
   },
 });

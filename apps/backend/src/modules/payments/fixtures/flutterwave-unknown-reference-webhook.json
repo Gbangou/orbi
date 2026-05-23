@@ -1,0 +1,29 @@
+{
+  "event": "charge.completed",
+  "transactionRef": "orbi_fw_unknown_ref_xxxxxxxx",
+  "data": {
+    "id": 999999999,
+    "tx_ref": "orbi_fw_unknown_ref_xxxxxxxx",
+    "flw_ref": "FLW-MOCK-REF-UNKNOWN-001",
+    "providerReference": "FLW-MOCK-REF-UNKNOWN-001",
+    "device_fingerprint": "N/A",
+    "amount": 2400,
+    "currency": "XOF",
+    "charged_amount": 2400,
+    "app_fee": 96,
+    "merchant_fee": 0,
+    "processor_response": "Approved. Successful",
+    "auth_model": "MOBILEMONEY",
+    "status": "successful",
+    "payment_type": "mobilemoneybf",
+    "created_at": "2026-05-23T08:10:00.000Z",
+    "account_id": 17321,
+    "customer": {
+      "id": 215604091,
+      "name": "Demo Inconnu",
+      "phone_number": "+22670000003",
+      "email": "unknown@orbi.bf",
+      "created_at": "2026-01-01T00:00:00.000Z"
+    }
+  }
+}
