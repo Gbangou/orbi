@@ -14,15 +14,19 @@
         {
           "locationWhenInUsePermission": "Orbi Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct."
         }
-      ]
+      ],
+      "expo-screen-capture"
     ],
     "ios": {
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Orbi Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct."
+        "NSLocationWhenInUseUsageDescription": "Orbi Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct.",
+        "NSAllowsArbitraryLoads": false
       }
     },
     "android": {
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
+      "usesCleartextTraffic": false,
+      "allowBackup": false
     },
     "web": {
       "bundler": "metro"

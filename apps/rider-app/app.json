@@ -14,12 +14,19 @@
         {
           "locationWhenInUsePermission": "Orbi Passager utilise votre position pour definir le depart, partager les signaux securite et suivre la course active."
         }
-      ]
+      ],
+      "expo-screen-capture"
     ],
     "ios": {
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Orbi Passager utilise votre position pour definir le depart, partager les signaux securite et suivre la course active."
+        "NSLocationWhenInUseUsageDescription": "Orbi Passager utilise votre position pour definir le depart, partager les signaux securite et suivre la course active.",
+        "NSAllowsArbitraryLoads": false
       }
+    },
+    "android": {
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
+      "usesCleartextTraffic": false,
+      "allowBackup": false
     },
     "web": {
       "bundler": "metro"

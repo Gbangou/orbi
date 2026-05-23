@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View, Text, StyleSheet } from 'react-native';
 import {
+  preventScreenCaptureAsync,
+  allowScreenCaptureAsync,
+} from 'expo-screen-capture';
+import {
   createSavedPlaceWithApi,
   deleteSavedPlaceWithApi,
   fetchMyTrips,
@@ -85,6 +89,13 @@ export default function AccountScreen() {
   });
   const previousSavedPlacesRef = useRef<RiderProfileResponse['profile']['savedPlaces'] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    void preventScreenCaptureAsync();
+    return () => {
+      void allowScreenCaptureAsync();
+    };
+  }, []);
 
   useEffect(() => {
     void loadProfile();

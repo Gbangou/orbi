@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import {
+  preventScreenCaptureAsync,
+  allowScreenCaptureAsync,
+} from 'expo-screen-capture';
+import {
   fetchDriverEarnings,
   fetchDriverProfile,
   fetchMyTrips,
@@ -112,6 +116,13 @@ export default function RevenusScreen() {
   }, []);
 
   useLiveRefresh(() => loadEarnings(true), 30000);
+
+  useEffect(() => {
+    void preventScreenCaptureAsync();
+    return () => {
+      void allowScreenCaptureAsync();
+    };
+  }, []);
 
   useEffect(() => {
     const previousSummary = previousSummaryRef.current;

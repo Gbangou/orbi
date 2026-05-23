@@ -9,6 +9,10 @@ import {
   View,
 } from 'react-native';
 import {
+  preventScreenCaptureAsync,
+  allowScreenCaptureAsync,
+} from 'expo-screen-capture';
+import {
   fetchTripDetail,
   type TripDetailResponse,
 } from '@orbi/api';
@@ -47,6 +51,13 @@ export default function ReceiptScreen() {
   const [detail, setDetail] = useState<TripDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    void preventScreenCaptureAsync();
+    return () => {
+      void allowScreenCaptureAsync();
+    };
+  }, []);
 
   useEffect(() => {
     if (!tripId) {
