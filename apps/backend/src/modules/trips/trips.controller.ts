@@ -119,7 +119,8 @@ export class TripsController {
   @Post(':tripId/share-link')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.RIDER)
   createShareLink(
     @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
@@ -178,7 +179,8 @@ export class TripsController {
   @Post(':tripId/sos')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, RateLimitGuard)
+  @RateLimit({ limit: 5, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.RIDER, UserRole.DRIVER, UserRole.ADMIN, UserRole.OPS)
   triggerSafetySos(
     @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
