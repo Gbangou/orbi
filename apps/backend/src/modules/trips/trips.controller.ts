@@ -194,7 +194,8 @@ export class TripsController {
   @Patch(':tripId/status')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, RateLimitGuard)
+  @RateLimit({ limit: 20, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.DRIVER, UserRole.RIDER, UserRole.ADMIN, UserRole.OPS)
   updateStatus(
     @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
