@@ -613,6 +613,54 @@ describe('TripsService', () => {
     ).rejects.toThrow('The driver already has an active trip in progress.');
   });
 
+  it('rejects ride acceptance when the driver profile cannot be loaded inside the transaction', async () => {
+    const { prisma, service } = createService();
+
+    // fatigue check passes (no recent trips), but profile lookup inside TX returns null
+    prisma.driverProfile.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.acceptRideRequest(
+        {
+          user: {
+            driverProfile: {
+              id: 'driver-1',
+            },
+          },
+        } as never,
+        'request-1',
+      ),
+    ).rejects.toThrow('Driver profile could not be loaded.');
+
+    expect(prisma.trip.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects ride acceptance when the driver is offline inside the transaction', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'OFFLINE',
+      verificationStatus: 'APPROVED',
+      vehicles: [],
+    });
+
+    await expect(
+      service.acceptRideRequest(
+        {
+          user: {
+            driverProfile: {
+              id: 'driver-1',
+            },
+          },
+        } as never,
+        'request-1',
+      ),
+    ).rejects.toThrow('The driver must be online before accepting a ride request.');
+
+    expect(prisma.trip.create).not.toHaveBeenCalled();
+  });
+
   it('verifies the pickup code before starting a trip', async () => {
     const { prisma, realtimeService, service } = createService();
 
