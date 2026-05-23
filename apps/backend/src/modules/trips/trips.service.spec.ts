@@ -2300,4 +2300,199 @@ describe('TripsService', () => {
       );
     });
   });
+
+  describe('evaluateRouteMonitoringAlerts (via recordRoutePosition)', () => {
+    function buildDriverMonitorAuth() {
+      return {
+        user: {
+          id: 'user-driver-monitor',
+          role: 'DRIVER',
+          driverProfile: { id: 'driver-monitor' },
+        },
+      } as never;
+    }
+
+    function buildTripWithHistory(overrides: {
+      previousEventCreatedAt: Date;
+      previousPayload: Record<string, unknown>;
+      extraEvents?: Array<{ eventType: string; payload: Record<string, unknown>; createdAt: Date }>;
+      rideRequest?: Record<string, unknown>;
+    }) {
+      return {
+        id: 'trip-monitor-1',
+        riderId: 'rider-monitor',
+        driverId: 'driver-monitor',
+        status: 'IN_PROGRESS',
+        distanceKm: 5,
+        durationMinutes: 20,
+        rideRequest: overrides.rideRequest ?? {},
+        events: [
+          {
+            eventType: 'ROUTE_POSITION_RECORDED',
+            payload: overrides.previousPayload,
+            createdAt: overrides.previousEventCreatedAt,
+          },
+          ...(overrides.extraEvents ?? []),
+        ],
+      };
+    }
+
+    it('raises LONG_STOP alert when driver is stationary for over 8 minutes', async () => {
+      const { prisma, service } = createService();
+      const nineMinutesAgo = new Date(Date.now() - 9 * 60 * 1000);
+
+      prisma.trip.findUnique.mockResolvedValue(
+        buildTripWithHistory({
+          previousEventCreatedAt: nineMinutesAgo,
+          previousPayload: {
+            latitude: 12.3700,
+            longitude: -1.5200,
+            speedKph: 0,
+            distanceToDestinationKm: 2.0,
+            sourceRole: 'DRIVER',
+          },
+        }),
+      );
+      prisma.trip.update.mockResolvedValue({ id: 'trip-monitor-1' });
+      prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-stop-1' });
+      prisma.auditLog.create.mockResolvedValue(undefined);
+
+      const result = await service.recordRoutePosition(
+        buildDriverMonitorAuth(),
+        'trip-monitor-1',
+        {
+          latitude: 12.3701,
+          longitude: -1.5201,
+          speedKph: 0,
+          distanceToDestinationKm: 2.0,
+        },
+      );
+
+      const stopAlerts = result.routeMonitoring.alerts.filter(
+        (a) => a.alertType === 'LONG_STOP',
+      );
+      expect(stopAlerts).toHaveLength(1);
+      expect(stopAlerts[0].severity).toBe('warning');
+      expect(stopAlerts[0].priority).toBe(2);
+      expect(prisma.supportTicket.create).toHaveBeenCalled();
+    });
+
+    it('raises NO_PROGRESS alert when driver makes less than 200m progress in 10 minutes', async () => {
+      const { prisma, service } = createService();
+      const elevenMinutesAgo = new Date(Date.now() - 11 * 60 * 1000);
+
+      prisma.trip.findUnique.mockResolvedValue(
+        buildTripWithHistory({
+          previousEventCreatedAt: elevenMinutesAgo,
+          previousPayload: {
+            latitude: 12.3720,
+            longitude: -1.5230,
+            speedKph: 4,
+            distanceToDestinationKm: 3.50,
+            sourceRole: 'DRIVER',
+          },
+        }),
+      );
+      prisma.trip.update.mockResolvedValue({ id: 'trip-monitor-1' });
+      prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-noprogress-1' });
+      prisma.auditLog.create.mockResolvedValue(undefined);
+
+      const result = await service.recordRoutePosition(
+        buildDriverMonitorAuth(),
+        'trip-monitor-1',
+        {
+          latitude: 12.3725,
+          longitude: -1.5234,
+          speedKph: 3,
+          distanceToDestinationKm: 3.45,
+        },
+      );
+
+      const noProgressAlerts = result.routeMonitoring.alerts.filter(
+        (a) => a.alertType === 'NO_PROGRESS',
+      );
+      expect(noProgressAlerts).toHaveLength(1);
+      expect(noProgressAlerts[0].severity).toBe('warning');
+    });
+
+    it('emits no stop or progress alerts when driver is moving normally', async () => {
+      const { prisma, service } = createService();
+      const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
+
+      prisma.trip.findUnique.mockResolvedValue(
+        buildTripWithHistory({
+          previousEventCreatedAt: threeMinutesAgo,
+          previousPayload: {
+            latitude: 12.3700,
+            longitude: -1.5200,
+            speedKph: 40,
+            distanceToDestinationKm: 4.0,
+            sourceRole: 'DRIVER',
+          },
+        }),
+      );
+      prisma.trip.update.mockResolvedValue({ id: 'trip-monitor-1' });
+      prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-ok' });
+      prisma.auditLog.create.mockResolvedValue(undefined);
+
+      const result = await service.recordRoutePosition(
+        buildDriverMonitorAuth(),
+        'trip-monitor-1',
+        {
+          latitude: 12.3820,
+          longitude: -1.5310,
+          speedKph: 38,
+          distanceToDestinationKm: 2.4,
+        },
+      );
+
+      expect(
+        result.routeMonitoring.alerts.filter((a) => a.alertType === 'LONG_STOP'),
+      ).toHaveLength(0);
+      expect(
+        result.routeMonitoring.alerts.filter((a) => a.alertType === 'NO_PROGRESS'),
+      ).toHaveLength(0);
+    });
+
+    it('suppresses a duplicate LONG_STOP alert within the 15-minute cooldown window', async () => {
+      const { prisma, service } = createService();
+      const nineMinutesAgo = new Date(Date.now() - 9 * 60 * 1000);
+
+      prisma.trip.findUnique.mockResolvedValue(
+        buildTripWithHistory({
+          previousEventCreatedAt: nineMinutesAgo,
+          previousPayload: {
+            latitude: 12.3700,
+            longitude: -1.5200,
+            speedKph: 0,
+            distanceToDestinationKm: 2.0,
+            sourceRole: 'DRIVER',
+          },
+          extraEvents: [
+            {
+              eventType: 'ROUTE_MONITORING_ALERT',
+              payload: { alertType: 'LONG_STOP', severity: 'warning' },
+              createdAt: new Date(Date.now() - 5 * 60 * 1000),
+            },
+          ],
+        }),
+      );
+      prisma.trip.update.mockResolvedValue({ id: 'trip-monitor-1' });
+      prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-cooldown' });
+      prisma.auditLog.create.mockResolvedValue(undefined);
+
+      await service.recordRoutePosition(
+        buildDriverMonitorAuth(),
+        'trip-monitor-1',
+        {
+          latitude: 12.3701,
+          longitude: -1.5201,
+          speedKph: 0,
+          distanceToDestinationKm: 2.0,
+        },
+      );
+
+      expect(prisma.supportTicket.create).not.toHaveBeenCalled();
+    });
+  });
 });
