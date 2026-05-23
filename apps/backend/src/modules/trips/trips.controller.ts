@@ -146,7 +146,8 @@ export class TripsController {
   @Post(':tripId/verify-pickup-code')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, RateLimitGuard)
+  @RateLimit({ limit: 5, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.DRIVER)
   verifyPickupCode(
     @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
