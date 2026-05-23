@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { RateLimit } from '../../common/rate-limit/rate-limit.decorator';
+import { RateLimitGuard } from '../../common/rate-limit/rate-limit.guard';
 import { OpaqueIdPipe } from '../../common/pipes/opaque-id.pipe';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import { Roles } from '../auth/roles.decorator';
@@ -28,6 +30,8 @@ export class RideRequestsController {
 
   @Post()
   @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.RIDER, UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   create(
     @Body() payload: CreateRideRequestDto,
@@ -59,6 +63,8 @@ export class RideRequestsController {
 
   @Delete(':rideRequestId')
   @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 20, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.RIDER, UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   cancel(
     @Param('rideRequestId', new OpaqueIdPipe('rideRequestId'))

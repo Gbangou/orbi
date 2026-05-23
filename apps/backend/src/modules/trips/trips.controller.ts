@@ -13,6 +13,8 @@ import {
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Observable } from 'rxjs';
+import { RateLimit } from '../../common/rate-limit/rate-limit.decorator';
+import { RateLimitGuard } from '../../common/rate-limit/rate-limit.guard';
 import { OpaqueIdPipe } from '../../common/pipes/opaque-id.pipe';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { CurrentAuth } from '../auth/current-auth.decorator';
@@ -103,7 +105,8 @@ export class TripsController {
   @Post('accept/:rideRequestId')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, RateLimitGuard)
+  @RateLimit({ limit: 30, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.DRIVER)
   acceptRideRequest(
     @Param('rideRequestId', new OpaqueIdPipe('rideRequestId'))
@@ -154,7 +157,8 @@ export class TripsController {
   @Post(':tripId/report-incident')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000, scope: 'user' })
   @Roles(
     UserRole.RIDER,
     UserRole.DRIVER,
@@ -204,7 +208,8 @@ export class TripsController {
   @Post(':tripId/rate')
   @Version('1')
   @ApiBearerAuth('session-token')
-  @UseGuards(SessionAuthGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, RolesGuard, RateLimitGuard)
+  @RateLimit({ limit: 5, windowMs: 60_000, scope: 'user' })
   @Roles(UserRole.RIDER)
   rateTrip(
     @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
