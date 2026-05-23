@@ -21,6 +21,7 @@ import {
   isActiveTripLifecycleStatus,
   reportTripIncidentWithApi,
   triggerTripSafetySosWithApi,
+  withNetworkRetry,
   type MyTripsResponse,
   type TripDetailResponse,
   updateTripStatusWithApi,
@@ -258,7 +259,14 @@ export default function ActivityScreen() {
     try {
       const { authClient, session } = await restoreRiderSession();
       setSessionToken(session.sessionToken);
-      const response = await fetchMyTrips(authClient);
+      const response = await withNetworkRetry(
+        () => fetchMyTrips(authClient),
+        {
+          maxAttempts: 3,
+          onRetry: (attempt, max) =>
+            setStatus(`Reconnexion... (tentative ${attempt}/${max})`),
+        },
+      );
       setHistory(response);
 
       const activeTrip = response.recentTrips.find((trip) =>
@@ -267,7 +275,14 @@ export default function ActivityScreen() {
 
       if (activeTrip) {
         try {
-          const detail = await fetchTripDetail(authClient, activeTrip.id);
+          const detail = await withNetworkRetry(
+            () => fetchTripDetail(authClient, activeTrip.id),
+            {
+              maxAttempts: 3,
+              onRetry: (attempt, max) =>
+                setStatus(`Reconnexion suivi... (tentative ${attempt}/${max})`),
+            },
+          );
           setActiveTripDetail(detail);
           setTripDetailStatus(null);
         } catch {
