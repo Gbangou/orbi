@@ -2336,11 +2336,21 @@ export class AdminService {
       inProgress: activeTrips.filter((trip) => trip.status === 'IN_PROGRESS')
         .length,
     };
+    const matchedSlaStalledMinutes = 10;
     const incidentTrips = activeTrips.filter((trip) =>
       trip.events.some((event) => event.eventType === 'INCIDENT_REPORTED'),
     ).length;
     const routeMonitoringAlertTrips = activeTrips.filter((trip) =>
       trip.events.some((event) => event.eventType === 'ROUTE_MONITORING_ALERT'),
+    ).length;
+    const stalledMatchedCutoff = new Date(
+      Date.now() - matchedSlaStalledMinutes * 60 * 1000,
+    );
+    const stalledMatchedTrips = activeTrips.filter(
+      (trip) =>
+        trip.status === 'MATCHED' &&
+        trip.createdAt < stalledMatchedCutoff &&
+        !trip.events.some((event) => event.eventType === 'DRIVER_ARRIVING'),
     ).length;
     const activeTripsMissingDriverRoutePosition = activeTrips.filter(
       (trip) =>
@@ -2379,6 +2389,7 @@ export class AdminService {
         openRequests,
         urgentSupportTickets,
         tripsByStatus,
+        stalledMatchedTrips,
         payments: {
           lookbackHours: 24,
           attempts: paymentAttempts.length,
@@ -2499,6 +2510,9 @@ export class AdminService {
           : activeTripsMissingDriverRoutePosition > 0
             ? `${activeTripsMissingDriverRoutePosition} trajet(s) actif(s) attendent le premier signal GPS chauffeur.`
             : 'Route monitoring clair sur les trajets actifs instrumentes.',
+        stalledMatchedTrips > 0
+          ? `${stalledMatchedTrips} trajet(s) MATCHED depuis plus de ${matchedSlaStalledMinutes} min sans signal DRIVER_ARRIVING — vérifier disponibilité chauffeur.`
+          : 'Aucun trajet MATCHED en dépassement SLA.',
         openRequests > 5
           ? 'La file de reservations ouvertes demande une attention immediate.'
           : 'La file de reservations ouvertes reste sous controle.',

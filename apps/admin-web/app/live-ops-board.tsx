@@ -202,6 +202,11 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
           <strong>{liveOps.summary.tripsByStatus.inProgress}</strong>
           <p>Trajets en statut IN_PROGRESS</p>
         </article>
+        <article className={`card${liveOps.summary.stalledMatchedTrips > 0 ? ' card-alert' : ''}`}>
+          <span>SLA MATCHED</span>
+          <strong>{liveOps.summary.stalledMatchedTrips}</strong>
+          <p>Trajet(s) MATCHED en attente {'>'} 10 min</p>
+        </article>
         <article className="card">
           <span>Paiements 24h</span>
           <strong>{liveOps.summary.payments.reconciliationRate}%</strong>

@@ -1235,6 +1235,7 @@ export type AdminLiveOpsResponse = {
       arriving: number;
       inProgress: number;
     };
+    stalledMatchedTrips: number;
     payments: {
       lookbackHours: number;
       attempts: number;
