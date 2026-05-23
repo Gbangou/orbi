@@ -13,7 +13,10 @@ export default () => ({
   },
   security: {
     trustedProxy: process.env.TRUST_PROXY === 'true',
-    enableDocs: process.env.ENABLE_SWAGGER !== 'false',
+    enableDocs:
+      process.env.NODE_ENV === 'production'
+        ? process.env.ENABLE_SWAGGER === 'true'
+        : process.env.ENABLE_SWAGGER !== 'false',
   },
   http: {
     requestBodyLimit: process.env.REQUEST_BODY_LIMIT ?? '256kb',
