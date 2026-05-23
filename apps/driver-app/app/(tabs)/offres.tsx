@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   Easing,
   Linking,
@@ -814,6 +815,47 @@ export default function OffersScreen() {
     });
   }
 
+  function handleDriverCancelTrip(tripId: string) {
+    const REASONS = [
+      "Passager introuvable",
+      "Zone inaccessible",
+      "Erreur d acceptation",
+    ];
+
+    Alert.alert(
+      "Annuler la course",
+      "Motif de l annulation ?",
+      [
+        ...REASONS.map((reason) => ({
+          text: reason,
+          onPress: () => void doDriverCancelTrip(tripId, reason),
+        })),
+        { text: "Ne pas annuler", style: "cancel" as const },
+      ],
+    );
+  }
+
+  async function doDriverCancelTrip(tripId: string, reason: string) {
+    await runExclusiveDriverAction(async () => {
+      setStatus("Annulation de la course en cours...");
+      try {
+        const { authClient } = await restoreDriverSession();
+        await updateTripStatusWithApi(authClient, tripId, "CANCELLED", reason);
+        setStatus("Course annulee. Vous repassez disponible.");
+        await loadDriverData();
+      } catch (error) {
+        const feedback = await resolveDriverAppError(error, {
+          surface: "active-trip",
+          fallback: "L annulation de la course a echoue.",
+        });
+        if (feedback.shouldClearSessionToken) {
+          setSessionToken(null);
+        }
+        setStatus(feedback.message);
+      }
+    });
+  }
+
   async function handleVerifyPickupCode(tripId: string, pickupCode: string) {
     const normalizedPickupCode = normalizePickupCode(pickupCode);
     const validation = validatePickupCode(normalizedPickupCode);
@@ -955,14 +997,23 @@ export default function OffersScreen() {
 
     if (activeTrip.status === "MATCHED") {
       return (
-        <FlowActionButton
-          disabled={isSubmitting}
-          label="Signaler l arrivee"
-          onPress={() => handleAdvanceTrip(activeTrip.id, "DRIVER_ARRIVING")}
-          tone="amber"
-          emphasis="primary"
-          style={isSubmitting ? styles.disabled : null}
-        />
+        <>
+          <FlowActionButton
+            disabled={isSubmitting}
+            label="Signaler l arrivee"
+            onPress={() => handleAdvanceTrip(activeTrip.id, "DRIVER_ARRIVING")}
+            tone="amber"
+            emphasis="primary"
+            style={isSubmitting ? styles.disabled : null}
+          />
+          <FlowActionButton
+            disabled={isSubmitting}
+            label="Annuler la course"
+            onPress={() => handleDriverCancelTrip(activeTrip.id)}
+            emphasis="secondary"
+            style={isSubmitting ? styles.disabled : null}
+          />
+        </>
       );
     }
 
@@ -994,6 +1045,13 @@ export default function OffersScreen() {
                 ? styles.disabled
                 : null
             }
+          />
+          <FlowActionButton
+            disabled={isSubmitting}
+            label="Annuler (passager absent)"
+            onPress={() => handleDriverCancelTrip(activeTrip.id)}
+            emphasis="secondary"
+            style={isSubmitting ? styles.disabled : null}
           />
         </View>
       );
