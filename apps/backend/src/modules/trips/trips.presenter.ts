@@ -124,7 +124,7 @@ export function serializeTripDetail(trip: {
   startedAt: Date | null;
   completedAt: Date | null;
   createdAt: Date;
-  rider: { user: { fullName: string } };
+  rider: { user: { fullName: string; phoneNumber?: string | null } };
   driver: {
     verificationStatus: string;
     averageRating: unknown;
@@ -156,10 +156,14 @@ export function serializeTripDetail(trip: {
   }>;
 }) {
   const activeStatuses = ['MATCHED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
+  const isActiveTrip = activeStatuses.includes(trip.status);
   const driverPhoneNumber =
-    activeStatuses.includes(trip.status) &&
-    trip.driver.user.phoneNumber
+    isActiveTrip && trip.driver.user.phoneNumber
       ? trip.driver.user.phoneNumber
+      : null;
+  const riderPhoneNumber =
+    isActiveTrip && trip.rider.user.phoneNumber
+      ? trip.rider.user.phoneNumber
       : null;
   const routeMonitoring = resolveRouteMonitoringSummary(trip.events);
   const pickupLatitude = toFiniteNumber(trip.rideRequest?.pickupLatitude);
@@ -232,6 +236,7 @@ export function serializeTripDetail(trip: {
         ? extractPickupCode(trip.events)
         : null,
       driverPhoneNumber,
+      riderPhoneNumber,
       actualFare: toAmount(trip.actualFare),
       currency: trip.currency,
       pickupLatitude,

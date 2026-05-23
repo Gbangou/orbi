@@ -1364,6 +1364,17 @@ export default function OffersScreen() {
             />
           ) : null}
           {renderActiveTripAction()}
+          {activeTripDetail?.trip.riderPhoneNumber ? (
+            <FlowActionButton
+              label="Appeler le passager"
+              onPress={() =>
+                void Linking.openURL(
+                  `tel:${activeTripDetail.trip.riderPhoneNumber}`,
+                )
+              }
+              emphasis="secondary"
+            />
+          ) : null}
           <FlowActionButton
             disabled={isSubmitting}
             label="SOS securite"

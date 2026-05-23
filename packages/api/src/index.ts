@@ -2542,6 +2542,7 @@ export type TripDetailResponse = {
     };
     pickupCode?: string | null;
     driverPhoneNumber: string | null;
+    riderPhoneNumber: string | null;
     actualFare: number;
     currency: string;
     pickupLatitude: number | null;
