@@ -961,6 +961,17 @@ export default function ActivityScreen() {
               style={isSubmitting ? styles.actionButtonDisabled : null}
             />
           ) : null}
+          {activeTripDetail?.trip.driverPhoneNumber ? (
+            <FlowActionButton
+              label="Appeler le chauffeur"
+              onPress={() =>
+                void Linking.openURL(
+                  `tel:${activeTripDetail.trip.driverPhoneNumber}`,
+                )
+              }
+              emphasis="secondary"
+            />
+          ) : null}
           <FlowActionButton
             disabled={isSubmitting}
             label="SOS securite"
