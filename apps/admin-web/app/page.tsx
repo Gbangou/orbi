@@ -92,6 +92,7 @@ const fallbackLiveOps: AdminLiveOpsResponse = {
       arriving: 0,
       inProgress: 0,
     },
+    stalledMatchedTrips: 0,
     payments: {
       lookbackHours: 24,
       attempts: 0,
@@ -109,6 +110,7 @@ const fallbackLiveOps: AdminLiveOpsResponse = {
   },
   trips: [],
   alerts: fallbackIncidents,
+  recentCancellations: [],
 };
 
 const fallbackHealth: HealthCheckResponse = {

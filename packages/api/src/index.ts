@@ -1298,6 +1298,15 @@ export type AdminLiveOpsResponse = {
     }>;
   }>;
   alerts: string[];
+  recentCancellations: Array<{
+    id: string;
+    riderName: string;
+    driverName: string;
+    route: string;
+    cancelledBy: string | null;
+    cancellationReason: string | null;
+    cancelledAt: string;
+  }>;
 };
 
 export type AdminLaunchReadinessResponse = {

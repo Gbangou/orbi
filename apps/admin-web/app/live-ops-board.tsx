@@ -344,6 +344,70 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
           </article>
         ) : null}
       </div>
+
+      {liveOps.recentCancellations.length > 0 ? (
+        <div className="roadmap-heading" style={{ marginTop: '2rem' }}>
+          <div>
+            <p className="eyebrow">Annulations</p>
+            <h2>Courses annulees dans les 2 dernieres heures</h2>
+          </div>
+          <div className="queue-meta">
+            <p className="lede">
+              Motifs declares par les riders et chauffeurs. Chaque annulation
+              est tracee dans le journal d evenements du trajet.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {liveOps.recentCancellations.length > 0 ? (
+        <div className="roadmap-grid live-ops-grid">
+          {liveOps.recentCancellations.map((cancel) => {
+            const actorLabel =
+              cancel.cancelledBy === 'RIDER'
+                ? 'Rider'
+                : cancel.cancelledBy === 'DRIVER'
+                  ? 'Chauffeur'
+                  : 'Inconnu';
+            const cancelTime = new Date(cancel.cancelledAt).toLocaleTimeString(
+              'fr-FR',
+              { hour: '2-digit', minute: '2-digit' },
+            );
+
+            return (
+              <article
+                className="phase-card live-trip-card"
+                key={cancel.id}
+              >
+                <div className="ticket-topline">
+                  <span className="phase-status" style={{ background: '#fee2e2', color: '#b91c1c' }}>
+                    Annule
+                  </span>
+                  <span className="live-trip-fare" style={{ color: '#6b7280' }}>
+                    {cancelTime}
+                  </span>
+                </div>
+                <h3>{cancel.route}</h3>
+                <p>
+                  {cancel.riderName} avec {cancel.driverName}
+                </p>
+                <div className="trip-meta-grid">
+                  <div className="trip-meta-card">
+                    <span>Annule par</span>
+                    <strong>{actorLabel}</strong>
+                  </div>
+                  <div className="trip-meta-card" style={{ gridColumn: 'span 3' }}>
+                    <span>Motif declare</span>
+                    <strong>
+                      {cancel.cancellationReason ?? 'Aucun motif renseigne'}
+                    </strong>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
     </section>
   );
 }

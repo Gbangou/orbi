@@ -2252,12 +2252,15 @@ export class AdminService {
 
   async liveOps() {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const cancellationLookbackMs = 2 * 60 * 60 * 1000;
+    const recentCancellationSince = new Date(Date.now() - cancellationLookbackMs);
     const [
       activeTrips,
       urgentSupportTickets,
       openRequests,
       paymentAttempts,
       paymentWebhookEvents,
+      recentlyCancelledTrips,
     ] = await Promise.all([
       this.prisma.trip.findMany({
         where: {
@@ -2327,6 +2330,29 @@ export class AdminService {
           action: true,
         },
       }),
+      this.prisma.trip.findMany({
+        where: {
+          status: 'CANCELLED',
+          updatedAt: {
+            gte: recentCancellationSince,
+          },
+        },
+        include: {
+          rider: {
+            include: { user: true },
+          },
+          driver: {
+            include: { user: true },
+          },
+          events: {
+            where: { eventType: 'TRIP_CANCELLED' },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 15,
+      }),
     ]);
 
     const tripsByStatus = {
@@ -2382,6 +2408,26 @@ export class AdminService {
       (attempt) => attempt.providerReference,
     ).length;
     const now = new Date();
+
+    const recentCancellations = recentlyCancelledTrips.map((trip) => {
+      const cancelEvent = trip.events[0];
+      const payload =
+        cancelEvent && isDispatchSettingsRecord(cancelEvent.payload)
+          ? cancelEvent.payload
+          : {};
+      return {
+        id: trip.id,
+        riderName: trip.rider.user.fullName,
+        driverName: trip.driver.user.fullName,
+        route: `${trip.pickupAddress} → ${trip.destinationAddress}`,
+        cancelledBy: typeof payload.actorRole === 'string' ? payload.actorRole : null,
+        cancellationReason:
+          typeof payload.cancellationReason === 'string'
+            ? payload.cancellationReason
+            : null,
+        cancelledAt: (cancelEvent?.createdAt ?? trip.updatedAt).toISOString(),
+      };
+    });
 
     return {
       summary: {
@@ -2535,6 +2581,7 @@ export class AdminService {
           ? `${refundPendingPayments} remboursement(s) provider attendent confirmation.`
           : 'Aucun remboursement provider en attente sur 24h.',
       ],
+      recentCancellations,
     };
   }
 

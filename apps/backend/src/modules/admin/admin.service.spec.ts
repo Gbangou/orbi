@@ -120,7 +120,7 @@ describe('AdminService', () => {
         findUnique: jest.fn(),
         update: jest.fn(),
       },
-      trip: { count: jest.fn(), findMany: jest.fn() },
+      trip: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
       supportTicket: {
         count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn(),
@@ -368,7 +368,7 @@ describe('AdminService', () => {
   it('builds a live ops payload from active trips and events', async () => {
     const { prisma, service } = createService();
 
-    prisma.trip.findMany.mockResolvedValue([
+    prisma.trip.findMany.mockResolvedValueOnce([
       {
         id: 'trip-1',
         status: 'DRIVER_ARRIVING',
@@ -494,7 +494,7 @@ describe('AdminService', () => {
   it('flags active trips waiting for the first driver route position', async () => {
     const { prisma, service } = createService();
 
-    prisma.trip.findMany.mockResolvedValue([
+    prisma.trip.findMany.mockResolvedValueOnce([
       {
         id: 'trip-1',
         status: 'DRIVER_ARRIVING',
@@ -553,7 +553,7 @@ describe('AdminService', () => {
   it('exposes completion gate blockers for active in-progress trips', async () => {
     const { prisma, service } = createService();
 
-    prisma.trip.findMany.mockResolvedValue([
+    prisma.trip.findMany.mockResolvedValueOnce([
       {
         id: 'trip-1',
         status: 'IN_PROGRESS',
@@ -609,7 +609,7 @@ describe('AdminService', () => {
   it('stalledMatchedTrips is 0 when a MATCHED trip was just created', async () => {
     const { prisma, service } = createService();
 
-    prisma.trip.findMany.mockResolvedValue([
+    prisma.trip.findMany.mockResolvedValueOnce([
       {
         id: 'trip-fresh',
         status: 'MATCHED',
@@ -643,7 +643,7 @@ describe('AdminService', () => {
 
     const stalledCreatedAt = new Date(Date.now() - 12 * 60 * 1000);
 
-    prisma.trip.findMany.mockResolvedValue([
+    prisma.trip.findMany.mockResolvedValueOnce([
       {
         id: 'trip-stalled',
         status: 'MATCHED',
@@ -685,7 +685,7 @@ describe('AdminService', () => {
 
     const oldCreatedAt = new Date(Date.now() - 15 * 60 * 1000);
 
-    prisma.trip.findMany.mockResolvedValue([
+    prisma.trip.findMany.mockResolvedValueOnce([
       {
         id: 'trip-progressing',
         status: 'MATCHED',
