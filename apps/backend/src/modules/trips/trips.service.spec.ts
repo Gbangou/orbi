@@ -2542,5 +2542,159 @@ describe('TripsService', () => {
 
       expect(prisma.supportTicket.create).not.toHaveBeenCalled();
     });
+
+    it('raises GPS_POSITION_ANOMALY when driver teleports faster than 500 km/h', async () => {
+      const { prisma, service } = createService();
+      // Previous position: Ouaga city centre
+      // New position: Abidjan (~1100 km away) in 10 seconds → impossible
+      const tenSecondsAgo = new Date(Date.now() - 10 * 1000);
+
+      prisma.trip.findUnique.mockResolvedValue(
+        buildTripWithHistory({
+          previousEventCreatedAt: tenSecondsAgo,
+          previousPayload: {
+            latitude: 12.3714,
+            longitude: -1.5197,
+            speedKph: 30,
+            distanceToDestinationKm: 4.0,
+            sourceRole: 'DRIVER',
+          },
+        }),
+      );
+      prisma.trip.update.mockResolvedValue({ id: 'trip-monitor-1' });
+      prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-gps-1' });
+      prisma.auditLog.create.mockResolvedValue(undefined);
+
+      // Abidjan coordinates — ~1100 km from Ouagadougou
+      const result = await service.recordRoutePosition(
+        buildDriverMonitorAuth(),
+        'trip-monitor-1',
+        {
+          latitude: 5.3600,
+          longitude: -4.0083,
+          speedKph: 30,
+          distanceToDestinationKm: 1100,
+        },
+      );
+
+      const anomalyAlerts = result.routeMonitoring.alerts.filter(
+        (a) => a.alertType === 'GPS_POSITION_ANOMALY',
+      );
+      expect(anomalyAlerts).toHaveLength(1);
+      expect(anomalyAlerts[0].severity).toBe('critical');
+      expect(anomalyAlerts[0].priority).toBe(3);
+      expect(anomalyAlerts[0].measuredValue).toBeGreaterThan(500);
+      expect(prisma.supportTicket.create).toHaveBeenCalled();
+    });
+
+    it('does not raise GPS_POSITION_ANOMALY for the first position update (no previous position)', async () => {
+      const { prisma, service } = createService();
+
+      // Trip with no previous ROUTE_POSITION_RECORDED events
+      prisma.trip.findUnique.mockResolvedValue({
+        id: 'trip-monitor-1',
+        riderId: 'rider-monitor',
+        driverId: 'driver-monitor',
+        status: 'IN_PROGRESS',
+        distanceKm: 5,
+        durationMinutes: 20,
+        rideRequest: {},
+        events: [],
+      });
+      prisma.trip.update.mockResolvedValue({ id: 'trip-monitor-1' });
+      prisma.auditLog.create.mockResolvedValue(undefined);
+
+      const result = await service.recordRoutePosition(
+        buildDriverMonitorAuth(),
+        'trip-monitor-1',
+        { latitude: 12.3714, longitude: -1.5197, speedKph: 30 },
+      );
+
+      expect(
+        result.routeMonitoring.alerts.filter(
+          (a) => a.alertType === 'GPS_POSITION_ANOMALY',
+        ),
+      ).toHaveLength(0);
+    });
+
+    it('does not raise GPS_POSITION_ANOMALY for a legitimate fast route update', async () => {
+      const { prisma, service } = createService();
+      // 10 km in 10 minutes → 60 km/h — well within the threshold
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+      prisma.trip.findUnique.mockResolvedValue(
+        buildTripWithHistory({
+          previousEventCreatedAt: tenMinutesAgo,
+          previousPayload: {
+            latitude: 12.3714,
+            longitude: -1.5197,
+            speedKph: 60,
+            distanceToDestinationKm: 8.0,
+            sourceRole: 'DRIVER',
+          },
+        }),
+      );
+      prisma.trip.update.mockResolvedValue({ id: 'trip-monitor-1' });
+      prisma.auditLog.create.mockResolvedValue(undefined);
+
+      // ~10 km away from previous position — fine for 10 minutes
+      const result = await service.recordRoutePosition(
+        buildDriverMonitorAuth(),
+        'trip-monitor-1',
+        {
+          latitude: 12.3714,
+          longitude: -1.4300,
+          speedKph: 60,
+          distanceToDestinationKm: 2.0,
+        },
+      );
+
+      expect(
+        result.routeMonitoring.alerts.filter(
+          (a) => a.alertType === 'GPS_POSITION_ANOMALY',
+        ),
+      ).toHaveLength(0);
+    });
+
+    it('does not raise GPS_POSITION_ANOMALY after a long gap (> 30 min) even for large distance', async () => {
+      const { prisma, service } = createService();
+      // 35 minutes gap: driver restarted the app — position jump is explainable
+      const thirtyFiveMinutesAgo = new Date(Date.now() - 35 * 60 * 1000);
+
+      prisma.trip.findUnique.mockResolvedValue(
+        buildTripWithHistory({
+          previousEventCreatedAt: thirtyFiveMinutesAgo,
+          previousPayload: {
+            latitude: 12.3714,
+            longitude: -1.5197,
+            speedKph: 0,
+            distanceToDestinationKm: 5.0,
+            sourceRole: 'DRIVER',
+          },
+        }),
+      );
+      prisma.trip.update.mockResolvedValue({ id: 'trip-monitor-1' });
+      // NO_PROGRESS alert may fire (driver moved far from destination) — mock ticket
+      prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-gap-1' });
+      prisma.auditLog.create.mockResolvedValue(undefined);
+
+      // Abidjan — huge jump but gap > 30 min → no anomaly flagged
+      const result = await service.recordRoutePosition(
+        buildDriverMonitorAuth(),
+        'trip-monitor-1',
+        {
+          latitude: 5.3600,
+          longitude: -4.0083,
+          speedKph: 0,
+          distanceToDestinationKm: 1100,
+        },
+      );
+
+      expect(
+        result.routeMonitoring.alerts.filter(
+          (a) => a.alertType === 'GPS_POSITION_ANOMALY',
+        ),
+      ).toHaveLength(0);
+    });
   });
 });

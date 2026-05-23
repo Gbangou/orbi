@@ -48,6 +48,9 @@ const routeStopMinutesThreshold = 8;
 const routeNoProgressMinutesThreshold = 10;
 const routeDeviationKmThreshold = 0.75;
 const routeMinimumProgressKm = 0.2;
+const gpsAnomalyMaxImpliedSpeedKph = 500;
+const gpsAnomalyMinDistanceKm = 0.5;
+const gpsAnomalyMaxGapMinutes = 30;
 const routeCompletionMaxSignalAgeMinutes = 10;
 const routeCompletionMaxAccuracyMeters = 250;
 const routeCompletionMaxSpeedKph = 110;
@@ -1928,7 +1931,7 @@ export class TripsService {
       );
     const previousPosition = previousPositions.at(-1);
     const alerts: Array<{
-      alertType: 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS';
+      alertType: 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS' | 'GPS_POSITION_ANOMALY';
       severity: 'warning' | 'critical';
       priority: 2 | 3;
       message: string;
@@ -1941,6 +1944,25 @@ export class TripsService {
         (input.observedAt.getTime() - previousPosition.createdAt.getTime()) /
         60000;
       const movementKm = haversineKm(previousPosition, input.position);
+
+      if (
+        elapsedMinutes > 0 &&
+        elapsedMinutes < gpsAnomalyMaxGapMinutes &&
+        movementKm >= gpsAnomalyMinDistanceKm
+      ) {
+        const impliedSpeedKph = movementKm / (elapsedMinutes / 60);
+
+        if (impliedSpeedKph > gpsAnomalyMaxImpliedSpeedKph) {
+          alerts.push({
+            alertType: 'GPS_POSITION_ANOMALY',
+            severity: 'critical',
+            priority: 3,
+            message: `Position suspecte detectee: deplacement de ${Math.round(movementKm)} km en ${Math.round(elapsedMinutes * 60)}s implique ${Math.round(impliedSpeedKph)} km/h.`,
+            measuredValue: Math.round(impliedSpeedKph),
+            threshold: gpsAnomalyMaxImpliedSpeedKph,
+          });
+        }
+      }
 
       if (
         elapsedMinutes >= routeStopMinutesThreshold &&
