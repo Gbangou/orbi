@@ -544,4 +544,92 @@ describe('RideRequestsService', () => {
       }),
     ).rejects.toThrow('The rider already has an active ride request or trip.');
   });
+
+  it('triggers proactive dispatch after creating a new ride request', async () => {
+    const { prisma, pricingService, dispatchCoordinator, service } =
+      createService();
+
+    pricingService.quote.mockResolvedValue({ estimatedFare: 1800 });
+    prisma.rideRequest.findFirst.mockResolvedValue(null);
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.rideRequest.create.mockImplementation(
+      async ({ data }: { data: Record<string, unknown> }) => ({
+        id: 'request-dispatch-1',
+        pickupAddress: 'Gounghin',
+        ...data,
+      }),
+    );
+
+    await service.create({
+      riderId: 'rider-1',
+      pickupAddress: 'Gounghin',
+      destinationAddress: 'Patte d Oie',
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      estimatedDistanceKm: 3.2,
+      estimatedDurationMinutes: 10,
+      paymentMethod: 'MOBILE_MONEY',
+      pickupAreaType: 'URBAN_CORE',
+    });
+
+    // proactiveDispatch est appelé en arrière-plan (void) — on attend la prochaine tick
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(dispatchCoordinator.proactiveDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rideRequestId: 'request-dispatch-1',
+        requestedVehicleType: 'MOTORCYCLE',
+        requestedServiceTier: 'MOTO_STANDARD',
+        pickupAddress: 'Gounghin',
+      }),
+    );
+  });
+
+  it('notifies the assigned driver when proactive dispatch succeeds', async () => {
+    const {
+      prisma,
+      pricingService,
+      dispatchCoordinator,
+      notificationsService,
+      service,
+    } = createService();
+
+    pricingService.quote.mockResolvedValue({ estimatedFare: 1800 });
+    prisma.rideRequest.findFirst.mockResolvedValue(null);
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.rideRequest.create.mockImplementation(
+      async ({ data }: { data: Record<string, unknown> }) => ({
+        id: 'request-dispatch-2',
+        pickupAddress: 'Gounghin',
+        ...data,
+      }),
+    );
+    dispatchCoordinator.proactiveDispatch.mockResolvedValue({
+      dispatched: true,
+      assignedDriverId: 'driver-proactive-1',
+      assignedUserId: 'user-driver-proactive-1',
+    });
+
+    await service.create({
+      riderId: 'rider-1',
+      pickupAddress: 'Gounghin',
+      destinationAddress: 'Patte d Oie',
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      estimatedDistanceKm: 3.2,
+      estimatedDurationMinutes: 10,
+      paymentMethod: 'MOBILE_MONEY',
+      pickupAreaType: 'URBAN_CORE',
+    });
+
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(notificationsService.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-driver-proactive-1',
+        title: 'Course pour vous !',
+        dedupeKey: expect.stringContaining('proactive:request-dispatch-2'),
+      }),
+    );
+  });
 });
