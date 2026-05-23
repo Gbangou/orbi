@@ -1366,6 +1366,16 @@ export type AdminLiveOpsResponse = {
     declineRate: number;
     expirationRate: number;
   }>;
+  lowConfidenceDrivers: Array<{
+    driverId: string;
+    driverName: string;
+    total: number;
+    accepted: number;
+    declined: number;
+    expired: number;
+    acceptanceRate: number;
+    expirationRate: number;
+  }>;
 };
 
 export type AdminLaunchReadinessResponse = {

@@ -787,6 +787,106 @@ describe('AdminService', () => {
     expect(result.recentCancellations).toEqual([]);
   });
 
+  // ── lowConfidenceDrivers extraction ───────────────────────────────────────
+
+  it('surfaces low-confidence drivers (acceptanceRate < 50%, >= 5 offers) in liveOps', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    prisma.rideRequest.count.mockResolvedValue(0);
+
+    const buildLogs = (userId: string, accepted: number, declined: number, expired: number, fullName: string) => {
+      const logs: Array<{ userId: string; action: string; user: { fullName: string } }> = [];
+      for (let i = 0; i < accepted; i++) {
+        logs.push({ userId, action: 'DISPATCH_RESERVATION_ACCEPTED', user: { fullName } });
+      }
+      for (let i = 0; i < declined; i++) {
+        logs.push({ userId, action: 'DISPATCH_RESERVATION_DECLINED', user: { fullName } });
+      }
+      for (let i = 0; i < expired; i++) {
+        logs.push({ userId, action: 'DISPATCH_RESERVATION_EXPIRED', user: { fullName } });
+      }
+      return logs;
+    };
+
+    // Driver A: 2/10 accepted = 20% — low confidence, >= 5 offers → should appear
+    // Driver B: 8/10 accepted = 80% — high acceptance → should NOT appear
+    // Driver C: 1/3 accepted = 33% — low but < 5 offers → should NOT appear (insufficient data)
+    prisma.auditLog.findMany.mockResolvedValue([
+      ...buildLogs('user-driver-a', 2, 3, 5, 'Driver A'), // 2/10 = 20%
+      ...buildLogs('user-driver-b', 8, 1, 1, 'Driver B'), // 8/10 = 80%
+      ...buildLogs('user-driver-c', 1, 1, 1, 'Driver C'), // 1/3 = 33%, but only 3 total
+    ]);
+
+    const result = await service.liveOps();
+
+    expect(result.lowConfidenceDrivers).toHaveLength(1);
+    expect(result.lowConfidenceDrivers[0]).toMatchObject({
+      driverId: 'user-driver-a',
+      driverName: 'Driver A',
+      total: 10,
+      accepted: 2,
+      acceptanceRate: 20,
+    });
+  });
+
+  it('sorts low-confidence drivers by acceptanceRate ascending (worst first)', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    prisma.rideRequest.count.mockResolvedValue(0);
+
+    const buildLogs = (userId: string, accepted: number, total: number, fullName: string) => {
+      const expired = total - accepted;
+      const logs: Array<{ userId: string; action: string; user: { fullName: string } }> = [];
+      for (let i = 0; i < accepted; i++) {
+        logs.push({ userId, action: 'DISPATCH_RESERVATION_ACCEPTED', user: { fullName } });
+      }
+      for (let i = 0; i < expired; i++) {
+        logs.push({ userId, action: 'DISPATCH_RESERVATION_EXPIRED', user: { fullName } });
+      }
+      return logs;
+    };
+
+    prisma.auditLog.findMany.mockResolvedValue([
+      ...buildLogs('user-b', 2, 10, 'Driver B'), // 20%
+      ...buildLogs('user-a', 1, 10, 'Driver A'), // 10%
+      ...buildLogs('user-c', 4, 10, 'Driver C'), // 40%
+    ]);
+
+    const result = await service.liveOps();
+
+    expect(result.lowConfidenceDrivers.map((d) => d.acceptanceRate)).toEqual([
+      10, 20, 40,
+    ]);
+  });
+
+  it('returns empty lowConfidenceDrivers when all drivers have high acceptance rates', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    prisma.rideRequest.count.mockResolvedValue(0);
+
+    const goodLogs: Array<{ userId: string; action: string; user: { fullName: string } }> = [];
+    for (let i = 0; i < 8; i++) {
+      goodLogs.push({ userId: 'user-good', action: 'DISPATCH_RESERVATION_ACCEPTED', user: { fullName: 'Good Driver' } });
+    }
+    for (let i = 0; i < 2; i++) {
+      goodLogs.push({ userId: 'user-good', action: 'DISPATCH_RESERVATION_EXPIRED', user: { fullName: 'Good Driver' } });
+    }
+    prisma.auditLog.findMany.mockResolvedValue(goodLogs);
+
+    const result = await service.liveOps();
+
+    expect(result.lowConfidenceDrivers).toEqual([]);
+  });
+
   it('lists job queue entries for operations triage', async () => {
     const { jobQueueService, service } = createService();
 

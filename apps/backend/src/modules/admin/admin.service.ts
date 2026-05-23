@@ -2468,6 +2468,30 @@ export class AdminService {
       .sort((a, b) => b.acceptanceRate - a.acceptanceRate)
       .slice(0, 10);
 
+    const lowConfidenceMinOffers = 5;
+    const lowConfidenceThreshold = 50;
+    const lowConfidenceDrivers = Array.from(driverDispatchStats.entries())
+      .map(([driverId, stats]) => {
+        const total = stats.accepted + stats.declined + stats.expired;
+        return {
+          driverId,
+          driverName: stats.fullName ?? 'Inconnu',
+          total,
+          accepted: stats.accepted,
+          declined: stats.declined,
+          expired: stats.expired,
+          acceptanceRate: safeRate(stats.accepted, total),
+          expirationRate: safeRate(stats.expired, total),
+        };
+      })
+      .filter(
+        (d) =>
+          d.total >= lowConfidenceMinOffers &&
+          d.acceptanceRate < lowConfidenceThreshold,
+      )
+      .sort((a, b) => a.acceptanceRate - b.acceptanceRate)
+      .slice(0, 10);
+
     const recentCancellations = recentlyCancelledTrips.map((trip) => {
       const cancelEvent = trip.events[0];
       const payload =
@@ -2642,6 +2666,7 @@ export class AdminService {
       ],
       recentCancellations,
       driverAcceptanceLeaderboard,
+      lowConfidenceDrivers,
     };
   }
 

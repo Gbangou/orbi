@@ -112,6 +112,7 @@ const fallbackLiveOps: AdminLiveOpsResponse = {
   alerts: fallbackIncidents,
   recentCancellations: [],
   driverAcceptanceLeaderboard: [],
+  lowConfidenceDrivers: [],
 };
 
 const fallbackHealth: HealthCheckResponse = {

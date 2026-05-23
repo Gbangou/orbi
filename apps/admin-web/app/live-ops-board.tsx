@@ -447,6 +447,94 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
         </div>
       ) : null}
 
+      {liveOps.lowConfidenceDrivers.length > 0 ? (
+        <div className="roadmap-heading" style={{ marginTop: '2rem' }}>
+          <div>
+            <p className="eyebrow" style={{ color: '#ef4444' }}>Alerte dispatch</p>
+            <h2>Chauffeurs a faible score de confiance</h2>
+          </div>
+          <div className="queue-meta">
+            <p className="lede">
+              Chauffeurs avec au moins 5 offres et un taux d&apos;acceptation en dessous
+              de 50% sur les 7 derniers jours. Ces profils degradent le score
+              moyen de dispatch et doivent faire l&apos;objet d&apos;un suivi avant extension
+              du pilote.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {liveOps.lowConfidenceDrivers.length > 0 ? (
+        <div className="roadmap-grid live-ops-grid">
+          {liveOps.lowConfidenceDrivers.map((driver) => {
+            const rateColor =
+              driver.acceptanceRate >= 30 ? '#f59e0b' : '#ef4444';
+
+            return (
+              <article
+                className="phase-card live-trip-card"
+                key={driver.driverId}
+                style={{ borderLeft: `3px solid ${rateColor}` }}
+              >
+                <div className="ticket-topline">
+                  <span
+                    className="phase-status"
+                    style={{
+                      background: `${rateColor}22`,
+                      color: rateColor,
+                      border: `1px solid ${rateColor}55`,
+                    }}
+                  >
+                    {driver.acceptanceRate}% acceptation
+                  </span>
+                  <span className="live-trip-fare" style={{ color: '#94a3b8' }}>
+                    {driver.total} offre(s)
+                  </span>
+                </div>
+                <h3>{driver.driverName}</h3>
+                <div
+                  style={{
+                    height: 6,
+                    borderRadius: 999,
+                    background: '#1e293b',
+                    overflow: 'hidden',
+                    margin: '8px 0',
+                  }}
+                >
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${driver.acceptanceRate}%`,
+                      background: rateColor,
+                      borderRadius: 999,
+                      transition: 'width 0.4s ease',
+                    }}
+                  />
+                </div>
+                <div className="trip-meta-grid">
+                  <div className="trip-meta-card">
+                    <span>Acceptees</span>
+                    <strong style={{ color: '#10b981' }}>{driver.accepted}</strong>
+                  </div>
+                  <div className="trip-meta-card">
+                    <span>Refusees</span>
+                    <strong style={{ color: '#f59e0b' }}>{driver.declined}</strong>
+                  </div>
+                  <div className="trip-meta-card">
+                    <span>Expirees</span>
+                    <strong style={{ color: '#ef4444' }}>{driver.expired}</strong>
+                  </div>
+                  <div className="trip-meta-card">
+                    <span>Expiration</span>
+                    <strong>{driver.expirationRate}%</strong>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
+
       {liveOps.recentCancellations.length > 0 ? (
         <div className="roadmap-grid live-ops-grid">
           {liveOps.recentCancellations.map((cancel) => {
