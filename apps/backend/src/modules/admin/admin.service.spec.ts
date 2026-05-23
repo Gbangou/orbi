@@ -725,6 +725,68 @@ describe('AdminService', () => {
     expect(result.alerts).toContain('Aucun trajet MATCHED en dépassement SLA.');
   });
 
+  it('surfaces recent cancellations with declared reason in liveOps', async () => {
+    const { prisma, service } = createService();
+
+    const cancelledAt = new Date(Date.now() - 30 * 60 * 1000);
+
+    // first findMany: active trips (empty)
+    // second findMany: recently cancelled trips
+    prisma.trip.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'trip-cancelled-1',
+          pickupAddress: 'Gounghin',
+          destinationAddress: 'Patte d Oie',
+          updatedAt: cancelledAt,
+          rider: { user: { fullName: 'Awa Rider' } },
+          driver: { user: { fullName: 'Issa Driver' } },
+          events: [
+            {
+              id: 'event-cancel-1',
+              eventType: 'TRIP_CANCELLED',
+              createdAt: cancelledAt,
+              payload: {
+                status: 'CANCELLED',
+                actorRole: 'RIDER',
+                cancellationReason: 'Chauffeur en retard',
+              },
+            },
+          ],
+        },
+      ]);
+    prisma.rideRequest.count.mockResolvedValue(0);
+
+    const result = await service.liveOps();
+
+    expect(result.recentCancellations).toHaveLength(1);
+    expect(result.recentCancellations[0]).toEqual(
+      expect.objectContaining({
+        id: 'trip-cancelled-1',
+        riderName: 'Awa Rider',
+        driverName: 'Issa Driver',
+        route: 'Gounghin → Patte d Oie',
+        cancelledBy: 'RIDER',
+        cancellationReason: 'Chauffeur en retard',
+        cancelledAt: cancelledAt.toISOString(),
+      }),
+    );
+  });
+
+  it('returns an empty recentCancellations list when no trips were cancelled in the last 2h', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    prisma.rideRequest.count.mockResolvedValue(0);
+
+    const result = await service.liveOps();
+
+    expect(result.recentCancellations).toEqual([]);
+  });
+
   it('lists job queue entries for operations triage', async () => {
     const { jobQueueService, service } = createService();
 
