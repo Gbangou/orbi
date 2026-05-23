@@ -2543,6 +2543,10 @@ export type TripDetailResponse = {
     pickupCode?: string | null;
     actualFare: number;
     currency: string;
+    pickupLatitude: number | null;
+    pickupLongitude: number | null;
+    destinationLatitude: number | null;
+    destinationLongitude: number | null;
     startedAt: string | null;
     completedAt: string | null;
     createdAt: string;

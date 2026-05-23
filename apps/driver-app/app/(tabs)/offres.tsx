@@ -75,6 +75,7 @@ import {
 } from "../../lib/offer-signal";
 import { useDriverPresence } from "../../lib/use-driver-presence";
 import { useDriverRealtimeStream } from "../../lib/use-driver-realtime-stream";
+import { TripMapView } from "../../lib/trip-map-view";
 import { useLiveRefresh } from "../../lib/use-live-refresh";
 import { DriverJourneySection } from "../../lib/driver-journey";
 import { buildDriverShiftReadiness } from "../../lib/driver-shift-readiness";
@@ -1318,18 +1319,36 @@ export default function OffersScreen() {
           ) : null}
           {driverRouteProgress ? (
             <>
-              <ActiveMissionMap
-                progressPercent={driverRouteProgress.progressPercent}
-                title={driverRouteProgress.title}
-                distanceLabel={driverRouteProgress.distanceLabel}
-                stateLabel={driverRouteProgress.stateLabel}
-                isInProgress={activeTrip.status === "IN_PROGRESS"}
-                etaLabel={driverRouteProgress.etaLabel}
-                freshnessLabel={driverRouteProgress.freshnessLabel}
-                coordinateLabel={driverRouteProgress.coordinateLabel}
-                accuracyLabel={driverRouteProgress.accuracyLabel}
-                speedLabel={driverRouteProgress.speedLabel}
-              />
+              {activeTripDetail?.trip.pickupLatitude != null ? (
+                <TripMapView
+                  pickupLat={activeTripDetail.trip.pickupLatitude}
+                  pickupLng={activeTripDetail.trip.pickupLongitude}
+                  destLat={activeTripDetail.trip.destinationLatitude}
+                  destLng={activeTripDetail.trip.destinationLongitude}
+                  driverLat={
+                    activeTripDetail.trip.routeMonitoring.latestPosition
+                      ?.latitude ?? null
+                  }
+                  driverLng={
+                    activeTripDetail.trip.routeMonitoring.latestPosition
+                      ?.longitude ?? null
+                  }
+                  style={styles.tripMap}
+                />
+              ) : (
+                <ActiveMissionMap
+                  progressPercent={driverRouteProgress.progressPercent}
+                  title={driverRouteProgress.title}
+                  distanceLabel={driverRouteProgress.distanceLabel}
+                  stateLabel={driverRouteProgress.stateLabel}
+                  isInProgress={activeTrip.status === "IN_PROGRESS"}
+                  etaLabel={driverRouteProgress.etaLabel}
+                  freshnessLabel={driverRouteProgress.freshnessLabel}
+                  coordinateLabel={driverRouteProgress.coordinateLabel}
+                  accuracyLabel={driverRouteProgress.accuracyLabel}
+                  speedLabel={driverRouteProgress.speedLabel}
+                />
+              )}
               <LiveRouteProgressCard {...driverRouteProgress} />
             </>
           ) : null}
@@ -2049,5 +2068,10 @@ const styles = StyleSheet.create({
   },
   completionFlashCloseBarAlt: {
     transform: [{ rotate: "-45deg" }],
+  },
+  tripMap: {
+    height: 220,
+    borderRadius: 14,
+    marginBottom: 12,
   },
 });

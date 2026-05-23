@@ -54,6 +54,7 @@ import { useLiveRefresh } from "../../lib/use-live-refresh";
 import { useRiderRealtimeStream } from "../../lib/use-rider-realtime-stream";
 import { useRiderPosition } from "../../lib/use-rider-position";
 import { resolveRiderAppError } from "../../lib/session-feedback";
+import { TripMapView } from "../../lib/trip-map-view";
 import { resolveOrbiApiBaseUrlForRuntime } from "@orbi/config";
 
 const fallbackHistory: MyTripsResponse = {
@@ -909,18 +910,36 @@ export default function ActivityScreen() {
           ) : null}
           {riderRouteProgress ? (
             <>
-              <LiveApproachPreview
-                progressPercent={riderRouteProgress.progressPercent}
-                title={riderRouteProgress.title}
-                distanceLabel={riderRouteProgress.distanceLabel}
-                stateLabel={riderRouteProgress.stateLabel}
-                etaLabel={riderRouteProgress.etaLabel}
-                freshnessLabel={riderRouteProgress.freshnessLabel}
-                coordinateLabel={riderRouteProgress.coordinateLabel}
-                accuracyLabel={riderRouteProgress.accuracyLabel}
-                speedLabel={riderRouteProgress.speedLabel}
-                isInProgress={activeTrip.status === "IN_PROGRESS"}
-              />
+              {activeTripDetail?.trip.pickupLatitude != null ? (
+                <TripMapView
+                  pickupLat={activeTripDetail.trip.pickupLatitude}
+                  pickupLng={activeTripDetail.trip.pickupLongitude}
+                  destLat={activeTripDetail.trip.destinationLatitude}
+                  destLng={activeTripDetail.trip.destinationLongitude}
+                  driverLat={
+                    activeTripDetail.trip.routeMonitoring.latestPosition
+                      ?.latitude ?? null
+                  }
+                  driverLng={
+                    activeTripDetail.trip.routeMonitoring.latestPosition
+                      ?.longitude ?? null
+                  }
+                  style={styles.tripMap}
+                />
+              ) : (
+                <LiveApproachPreview
+                  progressPercent={riderRouteProgress.progressPercent}
+                  title={riderRouteProgress.title}
+                  distanceLabel={riderRouteProgress.distanceLabel}
+                  stateLabel={riderRouteProgress.stateLabel}
+                  etaLabel={riderRouteProgress.etaLabel}
+                  freshnessLabel={riderRouteProgress.freshnessLabel}
+                  coordinateLabel={riderRouteProgress.coordinateLabel}
+                  accuracyLabel={riderRouteProgress.accuracyLabel}
+                  speedLabel={riderRouteProgress.speedLabel}
+                  isInProgress={activeTrip.status === "IN_PROGRESS"}
+                />
+              )}
               <LiveRouteProgressCard {...riderRouteProgress} />
             </>
           ) : null}
@@ -1402,5 +1421,10 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.teal,
     fontWeight: "800",
     fontSize: 13,
+  },
+  tripMap: {
+    height: 220,
+    borderRadius: 14,
+    marginBottom: 12,
   },
 });
