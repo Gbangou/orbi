@@ -7,6 +7,7 @@
     "setup:local": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\bootstrap-local.ps1",
     "mobile:lan": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\set-mobile-lan-api.ps1",
     "mobile:check": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\testing\\mobile-field-readiness.ps1",
+    "local:doctor": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\testing\\local-doctor.ps1",
     "db:start": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\start-local-db.ps1",
     "dev:backend": "pnpm --filter backend start:dev",
     "dev:admin": "pnpm --filter @orbi/admin-web dev",

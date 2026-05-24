@@ -428,6 +428,15 @@ Important:
 - `3000` est le backend API, donc ouvre toujours `http://localhost:3000/docs`
   ou une route API precise
 
+Si tu ne sais pas ce qui tourne vraiment sur ton PC:
+
+```powershell
+pnpm local:doctor
+```
+
+Cette commande verifie la base Docker, le backend, l admin, les comptes demo et
+les ports Expo habituels. Elle indique ensuite quelle commande lancer.
+
 ### Etape 14. Ouvrir Le Web Admin
 
 Ce que tu fais:
@@ -910,6 +919,7 @@ Si Windows affiche une fenetre de securite:
 Si quelqu un te demande de verifier que tout est sain, tu peux lancer:
 
 ```powershell
+pnpm local:doctor
 pnpm test:mobile:smoke
 pnpm --filter backend test -- --runInBand
 pnpm typecheck
