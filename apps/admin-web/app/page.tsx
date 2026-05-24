@@ -1038,10 +1038,10 @@ export default async function AdminHomePage({
           <article className="test-access-card">
             <span>Driver app</span>
             <strong>{orbiDemoAccounts.driver.email}</strong>
-            <p>Connexion, onboarding, offres et carte mission.</p>
-            <a className="test-access-link" href="http://localhost:8082/auth">
-              Ouvrir driver
-            </a>
+            <p>
+              Lancez `pnpm dev:web-driver-preview`, puis ouvrez l URL Expo
+              affichee dans le terminal.
+            </p>
             {showDemoPasswords ? (
               <code>{orbiDemoAccounts.driver.password}</code>
             ) : null}

@@ -421,6 +421,13 @@ Si la page ne s ouvre pas:
 - regarde dans le terminal `pnpm dev:full-web`
 - attends encore un peu
 
+Important:
+
+- `http://localhost:3000` tout seul peut afficher `Cannot GET /`
+- ce n est pas une panne
+- `3000` est le backend API, donc ouvre toujours `http://localhost:3000/docs`
+  ou une route API precise
+
 ### Etape 14. Ouvrir Le Web Admin
 
 Ce que tu fais:
@@ -485,6 +492,15 @@ pnpm dev:web-driver-preview
 Ce que tu dois voir:
 
 - l application driver web
+
+Important:
+
+- n ouvre pas `http://localhost:8082/auth` sauf si Expo affiche exactement ce
+  port dans le terminal
+- le plus fiable est toujours de copier l URL affichee par Expo apres
+  `pnpm dev:web-driver-preview`
+- dans cette configuration, rider web et driver web se testent l un apres
+  l autre, pas en meme temps
 
 ## 5. Comptes De Demonstration
 
