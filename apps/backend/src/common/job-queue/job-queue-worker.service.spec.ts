@@ -182,6 +182,7 @@ describe('JobQueueWorkerService', () => {
       notificationId: 'notification-1',
       userId: 'user-1',
       channel: 'PUSH',
+      data: {},
     });
     expect(jobQueueService.complete).toHaveBeenCalledWith('job-1', {
       lockedAt: now,

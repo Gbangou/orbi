@@ -414,6 +414,7 @@ export class RideRequestsService {
           body: `Prise en charge : ${input.pickupAddress}`,
           channel: NotificationChannel.PUSH,
           dedupeKey: `proactive:${input.rideRequestId}:${result.assignedDriverId}`,
+          data: { type: 'new_offer', rideRequestId: input.rideRequestId },
         });
         return;
       }
@@ -449,6 +450,7 @@ export class RideRequestsService {
             body: `Prise en charge : ${input.pickupAddress}`,
             channel: NotificationChannel.PUSH,
             dedupeKey: `new_request:${input.rideRequestId}:${driver.userId}`,
+            data: { type: 'new_offer', rideRequestId: input.rideRequestId },
           }),
         ),
       );

@@ -893,6 +893,7 @@ export class TripsService {
       body: 'Votre chauffeur est en route. Préparez-vous au point de ramassage.',
       channel: NotificationChannel.PUSH,
       dedupeKey: `trip_matched:${trip.id}`,
+      data: { type: 'trip_matched', tripId: trip.id },
     });
 
     return serializeTripLifecycle({
@@ -1332,6 +1333,7 @@ export class TripsService {
         body: `Trajet ${trip.id} — SOS déclenché par ${auth.user.role === UserRole.RIDER ? 'un passager' : 'un chauffeur'}. Ticket #${ticket.id}.`,
         channel: NotificationChannel.PUSH,
         dedupeKey: `sos:${trip.id}:${staff.id}`,
+        data: { type: 'sos_alert', tripId: trip.id, ticketId: ticket.id },
       });
     }
 
@@ -1500,6 +1502,7 @@ export class TripsService {
           body: 'Votre chauffeur vous attend au point de prise en charge.',
           channel: NotificationChannel.PUSH,
           dedupeKey: `driver_arriving:${tripId}`,
+          data: { type: 'driver_arriving', tripId },
         });
       } else if (nextStatus === 'COMPLETED') {
         void this.notificationsService.enqueue({
@@ -1508,6 +1511,7 @@ export class TripsService {
           body: "Merci d'avoir utilisé Orbi. Notez votre chauffeur !",
           channel: NotificationChannel.PUSH,
           dedupeKey: `trip_completed:${tripId}`,
+          data: { type: 'trip_completed', tripId },
         });
       }
     }

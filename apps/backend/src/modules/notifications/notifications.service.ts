@@ -16,6 +16,7 @@ export class NotificationsService {
     body: string;
     channel: NotificationChannel;
     dedupeKey?: string;
+    data?: Record<string, string>;
   }) {
     const title = input.title.trim();
     const body = input.body.trim();
@@ -50,6 +51,7 @@ export class NotificationsService {
         notificationId: notification.id,
         userId: input.userId,
         channel: input.channel,
+        data: input.data ?? {},
       },
     });
 

@@ -7,6 +7,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { orbiTheme } from '@orbi/ui';
 import { hasPersistedRiderSession } from '../lib/auth';
 
@@ -26,6 +27,26 @@ export default function RootLayout() {
       clearTimeout(timer);
     };
   }, []);
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data as
+          | Record<string, string>
+          | undefined;
+        const type = data?.type;
+        const tripId = data?.tripId;
+
+        if (type === 'trip_matched' || type === 'driver_arriving') {
+          router.push('/(tabs)/activity');
+        } else if (type === 'trip_completed' && tripId) {
+          router.push(`/receipt?tripId=${tripId}`);
+        }
+      },
+    );
+
+    return () => subscription.remove();
+  }, [router]);
 
   useEffect(() => {
     if (!isNavigationMounted || !rootNavigationState?.key) {

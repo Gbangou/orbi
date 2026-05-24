@@ -59,6 +59,7 @@ describe('NotificationsService', () => {
         notificationId: 'notification-1',
         userId: 'user-1',
         channel: 'PUSH',
+        data: {},
       },
     });
     expect(result.notification.id).toBe('notification-1');

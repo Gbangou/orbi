@@ -8,6 +8,7 @@ type NotificationDeliveryInput = {
   notificationId: string;
   userId: string;
   channel: NotificationChannel;
+  data?: Record<string, string>;
 };
 
 export type NotificationDeliveryResult = {
@@ -88,6 +89,7 @@ export class NotificationDeliveryService {
         sound: 'default',
         priority: 'high',
         channelId: 'default',
+        data: input.data ?? {},
       }),
     });
 
