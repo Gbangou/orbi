@@ -24,6 +24,16 @@ function ActivityIcon({ color, focused }: { color: string; focused: boolean }) {
   );
 }
 
+function TripsIcon({ color, focused }: { color: string; focused: boolean }) {
+  return (
+    <View style={styles.icon}>
+      <View style={[styles.tripLine, { backgroundColor: color, opacity: focused ? 1 : 0.5 }]} />
+      <View style={[styles.tripLine, { backgroundColor: color, opacity: focused ? 0.75 : 0.35, width: 14 }]} />
+      <View style={[styles.tripLine, { backgroundColor: color, opacity: focused ? 0.5 : 0.25, width: 10 }]} />
+    </View>
+  );
+}
+
 function AccountIcon({ color, focused }: { color: string; focused: boolean }) {
   return (
     <View style={styles.icon}>
@@ -79,6 +89,15 @@ export default function RiderTabsLayout() {
           title: 'Activité',
           tabBarIcon: ({ color, focused }) => (
             <ActivityIcon color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="trips"
+        options={{
+          title: 'Trajets',
+          tabBarIcon: ({ color, focused }) => (
+            <TripsIcon color={color} focused={focused} />
           ),
         }}
       />
@@ -169,6 +188,13 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1.5,
     alignSelf: 'flex-start',
+  },
+  tripLine: {
+    width: 18,
+    height: 2.5,
+    borderRadius: 2,
+    alignSelf: 'flex-start',
+    marginBottom: 3,
   },
   head: {
     width: 12,

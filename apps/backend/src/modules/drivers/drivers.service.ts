@@ -754,6 +754,67 @@ export class DriversService {
     };
   }
 
+  async getNearbyDrivers(
+    lat: number,
+    lng: number,
+    radiusKm: number,
+  ): Promise<{
+    drivers: Array<{
+      id: string;
+      latitude: number;
+      longitude: number;
+      vehicleType: string | null;
+      status: string;
+    }>;
+    total: number;
+  }> {
+    const profiles = await this.prisma.driverProfile.findMany({
+      where: {
+        status: DriverStatus.ONLINE,
+        currentLatitude: { not: null },
+        currentLongitude: { not: null },
+      },
+      select: {
+        id: true,
+        status: true,
+        currentLatitude: true,
+        currentLongitude: true,
+        vehicles: {
+          where: { isActive: true },
+          select: { type: true },
+          take: 1,
+        },
+      },
+      take: 40,
+    });
+
+    const R = 6371;
+    const nearby = profiles.filter((p) => {
+      const dLat =
+        ((toNumber(p.currentLatitude)! - lat) * Math.PI) / 180;
+      const dLng =
+        ((toNumber(p.currentLongitude)! - lng) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((lat * Math.PI) / 180) *
+          Math.cos((toNumber(p.currentLatitude)! * Math.PI) / 180) *
+          Math.sin(dLng / 2) ** 2;
+      const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return distKm <= radiusKm;
+    });
+
+    return {
+      drivers: nearby.map((p) => ({
+        id: p.id.slice(0, 8),
+        latitude: toNumber(p.currentLatitude)!,
+        longitude: toNumber(p.currentLongitude)!,
+        vehicleType: p.vehicles[0]?.type ?? null,
+        status: p.status,
+      })),
+      total: nearby.length,
+    };
+  }
+
   private async resolveDriverFatigue(driverProfileId: string) {
     const since = new Date(
       Date.now() - driverFatigueWindowHours * 60 * 60 * 1000,

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   driverOffers,
   fetchDriverEarnings,
@@ -53,6 +53,10 @@ import { useDriverPresence } from '../../lib/use-driver-presence';
 import { useDriverRealtimeStream } from '../../lib/use-driver-realtime-stream';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { buildDriverShiftReadiness } from '../../lib/driver-shift-readiness';
+import { DriverHomeMapView } from '../../lib/driver-home-map-view';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const MAP_HEIGHT = Math.round(SCREEN_HEIGHT * 0.38);
 
 const fallbackFatigue: DriverFatigueStatus = {
   state: 'clear',
@@ -236,7 +240,7 @@ export default function DriverHomeScreen() {
     fatigue: driverFatigue,
     earningsToday: earnings?.summary.today,
   });
-  const { presenceNote } = useDriverPresence(
+  const { presenceNote, latestPosition: driverPosition } = useDriverPresence(
     flow.availabilityStatus === 'ONLINE' || Boolean(activeTrip),
   );
   useReservationExpiryRefresh(
@@ -349,12 +353,65 @@ export default function DriverHomeScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.eyebrow}>Orbi Chauffeur</Text>
-      <Text style={styles.title}>{orbiCopy.driverHeadline}</Text>
-      <Text style={styles.body}>
-        Une application pensee pour les conducteurs au Burkina Faso, sur Android, iPhone et web.
-      </Text>
+    <View style={styles.root}>
+      {/* Carte position driver + demandes autour */}
+      <View style={[styles.mapContainer, { height: MAP_HEIGHT }]}>
+        <DriverHomeMapView
+          driverLat={driverPosition?.latitude}
+          driverLng={driverPosition?.longitude}
+          offers={visibleOffers}
+          style={styles.map}
+        />
+
+        {/* Badge statut GPS */}
+        <View style={styles.mapBadge}>
+          <View
+            style={[
+              styles.mapBadgeDot,
+              { backgroundColor: flow.availabilityStatus === 'ONLINE' ? orbiTheme.colors.teal : orbiTheme.colors.muted },
+            ]}
+          />
+          <Text style={styles.mapBadgeText}>
+            {flow.availabilityStatus === 'ONLINE'
+              ? `${visibleOffers.length > 0 ? `${visibleOffers.length} offre${visibleOffers.length > 1 ? 's' : ''}` : 'En ligne'} — Ouagadougou`
+              : 'Hors ligne'}
+          </Text>
+        </View>
+
+        {/* Overlay disponibilité en bas de la carte */}
+        <View style={styles.mapOverlay}>
+          <Pressable
+            onPress={() => void handleToggleAvailability()}
+            disabled={isRefreshing || isTogglingAvailability || flow.availabilityLocked}
+            style={[
+              styles.availabilityOverlayButton,
+              flow.availabilityStatus === 'ONLINE'
+                ? styles.availabilityOverlayOffline
+                : styles.availabilityOverlayOnline,
+              isRefreshing || isTogglingAvailability || flow.availabilityLocked
+                ? styles.inlineButtonDisabled
+                : null,
+            ]}
+          >
+            <Text style={styles.availabilityOverlayLabel}>
+              {isTogglingAvailability
+                ? 'Mise a jour...'
+                : activeTrip
+                  ? `Course active — ${flow.primaryRouteLabel}`
+                  : flow.availabilityStatus === 'ONLINE'
+                    ? 'En ligne · Passer hors ligne'
+                    : 'Hors ligne · Passer en ligne'}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.eyebrow}>Orbi Chauffeur</Text>
+        <Text style={styles.title}>{orbiCopy.driverHeadline}</Text>
 
       <LiveHeroCard
         eyebrow="Statut"
@@ -586,11 +643,86 @@ export default function DriverHomeScreen() {
           onPress={() => router.push('/revenus')}
         />
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: orbiTheme.colors.background,
+  },
+  mapContainer: {
+    position: 'relative',
+    width: '100%',
+  },
+  map: {
+    flex: 1,
+    borderRadius: 0,
+  },
+  mapBadge: {
+    position: 'absolute',
+    top: 52,
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(10,12,14,0.82)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  mapBadgeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  mapBadgeText: {
+    color: orbiTheme.colors.text,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  mapOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+  },
+  availabilityOverlayButton: {
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  availabilityOverlayOnline: {
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  availabilityOverlayOffline: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  availabilityOverlayLabel: {
+    color: orbiTheme.colors.text,
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  scroll: {
+    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    gap: 14,
+  },
   screen: {
     paddingTop: 88,
     paddingHorizontal: 24,

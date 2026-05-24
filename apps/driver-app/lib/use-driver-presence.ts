@@ -22,12 +22,20 @@ type DriverPresenceStatus =
   | 'unavailable'
   | 'error';
 
+export type DriverLivePosition = {
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number | null;
+};
+
 export function useDriverPresence(enabled: boolean, activeTripId?: string | null) {
   const [presenceStatus, setPresenceStatus] =
     useState<DriverPresenceStatus>('idle');
   const [presenceNote, setPresenceNote] = useState(
     'Presence GPS en attente.',
   );
+  const [latestPosition, setLatestPosition] =
+    useState<DriverLivePosition | null>(null);
 
   useEffect(() => {
     if (!enabled) {
@@ -88,6 +96,11 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
 
           try {
             const payload = buildDriverRoutePositionPayload(position);
+            setLatestPosition({
+              latitude: payload.latitude,
+              longitude: payload.longitude,
+              accuracyMeters: payload.accuracyMeters ?? null,
+            });
             const { authClient } = await restoreDriverSession();
             await updateDriverPresenceWithApi(authClient, {
               latitude: payload.latitude,
@@ -172,5 +185,6 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
   return {
     presenceStatus,
     presenceNote,
+    latestPosition,
   };
 }

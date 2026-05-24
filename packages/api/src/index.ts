@@ -139,6 +139,7 @@ export const apiRoutes = {
   },
   drivers: {
     root: '/drivers',
+    nearby: '/drivers/nearby',
     previewOffers: '/drivers/preview-offers',
     me: '/drivers/me',
     earnings: '/drivers/earnings',
@@ -3479,6 +3480,29 @@ export async function deleteSavedPlaceWithApi(
     {
       method: 'DELETE',
     },
+  );
+}
+
+export interface NearbyDriverMarker {
+  id: string;
+  latitude: number;
+  longitude: number;
+  vehicleType: string | null;
+  status: string;
+}
+
+export interface NearbyDriversResponse {
+  drivers: NearbyDriverMarker[];
+  total: number;
+}
+
+export async function fetchNearbyDrivers(
+  client: OrbiApiClient,
+  params: { lat: number; lng: number; radiusKm?: number },
+): Promise<NearbyDriversResponse> {
+  const radius = params.radiusKm ?? 5;
+  return client.request<NearbyDriversResponse>(
+    `${apiRoutes.drivers.nearby}?lat=${params.lat}&lng=${params.lng}&radius=${radius}`,
   );
 }
 

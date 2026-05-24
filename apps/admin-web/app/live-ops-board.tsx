@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { type AdminLiveOpsResponse } from '@orbi/api';
 import { describeRealtimeConnection, formatOperationalStatus } from '@orbi/ui';
+import { LiveOpsMap } from './live-ops-map';
 import {
   adminSyncHighlightDurationMs,
   hasLiveOpsTripChanged,
@@ -228,6 +229,8 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
           </p>
         </article>
       </div>
+
+      <LiveOpsMap trips={liveOps.trips} />
 
       {liveOps.alerts.length ? (
         <div className="ops-alert-strip">

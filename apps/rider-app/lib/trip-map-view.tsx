@@ -48,17 +48,38 @@ html,body,#map{width:100%;height:100%;background:#0a0c0e}
 var CFG=${config};
 var map=L.map('map',{zoomControl:false,attributionControl:false});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,subdomains:['a','b','c']}).addTo(map);
-var driverMarker=null,pickupMarker=null,destMarker=null;
+var driverMarker=null,pickupMarker=null,destMarker=null,routeLine=null;
 
 function driverIcon(){return L.divIcon({html:'<div class="driver-dot"></div>',iconSize:[14,14],iconAnchor:[7,7],className:''})}
 function pickupIcon(){return L.divIcon({html:'<div class="pickup-pin"><div class="pickup-pin-dot"></div><div class="pickup-pin-label">Depart</div></div>',iconSize:[72,18],iconAnchor:[5,9],className:''})}
 function destIcon(){return L.divIcon({html:'<div class="dest-pin"><div class="dest-pin-dot"></div><div class="dest-pin-label">Arrivee</div></div>',iconSize:[72,18],iconAnchor:[5,9],className:''})}
 
+function drawFallbackLine(lat1,lng1,lat2,lng2){
+  if(routeLine){map.removeLayer(routeLine)}
+  routeLine=L.polyline([[lat1,lng1],[lat2,lng2]],{color:'#00C7C7',weight:2,opacity:.45,dashArray:'8 6'}).addTo(map);
+}
+
+function fetchOsrmRoute(lat1,lng1,lat2,lng2){
+  var url='https://router.project-osrm.org/route/v1/driving/'+lng1+','+lat1+';'+lng2+','+lat2+'?geometries=geojson&overview=full';
+  fetch(url,{signal:AbortSignal.timeout(6000)})
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(data.routes&&data.routes[0]&&data.routes[0].geometry&&data.routes[0].geometry.coordinates){
+        var coords=data.routes[0].geometry.coordinates.map(function(c){return[c[1],c[0]]});
+        if(routeLine){map.removeLayer(routeLine)}
+        routeLine=L.polyline(coords,{color:'#00C7C7',weight:3,opacity:.75}).addTo(map);
+      }else{drawFallbackLine(lat1,lng1,lat2,lng2)}
+    })
+    .catch(function(){drawFallbackLine(lat1,lng1,lat2,lng2)});
+}
+
 function initMap(cfg){
   var bounds=[];
   if(cfg.pickupLat&&cfg.pickupLng){pickupMarker=L.marker([cfg.pickupLat,cfg.pickupLng],{icon:pickupIcon()}).addTo(map);bounds.push([cfg.pickupLat,cfg.pickupLng])}
   if(cfg.destLat&&cfg.destLng){destMarker=L.marker([cfg.destLat,cfg.destLng],{icon:destIcon()}).addTo(map);bounds.push([cfg.destLat,cfg.destLng])}
-  if(cfg.pickupLat&&cfg.pickupLng&&cfg.destLat&&cfg.destLng){L.polyline([[cfg.pickupLat,cfg.pickupLng],[cfg.destLat,cfg.destLng]],{color:'#00C7C7',weight:2,opacity:.45,dashArray:'8 6'}).addTo(map)}
+  if(cfg.pickupLat&&cfg.pickupLng&&cfg.destLat&&cfg.destLng){
+    fetchOsrmRoute(cfg.pickupLat,cfg.pickupLng,cfg.destLat,cfg.destLng);
+  }
   if(cfg.driverLat&&cfg.driverLng){driverMarker=L.marker([cfg.driverLat,cfg.driverLng],{icon:driverIcon()}).addTo(map);bounds.push([cfg.driverLat,cfg.driverLng])}
   if(bounds.length){map.fitBounds(bounds,{padding:[44,44]})}else{map.setView([12.3647,-1.5332],13)}
 }

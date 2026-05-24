@@ -72,6 +72,7 @@ import {
 } from '../lib/rider-active-flow';
 import { useRiderPosition } from '../lib/use-rider-position';
 import { TripMapView } from '../lib/trip-map-view';
+import { PlaceSearch } from '../lib/place-search';
 
 const cityPresets = burkinaPricingCityPresets;
 
@@ -1072,6 +1073,31 @@ export default function BookingScreen() {
       </View>
 
       <View style={styles.selectorCard}>
+        <Text style={styles.section}>Rechercher un lieu</Text>
+        <Text style={styles.helperText}>
+          Tapez une adresse, un quartier ou un monument a Ouagadougou.
+        </Text>
+        <View style={styles.searchRow}>
+          <View style={styles.searchField}>
+            <Text style={styles.searchLabel}>Depart</Text>
+            <PlaceSearch
+              placeholder="Ex: Patte d Oie, marche, universite..."
+              tone="teal"
+              onSelectPlace={(place) => applyPlace('pickup', place)}
+            />
+          </View>
+          <View style={styles.searchField}>
+            <Text style={styles.searchLabel}>Destination</Text>
+            <PlaceSearch
+              placeholder="Ex: Ouaga 2000, aeroport, hotel..."
+              tone="amber"
+              onSelectPlace={(place) => applyPlace('destination', place)}
+            />
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.selectorCard}>
         <Text style={styles.section}>Lieux enregistres</Text>
         <Text style={styles.helperText}>
           Utilisez vos lieux favoris comme point de depart ou destination.
@@ -1474,6 +1500,20 @@ const styles = StyleSheet.create({
   helperText: {
     color: orbiTheme.colors.muted,
     lineHeight: 18,
+  },
+  searchRow: {
+    gap: 12,
+    marginTop: 6,
+  },
+  searchField: {
+    gap: 4,
+  },
+  searchLabel: {
+    color: orbiTheme.colors.muted,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   placeChipRow: {
     gap: 10,

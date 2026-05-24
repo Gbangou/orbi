@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
   Version,
 } from '@nestjs/common';
@@ -29,6 +30,19 @@ import { DriversService } from './drivers.service';
 @Controller('drivers')
 export class DriversController {
   constructor(private readonly driversService: DriversService) {}
+
+  @Get('nearby')
+  @Version('1')
+  nearby(
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+    @Query('radius') radius?: string,
+  ) {
+    const latNum = parseFloat(lat ?? '12.3647');
+    const lngNum = parseFloat(lng ?? '-1.5332');
+    const radiusKm = parseFloat(radius ?? '5');
+    return this.driversService.getNearbyDrivers(latNum, lngNum, radiusKm);
+  }
 
   @Get('preview-offers')
   @Version('1')

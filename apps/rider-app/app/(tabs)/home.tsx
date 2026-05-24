@@ -1,6 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Dimensions,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import {
   fetchMyTrips,
   fetchRideOptionsPreview,
@@ -18,7 +25,6 @@ import {
 } from '@orbi/ui';
 import {
   DashboardMetricCard,
-  LiveHeroCard,
   MetricTile,
   QuickActionCard,
   RouteSignalCard,
@@ -38,6 +44,11 @@ import {
   buildRiderHomeStatusLabel,
   resolveRiderActiveFlow,
 } from '../../lib/rider-active-flow';
+import { useRiderPosition } from '../../lib/use-rider-position';
+import { HomeMapView } from '../../lib/home-map-view';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const MAP_HEIGHT = Math.round(SCREEN_HEIGHT * 0.42);
 
 function buildRideOptionInsights(option: RideOption): Array<{
   label: string;
@@ -77,11 +88,7 @@ function buildRideOptionDetailLines(option: RideOption) {
     option.fareBreakdown
       ? `Base ${formatXof(option.fareBreakdown.baseFare)} + frais ${formatXof(option.fareBreakdown.bookingFee)}`
       : null,
-    option.fareBreakdown?.driverPickupDistanceIncludedInFare === false
-      ? 'Approche chauffeur: dispatch et ETA, sans frais cache'
-      : null,
   ];
-
   return lines.filter((line): line is string => Boolean(line));
 }
 
@@ -89,21 +96,25 @@ export default function RiderHomeScreen() {
   const router = useRouter();
   const [options, setOptions] = useState<RideOption[]>(riderRideOptions);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
-  const [statusLabel, setStatusLabel] = useState('Connexion du compte passager de demonstration...');
+  const [statusLabel, setStatusLabel] = useState(
+    'Connexion du compte passager...',
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
-  const [flowTransitionLabel, setFlowTransitionLabel] = useState<string | null>(null);
+  const [flowTransitionLabel, setFlowTransitionLabel] = useState<string | null>(
+    null,
+  );
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
+
+  const riderPosition = useRiderPosition({ enabled: true });
 
   const loadHomeContext = useCallback(async (silent = false) => {
     const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
       version: orbiRuntimeConfig.apiVersion,
     });
 
-    if (!silent) {
-      setIsRefreshing(true);
-    }
+    if (!silent) setIsRefreshing(true);
 
     try {
       const { authClient, me, session } = await restoreRiderSession();
@@ -139,21 +150,11 @@ export default function RiderHomeScreen() {
       const feedback = await resolveRiderAppError(error, {
         network: 'Preview locale active en attendant la connexion API.',
       });
-
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
-      }
-
-      if (!silent) {
-        setStatusLabel(feedback.message);
-      }
+      if (feedback.shouldClearSessionToken) setSessionToken(null);
+      if (!silent) setStatusLabel(feedback.message);
     } finally {
-      if (silent) {
-        setIsRealtimeSyncing(false);
-      }
-      if (!silent) {
-        setIsRefreshing(false);
-      }
+      if (silent) setIsRealtimeSyncing(false);
+      if (!silent) setIsRefreshing(false);
     }
   }, []);
 
@@ -166,9 +167,8 @@ export default function RiderHomeScreen() {
       void loadHomeContext(true);
     },
     {
-      onHeartbeat: () => {
-        setStatusLabel(describeRealtimeConnection('rider', 'active'));
-      },
+      onHeartbeat: () =>
+        setStatusLabel(describeRealtimeConnection('rider', 'active')),
       onOpen: () => {
         setIsRealtimeSyncing(false);
         setStatusLabel(describeRealtimeConnection('rider', 'connected'));
@@ -181,238 +181,400 @@ export default function RiderHomeScreen() {
   );
 
   const flow = resolveRiderActiveFlow(history);
-  const { activeTrip, activeRequest, activeFlowState, primaryStatusLabel } = flow;
+  const { activeTrip, activeRequest, activeFlowState, primaryStatusLabel } =
+    flow;
 
   useEffect(() => {
     const previousFlowState = previousFlowStateRef.current;
     setFlowTransitionLabel(
       buildRiderFlowTransitionLabel(previousFlowState, activeFlowState, 'home'),
     );
-
     previousFlowStateRef.current = activeFlowState;
   }, [activeFlowState]);
 
   useEffect(() => {
-    if (!flowTransitionLabel) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setFlowTransitionLabel(null);
-    }, 5000);
-
+    if (!flowTransitionLabel) return;
+    const timeout = setTimeout(() => setFlowTransitionLabel(null), 5000);
     return () => clearTimeout(timeout);
   }, [flowTransitionLabel]);
 
-  return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.eyebrow}>Orbi Passager</Text>
-      <Text style={styles.title}>{orbiCopy.riderHeadline}</Text>
-      <Text style={styles.body}>
-        Commandez moto et voiture depuis une seule experience premium pour Android, iPhone et web.
-      </Text>
+  const nearbyDriverCount =
+    options[0]?.marketplace?.nearbyDrivers ?? 0;
 
-      <LiveHeroCard
-        eyebrow="Trajet actuel"
-        isHighlighted={Boolean(flowTransitionLabel)}
-        liveLabel={formatRealtimeBadgeLabel('Suivi direct', isRealtimeSyncing)}
-        liveTone={isRealtimeSyncing ? 'sky' : 'teal'}
-        message={statusLabel}
-        syncMessage={
-          isRealtimeSyncing
-            ? 'Resynchronisation en cours apres une mise a jour temps reel.'
-            : null
-        }
-        title={
-          activeTrip
-            ? `${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`
-            : activeRequest
-              ? `${activeRequest.pickupAddress} vers ${activeRequest.destinationAddress}`
-              : 'Universite Joseph Ki-Zerbo vers Ouaga 2000'
-        }
-        transitionMessage={flowTransitionLabel}
-      >
-        <View style={styles.heroStats}>
-          <MetricTile
-            label="Flux"
-            value={flow.hasOpenFlow ? primaryStatusLabel : 'Pret'}
+  return (
+    <View style={styles.root}>
+      {/* Carte plein-largeur avec chauffeurs proches */}
+      <View style={[styles.mapContainer, { height: MAP_HEIGHT }]}>
+        <HomeMapView
+          riderLat={riderPosition.latestPosition?.latitude}
+          riderLng={riderPosition.latestPosition?.longitude}
+          style={styles.map}
+        />
+
+        {/* Badge realtime sur la carte */}
+        <View style={styles.mapBadge}>
+          <View
+            style={[
+              styles.mapBadgeDot,
+              { backgroundColor: isRealtimeSyncing ? orbiTheme.colors.sky : orbiTheme.colors.teal },
+            ]}
           />
-          <MetricTile
-            label="Historique"
-            value={`${history?.stats.completedTrips ?? 0} courses`}
+          <Text style={styles.mapBadgeText}>
+            {formatRealtimeBadgeLabel(
+              nearbyDriverCount > 0
+                ? `${nearbyDriverCount} chauffeurs proches`
+                : 'Carte live',
+              isRealtimeSyncing,
+            )}
+          </Text>
+        </View>
+
+        {/* Overlay de reservation en bas de la carte */}
+        <View style={styles.mapOverlay}>
+          {activeTrip || activeRequest ? (
+            <Pressable
+              style={[styles.bookButton, styles.bookButtonActive]}
+              onPress={() => router.push('/activity')}
+            >
+              <Text style={styles.bookButtonLabel}>
+                {activeTrip
+                  ? `Course en cours — ${activeTrip.pickupAddress}`
+                  : `Demande active — ${activeRequest?.pickupAddress}`}
+              </Text>
+              <Text style={styles.bookButtonSub}>Suivre le trajet →</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={styles.bookButton}
+              onPress={() => router.push('/book')}
+            >
+              <Text style={styles.bookButtonLabel}>Ou allez-vous ?</Text>
+              <Text style={styles.bookButtonSub}>
+                Moto, voiture — trajet immediat
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+
+      {/* Contenu scrollable en dessous de la carte */}
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.eyebrow}>Orbi Passager</Text>
+        <Text style={styles.title}>{orbiCopy.riderHeadline}</Text>
+
+        {/* Statut de connexion */}
+        <View style={styles.statusRow}>
+          <Text style={styles.statusText} numberOfLines={2}>
+            {statusLabel}
+          </Text>
+          {flowTransitionLabel ? (
+            <Text style={styles.transitionText}>{flowTransitionLabel}</Text>
+          ) : null}
+        </View>
+
+        {/* Code de prise en charge si course active */}
+        {activeTrip?.pickupCode ? (
+          <View style={styles.pickupCodeCard}>
+            <Text style={styles.pickupCodeLabel}>Code de prise en charge</Text>
+            <Text style={styles.pickupCode}>{activeTrip.pickupCode}</Text>
+            <Text style={styles.pickupCodeNote}>
+              A communiquer au chauffeur avant le depart.
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Metriques rapides */}
+        <View style={styles.metricsRow}>
+          <DashboardMetricCard
+            label="Actif"
+            value={String(history?.stats.activeTrips ?? 0)}
+            helper="trajet ou demande"
+            tone="teal"
+          />
+          <DashboardMetricCard
+            label="Completes"
+            value={String(history?.stats.completedTrips ?? 0)}
+            helper="courses terminees"
+            tone="sky"
+          />
+          <DashboardMetricCard
+            label="Chauffeurs"
+            value={String(nearbyDriverCount)}
+            helper="a moins de 5 km"
+            tone="amber"
           />
         </View>
-        {activeTrip ? (
-          <>
-            <Text style={styles.heroSafety}>
-              Partage de trajet actif. Code de prise en charge a verifier avant le depart.
+
+        {/* Actions primaires */}
+        <View style={styles.primaryActions}>
+          <QuickActionCard
+            eyebrow="Reservation"
+            title="Reserver maintenant"
+            description={
+              flow.hasOpenFlow
+                ? 'Consulter le flux actif avant de creer une nouvelle demande.'
+                : 'Choisir un trajet, un service et un paiement.'
+            }
+            tone="teal"
+            emphasis="primary"
+            onPress={() => router.push('/book')}
+          />
+          <QuickActionCard
+            eyebrow="Suivi"
+            title="Voir l activite"
+            description="Suivre la course, la timeline et les incidents."
+            tone="sky"
+            onPress={() => router.push('/activity')}
+          />
+        </View>
+
+        {/* Flux actif */}
+        {(activeTrip || activeRequest) ? (
+          <View style={styles.activeFlowCard}>
+            <Text style={styles.activeFlowEyebrow}>Flux actif</Text>
+            <Text style={styles.activeFlowTitle}>
+              {activeTrip
+                ? `${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`
+                : `${activeRequest?.pickupAddress} vers ${activeRequest?.destinationAddress}`}
             </Text>
-            {activeTrip.pickupCode ? (
-              <Text style={styles.heroCode}>Code de prise en charge: {activeTrip.pickupCode}</Text>
-            ) : null}
-          </>
+            <MetricTile label="Etat" value={primaryStatusLabel} />
+          </View>
         ) : null}
+
+        {/* Services recommandes */}
+        <Text style={styles.sectionTitle}>Services disponibles</Text>
+        {options.map((option) => (
+          <RouteSignalCard
+            key={option.id}
+            eyebrow="Service disponible"
+            badgeLabel={option.badge ?? null}
+            badgeTone={option.category === 'motorcycle' ? 'teal' : 'amber'}
+            title={option.title}
+            titleAside={formatXof(option.fare)}
+            titleAsideColor={option.accent}
+            description={`${option.category === 'motorcycle' ? 'Moto' : 'Voiture'} disponible rapidement depuis votre zone.`}
+            insights={buildRideOptionInsights(option)}
+            detailLines={buildRideOptionDetailLines(option)}
+            note={option.marketplace?.pricePromise ?? option.safetyNote}
+            noteTone="teal"
+          />
+        ))}
+
+        <RiderJourneySection
+          currentStep="home"
+          description="Depuis l accueil, reservez, suivez et gerez votre compte avec les memes reperes visuels."
+        />
+
+        <View style={styles.actions}>
+          <QuickActionCard
+            eyebrow="Compte"
+            title="Profil et lieux enregistres"
+            description="Gerer vos informations, domiciles et points favoris."
+            tone="teal"
+            onPress={() => router.push('/account')}
+          />
+        </View>
+
         <Pressable
           onPress={() => void loadHomeContext()}
-          style={[styles.inlineButton, isRefreshing ? styles.inlineButtonDisabled : null]}
+          style={[
+            styles.refreshButton,
+            isRefreshing ? styles.refreshButtonDisabled : null,
+          ]}
           disabled={isRefreshing}
         >
-          <Text style={styles.inlineButtonLabel}>
+          <Text style={styles.refreshButtonLabel}>
             {isRefreshing ? 'Actualisation...' : 'Actualiser les donnees'}
           </Text>
         </Pressable>
-      </LiveHeroCard>
-
-      <View style={styles.primaryActions}>
-        <QuickActionCard
-          eyebrow="Reservation"
-          title="Reserver maintenant"
-          description={
-            flow.hasOpenFlow
-              ? 'Consulter le flux actif avant de creer une nouvelle demande.'
-              : 'Choisir un trajet, un service et un paiement.'
-          }
-          tone="teal"
-          emphasis="primary"
-          onPress={() => router.push('/book')}
-        />
-        <QuickActionCard
-          eyebrow="Suivi"
-          title="Voir l activite"
-          description="Suivre la course, la timeline et les incidents."
-          tone="sky"
-          onPress={() => router.push('/activity')}
-        />
-      </View>
-
-      <View style={styles.metricsRow}>
-        <DashboardMetricCard
-          label="Actif"
-          value={String(history?.stats.activeTrips ?? 0)}
-          helper="trajet ou demande en cours"
-          tone="teal"
-        />
-        <DashboardMetricCard
-          label="Completes"
-          value={String(history?.stats.completedTrips ?? 0)}
-          helper="courses terminees"
-          tone="sky"
-        />
-      </View>
-
-      <Text style={styles.sectionTitle}>Services recommandes</Text>
-      {options.map((option) => (
-        <RouteSignalCard
-          key={option.id}
-          eyebrow="Service recommande"
-          badgeLabel={option.badge ?? null}
-          badgeTone={option.category === 'motorcycle' ? 'teal' : 'amber'}
-          title={option.title}
-          titleAside={formatXof(option.fare)}
-          titleAsideColor={option.accent}
-          description={`Trajet estime avec ${option.category === 'motorcycle' ? 'moto' : 'voiture'} premium, disponible rapidement depuis votre zone.`}
-          insights={buildRideOptionInsights(option)}
-          detailLines={buildRideOptionDetailLines(option)}
-          note={option.marketplace?.pricePromise ?? option.safetyNote}
-          noteTone="teal"
-        />
-      ))}
-
-      <RiderJourneySection
-        currentStep="home"
-        description={
-          activeTrip || activeRequest
-            ? 'Le tunnel rider reste coherent meme pendant une reservation active, avec les memes CTA du cockpit au suivi.'
-            : 'Depuis l accueil, vous pouvez enchainer reservation, voice et suivi avec les memes reperes visuels.'
-        }
-      />
-      <View style={styles.actions}>
-        <QuickActionCard
-          eyebrow="Compte"
-          title="Profil et lieux enregistres"
-          description="Gerer vos informations, domiciles et points favoris."
-          tone="teal"
-          onPress={() => router.push('/account')}
-        />
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    paddingTop: 88,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+  root: {
+    flex: 1,
     backgroundColor: orbiTheme.colors.background,
-    gap: 16,
+  },
+  mapContainer: {
+    position: 'relative',
+    width: '100%',
+  },
+  map: {
+    flex: 1,
+    borderRadius: 0,
+  },
+  mapBadge: {
+    position: 'absolute',
+    top: 52,
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(10,12,14,0.82)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  mapBadgeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  mapBadgeText: {
+    color: orbiTheme.colors.text,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  mapOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+  },
+  bookButton: {
+    backgroundColor: orbiTheme.colors.teal,
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  bookButtonActive: {
+    backgroundColor: orbiTheme.colors.sky,
+  },
+  bookButtonLabel: {
+    color: '#0a0c0e',
+    fontWeight: '800',
+    fontSize: 16,
+  },
+  bookButtonSub: {
+    color: 'rgba(10,12,14,0.7)',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  scroll: {
+    paddingTop: 20,
+    paddingHorizontal: 18,
+    paddingBottom: 40,
+    gap: 14,
   },
   eyebrow: {
     color: orbiTheme.colors.teal,
     textTransform: 'uppercase',
     letterSpacing: 2,
+    fontSize: 11,
   },
   title: {
     color: orbiTheme.colors.text,
-    fontSize: 38,
-    lineHeight: 40,
+    fontSize: 32,
+    lineHeight: 34,
     fontWeight: '800',
   },
-  body: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 23,
-    marginBottom: 8,
+  statusRow: {
+    gap: 4,
   },
-  heroStats: {
+  statusText: {
+    color: orbiTheme.colors.muted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  transitionText: {
+    color: orbiTheme.colors.sky,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pickupCodeCard: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.teal,
+    gap: 4,
+  },
+  pickupCodeLabel: {
+    color: orbiTheme.colors.teal,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  pickupCode: {
+    color: orbiTheme.colors.text,
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: 4,
+  },
+  pickupCodeNote: {
+    color: orbiTheme.colors.muted,
+    fontSize: 11,
+  },
+  metricsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 10,
+    flexWrap: 'wrap',
+  },
+  primaryActions: {
+    gap: 10,
+  },
+  activeFlowCard: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.sky,
+    gap: 6,
+  },
+  activeFlowEyebrow: {
+    color: orbiTheme.colors.sky,
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+  activeFlowTitle: {
+    color: orbiTheme.colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  sectionTitle: {
+    color: orbiTheme.colors.text,
+    fontSize: 18,
+    fontWeight: '700',
     marginTop: 4,
   },
-  heroSafety: {
-    color: orbiTheme.colors.teal,
-    lineHeight: 19,
+  actions: {
+    gap: 10,
   },
-  heroCode: {
-    color: orbiTheme.colors.text,
-    fontWeight: '800',
-    fontSize: 18,
-    letterSpacing: 2,
-  },
-  inlineButton: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
+  refreshButton: {
+    alignSelf: 'center',
     borderRadius: 999,
-    paddingHorizontal: 14,
+    paddingHorizontal: 18,
     paddingVertical: 10,
     backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
+    marginTop: 4,
   },
-  inlineButtonDisabled: {
-    opacity: 0.65,
+  refreshButtonDisabled: {
+    opacity: 0.55,
   },
-  inlineButtonLabel: {
+  refreshButtonLabel: {
     color: orbiTheme.colors.text,
     fontWeight: '700',
     fontSize: 13,
-  },
-  sectionTitle: {
-    color: orbiTheme.colors.text,
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 8,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  primaryActions: {
-    gap: 12,
-  },
-  actions: {
-    gap: 12,
-    marginTop: 8,
   },
 });
