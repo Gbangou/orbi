@@ -28,24 +28,54 @@ async function fetchTripsAudit(lookbackHours: number) {
   );
 }
 
+function buildExportUrl(opts: {
+  status: string;
+  fromDate: string;
+  toDate: string;
+  search: string;
+  limit: number;
+}) {
+  const params = new URLSearchParams();
+  if (opts.status) params.set('status', opts.status);
+  if (opts.fromDate) params.set('fromDate', opts.fromDate);
+  if (opts.toDate) params.set('toDate', opts.toDate);
+  if (opts.search) params.set('search', opts.search);
+  params.set('limit', String(opts.limit));
+  return `/api/admin/trips/export.csv?${params.toString()}`;
+}
+
 export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
   const [audit, setAudit] = useState(initialAudit);
-  const [status, setStatus] = useState('Audit trajets synchronise.');
+  const [statusMsg, setStatusMsg] = useState('Audit trajets synchronise.');
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterFrom, setFilterFrom] = useState('');
+  const [filterTo, setFilterTo] = useState('');
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterLimit, setFilterLimit] = useState(300);
 
   const refreshAudit = useCallback(async (lookbackHours: number) => {
     setIsRefreshing(true);
-    setStatus('Rafraichissement audit trajets...');
+    setStatusMsg('Rafraichissement audit trajets...');
     try {
       const response = await fetchTripsAudit(lookbackHours);
       setAudit(response);
-      setStatus('Audit trajets a jour.');
+      setStatusMsg('Audit trajets a jour.');
     } catch {
-      setStatus("L'audit trajets n'a pas pu etre rafraichi.");
+      setStatusMsg("L'audit trajets n'a pas pu etre rafraichi.");
     } finally {
       setIsRefreshing(false);
     }
   }, []);
+
+  const exportUrl = buildExportUrl({
+    status: filterStatus,
+    fromDate: filterFrom,
+    toDate: filterTo,
+    search: filterSearch,
+    limit: filterLimit,
+  });
 
   return (
     <section className="panel">
@@ -71,17 +101,67 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
                 {hours}h
               </button>
             ))}
-            <a
-              className="secondary-link"
-              href="/api/admin/trips/export.csv?limit=300"
-            >
-              Export CSV
-            </a>
           </div>
           <span className="queue-status">
-            {status} Fenetre: {audit.window.lookbackHours}h.
+            {statusMsg} Fenetre: {audit.window.lookbackHours}h.
           </span>
         </div>
+      </div>
+
+      {/* ── Export CSV filter bar ── */}
+      <div className="export-filter-bar">
+        <span className="export-filter-label">Export CSV</span>
+
+        <input
+          className="export-filter-input"
+          onChange={(e) => setFilterSearch(e.target.value)}
+          placeholder="Nom passager ou chauffeur"
+          type="text"
+          value={filterSearch}
+        />
+
+        <select
+          className="export-filter-select"
+          onChange={(e) => setFilterStatus(e.target.value)}
+          value={filterStatus}
+        >
+          <option value="">Tous statuts</option>
+          <option value="PENDING">En attente</option>
+          <option value="MATCHED">Assigne</option>
+          <option value="DRIVER_ARRIVING">Chauffeur en route</option>
+          <option value="IN_PROGRESS">En cours</option>
+          <option value="COMPLETED">Termine</option>
+          <option value="CANCELLED">Annule</option>
+        </select>
+
+        <input
+          className="export-filter-input export-filter-date"
+          onChange={(e) => setFilterFrom(e.target.value)}
+          placeholder="Du (AAAA-MM-JJ)"
+          type="date"
+          value={filterFrom}
+        />
+        <input
+          className="export-filter-input export-filter-date"
+          onChange={(e) => setFilterTo(e.target.value)}
+          placeholder="Au (AAAA-MM-JJ)"
+          type="date"
+          value={filterTo}
+        />
+
+        <input
+          className="export-filter-input export-filter-limit"
+          max={500}
+          min={1}
+          onChange={(e) => setFilterLimit(Number(e.target.value))}
+          placeholder="Limite"
+          type="number"
+          value={filterLimit}
+        />
+
+        <a className="primary-link" download href={exportUrl}>
+          Exporter
+        </a>
       </div>
 
       <div className="grid">

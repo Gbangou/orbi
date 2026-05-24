@@ -6131,14 +6131,36 @@ export class AdminService {
   }
 
   async tripsExportCsv(
-    query: { status?: string; limit?: number },
+    query: { status?: string; limit?: number; fromDate?: string; toDate?: string; search?: string },
     auth: RequestAuthContext,
   ) {
     const limit = Math.min(query.limit ?? 200, 500);
-    const whereStatus = query.status ? { status: query.status as never } : {};
+
+    const dateFilter: Record<string, unknown> = {};
+    if (query.fromDate) {
+      dateFilter['gte'] = new Date(query.fromDate);
+    }
+    if (query.toDate) {
+      const to = new Date(query.toDate);
+      to.setUTCHours(23, 59, 59, 999);
+      dateFilter['lte'] = to;
+    }
+
+    const where: Prisma.TripWhereInput = {
+      ...(query.status ? { status: query.status as never } : {}),
+      ...(Object.keys(dateFilter).length ? { createdAt: dateFilter } : {}),
+      ...(query.search
+        ? {
+            OR: [
+              { rider: { user: { fullName: { contains: query.search, mode: 'insensitive' } } } },
+              { driver: { user: { fullName: { contains: query.search, mode: 'insensitive' } } } },
+            ],
+          }
+        : {}),
+    };
 
     const trips = await this.prisma.trip.findMany({
-      where: whereStatus,
+      where,
       orderBy: { createdAt: 'desc' },
       take: limit,
       select: {
@@ -6170,6 +6192,9 @@ export class AdminService {
         metadata: {
           format: 'csv',
           statusFilter: query.status ?? null,
+          fromDate: query.fromDate ?? null,
+          toDate: query.toDate ?? null,
+          search: query.search ?? null,
           exportedCount: trips.length,
           limit,
         } satisfies Prisma.InputJsonObject,

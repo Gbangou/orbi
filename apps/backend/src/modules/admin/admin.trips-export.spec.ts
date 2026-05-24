@@ -99,8 +99,62 @@ describe('AdminService.tripsExportCsv', () => {
     const { prisma, service, auth } = createService();
     await service.tripsExportCsv({}, auth as never);
 
-    expect(prisma.trip.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: {} }),
+    const call = prisma.trip.findMany.mock.calls[0][0] as { where: Record<string, unknown> };
+    expect(call.where).not.toHaveProperty('status');
+  });
+
+  it('applique un filtre createdAt gte quand fromDate est fourni', async () => {
+    const { prisma, service, auth } = createService();
+    await service.tripsExportCsv({ fromDate: '2026-05-01' }, auth as never);
+
+    const call = prisma.trip.findMany.mock.calls[0][0] as {
+      where: { createdAt?: { gte?: Date } };
+    };
+    expect(call.where.createdAt?.gte).toBeInstanceOf(Date);
+    expect((call.where.createdAt?.gte as Date).toISOString()).toContain('2026-05-01');
+  });
+
+  it('applique un filtre createdAt lte à fin de journée quand toDate est fourni', async () => {
+    const { prisma, service, auth } = createService();
+    await service.tripsExportCsv({ toDate: '2026-05-31' }, auth as never);
+
+    const call = prisma.trip.findMany.mock.calls[0][0] as {
+      where: { createdAt?: { lte?: Date } };
+    };
+    const lte = call.where.createdAt?.lte as Date;
+    expect(lte).toBeInstanceOf(Date);
+    expect(lte.getUTCHours()).toBe(23);
+    expect(lte.getUTCMinutes()).toBe(59);
+  });
+
+  it('filtre par nom avec OR sur rider/driver fullName quand search est fourni', async () => {
+    const { prisma, service, auth } = createService();
+    await service.tripsExportCsv({ search: 'Konaté' }, auth as never);
+
+    const call = prisma.trip.findMany.mock.calls[0][0] as {
+      where: { OR?: unknown[] };
+    };
+    expect(Array.isArray(call.where.OR)).toBe(true);
+    expect(call.where.OR).toHaveLength(2);
+  });
+
+  it("enregistre fromDate/toDate/search dans les metadonnees de l'audit log", async () => {
+    const { prisma, service, auth } = createService();
+    await service.tripsExportCsv(
+      { fromDate: '2026-05-01', toDate: '2026-05-31', search: 'Awa' },
+      auth as never,
+    );
+
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            fromDate: '2026-05-01',
+            toDate: '2026-05-31',
+            search: 'Awa',
+          }),
+        }),
+      }),
     );
   });
 
