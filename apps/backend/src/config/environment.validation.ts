@@ -87,7 +87,7 @@ export function validateEnvironment(config: EnvironmentVariables) {
       'postgresql://postgres:postgres@localhost:5433/orbi?schema=public',
     FRONTEND_ALLOWED_ORIGINS:
       config.FRONTEND_ALLOWED_ORIGINS ??
-      'http://localhost:3001,http://localhost:8081',
+      'http://localhost:3001,http://localhost:8081,http://localhost:8082',
     TRUST_PROXY: config.TRUST_PROXY ?? 'false',
     ENABLE_SWAGGER: config.ENABLE_SWAGGER ?? 'true',
     REQUEST_BODY_LIMIT: config.REQUEST_BODY_LIMIT ?? '256kb',

@@ -6,7 +6,11 @@ export default () => ({
     environment: process.env.NODE_ENV ?? 'development',
     frontendOrigins: process.env.FRONTEND_ALLOWED_ORIGINS?.split(',')
       .map((origin) => origin.trim())
-      .filter(Boolean) ?? ['http://localhost:3001', 'http://localhost:8081'],
+      .filter(Boolean) ?? [
+      'http://localhost:3001',
+      'http://localhost:8081',
+      'http://localhost:8082',
+    ],
   },
   database: {
     url: process.env.DATABASE_URL,
