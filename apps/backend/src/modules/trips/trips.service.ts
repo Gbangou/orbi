@@ -1320,6 +1320,21 @@ export class TripsService {
       },
     });
 
+    const opsStaff = await this.prisma.user.findMany({
+      where: { role: { in: [UserRole.OPS, UserRole.SUPPORT] }, isActive: true },
+      select: { id: true },
+    });
+
+    for (const staff of opsStaff) {
+      void this.notificationsService.enqueue({
+        userId: staff.id,
+        title: '🚨 SOS – Alerte urgente',
+        body: `Trajet ${trip.id} — SOS déclenché par ${auth.user.role === UserRole.RIDER ? 'un passager' : 'un chauffeur'}. Ticket #${ticket.id}.`,
+        channel: NotificationChannel.PUSH,
+        dedupeKey: `sos:${trip.id}:${staff.id}`,
+      });
+    }
+
     return {
       sos: {
         tripId: trip.id,

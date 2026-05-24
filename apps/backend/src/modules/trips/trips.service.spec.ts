@@ -56,6 +56,9 @@ describe('TripsService', () => {
         create: jest.fn(),
         aggregate: jest.fn(),
       },
+      user: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
     };
     const realtimeService = {
       publish: jest.fn(),
@@ -1101,6 +1104,59 @@ describe('TripsService', () => {
     expect(prisma.trip.update).not.toHaveBeenCalled();
     expect(prisma.auditLog.create).not.toHaveBeenCalled();
     expect(realtimeService.publish).not.toHaveBeenCalled();
+  });
+
+  it('sends push notifications to all active OPS and SUPPORT staff on SOS trigger', async () => {
+    const { prisma, notificationsService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-sos-2',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+    });
+    prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-sos-2' });
+    prisma.trip.update.mockResolvedValue({ id: 'trip-sos-2' });
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'ops-user-1' },
+      { id: 'support-user-1' },
+    ]);
+
+    await service.triggerSafetySos(
+      {
+        user: {
+          id: 'user-rider-1',
+          role: 'RIDER',
+          riderProfile: { id: 'rider-1' },
+        },
+      } as never,
+      'trip-sos-2',
+      {},
+    );
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          role: { in: expect.arrayContaining(['OPS', 'SUPPORT']) },
+          isActive: true,
+        }),
+      }),
+    );
+    expect(notificationsService.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'ops-user-1',
+        channel: 'PUSH',
+        dedupeKey: 'sos:trip-sos-2:ops-user-1',
+      }),
+    );
+    expect(notificationsService.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'support-user-1',
+        channel: 'PUSH',
+        dedupeKey: 'sos:trip-sos-2:support-user-1',
+      }),
+    );
+    expect(notificationsService.enqueue).toHaveBeenCalledTimes(2);
   });
 
   it('creates an audited expiring share link for an active trip', async () => {
