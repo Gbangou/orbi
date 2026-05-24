@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import type { ReactTestInstance } from 'react-test-renderer';
 import { router } from 'expo-router';
 import {
@@ -13,6 +14,7 @@ import {
   fetchRideOptionsPreview,
   fetchRiderProfile,
   fetchTripDetail,
+  getMySupportTicketsWithApi,
   recordTripRoutePositionWithApi,
   reportTripIncidentWithApi,
   resolveVoiceLocationIntentWithApi,
@@ -28,10 +30,10 @@ import {
   signOutRiderAccount,
 } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
-import AccountScreen from '../app/account';
-import ActivityScreen from '../app/activity';
+import AccountScreen from '../app/(tabs)/account';
+import ActivityScreen from '../app/(tabs)/activity';
 import RiderAuthScreen from '../app/auth';
-import RiderHomeScreen from '../app/home';
+import RiderHomeScreen from '../app/(tabs)/home';
 import BookingScreen from '../app/book';
 import VoiceScreen from '../app/voice';
 import {
@@ -120,9 +122,10 @@ jest.mock('@orbi/api', () => {
     resolveVoiceLocationIntentWithApi: jest.fn(),
     createRideRequestWithApi: jest.fn(),
     createTripShareLinkWithApi: jest.fn(),
-    createCheckoutIntentWithApi: jest.fn(),
-    createSavedPlaceWithApi: jest.fn(),
-    updateSavedPlaceWithApi: jest.fn(),
+  createCheckoutIntentWithApi: jest.fn(),
+  createSavedPlaceWithApi: jest.fn(),
+  getMySupportTicketsWithApi: jest.fn(),
+  updateSavedPlaceWithApi: jest.fn(),
     deleteSavedPlaceWithApi: jest.fn(),
     updateTrustedContactWithApi: jest.fn(),
     updateTripStatusWithApi: jest.fn(),
@@ -137,6 +140,7 @@ const mockedFetchRideOptionsPreview = jest.mocked(fetchRideOptionsPreview);
 const mockedFetchMyTrips = jest.mocked(fetchMyTrips);
 const mockedFetchRiderProfile = jest.mocked(fetchRiderProfile);
 const mockedFetchTripDetail = jest.mocked(fetchTripDetail);
+const mockedGetMySupportTicketsWithApi = jest.mocked(getMySupportTicketsWithApi);
 const mockedRecordTripRoutePositionWithApi = jest.mocked(recordTripRoutePositionWithApi);
 const mockedReportTripIncidentWithApi = jest.mocked(reportTripIncidentWithApi);
 const mockedTriggerTripSafetySosWithApi = jest.mocked(triggerTripSafetySosWithApi);
@@ -333,6 +337,7 @@ beforeEach(() => {
   mockedFetchMyTrips.mockReset();
   mockedFetchRiderProfile.mockReset();
   mockedFetchTripDetail.mockReset();
+  mockedGetMySupportTicketsWithApi.mockReset();
   mockedRecordTripRoutePositionWithApi.mockReset();
   riderPositionState.latestPosition = null;
   riderPositionState.positionNote = 'Position passager en attente.';
@@ -375,6 +380,7 @@ beforeEach(() => {
     message: 'Fallback rider error.',
     shouldClearSessionToken: false,
   });
+  mockedGetMySupportTicketsWithApi.mockResolvedValue({ tickets: [] } as never);
   mockedTriggerTripSafetySosWithApi.mockResolvedValue({
     sos: {
       tripId: 'trip-1',
@@ -922,10 +928,11 @@ describe('rider smoke flows', () => {
   it('keeps rider activity usable when trip detail is temporarily unavailable', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
     mockedFetchMyTrips.mockResolvedValue(buildRiderRealtimeHistory('DRIVER_ARRIVING') as never);
-    mockedFetchTripDetail.mockRejectedValue(new TypeError('Network request failed'));
+    mockedFetchTripDetail.mockRejectedValue(new Error('Trip detail temporarily unavailable'));
 
     const renderer = await renderScreen(<ActivityScreen />);
     await pressByText(renderer, 'Actualiser le suivi');
+    await flushMicrotasks();
 
     expectText(renderer, 'Course active');
     expectText(renderer, 'Mission en direct');
@@ -1010,12 +1017,21 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<ActivityScreen />);
     await pressByText(renderer, 'Actualiser le suivi');
+    await flushMicrotasks();
     await pressByText(renderer, 'Annuler avant depart');
+    const cancelOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
+      | Array<{ text: string; onPress?: () => void }>
+      | undefined;
+    await invokeInAct(() => {
+      cancelOptions?.[0]?.onPress?.();
+    });
+    await flushMicrotasks();
 
     expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
       { token: 'rider-auth-client' },
       'trip-rider-1',
       'CANCELLED',
+      'Chauffeur en retard',
     );
     expectText(renderer, 'Etat principal: Aucun flux actif');
   });

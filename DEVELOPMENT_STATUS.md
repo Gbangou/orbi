@@ -281,6 +281,12 @@ de securite ou de confiance.
   calcule completion, annulation, reconciliation mobile money, remboursements
   provider en attente, argent a verifier, files owner finance/ops/support et
   courses a risque avant cloture de journee.
+- Durcissement mobile WebView cartes ajoute: les payloads JSON injectes dans
+  les cartes rider/driver sont echappes pour `<script>`, les labels HTML sont
+  neutralises, et les WebViews de cartes refusent les navigations hors origines
+  cartographiques HTTPS attendues. Le gate SCA repasse vert via overrides
+  `ws`, `uuid` et `qs`, et les smokes rider/driver ont ete réalignes sur les
+  routes onglets actuelles.
 
 ## Architecture active
 

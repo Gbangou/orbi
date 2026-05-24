@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
+import {
+  serializeHtmlScriptJson,
+  shouldAllowLocalMapWebViewRequest,
+} from '@orbi/ui';
 
 export interface TripMapViewProps {
   pickupLat: number | null | undefined;
@@ -20,7 +24,7 @@ function buildMapHtml(cfg: {
   driverLat: number | null;
   driverLng: number | null;
 }): string {
-  const config = JSON.stringify(cfg);
+  const config = serializeHtmlScriptJson(cfg);
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -136,7 +140,10 @@ export function TripMapView({
         scrollEnabled={false}
         style={styles.webview}
         javaScriptEnabled
-        originWhitelist={['*']}
+        originWhitelist={['about:blank', 'https://*']}
+        onShouldStartLoadWithRequest={(request) =>
+          shouldAllowLocalMapWebViewRequest(request.url)
+        }
         onError={() => {}}
         onHttpError={() => {}}
         allowsInlineMediaPlayback

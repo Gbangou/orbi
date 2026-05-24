@@ -43,6 +43,9 @@ jest.mock(
       Text: "Text",
       Pressable: "Pressable",
       TextInput: "TextInput",
+      Dimensions: {
+        get: jest.fn(() => ({ width: 390, height: 844, scale: 2, fontScale: 1 })),
+      },
       StyleSheet: {
         create: <T>(styles: T) => styles,
       },
@@ -91,6 +94,23 @@ jest.mock(
   "expo-status-bar",
   () => ({
     StatusBar: "StatusBar",
+  }),
+  { virtual: true },
+);
+
+jest.mock(
+  "expo-screen-capture",
+  () => ({
+    preventScreenCaptureAsync: jest.fn(async () => undefined),
+    allowScreenCaptureAsync: jest.fn(async () => undefined),
+  }),
+  { virtual: true },
+);
+
+jest.mock(
+  "react-native-webview",
+  () => ({
+    WebView: "WebView",
   }),
   { virtual: true },
 );

@@ -61,10 +61,10 @@ describe('Orbi runtime config', () => {
 
   it('keeps mobile API clients and realtime streams on the runtime-resolved base URL', () => {
     const files = [
-      'app/home.tsx',
+      'app/(tabs)/home.tsx',
       'app/book.tsx',
       'app/voice.tsx',
-      'app/activity.tsx',
+      'app/(tabs)/activity.tsx',
       'lib/auth.ts',
       'lib/use-rider-realtime-stream.ts',
       '../driver-app/lib/auth.ts',

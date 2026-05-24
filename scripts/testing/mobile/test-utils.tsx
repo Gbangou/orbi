@@ -59,12 +59,16 @@ export async function pressByText(
   renderer: TestRenderer.ReactTestRenderer,
   expectedText: string,
 ) {
-  const pressable = renderer.root.find(
+  const pressable = renderer.root.findAll(
     (node) => isHostType(node, 'Pressable') && nodeContainsText(node, expectedText),
-  );
+  )[0];
+
+  if (!pressable) {
+    throw new Error(`No Pressable found for text: ${expectedText}`);
+  }
 
   await act(async () => {
-    pressable.props.onPress?.();
+    await pressable.props.onPress?.();
     for (let iteration = 0; iteration < 5; iteration += 1) {
       await Promise.resolve();
     }

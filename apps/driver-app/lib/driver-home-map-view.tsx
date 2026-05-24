@@ -2,6 +2,11 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type { DriverOffer } from '@orbi/api';
+import {
+  escapeHtmlText,
+  serializeHtmlScriptJson,
+  shouldAllowLocalMapWebViewRequest,
+} from '@orbi/ui';
 
 const OUAGA_LAT = 12.3647;
 const OUAGA_LNG = -1.5332;
@@ -29,7 +34,7 @@ function buildDemoOfferMarkers(
     id: `demo-offer-${i}`,
     lat: driverLat + o.dlat,
     lng: driverLng + o.dlng,
-    label: o.label,
+    label: escapeHtmlText(o.label),
     isMoto: o.isMoto,
   }));
 }
@@ -39,7 +44,7 @@ function buildMapHtml(cfg: {
   driverLng: number;
   offerMarkers: OfferMarker[];
 }): string {
-  const config = JSON.stringify(cfg);
+  const config = serializeHtmlScriptJson(cfg);
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -152,7 +157,10 @@ export function DriverHomeMapView({
         scrollEnabled={false}
         style={styles.webview}
         javaScriptEnabled
-        originWhitelist={['*']}
+        originWhitelist={['about:blank', 'https://*']}
+        onShouldStartLoadWithRequest={(request) =>
+          shouldAllowLocalMapWebViewRequest(request.url)
+        }
         onError={() => {}}
         onHttpError={() => {}}
         allowsInlineMediaPlayback

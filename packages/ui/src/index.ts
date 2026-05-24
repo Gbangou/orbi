@@ -211,3 +211,43 @@ export function formatOperationalStatus(status: string) {
     .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
     .join(' ');
 }
+
+export function escapeHtmlText(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+export function serializeHtmlScriptJson(value: unknown) {
+  return JSON.stringify(value)
+    .replaceAll('<', '\\u003c')
+    .replaceAll('>', '\\u003e')
+    .replaceAll('&', '\\u0026')
+    .replaceAll('\u2028', '\\u2028')
+    .replaceAll('\u2029', '\\u2029');
+}
+
+const allowedMapWebViewHosts = new Set([
+  'unpkg.com',
+  'tile.openstreetmap.org',
+  'a.tile.openstreetmap.org',
+  'b.tile.openstreetmap.org',
+  'c.tile.openstreetmap.org',
+  'router.project-osrm.org',
+]);
+
+export function shouldAllowLocalMapWebViewRequest(url: string) {
+  if (!url || url === 'about:blank' || url === 'about:srcdoc') {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && allowedMapWebViewHosts.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}

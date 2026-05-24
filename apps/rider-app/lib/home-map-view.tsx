@@ -3,6 +3,10 @@ import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { createOrbiApiClient, fetchNearbyDrivers, type NearbyDriverMarker } from '@orbi/api';
 import { resolveOrbiApiBaseUrlForRuntime, orbiRuntimeConfig } from '@orbi/config';
+import {
+  serializeHtmlScriptJson,
+  shouldAllowLocalMapWebViewRequest,
+} from '@orbi/ui';
 
 const OUAGA_LAT = 12.3647;
 const OUAGA_LNG = -1.5332;
@@ -28,7 +32,7 @@ function buildHomeMapHtml(cfg: {
   riderLng: number | null;
   drivers: NearbyDriverMarker[];
 }): string {
-  const config = JSON.stringify(cfg);
+  const config = serializeHtmlScriptJson(cfg);
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -139,13 +143,13 @@ export function HomeMapView({ riderLat, riderLng, style }: HomeMapViewProps) {
       setDrivers(list);
       if (webRef.current) {
         webRef.current.injectJavaScript(
-          `updateDrivers(${JSON.stringify(list)});true;`,
+          `updateDrivers(${serializeHtmlScriptJson(list)});true;`,
         );
       }
     } catch {
       if (webRef.current) {
         webRef.current.injectJavaScript(
-          `updateDrivers(${JSON.stringify(DEMO_DRIVERS)});true;`,
+          `updateDrivers(${serializeHtmlScriptJson(DEMO_DRIVERS)});true;`,
         );
       }
     }
@@ -175,7 +179,10 @@ export function HomeMapView({ riderLat, riderLng, style }: HomeMapViewProps) {
         scrollEnabled={false}
         style={styles.webview}
         javaScriptEnabled
-        originWhitelist={['*']}
+        originWhitelist={['about:blank', 'https://*']}
+        onShouldStartLoadWithRequest={(request) =>
+          shouldAllowLocalMapWebViewRequest(request.url)
+        }
         onError={() => {}}
         onHttpError={() => {}}
         allowsInlineMediaPlayback

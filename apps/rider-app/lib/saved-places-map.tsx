@@ -1,7 +1,12 @@
 import { useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
-import { orbiTheme } from '@orbi/ui';
+import {
+  escapeHtmlText,
+  orbiTheme,
+  serializeHtmlScriptJson,
+  shouldAllowLocalMapWebViewRequest,
+} from '@orbi/ui';
 
 const OUAGA_LAT = 12.3647;
 const OUAGA_LNG = -1.5332;
@@ -22,8 +27,11 @@ export interface SavedPlacesMapProps {
 function buildSavedPlacesMapHtml(pins: SavedPlacePin[]): string {
   const validPins = pins.filter(
     (p) => p.latitude !== null && p.longitude !== null,
-  );
-  const payload = JSON.stringify(validPins);
+  ).map((p) => ({
+    ...p,
+    label: escapeHtmlText(p.label),
+  }));
+  const payload = serializeHtmlScriptJson(validPins);
 
   return `<!DOCTYPE html>
 <html>
@@ -111,7 +119,10 @@ export function SavedPlacesMap({
         scrollEnabled={false}
         onMessage={handleMessage}
         javaScriptEnabled
-        originWhitelist={['*']}
+        originWhitelist={['about:blank', 'https://*']}
+        onShouldStartLoadWithRequest={(request) =>
+          shouldAllowLocalMapWebViewRequest(request.url)
+        }
       />
     </View>
   );

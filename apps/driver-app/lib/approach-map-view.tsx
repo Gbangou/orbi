@@ -1,6 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
+import {
+  escapeHtmlText,
+  serializeHtmlScriptJson,
+  shouldAllowLocalMapWebViewRequest,
+} from '@orbi/ui';
 
 export interface ApproachMapViewProps {
   driverLat: number | null | undefined;
@@ -18,7 +23,10 @@ function buildApproachHtml(cfg: {
   pickupLng: number | null;
   pickupAddress: string;
 }): string {
-  const config = JSON.stringify(cfg);
+  const config = serializeHtmlScriptJson({
+    ...cfg,
+    pickupAddress: escapeHtmlText(cfg.pickupAddress),
+  });
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -144,7 +152,10 @@ export function ApproachMapView({
         scrollEnabled={false}
         style={styles.webview}
         javaScriptEnabled
-        originWhitelist={['*']}
+        originWhitelist={['about:blank', 'https://*']}
+        onShouldStartLoadWithRequest={(request) =>
+          shouldAllowLocalMapWebViewRequest(request.url)
+        }
         onError={() => {}}
         onHttpError={() => {}}
         allowsInlineMediaPlayback

@@ -25,10 +25,10 @@ import {
 } from '../lib/auth';
 import { resolveDriverAppError } from '../lib/session-feedback';
 import DriverAuthScreen from '../app/auth';
-import DriverHomeScreen from '../app/accueil';
-import OffersScreen from '../app/offres';
-import ProfilScreen from '../app/profil';
-import RevenusScreen from '../app/revenus';
+import DriverHomeScreen from '../app/(tabs)/accueil';
+import OffersScreen from '../app/(tabs)/offres';
+import ProfilScreen from '../app/(tabs)/profil';
+import RevenusScreen from '../app/(tabs)/revenus';
 import {
   changeInputByPlaceholder,
   collectText,
@@ -908,7 +908,7 @@ describe('driver smoke flows', () => {
     mockedFetchDriverOffers.mockResolvedValue([] as never);
     mockedFetchMyTrips.mockResolvedValue(buildDriverTripsWithStatus('DRIVER_ARRIVING') as never);
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
-    mockedFetchTripDetail.mockRejectedValue(new TypeError('Network request failed'));
+    mockedFetchTripDetail.mockRejectedValue(new Error('Trip detail temporarily unavailable'));
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
@@ -927,7 +927,7 @@ describe('driver smoke flows', () => {
     mockedFetchDriverOffers.mockResolvedValue([] as never);
     mockedFetchMyTrips.mockResolvedValue(buildDriverTripsWithStatus('IN_PROGRESS') as never);
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
-    mockedFetchTripDetail.mockRejectedValue(new TypeError('Network request failed'));
+    mockedFetchTripDetail.mockRejectedValue(new Error('Trip detail temporarily unavailable'));
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
