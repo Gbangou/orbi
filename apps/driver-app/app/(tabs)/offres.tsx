@@ -79,6 +79,7 @@ import {
 import { useDriverPresence } from "../../lib/use-driver-presence";
 import { useDriverRealtimeStream } from "../../lib/use-driver-realtime-stream";
 import { TripMapView } from "../../lib/trip-map-view";
+import { ApproachMapView } from "../../lib/approach-map-view";
 import { useLiveRefresh } from "../../lib/use-live-refresh";
 import { DriverJourneySection } from "../../lib/driver-journey";
 import { buildDriverShiftReadiness } from "../../lib/driver-shift-readiness";
@@ -568,7 +569,7 @@ export default function OffersScreen() {
       }),
     [driverFatigue, flow],
   );
-  const { presenceNote } = useDriverPresence(
+  const { presenceNote, latestPosition: driverGpsPosition } = useDriverPresence(
     flow.availabilityStatus === "ONLINE" || Boolean(activeTrip),
     activeTrip?.id,
   );
@@ -1435,21 +1436,33 @@ export default function OffersScreen() {
           {driverRouteProgress ? (
             <>
               {activeTripDetail?.trip.pickupLatitude != null ? (
-                <TripMapView
-                  pickupLat={activeTripDetail.trip.pickupLatitude}
-                  pickupLng={activeTripDetail.trip.pickupLongitude}
-                  destLat={activeTripDetail.trip.destinationLatitude}
-                  destLng={activeTripDetail.trip.destinationLongitude}
-                  driverLat={
-                    activeTripDetail.trip.routeMonitoring.latestPosition
-                      ?.latitude ?? null
-                  }
-                  driverLng={
-                    activeTripDetail.trip.routeMonitoring.latestPosition
-                      ?.longitude ?? null
-                  }
-                  style={styles.tripMap}
-                />
+                activeTrip.status === "MATCHED" ||
+                activeTrip.status === "DRIVER_ARRIVING" ? (
+                  <ApproachMapView
+                    driverLat={driverGpsPosition?.latitude}
+                    driverLng={driverGpsPosition?.longitude}
+                    pickupLat={activeTripDetail.trip.pickupLatitude}
+                    pickupLng={activeTripDetail.trip.pickupLongitude}
+                    pickupAddress={activeTripDetail.trip.pickupAddress}
+                    style={styles.tripMap}
+                  />
+                ) : (
+                  <TripMapView
+                    pickupLat={activeTripDetail.trip.pickupLatitude}
+                    pickupLng={activeTripDetail.trip.pickupLongitude}
+                    destLat={activeTripDetail.trip.destinationLatitude}
+                    destLng={activeTripDetail.trip.destinationLongitude}
+                    driverLat={
+                      activeTripDetail.trip.routeMonitoring.latestPosition
+                        ?.latitude ?? null
+                    }
+                    driverLng={
+                      activeTripDetail.trip.routeMonitoring.latestPosition
+                        ?.longitude ?? null
+                    }
+                    style={styles.tripMap}
+                  />
+                )
               ) : (
                 <ActiveMissionMap
                   progressPercent={driverRouteProgress.progressPercent}

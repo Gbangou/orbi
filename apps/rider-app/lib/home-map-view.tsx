@@ -39,13 +39,12 @@ function buildHomeMapHtml(cfg: {
 html,body,#map{width:100%;height:100%;background:#0a0c0e}
 .leaflet-tile-pane{filter:brightness(.62) invert(1) contrast(3) hue-rotate(200deg) saturate(.28) brightness(.72)}
 .leaflet-control-attribution,.leaflet-control-zoom{display:none}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,199,199,.65)}70%{box-shadow:0 0 0 12px rgba(0,199,199,0)}100%{box-shadow:0 0 0 0 rgba(0,199,199,0)}}
-@keyframes pulseCar{0%{box-shadow:0 0 0 0 rgba(251,191,36,.55)}70%{box-shadow:0 0 0 10px rgba(251,191,36,0)}100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}}
-@keyframes pulseRider{0%{box-shadow:0 0 0 0 rgba(99,102,241,.7)}70%{box-shadow:0 0 0 16px rgba(99,102,241,0)}100%{box-shadow:0 0 0 0 rgba(99,102,241,0)}}
-.moto-dot{width:12px;height:12px;background:#00C7C7;border-radius:50%;border:2px solid rgba(0,199,199,.4);animation:pulse 1.8s ease-in-out infinite}
-.car-dot{width:13px;height:13px;background:#fbbf24;border-radius:3px;border:2px solid rgba(251,191,36,.4);animation:pulseCar 2s ease-in-out infinite}
-.rider-outer{width:18px;height:18px;background:rgba(99,102,241,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;animation:pulseRider 2.5s ease-in-out infinite}
-.rider-dot{width:10px;height:10px;background:#818cf8;border-radius:50%;border:2px solid #6366f1}
+@keyframes glowMoto{0%,100%{filter:drop-shadow(0 0 2px rgba(0,199,199,.5))}50%{filter:drop-shadow(0 0 6px rgba(0,199,199,.95))}}
+@keyframes glowCar{0%,100%{filter:drop-shadow(0 0 2px rgba(251,191,36,.5))}50%{filter:drop-shadow(0 0 6px rgba(251,191,36,.95))}}
+@keyframes glowRider{0%,100%{filter:drop-shadow(0 0 3px rgba(99,102,241,.55))}50%{filter:drop-shadow(0 0 8px rgba(99,102,241,1))}}
+.moto-svg{animation:glowMoto 1.8s ease-in-out infinite;display:block}
+.car-svg{animation:glowCar 2.1s ease-in-out infinite;display:block}
+.rider-svg{animation:glowRider 2.4s ease-in-out infinite;display:block}
 </style>
 </head>
 <body>
@@ -58,9 +57,13 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,sub
 var riderMarker=null;
 var driverMarkers={};
 
-function motoIcon(){return L.divIcon({html:'<div class="moto-dot"></div>',iconSize:[12,12],iconAnchor:[6,6],className:''})}
-function carIcon(){return L.divIcon({html:'<div class="car-dot"></div>',iconSize:[13,13],iconAnchor:[6,6],className:''})}
-function riderIcon(){return L.divIcon({html:'<div class="rider-outer"><div class="rider-dot"></div></div>',iconSize:[18,18],iconAnchor:[9,9],className:''})}
+var MOTO_SVG='<svg class="moto-svg" xmlns="http://www.w3.org/2000/svg" width="34" height="22" viewBox="0 0 34 22"><circle cx="6.5" cy="15" r="5.5" fill="none" stroke="#00C7C7" stroke-width="2"/><circle cx="6.5" cy="15" r="2" fill="#00C7C7"/><circle cx="27.5" cy="15" r="5.5" fill="none" stroke="#00C7C7" stroke-width="2"/><circle cx="27.5" cy="15" r="2" fill="#00C7C7"/><path d="M6.5,15 L14,7.5 L23,7.5 L27.5,15" fill="none" stroke="#00C7C7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14,7.5 L17,3 L21,3 L23,7.5 Z" fill="rgba(0,199,199,0.38)" stroke="#00C7C7" stroke-width="1.3" stroke-linejoin="round"/><path d="M23,8.5 L30,5.5 M23,8.5 L29,11" stroke="#00C7C7" stroke-width="2" stroke-linecap="round"/></svg>';
+var CAR_SVG='<svg class="car-svg" xmlns="http://www.w3.org/2000/svg" width="22" height="36" viewBox="0 0 22 36"><rect x="0" y="6" width="5" height="10" rx="2" fill="#0a0c14" opacity="0.9"/><rect x="17" y="6" width="5" height="10" rx="2" fill="#0a0c14" opacity="0.9"/><rect x="0" y="20" width="5" height="10" rx="2" fill="#0a0c14" opacity="0.9"/><rect x="17" y="20" width="5" height="10" rx="2" fill="#0a0c14" opacity="0.9"/><rect x="4" y="2" width="14" height="32" rx="5" fill="rgba(251,191,36,0.18)" stroke="#fbbf24" stroke-width="1.6"/><rect x="5.5" y="2" width="11" height="9.5" rx="3.5" fill="rgba(56,189,248,0.28)"/><rect x="5.5" y="24.5" width="11" height="9.5" rx="3.5" fill="rgba(56,189,248,0.22)"/><rect x="5.5" y="12.5" width="11" height="11" rx="2" fill="rgba(251,191,36,0.38)"/><path d="M3.5,11 L4,9 L4,14.5 L3.5,13 Z" fill="#fbbf24" opacity="0.85"/><path d="M18.5,11 L18,9 L18,14.5 L18.5,13 Z" fill="#fbbf24" opacity="0.85"/><rect x="5" y="1" width="4.5" height="3" rx="1.2" fill="rgba(255,253,176,0.9)"/><rect x="12.5" y="1" width="4.5" height="3" rx="1.2" fill="rgba(255,253,176,0.9)"/><rect x="5" y="32" width="4.5" height="3" rx="1.2" fill="rgba(248,113,113,0.9)"/><rect x="12.5" y="32" width="4.5" height="3" rx="1.2" fill="rgba(248,113,113,0.9)"/></svg>';
+var RIDER_SVG='<svg class="rider-svg" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="rgba(99,102,241,0.15)" stroke="rgba(129,140,248,0.5)" stroke-width="1.5"/><circle cx="11" cy="11" r="5.5" fill="rgba(99,102,241,0.35)" stroke="#818cf8" stroke-width="1.5"/><circle cx="11" cy="11" r="2.5" fill="#818cf8"/></svg>';
+
+function motoIcon(){return L.divIcon({html:MOTO_SVG,iconSize:[34,22],iconAnchor:[17,11],className:''})}
+function carIcon(){return L.divIcon({html:CAR_SVG,iconSize:[22,36],iconAnchor:[11,18],className:''})}
+function riderIcon(){return L.divIcon({html:RIDER_SVG,iconSize:[22,22],iconAnchor:[11,11],className:''})}
 
 function initMap(cfg){
   var centerLat=cfg.riderLat||12.3647;

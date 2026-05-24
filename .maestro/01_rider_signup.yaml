@@ -1,0 +1,33 @@
+appId: com.orbi.rider
+name: "Rider — Inscription complète"
+---
+# Lancer l'application rider depuis l'écran d'accueil
+- launchApp:
+    clearState: true
+
+# Attendre l'écran d'authentification
+- assertVisible: "Se connecter"
+
+# Naviguer vers l'inscription
+- tapOn: "Créer un compte"
+
+# Remplir le formulaire d'inscription
+- tapOn:
+    id: "input-firstname"
+- inputText: "Test"
+- tapOn:
+    id: "input-lastname"
+- inputText: "Rider"
+- tapOn:
+    id: "input-phone"
+- inputText: "+22670000001"
+- tapOn:
+    id: "input-password"
+- inputText: "TestOrbi2025!"
+
+# Soumettre l'inscription
+- tapOn: "S'inscrire"
+
+# Vérifier la redirection vers l'écran principal
+- assertVisible: "Accueil"
+- assertVisible: "Réserver"

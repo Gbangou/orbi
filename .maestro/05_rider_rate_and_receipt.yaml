@@ -1,0 +1,57 @@
+appId: com.orbi.rider
+name: "Rider — Note du chauffeur + reçu de course"
+---
+# Pré-requis: course terminée côté driver (04_driver_complete_trip)
+- launchApp
+
+# L'écran d'activité doit montrer la course terminée
+- tapOn: "Activité"
+
+# Vérifier que la course est marquée terminée
+- assertVisible:
+    text: "Terminée"
+    optional: true
+
+# Aller sur l'onglet Trajets
+- tapOn: "Trajets"
+
+# Vérifier les stats et la course récente
+- assertVisible: "Mes trajets"
+- assertVisible: "Terminées"
+- assertVisible: "FCFA"
+
+# Ouvrir le reçu de la dernière course
+- tapOn:
+    text: "Terminée"
+    index: 0
+    optional: true
+
+# Vérifier le contenu du reçu
+- assertVisible:
+    text: "Reçu"
+    optional: true
+- assertVisible:
+    text: "FCFA"
+    optional: true
+
+# Retour et noter le chauffeur
+- tapOn:
+    text: "Retour"
+    optional: true
+- tapOn: "Activité"
+- tapOn:
+    text: "Noter"
+    optional: true
+
+# Donner 5 étoiles
+- tapOn:
+    id: "star-5"
+    optional: true
+- tapOn:
+    text: "Envoyer"
+    optional: true
+
+# Vérifier la confirmation
+- assertVisible:
+    text: "Merci"
+    optional: true

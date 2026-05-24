@@ -1,0 +1,57 @@
+appId: com.orbi.rider
+name: "Rider — Réservation d'une course"
+---
+# Pré-requis: rider authentifié (enchaîner après 01_rider_signup ou login)
+- launchApp
+
+# L'écran d'accueil doit montrer la carte et le bouton de réservation
+- assertVisible: "Réserver"
+- assertVisible: "Accueil"
+
+# Vérifier que la carte home est chargée (badge chauffeurs)
+- assertVisible:
+    text: "chauffeur"
+    optional: true
+
+# Ouvrir l'écran de réservation
+- tapOn: "Réserver"
+
+# Attendre le chargement de l'écran book
+- assertVisible: "Réservation"
+
+# Sélectionner la ville de Ouagadougou (déjà sélectionnée par défaut)
+- assertVisible: "Ouagadougou"
+
+# Remplir l'adresse de départ via la recherche Nominatim
+- tapOn: "Rechercher un lieu"
+
+# Saisir une adresse de départ
+- tapOn:
+    id: "search-depart"
+    optional: true
+- inputText: "Université de Ouagadougou"
+- waitForAnimationToEnd
+- tapOn:
+    text: "Université"
+    index: 0
+    optional: true
+
+# Sélectionner l'option véhicule Moto Standard
+- tapOn: "Moto Standard"
+
+# Vérifier que le tarif s'affiche
+- assertVisible: "FCFA"
+
+# Sélectionner le moyen de paiement Mobile Money
+- tapOn: "Mobile Money"
+
+# Confirmer la réservation
+- tapOn: "Confirmer la réservation"
+
+# Vérifier la redirection vers l'écran d'activité (attente chauffeur)
+- assertVisible:
+    text: "Recherche"
+    optional: true
+- assertVisible:
+    text: "chauffeur"
+    optional: true

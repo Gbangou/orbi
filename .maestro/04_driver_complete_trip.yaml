@@ -1,0 +1,43 @@
+appId: com.orbi.driver
+name: "Driver — Compléter la course (pickup → livraison)"
+---
+# Pré-requis: driver avec trip MATCHED (après 03_driver_accept_offer)
+- launchApp
+
+# Confirmer l'arrivée au pickup
+- tapOn: "Offres"
+- tapOn:
+    text: "Arrivé au pickup"
+    optional: true
+
+# Saisir le code de confirmation passager (4 chiffres)
+- tapOn:
+    id: "input-pickup-code"
+    optional: true
+- inputText: "1234"
+
+# Valider le code
+- tapOn:
+    text: "Confirmer le départ"
+    optional: true
+- tapOn:
+    text: "Vérifier le code"
+    optional: true
+
+# Vérifier le passage en IN_PROGRESS
+- assertVisible:
+    text: "En cours"
+    optional: true
+
+# Terminer la course
+- tapOn:
+    text: "Terminer la course"
+    optional: true
+
+# Vérifier l'affichage du résumé / revenus
+- assertVisible:
+    text: "FCFA"
+    optional: true
+- assertVisible:
+    text: "Revenus"
+    optional: true

@@ -1,0 +1,33 @@
+appId: com.orbi.rider
+name: "Rider — Historique des trajets"
+---
+- launchApp
+
+# Aller sur l'onglet Trajets
+- tapOn: "Trajets"
+
+# Vérifier l'écran historique
+- assertVisible: "Mes trajets"
+
+# Vérifier les 4 stats
+- assertVisible: "Terminées"
+- assertVisible: "Actives"
+- assertVisible: "Annulées"
+- assertVisible: "Total dépensé"
+
+# Pull-to-refresh (scroll vers le bas puis vers le haut)
+- scroll:
+    direction: DOWN
+    duration: 500
+- scroll:
+    direction: UP
+    duration: 1500
+
+# Vérifier que la liste se recharge sans erreur
+- assertNotVisible: "Impossible de charger"
+
+# Naviguer vers le compte
+- tapOn: "Compte"
+- assertVisible:
+    text: "Profil"
+    optional: true

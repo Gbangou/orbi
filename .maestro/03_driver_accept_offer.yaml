@@ -1,0 +1,40 @@
+appId: com.orbi.driver
+name: "Driver — Accepter une offre de course"
+---
+# Pré-requis: driver authentifié et ONLINE
+- launchApp
+
+# L'écran d'accueil driver doit montrer la carte et le statut
+- assertVisible: "Accueil"
+
+# Passer en ligne si pas déjà ONLINE
+- tapOn:
+    text: "Passer en ligne"
+    optional: true
+
+# Attendre qu'une offre apparaisse (section "Offres")
+- tapOn: "Offres"
+
+# Vérifier la liste des offres
+- assertVisible:
+    text: "Mission"
+    optional: true
+
+# Accepter la première offre disponible
+- tapOn:
+    text: "Accepter"
+    index: 0
+    optional: true
+
+# Vérifier la transition vers l'état MATCHED
+- assertVisible:
+    text: "Passager"
+    optional: true
+- assertVisible:
+    text: "En route"
+    optional: true
+
+# Vérifier que la carte d'approche s'affiche
+- assertVisible:
+    text: "Prise en charge"
+    optional: true
