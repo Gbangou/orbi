@@ -42,8 +42,8 @@ export class AuthService {
     const session = this.createSessionSeed(metadata);
 
     const user = await this.prisma.user.create({
-      // A new account should be immediately usable in the local MVP: wallet,
-      // role-specific profile, and first session are bootstrapped in one write.
+      // Un nouveau compte doit être immédiatement utilisable : portefeuille,
+      // profil et première session sont créés en une seule écriture atomique.
       data: this.buildUserSignUpData(
         payload,
         normalizedEmail,

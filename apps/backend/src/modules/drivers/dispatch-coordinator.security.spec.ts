@@ -3,18 +3,18 @@ import { DriverOfferProjector } from './driver-offer-projector';
 import { DispatchCoordinator } from './dispatch-coordinator.service';
 
 /**
- * Security regression suite — BOLA/IDOR invariants for DispatchCoordinator.
+ * Suite de régression sécurité — invariants BOLA/IDOR pour DispatchCoordinator.
  *
- * OWASP API1 (BOLA): declineOffer() must verify the authenticated driver is
- * the one currently assigned to the reservation. Without this guard a driver
- * could decline another driver's assignment, disrupting dispatch.
+ * OWASP API1 (BOLA) : declineOffer() doit vérifier que le chauffeur authentifié est
+ * bien celui actuellement assigné à la réservation. Sans ce guard, un chauffeur
+ * pourrait décliner l'assignation d'un autre chauffeur, perturbant le dispatch.
  *
- * The guard is double-checked:
- * 1. In-memory: reservation.assignedDriverId !== driverProfileId → 400
- * 2. DB level: updateMany WHERE assignedDriverId = driverProfileId, so even if
- *    the in-memory check is bypassed, the DB write is a no-op → 400 (count: 0)
+ * Le guard est doublement vérifié :
+ * 1. En mémoire : reservation.assignedDriverId !== driverProfileId → 400
+ * 2. En base : updateMany WHERE assignedDriverId = driverProfileId — même si le
+ *    guard mémoire est contourné, l'écriture DB est un no-op → 400 (count: 0)
  */
-describe('DispatchCoordinator — Security (BOLA/IDOR)', () => {
+describe('DispatchCoordinator — Sécurité (BOLA/IDOR)', () => {
   function createService() {
     const prisma = {
       systemSetting: { findUnique: jest.fn().mockResolvedValue(null) },
@@ -73,11 +73,13 @@ describe('DispatchCoordinator — Security (BOLA/IDOR)', () => {
     } as never;
   }
 
-  function makeReservation(overrides: {
-    assignedDriverId?: string | null;
-    status?: string;
-    assignmentExpiresAt?: Date | null;
-  } = {}) {
+  function makeReservation(
+    overrides: {
+      assignedDriverId?: string | null;
+      status?: string;
+      assignmentExpiresAt?: Date | null;
+    } = {},
+  ) {
     return {
       id: 'req-001',
       riderId: 'rider-001',
@@ -90,7 +92,7 @@ describe('DispatchCoordinator — Security (BOLA/IDOR)', () => {
     };
   }
 
-  // ── BOLA: driver cannot decline another driver's reservation ──────────────
+  // ── BOLA : un chauffeur ne peut pas décliner la réservation d'un autre ──────
 
   describe('IDOR — declineOffer', () => {
     it('rejects when the authenticated driver is not the assigned driver', async () => {
@@ -155,11 +157,11 @@ describe('DispatchCoordinator — Security (BOLA/IDOR)', () => {
         userId: 'user-driver-alpha',
         status: 'ONLINE',
       });
-      // assignedDriverId: null → in-memory guard `null !== 'driver-alpha'` is true → BadRequest
+      // assignedDriverId: null → guard mémoire `null !== 'driver-alpha'` est vrai → BadRequest
       prisma.rideRequest.findUnique.mockResolvedValue(
         makeReservation({ assignedDriverId: null }),
       );
-      // updateMany is never reached in this code path, but mock it to be safe
+      // updateMany n'est jamais atteint dans ce chemin, mais on le mocke par sécurité
       prisma.rideRequest.updateMany.mockResolvedValue({ count: 0 });
 
       await expect(
@@ -198,7 +200,9 @@ describe('DispatchCoordinator — Security (BOLA/IDOR)', () => {
         'req-001',
       );
 
-      expect(result).toEqual({ offer: { rideRequestId: 'req-001', status: 'DECLINED' } });
+      expect(result).toEqual({
+        offer: { rideRequestId: 'req-001', status: 'DECLINED' },
+      });
       expect(prisma.rideRequest.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({

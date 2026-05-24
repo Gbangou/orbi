@@ -65,7 +65,7 @@ export function usePushRegistration() {
 
         await registerPushTokenWithApi(session.authClient, token);
       } catch {
-        // Push registration is best-effort — never block the UI
+        // L'enregistrement push est best-effort — ne jamais bloquer l'interface
       }
     }
 

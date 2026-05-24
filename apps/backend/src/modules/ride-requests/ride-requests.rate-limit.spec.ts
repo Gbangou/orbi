@@ -141,20 +141,17 @@ describe('RideRequestsController — Rate Limiting (integration)', () => {
       });
       rideRequestsService.create.mockRejectedValue(new Error('skip'));
 
-      await request(app.getHttpServer())
-        .post('/api/v1/ride-requests')
-        .send({});
+      await request(app.getHttpServer()).post('/api/v1/ride-requests').send({});
 
-      const callKey: string = rateLimitService.consume.mock.calls[0][0] as string;
+      const callKey: string = rateLimitService.consume.mock
+        .calls[0][0] as string;
       expect(callKey).toContain('user:user-rider-1');
     });
 
     it('passes the configured limit (10) and window (60s) to the store', async () => {
       rideRequestsService.create.mockRejectedValue(new Error('skip'));
 
-      await request(app.getHttpServer())
-        .post('/api/v1/ride-requests')
-        .send({});
+      await request(app.getHttpServer()).post('/api/v1/ride-requests').send({});
 
       expect(rateLimitService.consume).toHaveBeenCalledWith(
         expect.stringContaining('POST:'),
@@ -186,8 +183,9 @@ describe('RideRequestsController — Rate Limiting (integration)', () => {
         resetAt: Date.now() + 60_000,
       });
 
-      const res = await request(app.getHttpServer())
-        .delete('/api/v1/ride-requests/req-1');
+      const res = await request(app.getHttpServer()).delete(
+        '/api/v1/ride-requests/req-1',
+      );
 
       expect(res.headers['x-ratelimit-limit']).toBe('20');
     });

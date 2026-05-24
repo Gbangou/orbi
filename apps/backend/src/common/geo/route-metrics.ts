@@ -15,8 +15,8 @@ export function hasDefinedCoordinates(location: {
   );
 }
 
-// Keep this helper aligned with the shared rider/domain implementation until
-// backend Jest is widened to transform workspace TypeScript outside src/.
+// À synchroniser avec l'implémentation partagée rider/domain jusqu'à ce que
+// Jest backend transforme le TypeScript du workspace hors de src/.
 function toRadians(value: number) {
   return (value * Math.PI) / 180;
 }

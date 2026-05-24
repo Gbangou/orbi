@@ -111,7 +111,7 @@ export default function ReceiptScreen() {
 
       await Share.share({ message: shareText });
     } catch {
-      // Share cancelled or failed silently
+      // Partage annulé ou échoué silencieusement
     }
   }
 

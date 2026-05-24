@@ -3,24 +3,24 @@ import { UnauthorizedException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 
 /**
- * Security regression suite — webhook authentication invariants.
+ * Suite de régression sécurité — invariants d'authentification des webhooks.
  *
- * OWASP API2 (Broken Authentication) — payment provider webhooks must be
- * authenticated before any state is mutated. These tests lock the following
- * invariants:
+ * OWASP API2 (Authentification brisée) — les webhooks des prestataires de paiement
+ * doivent être authentifiés avant toute mutation d'état. Ces tests verrouillent
+ * les invariants suivants :
  *
- * 1. Shared webhook secret: requests with a wrong or missing secret are
- *    rejected before touching the DB.
- * 2. Provider HMAC (Flutterwave): rawBody HMAC-SHA256 is verified with
- *    timingSafeEqual; a tampered body is rejected.
- * 3. Provider verification hash (Flutterwave): direct hash comparison is
- *    a fallback; wrong value is rejected.
- * 4. CinetPay token: HMAC-SHA256 hex over a canonical field concatenation
- *    must match x-token; a wrong token is rejected.
- * 5. Passthrough: when no signature key is configured the check is skipped
- *    (dev / test environments — never in production where keys are set).
+ * 1. Secret partagé de webhook : les requêtes avec un secret absent ou incorrect
+ *    sont rejetées avant tout accès à la base de données.
+ * 2. HMAC fournisseur (Flutterwave) : le HMAC-SHA256 sur rawBody est vérifié avec
+ *    timingSafeEqual ; un body altéré est rejeté.
+ * 3. Hash de vérification fournisseur (Flutterwave) : la comparaison directe du hash
+ *    est un fallback ; une valeur incorrecte est rejetée.
+ * 4. Token CinetPay : HMAC-SHA256 hex sur une concaténation canonique de champs
+ *    doit correspondre au x-token ; un token incorrect est rejeté.
+ * 5. Passthrough : sans clé de signature configurée, la vérification est ignorée
+ *    (environnements dev/test — jamais en production où les clés sont définies).
  */
-describe('PaymentsService — Webhook Security', () => {
+describe('PaymentsService — Sécurité des webhooks', () => {
   function createService(
     provider = 'flutterwave',
     configOverrides: Record<string, string | undefined> = {},
@@ -185,14 +185,10 @@ describe('PaymentsService — Webhook Security', () => {
       });
 
       await expect(
-        service.handleWebhook(
-          'secret_123',
-          baseFlutterwavePayload,
-          {
-            rawBody,
-            flutterwaveSignature: validHmac,
-          },
-        ),
+        service.handleWebhook('secret_123', baseFlutterwavePayload, {
+          rawBody,
+          flutterwaveSignature: validHmac,
+        }),
       ).resolves.toBeDefined();
     });
 
@@ -202,13 +198,9 @@ describe('PaymentsService — Webhook Security', () => {
       });
 
       await expect(
-        service.handleWebhook(
-          'secret_123',
-          baseFlutterwavePayload,
-          {
-            flutterwaveVerificationHash: validVerifHash,
-          },
-        ),
+        service.handleWebhook('secret_123', baseFlutterwavePayload, {
+          flutterwaveVerificationHash: validVerifHash,
+        }),
       ).resolves.toBeDefined();
     });
 
@@ -217,20 +209,19 @@ describe('PaymentsService — Webhook Security', () => {
         'payments.flutterwave.webhookSecretHash': secretHash,
       });
 
-      const tamperedBody = JSON.stringify({ ...baseFlutterwavePayload, event: 'payment.injected' });
+      const tamperedBody = JSON.stringify({
+        ...baseFlutterwavePayload,
+        event: 'payment.injected',
+      });
       const tamperedHmac = createHmac('sha256', 'wrong_key')
         .update(tamperedBody)
         .digest('base64');
 
       await expect(
-        service.handleWebhook(
-          'secret_123',
-          baseFlutterwavePayload,
-          {
-            rawBody: tamperedBody,
-            flutterwaveSignature: tamperedHmac,
-          },
-        ),
+        service.handleWebhook('secret_123', baseFlutterwavePayload, {
+          rawBody: tamperedBody,
+          flutterwaveSignature: tamperedHmac,
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -240,13 +231,9 @@ describe('PaymentsService — Webhook Security', () => {
       });
 
       await expect(
-        service.handleWebhook(
-          'secret_123',
-          baseFlutterwavePayload,
-          {
-            flutterwaveVerificationHash: 'wrong_hash_value',
-          },
-        ),
+        service.handleWebhook('secret_123', baseFlutterwavePayload, {
+          flutterwaveVerificationHash: 'wrong_hash_value',
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -271,11 +258,21 @@ describe('PaymentsService — Webhook Security', () => {
       secretKey: string,
     ) {
       const fields = [
-        'cpm_site_id', 'cpm_trans_id', 'cpm_trans_date',
-        'cpm_amount', 'cpm_currency', 'signature',
-        'payment_method', 'cel_phone_num', 'cpm_phone_prefixe',
-        'cpm_language', 'cpm_version', 'cpm_payment_config',
-        'cpm_page_action', 'cpm_custom', 'cpm_designation',
+        'cpm_site_id',
+        'cpm_trans_id',
+        'cpm_trans_date',
+        'cpm_amount',
+        'cpm_currency',
+        'signature',
+        'payment_method',
+        'cel_phone_num',
+        'cpm_phone_prefixe',
+        'cpm_language',
+        'cpm_version',
+        'cpm_payment_config',
+        'cpm_page_action',
+        'cpm_custom',
+        'cpm_designation',
         'cpm_error_message',
       ];
       const canonical = fields.map((f) => payload[f] ?? '').join('');
@@ -295,11 +292,9 @@ describe('PaymentsService — Webhook Security', () => {
       );
 
       await expect(
-        service.handleWebhook(
-          'secret_123',
-          baseCinetPayPayload,
-          { cinetpayToken: validToken },
-        ),
+        service.handleWebhook('secret_123', baseCinetPayPayload, {
+          cinetpayToken: validToken,
+        }),
       ).resolves.toBeDefined();
     });
 
@@ -311,11 +306,9 @@ describe('PaymentsService — Webhook Security', () => {
       });
 
       await expect(
-        service.handleWebhook(
-          'secret_123',
-          baseCinetPayPayload,
-          { cinetpayToken: 'wrong_token_value' },
-        ),
+        service.handleWebhook('secret_123', baseCinetPayPayload, {
+          cinetpayToken: 'wrong_token_value',
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 

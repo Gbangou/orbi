@@ -1505,7 +1505,7 @@ export class TripsService {
         void this.notificationsService.enqueue({
           userId: updatedTrip.riderUserId,
           title: 'Course terminée',
-          body: 'Merci d\'avoir utilisé Orbi. Notez votre chauffeur !',
+          body: "Merci d'avoir utilisé Orbi. Notez votre chauffeur !",
           channel: NotificationChannel.PUSH,
           dedupeKey: `trip_completed:${tripId}`,
         });
@@ -1532,9 +1532,7 @@ export class TripsService {
     this.assertTripAccess(auth, trip);
 
     if (trip.status !== TripStatus.COMPLETED) {
-      throw new BadRequestException(
-        'Only completed trips can be rated.',
-      );
+      throw new BadRequestException('Only completed trips can be rated.');
     }
 
     const riderId = trip.riderId;
@@ -1548,9 +1546,7 @@ export class TripsService {
     });
 
     if (existing) {
-      throw new BadRequestException(
-        'This trip has already been rated.',
-      );
+      throw new BadRequestException('This trip has already been rated.');
     }
 
     const rating = await this.prisma.$transaction(async (tx) => {
@@ -1946,7 +1942,11 @@ export class TripsService {
       );
     const previousPosition = previousPositions.at(-1);
     const alerts: Array<{
-      alertType: 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS' | 'GPS_POSITION_ANOMALY';
+      alertType:
+        | 'LONG_STOP'
+        | 'ROUTE_DEVIATION'
+        | 'NO_PROGRESS'
+        | 'GPS_POSITION_ANOMALY';
       severity: 'warning' | 'critical';
       priority: 2 | 3;
       message: string;

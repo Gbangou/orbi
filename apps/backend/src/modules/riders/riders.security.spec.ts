@@ -2,14 +2,14 @@ import { NotFoundException } from '@nestjs/common';
 import { RidersService } from './riders.service';
 
 /**
- * Security regression suite — IDOR invariants for RidersService.
+ * Suite de régression sécurité — invariants IDOR pour RidersService.
  *
- * OWASP API1 (BOLA): updateSavedPlace() and deleteSavedPlace() use NotFoundException
- * (404) to prevent resource enumeration when a rider tries to access another
- * rider's saved place. The guard `existingPlace.riderId !== riderProfileId`
- * must not be silently removed.
+ * OWASP API1 (BOLA) : updateSavedPlace() et deleteSavedPlace() utilisent NotFoundException
+ * (404) pour empêcher l'énumération de ressources lorsqu'un rider tente d'accéder
+ * au lieu sauvegardé d'un autre rider. Le guard `existingPlace.riderId !== riderProfileId`
+ * ne doit pas être supprimé silencieusement.
  */
-describe('RidersService — Security (BOLA/IDOR)', () => {
+describe('RidersService — Sécurité (BOLA/IDOR)', () => {
   function createService() {
     const prisma = {
       riderProfile: {
@@ -58,7 +58,7 @@ describe('RidersService — Security (BOLA/IDOR)', () => {
     };
   }
 
-  // ── IDOR: updateSavedPlace ────────────────────────────────────────────────
+  // ── IDOR : updateSavedPlace ───────────────────────────────────────────────
 
   describe('IDOR — updateSavedPlace', () => {
     it('masks another rider saved place as 404, not 403, to prevent enumeration', async () => {
@@ -68,11 +68,9 @@ describe('RidersService — Security (BOLA/IDOR)', () => {
       );
 
       await expect(
-        service.updateSavedPlace(
-          makeAuth('rider-alpha'),
-          'place-001',
-          { label: 'Hijacked' },
-        ),
+        service.updateSavedPlace(makeAuth('rider-alpha'), 'place-001', {
+          label: 'Hijacked',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -83,11 +81,9 @@ describe('RidersService — Security (BOLA/IDOR)', () => {
       );
 
       await expect(
-        service.updateSavedPlace(
-          makeAuth('rider-alpha'),
-          'place-001',
-          { label: 'Hijacked' },
-        ),
+        service.updateSavedPlace(makeAuth('rider-alpha'), 'place-001', {
+          label: 'Hijacked',
+        }),
       ).rejects.toThrow();
 
       expect(prisma.savedPlace.update).not.toHaveBeenCalled();
@@ -98,11 +94,9 @@ describe('RidersService — Security (BOLA/IDOR)', () => {
       prisma.savedPlace.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.updateSavedPlace(
-          makeAuth('rider-alpha'),
-          'place-nonexistent',
-          { label: 'Ghost' },
-        ),
+        service.updateSavedPlace(makeAuth('rider-alpha'), 'place-nonexistent', {
+          label: 'Ghost',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -126,7 +120,7 @@ describe('RidersService — Security (BOLA/IDOR)', () => {
     });
   });
 
-  // ── IDOR: deleteSavedPlace ────────────────────────────────────────────────
+  // ── IDOR : deleteSavedPlace ───────────────────────────────────────────────
 
   describe('IDOR — deleteSavedPlace', () => {
     it('masks another rider saved place as 404 on delete attempt', async () => {

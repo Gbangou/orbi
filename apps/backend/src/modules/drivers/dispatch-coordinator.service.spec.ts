@@ -113,7 +113,10 @@ describe('DispatchCoordinator.proactiveDispatch', () => {
 
   it('excludes a driver that has an active trip and returns dispatched:false', async () => {
     const { coordinator, prisma } = createService();
-    const busyDriver = buildDriverProfile({ id: 'driver-busy', userId: 'user-busy' });
+    const busyDriver = buildDriverProfile({
+      id: 'driver-busy',
+      userId: 'user-busy',
+    });
 
     prisma.driverProfile.findMany.mockResolvedValue([busyDriver]);
     // The driver has an active trip → is in busyDriverIds
@@ -134,7 +137,10 @@ describe('DispatchCoordinator.proactiveDispatch', () => {
 
   it('assigns the best available driver and records DISPATCH_PROACTIVE_ASSIGNMENT', async () => {
     const { coordinator, prisma, realtimeService } = createService();
-    const bestDriver = buildDriverProfile({ id: 'driver-best', userId: 'user-best' });
+    const bestDriver = buildDriverProfile({
+      id: 'driver-best',
+      userId: 'user-best',
+    });
 
     prisma.driverProfile.findMany.mockResolvedValue([bestDriver]);
     prisma.trip.findMany.mockResolvedValue([]);
@@ -181,7 +187,10 @@ describe('DispatchCoordinator.proactiveDispatch', () => {
 
   it('returns dispatched:false when concurrent claim fails (updateMany count:0)', async () => {
     const { coordinator, prisma, realtimeService } = createService();
-    const driver = buildDriverProfile({ id: 'driver-claimed', userId: 'user-claimed' });
+    const driver = buildDriverProfile({
+      id: 'driver-claimed',
+      userId: 'user-claimed',
+    });
 
     prisma.driverProfile.findMany.mockResolvedValue([driver]);
     prisma.trip.findMany.mockResolvedValue([]);

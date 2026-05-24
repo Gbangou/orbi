@@ -66,18 +66,24 @@ describe('TripsController — Rate Limiting (integration)', () => {
     rateTripByRider: jest.Mock;
   };
 
-  async function buildApp(
-    rateLimitResponse: { allowed: boolean; remaining: number; resetAt: number },
-  ) {
+  async function buildApp(rateLimitResponse: {
+    allowed: boolean;
+    remaining: number;
+    resetAt: number;
+  }) {
     rateLimitService = {
       consume: jest.fn().mockResolvedValue(rateLimitResponse),
       snapshot: jest.fn(),
     };
 
     tripsService = {
-      acceptRideRequest: jest.fn().mockResolvedValue({ trip: { id: 'trip-1' } }),
+      acceptRideRequest: jest
+        .fn()
+        .mockResolvedValue({ trip: { id: 'trip-1' } }),
       recordRoutePosition: jest.fn().mockResolvedValue({ recorded: true }),
-      reportIncident: jest.fn().mockResolvedValue({ incident: { id: 'inc-1' } }),
+      reportIncident: jest
+        .fn()
+        .mockResolvedValue({ incident: { id: 'inc-1' } }),
       rateTripByRider: jest.fn().mockResolvedValue({ rated: true }),
     };
 
@@ -85,7 +91,10 @@ describe('TripsController — Rate Limiting (integration)', () => {
       controllers: [TripsController],
       providers: [
         { provide: TripsService, useValue: tripsService },
-        { provide: RealtimeService, useValue: { stream: jest.fn().mockReturnValue(of()) } },
+        {
+          provide: RealtimeService,
+          useValue: { stream: jest.fn().mockReturnValue(of()) },
+        },
         { provide: RateLimitService, useValue: rateLimitService },
         Reflector,
       ],
@@ -111,7 +120,11 @@ describe('TripsController — Rate Limiting (integration)', () => {
 
   describe('POST :tripId/route-position', () => {
     it('returns 429 when rate limit is exceeded for route position updates', async () => {
-      app = await buildApp({ allowed: false, remaining: 0, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: false,
+        remaining: 0,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/trips/trip-abc-1/route-position')
@@ -122,7 +135,11 @@ describe('TripsController — Rate Limiting (integration)', () => {
     });
 
     it('allows route position recording when under the rate limit', async () => {
-      app = await buildApp({ allowed: true, remaining: 59, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: true,
+        remaining: 59,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/trips/trip-abc-1/route-position')
@@ -133,7 +150,11 @@ describe('TripsController — Rate Limiting (integration)', () => {
     });
 
     it('sets X-RateLimit-Limit to 60 (1 update/second × 60 seconds)', async () => {
-      app = await buildApp({ allowed: true, remaining: 59, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: true,
+        remaining: 59,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/trips/trip-abc-1/route-position')
@@ -143,7 +164,11 @@ describe('TripsController — Rate Limiting (integration)', () => {
     });
 
     it('rate limit key includes the authenticated user id (user-scoped, not IP-scoped)', async () => {
-      app = await buildApp({ allowed: true, remaining: 59, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: true,
+        remaining: 59,
+        resetAt: Date.now() + 60_000,
+      });
 
       await request(app.getHttpServer())
         .post('/api/v1/trips/trip-abc-1/route-position')
@@ -158,7 +183,11 @@ describe('TripsController — Rate Limiting (integration)', () => {
 
   describe('POST accept/:rideRequestId', () => {
     it('returns 429 when rate limit is exceeded for trip acceptance', async () => {
-      app = await buildApp({ allowed: false, remaining: 0, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: false,
+        remaining: 0,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/trips/accept/request-abc-1')
@@ -169,7 +198,11 @@ describe('TripsController — Rate Limiting (integration)', () => {
     });
 
     it('sets X-RateLimit-Limit to 30 for trip acceptance', async () => {
-      app = await buildApp({ allowed: true, remaining: 29, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: true,
+        remaining: 29,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/trips/accept/request-abc-1')

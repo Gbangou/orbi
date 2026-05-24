@@ -9,8 +9,8 @@ import { promisify } from 'util';
 const scrypt = promisify(scryptCallback);
 const HASH_KEY_LENGTH = 64;
 
-// Password hashes are stored as `salt:derivedKey` so we can rotate hashing
-// parameters later without changing the public service contract.
+// Les hachages de mots de passe sont stockés au format `sel:cléDérivée` pour
+// permettre la rotation des paramètres de hachage sans changer le contrat public.
 export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString('hex');
   const derivedKey = (await scrypt(password, salt, HASH_KEY_LENGTH)) as Buffer;
@@ -35,8 +35,8 @@ export async function verifyPassword(password: string, storedHash: string) {
   return timingSafeEqual(storedKey, derivedKey);
 }
 
-// Session tokens are opaque credentials: the raw token is only returned once to
-// the client, while the database stores a one-way hash for later verification.
+// Les tokens de session sont des credentials opaques : le token brut n'est retourné
+// qu'une seule fois au client ; la base de données stocke un hash unidirectionnel.
 export function generateSessionToken() {
   return randomBytes(48).toString('base64url');
 }

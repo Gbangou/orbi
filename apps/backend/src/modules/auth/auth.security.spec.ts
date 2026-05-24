@@ -4,23 +4,22 @@ import { hashPassword } from './auth-crypto';
 import { AuthService } from './auth.service';
 
 /**
- * OWASP WSTG-IDNT-04 (Account Enumeration) + OWASP API2 (Broken Auth) —
- * Authentication invariants that prevent user enumeration and session abuse.
+ * OWASP WSTG-IDNT-04 (Énumération de comptes) + OWASP API2 (Authentification brisée) —
+ * Invariants d'authentification empêchant l'énumération des utilisateurs et l'abus de session.
  *
- * 1. Account enumeration: signIn returns exactly the same error message and
- *    status for both "email not found" and "wrong password" so an attacker
- *    cannot infer account existence from the response.
- * 2. Inactive account: the error message differs from the credentials error
- *    (this is acceptable — the account state is already public knowledge once
- *    a user has signed up and been suspended).
- * 3. Session revocation: signOut invalidates the targeted session; subsequent
- *    requests with that token hash are rejected by the SessionAuthGuard.
- * 4. Session isolation: signing out of one session does not invalidate other
- *    sessions of the same user (multi-device riders keep other sessions alive).
- * 5. Password hash not exposed: the serialised auth response never includes
- *    the passwordHash field.
+ * 1. Énumération de comptes : signIn retourne exactement le même message d'erreur et
+ *    le même statut pour "email introuvable" et "mauvais mot de passe", empêchant un
+ *    attaquant de déduire l'existence d'un compte depuis la réponse.
+ * 2. Compte inactif : le message d'erreur diffère de l'erreur de credentials
+ *    (acceptable — l'état du compte est déjà public une fois le compte suspendu).
+ * 3. Révocation de session : signOut invalide la session ciblée ; les requêtes
+ *    ultérieures avec ce hash de token sont rejetées par le SessionAuthGuard.
+ * 4. Isolation de session : la déconnexion d'une session n'invalide pas les autres
+ *    sessions du même utilisateur (les riders multi-appareils conservent leurs autres sessions).
+ * 5. Hash de mot de passe non exposé : la réponse d'auth sérialisée n'inclut jamais
+ *    le champ passwordHash.
  */
-describe('AuthService — authentication security invariants', () => {
+describe("AuthService — invariants de sécurité de l'authentification", () => {
   function createService() {
     const prisma = {
       user: {
@@ -40,9 +39,9 @@ describe('AuthService — authentication security invariants', () => {
     return { prisma, service: new AuthService(prisma as never) };
   }
 
-  // ── Account enumeration prevention ────────────────────────────────────────
+  // ── Prévention de l'énumération de comptes ────────────────────────────────
 
-  describe('Account enumeration prevention (WSTG-IDNT-04)', () => {
+  describe("Prévention de l'énumération de comptes (WSTG-IDNT-04)", () => {
     it('returns the same error message when the email is not found', async () => {
       const { prisma, service } = createService();
       prisma.user.findUnique.mockResolvedValue(null);
@@ -131,9 +130,9 @@ describe('AuthService — authentication security invariants', () => {
     });
   });
 
-  // ── Sensitive fields not serialised ───────────────────────────────────────
+  // ── Champs sensibles non sérialisés ───────────────────────────────────────
 
-  describe('Password hash excluded from auth response', () => {
+  describe("Hash de mot de passe exclu de la réponse d'auth", () => {
     it('sign-in response does not include the passwordHash field', async () => {
       const { prisma, service } = createService();
       const passwordHash = await hashPassword('Orbi123!');
@@ -168,16 +167,19 @@ describe('AuthService — authentication security invariants', () => {
       });
       prisma.user.update.mockResolvedValue({});
 
-      const result = await service.signIn({ email: 'rider@orbi.app', password: 'Orbi123!' });
+      const result = await service.signIn({
+        email: 'rider@orbi.app',
+        password: 'Orbi123!',
+      });
 
       expect(JSON.stringify(result)).not.toContain('passwordHash');
       expect(JSON.stringify(result)).not.toContain(passwordHash);
     });
   });
 
-  // ── Session revocation ────────────────────────────────────────────────────
+  // ── Révocation de session ─────────────────────────────────────────────────
 
-  describe('Session revocation (sign-out)', () => {
+  describe('Révocation de session (déconnexion)', () => {
     it('revokes the targeted session by setting revokedAt', async () => {
       const { prisma, service } = createService();
       const now = new Date();

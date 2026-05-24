@@ -1,29 +1,26 @@
-import {
-  canReceiveRealtimeEvent,
-  parseRealtimeEvent,
-} from './realtime.types';
+import { canReceiveRealtimeEvent, parseRealtimeEvent } from './realtime.types';
 import type { RealtimeEvent, RealtimeEventFilter } from './realtime.types';
 
 /**
- * OWASP API1 (BOLA/IDOR) + API3 (Excessive Data Exposure) — SSE stream
- * isolation invariants.
+ * OWASP API1 (BOLA/IDOR) + API3 (Exposition excessive de données) — invariants
+ * d'isolation du flux SSE.
  *
- * The canReceiveRealtimeEvent gate is the sole authorisation boundary between
- * a published event and a connected SSE client. These tests lock every access
- * path so a future refactor cannot accidentally widen visibility.
+ * La gate canReceiveRealtimeEvent est l'unique frontière d'autorisation entre
+ * un événement publié et un client SSE connecté. Ces tests verrouillent chaque
+ * chemin d'accès pour qu'un futur refactoring ne puisse pas élargir la visibilité.
  *
- * Threat model:
- * - A rider subscribed to /trips/stream must NEVER receive events for another
- *   rider — even if the event shares the same channel/type.
- * - A driver subscribed to /trips/stream must NOT receive addressed events for
- *   another driver, and must NOT see admin-channel events.
- * - Admin/OPS/SUPPORT roles have intentional broad visibility (operational
- *   tooling), but that fact is tested explicitly so widening it is visible.
- * - parseRealtimeEvent validates every field received over a shared backplane
- *   so injected / malformed messages are dropped before reaching subscribers.
+ * Modèle de menace :
+ * - Un rider abonné à /trips/stream ne doit JAMAIS recevoir les événements d'un autre rider,
+ *   même si l'événement partage le même channel/type.
+ * - Un chauffeur abonné à /trips/stream ne doit PAS recevoir les événements adressés
+ *   à un autre chauffeur, ni les événements du canal admin.
+ * - Les rôles Admin/OPS/SUPPORT ont une visibilité étendue intentionnelle (outils
+ *   opérationnels), mais ce fait est testé explicitement pour rendre visible tout élargissement.
+ * - parseRealtimeEvent valide chaque champ reçu sur le backplane partagé pour que
+ *   les messages injectés ou malformés soient rejetés avant d'atteindre les abonnés.
  */
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// ── Fonctions utilitaires ─────────────────────────────────────────────────
 
 function makeEvent(overrides: Partial<RealtimeEvent> = {}): RealtimeEvent {
   return {
@@ -36,7 +33,9 @@ function makeEvent(overrides: Partial<RealtimeEvent> = {}): RealtimeEvent {
   };
 }
 
-function makeFilter(overrides: Partial<RealtimeEventFilter> = {}): RealtimeEventFilter {
+function makeFilter(
+  overrides: Partial<RealtimeEventFilter> = {},
+): RealtimeEventFilter {
   return {
     role: 'RIDER',
     actorId: 'user-1',
@@ -97,7 +96,11 @@ describe('canReceiveRealtimeEvent — RIDER isolation (OWASP API1 BOLA)', () => 
   it('blocks a ride-request event for another rider from reaching the wrong subscriber', () => {
     expect(
       canReceiveRealtimeEvent(
-        makeEvent({ channel: 'ride-request', type: 'ride-request.created', riderId: 'rider-99' }),
+        makeEvent({
+          channel: 'ride-request',
+          type: 'ride-request.created',
+          riderId: 'rider-99',
+        }),
         makeFilter({ role: 'RIDER', riderId: 'rider-1' }),
       ),
     ).toBe(false);
@@ -128,7 +131,11 @@ describe('canReceiveRealtimeEvent — DRIVER isolation (OWASP API1 BOLA)', () =>
   it('allows a driver to receive a market ride-request event (no driverId — broadcast)', () => {
     expect(
       canReceiveRealtimeEvent(
-        makeEvent({ channel: 'ride-request', type: 'ride-request.created', riderId: 'rider-1' }),
+        makeEvent({
+          channel: 'ride-request',
+          type: 'ride-request.created',
+          riderId: 'rider-1',
+        }),
         makeFilter({ role: 'DRIVER', driverId: 'driver-1', riderId: null }),
       ),
     ).toBe(true);
@@ -230,7 +237,9 @@ describe('parseRealtimeEvent — rejects malformed backplane messages', () => {
   });
 
   it('rejects an event with an invalid channel', () => {
-    expect(parseRealtimeEvent({ ...validRaw, channel: 'private-messages' })).toBeNull();
+    expect(
+      parseRealtimeEvent({ ...validRaw, channel: 'private-messages' }),
+    ).toBeNull();
   });
 
   it('rejects an event with an oversized id (> 512 chars)', () => {
@@ -242,20 +251,29 @@ describe('parseRealtimeEvent — rejects malformed backplane messages', () => {
   });
 
   it('rejects an event with an invalid ISO date', () => {
-    expect(parseRealtimeEvent({ ...validRaw, createdAt: 'not-a-date' })).toBeNull();
+    expect(
+      parseRealtimeEvent({ ...validRaw, createdAt: 'not-a-date' }),
+    ).toBeNull();
   });
 
   it('rejects an event with an oversized entityId (> 256 chars)', () => {
-    expect(parseRealtimeEvent({ ...validRaw, entityId: 'x'.repeat(257) })).toBeNull();
+    expect(
+      parseRealtimeEvent({ ...validRaw, entityId: 'x'.repeat(257) }),
+    ).toBeNull();
   });
 
   it('rejects an event where payload is an array instead of an object', () => {
-    expect(parseRealtimeEvent({ ...validRaw, payload: ['injected'] })).toBeNull();
+    expect(
+      parseRealtimeEvent({ ...validRaw, payload: ['injected'] }),
+    ).toBeNull();
   });
 
   it('accepts an event with a well-formed optional payload', () => {
     expect(
-      parseRealtimeEvent({ ...validRaw, payload: { amount: 2400, currency: 'XOF' } }),
+      parseRealtimeEvent({
+        ...validRaw,
+        payload: { amount: 2400, currency: 'XOF' },
+      }),
     ).not.toBeNull();
   });
 

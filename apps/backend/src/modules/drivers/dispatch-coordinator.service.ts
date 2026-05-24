@@ -666,7 +666,11 @@ export class DispatchCoordinator {
         rideRequestId: input.rideRequestId,
         metadata: { reason: 'no_online_driver_with_compatible_vehicle' },
       });
-      return { dispatched: false, assignedDriverId: null, assignedUserId: null };
+      return {
+        dispatched: false,
+        assignedDriverId: null,
+        assignedUserId: null,
+      };
     }
 
     const activeTrips = await this.prisma.trip.findMany({
@@ -722,13 +726,19 @@ export class DispatchCoordinator {
         const driverLat = toNumber(driver.currentLatitude);
         const driverLng = toNumber(driver.currentLongitude);
         const pickupDistanceKm =
-          hasDefinedCoordinates({ latitude: driverLat, longitude: driverLng }) &&
+          hasDefinedCoordinates({
+            latitude: driverLat,
+            longitude: driverLng,
+          }) &&
           hasDefinedCoordinates({
             latitude: input.pickupLatitude,
             longitude: input.pickupLongitude,
           })
             ? calculateDistanceKm(
-                { latitude: driverLat as number, longitude: driverLng as number },
+                {
+                  latitude: driverLat as number,
+                  longitude: driverLng as number,
+                },
                 {
                   latitude: input.pickupLatitude as number,
                   longitude: input.pickupLongitude as number,
@@ -762,7 +772,11 @@ export class DispatchCoordinator {
         rideRequestId: input.rideRequestId,
         metadata: { reason: 'all_candidates_busy_or_incompatible' },
       });
-      return { dispatched: false, assignedDriverId: null, assignedUserId: null };
+      return {
+        dispatched: false,
+        assignedDriverId: null,
+        assignedUserId: null,
+      };
     }
 
     const offerConfidenceScore = calculateOfferConfidenceScore({
@@ -790,7 +804,11 @@ export class DispatchCoordinator {
     });
 
     if (claimResult.count === 0) {
-      return { dispatched: false, assignedDriverId: null, assignedUserId: null };
+      return {
+        dispatched: false,
+        assignedDriverId: null,
+        assignedUserId: null,
+      };
     }
 
     await this.recordDispatchAuditEvent({

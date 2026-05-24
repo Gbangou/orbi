@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path . -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(ConvertTo-Json)",
+      "PowerShell(Get-ChildItem -Path c:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi -Recurse -Directory | Select-Object FullName | ForEach-Object { $_.FullName })",
+      "Bash(pnpm test *)"
+    ]
+  }
+}

@@ -4,11 +4,13 @@ import { NotificationDeliveryService } from './notification-delivery.service';
 import { PushTokenService } from '../../modules/notifications/push-token.service';
 
 describe('NotificationDeliveryService', () => {
-  function createService(opts: {
-    pushToken?: string;
-    notificationTitle?: string;
-    notificationBody?: string;
-  } = {}) {
+  function createService(
+    opts: {
+      pushToken?: string;
+      notificationTitle?: string;
+      notificationBody?: string;
+    } = {},
+  ) {
     const configService = {
       get: jest.fn(() => undefined),
     };
@@ -20,11 +22,16 @@ describe('NotificationDeliveryService', () => {
 
     const prisma = {
       notification: {
-        findUnique: jest.fn().mockResolvedValue(
-          opts.notificationTitle
-            ? { title: opts.notificationTitle, body: opts.notificationBody ?? '' }
-            : null,
-        ),
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(
+            opts.notificationTitle
+              ? {
+                  title: opts.notificationTitle,
+                  body: opts.notificationBody ?? '',
+                }
+              : null,
+          ),
       },
     };
 

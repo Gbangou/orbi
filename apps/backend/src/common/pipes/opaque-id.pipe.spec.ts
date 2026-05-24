@@ -84,17 +84,23 @@ describe('OpaqueIdPipe', () => {
 
   it('rejects a non-string value (number)', () => {
     const pipe = new OpaqueIdPipe('id');
-    expect(() => pipe.transform(12345 as unknown as string)).toThrow(BadRequestException);
+    expect(() => pipe.transform(12345 as unknown as string)).toThrow(
+      BadRequestException,
+    );
   });
 
   it('rejects null', () => {
     const pipe = new OpaqueIdPipe('id');
-    expect(() => pipe.transform(null as unknown as string)).toThrow(BadRequestException);
+    expect(() => pipe.transform(null as unknown as string)).toThrow(
+      BadRequestException,
+    );
   });
 
   it('rejects undefined', () => {
     const pipe = new OpaqueIdPipe('id');
-    expect(() => pipe.transform(undefined as unknown as string)).toThrow(BadRequestException);
+    expect(() => pipe.transform(undefined as unknown as string)).toThrow(
+      BadRequestException,
+    );
   });
 
   // ── Error message includes the label ─────────────────────────────────────

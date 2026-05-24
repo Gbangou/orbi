@@ -47,8 +47,8 @@ export class PaymentsController {
   @Version('1')
   @UseGuards(RateLimitGuard)
   @RateLimit({ limit: 120, windowMs: 60_000 })
-  // Aggregator callbacks are authenticated with a shared secret header rather
-  // than a user session because they originate from server-to-server traffic.
+  // Les callbacks des agrégateurs sont authentifiés via un header secret partagé
+  // et non via une session utilisateur, car ils proviennent d'un trafic serveur-à-serveur.
   handleWebhook(
     @Headers('x-orbi-webhook-secret') secret: string | undefined,
     @Headers('flutterwave-signature') flutterwaveSignature: string | undefined,

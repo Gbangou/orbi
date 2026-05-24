@@ -214,8 +214,7 @@ export class HealthService {
       this.configService.get<string>(
         'observability.mobileErrorCollector.webhookUrl',
       ) ?? '';
-    const paymentFixtureReadiness =
-      resolvePaymentFixtureProductionReadiness();
+    const paymentFixtureReadiness = resolvePaymentFixtureProductionReadiness();
     const checks = [
       {
         id: 'rate-limit-backplane',

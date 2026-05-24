@@ -1,20 +1,20 @@
 import { createOrbiApiClient } from '@orbi/api';
 
 /**
- * OWASP MASVS-NETWORK-1 / NIST SSDF SA.15 — Request timeout invariants.
+ * OWASP MASVS-NETWORK-1 / NIST SSDF SA.15 — Invariants de timeout des requêtes.
  *
- * The OrbiApiClient must not leave requests pending indefinitely.
- * A configurable AbortController-based timeout ensures:
- * 1. Hanging server responses are aborted after requestTimeoutMs.
- * 2. A normal fast request completes without abort.
- * 3. The signal is forwarded to the underlying fetch call.
- * 4. AbortError is NOT caught by withNetworkRetry (no infinite loops on timeout).
+ * L'OrbiApiClient ne doit pas laisser les requêtes en attente indéfiniment.
+ * Un timeout configurable basé sur AbortController garantit :
+ * 1. Les réponses serveur bloquées sont annulées après requestTimeoutMs.
+ * 2. Une requête rapide normale se termine sans annulation.
+ * 3. Le signal est transmis à l'appel fetch sous-jacent.
+ * 4. AbortError n'est PAS intercepté par withNetworkRetry (pas de boucle infinie au timeout).
  */
-describe('OrbiApiClient — request timeout', () => {
+describe('OrbiApiClient — timeout des requêtes', () => {
   function buildHangingFetcher() {
     let capturedSignal: AbortSignal | undefined;
 
-    // Simulates a real fetch: rejects with AbortError when signal fires, never resolves otherwise
+    // Simule un vrai fetch : rejette avec AbortError quand le signal se déclenche, ne résout jamais sinon
     const fetcher = jest.fn(
       (_url: string, init?: RequestInit): Promise<Response> => {
         capturedSignal = init?.signal ?? undefined;
@@ -30,7 +30,7 @@ describe('OrbiApiClient — request timeout', () => {
     return { fetcher, capturedSignal: () => capturedSignal };
   }
 
-  it('aborts the request after the configured requestTimeoutMs', async () => {
+  it('annule la requête après le requestTimeoutMs configuré', async () => {
     const { fetcher } = buildHangingFetcher();
 
     const client = createOrbiApiClient('http://localhost:3000', {
@@ -38,20 +38,20 @@ describe('OrbiApiClient — request timeout', () => {
       fetcher: fetcher as never,
     });
 
-    // The fake fetcher rejects with AbortError when the signal fires after 50 ms
+    // Le faux fetcher rejette avec AbortError quand le signal se déclenche après 50 ms
     await expect(client.request('/test')).rejects.toMatchObject({
       name: 'AbortError',
     });
 
-    // Verify the signal that was passed to the fetcher is now aborted
+    // Vérifie que le signal transmis au fetcher est bien annulé
     const call = fetcher.mock.calls[0] as [string, RequestInit];
     expect(call[1]?.signal?.aborted).toBe(true);
   });
 
-  it('passes an AbortSignal to every fetch call', async () => {
+  it('transmet un AbortSignal à chaque appel fetch', async () => {
     const respondImmediately = jest.fn(
       (_url: string, init?: RequestInit): Promise<Response> => {
-        // Verify signal is provided before resolving
+        // Vérifie que le signal est fourni avant de résoudre
         expect(init?.signal).toBeInstanceOf(AbortSignal);
 
         return Promise.resolve({
@@ -72,7 +72,7 @@ describe('OrbiApiClient — request timeout', () => {
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it('clears the timeout after a successful response (no lingering timers)', async () => {
+  it('efface le timeout après une réponse réussie (pas de timers en suspens)', async () => {
     const fastFetcher = jest.fn((): Promise<Response> =>
       Promise.resolve({
         ok: true,
@@ -89,13 +89,13 @@ describe('OrbiApiClient — request timeout', () => {
 
     await client.request('/fast-endpoint');
 
-    // No pending timers should remain after the request completes
+    // Aucun timer en attente ne doit subsister après la fin de la requête
     expect(jest.getTimerCount()).toBe(0);
 
     jest.useRealTimers();
   });
 
-  it('does not retry on AbortError (timeout must not trigger retry loop)', async () => {
+  it('ne réessaie pas sur AbortError (le timeout ne doit pas déclencher une boucle de retry)', async () => {
     const { withNetworkRetry } = await import('@orbi/api');
 
     let callCount = 0;
@@ -109,11 +109,11 @@ describe('OrbiApiClient — request timeout', () => {
       withNetworkRetry(abortingFn, { maxAttempts: 3 }),
     ).rejects.toMatchObject({ name: 'AbortError' });
 
-    // AbortError is not a TypeError / network error — must NOT be retried
+    // AbortError n'est pas une TypeError / erreur réseau — NE DOIT PAS être réessayé
     expect(callCount).toBe(1);
   });
 
-  it('uses 30 seconds as the default timeout when requestTimeoutMs is not specified', async () => {
+  it("utilise 30 secondes comme timeout par défaut quand requestTimeoutMs n'est pas spécifié", async () => {
     let capturedSignal: AbortSignal | null = null;
 
     const fetchSpy = jest.fn(
@@ -133,7 +133,7 @@ describe('OrbiApiClient — request timeout', () => {
     await client.request('/default-timeout-check');
 
     expect(capturedSignal).not.toBeNull();
-    // The signal should not be aborted immediately (30s default has not elapsed)
+    // Le signal ne doit pas être annulé immédiatement (le timeout de 30s n'a pas expiré)
     expect(capturedSignal!.aborted).toBe(false);
   });
 });

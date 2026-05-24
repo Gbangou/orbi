@@ -732,30 +732,28 @@ describe('AdminService', () => {
 
     // first findMany: active trips (empty)
     // second findMany: recently cancelled trips
-    prisma.trip.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: 'trip-cancelled-1',
-          pickupAddress: 'Gounghin',
-          destinationAddress: 'Patte d Oie',
-          updatedAt: cancelledAt,
-          rider: { user: { fullName: 'Awa Rider' } },
-          driver: { user: { fullName: 'Issa Driver' } },
-          events: [
-            {
-              id: 'event-cancel-1',
-              eventType: 'TRIP_CANCELLED',
-              createdAt: cancelledAt,
-              payload: {
-                status: 'CANCELLED',
-                actorRole: 'RIDER',
-                cancellationReason: 'Chauffeur en retard',
-              },
+    prisma.trip.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        id: 'trip-cancelled-1',
+        pickupAddress: 'Gounghin',
+        destinationAddress: 'Patte d Oie',
+        updatedAt: cancelledAt,
+        rider: { user: { fullName: 'Awa Rider' } },
+        driver: { user: { fullName: 'Issa Driver' } },
+        events: [
+          {
+            id: 'event-cancel-1',
+            eventType: 'TRIP_CANCELLED',
+            createdAt: cancelledAt,
+            payload: {
+              status: 'CANCELLED',
+              actorRole: 'RIDER',
+              cancellationReason: 'Chauffeur en retard',
             },
-          ],
-        },
-      ]);
+          },
+        ],
+      },
+    ]);
     prisma.rideRequest.count.mockResolvedValue(0);
 
     const result = await service.liveOps();
@@ -777,9 +775,7 @@ describe('AdminService', () => {
   it('returns an empty recentCancellations list when no trips were cancelled in the last 2h', async () => {
     const { prisma, service } = createService();
 
-    prisma.trip.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+    prisma.trip.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
     prisma.rideRequest.count.mockResolvedValue(0);
 
     const result = await service.liveOps();
@@ -792,21 +788,41 @@ describe('AdminService', () => {
   it('surfaces low-confidence drivers (acceptanceRate < 50%, >= 5 offers) in liveOps', async () => {
     const { prisma, service } = createService();
 
-    prisma.trip.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+    prisma.trip.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
     prisma.rideRequest.count.mockResolvedValue(0);
 
-    const buildLogs = (userId: string, accepted: number, declined: number, expired: number, fullName: string) => {
-      const logs: Array<{ userId: string; action: string; user: { fullName: string } }> = [];
+    const buildLogs = (
+      userId: string,
+      accepted: number,
+      declined: number,
+      expired: number,
+      fullName: string,
+    ) => {
+      const logs: Array<{
+        userId: string;
+        action: string;
+        user: { fullName: string };
+      }> = [];
       for (let i = 0; i < accepted; i++) {
-        logs.push({ userId, action: 'DISPATCH_RESERVATION_ACCEPTED', user: { fullName } });
+        logs.push({
+          userId,
+          action: 'DISPATCH_RESERVATION_ACCEPTED',
+          user: { fullName },
+        });
       }
       for (let i = 0; i < declined; i++) {
-        logs.push({ userId, action: 'DISPATCH_RESERVATION_DECLINED', user: { fullName } });
+        logs.push({
+          userId,
+          action: 'DISPATCH_RESERVATION_DECLINED',
+          user: { fullName },
+        });
       }
       for (let i = 0; i < expired; i++) {
-        logs.push({ userId, action: 'DISPATCH_RESERVATION_EXPIRED', user: { fullName } });
+        logs.push({
+          userId,
+          action: 'DISPATCH_RESERVATION_EXPIRED',
+          user: { fullName },
+        });
       }
       return logs;
     };
@@ -835,19 +851,34 @@ describe('AdminService', () => {
   it('sorts low-confidence drivers by acceptanceRate ascending (worst first)', async () => {
     const { prisma, service } = createService();
 
-    prisma.trip.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+    prisma.trip.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
     prisma.rideRequest.count.mockResolvedValue(0);
 
-    const buildLogs = (userId: string, accepted: number, total: number, fullName: string) => {
+    const buildLogs = (
+      userId: string,
+      accepted: number,
+      total: number,
+      fullName: string,
+    ) => {
       const expired = total - accepted;
-      const logs: Array<{ userId: string; action: string; user: { fullName: string } }> = [];
+      const logs: Array<{
+        userId: string;
+        action: string;
+        user: { fullName: string };
+      }> = [];
       for (let i = 0; i < accepted; i++) {
-        logs.push({ userId, action: 'DISPATCH_RESERVATION_ACCEPTED', user: { fullName } });
+        logs.push({
+          userId,
+          action: 'DISPATCH_RESERVATION_ACCEPTED',
+          user: { fullName },
+        });
       }
       for (let i = 0; i < expired; i++) {
-        logs.push({ userId, action: 'DISPATCH_RESERVATION_EXPIRED', user: { fullName } });
+        logs.push({
+          userId,
+          action: 'DISPATCH_RESERVATION_EXPIRED',
+          user: { fullName },
+        });
       }
       return logs;
     };
@@ -868,17 +899,27 @@ describe('AdminService', () => {
   it('returns empty lowConfidenceDrivers when all drivers have high acceptance rates', async () => {
     const { prisma, service } = createService();
 
-    prisma.trip.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+    prisma.trip.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
     prisma.rideRequest.count.mockResolvedValue(0);
 
-    const goodLogs: Array<{ userId: string; action: string; user: { fullName: string } }> = [];
+    const goodLogs: Array<{
+      userId: string;
+      action: string;
+      user: { fullName: string };
+    }> = [];
     for (let i = 0; i < 8; i++) {
-      goodLogs.push({ userId: 'user-good', action: 'DISPATCH_RESERVATION_ACCEPTED', user: { fullName: 'Good Driver' } });
+      goodLogs.push({
+        userId: 'user-good',
+        action: 'DISPATCH_RESERVATION_ACCEPTED',
+        user: { fullName: 'Good Driver' },
+      });
     }
     for (let i = 0; i < 2; i++) {
-      goodLogs.push({ userId: 'user-good', action: 'DISPATCH_RESERVATION_EXPIRED', user: { fullName: 'Good Driver' } });
+      goodLogs.push({
+        userId: 'user-good',
+        action: 'DISPATCH_RESERVATION_EXPIRED',
+        user: { fullName: 'Good Driver' },
+      });
     }
     prisma.auditLog.findMany.mockResolvedValue(goodLogs);
 

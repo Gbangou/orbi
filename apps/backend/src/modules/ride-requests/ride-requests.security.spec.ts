@@ -3,16 +3,16 @@ import { RideRequestProjector } from './ride-request.projector';
 import { RideRequestsService } from './ride-requests.service';
 
 /**
- * Security regression suite — IDOR and input-boundary invariants for RideRequests.
+ * Suite de régression sécurité — invariants IDOR et limites d'entrée pour RideRequests.
  *
- * OWASP API1 (BOLA/IDOR): cancel() purposely returns NotFoundException (404)
- * instead of ForbiddenException (403) to prevent resource enumeration.
- * These tests lock that behaviour so it cannot be silently reverted.
+ * OWASP API1 (BOLA/IDOR) : cancel() retourne intentionnellement NotFoundException (404)
+ * au lieu de ForbiddenException (403) pour empêcher l'énumération de ressources.
+ * Ces tests verrouillent ce comportement pour qu'il ne puisse pas être silencieusement annulé.
  *
- * OWASP API4 (Unrestricted Resource Consumption): malformed or oversized IDs
- * must not cause crashes — Prisma parameterises all queries so they return null.
+ * OWASP API4 (Consommation de ressources non limitée) : les IDs malformés ou surdimensionnés
+ * ne doivent pas provoquer de crash — Prisma paramètre toutes les requêtes, elles retournent null.
  */
-describe('RideRequestsService — Security', () => {
+describe('RideRequestsService — Sécurité', () => {
   function createService() {
     const prisma = {
       $transaction: jest.fn(),
@@ -43,12 +43,18 @@ describe('RideRequestsService — Security', () => {
     const realtimeService = { publish: jest.fn() };
     const rideRequestProjector = new RideRequestProjector();
     const notificationsService = {
-      enqueue: jest.fn().mockResolvedValue({ notification: { id: 'notif-sec' } }),
+      enqueue: jest
+        .fn()
+        .mockResolvedValue({ notification: { id: 'notif-sec' } }),
     };
     const dispatchCoordinator = {
       proactiveDispatch: jest
         .fn()
-        .mockResolvedValue({ dispatched: false, assignedDriverId: null, assignedUserId: null }),
+        .mockResolvedValue({
+          dispatched: false,
+          assignedDriverId: null,
+          assignedUserId: null,
+        }),
     };
 
     prisma.$transaction.mockImplementation(
@@ -68,11 +74,13 @@ describe('RideRequestsService — Security', () => {
     };
   }
 
-  function buildRawRideRequest(overrides: {
-    riderId?: string;
-    status?: string;
-    trip?: object | null;
-  } = {}) {
+  function buildRawRideRequest(
+    overrides: {
+      riderId?: string;
+      status?: string;
+      trip?: object | null;
+    } = {},
+  ) {
     return {
       id: 'req-target',
       riderId: overrides.riderId ?? 'rider-beta',

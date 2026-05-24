@@ -40,7 +40,11 @@ describe('RideRequestsService', () => {
     const dispatchCoordinator = {
       proactiveDispatch: jest
         .fn()
-        .mockResolvedValue({ dispatched: false, assignedDriverId: null, assignedUserId: null }),
+        .mockResolvedValue({
+          dispatched: false,
+          assignedDriverId: null,
+          assignedUserId: null,
+        }),
     };
 
     prisma.$transaction.mockImplementation(

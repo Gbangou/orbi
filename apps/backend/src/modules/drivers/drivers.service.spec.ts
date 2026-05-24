@@ -1820,9 +1820,7 @@ describe('DriversService', () => {
     expect(result.summary.week).toBe(weekPayout);
     expect(result.summary.month).toBe(monthPayout);
     expect(result.summary.completedTrips).toBe(3);
-    expect(result.summary.averagePayout).toBe(
-      Math.round(monthPayout / 3),
-    );
+    expect(result.summary.averagePayout).toBe(Math.round(monthPayout / 3));
     expect(result.settlement.payoutRateBps).toBe(8200);
     expect(result.recentTrips).toHaveLength(3);
     expect(result.recentTrips[0]?.id).toBe('trip-today');

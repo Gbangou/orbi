@@ -659,7 +659,9 @@ describe('TripsService', () => {
         } as never,
         'request-1',
       ),
-    ).rejects.toThrow('The driver must be online before accepting a ride request.');
+    ).rejects.toThrow(
+      'The driver must be online before accepting a ride request.',
+    );
 
     expect(prisma.trip.create).not.toHaveBeenCalled();
   });
@@ -2156,8 +2158,14 @@ describe('TripsService', () => {
         riderId: 'rider-1',
         driverId: 'driver-profile-1',
         status: 'COMPLETED',
-        rider: { id: 'rider-1', user: { id: 'user-rider-1', fullName: 'Awa Test' } },
-        driver: { id: 'driver-profile-1', user: { id: 'user-driver-1', fullName: 'Boubacar Test' } },
+        rider: {
+          id: 'rider-1',
+          user: { id: 'user-rider-1', fullName: 'Awa Test' },
+        },
+        driver: {
+          id: 'driver-profile-1',
+          user: { id: 'user-driver-1', fullName: 'Boubacar Test' },
+        },
         ...overrides,
       };
     }
@@ -2419,7 +2427,11 @@ describe('TripsService', () => {
     function buildTripWithHistory(overrides: {
       previousEventCreatedAt: Date;
       previousPayload: Record<string, unknown>;
-      extraEvents?: Array<{ eventType: string; payload: Record<string, unknown>; createdAt: Date }>;
+      extraEvents?: Array<{
+        eventType: string;
+        payload: Record<string, unknown>;
+        createdAt: Date;
+      }>;
       rideRequest?: Record<string, unknown>;
     }) {
       return {
@@ -2449,8 +2461,8 @@ describe('TripsService', () => {
         buildTripWithHistory({
           previousEventCreatedAt: nineMinutesAgo,
           previousPayload: {
-            latitude: 12.3700,
-            longitude: -1.5200,
+            latitude: 12.37,
+            longitude: -1.52,
             speedKph: 0,
             distanceToDestinationKm: 2.0,
             sourceRole: 'DRIVER',
@@ -2489,16 +2501,18 @@ describe('TripsService', () => {
         buildTripWithHistory({
           previousEventCreatedAt: elevenMinutesAgo,
           previousPayload: {
-            latitude: 12.3720,
-            longitude: -1.5230,
+            latitude: 12.372,
+            longitude: -1.523,
             speedKph: 4,
-            distanceToDestinationKm: 3.50,
+            distanceToDestinationKm: 3.5,
             sourceRole: 'DRIVER',
           },
         }),
       );
       prisma.trip.update.mockResolvedValue({ id: 'trip-monitor-1' });
-      prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-noprogress-1' });
+      prisma.supportTicket.create.mockResolvedValue({
+        id: 'ticket-noprogress-1',
+      });
       prisma.auditLog.create.mockResolvedValue(undefined);
 
       const result = await service.recordRoutePosition(
@@ -2527,8 +2541,8 @@ describe('TripsService', () => {
         buildTripWithHistory({
           previousEventCreatedAt: threeMinutesAgo,
           previousPayload: {
-            latitude: 12.3700,
-            longitude: -1.5200,
+            latitude: 12.37,
+            longitude: -1.52,
             speedKph: 40,
             distanceToDestinationKm: 4.0,
             sourceRole: 'DRIVER',
@@ -2543,18 +2557,22 @@ describe('TripsService', () => {
         buildDriverMonitorAuth(),
         'trip-monitor-1',
         {
-          latitude: 12.3820,
-          longitude: -1.5310,
+          latitude: 12.382,
+          longitude: -1.531,
           speedKph: 38,
           distanceToDestinationKm: 2.4,
         },
       );
 
       expect(
-        result.routeMonitoring.alerts.filter((a) => a.alertType === 'LONG_STOP'),
+        result.routeMonitoring.alerts.filter(
+          (a) => a.alertType === 'LONG_STOP',
+        ),
       ).toHaveLength(0);
       expect(
-        result.routeMonitoring.alerts.filter((a) => a.alertType === 'NO_PROGRESS'),
+        result.routeMonitoring.alerts.filter(
+          (a) => a.alertType === 'NO_PROGRESS',
+        ),
       ).toHaveLength(0);
     });
 
@@ -2566,8 +2584,8 @@ describe('TripsService', () => {
         buildTripWithHistory({
           previousEventCreatedAt: nineMinutesAgo,
           previousPayload: {
-            latitude: 12.3700,
-            longitude: -1.5200,
+            latitude: 12.37,
+            longitude: -1.52,
             speedKph: 0,
             distanceToDestinationKm: 2.0,
             sourceRole: 'DRIVER',
@@ -2626,7 +2644,7 @@ describe('TripsService', () => {
         buildDriverMonitorAuth(),
         'trip-monitor-1',
         {
-          latitude: 5.3600,
+          latitude: 5.36,
           longitude: -4.0083,
           speedKph: 30,
           distanceToDestinationKm: 1100,
@@ -2699,7 +2717,7 @@ describe('TripsService', () => {
         'trip-monitor-1',
         {
           latitude: 12.3714,
-          longitude: -1.4300,
+          longitude: -1.43,
           speedKph: 60,
           distanceToDestinationKm: 2.0,
         },
@@ -2739,7 +2757,7 @@ describe('TripsService', () => {
         buildDriverMonitorAuth(),
         'trip-monitor-1',
         {
-          latitude: 5.3600,
+          latitude: 5.36,
           longitude: -4.0083,
           speedKph: 0,
           distanceToDestinationKm: 1100,

@@ -6,22 +6,22 @@ import {
 } from './auth-crypto';
 
 /**
- * OWASP ASVS 2.4 / NIST SP 800-63B — Credential storage and session token
- * security invariants.
+ * OWASP ASVS 2.4 / NIST SP 800-63B — Invariants de sécurité sur le stockage
+ * des credentials et la gestion des tokens de session.
  *
- * 1. Password hashing uses scrypt with a unique random salt per credential.
- *    Two identical passwords must produce distinct hashes.
- * 2. verifyPassword correctly accepts the correct password and rejects wrong
- *    ones — including timing-safe edge cases (prefix, suffix, empty string).
- * 3. A malformed storedHash (no salt separator) returns false without throwing.
- * 4. generateSessionToken returns a high-entropy opaque token (≥ 32 bytes of
- *    entropy, URL-safe base64, no two calls produce the same value).
- * 5. hashSessionToken is deterministic (same input → same SHA-256 hex digest)
- *    and does not store the raw token (the hash does not contain the token).
- * 6. Session token hashes are distinct from password hashes (different shape).
+ * 1. Le hachage de mot de passe utilise scrypt avec un sel aléatoire unique par
+ *    credential. Deux mots de passe identiques doivent produire des hachages distincts.
+ * 2. verifyPassword accepte le bon mot de passe et rejette les mauvais,
+ *    y compris les cas limites résistants au timing (préfixe, suffixe, chaîne vide).
+ * 3. Un storedHash malformé (sans séparateur de sel) retourne false sans lever d'exception.
+ * 4. generateSessionToken retourne un token opaque à haute entropie (≥ 32 octets
+ *    d'entropie, base64 URL-safe, deux appels ne produisent jamais la même valeur).
+ * 5. hashSessionToken est déterministe (même entrée → même digest SHA-256 hex)
+ *    et ne stocke pas le token brut (le hash ne contient pas le token).
+ * 6. Les hachages de tokens de session sont distincts des hachages de mots de passe.
  */
 describe('auth-crypto — credential security invariants', () => {
-  // ── Password hashing ───────────────────────────────────────────────────────
+  // ── Hachage de mots de passe ──────────────────────────────────────────────
 
   describe('hashPassword / verifyPassword', () => {
     it('produces a salt:derivedKey format with two components', async () => {
@@ -64,7 +64,9 @@ describe('auth-crypto — credential security invariants', () => {
     });
 
     it('returns false for a malformed storedHash without a salt separator', async () => {
-      expect(await verifyPassword('anything', 'no-colon-in-this-hash')).toBe(false);
+      expect(await verifyPassword('anything', 'no-colon-in-this-hash')).toBe(
+        false,
+      );
     });
 
     it('returns false for an empty storedHash', async () => {
@@ -72,18 +74,20 @@ describe('auth-crypto — credential security invariants', () => {
     });
   });
 
-  // ── Session token generation ───────────────────────────────────────────────
+  // ── Génération des tokens de session ──────────────────────────────────────
 
   describe('generateSessionToken', () => {
     it('generates a URL-safe base64 string with at least 64 characters', () => {
       const token = generateSessionToken();
       expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
-      // 48 bytes of randomBytes base64url → ≥64 chars (entropy ≥ 384 bits)
+      // 48 octets de randomBytes base64url → ≥64 caractères (entropie ≥ 384 bits)
       expect(token.length).toBeGreaterThanOrEqual(64);
     });
 
     it('generates a different token on every call (no two calls the same)', () => {
-      const tokens = new Set(Array.from({ length: 10 }, () => generateSessionToken()));
+      const tokens = new Set(
+        Array.from({ length: 10 }, () => generateSessionToken()),
+      );
       expect(tokens.size).toBe(10);
     });
 
@@ -95,7 +99,7 @@ describe('auth-crypto — credential security invariants', () => {
     });
   });
 
-  // ── Session token hashing ──────────────────────────────────────────────────
+  // ── Hachage des tokens de session ─────────────────────────────────────────
 
   describe('hashSessionToken', () => {
     it('produces a deterministic SHA-256 hex digest', () => {
@@ -126,7 +130,7 @@ describe('auth-crypto — credential security invariants', () => {
     });
   });
 
-  // ── Cross-function isolation ───────────────────────────────────────────────
+  // ── Isolation inter-fonctions ─────────────────────────────────────────────
 
   describe('session token hashes and password hashes are never interchangeable', () => {
     it('a session token hash cannot satisfy verifyPassword', async () => {
@@ -137,7 +141,7 @@ describe('auth-crypto — credential security invariants', () => {
 
     it('a password hash is not a valid session token hash format', async () => {
       const passwordHash = await hashPassword('Orbi123!');
-      // Password hashes contain `:` while session hashes are pure hex
+      // Les hachages de mots de passe contiennent `:` ; les hachages de session sont du hex pur
       expect(passwordHash).toContain(':');
       expect(passwordHash).not.toMatch(/^[0-9a-f]{64}$/);
     });

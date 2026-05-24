@@ -101,6 +101,6 @@ async function safelyQueueRiderErrorReport(
   try {
     await enqueueRiderMobileErrorReport(error, { classification });
   } catch {
-    // Error reporting must never block user recovery or auth cleanup.
+    // Le signalement d'erreur ne doit jamais bloquer la récupération utilisateur ou le nettoyage auth.
   }
 }

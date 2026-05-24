@@ -17,25 +17,25 @@ import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
 /**
- * OWASP API5 (Broken Function Level Authorization) — Admin endpoint access
- * control invariants.
+ * OWASP API5 (Autorisation au niveau des fonctions brisée) — invariants de contrôle
+ * d'accès aux endpoints admin.
  *
- * These tests use the REAL RolesGuard so the role-to-endpoint mapping is
- * enforced by production code, not a stub. Only the SessionAuthGuard is
- * stubbed (per role under test) so we can inject any user context without
- * a real database.
+ * Ces tests utilisent le VRAI RolesGuard pour que le mapping rôle-endpoint soit
+ * appliqué par le code de production, pas par un stub. Seul le SessionAuthGuard est
+ * stubbé (par rôle testé) pour injecter n'importe quel contexte utilisateur sans
+ * base de données réelle.
  *
- * Invariants:
- * 1. RIDER and DRIVER are denied (403) on every admin endpoint.
- * 2. Unauthenticated requests (no auth context) are denied (403).
- * 3. SUPPORT role is denied on write-only admin endpoints (payouts, refunds,
- *    replay, dispatch settings) — read-only access only.
- * 4. OPS role is denied on ADMIN-only endpoints (payout approval, wallet
- *    recovery adjustment).
- * 5. ADMIN role is accepted (2xx) on every endpoint tested.
+ * Invariants :
+ * 1. RIDER et DRIVER sont refusés (403) sur tous les endpoints admin.
+ * 2. Les requêtes non authentifiées (sans contexte auth) sont refusées (403).
+ * 3. Le rôle SUPPORT est refusé sur les endpoints d'écriture (virements, remboursements,
+ *    replay, paramètres dispatch) — accès en lecture seule uniquement.
+ * 4. Le rôle OPS est refusé sur les endpoints réservés ADMIN (approbation de virement,
+ *    ajustement de récupération de portefeuille).
+ * 5. Le rôle ADMIN est accepté (2xx) sur tous les endpoints testés.
  */
 
-// ── App factory ──────────────────────────────────────────────────────────────
+// ── Fabrique d'application ────────────────────────────────────────────────────
 
 function buildSessionStub(role: string | null) {
   class Stub implements CanActivate {
@@ -95,7 +95,9 @@ async function buildApp(role: string | null): Promise<INestApplication<App>> {
     updateDispatchSettings: jest.fn().mockResolvedValue({}),
     updateSupportTicket: jest.fn().mockResolvedValue({}),
     updateDriverOnboardingReview: jest.fn().mockResolvedValue({}),
-    getDriverDocumentViewLink: jest.fn().mockResolvedValue({ url: 'https://example.com' }),
+    getDriverDocumentViewLink: jest
+      .fn()
+      .mockResolvedValue({ url: 'https://example.com' }),
     updateDriverDocumentObjectVerification: jest.fn().mockResolvedValue({}),
     verifyDriverDocumentObjectFromProvider: jest.fn().mockResolvedValue({}),
     jobQueue: jest.fn().mockResolvedValue({ jobs: [] }),
@@ -167,16 +169,30 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
   describe('RIDER role is denied on all admin endpoints', () => {
     let app: INestApplication<App>;
 
-    beforeAll(async () => { app = await buildApp('RIDER'); });
-    afterAll(async () => { await app.close(); });
+    beforeAll(async () => {
+      app = await buildApp('RIDER');
+    });
+    afterAll(async () => {
+      await app.close();
+    });
 
     it.each(readEndpoints)('%s %s → 403', async (method, path) => {
-      const res = await (request(app.getHttpServer()) as unknown as Record<string, (p: string) => { expect: (s: number) => unknown }>)[method.toLowerCase()](path);
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => { expect: (s: number) => unknown }
+        >
+      )[method.toLowerCase()](path);
       expect((res as unknown as { status: number }).status).toBe(403);
     });
 
     it.each(adminOpsWriteEndpoints)('%s %s → 403', async (method, path) => {
-      const res = await (request(app.getHttpServer()) as unknown as Record<string, (p: string) => Promise<{ status: number }>>)[method.toLowerCase()](path);
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
       expect(res.status).toBe(403);
     });
   });
@@ -186,16 +202,30 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
   describe('DRIVER role is denied on all admin endpoints', () => {
     let app: INestApplication<App>;
 
-    beforeAll(async () => { app = await buildApp('DRIVER'); });
-    afterAll(async () => { await app.close(); });
+    beforeAll(async () => {
+      app = await buildApp('DRIVER');
+    });
+    afterAll(async () => {
+      await app.close();
+    });
 
     it.each(readEndpoints)('%s %s → 403', async (method, path) => {
-      const res = await (request(app.getHttpServer()) as unknown as Record<string, (p: string) => Promise<{ status: number }>>)[method.toLowerCase()](path);
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
       expect(res.status).toBe(403);
     });
 
     it.each(adminOpsWriteEndpoints)('%s %s → 403', async (method, path) => {
-      const res = await (request(app.getHttpServer()) as unknown as Record<string, (p: string) => Promise<{ status: number }>>)[method.toLowerCase()](path);
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
       expect(res.status).toBe(403);
     });
   });
@@ -205,11 +235,20 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
   describe('Unauthenticated (no auth.user.role) is denied on all admin endpoints', () => {
     let app: INestApplication<App>;
 
-    beforeAll(async () => { app = await buildApp(null); });
-    afterAll(async () => { await app.close(); });
+    beforeAll(async () => {
+      app = await buildApp(null);
+    });
+    afterAll(async () => {
+      await app.close();
+    });
 
     it.each(readEndpoints)('%s %s → 403', async (method, path) => {
-      const res = await (request(app.getHttpServer()) as unknown as Record<string, (p: string) => Promise<{ status: number }>>)[method.toLowerCase()](path);
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
       expect(res.status).toBe(403);
     });
   });
@@ -219,11 +258,20 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
   describe('SUPPORT role is denied write-only admin endpoints', () => {
     let app: INestApplication<App>;
 
-    beforeAll(async () => { app = await buildApp('SUPPORT'); });
-    afterAll(async () => { await app.close(); });
+    beforeAll(async () => {
+      app = await buildApp('SUPPORT');
+    });
+    afterAll(async () => {
+      await app.close();
+    });
 
     it.each(adminOpsWriteEndpoints)('%s %s → 403', async (method, path) => {
-      const res = await (request(app.getHttpServer()) as unknown as Record<string, (p: string) => Promise<{ status: number }>>)[method.toLowerCase()](path);
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
       expect(res.status).toBe(403);
     });
   });
@@ -233,11 +281,20 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
   describe('SUPPORT role can access read-only admin endpoints', () => {
     let app: INestApplication<App>;
 
-    beforeAll(async () => { app = await buildApp('SUPPORT'); });
-    afterAll(async () => { await app.close(); });
+    beforeAll(async () => {
+      app = await buildApp('SUPPORT');
+    });
+    afterAll(async () => {
+      await app.close();
+    });
 
     it.each(readEndpoints)('%s %s → 2xx', async (method, path) => {
-      const res = await (request(app.getHttpServer()) as unknown as Record<string, (p: string) => Promise<{ status: number }>>)[method.toLowerCase()](path);
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
       expect(res.status).toBeGreaterThanOrEqual(200);
       expect(res.status).toBeLessThan(300);
     });
@@ -248,11 +305,20 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
   describe('OPS role can access read-only and standard write admin endpoints', () => {
     let app: INestApplication<App>;
 
-    beforeAll(async () => { app = await buildApp('OPS'); });
-    afterAll(async () => { await app.close(); });
+    beforeAll(async () => {
+      app = await buildApp('OPS');
+    });
+    afterAll(async () => {
+      await app.close();
+    });
 
     it.each(readEndpoints)('%s %s → 2xx', async (method, path) => {
-      const res = await (request(app.getHttpServer()) as unknown as Record<string, (p: string) => Promise<{ status: number }>>)[method.toLowerCase()](path);
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
       expect(res.status).toBeGreaterThanOrEqual(200);
       expect(res.status).toBeLessThan(300);
     });
@@ -263,11 +329,20 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
   describe('ADMIN role can access all read endpoints', () => {
     let app: INestApplication<App>;
 
-    beforeAll(async () => { app = await buildApp('ADMIN'); });
-    afterAll(async () => { await app.close(); });
+    beforeAll(async () => {
+      app = await buildApp('ADMIN');
+    });
+    afterAll(async () => {
+      await app.close();
+    });
 
     it.each(readEndpoints)('%s %s → 2xx', async (method, path) => {
-      const res = await (request(app.getHttpServer()) as unknown as Record<string, (p: string) => Promise<{ status: number }>>)[method.toLowerCase()](path);
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
       expect(res.status).toBeGreaterThanOrEqual(200);
       expect(res.status).toBeLessThan(300);
     });
@@ -280,11 +355,20 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
   describe('ADMIN role receives no 403 on write admin endpoints', () => {
     let app: INestApplication<App>;
 
-    beforeAll(async () => { app = await buildApp('ADMIN'); });
-    afterAll(async () => { await app.close(); });
+    beforeAll(async () => {
+      app = await buildApp('ADMIN');
+    });
+    afterAll(async () => {
+      await app.close();
+    });
 
     it.each(adminOpsWriteEndpoints)('%s %s → not 403', async (method, path) => {
-      const res = await (request(app.getHttpServer()) as unknown as Record<string, (p: string) => Promise<{ status: number }>>)[method.toLowerCase()](path);
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
       expect(res.status).not.toBe(403);
     });
   });

@@ -146,7 +146,9 @@ describe('SessionAuthGuard — session lifecycle security', () => {
       switchToHttp: () => ({ getRequest: () => ({ headers: {}, query: {} }) }),
     } as ExecutionContext;
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('rejects an Authorization header with a non-Bearer scheme', async () => {
@@ -160,7 +162,9 @@ describe('SessionAuthGuard — session lifecycle security', () => {
       }),
     } as ExecutionContext;
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   // ── Valid session accepted ─────────────────────────────────────────────────
@@ -169,7 +173,9 @@ describe('SessionAuthGuard — session lifecycle security', () => {
     const { guard, prisma } = createGuard();
     prisma.userSession.findUnique.mockResolvedValue(validSessionBase());
 
-    const result = await guard.canActivate(createContext('session-token-valid'));
+    const result = await guard.canActivate(
+      createContext('session-token-valid'),
+    );
     expect(result).toBe(true);
   });
 });

@@ -67,9 +67,11 @@ describe('DriversController — Rate Limiting (integration)', () => {
     createDocumentUploadLinks: jest.Mock;
   };
 
-  async function buildApp(
-    rateLimitResponse: { allowed: boolean; remaining: number; resetAt: number },
-  ) {
+  async function buildApp(rateLimitResponse: {
+    allowed: boolean;
+    remaining: number;
+    resetAt: number;
+  }) {
     rateLimitService = {
       consume: jest.fn().mockResolvedValue(rateLimitResponse),
       snapshot: jest.fn(),
@@ -114,7 +116,11 @@ describe('DriversController — Rate Limiting (integration)', () => {
 
   describe('PATCH onboarding/document-upload-links', () => {
     it('returns 429 when rate limit is exceeded', async () => {
-      app = await buildApp({ allowed: false, remaining: 0, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: false,
+        remaining: 0,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .patch('/api/v1/drivers/onboarding/document-upload-links')
@@ -125,7 +131,11 @@ describe('DriversController — Rate Limiting (integration)', () => {
     });
 
     it('allows the call when under the rate limit', async () => {
-      app = await buildApp({ allowed: true, remaining: 4, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: true,
+        remaining: 4,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .patch('/api/v1/drivers/onboarding/document-upload-links')
@@ -136,7 +146,11 @@ describe('DriversController — Rate Limiting (integration)', () => {
     });
 
     it('sets X-RateLimit-Limit to 5 (signed URL generation is expensive)', async () => {
-      app = await buildApp({ allowed: true, remaining: 4, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: true,
+        remaining: 4,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .patch('/api/v1/drivers/onboarding/document-upload-links')
@@ -146,7 +160,11 @@ describe('DriversController — Rate Limiting (integration)', () => {
     });
 
     it('rate limit key includes the authenticated user id', async () => {
-      app = await buildApp({ allowed: true, remaining: 4, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: true,
+        remaining: 4,
+        resetAt: Date.now() + 60_000,
+      });
 
       await request(app.getHttpServer())
         .patch('/api/v1/drivers/onboarding/document-upload-links')
@@ -161,7 +179,11 @@ describe('DriversController — Rate Limiting (integration)', () => {
 
   describe('PATCH presence', () => {
     it('returns 429 when rate limit is exceeded', async () => {
-      app = await buildApp({ allowed: false, remaining: 0, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: false,
+        remaining: 0,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .patch('/api/v1/drivers/presence')
@@ -172,7 +194,11 @@ describe('DriversController — Rate Limiting (integration)', () => {
     });
 
     it('sets X-RateLimit-Limit to 60 (1 update/second × 60s)', async () => {
-      app = await buildApp({ allowed: true, remaining: 59, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: true,
+        remaining: 59,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .patch('/api/v1/drivers/presence')
@@ -186,7 +212,11 @@ describe('DriversController — Rate Limiting (integration)', () => {
 
   describe('POST offers/:rideRequestId/decline', () => {
     it('returns 429 when rate limit is exceeded', async () => {
-      app = await buildApp({ allowed: false, remaining: 0, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: false,
+        remaining: 0,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/drivers/offers/request-abc-1/decline')
@@ -197,7 +227,11 @@ describe('DriversController — Rate Limiting (integration)', () => {
     });
 
     it('sets X-RateLimit-Limit to 30', async () => {
-      app = await buildApp({ allowed: true, remaining: 29, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: true,
+        remaining: 29,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/drivers/offers/request-abc-1/decline')
@@ -211,7 +245,11 @@ describe('DriversController — Rate Limiting (integration)', () => {
 
   describe('PATCH availability', () => {
     it('returns 429 when rate limit is exceeded', async () => {
-      app = await buildApp({ allowed: false, remaining: 0, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: false,
+        remaining: 0,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .patch('/api/v1/drivers/availability')
@@ -222,7 +260,11 @@ describe('DriversController — Rate Limiting (integration)', () => {
     });
 
     it('sets X-RateLimit-Limit to 20', async () => {
-      app = await buildApp({ allowed: true, remaining: 19, resetAt: Date.now() + 60_000 });
+      app = await buildApp({
+        allowed: true,
+        remaining: 19,
+        resetAt: Date.now() + 60_000,
+      });
 
       const res = await request(app.getHttpServer())
         .patch('/api/v1/drivers/availability')

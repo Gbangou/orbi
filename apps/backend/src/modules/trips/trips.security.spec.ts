@@ -2,13 +2,13 @@ import { NotFoundException } from '@nestjs/common';
 import { TripsService } from './trips.service';
 
 /**
- * Security regression suite — IDOR and input-boundary invariants.
+ * Suite de régression sécurité — invariants IDOR et limites d'entrée.
  *
- * OWASP API1 (BOLA/IDOR): assertTripAccess purposely returns NotFoundException
- * (404) instead of ForbiddenException (403) to prevent resource enumeration.
- * These tests lock that behaviour so it cannot be silently reverted.
+ * OWASP API1 (BOLA/IDOR) : assertTripAccess retourne intentionnellement NotFoundException
+ * (404) au lieu de ForbiddenException (403) pour empêcher l'énumération de ressources.
+ * Ces tests verrouillent ce comportement pour qu'il ne puisse pas être silencieusement annulé.
  */
-describe('TripsService — Security', () => {
+describe('TripsService — Sécurité', () => {
   function createService() {
     const prisma = {
       $transaction: jest.fn(),
@@ -64,11 +64,13 @@ describe('TripsService — Security', () => {
     };
   }
 
-  function buildRawTrip(overrides: {
-    riderId?: string;
-    driverId?: string;
-    status?: string;
-  } = {}) {
+  function buildRawTrip(
+    overrides: {
+      riderId?: string;
+      driverId?: string;
+      status?: string;
+    } = {},
+  ) {
     const riderId = overrides.riderId ?? 'rider-beta';
     const driverId = overrides.driverId ?? 'driver-beta';
 

@@ -130,7 +130,11 @@ export function serializeTripDetail(trip: {
     averageRating: unknown;
     completedTripsCount: number;
     profilePhotoUrl?: string | null;
-    user: { fullName: string; isPhoneVerified: boolean; phoneNumber?: string | null };
+    user: {
+      fullName: string;
+      isPhoneVerified: boolean;
+      phoneNumber?: string | null;
+    };
   };
   vehicle: {
     plateNumber: string;

@@ -9,8 +9,8 @@ function normalizeHeaderValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value.join(', ') : value;
 }
 
-// Keep transport-specific request parsing out of the controller actions so the
-// auth service only receives explicit metadata it can persist safely.
+// L'analyse de la requête HTTP est isolée ici pour que le service d'auth
+// ne reçoive que des métadonnées explicites et sûres à persister.
 export function extractAuthRequestMetadata(
   request: Request,
 ): AuthRequestMetadata {

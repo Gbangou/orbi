@@ -1219,7 +1219,9 @@ describe('PaymentsService', () => {
 
   it('reconciles Flutterwave charge.completed schema-compliant fixture with known transactionRef', async () => {
     const { service, prisma } = createService('flutterwave');
-    const fixture = fixtureById('flutterwave-charge-completed-schema-compliant');
+    const fixture = fixtureById(
+      'flutterwave-charge-completed-schema-compliant',
+    );
     const webhookPayload = loadWebhookFixture(fixture.fileName);
 
     prisma.paymentAttempt.findFirst.mockResolvedValue(null);
@@ -1227,10 +1229,7 @@ describe('PaymentsService', () => {
     prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
     prisma.walletTransaction.findUnique.mockResolvedValue(null);
 
-    const result = await service.handleWebhook(
-      'secret_123',
-      webhookPayload,
-    );
+    const result = await service.handleWebhook('secret_123', webhookPayload);
 
     expect(result.nextAction).toBe('persisted_and_reconciled');
     expect(fixture.expected.paymentAttemptStatus).toBe('SUCCEEDED');
@@ -1253,10 +1252,7 @@ describe('PaymentsService', () => {
     prisma.paymentAttempt.findUnique.mockResolvedValue(null);
     prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
 
-    const result = await service.handleWebhook(
-      'secret_123',
-      webhookPayload,
-    );
+    const result = await service.handleWebhook('secret_123', webhookPayload);
 
     expect(result.nextAction).toBe('persisted_and_reconciled');
     expect(fixture.expected.paymentAttemptStatus).toBe('FAILED');
@@ -1271,17 +1267,16 @@ describe('PaymentsService', () => {
 
   it('ignores Flutterwave unknown-reference schema-compliant fixture without updating any attempt', async () => {
     const { service, prisma } = createService('flutterwave');
-    const fixture = fixtureById('flutterwave-unknown-reference-schema-compliant');
+    const fixture = fixtureById(
+      'flutterwave-unknown-reference-schema-compliant',
+    );
     const webhookPayload = loadWebhookFixture(fixture.fileName);
 
     prisma.paymentAttempt.findFirst.mockResolvedValue(null);
     prisma.paymentAttempt.findUnique.mockResolvedValue(null);
     prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 0 });
 
-    const result = await service.handleWebhook(
-      'secret_123',
-      webhookPayload,
-    );
+    const result = await service.handleWebhook('secret_123', webhookPayload);
 
     expect(result.nextAction).toBe('ignored_unknown_reference');
     expect(fixture.expected.moneyMovement).toBe('none');
@@ -1305,10 +1300,7 @@ describe('PaymentsService', () => {
     prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
     prisma.walletTransaction.findUnique.mockResolvedValue(null);
 
-    const result = await service.handleWebhook(
-      'secret_123',
-      webhookPayload,
-    );
+    const result = await service.handleWebhook('secret_123', webhookPayload);
 
     expect(result.nextAction).toBe('persisted_and_reconciled');
     expect(fixture.expected.paymentAttemptStatus).toBe('SUCCEEDED');
@@ -1329,10 +1321,7 @@ describe('PaymentsService', () => {
     prisma.paymentAttempt.findUnique.mockResolvedValue(null);
     prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
 
-    const result = await service.handleWebhook(
-      'secret_123',
-      webhookPayload,
-    );
+    const result = await service.handleWebhook('secret_123', webhookPayload);
 
     expect(result.nextAction).toBe('persisted_and_reconciled');
     expect(fixture.expected.paymentAttemptStatus).toBe('FAILED');

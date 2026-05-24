@@ -990,7 +990,10 @@ function resolveLiveOpsCompletionGate(input: {
     };
   }
 
-  if (!input.routeMonitoring.lastPositionAt || !input.routeMonitoring.latestPosition) {
+  if (
+    !input.routeMonitoring.lastPositionAt ||
+    !input.routeMonitoring.latestPosition
+  ) {
     return {
       state: 'blocked' as const,
       label: 'Finalisation bloquee',
@@ -2253,7 +2256,9 @@ export class AdminService {
   async liveOps() {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const cancellationLookbackMs = 2 * 60 * 60 * 1000;
-    const recentCancellationSince = new Date(Date.now() - cancellationLookbackMs);
+    const recentCancellationSince = new Date(
+      Date.now() - cancellationLookbackMs,
+    );
     const dispatchLeaderboardSince = new Date(
       Date.now() - 7 * 24 * 60 * 60 * 1000,
     );
@@ -2432,7 +2437,12 @@ export class AdminService {
 
     const driverDispatchStats = new Map<
       string,
-      { fullName: string | null; accepted: number; declined: number; expired: number }
+      {
+        fullName: string | null;
+        accepted: number;
+        declined: number;
+        expired: number;
+      }
     >();
     for (const log of dispatchAuditLogs) {
       const entry = driverDispatchStats.get(log.userId) ?? {
@@ -2450,7 +2460,9 @@ export class AdminService {
       }
       driverDispatchStats.set(log.userId, entry);
     }
-    const driverAcceptanceLeaderboard = Array.from(driverDispatchStats.entries())
+    const driverAcceptanceLeaderboard = Array.from(
+      driverDispatchStats.entries(),
+    )
       .map(([driverId, stats]) => {
         const total = stats.accepted + stats.declined + stats.expired;
         return {
@@ -2503,7 +2515,8 @@ export class AdminService {
         riderName: trip.rider.user.fullName,
         driverName: trip.driver.user.fullName,
         route: `${trip.pickupAddress} → ${trip.destinationAddress}`,
-        cancelledBy: typeof payload.actorRole === 'string' ? payload.actorRole : null,
+        cancelledBy:
+          typeof payload.actorRole === 'string' ? payload.actorRole : null,
         cancellationReason:
           typeof payload.cancellationReason === 'string'
             ? payload.cancellationReason
