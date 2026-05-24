@@ -8,12 +8,15 @@ import {
   View,
 } from 'react-native';
 import {
+  createSupportTicketWithApi,
   fetchMyTrips,
   fetchDriverProfile,
+  getMySupportTicketsWithApi,
   requestDriverDocumentUploadLinks,
   type DriverDocumentUploadLinksResponse,
   type DriverProfileResponse,
   type MyTripsResponse,
+  type SupportTicket,
   upsertDriverOnboarding,
 } from '@orbi/api';
 import { router } from 'expo-router';
@@ -337,6 +340,14 @@ export default function ProfilScreen() {
   const [preparedDocumentLinks, setPreparedDocumentLinks] = useState<
     Partial<Record<DocumentType, DriverDocumentLink>>
   >({});
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [isTicketFormOpen, setIsTicketFormOpen] = useState(false);
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+  const [ticketForm, setTicketForm] = useState({
+    subject: '',
+    description: '',
+    category: 'other' as 'payment' | 'trip' | 'account' | 'driver' | 'safety' | 'other',
+  });
   const previousReadinessRef = useRef<number | null>(null);
   const previousDocumentStatusesRef = useRef<Partial<Record<DocumentType, string>> | null>(null);
   const previousReviewIdsRef = useRef<string[] | null>(null);
@@ -584,12 +595,14 @@ export default function ProfilScreen() {
 
     try {
       const { authClient } = await withDriverClient();
-      const [profileResponse, historyResponse] = await Promise.all([
+      const [profileResponse, historyResponse, ticketsResponse] = await Promise.all([
         fetchDriverProfile(authClient),
         fetchMyTrips(authClient),
+        getMySupportTicketsWithApi(authClient),
       ]);
       setProfile(profileResponse);
       setHistory(historyResponse);
+      setTickets(ticketsResponse.tickets);
       setForm(buildInitialForm(profileResponse));
       setPreparedDocumentLinks({});
       setHasLoadedProfile(true);
@@ -726,6 +739,39 @@ export default function ProfilScreen() {
       setStatus(feedback.message);
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleCreateTicket() {
+    if (isSubmittingTicket) return;
+    if (ticketForm.subject.trim().length < 5) {
+      setStatus('Le sujet doit faire au moins 5 caracteres.');
+      return;
+    }
+    if (ticketForm.description.trim().length < 10) {
+      setStatus('La description doit faire au moins 10 caracteres.');
+      return;
+    }
+    setIsSubmittingTicket(true);
+    setStatus('Envoi de votre demande au support...');
+    try {
+      const { authClient } = await withDriverClient();
+      const result = await createSupportTicketWithApi(authClient, {
+        subject: ticketForm.subject.trim(),
+        description: ticketForm.description.trim(),
+        category: ticketForm.category,
+      });
+      setTickets((prev) => [result.ticket, ...prev]);
+      setTicketForm({ subject: '', description: '', category: 'other' });
+      setIsTicketFormOpen(false);
+      setStatus('Demande envoyee. Notre equipe vous repondra rapidement.');
+    } catch (error) {
+      const feedback = await resolveDriverAppError(error, {
+        fallback: "L'envoi de votre demande a echoue. Reessayez.",
+      });
+      setStatus(feedback.message);
+    } finally {
+      setIsSubmittingTicket(false);
     }
   }
 
@@ -1223,6 +1269,106 @@ export default function ProfilScreen() {
           </View>
         ))}
       </View>
+
+      {/* ── Support chauffeur ── */}
+      <View style={styles.card}>
+        <Text style={styles.heading}>Support</Text>
+        <Text style={styles.meta}>
+          Probleme de paiement, course litigieuse, vehicule ou compte ? Notre equipe repond sous 24h.
+        </Text>
+
+        {tickets.map((ticket) => (
+          <View key={ticket.id} style={styles.ticketRow}>
+            <View style={styles.ticketHeader}>
+              <Text style={styles.ticketSubject} numberOfLines={1}>{ticket.subject}</Text>
+              <View style={[
+                styles.ticketBadge,
+                ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'
+                  ? styles.ticketBadgeClosed
+                  : ticket.status === 'IN_REVIEW'
+                    ? styles.ticketBadgeReview
+                    : styles.ticketBadgeOpen,
+              ]}>
+                <Text style={styles.ticketBadgeLabel}>
+                  {ticket.status === 'OPEN' ? 'Ouvert'
+                    : ticket.status === 'IN_REVIEW' ? 'En cours'
+                    : ticket.status === 'RESOLVED' ? 'Resolu'
+                    : 'Ferme'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.meta} numberOfLines={2}>{ticket.description}</Text>
+          </View>
+        ))}
+
+        {isTicketFormOpen ? (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Sujet (ex: course non payee)"
+              placeholderTextColor={orbiTheme.colors.muted}
+              value={ticketForm.subject}
+              onChangeText={(v) => setTicketForm((f) => ({ ...f, subject: v }))}
+              maxLength={120}
+              editable={!isSubmittingTicket}
+            />
+            <TextInput
+              style={[styles.input, styles.ticketDescInput]}
+              placeholder="Decrivez votre probleme en detail..."
+              placeholderTextColor={orbiTheme.colors.muted}
+              value={ticketForm.description}
+              onChangeText={(v) => setTicketForm((f) => ({ ...f, description: v }))}
+              maxLength={2000}
+              multiline
+              numberOfLines={4}
+              editable={!isSubmittingTicket}
+            />
+            <View style={styles.chipRow}>
+              {(['payment', 'trip', 'account', 'vehicle', 'safety', 'other'] as const).map((cat) => (
+                <Pressable
+                  key={cat}
+                  style={[styles.chip, ticketForm.category === (cat === 'vehicle' ? 'driver' : cat) && styles.chipActive]}
+                  onPress={() => setTicketForm((f) => ({ ...f, category: cat === 'vehicle' ? 'driver' : cat }))}
+                >
+                  <Text style={[styles.chipLabel, ticketForm.category === (cat === 'vehicle' ? 'driver' : cat) && styles.chipLabelActive]}>
+                    {cat === 'payment' ? 'Paiement'
+                      : cat === 'trip' ? 'Course'
+                      : cat === 'account' ? 'Compte'
+                      : cat === 'vehicle' ? 'Vehicule'
+                      : cat === 'safety' ? 'Securite'
+                      : 'Autre'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.actionRow}>
+              <Pressable
+                style={[styles.primaryButton, isSubmittingTicket && styles.buttonDisabled]}
+                onPress={() => void handleCreateTicket()}
+                disabled={isSubmittingTicket}
+              >
+                <Text style={styles.primaryButtonLabel}>
+                  {isSubmittingTicket ? 'Envoi...' : 'Envoyer'}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => setIsTicketFormOpen(false)}
+                disabled={isSubmittingTicket}
+              >
+                <Text style={styles.secondaryButtonLabel}>Annuler</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => setIsTicketFormOpen(true)}
+          >
+            <Text style={styles.secondaryButtonLabel}>Contacter le support</Text>
+          </Pressable>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -1519,5 +1665,83 @@ const styles = StyleSheet.create({
   },
   warningText: {
     color: orbiTheme.colors.amber,
+  },
+  heading: {
+    color: orbiTheme.colors.text,
+    fontWeight: '800',
+    fontSize: 18,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 4,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+  },
+  chipActive: {
+    borderColor: orbiTheme.colors.amber,
+    backgroundColor: 'rgba(245, 158, 11, 0.14)',
+  },
+  chipLabel: {
+    color: orbiTheme.colors.muted,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  chipLabelActive: {
+    color: orbiTheme.colors.text,
+  },
+  ticketRow: {
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: orbiTheme.colors.border,
+    gap: 4,
+  },
+  ticketHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ticketSubject: {
+    flex: 1,
+    color: orbiTheme.colors.text,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  ticketBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  ticketBadgeOpen: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+  },
+  ticketBadgeReview: {
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+  },
+  ticketBadgeClosed: {
+    backgroundColor: 'rgba(100, 116, 139, 0.15)',
+  },
+  ticketBadgeLabel: {
+    color: orbiTheme.colors.muted,
+    fontWeight: '700',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  ticketDescInput: {
+    minHeight: 90,
+    textAlignVertical: 'top',
   },
 });
