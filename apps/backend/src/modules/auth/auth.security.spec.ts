@@ -109,9 +109,9 @@ describe('AuthService — authentication security invariants', () => {
       const passwordHash = await hashPassword('RealPassword1!');
 
       prisma.user.findUnique.mockResolvedValueOnce(null);
-      const notFoundError = await service
+      const notFoundError = (await service
         .signIn({ email: 'ghost@orbi.app', password: 'Orbi123!' })
-        .catch((e: UnauthorizedException) => e);
+        .catch((e: unknown) => e)) as UnauthorizedException;
 
       prisma.user.findUnique.mockResolvedValueOnce({
         id: 'user-1',
@@ -122,9 +122,9 @@ describe('AuthService — authentication security invariants', () => {
         riderProfile: { id: 'rider-1' },
         driverProfile: null,
       });
-      const wrongPassError = await service
+      const wrongPassError = (await service
         .signIn({ email: 'real@orbi.app', password: 'WrongPass1!' })
-        .catch((e: UnauthorizedException) => e);
+        .catch((e: unknown) => e)) as UnauthorizedException;
 
       expect(notFoundError.message).toBe(wrongPassError.message);
       expect(notFoundError.getStatus()).toBe(wrongPassError.getStatus());
