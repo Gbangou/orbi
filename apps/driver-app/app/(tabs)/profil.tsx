@@ -87,6 +87,7 @@ const documentDescriptors = [
     placeholder: 'ex: selfie.jpg',
   },
 ] as const;
+const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
 
 type DocumentType = (typeof documentDescriptors)[number]['type'];
 type VehicleTypeOption = (typeof vehicleTypeOptions)[number];
@@ -770,6 +771,9 @@ export default function ProfilScreen() {
         tone={profileTransitionLabel ? 'sky' : flow.operationalStatus === 'SUSPENDED' ? 'rose' : 'amber'}
       />
       <Pressable
+        accessibilityLabel="Actualiser le profil chauffeur"
+        accessibilityRole="button"
+        hitSlop={touchHitSlop}
         onPress={() => void loadProfile()}
         disabled={isRefreshing || isSubmitting || isSigningOut}
         style={[
@@ -782,6 +786,9 @@ export default function ProfilScreen() {
         </Text>
       </Pressable>
       <Pressable
+        accessibilityLabel="Se deconnecter du compte chauffeur"
+        accessibilityRole="button"
+        hitSlop={touchHitSlop}
         onPress={() => void handleSignOut()}
         disabled={isSigningOut || isRefreshing || isSubmitting}
         style={[
@@ -909,6 +916,9 @@ export default function ProfilScreen() {
           {cityOptions.map((city) => (
             <Pressable
               key={city}
+              accessibilityLabel={`Choisir la ville ${city.replace(/_/g, ' ')}`}
+              accessibilityRole="button"
+              hitSlop={touchHitSlop}
               onPress={() => updateForm('city', city)}
               style={[
                 styles.pill,
@@ -944,6 +954,9 @@ export default function ProfilScreen() {
           {vehicleTypeOptions.map((type) => (
             <Pressable
               key={type}
+              accessibilityLabel={`Choisir le type de vehicule ${type === 'MOTORCYCLE' ? 'Moto' : 'Voiture'}`}
+              accessibilityRole="button"
+              hitSlop={touchHitSlop}
               onPress={() => updateVehicleType(type)}
               style={[
                 styles.pill,
@@ -1019,6 +1032,9 @@ export default function ProfilScreen() {
           {serviceTierOptions[form.vehicleType].map((tier) => (
             <Pressable
               key={tier}
+              accessibilityLabel={`Choisir le niveau de service ${tier.replace(/_/g, ' ')}`}
+              accessibilityRole="button"
+              hitSlop={touchHitSlop}
               onPress={() => updateForm('vehicleTier', tier)}
               style={[
                 styles.pill,
@@ -1075,6 +1091,9 @@ export default function ProfilScreen() {
 
         <View style={styles.actionStack}>
           <Pressable
+            accessibilityLabel="Preparer les liens documentaires securises"
+            accessibilityRole="button"
+            hitSlop={touchHitSlop}
             onPress={() => void prepareDocuments()}
             disabled={isPreparingDocuments || isSubmitting}
             style={[
@@ -1090,6 +1109,9 @@ export default function ProfilScreen() {
             </Text>
           </Pressable>
           <Pressable
+            accessibilityLabel="Soumettre le dossier chauffeur aux operations"
+            accessibilityRole="button"
+            hitSlop={touchHitSlop}
             onPress={() => void handleSubmitOnboarding()}
             disabled={isSubmitting || isPreparingDocuments}
             style={[

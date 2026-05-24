@@ -212,6 +212,9 @@ export function QuickActionCard({
   tone = 'teal',
   emphasis = 'secondary',
   style,
+  accessibilityLabel,
+  accessibilityRole,
+  hitSlop,
   ...pressableProps
 }: QuickActionCardProps) {
   const toneStyle = toneStyles[tone];
@@ -219,6 +222,9 @@ export function QuickActionCard({
 
   return (
     <Pressable
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityRole={accessibilityRole ?? 'button'}
+      hitSlop={hitSlop ?? 8}
       {...pressableProps}
       style={(state) => [
         styles.actionCard,
@@ -527,6 +533,9 @@ export function FlowActionButton({
   tone = 'sky',
   emphasis = 'secondary',
   style,
+  accessibilityLabel,
+  accessibilityRole,
+  hitSlop,
   ...pressableProps
 }: PressableProps & {
   label: string;
@@ -537,6 +546,9 @@ export function FlowActionButton({
 
   return (
     <Pressable
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityRole={accessibilityRole ?? 'button'}
+      hitSlop={hitSlop ?? 8}
       {...pressableProps}
       style={(state) => [
         styles.flowActionButton,

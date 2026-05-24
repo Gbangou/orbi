@@ -57,6 +57,7 @@ import { DriverHomeMapView } from '../../lib/driver-home-map-view';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MAP_HEIGHT = Math.round(SCREEN_HEIGHT * 0.38);
+const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
 
 const fallbackFatigue: DriverFatigueStatus = {
   state: 'clear',
@@ -381,6 +382,13 @@ export default function DriverHomeScreen() {
         {/* Overlay disponibilité en bas de la carte */}
         <View style={styles.mapOverlay}>
           <Pressable
+            accessibilityLabel={
+              flow.availabilityStatus === 'ONLINE'
+                ? 'Passer le chauffeur hors ligne'
+                : 'Passer le chauffeur en ligne'
+            }
+            accessibilityRole="button"
+            hitSlop={touchHitSlop}
             onPress={() => void handleToggleAvailability()}
             disabled={isRefreshing || isTogglingAvailability || flow.availabilityLocked}
             style={[
@@ -468,6 +476,13 @@ export default function DriverHomeScreen() {
           <Text style={styles.meta}>Le backend vous maintient occupe pendant la course en cours.</Text>
         ) : null}
         <Pressable
+          accessibilityLabel={
+            flow.availabilityStatus === 'ONLINE'
+              ? 'Passer le chauffeur hors ligne'
+              : 'Passer le chauffeur en ligne'
+          }
+          accessibilityRole="button"
+          hitSlop={touchHitSlop}
           onPress={() => void handleToggleAvailability()}
           disabled={isRefreshing || isTogglingAvailability || flow.availabilityLocked}
           style={[
@@ -500,6 +515,9 @@ export default function DriverHomeScreen() {
           </Text>
         </Pressable>
         <Pressable
+          accessibilityLabel="Actualiser les donnees chauffeur en direct"
+          accessibilityRole="button"
+          hitSlop={touchHitSlop}
           onPress={() => void loadDriverHome()}
           disabled={isRefreshing || isTogglingAvailability}
           style={[styles.inlineButton, isRefreshing ? styles.inlineButtonDisabled : null]}

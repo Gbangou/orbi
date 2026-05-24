@@ -115,6 +115,8 @@ const fallbackFatigue: DriverFatigueStatus = {
   reason: "Aucun signal fatigue bloquant sur la fenetre recente.",
 };
 
+const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
+
 function buildInitials(name: string) {
   return (
     name
@@ -1164,6 +1166,9 @@ export default function OffersScreen() {
             </Text>
           </View>
           <Pressable
+            accessibilityLabel="Fermer le recap de course terminee"
+            accessibilityRole="button"
+            hitSlop={touchHitSlop}
             onPress={() => setCompletionFlash(null)}
             style={styles.completionFlashClose}
           >
@@ -1269,6 +1274,9 @@ export default function OffersScreen() {
         </Text>
       ) : null}
       <Pressable
+        accessibilityLabel="Actualiser les missions chauffeur en direct"
+        accessibilityRole="button"
+        hitSlop={touchHitSlop}
         onPress={() => void loadDriverData()}
         disabled={isRefreshing || isSubmitting}
         style={[
@@ -1281,6 +1289,13 @@ export default function OffersScreen() {
         </Text>
       </Pressable>
       <Pressable
+        accessibilityLabel={
+          flow.availabilityStatus === "ONLINE"
+            ? "Passer le chauffeur hors ligne"
+            : "Passer le chauffeur en ligne"
+        }
+        accessibilityRole="button"
+        hitSlop={touchHitSlop}
         onPress={() => void handleToggleAvailability()}
         disabled={isSubmitting || flow.availabilityLocked}
         style={[

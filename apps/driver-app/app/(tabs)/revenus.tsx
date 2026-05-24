@@ -60,6 +60,8 @@ const fallbackEarnings: DriverEarningsResponse = {
   recentTrips: [],
 };
 
+const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
+
 export default function RevenusScreen() {
   const [earnings, setEarnings] = useState<DriverEarningsResponse>(fallbackEarnings);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
@@ -267,6 +269,9 @@ export default function RevenusScreen() {
           />
         </View>
         <Pressable
+          accessibilityLabel="Actualiser les revenus chauffeur"
+          accessibilityRole="button"
+          hitSlop={touchHitSlop}
           onPress={() => void loadEarnings()}
           disabled={isRefreshing}
           style={[styles.refreshButton, isRefreshing ? styles.refreshButtonDisabled : null]}
