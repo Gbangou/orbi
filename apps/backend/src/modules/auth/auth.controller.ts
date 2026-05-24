@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Post,
   Req,
   UseGuards,
@@ -71,5 +73,18 @@ export class AuthController {
     @Body() payload?: SignOutDto,
   ) {
     return this.authService.signOut(auth, payload);
+  }
+
+  // RGPD — Droit à l'effacement : anonymise les PII et révoque toutes les sessions.
+  // Méthode DELETE + confirmation explicite pour empêcher les suppressions accidentelles.
+  @Delete('account')
+  @Version('1')
+  @HttpCode(200)
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard)
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 3, windowMs: 60_000 })
+  deleteAccount(@CurrentAuth() auth: RequestAuthContext) {
+    return this.authService.deleteAccount(auth);
   }
 }

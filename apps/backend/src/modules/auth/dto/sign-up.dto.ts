@@ -1,7 +1,8 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
   IsEnum,
+  IsOptional,
   IsString,
   Matches,
   MaxLength,
@@ -42,4 +43,13 @@ export class SignUpDto {
   @ApiProperty({ enum: SignUpRole, enumName: 'SignUpRole' })
   @IsEnum(SignUpRole)
   role!: SignUpRole;
+
+  // Format E.164 : +[code pays][numéro], 8–15 chiffres, ex. +22670123456
+  @ApiPropertyOptional({ example: '+22670123456' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\+[1-9]\d{7,14}$/, {
+    message: 'Phone number must be in E.164 format: +[country code][number], e.g. +22670123456',
+  })
+  phoneNumber?: string;
 }

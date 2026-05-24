@@ -34,6 +34,12 @@ describe("AuthService — invariants de sécurité de l'authentification", () =>
         update: jest.fn(),
         updateMany: jest.fn(),
       },
+      auditLog: {
+        create: jest.fn().mockResolvedValue(undefined),
+      },
+      $transaction: jest.fn(async (ops: unknown[]) =>
+        Promise.all(ops.map((op) => Promise.resolve(op))),
+      ),
     };
 
     return { prisma, service: new AuthService(prisma as never) };

@@ -19,6 +19,22 @@ import { SignUpDto } from './dto/sign-up.dto';
 import { serializeAuthenticatedUser, serializeSession } from './auth.presenter';
 import type { RequestAuthContext } from './auth.types';
 
+// Politique de verrouillage de compte : défense en profondeur contre le brute-force
+// même lorsque l'attaquant utilise plusieurs adresses IP.
+// Seuils : 5 échecs → 15 min | 10 échecs → 1 h | 20+ échecs → 24 h
+const LOCKOUT_THRESHOLDS: Array<{ minCount: number; lockMs: number }> = [
+  { minCount: 20, lockMs: 24 * 60 * 60_000 },
+  { minCount: 10, lockMs: 60 * 60_000 },
+  { minCount: 5,  lockMs: 15 * 60_000 },
+];
+
+function computeLockoutDuration(failedCount: number): number {
+  for (const threshold of LOCKOUT_THRESHOLDS) {
+    if (failedCount >= threshold.minCount) return threshold.lockMs;
+  }
+  return 0;
+}
+
 @Injectable()
 export class AuthService {
   constructor(private readonly prisma: PrismaService) {}
@@ -60,6 +76,8 @@ export class AuthService {
 
     const currentSession = user.sessions[0];
 
+    await this.logAuthEvent(user.id, 'SIGN_UP', metadata);
+
     return {
       message: 'Account created successfully.',
       sessionToken: session.token,
@@ -78,8 +96,24 @@ export class AuthService {
       },
     });
 
+    // Réponse identique que l'utilisateur existe ou non — pas d'énumération d'email.
     if (!user?.passwordHash) {
       throw new UnauthorizedException('Invalid email or password.');
+    }
+
+    // Vérification du verrouillage avant de tester le mot de passe.
+    const now = new Date();
+    if (user.lockedUntil && user.lockedUntil > now) {
+      const remainingSeconds = Math.ceil(
+        (user.lockedUntil.getTime() - now.getTime()) / 1000,
+      );
+      throw new UnauthorizedException(
+        `Account temporarily locked. Try again in ${remainingSeconds} seconds.`,
+      );
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('This account is currently inactive.');
     }
 
     const isPasswordValid = await verifyPassword(
@@ -88,43 +122,51 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
+      // Incrémenter le compteur et recalculer le verrouillage.
+      const newCount = user.failedLoginCount + 1;
+      const lockMs = computeLockoutDuration(newCount);
+      const lockedUntil = lockMs > 0 ? new Date(now.getTime() + lockMs) : null;
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginCount: newCount, lockedUntil },
+      });
+      // Journaliser l'échec pour la surveillance de sécurité.
+      await this.logAuthEvent(user.id, 'SIGN_IN_FAILED', metadata, {
+        failedLoginCount: newCount,
+        lockedUntil: lockedUntil?.toISOString() ?? null,
+      });
       throw new UnauthorizedException('Invalid email or password.');
     }
 
-    if (!user.isActive) {
-      throw new UnauthorizedException('This account is currently inactive.');
-    }
-
+    // Connexion réussie : réinitialiser le compteur d'échecs et mettre à jour lastLoginAt.
     const sessionSeed = this.createSessionSeed(metadata);
 
-    const session = await this.prisma.userSession.create({
-      data: {
-        userId: user.id,
-        tokenHash: sessionSeed.tokenHash,
-        expiresAt: sessionSeed.expiresAt,
-        userAgent: sessionSeed.userAgent,
-        ipAddress: sessionSeed.ipAddress,
-      },
-    });
+    const [session] = await this.prisma.$transaction([
+      this.prisma.userSession.create({
+        data: {
+          userId: user.id,
+          tokenHash: sessionSeed.tokenHash,
+          expiresAt: sessionSeed.expiresAt,
+          userAgent: sessionSeed.userAgent,
+          ipAddress: sessionSeed.ipAddress,
+        },
+      }),
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: now, failedLoginCount: 0, lockedUntil: null },
+      }),
+    ]);
 
     if (user.role === UserRole.DRIVER) {
       await this.revokeOtherActiveSessions(user.id, session.id);
     }
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lastLoginAt: new Date(),
-      },
-    });
+    await this.logAuthEvent(user.id, 'SIGN_IN_SUCCESS', metadata);
 
     return {
       message: 'Signed in successfully.',
       sessionToken: sessionSeed.token,
-      user: serializeAuthenticatedUser({
-        ...user,
-        lastLoginAt: new Date(),
-      }),
+      user: serializeAuthenticatedUser({ ...user, lastLoginAt: now }),
       session: serializeSession(session, true),
     };
   }
@@ -176,18 +218,78 @@ export class AuthService {
     }
 
     await this.prisma.userSession.update({
-      where: {
-        id: session.id,
-      },
-      data: {
-        revokedAt: new Date(),
-      },
+      where: { id: session.id },
+      data: { revokedAt: new Date() },
+    });
+
+    await this.logAuthEvent(auth.user.id, 'SIGN_OUT', {
+      ipAddress: auth.session.ipAddress ?? undefined,
+      userAgent: auth.session.userAgent ?? undefined,
     });
 
     return {
       message: 'Session revoked successfully.',
       revokedSessionId: session.id,
     };
+  }
+
+  // ── Droit à l'effacement RGPD / GDPR Right to Erasure ────────────────────────
+  // Anonymise les données personnelles identifiables tout en conservant les
+  // enregistrements financiers (courses, paiements) requis par la loi.
+  async deleteAccount(auth: RequestAuthContext) {
+    const userId = auth.user.id;
+    const anonymizedEmail = `deleted_${userId}@deleted.orbi`;
+
+    await this.prisma.$transaction([
+      // Anonymisation des champs PII de l'utilisateur.
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          email: anonymizedEmail,
+          fullName: 'Compte supprimé',
+          phoneNumber: null,
+          passwordHash: null,
+          isActive: false,
+        },
+      }),
+      // Révocation immédiate de toutes les sessions actives.
+      this.prisma.userSession.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    await this.logAuthEvent(userId, 'SIGN_OUT', {
+      ipAddress: auth.session.ipAddress ?? undefined,
+      userAgent: auth.session.userAgent ?? undefined,
+    });
+
+    return { message: 'Account data anonymized and all sessions revoked.' };
+  }
+
+  private async logAuthEvent(
+    userId: string,
+    action: 'SIGN_IN_SUCCESS' | 'SIGN_IN_FAILED' | 'SIGN_UP' | 'SIGN_OUT',
+    metadata: AuthRequestMetadata = {},
+    extra?: Record<string, unknown>,
+  ) {
+    try {
+      await this.prisma.auditLog.create({
+        data: {
+          userId,
+          action,
+          entityType: 'UserSession',
+          entityId: userId,
+          metadata: {
+            ipAddress: metadata.ipAddress ?? null,
+            userAgent: metadata.userAgent ?? null,
+            ...extra,
+          },
+        },
+      });
+    } catch {
+      // Non-bloquant : une erreur de log ne doit pas impacter l'auth.
+    }
   }
 
   private async revokeOtherActiveSessions(
@@ -247,6 +349,7 @@ export class AuthService {
       passwordHash,
       role,
       lastLoginAt: new Date(),
+      phoneNumber: payload.phoneNumber ?? undefined,
       wallets: {
         create: {
           currency: DEFAULT_WALLET_CURRENCY,

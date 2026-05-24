@@ -44,6 +44,24 @@ function normalizePlateNumber(value: string) {
   return value.trim().toUpperCase();
 }
 
+// Bruit gaussien Box-Muller : ±~100 m (0.0009°) — assez pour empêcher le
+// tracking précis tout en conservant l'utilité de la carte de proximité.
+function fuzzCoordinates(
+  latitude: number,
+  longitude: number,
+): { latitude: number; longitude: number } {
+  const noiseDegreesLat = 0.0009;
+  const noiseDegreesLng = 0.0009;
+  // Box-Muller transform pour bruit gaussien centré.
+  const u1 = Math.random() || Number.EPSILON;
+  const u2 = Math.random() || Number.EPSILON;
+  const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  return {
+    latitude:  parseFloat((latitude  + z * noiseDegreesLat).toFixed(6)),
+    longitude: parseFloat((longitude + z * noiseDegreesLng).toFixed(6)),
+  };
+}
+
 function summarizeReviewStatus(
   reviewStatus: DriverOnboardingReviewStatus | null,
 ) {
@@ -804,13 +822,21 @@ export class DriversService {
     });
 
     return {
-      drivers: nearby.map((p) => ({
-        id: p.id.slice(0, 8),
-        latitude: toNumber(p.currentLatitude)!,
-        longitude: toNumber(p.currentLongitude)!,
-        vehicleType: p.vehicles[0]?.type ?? null,
-        status: p.status,
-      })),
+      drivers: nearby.map((p) => {
+        // Floutage de position : bruit gaussien ±~100 m (≈ 0.0009°) pour empêcher
+        // le tracking précis des chauffeurs sans dégrader l'utilité de la carte.
+        const fuzzed = fuzzCoordinates(
+          toNumber(p.currentLatitude)!,
+          toNumber(p.currentLongitude)!,
+        );
+        return {
+          id: p.id.slice(0, 8),
+          latitude: fuzzed.latitude,
+          longitude: fuzzed.longitude,
+          vehicleType: p.vehicles[0]?.type ?? null,
+          status: p.status,
+        };
+      }),
       total: nearby.length,
     };
   }

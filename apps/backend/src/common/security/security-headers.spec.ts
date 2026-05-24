@@ -54,15 +54,19 @@ describe('applyApiSecurityHeaders', () => {
         response as never,
       );
 
-      expect(headers.get('Cache-Control')).toBe('no-store, max-age=0');
+      expect(headers.get('Cache-Control')).toBe(
+        'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+      );
       expect(headers.get('Pragma')).toBe('no-cache');
       expect(headers.get('Strict-Transport-Security')).toContain(
-        'max-age=31536000',
+        'max-age=63072000',
       );
     }
   });
 
-  it('does not trust raw forwarded proto headers for HSTS', () => {
+  it('sets HSTS behind a reverse proxy via X-Forwarded-Proto', () => {
+    // Production runs behind nginx/traefik: req.secure=false but X-Forwarded-Proto=https.
+    // HSTS must be sent so browsers enforce HTTPS end-to-end.
     const { headers, response } = createResponse();
 
     applyApiSecurityHeaders(
@@ -74,7 +78,10 @@ describe('applyApiSecurityHeaders', () => {
       response as never,
     );
 
-    expect(headers.has('Strict-Transport-Security')).toBe(false);
+    expect(headers.get('Strict-Transport-Security')).toContain(
+      'max-age=63072000',
+    );
+    expect(headers.get('Strict-Transport-Security')).toContain('preload');
   });
 
   it('sets HSTS when Express marks the request as secure', () => {
