@@ -135,18 +135,46 @@ export class DriversService {
   async overview() {
     const drivers = await this.prisma.driverProfile.findMany({
       include: {
-        user: true,
-        vehicles: true,
+        user: {
+          select: {
+            fullName: true,
+            email: true,
+            phoneNumber: true,
+            isActive: true,
+            isPhoneVerified: true,
+            createdAt: true,
+          },
+        },
+        vehicles: {
+          select: {
+            id: true,
+            plateNumber: true,
+            make: true,
+            model: true,
+            type: true,
+            isActive: true,
+          },
+        },
       },
       take: 25,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
 
     return {
       total: drivers.length,
-      drivers,
+      drivers: drivers.map((d) => ({
+        id: d.id,
+        userId: d.userId,
+        fullName: d.user.fullName,
+        email: d.user.email,
+        phoneNumber: d.user.phoneNumber,
+        isActive: d.user.isActive,
+        isPhoneVerified: d.user.isPhoneVerified,
+        status: d.status,
+        verificationStatus: d.verificationStatus,
+        vehicles: d.vehicles,
+        createdAt: d.user.createdAt.toISOString(),
+      })),
     };
   }
 

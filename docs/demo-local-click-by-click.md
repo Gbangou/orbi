@@ -1,342 +1,444 @@
-# Demo locale Orbi clic par clic
+# Tester Orbi sur ton ordinateur et ton téléphone — guide pas à pas
 
-Date de reference: 18 mai 2026
+> **Ce guide est écrit pour tout le monde.** Tu n'as pas besoin de savoir coder.
+> Chaque étape te dit exactement quoi faire, mot pour mot, clic par clic.
+> Si quelque chose ne marche pas, il y a une section "Ça ne marche pas ?" à la fin.
 
-Ce guide explique comment tester une demo locale qui fonctionne vraiment:
-sessions reelles, identifiants/mots de passe, rider, driver, admin, course
-active et mouvement GPS visible dans les apps.
+---
 
-## 1. Preparer la machine
+## Ce dont tu as besoin avant de commencer
 
-1. Ouvrir Docker Desktop.
-2. Attendre que Docker indique qu il est lance.
-3. Ouvrir un terminal PowerShell 7 dans le dossier du repo Orbi.
-4. Lancer:
+Avant de faire quoi que ce soit, vérifie que tu as ces 4 choses :
+
+| Ce qu'il faut | Comment vérifier | Où le télécharger si absent |
+|---|---|---|
+| **Docker Desktop** | Tu vois une icône de baleine dans ta barre des tâches | [docker.com](https://www.docker.com/products/docker-desktop/) |
+| **Node.js** | Ouvre un terminal, tape `node --version`, tu vois un numéro | [nodejs.org](https://nodejs.org/) |
+| **pnpm** | Dans le terminal, tape `pnpm --version`, tu vois un numéro | Dans le terminal : `npm install -g pnpm` |
+| **Expo Go** sur ton téléphone | Tu vois l'app "Expo Go" sur ton téléphone | App Store (iPhone) ou Play Store (Android) |
+
+---
+
+## PARTIE 1 — Tester sur l'ordinateur
+
+### Étape 1 — Ouvrir Docker Desktop
+
+Docker Desktop, c'est le programme qui fait tourner la base de données (l'endroit où sont stockées toutes les informations des utilisateurs, courses, etc.).
+
+1. Double-clique sur l'icône **Docker Desktop** sur ton bureau
+2. Attends que la fenêtre s'ouvre et affiche **"Engine running"** (ou une icône verte)
+3. Tu peux réduire la fenêtre, elle continue de tourner en arrière-plan
+
+---
+
+### Étape 2 — Ouvrir le dossier du projet dans un terminal
+
+Le terminal, c'est la fenêtre noire où tu tapes des commandes. Ne t'inquiète pas, tu n'as pas besoin de comprendre ce que tu tapes — copie-colle exactement ce qui est écrit.
+
+1. Ouvre l'explorateur de fichiers Windows
+2. Va dans le dossier `C:\Users\LENOVO\Desktop\orbi`
+3. Clique dans la barre d'adresse en haut (là où il est écrit le chemin du dossier)
+4. Tape `powershell` et appuie sur **Entrée**
+5. Une fenêtre bleue ou noire s'ouvre — c'est ton terminal
+
+---
+
+### Étape 3 — Préparer l'application (une seule fois)
+
+Dans le terminal, copie-colle cette commande et appuie sur **Entrée** :
 
 ```powershell
-pnpm install
 pnpm setup:local
+```
+
+Tu vas voir des textes défiler. C'est normal. Attends que ça s'arrête et que tu vois à nouveau le curseur clignoter.
+
+**Ce que ça fait :** ça copie les fichiers de configuration dont l'application a besoin pour démarrer.
+
+---
+
+### Étape 4 — Démarrer la base de données
+
+```powershell
 pnpm db:start
+```
+
+Attends le message : `PostgreSQL is ready` ou `healthy`.
+
+**Ce que ça fait :** ça démarre la base de données, comme allumer un tiroir où sont rangées toutes les informations.
+
+---
+
+### Étape 5 — Initialiser les données (une seule fois)
+
+Tape ces commandes **une par une**, en attendant que chacune soit finie avant de taper la suivante :
+
+```powershell
 pnpm prisma:generate
+```
+
+*(attends que ça finisse)*
+
+```powershell
 pnpm prisma:migrate
+```
+
+*(attends que ça finisse)*
+
+```powershell
 pnpm prisma:seed
 ```
 
-Si une commande echoue parce que PostgreSQL n est pas pret, attendre quelques
-secondes puis relancer la commande echouee.
+*(attends que ça finisse)*
 
-## 2. Demarrer la demo sur ordinateur
+**Ce que ça fait :** ça crée les tables dans la base de données et crée 3 comptes de test prêts à utiliser.
 
-### Rider web + admin
+---
 
-1. Dans un terminal, lancer:
+### Étape 6 — Les 3 comptes de test créés automatiquement
 
-```powershell
-pnpm dev:full-web
-```
+Ces comptes sont créés par l'étape précédente. **Ne les change pas.**
 
-2. Attendre que le backend, l admin et Expo web soient prets.
-3. Ouvrir l admin:
+| Qui | Email | Mot de passe |
+|---|---|---|
+| **Administrateur** (le patron qui voit tout) | `admin@orbi.app` | `Orbi123!` |
+| **Passager** (celui qui commande une course) | `rider@orbi.app` | `Orbi123!` |
+| **Chauffeur** (celui qui conduit) | `driver@orbi.app` | `Orbi123!` |
 
-```text
-http://localhost:3001
-```
+---
 
-4. Ouvrir le rider web. L URL est affichee dans le terminal Expo, souvent:
+### Étape 7 — Démarrer l'application
 
-```text
-http://localhost:8081/auth
-```
+Tu vas ouvrir **3 fenêtres de terminal** en même temps. Chaque fenêtre fait tourner une partie de l'application.
 
-### Driver web
+#### Terminal 1 — Le serveur principal (le cerveau de l'app)
 
-Expo web utilise souvent le meme port pour rider et driver. Pour tester le
-driver web proprement:
-
-1. Arreter le terminal `pnpm dev:full-web` avec `Ctrl+C`.
-2. Lancer:
+Dans ton terminal actuel, tape :
 
 ```powershell
-pnpm dev:web-driver-preview
+pnpm dev:backend
 ```
 
-3. Ouvrir:
+Attends le message : `Application is running on: http://[::1]:3000`
 
-```text
-http://localhost:8081/auth
-```
+**Ne ferme pas cette fenêtre.**
 
-Si un autre port est affiche dans le terminal Expo, utiliser ce port.
+#### Terminal 2 — L'app passager
 
-## 3. Comptes de demo
-
-Ces comptes sont crees par `pnpm prisma:seed`.
-
-| Surface | Email | Mot de passe |
-| --- | --- | --- |
-| Admin | `admin@orbi.app` | `Orbi123!` |
-| Rider | `rider@orbi.app` | `Orbi123!` |
-| Driver | `driver@orbi.app` | `Orbi123!` |
-
-## 4. Se connecter a l admin
-
-1. Aller sur `http://localhost:3001`.
-2. Dans le bloc `Session admin`, verifier l email:
-
-```text
-admin@orbi.app
-```
-
-3. Saisir le mot de passe:
-
-```text
-Orbi123!
-```
-
-4. Cliquer sur `Se connecter`.
-5. Attendre le retour sur la page admin.
-6. Verifier que la page affiche les panneaux operations, live ops, onboarding,
-   paiements, wallets et readiness.
-
-Raccourci local:
-
-1. Cliquer sur `Demo admin`.
-2. La page ouvre une session admin avec le meme endpoint auth backend.
-
-Pour fermer:
-
-1. Cliquer sur `Deconnexion`.
-2. La session admin locale est effacee.
-
-## 5. Se connecter au rider
-
-1. Ouvrir l URL rider, par exemple `http://localhost:8081/auth`.
-2. Cliquer sur `Utiliser le compte demo`, ou saisir:
-
-```text
-Email: rider@orbi.app
-Mot de passe: Orbi123!
-```
-
-3. Verifier que les lignes de preparation indiquent `Email pret` et
-   `Mot de passe pret`.
-4. Cliquer sur `Se connecter`.
-5. L app doit ouvrir l accueil rider.
-6. Cliquer sur `Reservation` ou `Ouvrir la reservation` selon la navigation
-   visible.
-7. Choisir une option de trajet.
-8. Cliquer sur le bouton de creation de demande.
-9. Aller dans `Activite` pour voir la course active et la carte de suivi.
-
-Raccourci local:
-
-1. Sur `/auth`, cliquer sur `Demo rider`.
-2. L app connecte le rider et ouvre l accueil.
-
-## 6. Se connecter au driver
-
-1. Ouvrir l URL driver, par exemple `http://localhost:8081/auth` quand
-   `pnpm dev:web-driver-preview` est lance.
-2. Cliquer sur `Utiliser le compte demo`, ou saisir:
-
-```text
-Email: driver@orbi.app
-Mot de passe: Orbi123!
-```
-
-3. Verifier que les lignes de preparation indiquent `Email pret` et
-   `Mot de passe pret`.
-4. Cliquer sur `Se connecter`.
-5. L app doit ouvrir l accueil chauffeur.
-6. Cliquer sur `Offres` ou `Voir toutes les offres`.
-7. Mettre le chauffeur en ligne si le bouton est visible.
-8. Accepter une offre disponible.
-9. Dans l ecran offres, verifier la carte mission, les marqueurs `Rider` et
-   `Driver`, la precision GPS et les coordonnees.
-
-Raccourci local:
-
-1. Sur `/auth`, cliquer sur `Demo driver`.
-2. L app connecte le driver et ouvre l accueil.
-
-## 7. Generer une vraie course demo avec mouvement GPS
-
-Cette commande est la plus directe pour prouver que la demo n est pas statique.
-Elle se connecte au backend avec les vrais comptes seedes, cree une vraie
-course active et poste des positions GPS successives du driver.
-
-1. Garder le backend local lance.
-2. Ouvrir rider et driver, puis se connecter avec les comptes demo.
-3. Dans un nouveau terminal a la racine du repo, lancer:
+Ouvre un **nouveau terminal** dans le même dossier (répète l'étape 2). Tape :
 
 ```powershell
-pnpm demo:local-live-session
+pnpm dev:rider
 ```
 
-4. Attendre le message:
+Attends que le QR code apparaisse dans le terminal.
 
-```text
-Local demo live session is ready.
-```
+**Ne ferme pas cette fenêtre.**
 
-5. Dans l app rider, aller dans `Activite`.
-6. Cliquer sur `Actualiser le suivi` si l ecran ne se met pas a jour tout seul.
-7. Verifier que la carte affiche:
-   - `Rider`
-   - `Driver`
-   - une coordonnee du type `Zone chauffeur approx. ...`
-   - `Precision ... m`
-   - une distance restante vers le pickup
-8. Dans l app driver, aller dans `Offres`.
-9. Cliquer sur `Actualiser le direct`.
-10. Verifier que la carte mission affiche:
-    - `Rider`
-    - `Driver`
-    - une coordonnee du type `Zone mission approx. ...`
-    - `Precision ... m`
-    - une distance restante vers le pickup
+#### Terminal 3 — L'app chauffeur
 
-Pour poster de nouveaux mouvements pendant que les ecrans sont ouverts:
+Ouvre un **troisième terminal**. Tape :
 
 ```powershell
-pnpm demo:local-live-session
+pnpm dev:driver
 ```
 
-Pour faire aussi demarrer la course et montrer le mouvement vers la destination:
+Attends que le QR code apparaisse.
+
+**Ne ferme pas cette fenêtre.**
+
+#### Terminal 4 — Le tableau de bord admin (optionnel)
+
+Ouvre un **quatrième terminal**. Tape :
 
 ```powershell
-pnpm demo:local-live-session -- -StartTrip
+pnpm dev:admin
 ```
 
-## 8. Tester sur telephone avec Expo Go
+Attends le message `ready on http://localhost:3001`.
 
-Le telephone ne peut pas utiliser `localhost` pour appeler le backend du PC.
-Il faut lui donner l IP Wi-Fi du PC.
+---
 
-1. Verifier que le PC et le telephone sont sur le meme Wi-Fi.
-2. Lancer:
+### Étape 8 — Tester le tableau de bord admin
+
+1. Ouvre ton navigateur internet (Chrome, Firefox, Edge...)
+2. Dans la barre d'adresse, tape exactement : `http://localhost:3001`
+3. Tu vois une page de connexion
+4. Tape l'email : `admin@orbi.app`
+5. Tape le mot de passe : `Orbi123!`
+6. Clique sur **"Se connecter"**
+
+Tu dois voir le tableau de bord avec les statistiques, la carte en temps réel, les courses, les chauffeurs, etc.
+
+---
+
+## PARTIE 2 — Tester sur le téléphone
+
+### Étape 9 — Connecter le téléphone au même Wi-Fi que le PC
+
+**Important :** ton téléphone et ton ordinateur doivent être sur le **même réseau Wi-Fi**. Pas en 4G/5G, pas sur un autre réseau — exactement le même.
+
+Pour vérifier :
+- Sur ton PC : clique sur l'icône Wi-Fi en bas à droite. Note le nom du réseau.
+- Sur ton téléphone : va dans Paramètres → Wi-Fi. Connecte-toi au même réseau.
+
+---
+
+### Étape 10 — Dire au téléphone où trouver l'application
+
+Le téléphone ne peut pas utiliser `localhost` (ce mot signifie "l'ordinateur lui-même" et le téléphone ne sait pas que ça parle du PC). Il faut lui donner l'adresse du PC sur le réseau Wi-Fi.
+
+Dans un terminal, tape :
 
 ```powershell
 pnpm mobile:lan
-pnpm mobile:check
 ```
 
-3. Si `mobile:check` echoue, relancer avec l IP exacte du PC:
+**Ce que ça fait :** ce script trouve automatiquement l'adresse de ton PC sur le Wi-Fi et la note dans les fichiers de configuration des apps mobile. Tu n'as rien d'autre à faire.
+
+---
+
+### Étape 11 — Ouvrir les apps sur le téléphone
+
+1. Sur ton téléphone, ouvre l'application **Expo Go**
+2. Appuie sur le bouton **"Scan QR code"** (scanner le code QR)
+3. Pointe l'appareil photo vers le **QR code de l'app passager** (affiché dans le Terminal 2)
+4. L'app passager s'ouvre sur ton téléphone
+
+Pour l'app chauffeur :
+1. Dans Expo Go, appuie à nouveau sur **"Scan QR code"**
+2. Scanne le **QR code de l'app chauffeur** (Terminal 3)
+3. L'app chauffeur s'ouvre
+
+> Si les apps ne se connectent pas au serveur, va à la section "Ça ne marche pas ?" en bas.
+
+---
+
+## PARTIE 3 — Faire un vrai trajet de bout en bout
+
+Maintenant qu'on a tout démarré, on va simuler une vraie course : le passager commande, le chauffeur accepte, la course se fait, le passager note.
+
+---
+
+### Étape 12 — S'inscrire (ou se connecter) côté passager
+
+Sur le téléphone avec **l'app passager** :
+
+1. Tu vois un écran avec les mots "Se connecter" et "Créer un compte"
+2. Appuie sur **"Se connecter"**
+3. Dans le champ "Email", tape : `rider@orbi.app`
+4. Dans le champ "Mot de passe", tape : `Orbi123!`
+5. Appuie sur **"Se connecter"**
+
+Tu arrives sur la carte principale. Tu vois des petites icônes de voitures qui bougent — ce sont les chauffeurs disponibles près de toi (simulés).
+
+---
+
+### Étape 13 — S'inscrire (ou se connecter) côté chauffeur
+
+Sur le téléphone avec **l'app chauffeur** (ou un deuxième téléphone) :
+
+1. Appuie sur **"Se connecter"**
+2. Email : `driver@orbi.app`
+3. Mot de passe : `Orbi123!`
+4. Appuie sur **"Se connecter"**
+
+Tu arrives sur la carte chauffeur.
+
+5. Cherche le bouton **"Disponible"** ou **"Passer en ligne"** et appuie dessus
+
+Le chauffeur est maintenant visible pour les passagers.
+
+---
+
+### Étape 14 — Commander une course (côté passager)
+
+Sur **l'app passager** :
+
+1. Appuie sur la **barre de recherche** en bas de l'écran (là où il est écrit "Où voulez-vous aller ?")
+2. Tape le nom d'un endroit, par exemple : `Marché de Gounghin`
+3. Des suggestions apparaissent en dessous — appuie sur la première suggestion
+4. Tu vois deux types de véhicules : **Moto** et **Voiture**. Appuie sur l'un d'eux.
+5. Tu vois le prix estimé de la course
+6. Appuie sur **"Confirmer la réservation"**
+
+Tu es redirigé vers l'écran **"Activité"** qui dit "En attente d'un chauffeur...".
+
+---
+
+### Étape 15 — Accepter la course (côté chauffeur)
+
+Sur **l'app chauffeur**, dans l'onglet **"Offres"** :
+
+1. Une carte apparaît avec les informations de la course : adresse de prise en charge, prix
+2. Appuie sur **"Accepter"**
+
+Deux choses se passent en même temps :
+- Sur l'app **chauffeur** : une carte s'affiche avec l'itinéraire vers le passager (la route en bleu)
+- Sur l'app **passager** : l'écran Activité dit "Votre chauffeur arrive !" et montre une carte
+
+---
+
+### Étape 16 — Arriver au point de prise en charge (côté chauffeur)
+
+Sur **l'app chauffeur** :
+
+1. Appuie sur **"Je suis arrivé"**
+
+Sur **l'app passager** :
+
+1. Un message s'affiche : "Votre chauffeur est arrivé"
+2. Tu vois un **code à 4 chiffres** — note-le (exemple : `4827`)
+
+---
+
+### Étape 17 — Démarrer la course (côté chauffeur)
+
+Sur **l'app chauffeur** :
+
+1. Un champ apparaît pour entrer le code du passager
+2. Tape le code que le passager vient de voir (exemple : `4827`)
+3. Appuie sur **"Démarrer la course"**
+
+La course est maintenant **en cours**. Les deux apps affichent la route vers la destination.
+
+---
+
+### Étape 18 — Terminer la course (côté chauffeur)
+
+Sur **l'app chauffeur** :
+
+1. Appuie sur **"Terminer la course"**
+
+---
+
+### Étape 19 — Voir le reçu et noter le chauffeur (côté passager)
+
+Sur **l'app passager** :
+
+1. L'écran **Reçu** s'ouvre automatiquement
+2. Tu vois : le montant payé, la distance, la durée, le nom du chauffeur
+3. Appuie sur **"Évaluer le chauffeur"**
+4. Appuie sur le nombre d'étoiles que tu veux donner (5 étoiles = excellent)
+5. Appuie sur **"Envoyer"**
+
+**Félicitations — tu as fait un trajet complet de bout en bout !**
+
+---
+
+### Étape 20 — Vérifier dans l'admin
+
+Dans ton navigateur, sur `http://localhost:3001` :
+
+1. Tu vois le trajet qui vient d'être terminé dans les statistiques
+2. Le montant est crédité au chauffeur dans son portefeuille
+3. La carte LiveOps (Operations en direct) montre l'historique
+
+---
+
+## Ce que chaque partie fait (en résumé simple)
+
+```
+Ton ordinateur
+│
+├── Serveur principal (Terminal 1, port 3000)
+│   └── C'est le cerveau. Il reçoit toutes les demandes, stocke les infos.
+│
+├── App Passager (Terminal 2, port 8081)
+│   └── Ce que voit le passager sur son téléphone ou navigateur.
+│
+├── App Chauffeur (Terminal 3, port 8082)
+│   └── Ce que voit le chauffeur sur son téléphone.
+│
+└── Admin (Terminal 4, port 3001)
+    └── Le tableau de bord pour voir tout ce qui se passe.
+```
+
+---
+
+## Ça ne marche pas ? Solutions aux problèmes courants
+
+### "Le QR code ne charge rien sur mon téléphone"
+
+**Cause la plus probable :** le téléphone n'est pas sur le même Wi-Fi que le PC.
+
+Solution :
+1. Sur ton téléphone, va dans Paramètres → Wi-Fi
+2. Connecte-toi au même réseau Wi-Fi que ton PC
+3. Retape `pnpm mobile:lan` dans un terminal
+4. Rescanne le QR code
+
+---
+
+### "L'app s'ouvre mais dit 'Impossible de se connecter au serveur'"
+
+Solution :
+1. Vérifie que le Terminal 1 (serveur principal) est bien ouvert et affiche `running on port 3000`
+2. Dans un terminal, tape :
 
 ```powershell
-pnpm mobile:lan -- -HostIp 192.168.1.20
-pnpm mobile:check
+netsh advfirewall firewall add rule name="Orbi Dev" dir=in action=allow protocol=TCP localport=3000
 ```
 
-4. Lancer les apps mobiles:
+3. Relance `pnpm mobile:lan` puis rescanne le QR code
 
-```powershell
-pnpm dev:full-mobile
-```
+---
 
-5. Ouvrir Expo Go sur le telephone.
-6. Scanner le QR code rider dans le terminal.
-7. Se connecter avec:
+### "La connexion échoue — 'Email ou mot de passe incorrect'"
 
-```text
-rider@orbi.app / Orbi123!
-```
-
-8. Scanner le QR code driver dans l autre terminal ou ouvrir l app driver
-   depuis Expo Go si elle est deja listee.
-9. Se connecter avec:
-
-```text
-driver@orbi.app / Orbi123!
-```
-
-10. Depuis le PC, lancer:
-
-```powershell
-pnpm demo:local-live-session
-```
-
-11. Sur le telephone rider, ouvrir `Activite` et verifier la carte.
-12. Sur le telephone driver, ouvrir `Offres` et verifier la carte mission.
-
-Si le telephone ne charge pas les donnees:
-
-1. Verifier que Windows Firewall autorise Node.js.
-2. Verifier que le backend repond depuis le PC:
-
-```text
-http://localhost:3000/api/v1/health
-```
-
-3. Verifier que les fichiers `apps/rider-app/.env` et `apps/driver-app/.env`
-   contiennent une URL `http://192.168.x.x:3000`, pas `localhost`.
-4. Relancer Expo apres `pnpm mobile:lan`.
-
-## 9. Verification backend automatique
-
-Pour tester le flux backend complet sans cliquer:
-
-```powershell
-pnpm e2e:local-api
-```
-
-Cette commande couvre login, booking, acceptation chauffeur, positions route,
-pickup code, paiement mobile money local, webhook, wallet, payout, refund et
-compteurs admin.
-
-## 10. Probleme courant
-
-### Le bouton de connexion semble bloque
-
-Verifier les messages sous le formulaire:
-
-- `Email pret`
-- `Mot de passe pret`
-- `Nom complet pret` en inscription
-
-Le bouton reste desactive si le mot de passe fait moins de 8 caracteres.
-
-### Le login echoue
-
-Relancer:
+Les comptes de test ont peut-être été effacés. Solution :
 
 ```powershell
 pnpm prisma:seed
 ```
 
-Puis reessayer avec `Orbi123!`.
+Puis réessaie avec `rider@orbi.app` / `Orbi123!`.
 
-### La carte ne bouge pas
+---
 
-Lancer:
+### "Le compte est bloqué"
 
-```powershell
-pnpm demo:local-live-session
-```
+Si tu as essayé un mauvais mot de passe plus de 5 fois, le compte se bloque 15 minutes. Attends 15 minutes ou relance `pnpm prisma:seed`.
 
-Puis cliquer sur `Actualiser le suivi` cote rider et `Actualiser le direct`
-cote driver.
+---
 
-### Le driver ne voit pas d offre
+### "Docker dit 'port already in use'"
 
-Lancer:
+Un autre programme utilise le même port. Solution :
 
 ```powershell
-pnpm demo:local-live-session
+docker compose down
+pnpm db:start
 ```
 
-Cette commande cree la demande et l accepte avec le driver demo. Elle laisse
-ensuite une course active visible dans les deux apps.
+---
 
-## 11. Definition de demo locale reussie
+### "Je vois une page blanche dans le navigateur"
 
-La demo locale est valide quand:
+Attends 30 secondes que le serveur finisse de démarrer, puis recharge la page (appuie sur **F5**).
 
-1. Admin peut se connecter avec email/mot de passe.
-2. Rider peut se connecter avec email/mot de passe.
-3. Driver peut se connecter avec email/mot de passe.
-4. Rider voit une course active dans `Activite`.
-5. Driver voit la meme mission dans `Offres`.
-6. Les deux cartes affichent `Rider`, `Driver`, precision GPS et coordonnees.
-7. `pnpm demo:local-live-session` poste de nouveaux signaux sans erreur.
-8. `pnpm e2e:local-api` passe pour le flux backend complet.
+---
+
+### "Je ne vois pas de QR code dans le terminal"
+
+Cherche la ligne qui dit `› Metro waiting on exp://...` — le QR code est juste au-dessus. Fais défiler vers le haut dans le terminal.
+
+---
+
+## Vérifications finales — comment savoir que tout marche
+
+Coche chaque case mentalement :
+
+- [ ] `http://localhost:3001` — l'admin s'affiche et on peut se connecter
+- [ ] L'app passager s'ouvre sur le téléphone et on peut se connecter
+- [ ] L'app chauffeur s'ouvre sur le téléphone et on peut se connecter
+- [ ] Le passager peut commander une course et la voir en "Activité"
+- [ ] Le chauffeur voit la demande dans "Offres" et peut l'accepter
+- [ ] La carte montre l'itinéraire dans les deux apps
+- [ ] La course peut être terminée et notée
+
+Si toutes les cases sont cochées : **l'application fonctionne correctement.**
+
+---
+
+*Dernière mise à jour : 24 mai 2026*

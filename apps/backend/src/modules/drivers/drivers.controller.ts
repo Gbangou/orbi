@@ -27,20 +27,26 @@ import { UpdateDriverPresenceDto } from './dto/update-driver-presence.dto';
 import { UpsertDriverOnboardingDto } from './dto/upsert-driver-onboarding.dto';
 import { DriversService } from './drivers.service';
 
+function clampParam(value: number, min: number, max: number, fallback: number) {
+  return Number.isFinite(value) ? Math.min(Math.max(value, min), max) : fallback;
+}
+
 @Controller('drivers')
 export class DriversController {
   constructor(private readonly driversService: DriversService) {}
 
   @Get('nearby')
   @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 60, windowMs: 60_000 })
   nearby(
     @Query('lat') lat: string,
     @Query('lng') lng: string,
     @Query('radius') radius?: string,
   ) {
-    const latNum = parseFloat(lat ?? '12.3647');
-    const lngNum = parseFloat(lng ?? '-1.5332');
-    const radiusKm = parseFloat(radius ?? '5');
+    const latNum = clampParam(parseFloat(lat ?? '12.3647'), -90, 90, 12.3647);
+    const lngNum = clampParam(parseFloat(lng ?? '-1.5332'), -180, 180, -1.5332);
+    const radiusKm = clampParam(parseFloat(radius ?? '5'), 0.1, 50, 5);
     return this.driversService.getNearbyDrivers(latNum, lngNum, radiusKm);
   }
 

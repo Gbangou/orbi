@@ -45,7 +45,7 @@ describe('AuthService', () => {
       },
       userSession: {
         create: jest.fn(),
-        findMany: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn(),
@@ -59,9 +59,14 @@ describe('AuthService', () => {
       ),
     };
 
+    const notifications = {
+      enqueue: jest.fn().mockResolvedValue({ notification: { id: 'notif-1' } }),
+    };
+
     return {
       prisma,
-      service: new AuthService(prisma as never),
+      notifications,
+      service: new AuthService(prisma as never, notifications as never),
     };
   }
 
@@ -298,6 +303,84 @@ describe('AuthService', () => {
         data: expect.objectContaining({ action: 'SIGN_IN_SUCCESS' }),
       }),
     );
+  });
+
+  // ── Détection nouvel appareil ─────────────────────────────────────────────────
+
+  it('flags isNewDevice when userAgent has never signed in before', async () => {
+    const { prisma, service } = createService();
+    const passwordHash = await hashPassword('Orbi123!');
+
+    prisma.user.findUnique.mockResolvedValue(
+      makeUser({ passwordHash, role: UserRole.RIDER }),
+    );
+    prisma.$transaction.mockResolvedValue([
+      { ...SESSION_STUB, id: 'new-session' },
+      undefined,
+    ]);
+    // Previous sessions exist but with a different userAgent.
+    prisma.userSession.findMany.mockResolvedValue([
+      { userAgent: 'OldDevice/1.0' },
+      { userAgent: 'OldDevice/2.0' },
+    ]);
+
+    const result = await service.signIn(
+      { email: 'driver@orbi.app', password: 'Orbi123!' },
+      { userAgent: 'NewDevice/3.0', ipAddress: '127.0.0.1' },
+    );
+
+    expect(result.isNewDevice).toBe(true);
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ action: 'NEW_DEVICE_SIGN_IN' }),
+      }),
+    );
+  });
+
+  it('does not flag isNewDevice for a known userAgent', async () => {
+    const { prisma, service } = createService();
+    const passwordHash = await hashPassword('Orbi123!');
+
+    prisma.user.findUnique.mockResolvedValue(
+      makeUser({ passwordHash, role: UserRole.RIDER }),
+    );
+    prisma.$transaction.mockResolvedValue([
+      { ...SESSION_STUB, id: 'returning-session' },
+      undefined,
+    ]);
+    // Same userAgent as one of the previous sessions.
+    prisma.userSession.findMany.mockResolvedValue([
+      { userAgent: 'KnownDevice/1.0' },
+    ]);
+
+    const result = await service.signIn(
+      { email: 'driver@orbi.app', password: 'Orbi123!' },
+      { userAgent: 'KnownDevice/1.0', ipAddress: '127.0.0.1' },
+    );
+
+    expect(result.isNewDevice).toBe(false);
+  });
+
+  it('does not flag isNewDevice on the very first sign-in (no prior sessions)', async () => {
+    const { prisma, service } = createService();
+    const passwordHash = await hashPassword('Orbi123!');
+
+    prisma.user.findUnique.mockResolvedValue(
+      makeUser({ passwordHash, role: UserRole.RIDER }),
+    );
+    prisma.$transaction.mockResolvedValue([
+      { ...SESSION_STUB, id: 'first-session' },
+      undefined,
+    ]);
+    // No previous sessions at all.
+    prisma.userSession.findMany.mockResolvedValue([]);
+
+    const result = await service.signIn(
+      { email: 'driver@orbi.app', password: 'Orbi123!' },
+      { userAgent: 'FirstDevice/1.0', ipAddress: '127.0.0.1' },
+    );
+
+    expect(result.isNewDevice).toBe(false);
   });
 
   // ── Sessions ─────────────────────────────────────────────────────────────────

@@ -180,6 +180,12 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
             Les courses en direct remontent maintenant les etapes clefs du cycle
             de trajet pour l equipe operations.
           </p>
+          <a
+            className="secondary-link"
+            href="/api/admin/trips/export.csv?limit=200"
+          >
+            Export CSV trajets audite
+          </a>
           <span className="queue-status">{status}</span>
           {transitionLabel ? (
             <span className="queue-transition">{transitionLabel}</span>

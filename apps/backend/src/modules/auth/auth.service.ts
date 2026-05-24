@@ -3,8 +3,9 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { NotificationChannel, UserRole } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { DEFAULT_WALLET_CURRENCY, SESSION_TTL_IN_DAYS } from './auth.constants';
 import {
   hashPassword,
@@ -16,6 +17,7 @@ import type { AuthRequestMetadata } from './auth.metadata';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignOutDto } from './dto/sign-out.dto';
 import { SignUpDto } from './dto/sign-up.dto';
+import type { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
 import { serializeAuthenticatedUser, serializeSession } from './auth.presenter';
 import type { RequestAuthContext } from './auth.types';
 
@@ -37,7 +39,10 @@ function computeLockoutDuration(failedCount: number): number {
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async signUp(payload: SignUpDto, metadata: AuthRequestMetadata = {}) {
     const normalizedEmail = this.normalizeEmail(payload.email);
@@ -161,13 +166,24 @@ export class AuthService {
       await this.revokeOtherActiveSessions(user.id, session.id);
     }
 
+    const isNewDevice = await this.detectNewDevice(
+      user.id,
+      session.id,
+      sessionSeed.userAgent ?? null,
+    );
+
     await this.logAuthEvent(user.id, 'SIGN_IN_SUCCESS', metadata);
+    if (isNewDevice) {
+      await this.logAuthEvent(user.id, 'NEW_DEVICE_SIGN_IN', metadata);
+      await this.sendNewDeviceAlert(user.id, session.id, metadata);
+    }
 
     return {
       message: 'Signed in successfully.',
       sessionToken: sessionSeed.token,
       user: serializeAuthenticatedUser({ ...user, lastLoginAt: now }),
       session: serializeSession(session, true),
+      isNewDevice,
     };
   }
 
@@ -267,9 +283,363 @@ export class AuthService {
     return { message: 'Account data anonymized and all sessions revoked.' };
   }
 
+  private async sendNewDeviceAlert(
+    userId: string,
+    sessionId: string,
+    metadata: AuthRequestMetadata,
+  ) {
+    try {
+      await this.notifications.enqueue({
+        userId,
+        title: 'Nouvelle connexion détectée',
+        body: "Connexion depuis un nouvel appareil. Si ce n'est pas vous, déconnectez les appareils inconnus dans vos paramètres.",
+        channel: NotificationChannel.PUSH,
+        dedupeKey: `new-device:${userId}:${sessionId}`,
+        data: {
+          type: 'new_device_signin',
+          ipAddress: metadata.ipAddress ?? '',
+        },
+      });
+    } catch {
+      // Non-bloquant : l'alerte de sécurité ne doit pas impacter la connexion.
+    }
+  }
+
+  private async detectNewDevice(
+    userId: string,
+    currentSessionId: string,
+    userAgent: string | null,
+  ): Promise<boolean> {
+    const previousSessions = await this.prisma.userSession.findMany({
+      where: { userId, id: { not: currentSessionId } },
+      select: { userAgent: true },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+    if (previousSessions.length === 0) return false;
+    return !previousSessions.some((s) => s.userAgent === userAgent);
+  }
+
+  async dataExport(auth: RequestAuthContext) {
+    const userId = auth.user.id;
+
+    const [user, sessions, wallet, notifications, supportTickets, paymentAttempts] =
+      await Promise.all([
+        this.prisma.user.findUniqueOrThrow({
+          where: { id: userId },
+          include: {
+            riderProfile: {
+              include: {
+                savedPlaces: true,
+                trips: {
+                  orderBy: { createdAt: 'desc' as const },
+                  take: 200,
+                },
+                ratingsGiven: {
+                  select: { score: true, comment: true, createdAt: true },
+                  orderBy: { createdAt: 'desc' as const },
+                },
+              },
+            },
+            driverProfile: {
+              include: {
+                vehicles: true,
+                assignedTrips: {
+                  orderBy: { createdAt: 'desc' as const },
+                  take: 200,
+                },
+                ratingsReceived: {
+                  select: { score: true, comment: true, createdAt: true },
+                  orderBy: { createdAt: 'desc' as const },
+                },
+                onboardingDocuments: {
+                  select: {
+                    type: true,
+                    status: true,
+                    uploadedAt: true,
+                    expiresAt: true,
+                  },
+                },
+              },
+            },
+          },
+        }),
+        this.prisma.userSession.findMany({
+          where: { userId },
+          select: {
+            userAgent: true,
+            ipAddress: true,
+            createdAt: true,
+            expiresAt: true,
+            revokedAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        }),
+        this.prisma.wallet.findFirst({
+          where: { userId },
+          include: {
+            transactions: {
+              select: {
+                type: true,
+                amount: true,
+                reference: true,
+                description: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 500,
+            },
+          },
+        }),
+        this.prisma.notification.findMany({
+          where: { userId },
+          select: {
+            title: true,
+            body: true,
+            channel: true,
+            isRead: true,
+            sentAt: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 200,
+        }),
+        this.prisma.supportTicket.findMany({
+          where: { userId },
+          select: {
+            subject: true,
+            description: true,
+            status: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.paymentAttempt.findMany({
+          where: { userId },
+          select: {
+            provider: true,
+            channel: true,
+            status: true,
+            amount: true,
+            currency: true,
+            mobileMoneyNetwork: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 200,
+        }),
+      ]);
+
+    await this.logAuthEvent(userId, 'DATA_EXPORT', {
+      ipAddress: auth.session.ipAddress ?? undefined,
+      userAgent: auth.session.userAgent ?? undefined,
+    });
+
+    return {
+      exportedAt: new Date().toISOString(),
+      profile: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        provider: user.provider,
+        isActive: user.isActive,
+        isPhoneVerified: user.isPhoneVerified,
+        lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+        createdAt: user.createdAt.toISOString(),
+      },
+      sessions: sessions.map((s) => ({
+        userAgent: s.userAgent,
+        ipAddress: s.ipAddress,
+        createdAt: s.createdAt.toISOString(),
+        expiresAt: s.expiresAt.toISOString(),
+        revokedAt: s.revokedAt?.toISOString() ?? null,
+      })),
+      wallet: wallet
+        ? {
+            currency: wallet.currency,
+            balance: wallet.balance.toString(),
+            transactions: wallet.transactions.map((t) => ({
+              type: t.type,
+              amount: t.amount.toString(),
+              reference: t.reference,
+              description: t.description,
+              createdAt: t.createdAt.toISOString(),
+            })),
+          }
+        : null,
+      notifications: notifications.map((n) => ({
+        title: n.title,
+        body: n.body,
+        channel: n.channel,
+        isRead: n.isRead,
+        sentAt: n.sentAt?.toISOString() ?? null,
+        createdAt: n.createdAt.toISOString(),
+      })),
+      supportTickets: supportTickets.map((t) => ({
+        subject: t.subject,
+        description: t.description,
+        status: t.status,
+        createdAt: t.createdAt.toISOString(),
+      })),
+      paymentAttempts: paymentAttempts.map((p) => ({
+        provider: p.provider,
+        channel: p.channel,
+        status: p.status,
+        amount: p.amount.toString(),
+        currency: p.currency,
+        mobileMoneyNetwork: p.mobileMoneyNetwork,
+        createdAt: p.createdAt.toISOString(),
+      })),
+      ...(user.riderProfile
+        ? {
+            riderProfile: {
+              savedPlaces: user.riderProfile.savedPlaces.map((p) => ({
+                label: p.label,
+                address: p.address,
+                latitude: p.latitude.toString(),
+                longitude: p.longitude.toString(),
+                createdAt: p.createdAt.toISOString(),
+              })),
+              trips: user.riderProfile.trips.map((t) => ({
+                pickupAddress: t.pickupAddress,
+                destinationAddress: t.destinationAddress,
+                status: t.status,
+                actualFare: t.actualFare?.toString() ?? null,
+                currency: t.currency,
+                distanceKm: t.distanceKm?.toString() ?? null,
+                durationMinutes: t.durationMinutes,
+                startedAt: t.startedAt?.toISOString() ?? null,
+                completedAt: t.completedAt?.toISOString() ?? null,
+                createdAt: t.createdAt.toISOString(),
+              })),
+              ratingsGiven: user.riderProfile.ratingsGiven.map((r) => ({
+                score: r.score,
+                comment: r.comment,
+                createdAt: r.createdAt.toISOString(),
+              })),
+            },
+          }
+        : {}),
+      ...(user.driverProfile
+        ? {
+            driverProfile: {
+              licenseNumber: user.driverProfile.licenseNumber,
+              verificationStatus: user.driverProfile.verificationStatus,
+              averageRating: user.driverProfile.averageRating?.toString() ?? null,
+              completedTripsCount: user.driverProfile.completedTripsCount,
+              vehicles: user.driverProfile.vehicles.map((v) => ({
+                make: v.make,
+                model: v.model,
+                type: v.type,
+                tier: v.tier,
+                plateNumber: v.plateNumber,
+                year: v.year,
+                isActive: v.isActive,
+                createdAt: v.createdAt.toISOString(),
+              })),
+              trips: user.driverProfile.assignedTrips.map((t) => ({
+                pickupAddress: t.pickupAddress,
+                destinationAddress: t.destinationAddress,
+                status: t.status,
+                actualFare: t.actualFare?.toString() ?? null,
+                currency: t.currency,
+                distanceKm: t.distanceKm?.toString() ?? null,
+                durationMinutes: t.durationMinutes,
+                startedAt: t.startedAt?.toISOString() ?? null,
+                completedAt: t.completedAt?.toISOString() ?? null,
+                createdAt: t.createdAt.toISOString(),
+              })),
+              ratingsReceived: user.driverProfile.ratingsReceived.map((r) => ({
+                score: r.score,
+                comment: r.comment,
+                createdAt: r.createdAt.toISOString(),
+              })),
+              documents: user.driverProfile.onboardingDocuments.map((d) => ({
+                type: d.type,
+                status: d.status,
+                uploadedAt: d.uploadedAt.toISOString(),
+                expiresAt: d.expiresAt?.toISOString() ?? null,
+              })),
+            },
+          }
+        : {}),
+    };
+  }
+
+  async createSupportTicket(
+    auth: RequestAuthContext,
+    payload: CreateSupportTicketDto,
+  ) {
+    const ticket = await this.prisma.supportTicket.create({
+      data: {
+        userId: auth.user.id,
+        subject: payload.subject,
+        description: payload.description,
+        priority: payload.category === 'safety' ? 3 : 1,
+      },
+      select: {
+        id: true,
+        subject: true,
+        description: true,
+        status: true,
+        priority: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      ticket: {
+        id: ticket.id,
+        subject: ticket.subject,
+        description: ticket.description,
+        status: ticket.status,
+        priority: ticket.priority,
+        createdAt: ticket.createdAt.toISOString(),
+      },
+    };
+  }
+
+  async getMySupportTickets(auth: RequestAuthContext) {
+    const tickets = await this.prisma.supportTicket.findMany({
+      where: { userId: auth.user.id },
+      select: {
+        id: true,
+        subject: true,
+        description: true,
+        status: true,
+        priority: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    return {
+      tickets: tickets.map((t) => ({
+        id: t.id,
+        subject: t.subject,
+        description: t.description,
+        status: t.status,
+        priority: t.priority,
+        createdAt: t.createdAt.toISOString(),
+        updatedAt: t.updatedAt.toISOString(),
+      })),
+    };
+  }
+
   private async logAuthEvent(
     userId: string,
-    action: 'SIGN_IN_SUCCESS' | 'SIGN_IN_FAILED' | 'SIGN_UP' | 'SIGN_OUT',
+    action:
+      | 'SIGN_IN_SUCCESS'
+      | 'SIGN_IN_FAILED'
+      | 'SIGN_UP'
+      | 'SIGN_OUT'
+      | 'NEW_DEVICE_SIGN_IN'
+      | 'DATA_EXPORT',
     metadata: AuthRequestMetadata = {},
     extra?: Record<string, unknown>,
   ) {

@@ -6,6 +6,7 @@ import {
   fetchHealthCheck,
   fetchPricingEstimate,
   fetchAdminLiveOps,
+  fetchAdminTripsAudit,
   fetchAdminDispatchSettings,
   fetchAdminFeatureFlags,
   fetchAdminLaunchReadiness,
@@ -20,6 +21,7 @@ import {
   type AdminDriverWalletsResponse,
   type AdminLaunchReadinessResponse,
   type AdminLiveOpsResponse,
+  type AdminTripsAuditResponse,
   type AdminPaymentWebhookEventsResponse,
   type AdminPricingCalibrationResponse,
   type HealthCheckResponse,
@@ -52,6 +54,7 @@ import { DispatchControlBoard } from './dispatch-control-board';
 import { PricingCalibrationBoard } from './pricing-calibration-board';
 import { PaymentWebhookJournalBoard } from './payment-webhook-journal-board';
 import { DriverWalletsBoard } from './driver-wallets-board';
+import { TripsAuditBoard } from './trips-audit-board';
 
 const fallbackIncidents = [
   '2 chauffeurs moto en attente de verification',
@@ -113,6 +116,46 @@ const fallbackLiveOps: AdminLiveOpsResponse = {
   recentCancellations: [],
   driverAcceptanceLeaderboard: [],
   lowConfidenceDrivers: [],
+};
+
+const fallbackTripsAudit: AdminTripsAuditResponse = {
+  window: {
+    lookbackHours: 24,
+    since: new Date('2026-05-23T00:00:00.000Z').toISOString(),
+    generatedAt: new Date('2026-05-24T00:00:00.000Z').toISOString(),
+  },
+  summary: {
+    totalTrips: 0,
+    completedTrips: 0,
+    cancelledTrips: 0,
+    completionRate: 0,
+    cancellationRate: 0,
+    mobileMoneyTrips: 0,
+    mobileMoneyReconciledTrips: 0,
+    mobileMoneyReconciliationRate: 0,
+    refundPendingTrips: 0,
+    riskTripCount: 0,
+    criticalRiskTripCount: 0,
+    moneyAtRisk: 0,
+    currency: 'XOF',
+    byStatus: {
+      matched: 0,
+      arriving: 0,
+      inProgress: 0,
+      completed: 0,
+      cancelled: 0,
+    },
+  },
+  ownerQueue: [
+    { owner: 'finance', count: 0, critical: 0, moneyAtRisk: 0 },
+    { owner: 'ops', count: 0, critical: 0, moneyAtRisk: 0 },
+    { owner: 'support', count: 0, critical: 0, moneyAtRisk: 0 },
+    { owner: 'engineering', count: 0, critical: 0, moneyAtRisk: 0 },
+  ],
+  riskTrips: [],
+  recommendations: [
+    'Connecter le backend local pour obtenir l audit trajets officiel.',
+  ],
 };
 
 const fallbackHealth: HealthCheckResponse = {
@@ -550,6 +593,7 @@ const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
 async function loadAdminData(): Promise<{
   preview: AdminPreviewResponse;
   liveOps: AdminLiveOpsResponse;
+  tripsAudit: AdminTripsAuditResponse;
   support: SupportTicketQueueResponse;
   onboardingQueue: DriverOnboardingQueueResponse;
   featureFlags: AdminFeatureFlagsResponse;
@@ -585,6 +629,7 @@ async function loadAdminData(): Promise<{
     const [
       overview,
       liveOps,
+      tripsAudit,
       support,
       onboardingQueue,
       featureFlags,
@@ -600,6 +645,7 @@ async function loadAdminData(): Promise<{
     ] = await Promise.all([
         fetchAdminOverview(authClient),
         fetchAdminLiveOps(authClient),
+        fetchAdminTripsAudit(authClient, { lookbackHours: 24 }),
         fetchAdminSupportTickets(authClient),
         fetchAdminDriverOnboardingQueue(authClient),
         fetchAdminFeatureFlags(authClient),
@@ -701,6 +747,7 @@ async function loadAdminData(): Promise<{
         incidents: liveOps.alerts.length ? liveOps.alerts : calmIncidentFeed,
       },
       liveOps,
+      tripsAudit,
       support,
       onboardingQueue,
       featureFlags,
@@ -739,6 +786,7 @@ async function loadAdminData(): Promise<{
         incidents: fallbackIncidents,
       },
       liveOps: fallbackLiveOps,
+      tripsAudit: fallbackTripsAudit,
       support: {
         tickets: [],
       },
@@ -828,6 +876,7 @@ export default async function AdminHomePage({
   const {
     preview,
     liveOps,
+    tripsAudit,
     support,
     onboardingQueue,
     featureFlags,
@@ -1034,6 +1083,8 @@ export default async function AdminHomePage({
       </section>
 
       <LiveOpsBoard initialLiveOps={liveOps} />
+
+      <TripsAuditBoard initialAudit={tripsAudit} />
 
       <SystemHealthBoard initialHealth={health} />
 

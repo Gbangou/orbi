@@ -104,6 +104,9 @@ export const apiRoutes = {
     me: '/auth/me',
     sessions: '/auth/sessions',
     signOut: '/auth/sign-out',
+    supportTickets: '/auth/support-tickets',
+    dataExport: '/auth/data-export',
+    deleteAccount: '/auth/account',
   },
   mobile: {
     errorReports: '/mobile/error-reports',
@@ -112,6 +115,7 @@ export const apiRoutes = {
     preview: '/admin/preview',
     overview: '/admin/overview',
     liveOps: '/admin/live-ops',
+    tripsAudit: '/admin/trips/audit',
     launchReadiness: '/admin/launch-readiness',
     jobQueue: '/admin/job-queue',
     stream: '/admin/stream',
@@ -130,6 +134,7 @@ export const apiRoutes = {
     driverOnboardingQueue: '/admin/driver-onboarding-queue',
     driverOnboardingExportHistory: '/admin/driver-onboarding/export-history',
     driverOnboardingExportCsv: '/admin/driver-onboarding/export.csv',
+    tripsExportCsv: '/admin/trips/export.csv',
   },
   riders: {
     me: '/riders/me',
@@ -1395,6 +1400,58 @@ export type AdminLiveOpsResponse = {
     acceptanceRate: number;
     expirationRate: number;
   }>;
+};
+
+export type AdminTripsAuditResponse = {
+  window: {
+    lookbackHours: number;
+    since: string;
+    generatedAt: string;
+  };
+  summary: {
+    totalTrips: number;
+    completedTrips: number;
+    cancelledTrips: number;
+    completionRate: number;
+    cancellationRate: number;
+    mobileMoneyTrips: number;
+    mobileMoneyReconciledTrips: number;
+    mobileMoneyReconciliationRate: number;
+    refundPendingTrips: number;
+    riskTripCount: number;
+    criticalRiskTripCount: number;
+    moneyAtRisk: number;
+    currency: string;
+    byStatus: {
+      matched: number;
+      arriving: number;
+      inProgress: number;
+      completed: number;
+      cancelled: number;
+    };
+  };
+  ownerQueue: Array<{
+    owner: 'finance' | 'ops' | 'support' | 'engineering';
+    count: number;
+    critical: number;
+    moneyAtRisk: number;
+  }>;
+  riskTrips: Array<{
+    id: string;
+    status: string;
+    route: string;
+    riderName: string;
+    driverName: string;
+    fare: number;
+    currency: string;
+    paymentMethod: string;
+    paymentStatus: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    owner: 'ops' | 'finance' | 'support' | 'engineering';
+    reasons: string[];
+    createdAt: string;
+  }>;
+  recommendations: string[];
 };
 
 export type AdminLaunchReadinessResponse = {
@@ -3035,6 +3092,15 @@ export async function fetchAdminLiveOps(client: OrbiApiClient) {
   return client.request<AdminLiveOpsResponse>(apiRoutes.admin.liveOps);
 }
 
+export async function fetchAdminTripsAudit(
+  client: OrbiApiClient,
+  query?: { lookbackHours?: number },
+) {
+  return client.request<AdminTripsAuditResponse>(apiRoutes.admin.tripsAudit, {
+    query,
+  });
+}
+
 export async function fetchAdminJobQueue(
   client: OrbiApiClient,
   query?: {
@@ -3204,6 +3270,23 @@ export async function fetchAdminDriverOnboardingExportHistory(
       query,
     },
   );
+}
+
+export async function fetchAdminTripsExportCsv(
+  client: OrbiApiClient,
+  query?: {
+    status?:
+      | 'MATCHED'
+      | 'DRIVER_ARRIVING'
+      | 'IN_PROGRESS'
+      | 'COMPLETED'
+      | 'CANCELLED';
+    limit?: number;
+  },
+) {
+  return client.requestText(apiRoutes.admin.tripsExportCsv, {
+    query,
+  });
 }
 
 export async function fetchAdminFeatureFlags(client: OrbiApiClient) {
@@ -3871,6 +3954,58 @@ export async function registerPushTokenWithApi(
     method: 'POST',
     body: { token },
   });
+}
+
+// ── Support tickets (rider & driver) ──────────────────────────────────────
+
+export type TicketCategory =
+  | 'payment'
+  | 'trip'
+  | 'account'
+  | 'driver'
+  | 'safety'
+  | 'other';
+
+export type SupportTicketStatus = 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
+
+export interface SupportTicket {
+  id: string;
+  subject: string;
+  description: string;
+  status: SupportTicketStatus;
+  priority: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateSupportTicketPayload {
+  subject: string;
+  description: string;
+  category?: TicketCategory;
+}
+
+export interface CreateSupportTicketResponse {
+  ticket: SupportTicket;
+}
+
+export interface MySupportTicketsResponse {
+  tickets: SupportTicket[];
+}
+
+export async function createSupportTicketWithApi(
+  client: OrbiApiClient,
+  payload: CreateSupportTicketPayload,
+): Promise<CreateSupportTicketResponse> {
+  return client.request<CreateSupportTicketResponse>(
+    apiRoutes.auth.supportTickets,
+    { method: 'POST', body: payload },
+  );
+}
+
+export async function getMySupportTicketsWithApi(
+  client: OrbiApiClient,
+): Promise<MySupportTicketsResponse> {
+  return client.request<MySupportTicketsResponse>(apiRoutes.auth.supportTickets);
 }
 
 function resolveApiErrorMessage(payload: unknown) {

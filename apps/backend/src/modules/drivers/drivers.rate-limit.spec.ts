@@ -60,6 +60,8 @@ describe('DriversController — Rate Limiting (integration)', () => {
   let app: INestApplication<App>;
   let rateLimitService: { consume: jest.Mock; snapshot: jest.Mock };
   let driversService: {
+    getNearbyDrivers: jest.Mock;
+    previewOffers: jest.Mock;
     declineOffer: jest.Mock;
     updateAvailability: jest.Mock;
     updatePresence: jest.Mock;
@@ -78,6 +80,8 @@ describe('DriversController — Rate Limiting (integration)', () => {
     };
 
     driversService = {
+      getNearbyDrivers: jest.fn().mockResolvedValue({ drivers: [], total: 0 }),
+      previewOffers: jest.fn().mockResolvedValue({ offers: [] }),
       declineOffer: jest.fn().mockResolvedValue({ declined: true }),
       updateAvailability: jest.fn().mockResolvedValue({ status: 'AVAILABLE' }),
       updatePresence: jest.fn().mockResolvedValue({ updated: true }),
@@ -271,6 +275,70 @@ describe('DriversController — Rate Limiting (integration)', () => {
         .send({ status: 'AVAILABLE' });
 
       expect(res.headers['x-ratelimit-limit']).toBe('20');
+    });
+  });
+
+  // ── GET /nearby (endpoint public — rate limit anti-scraping) ─────────────
+
+  describe('GET nearby', () => {
+    it('retourne 429 quand la limite est dépassée', async () => {
+      app = await buildApp({
+        allowed: false,
+        remaining: 0,
+        resetAt: Date.now() + 60_000,
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/drivers/nearby?lat=12.36&lng=-1.53');
+
+      expect(res.status).toBe(429);
+      expect(driversService.getNearbyDrivers).not.toHaveBeenCalled();
+    });
+
+    it("autorise l'appel et définit X-RateLimit-Limit à 60", async () => {
+      app = await buildApp({
+        allowed: true,
+        remaining: 59,
+        resetAt: Date.now() + 60_000,
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/drivers/nearby?lat=12.36&lng=-1.53');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['x-ratelimit-limit']).toBe('60');
+      expect(driversService.getNearbyDrivers).toHaveBeenCalledTimes(1);
+    });
+
+    it('borne radius à 50 km — une valeur excessive est ramenée au max', async () => {
+      app = await buildApp({
+        allowed: true,
+        remaining: 59,
+        resetAt: Date.now() + 60_000,
+      });
+
+      await request(app.getHttpServer())
+        .get('/api/v1/drivers/nearby?lat=12.36&lng=-1.53&radius=9999');
+
+      const [, , radiusArg] = driversService.getNearbyDrivers.mock
+        .calls[0] as [number, number, number];
+      expect(radiusArg).toBeLessThanOrEqual(50);
+    });
+
+    it('remplace NaN par les coordonnées par défaut', async () => {
+      app = await buildApp({
+        allowed: true,
+        remaining: 59,
+        resetAt: Date.now() + 60_000,
+      });
+
+      await request(app.getHttpServer())
+        .get('/api/v1/drivers/nearby?lat=invalid&lng=bad');
+
+      const [latArg, lngArg] = driversService.getNearbyDrivers.mock
+        .calls[0] as [number, number, number];
+      expect(Number.isFinite(latArg)).toBe(true);
+      expect(Number.isFinite(lngArg)).toBe(true);
     });
   });
 });

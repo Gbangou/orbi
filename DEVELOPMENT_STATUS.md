@@ -270,6 +270,17 @@ de securite ou de confiance.
   vers admin/rider/driver web, les ecrans auth rider et driver proposent une
   connexion demo immediate, et les cartes de mission rider/driver affichent
   explicitement les marqueurs `Rider` et `Driver` en progression sur le trajet.
+- Export CSV trajets branche de bout en bout: backend admin audite
+  `GET /api/v1/admin/trips/export.csv`, contrat partage `packages/api`, route
+  serveur admin locale `/api/admin/trips/export.csv` avec session HttpOnly et
+  no-store, puis action visible dans Live Ops pour sortir une preuve operationnelle
+  des courses sans exposer de Bearer navigateur.
+- Audit trajets pilote ajoute dans l admin: backend
+  `GET /api/v1/admin/trips/audit`, route serveur locale
+  `/api/admin/trips/audit`, contrat partage et board operations dedie. La vue
+  calcule completion, annulation, reconciliation mobile money, remboursements
+  provider en attente, argent a verifier, files owner finance/ops/support et
+  courses a risque avant cloture de journee.
 
 ## Architecture active
 
@@ -287,16 +298,18 @@ de securite ou de confiance.
 1. Capturer des fixtures provider paiement sandbox reelles en plus des fixtures
    locales deja executables: checkout, success, failed, refund pending,
    refund processed et references inconnues.
-2. Brancher providers externes au worker durable: replay paiement strictement
+2. Enrichir l audit trajets avec filtres statut/date plus fins, rapprochement
+   wallet/payout et resolution auditee des anomalies de course.
+3. Brancher providers externes au worker durable: replay paiement strictement
    controle, antivirus/anti-fraude documentaire et push/SMS/email reels derriere
    les frontieres provider deja testees.
-3. Adapter S3/GCS production pour objets documentaires.
-4. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
-5. Verifier qu il ne reste pas de surface admin sensible exposee en Bearer
+4. Adapter S3/GCS production pour objets documentaires.
+5. Renforcer observabilite, alertes et dashboards capacite avant pilote large.
+6. Verifier qu il ne reste pas de surface admin sensible exposee en Bearer
    navigateur; wallet/payout, refund/replay paiement, support, health, jobs,
    feature flags, dispatch, onboarding documents, live ops, launch readiness et
    system health sont deja couverts cote routes serveur locales.
-6. Continuer le programme de tests securite iteratif:
+7. Continuer le programme de tests securite iteratif:
    - API1/API5: IDOR/BOLA et function-level authorization sur onboarding
      documents, dispatch, support tickets et exports finance.
    - API3/API6: mass assignment, pagination abusive et filtrage excessif sur

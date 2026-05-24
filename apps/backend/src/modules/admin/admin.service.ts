@@ -2683,6 +2683,218 @@ export class AdminService {
     };
   }
 
+  async tripsAudit(query: { lookbackHours?: number } = {}) {
+    const lookbackHours = Math.min(Math.max(query.lookbackHours ?? 24, 1), 168);
+    const since = new Date(Date.now() - lookbackHours * 60 * 60 * 1000);
+    const now = new Date();
+
+    const trips = await this.prisma.trip.findMany({
+      where: {
+        createdAt: {
+          gte: since,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 300,
+      include: {
+        rider: { include: { user: true } },
+        driver: { include: { user: true } },
+        vehicle: true,
+        rideRequest: {
+          include: {
+            paymentAttempts: {
+              orderBy: { createdAt: 'desc' },
+              take: 5,
+            },
+          },
+        },
+        events: {
+          orderBy: { createdAt: 'asc' },
+          take: 40,
+        },
+      },
+    });
+
+    const byStatus = {
+      matched: trips.filter((trip) => trip.status === 'MATCHED').length,
+      arriving: trips.filter((trip) => trip.status === 'DRIVER_ARRIVING').length,
+      inProgress: trips.filter((trip) => trip.status === 'IN_PROGRESS').length,
+      completed: trips.filter((trip) => trip.status === 'COMPLETED').length,
+      cancelled: trips.filter((trip) => trip.status === 'CANCELLED').length,
+    };
+    const completedTrips = trips.filter((trip) => trip.status === 'COMPLETED');
+    const cancelledTrips = trips.filter((trip) => trip.status === 'CANCELLED');
+    const mobileMoneyTrips = trips.filter(
+      (trip) => trip.rideRequest.paymentMethod === 'MOBILE_MONEY',
+    );
+    const mobileMoneySucceededTrips = mobileMoneyTrips.filter((trip) =>
+      trip.rideRequest.paymentAttempts.some(
+        (attempt) => attempt.status === 'SUCCEEDED',
+      ),
+    );
+    const refundPendingTrips = trips.filter((trip) =>
+      trip.rideRequest.paymentAttempts.some(
+        (attempt) => attempt.status === 'REFUND_PENDING',
+      ),
+    );
+
+    const riskTrips = trips
+      .map((trip) => {
+        const latestDriverRoutePosition = [...trip.events]
+          .reverse()
+          .find((event) => {
+            if (event.eventType !== 'ROUTE_POSITION_RECORDED') {
+              return false;
+            }
+
+            const payload = isDispatchSettingsRecord(event.payload)
+              ? event.payload
+              : {};
+
+            return payload.sourceRole !== 'RIDER';
+          });
+        const routeSignalAgeMinutes = latestDriverRoutePosition
+          ? Math.round(
+              (now.getTime() - latestDriverRoutePosition.createdAt.getTime()) /
+                60_000,
+            )
+          : null;
+        const paymentSucceeded = trip.rideRequest.paymentAttempts.some(
+          (attempt) => attempt.status === 'SUCCEEDED',
+        );
+        const hasRefundPending = trip.rideRequest.paymentAttempts.some(
+          (attempt) => attempt.status === 'REFUND_PENDING',
+        );
+        const fare = Number(trip.actualFare ?? trip.rideRequest.estimatedFare ?? 0);
+        const reasons: string[] = [];
+        let severity: 'low' | 'medium' | 'high' | 'critical' = 'low';
+        let owner: 'ops' | 'finance' | 'support' | 'engineering' = 'ops';
+
+        if (
+          trip.status === 'COMPLETED' &&
+          trip.rideRequest.paymentMethod === 'MOBILE_MONEY' &&
+          !paymentSucceeded
+        ) {
+          reasons.push('Course terminee sans paiement mobile money reussi.');
+          severity = 'critical';
+          owner = 'finance';
+        }
+
+        if (trip.status === 'COMPLETED' && fare <= 0) {
+          reasons.push('Course terminee sans montant exploitable.');
+          severity = severity === 'critical' ? severity : 'high';
+          owner = 'finance';
+        }
+
+        if (hasRefundPending) {
+          reasons.push('Remboursement provider encore en attente.');
+          severity = severity === 'critical' ? severity : 'high';
+          owner = 'finance';
+        }
+
+        if (trip.status === 'CANCELLED' && trip.startedAt) {
+          reasons.push('Course annulee apres demarrage declare.');
+          severity =
+            severity === 'critical' || severity === 'high' ? severity : 'medium';
+          owner = owner === 'finance' ? owner : 'support';
+        }
+
+        if (
+          ['MATCHED', 'DRIVER_ARRIVING', 'IN_PROGRESS'].includes(trip.status) &&
+          (!routeSignalAgeMinutes || routeSignalAgeMinutes > 10)
+        ) {
+          reasons.push('Signal GPS chauffeur absent ou trop ancien.');
+          severity =
+            severity === 'critical' || severity === 'high' ? severity : 'medium';
+          owner = owner === 'finance' ? owner : 'ops';
+        }
+
+        return reasons.length
+          ? {
+              id: trip.id,
+              status: trip.status,
+              route: `${trip.pickupAddress} vers ${trip.destinationAddress}`,
+              riderName: trip.rider.user.fullName,
+              driverName: trip.driver.user.fullName,
+              fare,
+              currency: trip.currency,
+              paymentMethod: trip.rideRequest.paymentMethod,
+              paymentStatus:
+                trip.rideRequest.paymentAttempts[0]?.status ?? 'NO_ATTEMPT',
+              severity,
+              owner,
+              reasons,
+              createdAt: trip.createdAt.toISOString(),
+            }
+          : null;
+      })
+      .filter((trip): trip is NonNullable<typeof trip> => trip !== null)
+      .sort((a, b) => {
+        const score = { critical: 4, high: 3, medium: 2, low: 1 };
+        return score[b.severity] - score[a.severity];
+      });
+
+    const moneyAtRisk = riskTrips
+      .filter((trip) => trip.owner === 'finance')
+      .reduce((sum, trip) => sum + trip.fare, 0);
+
+    return {
+      window: {
+        lookbackHours,
+        since: since.toISOString(),
+        generatedAt: now.toISOString(),
+      },
+      summary: {
+        totalTrips: trips.length,
+        completedTrips: completedTrips.length,
+        cancelledTrips: cancelledTrips.length,
+        completionRate: safeRate(completedTrips.length, trips.length),
+        cancellationRate: safeRate(cancelledTrips.length, trips.length),
+        mobileMoneyTrips: mobileMoneyTrips.length,
+        mobileMoneyReconciledTrips: mobileMoneySucceededTrips.length,
+        mobileMoneyReconciliationRate: safeRate(
+          mobileMoneySucceededTrips.length,
+          mobileMoneyTrips.length,
+        ),
+        refundPendingTrips: refundPendingTrips.length,
+        riskTripCount: riskTrips.length,
+        criticalRiskTripCount: riskTrips.filter(
+          (trip) => trip.severity === 'critical',
+        ).length,
+        moneyAtRisk,
+        currency: 'XOF',
+        byStatus,
+      },
+      ownerQueue: [
+        'finance',
+        'ops',
+        'support',
+        'engineering',
+      ].map((owner) => {
+        const ownerTrips = riskTrips.filter((trip) => trip.owner === owner);
+        return {
+          owner,
+          count: ownerTrips.length,
+          critical: ownerTrips.filter((trip) => trip.severity === 'critical')
+            .length,
+          moneyAtRisk: ownerTrips.reduce((sum, trip) => sum + trip.fare, 0),
+        };
+      }),
+      riskTrips: riskTrips.slice(0, 12),
+      recommendations: [
+        riskTrips.some((trip) => trip.owner === 'finance')
+          ? 'Rapprocher les courses finance avec le journal paiements avant tout payout chauffeur.'
+          : 'Aucun risque finance prioritaire dans la fenetre auditee.',
+        refundPendingTrips.length > 0
+          ? 'Verifier les remboursements en attente cote provider avant cloture de journee.'
+          : 'Aucun remboursement provider en attente sur cette fenetre.',
+        riskTrips.some((trip) => trip.owner === 'ops')
+          ? 'Traiter les trajets actifs sans signal GPS avant extension du pilote.'
+          : 'Le signal operationnel des trajets actifs est sous controle.',
+      ],
+    };
+  }
+
   async launchReadiness() {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const [
@@ -5916,6 +6128,102 @@ export class AdminService {
       findings: [],
       quarantineReason: null,
     };
+  }
+
+  async tripsExportCsv(
+    query: { status?: string; limit?: number },
+    auth: RequestAuthContext,
+  ) {
+    const limit = Math.min(query.limit ?? 200, 500);
+    const whereStatus = query.status ? { status: query.status as never } : {};
+
+    const trips = await this.prisma.trip.findMany({
+      where: whereStatus,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        status: true,
+        cancelledBy: true,
+        pickupAddress: true,
+        destinationAddress: true,
+        actualFare: true,
+        distanceKm: true,
+        durationMinutes: true,
+        currency: true,
+        startedAt: true,
+        completedAt: true,
+        createdAt: true,
+        rider: { select: { user: { select: { fullName: true } } } },
+        driver: { select: { user: { select: { fullName: true } } } },
+        vehicle: { select: { make: true, model: true, type: true, plateNumber: true } },
+        rideRequest: { select: { paymentMethod: true, estimatedFare: true } },
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'TRIPS_EXPORTED',
+        entityType: 'TRIP',
+        entityId: query.status ?? 'ALL',
+        metadata: {
+          format: 'csv',
+          statusFilter: query.status ?? null,
+          exportedCount: trips.length,
+          limit,
+        } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    const headers = [
+      'trip_id',
+      'status',
+      'cancelled_by',
+      'rider_name',
+      'driver_name',
+      'vehicle',
+      'plate_number',
+      'pickup_address',
+      'destination_address',
+      'estimated_fare',
+      'actual_fare',
+      'currency',
+      'distance_km',
+      'duration_minutes',
+      'payment_method',
+      'created_at',
+      'started_at',
+      'completed_at',
+    ];
+
+    const rows = trips.map((trip) => [
+      trip.id,
+      trip.status,
+      trip.cancelledBy ?? '',
+      trip.rider.user.fullName,
+      trip.driver.user.fullName,
+      `${trip.vehicle.make} ${trip.vehicle.model} (${trip.vehicle.type})`,
+      trip.vehicle.plateNumber,
+      trip.pickupAddress,
+      trip.destinationAddress,
+      trip.rideRequest.estimatedFare !== null
+        ? Number(trip.rideRequest.estimatedFare)
+        : '',
+      trip.actualFare !== null ? Number(trip.actualFare) : '',
+      trip.currency,
+      trip.distanceKm !== null ? Number(trip.distanceKm) : '',
+      trip.durationMinutes ?? '',
+      trip.rideRequest.paymentMethod,
+      trip.createdAt.toISOString(),
+      trip.startedAt?.toISOString() ?? '',
+      trip.completedAt?.toISOString() ?? '',
+    ]);
+
+    return [
+      headers.map(csvCell).join(','),
+      ...rows.map((row) => row.map(csvCell).join(',')),
+    ].join('\n');
   }
 
   private resolveDocumentExtension(value: string) {

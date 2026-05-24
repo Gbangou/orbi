@@ -483,6 +483,25 @@ body {
   font-weight: 700;
 }
 
+.secondary-link {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(123, 154, 190, 0.24);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  background: rgba(61, 215, 192, 0.08);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.secondary-link:hover {
+  border-color: rgba(61, 215, 192, 0.48);
+  background: rgba(61, 215, 192, 0.14);
+}
+
 .board-summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -536,6 +555,28 @@ body {
   border-color: rgba(56, 189, 248, 0.32);
   background: rgba(56, 189, 248, 0.12);
   color: #c7ecff;
+}
+
+.trips-audit-owner-grid {
+  margin: 18px 0;
+}
+
+.trips-audit-risk-critical {
+  border-color: rgba(239, 68, 68, 0.46);
+}
+
+.trips-audit-risk-high {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.trips-audit-risk-medium {
+  border-color: rgba(56, 189, 248, 0.34);
+}
+
+.audit-reason {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.92rem;
 }
 
 .ghost-button {

@@ -103,18 +103,35 @@ export class RidersService {
   async overview() {
     const riders = await this.prisma.riderProfile.findMany({
       include: {
-        user: true,
-        savedPlaces: true,
+        user: {
+          select: {
+            fullName: true,
+            email: true,
+            phoneNumber: true,
+            isActive: true,
+            isPhoneVerified: true,
+            createdAt: true,
+          },
+        },
+        savedPlaces: { select: { id: true } },
       },
       take: 25,
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
 
     return {
       total: riders.length,
-      riders,
+      riders: riders.map((r) => ({
+        id: r.id,
+        userId: r.userId,
+        fullName: r.user.fullName,
+        email: r.user.email,
+        phoneNumber: r.user.phoneNumber,
+        isActive: r.user.isActive,
+        isPhoneVerified: r.user.isPhoneVerified,
+        savedPlacesCount: r.savedPlaces.length,
+        createdAt: r.user.createdAt.toISOString(),
+      })),
     };
   }
 

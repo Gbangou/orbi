@@ -30,6 +30,8 @@ import { DriverPayoutApprovalDto } from './dto/driver-payout-approval.dto';
 import { DriverWalletRecoveryAdjustmentDto } from './dto/driver-wallet-recovery-adjustment.dto';
 import { DriverPayoutSettlementQueryDto } from './dto/driver-payout-settlement-query.dto';
 import { DriverOnboardingExportQueryDto } from './dto/driver-onboarding-export-query.dto';
+import { TripsAuditQueryDto } from './dto/trips-audit-query.dto';
+import { TripsExportQueryDto } from './dto/trips-export-query.dto';
 import { PaymentAttemptRefundDto } from './dto/payment-attempt-refund.dto';
 import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query.dto';
 import { JobQueueQueryDto } from './dto/job-queue-query.dto';
@@ -67,6 +69,15 @@ export class AdminController {
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   liveOps() {
     return this.adminService.liveOps();
+  }
+
+  @Get('trips/audit')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  tripsAudit(@Query() query: TripsAuditQueryDto) {
+    return this.adminService.tripsAudit(query);
   }
 
   @Get('job-queue')
@@ -176,6 +187,20 @@ export class AdminController {
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.driverOnboardingExportCsv(query, auth);
+  }
+
+  @Get('trips/export.csv')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="orbi-trips-export.csv"')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  tripsExportCsv(
+    @Query() query: TripsExportQueryDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.tripsExportCsv(query, auth);
   }
 
   @Get('driver-wallets')

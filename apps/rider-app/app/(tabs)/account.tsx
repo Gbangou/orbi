@@ -6,13 +6,16 @@ import {
 } from 'expo-screen-capture';
 import {
   createSavedPlaceWithApi,
+  createSupportTicketWithApi,
   deleteSavedPlaceWithApi,
   fetchMyTrips,
   fetchRiderProfile,
+  getMySupportTicketsWithApi,
   updateTrustedContactWithApi,
   updateSavedPlaceWithApi,
   type MyTripsResponse,
   type RiderProfileResponse,
+  type SupportTicket,
 } from '@orbi/api';
 import { orbiTheme } from '@orbi/ui';
 import { router } from 'expo-router';
@@ -37,6 +40,7 @@ import {
 } from '../../lib/realtime-widgets';
 import { RiderJourneySection } from '../../lib/rider-journey';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
+import { SavedPlacesMap } from '../../lib/saved-places-map';
 
 const fallbackProfile: RiderProfileResponse = {
   profile: {
@@ -86,6 +90,14 @@ export default function AccountScreen() {
     phoneNumber: '',
     shareMode: 'MANUAL' as TrustedContactShareMode,
     notes: '',
+  });
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [isTicketFormOpen, setIsTicketFormOpen] = useState(false);
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+  const [ticketForm, setTicketForm] = useState({
+    subject: '',
+    description: '',
+    category: 'other' as 'payment' | 'trip' | 'account' | 'driver' | 'safety' | 'other',
   });
   const previousSavedPlacesRef = useRef<RiderProfileResponse['profile']['savedPlaces'] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
@@ -201,11 +213,13 @@ export default function AccountScreen() {
 
     try {
       const { authClient } = await restoreRiderSession();
-      const [profileResponse, historyResponse] = await Promise.all([
+      const [profileResponse, historyResponse, ticketsResponse] = await Promise.all([
         fetchRiderProfile(authClient),
         fetchMyTrips(authClient),
+        getMySupportTicketsWithApi(authClient),
       ]);
       setProfile(profileResponse);
+      setTickets(ticketsResponse.tickets);
       setTrustedContactForm({
         phoneNumber: profileResponse.profile.trustedContact.phoneNumber ?? '',
         shareMode:
@@ -255,6 +269,39 @@ export default function AccountScreen() {
       setStatus(feedback.message);
     } finally {
       setIsSigningOut(false);
+    }
+  }
+
+  async function handleCreateTicket() {
+    if (isSubmittingTicket) return;
+    if (ticketForm.subject.trim().length < 5) {
+      setStatus('Le sujet doit faire au moins 5 caracteres.');
+      return;
+    }
+    if (ticketForm.description.trim().length < 10) {
+      setStatus('La description doit faire au moins 10 caracteres.');
+      return;
+    }
+    setIsSubmittingTicket(true);
+    setStatus('Envoi de votre demande au support...');
+    try {
+      const { authClient } = await restoreRiderSession();
+      const result = await createSupportTicketWithApi(authClient, {
+        subject: ticketForm.subject.trim(),
+        description: ticketForm.description.trim(),
+        category: ticketForm.category,
+      });
+      setTickets((prev) => [result.ticket, ...prev]);
+      setTicketForm({ subject: '', description: '', category: 'other' });
+      setIsTicketFormOpen(false);
+      setStatus('Demande envoyee. Notre equipe vous repondra rapidement.');
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        fallback: "L'envoi de votre demande a echoue. Reessayez.",
+      });
+      setStatus(feedback.message);
+    } finally {
+      setIsSubmittingTicket(false);
     }
   }
 
@@ -661,6 +708,19 @@ export default function AccountScreen() {
             </Pressable>
           ) : null}
         </View>
+        <SavedPlacesMap
+          places={profile.profile.savedPlaces.map((p) => ({
+            id: p.id,
+            label: p.label,
+            latitude: p.latitude ?? null,
+            longitude: p.longitude ?? null,
+          }))}
+          height={200}
+          onPlaceSelect={(placeId) => {
+            const place = profile.profile.savedPlaces.find((p) => p.id === placeId);
+            if (place) startEditingPlace(place);
+          }}
+        />
         {profile.profile.savedPlaces.map((place) => (
           <View
             key={place.id}
@@ -694,6 +754,106 @@ export default function AccountScreen() {
             </View>
           </View>
         ))}
+      </View>
+
+      {/* ── Support ── */}
+      <View style={styles.card}>
+        <Text style={styles.heading}>Support</Text>
+        <Text style={styles.meta}>
+          Un probleme avec une course, un paiement ou votre compte ? Notre equipe repond en moins de 24h.
+        </Text>
+
+        {tickets.map((ticket) => (
+          <View key={ticket.id} style={styles.ticketRow}>
+            <View style={styles.ticketHeader}>
+              <Text style={styles.ticketSubject} numberOfLines={1}>{ticket.subject}</Text>
+              <View style={[
+                styles.ticketBadge,
+                ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'
+                  ? styles.ticketBadgeClosed
+                  : ticket.status === 'IN_REVIEW'
+                    ? styles.ticketBadgeReview
+                    : styles.ticketBadgeOpen,
+              ]}>
+                <Text style={styles.ticketBadgeLabel}>
+                  {ticket.status === 'OPEN' ? 'Ouvert'
+                    : ticket.status === 'IN_REVIEW' ? 'En cours'
+                    : ticket.status === 'RESOLVED' ? 'Resolu'
+                    : 'Ferme'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.meta} numberOfLines={2}>{ticket.description}</Text>
+          </View>
+        ))}
+
+        {isTicketFormOpen ? (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Sujet (ex: paiement debite deux fois)"
+              placeholderTextColor={orbiTheme.colors.muted}
+              value={ticketForm.subject}
+              onChangeText={(v) => setTicketForm((f) => ({ ...f, subject: v }))}
+              maxLength={120}
+              editable={!isSubmittingTicket}
+            />
+            <TextInput
+              style={[styles.input, styles.ticketDescInput]}
+              placeholder="Decrivez votre probleme en detail..."
+              placeholderTextColor={orbiTheme.colors.muted}
+              value={ticketForm.description}
+              onChangeText={(v) => setTicketForm((f) => ({ ...f, description: v }))}
+              maxLength={2000}
+              multiline
+              numberOfLines={4}
+              editable={!isSubmittingTicket}
+            />
+            <View style={styles.modeRow}>
+              {(['payment', 'trip', 'account', 'driver', 'safety', 'other'] as const).map((cat) => (
+                <Pressable
+                  key={cat}
+                  style={[styles.modeChip, ticketForm.category === cat && styles.modeChipActive]}
+                  onPress={() => setTicketForm((f) => ({ ...f, category: cat }))}
+                >
+                  <Text style={[styles.modeChipLabel, ticketForm.category === cat && styles.modeChipLabelActive]}>
+                    {cat === 'payment' ? 'Paiement'
+                      : cat === 'trip' ? 'Course'
+                      : cat === 'account' ? 'Compte'
+                      : cat === 'driver' ? 'Chauffeur'
+                      : cat === 'safety' ? 'Securite'
+                      : 'Autre'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.actionsRow}>
+              <Pressable
+                style={[styles.primaryAction, isSubmittingTicket && { opacity: 0.6 }]}
+                onPress={() => void handleCreateTicket()}
+                disabled={isSubmittingTicket}
+              >
+                <Text style={styles.primaryActionLabel}>
+                  {isSubmittingTicket ? 'Envoi...' : 'Envoyer la demande'}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondaryAction}
+                onPress={() => setIsTicketFormOpen(false)}
+                disabled={isSubmittingTicket}
+              >
+                <Text style={styles.secondaryActionLabel}>Annuler</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <Pressable
+            style={styles.secondaryAction}
+            onPress={() => setIsTicketFormOpen(true)}
+          >
+            <Text style={styles.secondaryActionLabel}>Contacter le support</Text>
+          </Pressable>
+        )}
       </View>
     </ScrollView>
   );
@@ -910,5 +1070,47 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.danger,
     fontWeight: '700',
     fontSize: 12,
+  },
+  ticketRow: {
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: orbiTheme.colors.border,
+    gap: 4,
+  },
+  ticketHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ticketSubject: {
+    flex: 1,
+    color: orbiTheme.colors.text,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  ticketBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  ticketBadgeOpen: {
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+  },
+  ticketBadgeReview: {
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+  },
+  ticketBadgeClosed: {
+    backgroundColor: 'rgba(100, 116, 139, 0.15)',
+  },
+  ticketBadgeLabel: {
+    color: orbiTheme.colors.muted,
+    fontWeight: '700',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  ticketDescInput: {
+    minHeight: 90,
+    textAlignVertical: 'top',
   },
 });

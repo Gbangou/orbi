@@ -29,7 +29,7 @@ describe("AuthService — invariants de sécurité de l'authentification", () =>
       },
       userSession: {
         create: jest.fn(),
-        findMany: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn(),
@@ -42,7 +42,15 @@ describe("AuthService — invariants de sécurité de l'authentification", () =>
       ),
     };
 
-    return { prisma, service: new AuthService(prisma as never) };
+    const notifications = {
+      enqueue: jest.fn().mockResolvedValue({ notification: { id: 'notif-1' } }),
+    };
+
+    return {
+      prisma,
+      notifications,
+      service: new AuthService(prisma as never, notifications as never),
+    };
   }
 
   // ── Prévention de l'énumération de comptes ────────────────────────────────
@@ -180,6 +188,117 @@ describe("AuthService — invariants de sécurité de l'authentification", () =>
 
       expect(JSON.stringify(result)).not.toContain('passwordHash');
       expect(JSON.stringify(result)).not.toContain(passwordHash);
+    });
+  });
+
+  // ── Alerte nouvel appareil ────────────────────────────────────────────────
+
+  describe("Alerte push lors d'une connexion depuis un nouvel appareil", () => {
+    async function buildSignInUser(passwordHash: string, now: Date) {
+      return {
+        id: 'user-1',
+        email: 'rider@orbi.app',
+        fullName: 'Awa Ouedraogo',
+        phoneNumber: null,
+        passwordHash,
+        role: 'RIDER',
+        isActive: true,
+        isPhoneVerified: false,
+        lastLoginAt: null,
+        createdAt: now,
+        failedLoginCount: 0,
+        lockedUntil: null,
+        riderProfile: { id: 'rider-1', userId: 'user-1' },
+        driverProfile: null,
+      };
+    }
+
+    function buildSession(now: Date) {
+      return {
+        id: 'session-1',
+        userId: 'user-1',
+        tokenHash: 'hashed',
+        createdAt: now,
+        lastSeenAt: now,
+        expiresAt: new Date(now.getTime() + 3_600_000),
+        revokedAt: null,
+        userAgent: 'new-device-agent',
+        ipAddress: '10.0.0.1',
+      };
+    }
+
+    it("envoie une alerte push quand l'appareil est inconnu", async () => {
+      const { prisma, notifications, service } = createService();
+      const passwordHash = await hashPassword('Orbi123!');
+      const now = new Date();
+
+      prisma.user.findUnique.mockResolvedValue(
+        await buildSignInUser(passwordHash, now),
+      );
+      prisma.userSession.create.mockResolvedValue(buildSession(now));
+      prisma.user.update.mockResolvedValue({});
+      // Session précédente avec un user-agent différent → nouvel appareil.
+      prisma.userSession.findMany.mockResolvedValue([
+        { userAgent: 'old-device-agent' },
+      ]);
+
+      await service.signIn(
+        { email: 'rider@orbi.app', password: 'Orbi123!' },
+        { userAgent: 'new-device-agent', ipAddress: '10.0.0.1' },
+      );
+
+      expect(notifications.enqueue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          data: expect.objectContaining({ type: 'new_device_signin' }),
+        }),
+      );
+    });
+
+    it("n'envoie pas d'alerte quand l'appareil est déjà connu", async () => {
+      const { prisma, notifications, service } = createService();
+      const passwordHash = await hashPassword('Orbi123!');
+      const now = new Date();
+
+      prisma.user.findUnique.mockResolvedValue(
+        await buildSignInUser(passwordHash, now),
+      );
+      prisma.userSession.create.mockResolvedValue(buildSession(now));
+      prisma.user.update.mockResolvedValue({});
+      // Même user-agent que la session précédente → appareil connu.
+      prisma.userSession.findMany.mockResolvedValue([
+        { userAgent: 'new-device-agent' },
+      ]);
+
+      await service.signIn(
+        { email: 'rider@orbi.app', password: 'Orbi123!' },
+        { userAgent: 'new-device-agent', ipAddress: '10.0.0.1' },
+      );
+
+      expect(notifications.enqueue).not.toHaveBeenCalled();
+    });
+
+    it("une erreur de notification n'interrompt pas la connexion", async () => {
+      const { prisma, notifications, service } = createService();
+      const passwordHash = await hashPassword('Orbi123!');
+      const now = new Date();
+
+      prisma.user.findUnique.mockResolvedValue(
+        await buildSignInUser(passwordHash, now),
+      );
+      prisma.userSession.create.mockResolvedValue(buildSession(now));
+      prisma.user.update.mockResolvedValue({});
+      prisma.userSession.findMany.mockResolvedValue([
+        { userAgent: 'old-device-agent' },
+      ]);
+      notifications.enqueue.mockRejectedValue(new Error('push service down'));
+
+      const result = await service.signIn(
+        { email: 'rider@orbi.app', password: 'Orbi123!' },
+        { userAgent: 'new-device-agent', ipAddress: '10.0.0.1' },
+      );
+
+      expect(result.message).toBe('Signed in successfully.');
     });
   });
 

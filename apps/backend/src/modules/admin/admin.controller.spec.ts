@@ -19,6 +19,7 @@ describe('AdminController', () => {
       driverOnboardingQueue: jest.fn(),
       driverOnboardingExportHistory: jest.fn(),
       driverOnboardingExportCsv: jest.fn(),
+      tripsExportCsv: jest.fn(),
       driverWallets: jest.fn(),
       prepareDriverWalletPayout: jest.fn(),
       recordDriverWalletRecoveryAdjustment: jest.fn(),
@@ -530,5 +531,36 @@ describe('AdminController', () => {
       'incident-1',
       auth,
     );
+  });
+
+  it('delegates trips CSV export with auth context', async () => {
+    const { adminService, controller } = createController();
+    const query = { status: 'COMPLETED', limit: 100 };
+    const auth = { user: { id: 'admin-1', role: 'ADMIN' } };
+
+    await controller.tripsExportCsv(query as never, auth as never);
+
+    expect(adminService.tripsExportCsv).toHaveBeenCalledWith(query, auth);
+  });
+
+  it('trips/export.csv is restricted to ADMIN and OPS roles', () => {
+    const { controller } = createController();
+    const roles: UserRole[] = Reflect.getMetadata(
+      ROLES_KEY,
+      controller.tripsExportCsv,
+    ) as UserRole[];
+    expect(roles).toContain(UserRole.ADMIN);
+    expect(roles).toContain(UserRole.OPS);
+    expect(roles).not.toContain(UserRole.SUPPORT);
+  });
+
+  it('trips/export.csv requires SessionAuthGuard', () => {
+    const { controller } = createController();
+    const guards: unknown[] = Reflect.getMetadata(
+      GUARDS_METADATA,
+      controller.tripsExportCsv,
+    ) as unknown[];
+    expect(guards).toContain(SessionAuthGuard);
+    expect(guards).toContain(RolesGuard);
   });
 });
