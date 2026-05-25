@@ -24,6 +24,7 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
     Record<string, string>
   >({});
   const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const [busyMutationKeys, setBusyMutationKeys] = useState<string[]>([]);
   const mutationInFlightRef = useRef(new Set<string>());
 
   function beginMutation(key: string) {
@@ -32,11 +33,21 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
     }
 
     mutationInFlightRef.current.add(key);
+    setBusyMutationKeys((current) =>
+      current.includes(key) ? current : [...current, key],
+    );
     return true;
   }
 
   function endMutation(key: string) {
     mutationInFlightRef.current.delete(key);
+    setBusyMutationKeys((current) =>
+      current.filter((mutationKey) => mutationKey !== key),
+    );
+  }
+
+  function isMutationBusy(key: string) {
+    return busyMutationKeys.includes(key);
   }
 
   async function preparePayout(walletId: string) {
@@ -296,17 +307,19 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
         <div className="ticket-actions">
           <button
             className="ticket-button ticket-button-neutral"
+            disabled={isMutationBusy('export:csv')}
             onClick={() => void downloadSettlement('csv')}
             type="button"
           >
-            Export CSV
+            {isMutationBusy('export:csv') ? 'Export CSV...' : 'Export CSV'}
           </button>
           <button
             className="ticket-button ticket-button-neutral"
+            disabled={isMutationBusy('export:pdf')}
             onClick={() => void downloadSettlement('pdf')}
             type="button"
           >
-            Export PDF
+            {isMutationBusy('export:pdf') ? 'Export PDF...' : 'Export PDF'}
           </button>
           {exportStatus ? (
             <span className="queue-status">{exportStatus}</span>
@@ -338,99 +351,126 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
       </div>
 
       <div className="roadmap-grid live-ops-grid">
-        {walletState.map((wallet) => (
-          <article className="phase-card live-trip-card" key={wallet.id}>
-            <div className="ticket-topline">
-              <span className="phase-status phase-status-completed">
-                {wallet.verificationStatus ?? 'verification inconnue'}
-              </span>
-              <span className="live-trip-fare">
-                {formatMoney(wallet.balance, wallet.currency)}
-              </span>
-            </div>
-            {wallet.recoveryDue > 0 ? (
-              <span className="phase-status phase-status-planned">
-                Recouvrement du {formatMoney(wallet.recoveryDue, wallet.currency)}
-              </span>
-            ) : null}
-            <h3>{wallet.driverName}</h3>
-            <p>
-              Statut chauffeur: {wallet.driverStatus ?? 'non renseigne'} -
-              derniere activite{' '}
-              {formatAdminDateTime(wallet.lastActivityAt)}
-            </p>
-            <div className="trip-meta-grid">
-              <div className="trip-meta-card">
-                <span>Payout net</span>
-                <strong>{formatMoney(wallet.payoutTotal, wallet.currency)}</strong>
+        {walletState.map((wallet) => {
+          const prepareKey = `prepare:${wallet.id}`;
+          const paidKey = wallet.preparedPayout
+            ? `paid:${wallet.preparedPayout.id}`
+            : null;
+          const recoveryKey = `recovery:${wallet.id}`;
+          const isWalletBusy =
+            isMutationBusy(prepareKey) ||
+            (paidKey ? isMutationBusy(paidKey) : false) ||
+            isMutationBusy(recoveryKey);
+
+          return (
+            <article className="phase-card live-trip-card" key={wallet.id}>
+              <div className="ticket-topline">
+                <span className="phase-status phase-status-completed">
+                  {wallet.verificationStatus ?? 'verification inconnue'}
+                </span>
+                <span className="live-trip-fare">
+                  {formatMoney(wallet.balance, wallet.currency)}
+                </span>
               </div>
-              <div className="trip-meta-card">
-                <span>Commission</span>
-                <strong>
-                  {formatMoney(wallet.commissionTotal, wallet.currency)}
-                </strong>
-              </div>
-            </div>
-            {wallet.recentTransactions.slice(0, 3).map((transaction) => (
-              <p key={transaction.id}>
-                {transaction.type} {formatMoney(transaction.amount, wallet.currency)}
-                {transaction.provider ? ` - ${transaction.provider}` : ''}
-                {transaction.reference ? ` - ${transaction.reference}` : ''}
-              </p>
-            ))}
-            {!wallet.recentTransactions.length ? (
-              <p>Aucune ecriture ledger recente.</p>
-            ) : null}
-            {wallet.preparedPayout ? (
-              <p>
-                Payout prepare: {formatMoney(
-                  wallet.preparedPayout.amount,
-                  wallet.preparedPayout.currency,
-                )}{' '}
-                - {wallet.preparedPayout.reference}
-              </p>
-            ) : null}
-            <div className="ticket-actions">
-              <button
-                className="ticket-button ticket-button-neutral"
-                disabled={
-                  wallet.balance <= 0 ||
-                  wallet.recoveryDue > 0 ||
-                  Boolean(wallet.preparedPayout)
-                }
-                onClick={() => void preparePayout(wallet.id)}
-                type="button"
-              >
-                Preparer payout
-              </button>
-              {wallet.preparedPayout ? (
-                <button
-                  className="ticket-button"
-                  onClick={() =>
-                    void markPayoutPaid(wallet.id, wallet.preparedPayout!.id)
-                  }
-                  type="button"
-                >
-                  Marquer paye
-                </button>
-              ) : null}
               {wallet.recoveryDue > 0 ? (
-                <button
-                  className="ticket-button ticket-button-success"
-                  onClick={() => void recordRecovery(wallet.id, wallet.recoveryDue)}
-                  type="button"
-                >
-                  Enregistrer recouvrement
-                </button>
-              ) : null}
-              {statusByWalletId[wallet.id] ? (
-                <span className="queue-status">
-                  {statusByWalletId[wallet.id]}
+                <span className="phase-status phase-status-planned">
+                  Recouvrement du{' '}
+                  {formatMoney(wallet.recoveryDue, wallet.currency)}
                 </span>
               ) : null}
-            </div>
-          </article>
-        ))}
+              <h3>{wallet.driverName}</h3>
+              <p>
+                Statut chauffeur: {wallet.driverStatus ?? 'non renseigne'} -
+                derniere activite {formatAdminDateTime(wallet.lastActivityAt)}
+              </p>
+              <div className="trip-meta-grid">
+                <div className="trip-meta-card">
+                  <span>Payout net</span>
+                  <strong>
+                    {formatMoney(wallet.payoutTotal, wallet.currency)}
+                  </strong>
+                </div>
+                <div className="trip-meta-card">
+                  <span>Commission</span>
+                  <strong>
+                    {formatMoney(wallet.commissionTotal, wallet.currency)}
+                  </strong>
+                </div>
+              </div>
+              {wallet.recentTransactions.slice(0, 3).map((transaction) => (
+                <p key={transaction.id}>
+                  {transaction.type}{' '}
+                  {formatMoney(transaction.amount, wallet.currency)}
+                  {transaction.provider ? ` - ${transaction.provider}` : ''}
+                  {transaction.reference ? ` - ${transaction.reference}` : ''}
+                </p>
+              ))}
+              {!wallet.recentTransactions.length ? (
+                <p>Aucune ecriture ledger recente.</p>
+              ) : null}
+              {wallet.preparedPayout ? (
+                <p>
+                  Payout prepare:{' '}
+                  {formatMoney(
+                    wallet.preparedPayout.amount,
+                    wallet.preparedPayout.currency,
+                  )}{' '}
+                  - {wallet.preparedPayout.reference}
+                </p>
+              ) : null}
+              <div className="ticket-actions">
+                <button
+                  className="ticket-button ticket-button-neutral"
+                  disabled={
+                    isWalletBusy ||
+                    wallet.balance <= 0 ||
+                    wallet.recoveryDue > 0 ||
+                    Boolean(wallet.preparedPayout)
+                  }
+                  onClick={() => void preparePayout(wallet.id)}
+                  type="button"
+                >
+                  {isMutationBusy(prepareKey)
+                    ? 'Preparation...'
+                    : 'Preparer payout'}
+                </button>
+                {wallet.preparedPayout ? (
+                  <button
+                    className="ticket-button"
+                    disabled={isWalletBusy}
+                    onClick={() =>
+                      void markPayoutPaid(wallet.id, wallet.preparedPayout!.id)
+                    }
+                    type="button"
+                  >
+                    {paidKey && isMutationBusy(paidKey)
+                      ? 'Marquage...'
+                      : 'Marquer paye'}
+                  </button>
+                ) : null}
+                {wallet.recoveryDue > 0 ? (
+                  <button
+                    className="ticket-button ticket-button-success"
+                    disabled={isWalletBusy}
+                    onClick={() =>
+                      void recordRecovery(wallet.id, wallet.recoveryDue)
+                    }
+                    type="button"
+                  >
+                    {isMutationBusy(recoveryKey)
+                      ? 'Enregistrement...'
+                      : 'Enregistrer recouvrement'}
+                  </button>
+                ) : null}
+                {statusByWalletId[wallet.id] ? (
+                  <span className="queue-status">
+                    {statusByWalletId[wallet.id]}
+                  </span>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
         {!wallets.wallets.length ? (
           <article className="phase-card">
             <span className="phase-status phase-status-planned">ledger</span>
