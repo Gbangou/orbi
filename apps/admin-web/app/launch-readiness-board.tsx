@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AdminFeatureFlagsResponse,
   AdminDriverWalletsResponse,
@@ -177,6 +177,7 @@ export function LaunchReadinessBoard({
     ),
   );
   const [busyActionId, setBusyActionId] = useState<string | null>(null);
+  const actionInFlightRef = useRef(new Set<string>());
   const [actionStatus, setActionStatus] = useState(
     'Plan de stabilisation pret.',
   );
@@ -416,6 +417,11 @@ export function LaunchReadinessBoard({
   async function acknowledgeAction(
     action: NonNullable<AdminLaunchReadinessResponse['nextActions']>[number],
   ) {
+    if (actionInFlightRef.current.has(action.checkId)) {
+      return;
+    }
+
+    actionInFlightRef.current.add(action.checkId);
     setBusyActionId(action.checkId);
     setActionStatus('Acknowledgement en cours...');
 
@@ -439,6 +445,7 @@ export function LaunchReadinessBoard({
     } catch {
       setActionStatus("L acknowledgement n'a pas pu etre audite.");
     } finally {
+      actionInFlightRef.current.delete(action.checkId);
       setBusyActionId(null);
     }
   }

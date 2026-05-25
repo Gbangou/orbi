@@ -1,5 +1,7 @@
 /// <reference path="../../backend/node_modules/@types/jest/index.d.ts" />
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { HealthCheckResponse } from '@orbi/api';
 import {
   resolveCombinedProductionState,
@@ -144,5 +146,17 @@ describe('launch readiness production decision', () => {
       state: 'warn',
       label: 'decision incomplete',
     });
+  });
+
+  it('guards launch readiness acknowledgements against duplicate clicks', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/launch-readiness-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('actionInFlightRef');
+    expect(source).toContain('actionInFlightRef.current.has(action.checkId)');
+    expect(source).toContain('actionInFlightRef.current.add(action.checkId)');
+    expect(source).toContain('actionInFlightRef.current.delete(action.checkId)');
   });
 });
