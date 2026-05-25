@@ -14,6 +14,7 @@ import {
   resolveDriverPayoutSettlementStatus,
   resolvePaymentWebhookJournalKind,
 } from '../app/admin-server-security';
+import { createAdminIdempotencyKey } from '../app/admin-idempotency';
 import { resolveSafeDocumentUrl } from '../app/admin-url-security';
 
 function request(headers: Record<string, string>, method = 'POST') {
@@ -95,6 +96,15 @@ describe('admin server security', () => {
       Pragma: 'no-cache',
       Expires: '0',
     });
+  });
+
+  it('generates bounded URL-safe admin idempotency keys', () => {
+    const key = createAdminIdempotencyKey('Recovery Wallet!');
+    const secondKey = createAdminIdempotencyKey('Recovery Wallet!');
+
+    expect(key).toMatch(/^recovery-wallet-[A-Za-z0-9._-]+$/);
+    expect(key.length).toBeLessThanOrEqual(128);
+    expect(secondKey).not.toBe(key);
   });
 
   it('bounds driver payout settlement status before proxying exports', () => {

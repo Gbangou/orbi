@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { recordAdminDriverWalletRecoveryAdjustment } from '@orbi/api';
+import { createAdminIdempotencyKey } from '../../../../../admin-idempotency';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,
@@ -73,7 +74,7 @@ export async function POST(
   const idempotencyKey =
     payload && isSafeIdempotencyKey(payload.idempotencyKey)
       ? payload.idempotencyKey.trim()
-      : `recovery-${walletId}-${Math.round(recoveryAmount)}`;
+      : createAdminIdempotencyKey('recovery');
 
   try {
     const authClient = await getAdminServerAuthClient();

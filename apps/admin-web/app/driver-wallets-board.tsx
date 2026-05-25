@@ -6,6 +6,7 @@ import {
   type AdminDriverWalletRecoveryAdjustmentResponse,
   type AdminDriverWalletsResponse,
 } from '@orbi/api';
+import { createAdminIdempotencyKey } from './admin-idempotency';
 import { postAdminMutation } from './admin-client-fetch';
 import { formatAdminDateTime } from './admin-ops-kernel';
 
@@ -186,9 +187,7 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
             body: JSON.stringify({
               amount: recoveryDue,
               notes: 'Recouvrement terrain confirme depuis la console ops.',
-              idempotencyKey: `recovery-${walletId}-${Math.round(
-                recoveryDue,
-              )}`,
+              idempotencyKey: createAdminIdempotencyKey('recovery'),
             }),
           },
       );
