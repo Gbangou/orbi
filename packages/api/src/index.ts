@@ -12,9 +12,7 @@ import type {
   PaymentMethod,
   PricingEstimate,
   RideOption,
-  RideRequestLifecycleStatus,
   ServiceTier,
-  TripLifecycleStatus,
   VehicleCategory,
   VoiceSuggestion,
 } from '@orbi/domain';
@@ -4032,6 +4030,26 @@ export async function getMySupportTicketsWithApi(
   client: OrbiApiClient,
 ): Promise<MySupportTicketsResponse> {
   return client.request<MySupportTicketsResponse>(apiRoutes.auth.supportTickets);
+}
+
+export type PromoValidationResponse = {
+  valid: true;
+  code: string;
+  discountBps: number;
+  discountPercent: number;
+  description: string | null;
+  firstTripOnly: boolean;
+  validTo: string;
+};
+
+export async function validatePromoCodeWithApi(
+  client: OrbiApiClient,
+  code: string,
+): Promise<PromoValidationResponse> {
+  return client.request<PromoValidationResponse>('/auth/validate-promo-code', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
 }
 
 export type PromoCodeItem = {

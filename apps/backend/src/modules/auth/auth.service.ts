@@ -1,9 +1,10 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { NotificationChannel, UserRole } from '@prisma/client';
+import { NotificationChannel, TripStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DEFAULT_WALLET_CURRENCY, SESSION_TTL_IN_DAYS } from './auth.constants';
@@ -630,6 +631,73 @@ export class AuthService {
         createdAt: t.createdAt.toISOString(),
         updatedAt: t.updatedAt.toISOString(),
       })),
+    };
+  }
+
+  async validatePromoCode(code: string, auth: RequestAuthContext) {
+    const normalizedCode = code.toUpperCase().trim();
+
+    const promo = await this.prisma.promoCode.findUnique({
+      where: { code: normalizedCode },
+      select: {
+        id: true,
+        code: true,
+        description: true,
+        discountBps: true,
+        maxUses: true,
+        usedCount: true,
+        validFrom: true,
+        validTo: true,
+        firstTripOnly: true,
+        active: true,
+      },
+    });
+
+    if (!promo || !promo.active) {
+      throw new BadRequestException('Code promo invalide ou inactif.');
+    }
+
+    const now = new Date();
+
+    if (promo.validTo < now) {
+      throw new BadRequestException('Ce code promo a expire.');
+    }
+
+    if (promo.validFrom > now) {
+      throw new BadRequestException('Ce code promo n est pas encore actif.');
+    }
+
+    if (promo.maxUses !== null && promo.usedCount >= promo.maxUses) {
+      throw new BadRequestException('Ce code promo a atteint son nombre maximum d utilisations.');
+    }
+
+    if (promo.firstTripOnly) {
+      const riderProfile = await this.prisma.riderProfile.findUnique({
+        where: { userId: auth.user.id },
+        select: { id: true },
+      });
+
+      if (riderProfile) {
+        const completedTripsCount = await this.prisma.trip.count({
+          where: { riderId: riderProfile.id, status: TripStatus.COMPLETED },
+        });
+
+        if (completedTripsCount > 0) {
+          throw new BadRequestException('Ce code est reserve aux nouveaux passagers (premier trajet).');
+        }
+      }
+    }
+
+    const discountPercent = promo.discountBps / 100;
+
+    return {
+      valid: true,
+      code: promo.code,
+      discountBps: promo.discountBps,
+      discountPercent,
+      description: promo.description,
+      firstTripOnly: promo.firstTripOnly,
+      validTo: promo.validTo.toISOString(),
     };
   }
 

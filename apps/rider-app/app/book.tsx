@@ -25,7 +25,9 @@ import {
   toApiPaymentMethod,
   toApiServiceTier,
   toApiVehicleType,
+  validatePromoCodeWithApi,
   type MyTripsResponse,
+  type PromoValidationResponse,
   type PaymentMethod,
   type Place,
   type RiderProfileResponse,
@@ -339,6 +341,88 @@ function VehicleOptionAvatar({
   );
 }
 
+const promoStyles = StyleSheet.create({
+  container: {
+    backgroundColor: orbiTheme.colors.panel,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    borderRadius: 16,
+    padding: 14,
+    gap: 10,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: orbiTheme.colors.muted,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    paddingHorizontal: 12,
+    color: orbiTheme.colors.text,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    fontSize: 14,
+  },
+  applyButton: {
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  applyButtonDisabled: {
+    opacity: 0.4,
+  },
+  applyButtonLabel: {
+    color: orbiTheme.colors.background,
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  clearButton: {
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  clearButtonLabel: {
+    color: orbiTheme.colors.muted,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  successBox: {
+    backgroundColor: 'rgba(61,215,192,0.08)',
+    borderRadius: 10,
+    padding: 10,
+    gap: 4,
+  },
+  successText: {
+    color: orbiTheme.colors.teal,
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  successMeta: {
+    color: orbiTheme.colors.muted,
+    fontSize: 12,
+  },
+  errorText: {
+    color: orbiTheme.colors.danger ?? '#ff7f66',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+});
+
 export default function BookingScreen() {
   const router = useRouter();
   const [options, setOptions] = useState<RideOption[]>(riderRideOptions);
@@ -366,6 +450,11 @@ export default function BookingScreen() {
   const [isResolvingVoice, setIsResolvingVoice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [promoValidation, setPromoValidation] =
+    useState<PromoValidationResponse | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
   const [bookingTransitionLabel, setBookingTransitionLabel] = useState<
     string | null
@@ -732,6 +821,23 @@ export default function BookingScreen() {
 
     return () => clearTimeout(timeout);
   }, [bookingTransitionLabel]);
+
+  async function handleValidatePromo() {
+    const code = promoCodeInput.trim().toUpperCase();
+    if (!code) return;
+    setIsValidatingPromo(true);
+    setPromoError(null);
+    setPromoValidation(null);
+    try {
+      const { authClient } = await restoreRiderSession();
+      const result = await validatePromoCodeWithApi(authClient, code);
+      setPromoValidation(result);
+    } catch {
+      setPromoError('Code invalide, expire ou non applicable a votre compte.');
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  }
 
   async function handleCreateRideRequest() {
     if (bookingMutationInFlightRef.current) {
@@ -1365,6 +1471,65 @@ export default function BookingScreen() {
           </View>
         </View>
       ) : null}
+
+      <View style={promoStyles.container}>
+        <Text style={promoStyles.label}>Code promo (optionnel)</Text>
+        <View style={promoStyles.row}>
+          <TextInput
+            autoCapitalize="characters"
+            autoCorrect={false}
+            editable={!isValidatingPromo && !promoValidation}
+            maxLength={32}
+            onChangeText={(v) => {
+              setPromoCodeInput(v.toUpperCase());
+              setPromoError(null);
+              setPromoValidation(null);
+            }}
+            placeholder="ex: BIENVENUE20"
+            placeholderTextColor={orbiTheme.colors.muted}
+            style={promoStyles.input}
+            value={promoCodeInput}
+          />
+          {promoValidation ? (
+            <Pressable
+              onPress={() => {
+                setPromoValidation(null);
+                setPromoCodeInput('');
+              }}
+              style={promoStyles.clearButton}
+            >
+              <Text style={promoStyles.clearButtonLabel}>Retirer</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              disabled={!promoCodeInput.trim() || isValidatingPromo}
+              onPress={() => void handleValidatePromo()}
+              style={[
+                promoStyles.applyButton,
+                (!promoCodeInput.trim() || isValidatingPromo) && promoStyles.applyButtonDisabled,
+              ]}
+            >
+              <Text style={promoStyles.applyButtonLabel}>
+                {isValidatingPromo ? '...' : 'Appliquer'}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+        {promoValidation ? (
+          <View style={promoStyles.successBox}>
+            <Text style={promoStyles.successText}>
+              -{promoValidation.discountPercent.toFixed(0)} % applique
+              {promoValidation.firstTripOnly ? ' (1er trajet)' : ''}
+            </Text>
+            {promoValidation.description ? (
+              <Text style={promoStyles.successMeta}>{promoValidation.description}</Text>
+            ) : null}
+          </View>
+        ) : null}
+        {promoError ? (
+          <Text style={promoStyles.errorText}>{promoError}</Text>
+        ) : null}
+      </View>
 
       <FlowActionButton
         disabled={isSubmitting || hasOpenFlow || !selectedOption}

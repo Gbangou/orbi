@@ -125,4 +125,17 @@ export class AuthController {
   getMySupportTickets(@CurrentAuth() auth: RequestAuthContext) {
     return this.authService.getMySupportTickets(auth);
   }
+
+  @Post('validate-promo-code')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard)
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 20, windowMs: 60_000, scope: 'user' })
+  validatePromoCode(
+    @Body() body: { code: string },
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.authService.validatePromoCode(body.code, auth);
+  }
 }
