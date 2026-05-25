@@ -192,6 +192,7 @@ describe('admin server security', () => {
         'app/api/admin/driver-payouts/[payoutId]/paid/route.ts',
         'app/api/admin/payment-attempts/[paymentAttemptId]/refund/route.ts',
         'app/api/admin/payment-webhook-events/[eventId]/replay/route.ts',
+        'app/api/admin/riders/[userId]/status/route.ts',
       ]));
 
     const unguardedRoutes = mutationRoutes
