@@ -15,6 +15,7 @@ import {
   fetchAdminDriverWallets,
   fetchAdminPaymentWebhookEvents,
   fetchAdminPricingCalibration,
+  fetchAdminRiders,
   fetchAdminSupportTickets,
   listAdminPromoCodes,
   type ListAdminPromoCodesResponse,
@@ -26,6 +27,7 @@ import {
   type AdminTripsAuditResponse,
   type AdminPaymentWebhookEventsResponse,
   type AdminPricingCalibrationResponse,
+  type AdminRidersResponse,
   type HealthCheckResponse,
   type DriverOnboardingQueueResponse,
   type AdminMetric,
@@ -58,6 +60,7 @@ import { PaymentWebhookJournalBoard } from './payment-webhook-journal-board';
 import { DriverWalletsBoard } from './driver-wallets-board';
 import { TripsAuditBoard } from './trips-audit-board';
 import { PromoCodesBoard } from './promo-codes-board';
+import { RidersBoard } from './riders-board';
 
 const fallbackIncidents = [
   '2 chauffeurs moto en attente de verification',
@@ -159,6 +162,13 @@ const fallbackTripsAudit: AdminTripsAuditResponse = {
   recommendations: [
     'Connecter le backend local pour obtenir l audit trajets officiel.',
   ],
+};
+
+const fallbackRiders: AdminRidersResponse = {
+  riders: [],
+  total: 0,
+  page: 1,
+  pageSize: 30,
 };
 
 const fallbackHealth: HealthCheckResponse = {
@@ -604,6 +614,7 @@ async function loadAdminData(): Promise<{
   pricingCalibration: AdminPricingCalibrationResponse;
   paymentWebhookJournal: AdminPaymentWebhookEventsResponse;
   driverWallets: AdminDriverWalletsResponse;
+  riders: AdminRidersResponse;
   launchReadiness: AdminLaunchReadinessResponse;
   health: HealthCheckResponse;
   promoCodes: ListAdminPromoCodesResponse;
@@ -641,6 +652,7 @@ async function loadAdminData(): Promise<{
       pricingCalibration,
       paymentWebhookJournal,
       driverWallets,
+      riders,
       launchReadiness,
       health,
       promoCodes,
@@ -661,6 +673,7 @@ async function loadAdminData(): Promise<{
           pageSize: 8,
         }),
         fetchAdminDriverWallets(authClient),
+        fetchAdminRiders(authClient, { page: 1, pageSize: 30 }),
         fetchAdminLaunchReadiness(authClient),
         fetchHealthCheck(client),
         listAdminPromoCodes(authClient),
@@ -761,6 +774,7 @@ async function loadAdminData(): Promise<{
       pricingCalibration,
       paymentWebhookJournal,
       driverWallets,
+      riders,
       launchReadiness,
       health,
       promoCodes,
@@ -858,6 +872,7 @@ async function loadAdminData(): Promise<{
       pricingCalibration: fallbackPricingCalibration,
       paymentWebhookJournal: fallbackPaymentWebhookJournal,
       driverWallets: fallbackDriverWallets,
+      riders: fallbackRiders,
       launchReadiness: fallbackLaunchReadiness,
       onboardingQueue: {
         drivers: [],
@@ -892,6 +907,7 @@ export default async function AdminHomePage({
     pricingCalibration,
     paymentWebhookJournal,
     driverWallets,
+    riders,
     launchReadiness,
     health,
     promoCodes,
@@ -1118,6 +1134,8 @@ export default async function AdminHomePage({
       <PaymentWebhookJournalBoard journal={paymentWebhookJournal} />
 
       <DriverWalletsBoard wallets={driverWallets} />
+
+      <RidersBoard initialRiders={riders} />
 
       {pricingScenarios.length ? (
         <PricingStrategyBoard scenarios={pricingScenarios} />
