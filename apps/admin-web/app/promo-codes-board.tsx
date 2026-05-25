@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { PromoCodeItem } from '@orbi/api';
 import { createAdminMutationHeaders, fetchAdminJson } from './admin-client-fetch';
 
@@ -74,6 +74,8 @@ export function PromoCodesBoard({ initialCodes }: PromoCodesBoardProps) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const promoCreateInFlightRef = useRef(false);
+  const promoDeactivateInFlightRef = useRef(new Set<string>());
 
   async function refreshCodes() {
     try {
@@ -85,6 +87,11 @@ export function PromoCodesBoard({ initialCodes }: PromoCodesBoardProps) {
   }
 
   async function handleDeactivate(id: string) {
+    if (promoDeactivateInFlightRef.current.has(id)) {
+      return;
+    }
+
+    promoDeactivateInFlightRef.current.add(id);
     setBusyId(id);
     setStatus('Desactivation en cours...');
     try {
@@ -94,12 +101,18 @@ export function PromoCodesBoard({ initialCodes }: PromoCodesBoardProps) {
     } catch {
       setStatus('La desactivation a echoue.');
     } finally {
+      promoDeactivateInFlightRef.current.delete(id);
       setBusyId(null);
     }
   }
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
+
+    if (promoCreateInFlightRef.current) {
+      return;
+    }
+
     const discountBps = parseInt(form.discountBps, 10);
     const maxUses = form.maxUses ? parseInt(form.maxUses, 10) : undefined;
 
@@ -108,6 +121,7 @@ export function PromoCodesBoard({ initialCodes }: PromoCodesBoardProps) {
       return;
     }
 
+    promoCreateInFlightRef.current = true;
     setSubmitting(true);
     setStatus('Creation du code promo...');
     try {
@@ -127,6 +141,7 @@ export function PromoCodesBoard({ initialCodes }: PromoCodesBoardProps) {
     } catch {
       setStatus('La creation du code promo a echoue. Verifiez que le code est unique.');
     } finally {
+      promoCreateInFlightRef.current = false;
       setSubmitting(false);
     }
   }
