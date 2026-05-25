@@ -189,6 +189,8 @@ describe('admin server security', () => {
 
     expect(mutationRoutes.map((routeFile) => relativeRoutePath(routeFile)))
       .toEqual(expect.arrayContaining([
+        'app/api/admin/driver-wallets/[walletId]/payouts/prepare/route.ts',
+        'app/api/admin/driver-wallets/[walletId]/recovery-adjustments/route.ts',
         'app/api/admin/driver-payouts/[payoutId]/paid/route.ts',
         'app/api/admin/payment-attempts/[paymentAttemptId]/refund/route.ts',
         'app/api/admin/payment-webhook-events/[eventId]/replay/route.ts',
