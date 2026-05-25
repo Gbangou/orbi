@@ -4409,4 +4409,47 @@ describe('AdminService', () => {
       }),
     );
   });
+
+  it('clamps lookback hours to 1-168 and queries trips within the window', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValue([]);
+
+    await service.tripsAudit({ lookbackHours: 9999 });
+
+    expect(prisma.trip.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          createdAt: expect.objectContaining({
+            gte: expect.any(Date),
+          }),
+        }),
+        take: 300,
+      }),
+    );
+
+    const call = prisma.trip.findMany.mock.calls[0][0] as {
+      where: { createdAt: { gte: Date } };
+    };
+    const ageMs = Date.now() - call.where.createdAt.gte.getTime();
+    const ageHours = ageMs / (60 * 60 * 1000);
+
+    expect(ageHours).toBeCloseTo(168, 0);
+  });
+
+  it('uses 24-hour default lookback when no query is provided', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValue([]);
+
+    await service.tripsAudit();
+
+    const call = prisma.trip.findMany.mock.calls[0][0] as {
+      where: { createdAt: { gte: Date } };
+    };
+    const ageMs = Date.now() - call.where.createdAt.gte.getTime();
+    const ageHours = ageMs / (60 * 60 * 1000);
+
+    expect(ageHours).toBeCloseTo(24, 0);
+  });
 });
