@@ -1,6 +1,8 @@
 import {
+  areBookingPlacesEquivalent,
   buildCheckoutIdempotencyKey,
   buildRideRequestIdempotencyKey,
+  resolveCheckoutChannel,
   validateBookingSelection,
 } from '../lib/booking-safety';
 
@@ -69,6 +71,42 @@ describe('rider booking safety helpers', () => {
     });
   });
 
+  it('rejects same pickup and destination (equivalent places)', () => {
+    expect(
+      validateBookingSelection({
+        destinationPlace: basePlace,
+        hasOpenFlow: false,
+        pickupPlace: basePlace,
+        selectedOption: option,
+        selectedPaymentMethod: 'cash',
+      }),
+    ).toMatchObject({ ok: false });
+  });
+
+  it('rejects when an open flow already exists', () => {
+    expect(
+      validateBookingSelection({
+        destinationPlace,
+        hasOpenFlow: true,
+        pickupPlace: basePlace,
+        selectedOption: option,
+        selectedPaymentMethod: 'cash',
+      }),
+    ).toMatchObject({ ok: false });
+  });
+
+  it('rejects when no option is selected', () => {
+    expect(
+      validateBookingSelection({
+        destinationPlace,
+        hasOpenFlow: false,
+        pickupPlace: basePlace,
+        selectedOption: null,
+        selectedPaymentMethod: 'cash',
+      }),
+    ).toMatchObject({ ok: false });
+  });
+
   it('builds stable URL-safe idempotency keys for booking and checkout', () => {
     expect(
       buildRideRequestIdempotencyKey({
@@ -89,5 +127,43 @@ describe('rider booking safety helpers', () => {
         rideRequestId: 'ride-request-12345678',
       }),
     ).toBe('checkout-ride-request-12345678-mobile-money');
+  });
+});
+
+describe('areBookingPlacesEquivalent', () => {
+  it('returns true for places with coordinates within 100m', () => {
+    expect(
+      areBookingPlacesEquivalent(
+        { ...basePlace, coordinates: { latitude: 12.3412, longitude: -1.5601 } },
+        { ...basePlace, coordinates: { latitude: 12.3412, longitude: -1.5601 } },
+      ),
+    ).toBe(true);
+  });
+
+  it('returns false for places far apart', () => {
+    expect(
+      areBookingPlacesEquivalent(basePlace, destinationPlace),
+    ).toBe(false);
+  });
+
+  it('returns true when normalized addresses are identical even without coordinates', () => {
+    const a = { id: 'a', label: 'A', address: '  Ouaga 2000  ' };
+    const b = { id: 'b', label: 'B', address: 'ouaga 2000' };
+
+    expect(areBookingPlacesEquivalent(a as never, b as never)).toBe(true);
+  });
+});
+
+describe('resolveCheckoutChannel', () => {
+  it('returns WALLET for the wallet payment method', () => {
+    expect(resolveCheckoutChannel('wallet')).toBe('WALLET');
+  });
+
+  it('returns MOBILE_MONEY for mobile-money', () => {
+    expect(resolveCheckoutChannel('mobile-money')).toBe('MOBILE_MONEY');
+  });
+
+  it('returns MOBILE_MONEY for cash', () => {
+    expect(resolveCheckoutChannel('cash')).toBe('MOBILE_MONEY');
   });
 });
