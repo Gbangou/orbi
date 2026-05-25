@@ -2714,6 +2714,7 @@ export type TripDetailResponse = {
       label: string;
       createdAt: string;
     }>;
+    promoCode?: { code: string; discountBps: number } | null;
   };
 };
 

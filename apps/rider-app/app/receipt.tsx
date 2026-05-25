@@ -264,6 +264,15 @@ export default function ReceiptScreen() {
       <View style={styles.receiptCard}>
         <Text style={styles.receiptSection}>Paiement</Text>
         <ReceiptRow label="Montant course" value={formatXof(trip.actualFare)} accent />
+        {trip.promoCode ? (
+          <>
+            <Divider />
+            <ReceiptRow
+              label="Code promo"
+              value={`${trip.promoCode.code} (−${trip.promoCode.discountBps / 100}%)`}
+            />
+          </>
+        ) : null}
         <Divider />
         <ReceiptRow
           label="Reference"

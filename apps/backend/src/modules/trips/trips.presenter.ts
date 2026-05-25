@@ -152,6 +152,7 @@ export function serializeTripDetail(trip: {
     destinationLatitude?: unknown;
     destinationLongitude?: unknown;
   } | null;
+  promoCode?: { code: string; discountBps: number } | null;
   events: Array<{
     id: string;
     eventType: string;
@@ -256,6 +257,7 @@ export function serializeTripDetail(trip: {
         label: formatTripEventLabel(event.eventType),
         createdAt: event.createdAt.toISOString(),
       })),
+      promoCode: trip.promoCode ?? null,
     },
   };
 }

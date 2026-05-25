@@ -263,12 +263,24 @@ export class TripsService {
     this.assertTripAccess(auth, trip);
     const profilePhotoUrl = this.resolveDriverProfilePhotoUrl(trip, auth);
 
+    let promoCode: { code: string; discountBps: number } | null = null;
+    if (trip.rideRequest?.promoCodeId) {
+      const promo = await this.prisma.promoCode.findUnique({
+        where: { id: trip.rideRequest.promoCodeId },
+        select: { code: true, discountBps: true },
+      });
+      if (promo) {
+        promoCode = { code: promo.code, discountBps: promo.discountBps };
+      }
+    }
+
     return serializeTripDetail({
       ...trip,
       driver: {
         ...trip.driver,
         profilePhotoUrl,
       },
+      promoCode,
     });
   }
 
