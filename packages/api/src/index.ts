@@ -120,6 +120,7 @@ export const apiRoutes = {
     healthIncidents: '/admin/health-incidents',
     supportTickets: '/admin/support-tickets',
     riders: '/admin/riders',
+    drivers: '/admin/drivers',
     driverWallets: '/admin/driver-wallets',
     driverPayouts: '/admin/driver-payouts',
     driverPayoutSettlementCsv: '/admin/driver-payouts/settlement.csv',
@@ -1617,6 +1618,29 @@ export type AdminRidersResponse = {
 export type AdminRiderStatusResponse = {
   riderId: string;
   isActive: boolean;
+};
+
+export type AdminDriversResponse = {
+  drivers: Array<{
+    id: string;
+    userId: string;
+    fullName: string;
+    email: string;
+    phoneNumber: string | null;
+    isActive: boolean;
+    status: string;
+    createdAt: string;
+    completedTripsCount: number;
+    vehicle: {
+      make: string;
+      model: string;
+      plateNumber: string;
+      vehicleType: string;
+    } | null;
+  }>;
+  total: number;
+  page: number;
+  pageSize: number;
 };
 
 export type AdminDriverWalletsResponse = {
@@ -3179,6 +3203,21 @@ export async function acknowledgeAdminLaunchReadinessAction(
 
 export async function fetchAdminSupportTickets(client: OrbiApiClient) {
   return client.request<SupportTicketQueueResponse>(apiRoutes.admin.supportTickets);
+}
+
+export async function fetchAdminDrivers(
+  client: OrbiApiClient,
+  query: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    status?: string;
+  } = {},
+) {
+  return client.request<AdminDriversResponse>(
+    apiRoutes.admin.drivers,
+    { query },
+  );
 }
 
 export async function fetchAdminRiders(

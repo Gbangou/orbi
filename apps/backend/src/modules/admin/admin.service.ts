@@ -6522,6 +6522,95 @@ export class AdminService {
     return { promoCodeId, active: false };
   }
 
+  async listDrivers(query: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    status?: string;
+  }) {
+    const page = Math.max(1, query.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 30));
+    const searchTerm = query.search?.trim();
+    const allowedStatuses = new Set(['PENDING', 'ACTIVE', 'SUSPENDED', 'REJECTED']);
+    const filterStatus =
+      query.status && allowedStatuses.has(query.status.toUpperCase())
+        ? (query.status.toUpperCase() as DriverStatus)
+        : undefined;
+
+    const where: Prisma.DriverProfileWhereInput = {
+      ...(searchTerm
+        ? {
+            OR: [
+              { user: { fullName: { contains: searchTerm, mode: 'insensitive' } } },
+              { user: { email: { contains: searchTerm, mode: 'insensitive' } } },
+              { user: { phoneNumber: { contains: searchTerm } } },
+            ],
+          }
+        : {}),
+      ...(filterStatus ? { status: filterStatus } : {}),
+    };
+
+    const [driverRows, total] = await Promise.all([
+      this.prisma.driverProfile.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              phoneNumber: true,
+              isActive: true,
+            },
+          },
+          vehicles: {
+            where: { isActive: true },
+            select: {
+              make: true,
+              model: true,
+              plateNumber: true,
+              type: true,
+            },
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.driverProfile.count({ where }),
+    ]);
+
+    return {
+      drivers: driverRows.map((d) => {
+        const [firstVehicle] = d.vehicles;
+        return {
+          id: d.id,
+          userId: d.user.id,
+          fullName: d.user.fullName,
+          email: d.user.email,
+          phoneNumber: d.user.phoneNumber ?? null,
+          isActive: d.user.isActive,
+          status: d.status,
+          createdAt: d.createdAt.toISOString(),
+          completedTripsCount: d.completedTripsCount,
+          vehicle: firstVehicle
+            ? {
+                make: firstVehicle.make,
+                model: firstVehicle.model,
+                plateNumber: firstVehicle.plateNumber,
+                vehicleType: firstVehicle.type,
+              }
+            : null,
+        };
+      }),
+      total,
+      page,
+      pageSize,
+    };
+  }
+
   async listRiders(query: {
     page?: number;
     pageSize?: number;

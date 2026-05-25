@@ -43,6 +43,7 @@ import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-
 import { CreatePromoCodeDto } from './dto/create-promo-code.dto';
 import { RidersQueryDto } from './dto/riders-query.dto';
 import { SetRiderStatusDto } from './dto/set-rider-status.dto';
+import { DriversQueryDto } from './dto/drivers-query.dto';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
@@ -154,6 +155,15 @@ export class AdminController {
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   supportTickets(@Query() query: PageQueryDto) {
     return this.adminService.supportTickets(query);
+  }
+
+  @Get('drivers')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  listDrivers(@Query() query: DriversQueryDto) {
+    return this.adminService.listDrivers(query);
   }
 
   @Get('riders')

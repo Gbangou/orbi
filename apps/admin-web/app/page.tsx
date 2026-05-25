@@ -16,12 +16,14 @@ import {
   fetchAdminPaymentWebhookEvents,
   fetchAdminPricingCalibration,
   fetchAdminRiders,
+  fetchAdminDrivers,
   fetchAdminSupportTickets,
   listAdminPromoCodes,
   type ListAdminPromoCodesResponse,
   type AdminDispatchSettingsResponse,
   type AdminFeatureFlagsResponse,
   type AdminDriverWalletsResponse,
+  type AdminDriversResponse,
   type AdminLaunchReadinessResponse,
   type AdminLiveOpsResponse,
   type AdminTripsAuditResponse,
@@ -61,6 +63,7 @@ import { DriverWalletsBoard } from './driver-wallets-board';
 import { TripsAuditBoard } from './trips-audit-board';
 import { PromoCodesBoard } from './promo-codes-board';
 import { RidersBoard } from './riders-board';
+import { DriversBoard } from './drivers-board';
 
 const fallbackIncidents = [
   '2 chauffeurs moto en attente de verification',
@@ -166,6 +169,13 @@ const fallbackTripsAudit: AdminTripsAuditResponse = {
 
 const fallbackRiders: AdminRidersResponse = {
   riders: [],
+  total: 0,
+  page: 1,
+  pageSize: 30,
+};
+
+const fallbackDrivers: AdminDriversResponse = {
+  drivers: [],
   total: 0,
   page: 1,
   pageSize: 30,
@@ -615,6 +625,7 @@ async function loadAdminData(): Promise<{
   paymentWebhookJournal: AdminPaymentWebhookEventsResponse;
   driverWallets: AdminDriverWalletsResponse;
   riders: AdminRidersResponse;
+  drivers: AdminDriversResponse;
   launchReadiness: AdminLaunchReadinessResponse;
   health: HealthCheckResponse;
   promoCodes: ListAdminPromoCodesResponse;
@@ -653,6 +664,7 @@ async function loadAdminData(): Promise<{
       paymentWebhookJournal,
       driverWallets,
       riders,
+      drivers,
       launchReadiness,
       health,
       promoCodes,
@@ -674,6 +686,7 @@ async function loadAdminData(): Promise<{
         }),
         fetchAdminDriverWallets(authClient),
         fetchAdminRiders(authClient, { page: 1, pageSize: 30 }),
+        fetchAdminDrivers(authClient, { page: 1, pageSize: 30 }),
         fetchAdminLaunchReadiness(authClient),
         fetchHealthCheck(client),
         listAdminPromoCodes(authClient),
@@ -775,6 +788,7 @@ async function loadAdminData(): Promise<{
       paymentWebhookJournal,
       driverWallets,
       riders,
+      drivers,
       launchReadiness,
       health,
       promoCodes,
@@ -873,6 +887,7 @@ async function loadAdminData(): Promise<{
       paymentWebhookJournal: fallbackPaymentWebhookJournal,
       driverWallets: fallbackDriverWallets,
       riders: fallbackRiders,
+      drivers: fallbackDrivers,
       launchReadiness: fallbackLaunchReadiness,
       onboardingQueue: {
         drivers: [],
@@ -908,6 +923,7 @@ export default async function AdminHomePage({
     paymentWebhookJournal,
     driverWallets,
     riders,
+    drivers,
     launchReadiness,
     health,
     promoCodes,
@@ -1134,6 +1150,8 @@ export default async function AdminHomePage({
       <PaymentWebhookJournalBoard journal={paymentWebhookJournal} />
 
       <DriverWalletsBoard wallets={driverWallets} />
+
+      <DriversBoard initialDrivers={drivers} />
 
       <RidersBoard initialRiders={riders} />
 
