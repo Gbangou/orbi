@@ -6,10 +6,12 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUppercase,
   Matches,
   Max,
   MaxLength,
   Min,
+  MinLength,
 } from 'class-validator';
 
 const requestedVehicleTypes = ['MOTORCYCLE', 'CAR'] as const;
@@ -138,4 +140,13 @@ export class CreateRideRequestDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(32)
+  @IsUppercase()
+  @Matches(/^[A-Z0-9]+$/, { message: 'Promo code must be alphanumeric uppercase.' })
+  promoCode?: string;
 }

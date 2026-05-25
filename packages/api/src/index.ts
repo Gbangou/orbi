@@ -2797,6 +2797,7 @@ export type CreateRideRequestPayload = {
     | 'INDUSTRIAL'
     | 'INTERCITY_GATE';
   notes?: string;
+  promoCode?: string;
 };
 
 export type RideRequestResponse = {

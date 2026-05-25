@@ -369,6 +369,7 @@ model RideRequest {
   estimatedDurationMinutes Int?              @map("estimated_duration_minutes")
   currency                 String            @default("XOF")
   notes                    String?
+  promoCodeId              String?           @map("promo_code_id")
   createdAt                DateTime          @default(now()) @map("created_at")
   updatedAt                DateTime          @updatedAt @map("updated_at")
   rider                    RiderProfile      @relation(fields: [riderId], references: [id])

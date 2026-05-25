@@ -895,6 +895,7 @@ export default function BookingScreen() {
           city: selectedCity.id,
           districtProfile: selectedCity.districtProfile,
           notes: `Flow authentifie depuis l'app rider pour ${me.user.fullName}, ville ${selectedCity.label}, profil ${selectedCity.districtProfile}, option ${selectedValidatedOption.title}, paiement ${selectedPaymentMethod}`,
+          promoCode: promoValidation?.code,
         },
         {
           idempotencyKey: bookingIdempotencyKey,

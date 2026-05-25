@@ -76,9 +76,30 @@ export class RideRequestsService {
       roadCondition: operatingContext.roadCondition,
       isPeakHour: inferRideRequestPeakHour(),
     });
+    let applicableFare = pricing.estimatedFare;
+    let resolvedPromoCodeId: string | null = null;
+
+    if (payload.promoCode) {
+      const promo = await this.prisma.promoCode.findUnique({
+        where: { code: payload.promoCode },
+        select: { id: true, discountBps: true, maxUses: true, usedCount: true, validFrom: true, validTo: true, active: true },
+      });
+      const now = new Date();
+      if (
+        promo &&
+        promo.active &&
+        promo.validFrom <= now &&
+        promo.validTo > now &&
+        (promo.maxUses === null || promo.usedCount < promo.maxUses)
+      ) {
+        applicableFare = Math.round(Number(pricing.estimatedFare) * (1 - promo.discountBps / 10000));
+        resolvedPromoCodeId = promo.id;
+      }
+    }
+
     const createData = buildRideRequestCreateData(
       payload,
-      pricing.estimatedFare,
+      applicableFare,
       routeMetrics,
     );
 
@@ -158,10 +179,19 @@ export class RideRequestsService {
           );
         }
 
+        const newRideRequest = await tx.rideRequest.create({
+          data: { ...createData, promoCodeId: resolvedPromoCodeId },
+        });
+
+        if (resolvedPromoCodeId) {
+          await tx.promoCode.update({
+            where: { id: resolvedPromoCodeId },
+            data: { usedCount: { increment: 1 } },
+          });
+        }
+
         return {
-          rideRequest: await tx.rideRequest.create({
-            data: createData,
-          }),
+          rideRequest: newRideRequest,
           created: true,
         };
       });
