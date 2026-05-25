@@ -61,7 +61,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Dependency audit
-        run: pnpm audit --audit-level moderate
+        run: pnpm audit --audit-level high
 
       - name: Whitespace diff check
         run: git diff --check
@@ -76,7 +76,7 @@ jobs:
         run: pnpm --filter backend exec prisma migrate deploy
 
       - name: Backend tests
-        run: pnpm --filter backend exec jest --runInBand
+        run: pnpm --filter backend exec jest --runInBand --ci --forceExit
 
       - name: Admin web smoke tests
         run: pnpm test:admin:smoke
@@ -95,7 +95,8 @@ jobs:
           NODE_ENV: development
           SKIP_DB_CONNECT: false
           PORT: 3000
-          PAYMENTS_WEBHOOK_SECRET: orbi_dev_webhook_secret
+          ENABLE_SWAGGER: 'false'
+          PAYMENTS_WEBHOOK_SECRET: ${{ secrets.CI_WEBHOOK_SECRET || 'orbi_dev_webhook_secret' }}
         run: |
           pnpm --filter backend start > backend-smoke.log 2>&1 &
           for i in {1..30}; do
@@ -108,7 +109,10 @@ jobs:
           exit 1
 
       - name: Local API money-path smoke
-        run: pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/testing/local-api-e2e-smoke.ps1
+        run: >-
+          pwsh -NoProfile -ExecutionPolicy Bypass
+          -File ./scripts/testing/local-api-e2e-smoke.ps1
+          -WebhookSecret "${{ secrets.CI_WEBHOOK_SECRET || 'orbi_dev_webhook_secret' }}"
 
       - name: Print backend smoke logs on failure
         if: failure()
