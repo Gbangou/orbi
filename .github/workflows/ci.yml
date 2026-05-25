@@ -66,6 +66,17 @@ jobs:
       - name: Whitespace diff check
         run: git diff --check
 
+      - name: Production secret hygiene gate
+        run: >-
+          node ./scripts/testing/production-readiness-gate.mjs
+          --skip-audit
+          --skip-prisma
+          --skip-backend-readiness
+          --skip-payment-fixtures
+          --skip-admin-smoke
+          --skip-mobile-smoke
+          --skip-typecheck
+
       - name: Generate Prisma client
         run: pnpm prisma:generate
 
