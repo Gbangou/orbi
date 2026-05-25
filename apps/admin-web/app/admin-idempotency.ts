@@ -2,7 +2,7 @@ export function createAdminIdempotencyKey(prefix: string) {
   const normalizedPrefix = prefix
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9._-]/g, '-')
+    .replace(/[^a-z0-9_-]/g, '-')
     .replace(/-+/g, '-')
     .slice(0, 40);
   const entropy =

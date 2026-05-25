@@ -102,7 +102,10 @@ describe('admin server security', () => {
     const key = createAdminIdempotencyKey('Recovery Wallet!');
     const secondKey = createAdminIdempotencyKey('Recovery Wallet!');
 
-    expect(key).toMatch(/^recovery-wallet-[A-Za-z0-9._-]+$/);
+    expect(key).toMatch(/^recovery-wallet-[A-Za-z0-9_-]+$/);
+    expect(createAdminIdempotencyKey('ops.recovery')).toMatch(
+      /^ops-recovery-[A-Za-z0-9_-]+$/,
+    );
     expect(key.length).toBeLessThanOrEqual(128);
     expect(secondKey).not.toBe(key);
   });
