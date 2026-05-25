@@ -1,394 +1,549 @@
-# Orbi Architecture & Development Standards
+# Architecture Orbi — Vue Système
 
-*Last updated: May 8, 2026*
-*Stability: strong local foundation | Production posture: controlled pilot, not broad launch*
+*Dernière mise à jour : 25 mai 2026*
+*Stabilité : fondation locale solide | Posture production : pilote contrôlé Ouagadougou*
 
-## Executive Summary
+---
 
-Orbi is a complete mobility platform for Burkina Faso with:
-- Unified moto + car experience for riders and drivers
-- Secure authentication with session tokens & password hashing (scrypt + timing-safe comparison)
-- Real-time dispatch with event-sourced trip lifecycle
-- Premium voice intelligence for ride intent capture
-- Wallet & payment system with webhook idempotency
-- Operations dashboard for live management
-- Multi-platform: Android, iOS, Web (Expo + Next.js)
+## 1. Vue Macro — Topologie Système
 
-## System Architecture
+```mermaid
+graph TB
+    subgraph Clients["Clients"]
+        RA["📱 Rider App\n(Expo / Android · iOS)"]
+        DA["📱 Driver App\n(Expo / Android · iOS)"]
+        AW["🖥️ Admin Web\n(Next.js 15)"]
+    end
 
-### Monorepo Structure
+    subgraph Backend["Backend — NestJS :3000"]
+        direction TB
+        AUTH["AuthModule\nscrypt · sessions"]
+        RIDERS["RidersModule\nprofile · status"]
+        DRIVERS["DriversModule\navailability · docs"]
+        TRIPS["TripsModule\nlifecycle · presenter"]
+        DISPATCH["DispatchModule\ncoordinator · offers"]
+        PAYMENTS["PaymentsModule\nwallet · webhook"]
+        ADMIN["AdminModule\nRBAC · audit · liveops"]
+        RATINGS["RatingsModule\npost-trip"]
+        PROMOS["PromoCodesModule\nvalidation · usage"]
+        HEALTH["HealthModule\nliveness · readiness"]
+        RATELIMIT["RateLimitService\nin-memory (→ PG prod)"]
+    end
+
+    subgraph Data["Persistance"]
+        PG[("PostgreSQL 17\n(Prisma ORM)")]
+        FS["Stockage fichiers\ndocuments chauffeur"]
+    end
+
+    subgraph Ext["Services Externes"]
+        PAY["Passerelle Paiement\n(webhook HMAC)"]
+        SMS["Passerelle SMS\n(OTP futur)"]
+        PUSH["Push Notifications\n(FCM futur)"]
+    end
+
+    RA -->|HTTPS REST + token session| AUTH
+    DA -->|HTTPS REST + token session| AUTH
+    AW -->|HTTPS REST + cookie session admin| ADMIN
+
+    AUTH --> RIDERS
+    AUTH --> DRIVERS
+    AUTH --> DISPATCH
+    AUTH --> TRIPS
+    AUTH --> PAYMENTS
+    AUTH --> PROMOS
+    AUTH --> RATINGS
+
+    DISPATCH --> TRIPS
+    DISPATCH --> DRIVERS
+    TRIPS --> PAYMENTS
+    TRIPS --> RATINGS
+
+    ADMIN --> RIDERS
+    ADMIN --> DRIVERS
+    ADMIN --> TRIPS
+    ADMIN --> PAYMENTS
+
+    PAYMENTS -->|webhook entrant| PAY
+    DRIVERS -->|upload| FS
+
+    AUTH --> PG
+    RIDERS --> PG
+    DRIVERS --> PG
+    TRIPS --> PG
+    DISPATCH --> PG
+    PAYMENTS --> PG
+    ADMIN --> PG
+    RATINGS --> PG
+    PROMOS --> PG
+    HEALTH --> PG
+
+    RATELIMIT -.->|toutes les mutations| AUTH
+```
+
+---
+
+## 2. Modèle de Données — Diagramme Entité-Relation
+
+```mermaid
+erDiagram
+    User {
+        string id PK
+        string email UK
+        string passwordHash
+        string role "RIDER|DRIVER|ADMIN|OPS|SUPPORT"
+        boolean isActive
+        datetime createdAt
+    }
+
+    RiderProfile {
+        string id PK
+        string userId FK
+        string fullName
+        string phoneNumber
+        datetime createdAt
+    }
+
+    DriverProfile {
+        string id PK
+        string userId FK
+        string fullName
+        string phoneNumber
+        string status "PENDING|ACTIVE|SUSPENDED|REJECTED"
+        string profilePhotoUrl
+        datetime createdAt
+    }
+
+    Vehicle {
+        string id PK
+        string driverId FK
+        string make
+        string model
+        string plateNumber
+        string vehicleType "MOTO|CAR"
+        boolean isActive
+    }
+
+    RideRequest {
+        string id PK
+        string riderId FK
+        string promoCodeId
+        string status "REQUESTED|MATCHED|DRIVER_ARRIVING|IN_PROGRESS|COMPLETED|CANCELLED"
+        decimal estimatedFare
+        string pickupAddress
+        string destinationAddress
+        datetime createdAt
+    }
+
+    Trip {
+        string id PK
+        string rideRequestId FK
+        string riderId FK
+        string driverId FK
+        string status "MATCHED|DRIVER_ARRIVING|IN_PROGRESS|COMPLETED|CANCELLED"
+        decimal fare
+        datetime startedAt
+        datetime completedAt
+    }
+
+    PromoCode {
+        string id PK
+        string code UK
+        int discountBps
+        boolean isActive
+        int maxUses
+        int usedCount
+        datetime expiresAt
+    }
+
+    PaymentAttempt {
+        string id PK
+        string tripId FK
+        string provider
+        string providerReference UK
+        string status "PENDING|SUCCESS|FAILED"
+        decimal amount
+        datetime createdAt
+    }
+
+    Wallet {
+        string id PK
+        string driverId FK
+        decimal balance
+        datetime updatedAt
+    }
+
+    AuditLog {
+        string id PK
+        string actorId FK
+        string action
+        string targetType
+        string targetId
+        json metadata
+        datetime createdAt
+    }
+
+    Rating {
+        string id PK
+        string tripId FK
+        string raterId FK
+        string ratedId FK
+        int score "1-5"
+        string comment
+        datetime createdAt
+    }
+
+    User ||--o| RiderProfile : "has"
+    User ||--o| DriverProfile : "has"
+    DriverProfile ||--o{ Vehicle : "owns"
+    DriverProfile ||--|| Wallet : "has"
+    User ||--o{ RideRequest : "creates (rider)"
+    RideRequest ||--o| Trip : "generates"
+    PromoCode ||--o{ RideRequest : "applied to"
+    Trip ||--o{ PaymentAttempt : "triggers"
+    Trip ||--o{ Rating : "receives"
+    User ||--o{ AuditLog : "generates"
+```
+
+---
+
+## 3. Flux Sécurité & RBAC
+
+```mermaid
+flowchart TD
+    REQ["Requête HTTP entrante"] --> HTTPS{"HTTPS\nobligatoire prod"}
+    HTTPS -->|non| R403A["403 Forbidden"]
+    HTTPS -->|oui| CORS{"CORS\norigine autorisée?"}
+    CORS -->|non| R403B["403 Forbidden"]
+    CORS -->|oui| RATELIMIT{"RateLimitGuard\nlimite atteinte?"}
+    RATELIMIT -->|oui| R429["429 Too Many Requests"]
+    RATELIMIT -->|non| SESSGUARD{"SessionAuthGuard\ntoken valide?"}
+    SESSGUARD -->|non| R401["401 Unauthorized"]
+    SESSGUARD -->|oui| ROLESG{"RolesGuard\nrôle autorisé?"}
+    ROLESG -->|non| R403C["403 Forbidden"]
+    ROLESG -->|oui| DTO{"ValidationPipe\nDTO valide?"}
+    DTO -->|non| R400["400 Bad Request"]
+    DTO -->|oui| HANDLER["Handler métier"]
+    HANDLER --> AUDIT["AuditLog (mutations admin)"]
+    HANDLER --> RESP["200/201 Response"]
+
+    subgraph Roles["Matrice RBAC"]
+        direction LR
+        R1["RIDER — ride-requests, trips, ratings, wallet"]
+        R2["DRIVER — availability, offers, earnings, docs"]
+        R3["OPS — liveops board, drivers, riders (lecture + suspension)"]
+        R4["ADMIN — tout + config + exports"]
+        R5["SUPPORT — lecture seule riders"]
+    end
+
+    subgraph AdminMutation["Sécurité mutations Admin Web"]
+        direction TB
+        AM1["isSafeAdminMutationRequest\nX-Admin-Mutation-Token header"]
+        AM2["isSafeOpaqueAdminId\nformat UUID valide"]
+        AM3["normalizePayload\nvalidation + truncation"]
+        AM1 --> AM2 --> AM3
+    end
+```
+
+---
+
+## 4. Cycle de Vie d'une Course — Diagramme de Séquence
+
+```mermaid
+sequenceDiagram
+    actor Rider
+    actor Driver
+    participant API as Backend API
+    participant DB as PostgreSQL
+    participant Pay as Passerelle Paiement
+
+    Rider->>API: POST /ride-requests (pickup, dest, promoCode?)
+    API->>DB: Valider promoCode + créer RideRequest (REQUESTED)
+    API->>DB: Dispatch — chercher drivers disponibles
+    API-->>Rider: { rideRequestId, estimatedFare }
+
+    API->>Driver: Offre course (push/polling)
+    Driver->>API: POST /trips/accept { rideRequestId }
+    API->>DB: RideRequest → MATCHED, créer Trip (MATCHED)
+    API-->>Driver: { tripId, riderInfo }
+    API-->>Rider: Course acceptée
+
+    Driver->>API: PATCH /trips/:id/arriving
+    API->>DB: Trip → DRIVER_ARRIVING
+    API-->>Rider: Chauffeur en route
+
+    Driver->>API: PATCH /trips/:id/start
+    API->>DB: Trip → IN_PROGRESS, startedAt = now()
+    API-->>Rider: Course démarrée
+
+    Driver->>API: PATCH /trips/:id/complete { finalFare }
+    API->>DB: Trip → COMPLETED, RideRequest → COMPLETED
+    API->>DB: Créer PaymentAttempt (PENDING)
+    API-->>Driver: Course terminée
+    API-->>Rider: Reçu disponible
+
+    Pay-->>API: POST /payments/webhook (événement paiement)
+    API->>DB: Idempotence (provider_reference unique)
+    API->>DB: PaymentAttempt → SUCCESS
+    API->>DB: Créditer Wallet chauffeur
+    API->>DB: AuditLog PAYMENT_CONFIRMED
+
+    Rider->>API: GET /trips/:id/detail
+    API->>DB: Trip + RideRequest + PromoCode
+    API-->>Rider: TripDetailResponse (fare, promoCode, rating)
+```
+
+---
+
+## 5. Modules Backend — Dépendances NestJS
+
+```mermaid
+graph LR
+    subgraph Core["Modules Globaux"]
+        PRISMA["PrismaModule"]
+        CONFIG["ConfigModule"]
+        AUDIT_SVC["AuditLogService"]
+        RATE["RateLimitService"]
+    end
+
+    subgraph Feature["Modules Fonctionnels"]
+        AUTH_M["AuthModule"]
+        RIDER_M["RidersModule"]
+        DRIVER_M["DriversModule"]
+        TRIP_M["TripsModule"]
+        DISPATCH_M["DispatchModule"]
+        PAY_M["PaymentsModule"]
+        ADMIN_M["AdminModule"]
+        PROMO_M["PromoCodesModule"]
+        RATING_M["RatingsModule"]
+        HEALTH_M["HealthModule"]
+    end
+
+    subgraph Guards["Guards Partagés"]
+        SESS["SessionAuthGuard"]
+        ROLES["RolesGuard"]
+        PROFILE["ProfileAccessGuard"]
+        OPAQUE["OpaqueIdPipe"]
+    end
+
+    CONFIG --> AUTH_M
+    CONFIG --> PAY_M
+    PRISMA --> AUTH_M
+    PRISMA --> RIDER_M
+    PRISMA --> DRIVER_M
+    PRISMA --> TRIP_M
+    PRISMA --> DISPATCH_M
+    PRISMA --> PAY_M
+    PRISMA --> ADMIN_M
+    PRISMA --> PROMO_M
+    PRISMA --> RATING_M
+    PRISMA --> HEALTH_M
+
+    AUTH_M --> SESS
+    SESS --> ROLES
+    ROLES --> PROFILE
+
+    DISPATCH_M --> DRIVER_M
+    DISPATCH_M --> TRIP_M
+    TRIP_M --> PAY_M
+    TRIP_M --> PROMO_M
+    TRIP_M --> RATING_M
+    ADMIN_M --> RIDER_M
+    ADMIN_M --> DRIVER_M
+    ADMIN_M --> TRIP_M
+    ADMIN_M --> AUDIT_SVC
+
+    OPAQUE -.->|validation ID| ADMIN_M
+    OPAQUE -.->|validation ID| DRIVER_M
+    RATE -.->|throttle mutations| AUTH_M
+    RATE -.->|throttle mutations| PAY_M
+```
+
+---
+
+## 6. Gates Production — LaunchReadiness
+
+```mermaid
+flowchart TD
+    START(["Démarrage évaluation\nLaunchReadiness"]) --> G1
+
+    G1{"runtime\nNode 22+ · Prisma OK"} -->|FAIL| BLK1["BLOCKED"]
+    G1 -->|PASS| G2
+
+    G2{"support-load\nAdmin Web joignable"} -->|FAIL| BLK2["BLOCKED"]
+    G2 -->|PASS| G3
+
+    G3{"urgent-support\nSuspension rider fonctionnelle"} -->|FAIL| BLK3["BLOCKED"]
+    G3 -->|PASS| G4
+
+    G4{"driver-onboarding\nValidation docs + export CSV"} -->|FAIL| BLK4["BLOCKED"]
+    G4 -->|PASS| G5
+
+    G5{"driver-documents\nStockage + accès sécurisé"} -->|FAIL| BLK5["BLOCKED"]
+    G5 -->|PASS| G6
+
+    G6{"payment-refunds\nRembours. + audit complet"} -->|FAIL| BLK6["BLOCKED"]
+    G6 -->|PASS| G7
+
+    G7{"payment-webhooks\nIdempotence + replay protection"} -->|FAIL| WARN7["⚠️ READY (warning)"]
+    G7 -->|PASS| G8
+
+    G8{"wallet-recovery\nRéconciliation solde"} -->|FAIL| BLK8["BLOCKED"]
+    G8 -->|PASS| G9
+
+    G9{"admin-realtime\nLiveOps board opérationnel"} -->|FAIL| WARN9["⚠️ READY (warning)"]
+    G9 -->|PASS| G10
+
+    G10{"safety-benchmark\nRating · incident report"} -->|FAIL| WARN10["⚠️ READY (warning)"]
+    G10 -->|PASS| G11
+
+    G11{"security-assurance\nRate limit PG · CORS · secrets prod"} -->|FAIL| BLK11["BLOCKED"]
+    G11 -->|PASS| GO(["✅ GO — Lancement pilote\nOuagadougou"])
+
+    style GO fill:#16a34a,color:#fff
+    style BLK1 fill:#dc2626,color:#fff
+    style BLK2 fill:#dc2626,color:#fff
+    style BLK3 fill:#dc2626,color:#fff
+    style BLK4 fill:#dc2626,color:#fff
+    style BLK5 fill:#dc2626,color:#fff
+    style BLK6 fill:#dc2626,color:#fff
+    style BLK8 fill:#dc2626,color:#fff
+    style BLK11 fill:#dc2626,color:#fff
+    style WARN7 fill:#d97706,color:#fff
+    style WARN9 fill:#d97706,color:#fff
+    style WARN10 fill:#d97706,color:#fff
+```
+
+---
+
+## 7. Plan Sprint Hardening — Tranches Production
+
+| Priorité | Tranche | Surface | Test ciblé | Gate | Statut |
+|----------|---------|---------|-----------|------|--------|
+| 🔴 P0 | **Argent** | `PaymentsModule` · `Wallet` · webhook idempotence | `payments.service.spec` · `webhook.spec` | `payment-webhooks` · `payment-refunds` | À vérifier |
+| 🔴 P0 | **Auth/Session** | `SessionAuthGuard` · rotation token · lock-out | `auth.service.spec` · `session.spec` | `security-assurance` | Partiel |
+| 🟠 P1 | **Rate Limit PG** | `RateLimitService` adapter PostgreSQL prod | `rate-limit.spec` | `security-assurance` | ⚠️ in-memory |
+| 🟠 P1 | **Launch Readiness** | `LaunchReadinessService` — 11 gates | `launch-readiness.spec` | tous | ✅ 824 tests |
+| 🟡 P2 | **Mobile Smoke** | E2E API money-path · admin smoke | `local-api-e2e-smoke.ps1` | `payment-refunds` | Script OK |
+| 🟡 P2 | **Runbook Prod** | `docs/deployment-runbook.md` — incidents | revue manuelle | ops readiness | À enrichir |
+| 🟢 P3 | **Android Field** | Test sur device réel Tecno/Samsung | smoke physique | `safety-benchmark` | Non démarré |
+| 🟢 P3 | **Secrets Prod** | `DOCUMENT_SIGNING_SECRET` · `PAYMENTS_WEBHOOK_SECRET` | validation env | `security-assurance` | ⚠️ dev defaults |
+
+---
+
+## Résumé Architecture
+
+### Stack technique
+
+| Couche | Technologie | Version | Rôle |
+|--------|-------------|---------|------|
+| **Backend** | NestJS | ^11.1 | API REST, Auth, Dispatch |
+| **ORM** | Prisma | ^7.4 | DB type-safe, migrations |
+| **Base de données** | PostgreSQL | 17+ | Stockage principal, index partiels |
+| **Frontend Web** | Next.js | 15.x | Console admin |
+| **Frontend Mobile** | Expo | ^52 | iOS + Android |
+| **Runtime** | Node.js | 22+ | Backend + scripts |
+| **Package Manager** | pnpm | ^10.30 | Coordination monorepo |
+| **Tests** | Jest | ^30 | Unit, intégration, smoke |
+| **Validation** | class-validator | latest | DTO (whitelist, forbid unknown) |
+
+### Monorepo
 
 ```
 orbi/
 ├── apps/
 │   ├── backend/          # NestJS + Prisma (Auth, Dispatch, Payments, Admin API)
-│   ├── admin-web/        # Next.js 15 ops console (live dispatch, pricing, health)
-│   ├── rider-app/        # Expo app (booking, active ride, profile)
-│   ├── driver-app/       # Expo app (availability, offers, trips, earnings)
-│   └── mobile-shared/    # Shared UI logic (Expo)
+│   ├── admin-web/        # Next.js 15 — console opérations
+│   ├── rider-app/        # Expo — réservation, course active, profil
+│   ├── driver-app/       # Expo — disponibilité, offres, gains
+│   └── mobile-shared/    # Utilitaires Expo partagés
 ├── packages/
-│   ├── api/              # TypeScript API contract (shared client types)
-│   ├── config/           # Environment validation & constants
-│   ├── domain/           # Business enums & pricing presets
-│   └── ui/               # Shared design tokens and helpers
-└── docs/                 # Architecture, runbooks, strategy
+│   ├── api/              # Contrat TypeScript partagé (types client)
+│   ├── config/           # Validation env + constantes
+│   ├── domain/           # Enums métier + tarifs
+│   └── ui/               # Design tokens + helpers
+└── docs/                 # Architecture, runbooks, stratégie
 ```
 
-`apps/mobile-shared` contains Expo utilities shared by the rider and driver
-apps. See `docs/architecture/repository-map.md` for dependency rules.
+### Invariants critiques base de données
 
-### Tech Stack
+| Index | Table | Condition | Règle |
+|-------|-------|-----------|-------|
+| `ride_requests_single_active_per_rider_idx` | `RideRequest` | status IN (REQUESTED, MATCHED, DRIVER_ARRIVING) | 1 seul actif par rider |
+| `trips_single_active_per_rider_idx` | `Trip` | status IN (MATCHED, DRIVER_ARRIVING, IN_PROGRESS) | 1 seul actif par rider |
+| `payment_webhook_events_provider_ref_idx` | `PaymentWebhookEvent` | — | Idempotence webhook |
 
-| Layer | Technology | Version | Purpose |
-|-------|-----------|---------|---------|
-| **Backend** | NestJS | ^11.1 | REST API, Auth, Dispatch |
-| **ORM** | Prisma | ^7.4 | Type-safe DB, Migrations |
-| **Database** | PostgreSQL | 17+ | Primary store, partial indexes for ride lifecycle |
-| **Frontend (Web)** | Next.js | 15.x | Admin console, analytics |
-| **Frontend (Mobile)** | Expo | ^52 | iOS + Android unified codebase |
-| **Runtime** | Node.js | 22+ | Backend + build scripts |
-| **Package Manager** | pnpm | ^10.30 | Monorepo coordination |
-| **Testing** | Jest | ^30 | Unit, integration and smoke tests |
-| **Validation** | class-validator | Latest | DTO validation (whitelist mode, forbid unknown) |
+> **CRITIQUE** : Ces index NE DOIVENT JAMAIS être supprimés dans une migration.
 
-## Security Architecture
+### Authentification & Sessions
 
-### Authentication & Authorization
+- Email normalisé (lowercase)
+- Mot de passe : **scrypt** (sel + clé dérivée, comparaison timing-safe)
+- Token session : 48 octets aléatoires, base64url
+- Hash session : SHA-256 (seul le hash est stocké en DB)
+- TTL : configurable via env (défaut 30 jours)
 
-1. **Sign-Up / Sign-In**
-   - Email normalized (lowercase)
-   - Password hashed with **scrypt** (salt + derived key stored)
-   - Session token: 48-byte random, base64url encoded
-   - Session hash: SHA256 (one-way, DB stores only hash)
-   - TTL: Configurable via env (default 30 days)
+### Headers sécurité (toutes les réponses)
 
-2. **Session Guards**
-   - `SessionAuthGuard`: Validates session token against DB hash
-   - `RolesGuard`: RBAC on endpoints (ADMIN, DRIVER, RIDER, OPS)
-   - `ProfileAccessGuard`: Ensures users can only access their own data
+```
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: no-referrer
+Cross-Origin-Resource-Policy: same-site
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Strict-Transport-Security: max-age=31536000; includeSubDomains  (HTTPS détecté)
+```
 
-3. **Database-Level Invariants**
-   - `ride_requests_single_active_per_rider_idx`: Partial unique index (REQUESTED | MATCHED | DRIVER_ARRIVING)
-   - `trips_single_active_per_rider_idx`: Partial unique index (MATCHED | DRIVER_ARRIVING | IN_PROGRESS)
-   - **CRITICAL**: These indexes MUST NOT be dropped in any future migration
-
-### Input Validation & Sanitization
-
-- All DTOs use `class-validator` decorators
-- ValidationPipe config: `whitelist: true, forbidNonWhitelisted: true, transform: true`
-- Example (SignUpDto):
-  ```typescript
-  @IsString() @MinLength(2) @MaxLength(80) @Matches(/^[\p{L}\p{M}]/) fullName
-  @IsEmail() email
-  @IsString() @MinLength(8) @MaxLength(128) password
-  ```
-- No raw SQL queries; all via Prisma (parameterized by default)
-
-### Security Headers
-
-- `X-Content-Type-Options: nosniff` (prevent MIME sniffing)
-- `X-Frame-Options: DENY` (prevent clickjacking)
-- `Referrer-Policy: no-referrer` (privacy)
-- `Cross-Origin-Resource-Policy: same-site` (CORP)
-- `Permissions-Policy: camera=(), microphone=(), geolocation=()` (restrict sensors)
-- `Strict-Transport-Security: max-age=31536000; includeSubDomains` (when HTTPS detected)
-
-### CORS Configuration
+### CORS production
 
 ```typescript
 app.enableCors({
-  origin: frontendOrigins,  // Whitelist from env
-  credentials: true         // Allow cookies
+  origin: frontendOrigins,   // whitelist depuis env — JAMAIS '*' en prod
+  credentials: true,
 });
 ```
 
-### Rate Limiting
-
-- `RateLimitService` with configurable limits per endpoint
-- In-memory store (can be replaced with Redis for distributed systems)
-- Tracked by key (IP, user_id, etc.)
-
-## Data Model Invariants
-
-### Core Entities
-
-| Entity | Key Constraint | Notes |
-|--------|---------------|-------|
-| `User` | `email` (unique, normalized) | Rider + Driver profiles linked |
-| `RideRequest` | Partial unique (1 active per rider) | Lifecycle: REQUESTED → MATCHED → DRIVER_ARRIVING → IN_PROGRESS → COMPLETED |
-| `Trip` | Partial unique (1 active per rider) | Mirrors ride request lifecycle |
-| `DriverPayout` | `reference` (idempotent) | Webhook safety |
-| `PaymentWebhookEvent` | `provider + provider_reference` (unique) | At-least-once delivery |
-
-### Lifecycle States
-
-**Ride Requests:**
-- `REQUESTED` → `MATCHED` → `DRIVER_ARRIVING` → `IN_PROGRESS` → `COMPLETED` | `CANCELLED`
-
-**Trips:**
-- `MATCHED` → `DRIVER_ARRIVING` → `IN_PROGRESS` → `COMPLETED` | `CANCELLED`
-
-**Critical Rule:** Only ONE active ride_request and ONE active trip per rider at a time (enforced by partial unique indexes).
-
-## API Contracts
-
-### Core Response Format
-
-```json
-{
-  "statusCode": 200,
-  "message": "Optional message",
-  "data": { /* entity or array */ },
-  "meta": { "pagination": { "page": 1, "limit": 20, "total": 100 } }
-}
-```
-
-### Example Endpoints
-
-- `POST /api/v1/auth/sign-up` → Create account, return session token
-- `POST /api/v1/auth/sign-in` → Authenticate, return session token
-- `GET /api/v1/riders/me` → Get current rider profile (auth required)
-- `POST /api/v1/ride-requests` → Create ride request (auth required, rider role)
-- `GET /api/v1/admin/live` → Live dashboard data (auth required, OPS/ADMIN role)
-- `GET /api/v1/admin/driver-onboarding/export-history` → Audited onboarding CSV export history (auth required, OPS/ADMIN role)
-
-### Versioning
-
-- URI-based: `/api/v1/**`
-- All new endpoints default to v1
-- Breaking changes increment major version
-
-## Testing Standards
-
-### Coverage Requirements
-
-- **Unit tests**: All services, utils, domain logic
-- **Integration tests**: Controllers, guards, full request/response cycles
-- **Database tests**: Migrations, constraints, data invariants
-
-### Current Status
-
-Current verification must be read from `DEVELOPMENT_STATUS.md` and the latest
-local command output. Historical full-suite runs have covered 300+ backend tests,
-but every meaningful change still requires focused tests plus `pnpm typecheck`.
-
-### Writing Tests
-
-```typescript
-describe('AuthService', () => {
-  it('signs up a new user with hashed password', async () => {
-    const result = await authService.signUp({
-      email: 'test@orbi.app',
-      password: 'SecurePassword123!',
-      fullName: 'Test User',
-      role: SignUpRole.RIDER
-    });
-
-    expect(result.sessionToken).toBeDefined();
-    expect(result.user.id).toBeDefined();
-  });
-});
-```
-
-## Error Handling
-
-### Standard Error Codes
-
-| Code | Message | Example |
-|------|---------|---------|
-| 400 | Bad Request | Invalid email format |
-| 401 | Unauthorized | Invalid session token |
-| 403 | Forbidden | Insufficient role permissions |
-| 404 | Not Found | User/ride not found |
-| 409 | Conflict | Email already registered |
-| 500 | Internal Server Error | Unexpected error |
-| 503 | Service Unavailable | Instance still starting/draining |
-
-### Error Response Format
-
-```json
-{
-  "statusCode": 400,
-  "message": "Validation failed",
-  "error": "Bad Request"
-}
-```
-
-## Deployment & Operations
-
-### Environment Variables
-
-Required in `apps/backend/.env`:
+### Variables d'environnement obligatoires (production)
 
 ```env
 DATABASE_URL=postgresql://user:pass@host:5432/orbi
 NODE_ENV=production
-JWT_SECRET=<random 32+ bytes>
 SESSION_TTL_DAYS=30
 FRONTEND_ORIGINS=https://app.orbi.bf,https://admin.orbi.bf
-ENABLE_SWAGGER_DOCS=false
+ENABLE_SWAGGER=false
+PAYMENTS_WEBHOOK_SECRET=<secret aléatoire 32+ octets>
+DOCUMENT_SIGNING_SECRET=<secret aléatoire 32+ octets>
+RATE_LIMIT_ADAPTER=postgres
 ```
 
-### Health Checks
+### Health checks
 
-- `GET /api/v1/health` → Full system status
-- `GET /api/v1/health/live` → Liveness probe
-- `GET /api/v1/health/ready` → Readiness probe (returns 503 until ready)
+- `GET /api/v1/health` — statut système complet
+- `GET /api/v1/health/live` — liveness probe
+- `GET /api/v1/health/ready` — readiness probe (503 jusqu'au prêt)
 
-### Graceful Shutdown
+### Commandes clés
 
-- 15-second timeout (configurable)
-- Drains existing requests
-- Closes DB connections safely
-- Ideal for orchestrators (Kubernetes, Docker)
+| Commande | Rôle |
+|----------|------|
+| `pnpm typecheck` | Validation TypeScript complète (tous les packages) |
+| `pnpm test` | Tous les tests backend |
+| `pnpm build` | Build tous les packages |
+| `pnpm lint` | Lint tous les packages |
+| `pnpm db:start` | Démarrer PostgreSQL local |
+| `pnpm prisma:migrate` | Appliquer les migrations |
 
-## Development Workflow
+### Règles de sécurité — NE JAMAIS faire
 
-### Local Setup
+- Exposer Swagger en production
+- Stocker des mots de passe en clair
+- Utiliser `*` comme origine CORS en production
+- Logger des données personnelles (email, téléphone, token)
+- Faire confiance aux IDs fournis par le client sans validation session
+- Utiliser les secrets dev (`orbi_dev_*`) en production
 
-```bash
-pnpm setup:local          # Install deps, validate env
-pnpm db:start              # Start PostgreSQL container
-pnpm prisma:generate       # Generate Prisma client
-pnpm prisma:migrate        # Run migrations
-pnpm prisma:seed           # Seed demo data
-pnpm dev:web-preview       # Backend + Admin + Rider (web)
-```
+### Références
 
-### Key Commands
-
-| Command | Purpose |
-|---------|---------|
-| `pnpm typecheck` | Full TypeScript validation (all packages) |
-| `pnpm test` | Run all tests (backend) |
-| `pnpm test -- <pattern>` | Run specific test |
-| `pnpm build` | Build all packages |
-| `pnpm lint` | Lint all packages |
-
-### Commit Guidelines
-
-After **every working feature**:
-
-```bash
-git add .
-git commit -m "feat(dispatch): implement real-time driver matching
-
-- Add DispatchEngine service with offer queue
-- Implement race condition prevention
-- Add 100% test coverage
-- Update Prisma schema for driver availability
-"
-```
-
-### Migration Safety
-
-1. **Before making schema changes**: Run all tests
-2. **After Prisma schema update**: `prisma migrate dev --name feature_name`
-3. **NEVER manually drop indexes** that are in `CRITICAL CONSTRAINTS` list
-4. **Review migration SQL** before pushing
-
-### Code Review Checklist
-
-- [ ] TypeScript strict mode passes
-- [ ] All tests pass (300+ tests)
-- [ ] No hardcoded secrets or env values
-- [ ] DTOs validate all input
-- [ ] Audit logs created for ops changes
-- [ ] Database constraints documented in comments
-- [ ] Error messages don't leak sensitive info
-- [ ] Rate limiting applied to public endpoints
-
-## Common Patterns
-
-### Service Pattern (Dependency Injection)
-
-```typescript
-@Injectable()
-export class RideRequestService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly dispatchEngine: DispatchEngineService,
-    private readonly auditLog: AuditLogService
-  ) {}
-
-  async createRideRequest(payload: CreateRideRequestDto, user: AuthenticatedUser) {
-    // Validate, create, log
-  }
-}
-```
-
-### Guard Pattern (Authorization)
-
-```typescript
-@Injectable()
-export class RolesGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const { user } = context.switchToHttp().getRequest();
-    const requiredRoles = this.reflector.get<UserRole[]>('roles', context.getHandler());
-    return requiredRoles.includes(user.role);
-  }
-}
-```
-
-### Presenter Pattern (Response Serialization)
-
-```typescript
-export function serializeAuthenticatedUser(user: User) {
-  return {
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    // Omit passwordHash, sensitive data
-  };
-}
-```
-
-## Known Limitations & Roadmap
-
-### Phase 1 (Complete)
-- Core authentication & RBAC
-- User profiles (Rider + Driver)
-- Session management
-- Focused backend and frontend smoke coverage
-
-### Phase 2 (In Progress)
-- Real-time dispatch hardening
-- Driver onboarding security and ops review
-- Voice intent capture & NLU
-- Payment webhook hardening and reconciliation
-
-### Phase 3 (Planned)
-- Mobile error reporting
-- Admin audit dashboard
-- Driver performance scoring
-- Multi-city operations
-
-## Critical Security Notes
-
-**DO NOT:**
-- Drop `ride_requests_single_active_per_rider_idx` or `trips_single_active_per_rider_idx`
-- Store raw passwords anywhere
-- Expose error stack traces to clients
-- Trust client-provided user IDs (always validate against session)
-- Enable Swagger docs in production
-
-**DO:**
-- Use class-validator for all DTOs
-- Hash passwords with scrypt (never bcrypt for new projects)
-- Log all admin/ops actions to audit trail
-- Validate environment variables on startup
-- Test with real PostgreSQL (not in-memory)
-
-## Quick Links
-
-- **GitHub**: https://github.com/orbi-app/orbi
-- **API Docs**: `/docs` (when enabled)
-- **Deployment**: See `docs/deployment-runbook.md`
-- **Pricing Strategy**: See `docs/pricing-burkina-strategy.md`
-- **Architecture Diagrams**: See `docs/architecture/`
-
-## Contact & Support
-
-- **Architecture Questions**: See AGENTS.md (team roles)
-- **Bug Reports**: Use GitHub Issues with label `critical-security` if applicable
-- **Product Decisions**: See EXECUTION_PLAN.md
+- Runbook déploiement : `docs/deployment-runbook.md`
+- Stratégie tarification : `docs/pricing-burkina-strategy.md`
+- Plan d'exécution : `EXECUTION_PLAN.md`
+- Statut développement : `DEVELOPMENT_STATUS.md`
