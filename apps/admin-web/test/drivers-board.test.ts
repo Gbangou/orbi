@@ -1,0 +1,111 @@
+/// <reference path="../../backend/node_modules/@types/jest/index.d.ts" />
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+describe('drivers board', () => {
+  it('guards driver actions against duplicate in-flight requests', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/drivers-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('inFlightRef');
+    expect(source).toContain('inFlightRef.current.has(driverId)');
+    expect(source).toContain('inFlightRef.current.add(driverId)');
+    expect(source).toContain('inFlightRef.current.delete(driverId)');
+  });
+
+  it('enforces a minimum suspension reason length before calling the backend', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/drivers-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('reason.length < 10');
+    expect(source).toContain('suspendReason.trim().length < 10');
+  });
+
+  it('requires a two-step confirm before suspending a driver', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/drivers-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('confirmingDriverId');
+    expect(source).toContain('setConfirmingDriverId(driver.id)');
+    expect(source).toContain('setConfirmingDriverId(null)');
+  });
+
+  it('sends the mutation guard header on suspend and reactivate requests', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/drivers-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('createAdminMutationHeaders');
+    const suspendBlock = source.slice(
+      source.indexOf('async function suspendDriver'),
+      source.indexOf('async function reactivateDriver'),
+    );
+    const reactivateBlock = source.slice(
+      source.indexOf('async function reactivateDriver'),
+      source.indexOf('const DRIVER_STATUS_LABELS'),
+    );
+
+    expect(suspendBlock).toContain('createAdminMutationHeaders()');
+    expect(reactivateBlock).toContain('createAdminMutationHeaders()');
+  });
+
+  it('normalises the suspension payload and rejects short reasons in the route handler', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/api/admin/drivers/[driverId]/suspend/route.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain('normalizeSuspensionPayload');
+    expect(source).toContain('reason.length < 10');
+    expect(source).toContain('reason.length > 500');
+    expect(source).toContain("status: 400");
+  });
+
+  it('bounds the driverId with isSafeOpaqueAdminId in suspend and reactivate routes', () => {
+    const suspendSource = readFileSync(
+      join(process.cwd(), 'app/api/admin/drivers/[driverId]/suspend/route.ts'),
+      'utf8',
+    );
+    const reactivateSource = readFileSync(
+      join(
+        process.cwd(),
+        'app/api/admin/drivers/[driverId]/reactivate/route.ts',
+      ),
+      'utf8',
+    );
+
+    expect(suspendSource).toContain('isSafeOpaqueAdminId(driverId)');
+    expect(reactivateSource).toContain('isSafeOpaqueAdminId(driverId)');
+  });
+
+  it('keeps the drivers list route no-store and auth-guarded', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/api/admin/drivers/route.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain('force-dynamic');
+    expect(source).toContain('getAdminServerAuthClient');
+    expect(source).toContain('createAdminServerAuthErrorResponse');
+    expect(source).toContain('createNoStoreAdminHeaders()');
+  });
+
+  it('bounds search and pageSize before proxying to the backend', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/api/admin/drivers/route.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain('Math.min(');
+    expect(source).toContain('100');
+    expect(source).toContain('.slice(0, 120)');
+  });
+});
