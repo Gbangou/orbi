@@ -108,6 +108,12 @@ async function buildApp(role: string | null): Promise<INestApplication<App>> {
     healthIncidents: jest.fn().mockResolvedValue({ incidents: [] }),
     acknowledgeHealthIncident: jest.fn().mockResolvedValue({}),
     muteHealthIncident: jest.fn().mockResolvedValue({}),
+    tripsAudit: jest.fn().mockResolvedValue({ trips: [] }),
+    suspendDriver: jest.fn().mockResolvedValue({}),
+    reactivateDriver: jest.fn().mockResolvedValue({}),
+    listPromoCodes: jest.fn().mockResolvedValue({ promoCodes: [] }),
+    createPromoCode: jest.fn().mockResolvedValue({}),
+    deactivatePromoCode: jest.fn().mockResolvedValue({}),
   };
 
   const realtimeService = {
@@ -154,6 +160,8 @@ const readEndpoints = [
   ['GET', '/api/v1/admin/driver-onboarding-queue'],
   ['GET', '/api/v1/admin/driver-wallets'],
   ['GET', '/api/v1/admin/payment-webhook-events'],
+  ['GET', '/api/v1/admin/trips/audit'],
+  ['GET', '/api/v1/admin/job-queue'],
 ] as const;
 
 // ── WRITE endpoints restricted to ADMIN/OPS only ─────────────────────────────
@@ -165,6 +173,15 @@ const adminOpsWriteEndpoints = [
   ['POST', '/api/v1/admin/payment-attempts/pa-abc/refund'],
   ['PATCH', '/api/v1/admin/riders/rider-user-1/status'],
   ['PATCH', '/api/v1/admin/dispatch-settings'],
+  ['POST', '/api/v1/admin/drivers/driver-abc/suspend'],
+] as const;
+
+// ── WRITE endpoints restricted to ADMIN only (OPS is also denied) ─────────────
+
+const adminOnlyWriteEndpoints = [
+  ['POST', '/api/v1/admin/drivers/driver-abc/reactivate'],
+  ['POST', '/api/v1/admin/promo-codes'],
+  ['DELETE', '/api/v1/admin/promo-codes/promo-abc'],
 ] as const;
 
 // ── Test suites ──────────────────────────────────────────────────────────────
@@ -376,6 +393,62 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
         >
       )[method.toLowerCase()](path);
       expect(res.status).not.toBe(403);
+    });
+
+    it.each(adminOnlyWriteEndpoints)('%s %s → not 403', async (method, path) => {
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
+      expect(res.status).not.toBe(403);
+    });
+  });
+
+  // ── OPS is denied ADMIN-only write endpoints ──────────────────────────────
+
+  describe('OPS role is denied ADMIN-only write endpoints', () => {
+    let app: INestApplication<App>;
+
+    beforeAll(async () => {
+      app = await buildApp('OPS');
+    });
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it.each(adminOnlyWriteEndpoints)('%s %s → 403', async (method, path) => {
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
+      expect(res.status).toBe(403);
+    });
+  });
+
+  // ── SUPPORT is denied ADMIN-only write endpoints ──────────────────────────
+
+  describe('SUPPORT role is denied ADMIN-only write endpoints', () => {
+    let app: INestApplication<App>;
+
+    beforeAll(async () => {
+      app = await buildApp('SUPPORT');
+    });
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it.each(adminOnlyWriteEndpoints)('%s %s → 403', async (method, path) => {
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
+      expect(res.status).toBe(403);
     });
   });
 });
