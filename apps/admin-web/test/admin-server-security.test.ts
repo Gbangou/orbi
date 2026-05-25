@@ -14,7 +14,10 @@ import {
   resolveDriverPayoutSettlementStatus,
   resolvePaymentWebhookJournalKind,
 } from '../app/admin-server-security';
-import { createAdminIdempotencyKey } from '../app/admin-idempotency';
+import {
+  createAdminIdempotencyKey,
+  isSafeAdminGeneratedIdempotencyKey,
+} from '../app/admin-idempotency';
 import { resolveSafeDocumentUrl } from '../app/admin-url-security';
 
 function request(headers: Record<string, string>, method = 'POST') {
@@ -110,6 +113,21 @@ describe('admin server security', () => {
     expect(secondKey).not.toBe(key);
   });
 
+  it('validates generated admin idempotency keys without allowing route-unsafe separators', () => {
+    expect(isSafeAdminGeneratedIdempotencyKey('launch-ack-12345678')).toBe(
+      true,
+    );
+    expect(isSafeAdminGeneratedIdempotencyKey(' launch-ack-12345678 ')).toBe(
+      true,
+    );
+    expect(isSafeAdminGeneratedIdempotencyKey('ops.recovery-12345678')).toBe(
+      false,
+    );
+    expect(isSafeAdminGeneratedIdempotencyKey('unsafe key')).toBe(false);
+    expect(isSafeAdminGeneratedIdempotencyKey('short')).toBe(false);
+    expect(isSafeAdminGeneratedIdempotencyKey('a'.repeat(129))).toBe(false);
+  });
+
   it('keeps launch readiness acknowledgement idempotency generated server-side', () => {
     const source = readFileSync(
       join(
@@ -121,6 +139,7 @@ describe('admin server security', () => {
 
     expect(source).toContain('createAdminIdempotencyKey');
     expect(source).toContain("createAdminIdempotencyKey('launch-ack')");
+    expect(source).toContain('isSafeAdminGeneratedIdempotencyKey');
   });
 
   it('bounds driver payout settlement status before proxying exports', () => {

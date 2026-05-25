@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { acknowledgeAdminLaunchReadinessAction } from '@orbi/api';
-import { createAdminIdempotencyKey } from '../../../../../../admin-idempotency';
+import {
+  createAdminIdempotencyKey,
+  isSafeAdminGeneratedIdempotencyKey,
+} from '../../../../../../admin-idempotency';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,
@@ -45,8 +48,7 @@ function normalizeAcknowledgementPayload(value: unknown) {
 
   if (
     input.idempotencyKey !== undefined &&
-    (typeof input.idempotencyKey !== 'string' ||
-      !/^[A-Za-z0-9_-]{8,128}$/.test(input.idempotencyKey))
+    !isSafeAdminGeneratedIdempotencyKey(input.idempotencyKey)
   ) {
     return null;
   }
@@ -56,7 +58,7 @@ function normalizeAcknowledgementPayload(value: unknown) {
     notes,
     idempotencyKey:
       typeof input.idempotencyKey === 'string'
-        ? input.idempotencyKey
+        ? input.idempotencyKey.trim()
         : createAdminIdempotencyKey('launch-ack'),
   };
 }
