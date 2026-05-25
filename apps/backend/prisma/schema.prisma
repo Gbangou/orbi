@@ -661,3 +661,21 @@ model JobQueueEntry {
   @@index([entityType, entityId, createdAt])
   @@map("job_queue_entries")
 }
+
+model PromoCode {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  description   String?
+  discountBps   Int      @map("discount_bps")
+  maxUses       Int?     @map("max_uses")
+  usedCount     Int      @default(0) @map("used_count")
+  validFrom     DateTime @map("valid_from")
+  validTo       DateTime @map("valid_to")
+  firstTripOnly Boolean  @default(true) @map("first_trip_only")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([active, validTo])
+  @@map("promo_codes")
+}

@@ -4034,6 +4034,60 @@ export async function getMySupportTicketsWithApi(
   return client.request<MySupportTicketsResponse>(apiRoutes.auth.supportTickets);
 }
 
+export type PromoCodeItem = {
+  id: string;
+  code: string;
+  description: string | null;
+  discountBps: number;
+  maxUses: number | null;
+  usedCount: number;
+  validFrom: string;
+  validTo: string;
+  firstTripOnly: boolean;
+  active: boolean;
+  createdAt: string;
+};
+
+export type ListAdminPromoCodesResponse = {
+  promoCodes: PromoCodeItem[];
+};
+
+export type CreateAdminPromoCodePayload = {
+  code: string;
+  description?: string;
+  discountBps: number;
+  maxUses?: number;
+  validFrom: string;
+  validTo: string;
+  firstTripOnly?: boolean;
+};
+
+export async function listAdminPromoCodes(
+  client: OrbiApiClient,
+): Promise<ListAdminPromoCodesResponse> {
+  return client.request<ListAdminPromoCodesResponse>('/admin/promo-codes');
+}
+
+export async function createAdminPromoCode(
+  client: OrbiApiClient,
+  payload: CreateAdminPromoCodePayload,
+): Promise<PromoCodeItem> {
+  return client.request<PromoCodeItem>('/admin/promo-codes', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deactivateAdminPromoCode(
+  client: OrbiApiClient,
+  promoCodeId: string,
+): Promise<{ promoCodeId: string; active: false }> {
+  return client.request<{ promoCodeId: string; active: false }>(
+    `/admin/promo-codes/${promoCodeId}`,
+    { method: 'DELETE' },
+  );
+}
+
 function resolveApiErrorMessage(payload: unknown) {
   if (!payload || typeof payload !== 'object') {
     return null;

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -47,6 +48,7 @@ import { UpdateDriverOnboardingReviewDto } from './dto/update-driver-onboarding-
 import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query.dto';
 import { JobQueueQueryDto } from './dto/job-queue-query.dto';
 import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-document-object-verification.dto';
+import { CreatePromoCodeDto } from './dto/create-promo-code.dto';
 
 const reviewDecisionRoles = new Set(['ADMIN', 'OPS']);
 const pricingCalibrationLookbackDays = 14;
@@ -6373,6 +6375,115 @@ export class AdminService {
     });
 
     return { driverId, status: 'OFFLINE' };
+  }
+
+  async listPromoCodes() {
+    const codes = await this.prisma.promoCode.findMany({
+      orderBy: [{ active: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    return {
+      promoCodes: codes.map((c) => ({
+        id: c.id,
+        code: c.code,
+        description: c.description,
+        discountBps: c.discountBps,
+        maxUses: c.maxUses,
+        usedCount: c.usedCount,
+        validFrom: c.validFrom.toISOString(),
+        validTo: c.validTo.toISOString(),
+        firstTripOnly: c.firstTripOnly,
+        active: c.active,
+        createdAt: c.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  async createPromoCode(dto: CreatePromoCodeDto, auth: RequestAuthContext) {
+    const normalizedCode = dto.code.toUpperCase().trim();
+    const validFrom = new Date(dto.validFrom);
+    const validTo = new Date(dto.validTo);
+
+    if (validTo <= validFrom) {
+      throw new BadRequestException('validTo must be after validFrom.');
+    }
+
+    const existing = await this.prisma.promoCode.findUnique({
+      where: { code: normalizedCode },
+      select: { id: true },
+    });
+
+    if (existing) {
+      throw new ConflictException(`Promo code "${normalizedCode}" already exists.`);
+    }
+
+    const created = await this.prisma.promoCode.create({
+      data: {
+        code: normalizedCode,
+        description: dto.description?.trim() ?? null,
+        discountBps: dto.discountBps,
+        maxUses: dto.maxUses ?? null,
+        validFrom,
+        validTo,
+        firstTripOnly: dto.firstTripOnly ?? true,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'PROMO_CODE_CREATED',
+        entityType: 'PROMO_CODE',
+        entityId: created.id,
+        metadata: {
+          code: normalizedCode,
+          discountBps: dto.discountBps,
+        } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    return {
+      id: created.id,
+      code: created.code,
+      discountBps: created.discountBps,
+      validFrom: created.validFrom.toISOString(),
+      validTo: created.validTo.toISOString(),
+      firstTripOnly: created.firstTripOnly,
+      active: created.active,
+      createdAt: created.createdAt.toISOString(),
+    };
+  }
+
+  async deactivatePromoCode(promoCodeId: string, auth: RequestAuthContext) {
+    const code = await this.prisma.promoCode.findUnique({
+      where: { id: promoCodeId },
+      select: { id: true, code: true, active: true },
+    });
+
+    if (!code) {
+      throw new NotFoundException('Promo code not found.');
+    }
+
+    if (!code.active) {
+      throw new BadRequestException('Promo code is already inactive.');
+    }
+
+    await this.prisma.promoCode.update({
+      where: { id: promoCodeId },
+      data: { active: false },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'PROMO_CODE_DEACTIVATED',
+        entityType: 'PROMO_CODE',
+        entityId: promoCodeId,
+        metadata: { code: code.code } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    return { promoCodeId, active: false };
   }
 
   private resolveDocumentExtension(value: string) {

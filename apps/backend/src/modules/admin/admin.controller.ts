@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   MessageEvent,
@@ -39,6 +40,7 @@ import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-d
 import { UpdateSupportTicketDto } from './dto/update-support-ticket.dto';
 import { DriverSuspensionDto } from './dto/driver-suspension.dto';
 import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-action-acknowledgement.dto';
+import { CreatePromoCodeDto } from './dto/create-promo-code.dto';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
@@ -543,5 +545,38 @@ export class AdminController {
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.reactivateDriver(driverId, auth);
+  }
+
+  @Get('promo-codes')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  listPromoCodes() {
+    return this.adminService.listPromoCodes();
+  }
+
+  @Post('promo-codes')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  createPromoCode(
+    @Body() body: CreatePromoCodeDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.createPromoCode(body, auth);
+  }
+
+  @Delete('promo-codes/:promoCodeId')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  deactivatePromoCode(
+    @Param('promoCodeId', new OpaqueIdPipe('promoCodeId')) promoCodeId: string,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.deactivatePromoCode(promoCodeId, auth);
   }
 }

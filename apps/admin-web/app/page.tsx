@@ -16,6 +16,8 @@ import {
   fetchAdminPaymentWebhookEvents,
   fetchAdminPricingCalibration,
   fetchAdminSupportTickets,
+  listAdminPromoCodes,
+  type ListAdminPromoCodesResponse,
   type AdminDispatchSettingsResponse,
   type AdminFeatureFlagsResponse,
   type AdminDriverWalletsResponse,
@@ -55,6 +57,7 @@ import { PricingCalibrationBoard } from './pricing-calibration-board';
 import { PaymentWebhookJournalBoard } from './payment-webhook-journal-board';
 import { DriverWalletsBoard } from './driver-wallets-board';
 import { TripsAuditBoard } from './trips-audit-board';
+import { PromoCodesBoard } from './promo-codes-board';
 
 const fallbackIncidents = [
   '2 chauffeurs moto en attente de verification',
@@ -603,6 +606,7 @@ async function loadAdminData(): Promise<{
   driverWallets: AdminDriverWalletsResponse;
   launchReadiness: AdminLaunchReadinessResponse;
   health: HealthCheckResponse;
+  promoCodes: ListAdminPromoCodesResponse;
   pricingScenarios: Array<{
     id: string;
     title: string;
@@ -639,6 +643,7 @@ async function loadAdminData(): Promise<{
       driverWallets,
       launchReadiness,
       health,
+      promoCodes,
       ouagaEstimate,
       boboEstimate,
       northEstimate,
@@ -658,6 +663,7 @@ async function loadAdminData(): Promise<{
         fetchAdminDriverWallets(authClient),
         fetchAdminLaunchReadiness(authClient),
         fetchHealthCheck(client),
+        listAdminPromoCodes(authClient),
         fetchPricingEstimate(client, {
           distanceKm: ouagaPreset.estimatedDistanceKm,
           durationMinutes: ouagaPreset.estimatedDurationMinutes,
@@ -757,6 +763,7 @@ async function loadAdminData(): Promise<{
       driverWallets,
       launchReadiness,
       health,
+      promoCodes,
       pricingScenarios: [
         {
           id: 'ouaga-campus',
@@ -862,6 +869,7 @@ async function loadAdminData(): Promise<{
         },
       },
       health: fallbackHealth,
+      promoCodes: { promoCodes: [] },
       pricingScenarios: [],
     };
   }
@@ -886,6 +894,7 @@ export default async function AdminHomePage({
     driverWallets,
     launchReadiness,
     health,
+    promoCodes,
     pricingScenarios,
   } = await loadAdminData();
   const showDemoPasswords = shouldShowDemoPasswords();
@@ -1117,6 +1126,8 @@ export default async function AdminHomePage({
       <DriverOnboardingReviewBoard initialQueue={onboardingQueue.drivers} />
 
       <SupportQueue initialTickets={support.tickets} />
+
+      <PromoCodesBoard initialCodes={promoCodes.promoCodes} />
 
       <section className="panel roadmap">
         <div className="roadmap-heading">
