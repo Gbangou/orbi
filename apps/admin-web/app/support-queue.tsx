@@ -64,6 +64,7 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
   const [transitionLabel, setTransitionLabel] = useState<string | null>(null);
   const [freshTicketIds, setFreshTicketIds] = useState<string[]>([]);
   const previousTicketsRef = useRef<SupportQueueProps['initialTickets'] | null>(null);
+  const ticketUpdateInFlightRef = useRef(new Set<string>());
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
 
   const refreshTickets = useCallback(
@@ -191,6 +192,11 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
     },
     message: string,
   ) {
+    if (ticketUpdateInFlightRef.current.has(ticketId)) {
+      return false;
+    }
+
+    ticketUpdateInFlightRef.current.add(ticketId);
     setBusyTicketId(ticketId);
     setStatus(message);
 
@@ -198,9 +204,12 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
       await updateSupportTicket(ticketId, payload);
       await refreshTickets(false);
       setStatus('Ticket mis a jour avec succes.');
+      return true;
     } catch {
       setStatus('La mise a jour du ticket a echoue.');
+      return false;
     } finally {
+      ticketUpdateInFlightRef.current.delete(ticketId);
       setBusyTicketId(null);
     }
   }
@@ -208,8 +217,15 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
   async function handleSendNote(ticketId: string) {
     const note = noteDrafts[ticketId]?.trim();
     if (!note) return;
-    await handleTicketUpdate(ticketId, { adminNote: note }, 'Envoi de la reponse au ticket...');
-    setNoteDrafts((prev) => ({ ...prev, [ticketId]: '' }));
+    const sent = await handleTicketUpdate(
+      ticketId,
+      { adminNote: note },
+      'Envoi de la reponse au ticket...',
+    );
+
+    if (sent) {
+      setNoteDrafts((prev) => ({ ...prev, [ticketId]: '' }));
+    }
   }
 
   return (
