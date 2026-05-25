@@ -57,6 +57,20 @@ export function resolveProductionReadinessState(
   return 'good';
 }
 
+export function resolveCombinedProductionState(
+  localState: ReadinessState,
+  backendDecisionState?: ReadinessState,
+): ReadinessState {
+  if (!backendDecisionState) {
+    return localState;
+  }
+
+  return resolveReadinessGroupState([
+    { state: localState },
+    { state: backendDecisionState },
+  ]);
+}
+
 export function describeProductionReadiness(
   productionReadiness: HealthCheckResponse['operations']['productionReadiness'],
 ) {

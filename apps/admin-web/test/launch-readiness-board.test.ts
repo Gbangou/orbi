@@ -2,6 +2,7 @@
 
 import type { HealthCheckResponse } from '@orbi/api';
 import {
+  resolveCombinedProductionState,
   resolveProductionPilotDecision,
   resolveProductionReadinessState,
   resolveReadinessGroupState,
@@ -100,6 +101,22 @@ describe('launch readiness production decision', () => {
     expect(resolveProductionPilotDecision(readiness)).toMatchObject({
       state: 'good',
       label: 'pilot autorise',
+    });
+  });
+
+  it('keeps the stricter state when backend and local ops signals disagree', () => {
+    expect(resolveCombinedProductionState('warn', 'good')).toBe('warn');
+    expect(resolveCombinedProductionState('good', 'bad')).toBe('bad');
+    expect(resolveCombinedProductionState('good', undefined)).toBe('good');
+  });
+
+  it('does not approve production pilot when backend is approved but local ops signals warn', () => {
+    const readiness = buildProductionReadiness('low');
+    const combinedState = resolveCombinedProductionState('warn', 'good');
+
+    expect(resolveProductionPilotDecision(readiness, combinedState)).toMatchObject({
+      state: 'warn',
+      label: 'pilot limite seulement',
     });
   });
 

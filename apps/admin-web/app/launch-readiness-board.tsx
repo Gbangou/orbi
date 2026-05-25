@@ -19,6 +19,7 @@ import {
 import {
   describeProductionReadiness,
   describeReadinessState,
+  resolveCombinedProductionState,
   resolveProductionPilotDecision,
   resolveProductionReadinessState,
   resolveReadinessGroupState,
@@ -368,9 +369,13 @@ export function LaunchReadinessBoard({
         : currentLaunchReadiness?.decision.state === 'limited'
           ? 'warn'
           : undefined;
+  const combinedProductionState = resolveCombinedProductionState(
+    prodState,
+    backendDecisionState,
+  );
   const productionPilotDecision = resolveProductionPilotDecision(
     productionReadiness,
-    backendDecisionState ?? prodState,
+    combinedProductionState,
   );
   const runtimeAttentionChecks =
     currentLaunchReadiness?.checks.filter((check) => check.state !== 'pass').slice(0, 3) ??
