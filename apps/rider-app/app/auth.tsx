@@ -92,6 +92,8 @@ export default function RiderAuthScreen() {
   }
 
   async function handleSubmit() {
+    const normalizedEmail = email.trim().toLowerCase();
+
     setIsSubmitting(true);
     setStatus(
       mode === 'sign-in'
@@ -102,13 +104,13 @@ export default function RiderAuthScreen() {
     try {
       if (mode === 'sign-in') {
         await signInRiderAccount({
-          email: email.trim(),
+          email: normalizedEmail,
           password,
         });
       } else {
         await signUpRiderAccount({
           fullName: fullName.trim(),
-          email: email.trim(),
+          email: normalizedEmail,
           password,
         });
       }

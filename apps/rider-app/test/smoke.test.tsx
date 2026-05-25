@@ -471,6 +471,21 @@ describe('rider smoke flows', () => {
     expect(router.replace).toHaveBeenCalledWith('/home');
   });
 
+  it('normalizes rider sign-in email before submitting', async () => {
+    mockedSignInRiderAccount.mockResolvedValue(buildRiderSession() as never);
+
+    const renderer = await renderScreen(<RiderAuthScreen />);
+    await changeInputByPlaceholder(renderer, 'rider@orbi.app', ' Rider@Orbi.App ');
+    await changeInputByPlaceholder(renderer, 'Mot de passe', 'Orbi123!');
+    await pressByText(renderer, 'Se connecter');
+
+    expect(mockedSignInRiderAccount).toHaveBeenCalledWith({
+      email: 'rider@orbi.app',
+      password: 'Orbi123!',
+    });
+    expect(router.replace).toHaveBeenCalledWith('/home');
+  });
+
   it('surfaces a network-specific auth message', async () => {
     mockedSignInRiderAccount.mockRejectedValue(new TypeError('Network request failed'));
 
