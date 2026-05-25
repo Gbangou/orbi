@@ -3073,6 +3073,70 @@ describe('AdminService', () => {
     );
   });
 
+  it('audits reused prepared driver payouts without creating a duplicate payout', async () => {
+    const { prisma, service } = createService();
+
+    prisma.wallet.findUnique.mockResolvedValue({
+      id: 'wallet-1',
+      userId: 'driver-user-1',
+      currency: 'XOF',
+      balance: 1968,
+      isLocked: false,
+      user: {
+        role: 'DRIVER',
+        fullName: 'Issa Driver',
+        driverProfile: {
+          status: 'ONLINE',
+        },
+      },
+      driverPayouts: [
+        {
+          id: 'driver-payout-existing',
+          walletId: 'wallet-1',
+          amount: 1968,
+          currency: 'XOF',
+          status: 'PREPARED',
+          reference: 'driver-payout:wallet-1:existing',
+          preparedAt: new Date('2026-05-01T08:10:00.000Z'),
+          paidAt: null,
+        },
+      ],
+    });
+
+    const result = await service.prepareDriverWalletPayout(
+      'wallet-1',
+      {
+        notes: 'Deuxieme tentative controlee.',
+      },
+      authContext({ id: 'ops-1' }),
+    );
+
+    expect(prisma.driverPayout.create).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'ops-1',
+        action: 'DRIVER_PAYOUT_PREPARE_REUSED',
+        entityType: 'DRIVER_PAYOUT',
+        entityId: 'driver-payout-existing',
+        metadata: {
+          walletId: 'wallet-1',
+          driverUserId: 'driver-user-1',
+          amount: 1968,
+          currency: 'XOF',
+          reference: 'driver-payout:wallet-1:existing',
+          result: 'existing_prepared_payout',
+          notes: 'Deuxieme tentative controlee.',
+        },
+      },
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        action: 'existing_prepared_payout',
+        payout: expect.objectContaining({ id: 'driver-payout-existing' }),
+      }),
+    );
+  });
+
   it('records an idempotent recovery adjustment for a negative driver wallet', async () => {
     const { prisma, realtimeService, service } = createService();
 

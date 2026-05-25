@@ -4739,6 +4739,24 @@ export class AdminService {
 
     const existingPreparedPayout = wallet.driverPayouts[0] ?? null;
     if (existingPreparedPayout) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'DRIVER_PAYOUT_PREPARE_REUSED',
+          entityType: 'DRIVER_PAYOUT',
+          entityId: existingPreparedPayout.id,
+          metadata: {
+            walletId: wallet.id,
+            driverUserId: wallet.userId,
+            amount: Number(existingPreparedPayout.amount),
+            currency: existingPreparedPayout.currency,
+            reference: existingPreparedPayout.reference,
+            result: 'existing_prepared_payout',
+            notes,
+          } satisfies Prisma.InputJsonObject,
+        },
+      });
+
       return {
         payout: this.serializeDriverPayout(existingPreparedPayout),
         action: 'existing_prepared_payout',
@@ -4787,6 +4805,24 @@ export class AdminService {
       if (!concurrentPayout) {
         throw error;
       }
+
+      await this.prisma.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'DRIVER_PAYOUT_PREPARE_REUSED',
+          entityType: 'DRIVER_PAYOUT',
+          entityId: concurrentPayout.id,
+          metadata: {
+            walletId: wallet.id,
+            driverUserId: wallet.userId,
+            amount: Number(concurrentPayout.amount),
+            currency: concurrentPayout.currency,
+            reference: concurrentPayout.reference,
+            result: 'existing_prepared_payout',
+            notes,
+          } satisfies Prisma.InputJsonObject,
+        },
+      });
 
       return {
         payout: this.serializeDriverPayout(concurrentPayout),
