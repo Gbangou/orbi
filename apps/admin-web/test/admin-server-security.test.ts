@@ -241,6 +241,8 @@ describe('admin server security', () => {
         'app/api/admin/drivers/[driverId]/reactivate/route.ts',
         'app/api/admin/payment-attempts/[paymentAttemptId]/refund/route.ts',
         'app/api/admin/payment-webhook-events/[eventId]/replay/route.ts',
+        'app/api/admin/promo-codes/route.ts',
+        'app/api/admin/promo-codes/[promoCodeId]/route.ts',
         'app/api/admin/riders/[userId]/status/route.ts',
       ]));
 

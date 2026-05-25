@@ -4102,7 +4102,7 @@ export async function validatePromoCodeWithApi(
 ): Promise<PromoValidationResponse> {
   return client.request<PromoValidationResponse>('/auth/validate-promo-code', {
     method: 'POST',
-    body: JSON.stringify({ code }),
+    body: { code },
   });
 }
 
@@ -4146,7 +4146,7 @@ export async function createAdminPromoCode(
 ): Promise<PromoCodeItem> {
   return client.request<PromoCodeItem>('/admin/promo-codes', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: payload,
   });
 }
 
