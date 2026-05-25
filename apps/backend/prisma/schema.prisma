@@ -601,6 +601,7 @@ model SupportTicket {
   description String
   status      SupportTicketStatus @default(OPEN)
   priority    Int                 @default(1)
+  adminNote   String?             @map("admin_note")
   createdAt   DateTime            @default(now()) @map("created_at")
   updatedAt   DateTime            @updatedAt @map("updated_at")
   user        User                @relation(fields: [userId], references: [id])

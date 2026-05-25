@@ -982,6 +982,57 @@ body {
   color: #ffb3a3;
 }
 
+.ticket-admin-note {
+  background: rgba(61, 215, 192, 0.07);
+  border: 1px solid rgba(61, 215, 192, 0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+
+.ticket-admin-note-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.ticket-admin-note p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.ticket-reply-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 10px;
+}
+
+.ticket-reply-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(123, 154, 190, 0.24);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-family: inherit;
+  padding: 8px 12px;
+  resize: vertical;
+  outline: none;
+  min-height: 56px;
+}
+
+.ticket-reply-input:focus {
+  border-color: rgba(61, 215, 192, 0.5);
+  background: rgba(61, 215, 192, 0.06);
+}
+
 .ticket-topline {
   display: flex;
   align-items: center;

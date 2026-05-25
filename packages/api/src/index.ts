@@ -1579,6 +1579,7 @@ export type SupportTicketQueueResponse = {
     description: string;
     status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
     priority: number;
+    adminNote: string | null;
     requesterName: string;
     requesterRole: string;
     tripId: string | null;
@@ -1592,6 +1593,7 @@ export type SupportTicketUpdateResponse = {
     id: string;
     status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
     priority: number;
+    adminNote: string | null;
     updatedAt: string;
   };
 };
@@ -3221,6 +3223,7 @@ export async function updateAdminSupportTicket(
   payload: {
     status?: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
     priority?: number;
+    adminNote?: string;
   },
 ) {
   return client.request<SupportTicketUpdateResponse>(`${apiRoutes.admin.supportTickets}/${ticketId}`, {
@@ -3974,6 +3977,7 @@ export interface SupportTicket {
   description: string;
   status: SupportTicketStatus;
   priority: number;
+  adminNote: string | null;
   createdAt: string;
   updatedAt?: string;
 }

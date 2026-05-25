@@ -4134,6 +4134,7 @@ export class AdminService {
           description: redactSupportText(ticket.description),
           status: ticket.status,
           priority: ticket.priority,
+          adminNote: ticket.adminNote ?? null,
           requesterName: maskRequesterName(ticket.user.fullName),
           requesterRole: ticket.user.role,
           tripId: tripIdMatch?.[1] ?? null,
@@ -5447,6 +5448,7 @@ export class AdminService {
     payload: {
       status?: SupportTicketStatus;
       priority?: number;
+      adminNote?: string;
     },
     auth: RequestAuthContext,
   ) {
@@ -5460,6 +5462,8 @@ export class AdminService {
       throw new NotFoundException('Support ticket not found.');
     }
 
+    const trimmedNote = payload.adminNote?.trim() ?? undefined;
+
     const updated = await this.prisma.supportTicket.update({
       where: {
         id: ticketId,
@@ -5467,6 +5471,7 @@ export class AdminService {
       data: {
         status: payload.status ?? existing.status,
         priority: payload.priority ?? existing.priority,
+        ...(trimmedNote !== undefined ? { adminNote: trimmedNote || null } : {}),
       },
     });
 
@@ -5479,6 +5484,7 @@ export class AdminService {
         metadata: {
           status: updated.status,
           priority: updated.priority,
+          hasAdminNote: updated.adminNote !== null,
         },
       },
     });
@@ -5499,6 +5505,7 @@ export class AdminService {
         id: updated.id,
         status: updated.status,
         priority: updated.priority,
+        adminNote: updated.adminNote,
         updatedAt: updated.updatedAt.toISOString(),
       },
     };

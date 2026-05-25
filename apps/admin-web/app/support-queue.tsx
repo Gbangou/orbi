@@ -41,6 +41,7 @@ async function updateSupportTicket(
   payload: {
     status?: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
     priority?: number;
+    adminNote?: string;
   },
 ) {
   return fetchAdminJson<SupportTicketUpdateResponse>(
@@ -63,6 +64,7 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
   const [transitionLabel, setTransitionLabel] = useState<string | null>(null);
   const [freshTicketIds, setFreshTicketIds] = useState<string[]>([]);
   const previousTicketsRef = useRef<SupportQueueProps['initialTickets'] | null>(null);
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
 
   const refreshTickets = useCallback(
     async (showMessage = true, successMessage = 'File support actualisee.') => {
@@ -185,6 +187,7 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
     payload: {
       status?: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
       priority?: number;
+      adminNote?: string;
     },
     message: string,
   ) {
@@ -200,6 +203,13 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
     } finally {
       setBusyTicketId(null);
     }
+  }
+
+  async function handleSendNote(ticketId: string) {
+    const note = noteDrafts[ticketId]?.trim();
+    if (!note) return;
+    await handleTicketUpdate(ticketId, { adminNote: note }, 'Envoi de la reponse au ticket...');
+    setNoteDrafts((prev) => ({ ...prev, [ticketId]: '' }));
   }
 
   return (
@@ -282,6 +292,35 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
                 : 'Trajet non identifie'}
             </p>
             <p>{ticket.description}</p>
+            {ticket.adminNote ? (
+              <div className="ticket-admin-note">
+                <span className="ticket-admin-note-label">Reponse ops</span>
+                <p>{ticket.adminNote}</p>
+              </div>
+            ) : null}
+
+            <div className="ticket-reply-row">
+              <textarea
+                className="ticket-reply-input"
+                disabled={busyTicketId === ticket.id}
+                maxLength={1000}
+                onChange={(e) =>
+                  setNoteDrafts((prev) => ({ ...prev, [ticket.id]: e.target.value }))
+                }
+                placeholder="Repondre au ticket..."
+                rows={2}
+                value={noteDrafts[ticket.id] ?? ''}
+              />
+              <button
+                className="ticket-button ticket-button-neutral"
+                disabled={busyTicketId === ticket.id || !noteDrafts[ticket.id]?.trim()}
+                onClick={() => void handleSendNote(ticket.id)}
+                type="button"
+              >
+                Envoyer
+              </button>
+            </div>
+
             <div className="ticket-actions">
               <button
                 className="ticket-button ticket-button-neutral"

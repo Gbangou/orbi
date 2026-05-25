@@ -1298,6 +1298,12 @@ export default function ProfilScreen() {
               </View>
             </View>
             <Text style={styles.meta} numberOfLines={2}>{ticket.description}</Text>
+            {ticket.adminNote ? (
+              <View style={styles.adminNoteBox}>
+                <Text style={styles.adminNoteLabel}>Reponse du support</Text>
+                <Text style={styles.adminNoteText}>{ticket.adminNote}</Text>
+              </View>
+            ) : null}
           </View>
         ))}
 
@@ -1743,5 +1749,26 @@ const styles = StyleSheet.create({
   ticketDescInput: {
     minHeight: 90,
     textAlignVertical: 'top',
+  },
+  adminNoteBox: {
+    marginTop: 8,
+    padding: 10,
+    backgroundColor: 'rgba(251, 191, 36, 0.07)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.2)',
+  },
+  adminNoteLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    color: orbiTheme.colors.amber,
+    marginBottom: 4,
+  },
+  adminNoteText: {
+    fontSize: 13,
+    color: orbiTheme.colors.text,
+    lineHeight: 18,
   },
 });
