@@ -288,6 +288,38 @@ export function DriverOnboardingReviewBoard({
   const [suspendReasons, setSuspendReasons] = useState<Record<string, string>>({});
   const previousDriversRef =
     useRef<DriverOnboardingReviewBoardProps['initialQueue'] | null>(null);
+  const driverActionInFlightRef = useRef(new Set<string>());
+  const documentActionInFlightRef = useRef(new Set<string>());
+
+  function beginDriverAction(driverId: string) {
+    if (driverActionInFlightRef.current.has(driverId)) {
+      return false;
+    }
+
+    driverActionInFlightRef.current.add(driverId);
+    setBusyDriverId(driverId);
+    return true;
+  }
+
+  function endDriverAction(driverId: string) {
+    driverActionInFlightRef.current.delete(driverId);
+    setBusyDriverId(null);
+  }
+
+  function beginDocumentAction(documentId: string) {
+    if (documentActionInFlightRef.current.has(documentId)) {
+      return false;
+    }
+
+    documentActionInFlightRef.current.add(documentId);
+    setBusyDocumentId(documentId);
+    return true;
+  }
+
+  function endDocumentAction(documentId: string) {
+    documentActionInFlightRef.current.delete(documentId);
+    setBusyDocumentId(null);
+  }
 
   const refreshQueue = useCallback(
     async (message = 'File onboarding actualisee.') => {
@@ -443,7 +475,10 @@ export function DriverOnboardingReviewBoard({
     driverId: string,
     decision: 'UNDER_REVIEW' | 'APPROVED' | 'CHANGES_REQUESTED',
   ) {
-    setBusyDriverId(driverId);
+    if (!beginDriverAction(driverId)) {
+      return;
+    }
+
     setStatus('Mise a jour de la decision ops...');
 
     try {
@@ -473,7 +508,7 @@ export function DriverOnboardingReviewBoard({
     } catch {
       setStatus("La decision onboarding n'a pas pu etre appliquee.");
     } finally {
-      setBusyDriverId(null);
+      endDriverAction(driverId);
     }
   }
 
@@ -483,7 +518,10 @@ export function DriverOnboardingReviewBoard({
       setStatus('Saisir une raison de suspension (10 caracteres minimum).');
       return;
     }
-    setBusyDriverId(driverId);
+    if (!beginDriverAction(driverId)) {
+      return;
+    }
+
     setStatus('Suspension du compte chauffeur...');
     try {
       await suspendDriver(driverId, reason);
@@ -492,12 +530,15 @@ export function DriverOnboardingReviewBoard({
     } catch {
       setStatus('La suspension a echoue.');
     } finally {
-      setBusyDriverId(null);
+      endDriverAction(driverId);
     }
   }
 
   async function handleReactivateDriver(driverId: string) {
-    setBusyDriverId(driverId);
+    if (!beginDriverAction(driverId)) {
+      return;
+    }
+
     setStatus('Reactivation du compte chauffeur...');
     try {
       await reactivateDriver(driverId);
@@ -505,7 +546,7 @@ export function DriverOnboardingReviewBoard({
     } catch {
       setStatus('La reactivation a echoue.');
     } finally {
-      setBusyDriverId(null);
+      endDriverAction(driverId);
     }
   }
 
@@ -515,7 +556,10 @@ export function DriverOnboardingReviewBoard({
       return;
     }
 
-    setBusyDocumentId(documentId);
+    if (!beginDocumentAction(documentId)) {
+      return;
+    }
+
     setStatus('Generation du lien signe...');
 
     try {
@@ -535,12 +579,15 @@ export function DriverOnboardingReviewBoard({
     } catch {
       setStatus("Impossible de generer le lien signe du justificatif.");
     } finally {
-      setBusyDocumentId(null);
+      endDocumentAction(documentId);
     }
   }
 
   async function handleVerifyDocumentObject(driverId: string, documentId: string) {
-    setBusyDocumentId(documentId);
+    if (!beginDocumentAction(documentId)) {
+      return;
+    }
+
     setStatus('Verification provider du justificatif...');
 
     try {
@@ -556,7 +603,7 @@ export function DriverOnboardingReviewBoard({
     } catch {
       setStatus('La verification provider du justificatif a echoue.');
     } finally {
-      setBusyDocumentId(null);
+      endDocumentAction(documentId);
     }
   }
 
