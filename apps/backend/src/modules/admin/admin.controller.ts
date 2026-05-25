@@ -37,6 +37,7 @@ import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query
 import { JobQueueQueryDto } from './dto/job-queue-query.dto';
 import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-document-object-verification.dto';
 import { UpdateSupportTicketDto } from './dto/update-support-ticket.dto';
+import { DriverSuspensionDto } from './dto/driver-suspension.dto';
 import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-action-acknowledgement.dto';
 import { AdminService } from './admin.service';
 
@@ -517,5 +518,30 @@ export class AdminController {
       documentId,
       auth,
     );
+  }
+
+  @Post('drivers/:driverId/suspend')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  suspendDriver(
+    @Param('driverId', new OpaqueIdPipe('driverId')) driverId: string,
+    @Body() body: DriverSuspensionDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.suspendDriver(driverId, body, auth);
+  }
+
+  @Post('drivers/:driverId/reactivate')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  reactivateDriver(
+    @Param('driverId', new OpaqueIdPipe('driverId')) driverId: string,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.reactivateDriver(driverId, auth);
   }
 }

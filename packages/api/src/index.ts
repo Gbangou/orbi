@@ -1833,6 +1833,7 @@ export type DriverOnboardingQueueResponse = {
     driverName: string;
     email: string;
     phoneNumber: string | null;
+    driverStatus: 'ONLINE' | 'OFFLINE' | 'SUSPENDED';
     verificationStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
     reviewStatus:
       | 'SUBMITTED'
@@ -3454,6 +3455,27 @@ export async function updateAdminDriverOnboardingReview(
       method: 'PATCH',
       body: payload,
     },
+  );
+}
+
+export async function suspendAdminDriver(
+  client: OrbiApiClient,
+  driverId: string,
+  reason: string,
+) {
+  return client.request<{ driverId: string; status: 'SUSPENDED' }>(
+    `/admin/drivers/${driverId}/suspend`,
+    { method: 'POST', body: { reason } },
+  );
+}
+
+export async function reactivateAdminDriver(
+  client: OrbiApiClient,
+  driverId: string,
+) {
+  return client.request<{ driverId: string; status: 'OFFLINE' }>(
+    `/admin/drivers/${driverId}/reactivate`,
+    { method: 'POST' },
   );
 }
 

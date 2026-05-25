@@ -4267,6 +4267,7 @@ export class AdminService {
           phoneNumber: minimizeIdentity
             ? maskPhoneNumber(profile.user.phoneNumber)
             : profile.user.phoneNumber,
+          driverStatus: profile.status,
           verificationStatus: profile.verificationStatus,
           reviewStatus:
             latestReview?.status ?? DriverOnboardingReviewStatus.SUBMITTED,
@@ -6286,6 +6287,92 @@ export class AdminService {
       headers.map(csvCell).join(','),
       ...rows.map((row) => row.map(csvCell).join(',')),
     ].join('\n');
+  }
+
+  async suspendDriver(
+    driverId: string,
+    payload: { reason: string },
+    auth: RequestAuthContext,
+  ) {
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: { id: driverId },
+      select: { id: true, userId: true, status: true },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Driver profile not found.');
+    }
+
+    if (profile.status === DriverStatus.SUSPENDED) {
+      throw new BadRequestException('Driver is already suspended.');
+    }
+
+    await this.prisma.driverProfile.update({
+      where: { id: driverId },
+      data: { status: DriverStatus.SUSPENDED },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_SUSPENDED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: driverId,
+        metadata: { reason: payload.reason } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    void this.notificationsService.enqueue({
+      userId: profile.userId,
+      title: 'Compte suspendu',
+      body: "Votre compte chauffeur a ete temporairement suspendu. Contactez le support pour plus d'informations.",
+      channel: NotificationChannel.PUSH,
+      dedupeKey: `driver-suspended:${driverId}:${Date.now()}`,
+      data: { type: 'driver_account_suspended' },
+    });
+
+    return { driverId, status: 'SUSPENDED' };
+  }
+
+  async reactivateDriver(driverId: string, auth: RequestAuthContext) {
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: { id: driverId },
+      select: { id: true, userId: true, status: true },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Driver profile not found.');
+    }
+
+    if (profile.status !== DriverStatus.SUSPENDED) {
+      throw new BadRequestException('Driver is not suspended.');
+    }
+
+    await this.prisma.driverProfile.update({
+      where: { id: driverId },
+      data: { status: DriverStatus.OFFLINE },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_REACTIVATED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: driverId,
+        metadata: {} satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    void this.notificationsService.enqueue({
+      userId: profile.userId,
+      title: 'Compte reactivé',
+      body: 'Votre compte chauffeur est de nouveau actif. Bon retour sur Orbi !',
+      channel: NotificationChannel.PUSH,
+      dedupeKey: `driver-reactivated:${driverId}:${Date.now()}`,
+      data: { type: 'driver_account_reactivated' },
+    });
+
+    return { driverId, status: 'OFFLINE' };
   }
 
   private resolveDocumentExtension(value: string) {

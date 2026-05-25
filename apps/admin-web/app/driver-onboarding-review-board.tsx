@@ -241,6 +241,30 @@ async function verifyDriverDocumentObjectWithProvider(
   );
 }
 
+async function suspendDriver(driverId: string, reason: string) {
+  return fetchAdminJson<{ driverId: string; status: string }>(
+    `/api/admin/drivers/${driverId}/suspend`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...createAdminMutationHeaders(),
+      },
+      body: JSON.stringify({ reason }),
+    },
+  );
+}
+
+async function reactivateDriver(driverId: string) {
+  return fetchAdminJson<{ driverId: string; status: string }>(
+    `/api/admin/drivers/${driverId}/reactivate`,
+    {
+      method: 'POST',
+      headers: createAdminMutationHeaders(),
+    },
+  );
+}
+
 export function DriverOnboardingReviewBoard({
   initialQueue,
 }: DriverOnboardingReviewBoardProps) {
@@ -258,6 +282,7 @@ export function DriverOnboardingReviewBoard({
   const [guidanceFilter, setGuidanceFilter] =
     useState<DriverOnboardingGuidanceFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [suspendReasons, setSuspendReasons] = useState<Record<string, string>>({});
   const previousDriversRef =
     useRef<DriverOnboardingReviewBoardProps['initialQueue'] | null>(null);
 
@@ -443,6 +468,38 @@ export function DriverOnboardingReviewBoard({
       await refreshQueue('Decision onboarding appliquee avec succes.');
     } catch {
       setStatus("La decision onboarding n'a pas pu etre appliquee.");
+    } finally {
+      setBusyDriverId(null);
+    }
+  }
+
+  async function handleSuspendDriver(driverId: string) {
+    const reason = suspendReasons[driverId]?.trim();
+    if (!reason || reason.length < 10) {
+      setStatus('Saisir une raison de suspension (10 caracteres minimum).');
+      return;
+    }
+    setBusyDriverId(driverId);
+    setStatus('Suspension du compte chauffeur...');
+    try {
+      await suspendDriver(driverId, reason);
+      setSuspendReasons((prev) => ({ ...prev, [driverId]: '' }));
+      await refreshQueue('Chauffeur suspendu avec succes.');
+    } catch {
+      setStatus('La suspension a echoue.');
+    } finally {
+      setBusyDriverId(null);
+    }
+  }
+
+  async function handleReactivateDriver(driverId: string) {
+    setBusyDriverId(driverId);
+    setStatus('Reactivation du compte chauffeur...');
+    try {
+      await reactivateDriver(driverId);
+      await refreshQueue('Chauffeur reactivé avec succes.');
+    } catch {
+      setStatus('La reactivation a echoue.');
     } finally {
       setBusyDriverId(null);
     }
@@ -942,6 +999,65 @@ export function DriverOnboardingReviewBoard({
                       : action.label}
                 </button>
               ))}
+            </div>
+
+            {/* ── Driver suspension control ── */}
+            <div className="driver-suspension-zone">
+              <span
+                className={`driver-status-badge ${
+                  driver.driverStatus === 'SUSPENDED'
+                    ? 'driver-status-suspended'
+                    : driver.driverStatus === 'ONLINE'
+                      ? 'driver-status-online'
+                      : 'driver-status-offline'
+                }`}
+              >
+                {driver.driverStatus === 'SUSPENDED'
+                  ? 'Suspendu'
+                  : driver.driverStatus === 'ONLINE'
+                    ? 'En ligne'
+                    : 'Hors ligne'}
+              </span>
+
+              {driver.driverStatus === 'SUSPENDED' ? (
+                <button
+                  className="ticket-button ticket-button-success"
+                  disabled={busyDriverId === driver.id}
+                  onClick={() => void handleReactivateDriver(driver.id)}
+                  type="button"
+                >
+                  {busyDriverId === driver.id ? 'Traitement...' : 'Reactivér'}
+                </button>
+              ) : (
+                <div className="driver-suspend-row">
+                  <input
+                    className="export-filter-input"
+                    disabled={busyDriverId === driver.id}
+                    maxLength={500}
+                    onChange={(e) =>
+                      setSuspendReasons((prev) => ({
+                        ...prev,
+                        [driver.id]: e.target.value,
+                      }))
+                    }
+                    placeholder="Raison de suspension (obligatoire)"
+                    type="text"
+                    value={suspendReasons[driver.id] ?? ''}
+                  />
+                  <button
+                    className="ticket-button ticket-button-danger"
+                    disabled={
+                      busyDriverId === driver.id ||
+                      !suspendReasons[driver.id]?.trim() ||
+                      (suspendReasons[driver.id]?.trim()?.length ?? 0) < 10
+                    }
+                    onClick={() => void handleSuspendDriver(driver.id)}
+                    type="button"
+                  >
+                    {busyDriverId === driver.id ? 'Traitement...' : 'Suspendre'}
+                  </button>
+                </div>
+              )}
             </div>
           </article>
         ))}

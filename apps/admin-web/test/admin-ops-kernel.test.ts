@@ -63,6 +63,7 @@ function createDriver(
     driverName: 'Issa Driver',
     email: 'issa@example.com',
     phoneNumber: '+22670000000',
+    driverStatus: 'OFFLINE',
     verificationStatus: 'PENDING',
     reviewStatus: 'SUBMITTED',
     latestReviewAt: null,
