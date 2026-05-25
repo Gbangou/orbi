@@ -5,12 +5,10 @@ import {
   evaluateDriverFatigue,
 } from './driver-fatigue.policy';
 
-function makeTrip(
-  startedAt: Date,
-  completedAt: Date | null,
-  id = crypto.randomUUID(),
-) {
-  return { id, startedAt, completedAt };
+let _tripSeq = 0;
+
+function makeTrip(startedAt: Date, completedAt: Date | null, id?: string) {
+  return { id: id ?? `trip-id-${++_tripSeq}`, startedAt, completedAt };
 }
 
 const now = new Date('2026-05-25T10:00:00.000Z');
