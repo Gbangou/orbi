@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
 const skipFlags = new Set(process.argv.slice(2));
@@ -34,6 +35,100 @@ function runGate(name, command, args) {
   process.stdout.write(`[ok] ${name} passed in ${durationSeconds.toFixed(1)}s\n`);
 }
 
+function runSecretHygieneGate() {
+  writeSection('Secret hygiene');
+  const trackedFiles = collectWorkspaceFiles('.');
+  const forbiddenPathPatterns = [
+    /\.(pem|p12|pfx|key)$/iu,
+  ];
+  const forbiddenContentPatterns = [
+    /-----BEGIN (RSA |EC |OPENSSH |)PRIVATE KEY-----/u,
+    /(?:sk|pk)_(?:live|test)_[A-Za-z0-9]{16,}/u,
+    /FLWSECK-[A-Za-z0-9_-]{16,}/u,
+    /CINETPAY[_-]?(?:API|SECRET)[_-]?KEY\s*[:=]\s*['"]?[A-Za-z0-9_-]{16,}/iu,
+  ];
+  const forbiddenPaths = trackedFiles.filter((file) =>
+    forbiddenPathPatterns.some((pattern) => pattern.test(file)),
+  );
+  const forbiddenContent = [];
+
+  for (const file of trackedFiles) {
+    if (/(^|\/)\.env(\.|$)/u.test(file)) {
+      continue;
+    }
+
+    if (
+      file.endsWith('.png') ||
+      file.endsWith('.jpg') ||
+      file.endsWith('.jpeg') ||
+      file.endsWith('.pdf')
+    ) {
+      continue;
+    }
+
+    let source = '';
+
+    try {
+      source = readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+
+    if (
+      forbiddenContentPatterns.some((pattern) => pattern.test(source))
+    ) {
+      forbiddenContent.push(file);
+    }
+  }
+
+  if (forbiddenPaths.length || forbiddenContent.length) {
+    const details = [
+      ...forbiddenPaths.map((file) => `tracked secret-like path: ${file}`),
+      ...forbiddenContent.map((file) => `secret-like content: ${file}`),
+    ].join('\n');
+
+    throw new Error(`Secret hygiene gate failed:\n${details}`);
+  }
+
+  process.stdout.write(
+    '[ok] No private-key/certificate/provider-secret patterns found.\n',
+  );
+}
+
+function collectWorkspaceFiles(directory) {
+  const ignoredDirectories = new Set([
+    '.git',
+    '.next',
+    '.turbo',
+    '.expo',
+    'coverage',
+    'dist',
+    'logs',
+    'node_modules',
+  ]);
+  const files = [];
+
+  for (const entry of readdirSync(directory)) {
+    if (ignoredDirectories.has(entry)) {
+      continue;
+    }
+
+    const path = directory === '.' ? entry : `${directory}/${entry}`;
+    const stat = statSync(path);
+
+    if (stat.isDirectory()) {
+      files.push(...collectWorkspaceFiles(path));
+      continue;
+    }
+
+    if (stat.isFile()) {
+      files.push(path);
+    }
+  }
+
+  return files;
+}
+
 function resolveInvocation(command, args) {
   if (process.platform === 'win32' && command === 'pnpm') {
     return {
@@ -54,6 +149,7 @@ function quoteWindowsArg(value) {
 }
 
 process.stdout.write('Orbi production readiness gate\n');
+process.stdout.write(`SkipSecretHygiene:    ${isSkipped('--skip-secret-hygiene')}\n`);
 process.stdout.write(`SkipAudit:            ${isSkipped('--skip-audit')}\n`);
 process.stdout.write(`SkipPrisma:           ${isSkipped('--skip-prisma')}\n`);
 process.stdout.write(`SkipBackendReadiness: ${isSkipped('--skip-backend-readiness')}\n`);
@@ -64,6 +160,10 @@ process.stdout.write(`SkipTypecheck:        ${isSkipped('--skip-typecheck')}\n`)
 
 try {
   runGate('Whitespace diff check', 'git', ['diff', '--check']);
+
+  if (!isSkipped('--skip-secret-hygiene')) {
+    runSecretHygieneGate();
+  }
 
   if (!isSkipped('--skip-audit')) {
     runGate('SCA dependency audit', 'pnpm', ['audit', '--audit-level', 'moderate']);
