@@ -46,6 +46,15 @@ describe('AdminController', () => {
       getDriverDocumentViewLink: jest.fn(),
       updateDriverDocumentObjectVerification: jest.fn(),
       verifyDriverDocumentObjectFromProvider: jest.fn(),
+      tripsAudit: jest.fn(),
+      jobQueue: jest.fn(),
+      requeueJob: jest.fn(),
+      healthIncidents: jest.fn(),
+      suspendDriver: jest.fn(),
+      reactivateDriver: jest.fn(),
+      listPromoCodes: jest.fn(),
+      createPromoCode: jest.fn(),
+      deactivatePromoCode: jest.fn(),
     };
     const realtimeService = {
       stream: jest.fn(),
@@ -634,5 +643,169 @@ describe('AdminController', () => {
 
     expect(guards).toContain(SessionAuthGuard);
     expect(guards).toContain(RolesGuard);
+  });
+
+  it('delegates trips audit reads to the admin service', async () => {
+    const { adminService, controller } = createController();
+    const query = { lookbackHours: 48 };
+
+    await controller.tripsAudit(query as never);
+
+    expect(adminService.tripsAudit).toHaveBeenCalledWith(query);
+  });
+
+  it('allows ADMIN, OPS and SUPPORT to read trips audit', () => {
+    const handler = AdminController.prototype['tripsAudit'];
+    const roles: UserRole[] = Reflect.getMetadata(
+      ROLES_KEY,
+      handler,
+    ) as UserRole[];
+
+    expect(roles).toContain(UserRole.ADMIN);
+    expect(roles).toContain(UserRole.OPS);
+    expect(roles).toContain(UserRole.SUPPORT);
+  });
+
+  it('delegates job queue reads to the admin service', async () => {
+    const { adminService, controller } = createController();
+    const query = { page: 1, pageSize: 20 };
+
+    await controller.jobQueue(query as never);
+
+    expect(adminService.jobQueue).toHaveBeenCalledWith(query);
+  });
+
+  it('delegates dead-letter job requeue with auth context', async () => {
+    const { adminService, controller } = createController();
+    const auth = { user: { id: 'ops-1', role: 'OPS' } };
+
+    await controller.requeueJob('job-dead-1', auth as never);
+
+    expect(adminService.requeueJob).toHaveBeenCalledWith('job-dead-1', auth);
+  });
+
+  it('restricts job requeue to ADMIN and OPS — SUPPORT is excluded', () => {
+    const handler = AdminController.prototype['requeueJob'];
+    const roles: UserRole[] = Reflect.getMetadata(
+      ROLES_KEY,
+      handler,
+    ) as UserRole[];
+
+    expect(roles).toContain(UserRole.ADMIN);
+    expect(roles).toContain(UserRole.OPS);
+    expect(roles).not.toContain(UserRole.SUPPORT);
+  });
+
+  it('delegates driver suspension with payload and auth context', async () => {
+    const { adminService, controller } = createController();
+    const payload = { reason: 'Comportement inapproprie signale.' };
+    const auth = { user: { id: 'ops-1', role: 'OPS' } };
+
+    await controller.suspendDriver('driver-1', payload as never, auth as never);
+
+    expect(adminService.suspendDriver).toHaveBeenCalledWith(
+      'driver-1',
+      payload,
+      auth,
+    );
+  });
+
+  it('allows ADMIN and OPS to suspend drivers — SUPPORT is excluded', () => {
+    const handler = AdminController.prototype['suspendDriver'];
+    const roles: UserRole[] = Reflect.getMetadata(
+      ROLES_KEY,
+      handler,
+    ) as UserRole[];
+
+    expect(roles).toContain(UserRole.ADMIN);
+    expect(roles).toContain(UserRole.OPS);
+    expect(roles).not.toContain(UserRole.SUPPORT);
+  });
+
+  it('delegates driver reactivation with auth context', async () => {
+    const { adminService, controller } = createController();
+    const auth = { user: { id: 'admin-1', role: 'ADMIN' } };
+
+    await controller.reactivateDriver('driver-1', auth as never);
+
+    expect(adminService.reactivateDriver).toHaveBeenCalledWith('driver-1', auth);
+  });
+
+  it('restricts driver reactivation to ADMIN only — OPS and SUPPORT are excluded', () => {
+    const handler = AdminController.prototype['reactivateDriver'];
+    const roles: UserRole[] = Reflect.getMetadata(
+      ROLES_KEY,
+      handler,
+    ) as UserRole[];
+
+    expect(roles).toContain(UserRole.ADMIN);
+    expect(roles).not.toContain(UserRole.OPS);
+    expect(roles).not.toContain(UserRole.SUPPORT);
+  });
+
+  it('delegates promo code list reads to the admin service', async () => {
+    const { adminService, controller } = createController();
+
+    await controller.listPromoCodes();
+
+    expect(adminService.listPromoCodes).toHaveBeenCalled();
+  });
+
+  it('restricts promo code listing to ADMIN and OPS — SUPPORT is excluded', () => {
+    const handler = AdminController.prototype['listPromoCodes'];
+    const roles: UserRole[] = Reflect.getMetadata(
+      ROLES_KEY,
+      handler,
+    ) as UserRole[];
+
+    expect(roles).toContain(UserRole.ADMIN);
+    expect(roles).toContain(UserRole.OPS);
+    expect(roles).not.toContain(UserRole.SUPPORT);
+  });
+
+  it('delegates promo code creation with payload and auth context', async () => {
+    const { adminService, controller } = createController();
+    const payload = { code: 'PILOTE10', discountBps: 1000, maxUses: 100 };
+    const auth = { user: { id: 'admin-1', role: 'ADMIN' } };
+
+    await controller.createPromoCode(payload as never, auth as never);
+
+    expect(adminService.createPromoCode).toHaveBeenCalledWith(payload, auth);
+  });
+
+  it('restricts promo code creation to ADMIN only — OPS and SUPPORT are excluded', () => {
+    const handler = AdminController.prototype['createPromoCode'];
+    const roles: UserRole[] = Reflect.getMetadata(
+      ROLES_KEY,
+      handler,
+    ) as UserRole[];
+
+    expect(roles).toContain(UserRole.ADMIN);
+    expect(roles).not.toContain(UserRole.OPS);
+    expect(roles).not.toContain(UserRole.SUPPORT);
+  });
+
+  it('delegates promo code deactivation with auth context', async () => {
+    const { adminService, controller } = createController();
+    const auth = { user: { id: 'admin-1', role: 'ADMIN' } };
+
+    await controller.deactivatePromoCode('promo-1', auth as never);
+
+    expect(adminService.deactivatePromoCode).toHaveBeenCalledWith(
+      'promo-1',
+      auth,
+    );
+  });
+
+  it('restricts promo code deactivation to ADMIN only — OPS and SUPPORT are excluded', () => {
+    const handler = AdminController.prototype['deactivatePromoCode'];
+    const roles: UserRole[] = Reflect.getMetadata(
+      ROLES_KEY,
+      handler,
+    ) as UserRole[];
+
+    expect(roles).toContain(UserRole.ADMIN);
+    expect(roles).not.toContain(UserRole.OPS);
+    expect(roles).not.toContain(UserRole.SUPPORT);
   });
 });
