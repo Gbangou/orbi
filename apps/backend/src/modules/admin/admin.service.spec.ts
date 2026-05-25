@@ -363,6 +363,7 @@ describe('AdminService', () => {
         driversService as never,
         paymentsService as never,
         jobQueueService as never,
+        { enqueue: jest.fn() } as never,
       ),
     };
   }

@@ -4,6 +4,7 @@ import { JobQueueModule } from '../../common/job-queue/job-queue.module';
 import { HealthModule } from '../health/health.module';
 import { DriversModule } from '../drivers/drivers.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
@@ -14,6 +15,7 @@ import { AdminService } from './admin.service';
     HealthModule,
     DriversModule,
     PaymentsModule,
+    NotificationsModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

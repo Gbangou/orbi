@@ -35,6 +35,8 @@ import { HealthService } from '../health/health.service';
 import { DriversService } from '../drivers/drivers.service';
 import { PaymentsService } from '../payments/payments.service';
 import { ACTIVE_TRIP_STATUSES } from '../trips/trips.constants';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationChannel } from '@prisma/client';
 import { DriverPayoutApprovalDto } from './dto/driver-payout-approval.dto';
 import { DriverWalletRecoveryAdjustmentDto } from './dto/driver-wallet-recovery-adjustment.dto';
 import { DriverPayoutSettlementQueryDto } from './dto/driver-payout-settlement-query.dto';
@@ -1937,6 +1939,7 @@ export class AdminService {
     private readonly driversService: DriversService,
     private readonly paymentsService: PaymentsService,
     private readonly jobQueueService: JobQueueService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async previewOverview() {
@@ -5499,6 +5502,33 @@ export class AdminService {
         priority: updated.priority,
       },
     });
+
+    const shouldNotifyUser =
+      trimmedNote !== undefined || payload.status === 'RESOLVED' || payload.status === 'CLOSED';
+
+    if (shouldNotifyUser) {
+      const notifTitle =
+        updated.status === 'RESOLVED' || updated.status === 'CLOSED'
+          ? 'Ticket support résolu'
+          : 'Réponse du support';
+      const notifBody =
+        trimmedNote
+          ? `L'équipe support a répondu à votre demande "${updated.subject.slice(0, 40)}".`
+          : `Votre ticket "${updated.subject.slice(0, 40)}" a été mis à jour.`;
+
+      void this.notificationsService.enqueue({
+        userId: existing.userId,
+        title: notifTitle,
+        body: notifBody,
+        channel: NotificationChannel.PUSH,
+        dedupeKey: `support-ticket-update:${updated.id}:${updated.updatedAt.getTime()}`,
+        data: {
+          type: 'support_ticket_updated',
+          ticketId: updated.id,
+          status: updated.status,
+        },
+      });
+    }
 
     return {
       ticket: {

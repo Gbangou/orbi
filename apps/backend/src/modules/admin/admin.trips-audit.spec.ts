@@ -57,6 +57,7 @@ function createService(trips = [createTrip()]) {
     {} as never,
     {} as never,
     {} as never,
+    { enqueue: jest.fn() } as never,
   );
 
   return { prisma, service };

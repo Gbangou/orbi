@@ -50,6 +50,7 @@ function createService() {
     {} as never,
     {} as never,
     {} as never,
+    { enqueue: jest.fn() } as never,
   );
 
   const auth = { user: { id: 'admin-1', role: 'ADMIN', fullName: 'Admin Test' } };
