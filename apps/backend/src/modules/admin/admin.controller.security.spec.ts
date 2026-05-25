@@ -76,6 +76,8 @@ async function buildApp(role: string | null): Promise<INestApplication<App>> {
     launchReadiness: jest.fn().mockResolvedValue({}),
     acknowledgeLaunchReadinessAction: jest.fn().mockResolvedValue({}),
     supportTickets: jest.fn().mockResolvedValue({ tickets: [] }),
+    listRiders: jest.fn().mockResolvedValue({ riders: [] }),
+    setRiderStatus: jest.fn().mockResolvedValue({}),
     driverOnboardingQueue: jest.fn().mockResolvedValue({ drivers: [] }),
     driverWallets: jest.fn().mockResolvedValue({ wallets: [] }),
     prepareDriverWalletPayout: jest.fn().mockResolvedValue({}),
@@ -146,6 +148,7 @@ const readEndpoints = [
   ['GET', '/api/v1/admin/live-ops'],
   ['GET', '/api/v1/admin/launch-readiness'],
   ['GET', '/api/v1/admin/support-tickets'],
+  ['GET', '/api/v1/admin/riders'],
   ['GET', '/api/v1/admin/driver-onboarding-queue'],
   ['GET', '/api/v1/admin/driver-wallets'],
   ['GET', '/api/v1/admin/payment-webhook-events'],
@@ -158,6 +161,7 @@ const adminOpsWriteEndpoints = [
   ['POST', '/api/v1/admin/launch-readiness/actions/check-abc/acknowledge'],
   ['POST', '/api/v1/admin/payment-webhook-events/evt-abc/replay'],
   ['POST', '/api/v1/admin/payment-attempts/pa-abc/refund'],
+  ['PATCH', '/api/v1/admin/riders/rider-user-1/status'],
   ['PATCH', '/api/v1/admin/dispatch-settings'],
 ] as const;
 
