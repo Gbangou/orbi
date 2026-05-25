@@ -1510,6 +1510,44 @@ describe('AdminService', () => {
     });
   });
 
+  it('normalizes empty rider status reasons before audit logging', async () => {
+    const { prisma, service } = createService();
+
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'rider-user-1',
+      role: 'RIDER',
+      isActive: false,
+      fullName: 'Awa Rider',
+    });
+    prisma.user.update.mockResolvedValue({
+      id: 'rider-user-1',
+      isActive: true,
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    await service.setRiderStatus(
+      'rider-user-1',
+      {
+        isActive: true,
+        reason: '   ',
+      },
+      authContext({ id: 'admin-rider-1' }),
+    );
+
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'admin-rider-1',
+        action: 'RIDER_ACTIVATED',
+        entityType: 'USER',
+        entityId: 'rider-user-1',
+        metadata: {
+          reason: null,
+          previousIsActive: false,
+        },
+      },
+    });
+  });
+
   it('rejects rider status updates for non-rider accounts', async () => {
     const { prisma, service } = createService();
 

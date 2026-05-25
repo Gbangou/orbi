@@ -6579,6 +6579,8 @@ export class AdminService {
       data: { isActive: payload.isActive },
     });
 
+    const reason = payload.reason?.trim() || null;
+
     await this.prisma.auditLog.create({
       data: {
         userId: auth.user.id,
@@ -6586,7 +6588,7 @@ export class AdminService {
         entityType: 'USER',
         entityId: userId,
         metadata: {
-          reason: payload.reason ?? null,
+          reason,
           previousIsActive: user.isActive,
         } satisfies Prisma.InputJsonObject,
       },
