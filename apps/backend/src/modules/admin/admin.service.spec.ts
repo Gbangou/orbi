@@ -84,7 +84,12 @@ describe('AdminService', () => {
 
   function createService() {
     const prisma = {
-      user: { count: jest.fn() },
+      user: {
+        count: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
       riderProfile: { count: jest.fn() },
       driverProfile: {
         count: jest.fn().mockResolvedValue(0),
@@ -1392,6 +1397,142 @@ describe('AdminService', () => {
       total: 1,
       pageCount: 1,
     });
+  });
+
+  it('lists rider accounts with bounded pagination and search filters', async () => {
+    const { prisma, service } = createService();
+
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: 'rider-user-1',
+        fullName: 'Awa Ouedraogo',
+        email: 'awa@orbi.test',
+        phoneNumber: '+22670000000',
+        isActive: true,
+        createdAt: new Date('2026-05-01T08:00:00.000Z'),
+        riderProfile: {
+          id: 'rider-profile-1',
+          _count: {
+            trips: 4,
+            rideRequests: 9,
+          },
+        },
+      },
+    ]);
+    prisma.user.count.mockResolvedValue(1);
+
+    const result = await service.listRiders({
+      page: 0,
+      pageSize: 500,
+      search: ' awa ',
+      activeOnly: true,
+    });
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          role: 'RIDER',
+          isActive: true,
+          OR: expect.arrayContaining([
+            { fullName: { contains: 'awa', mode: 'insensitive' } },
+            { email: { contains: 'awa', mode: 'insensitive' } },
+            { phoneNumber: { contains: 'awa' } },
+          ]),
+        }),
+        skip: 0,
+        take: 100,
+      }),
+    );
+    expect(result).toEqual({
+      riders: [
+        {
+          id: 'rider-user-1',
+          fullName: 'Awa Ouedraogo',
+          email: 'awa@orbi.test',
+          phoneNumber: '+22670000000',
+          isActive: true,
+          createdAt: '2026-05-01T08:00:00.000Z',
+          riderId: 'rider-profile-1',
+          completedTripsCount: 4,
+          rideRequestsCount: 9,
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 100,
+    });
+  });
+
+  it('updates rider status and writes an audit log', async () => {
+    const { prisma, service } = createService();
+    const auth = authContext({ id: 'ops-rider-1' });
+
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'rider-user-1',
+      role: 'RIDER',
+      isActive: true,
+      fullName: 'Awa Rider',
+    });
+    prisma.user.update.mockResolvedValue({
+      id: 'rider-user-1',
+      isActive: false,
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.setRiderStatus(
+      'rider-user-1',
+      {
+        isActive: false,
+        reason: 'Signal support confirme.',
+      },
+      auth,
+    );
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'rider-user-1' },
+      data: { isActive: false },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'ops-rider-1',
+        action: 'RIDER_SUSPENDED',
+        entityType: 'USER',
+        entityId: 'rider-user-1',
+        metadata: {
+          reason: 'Signal support confirme.',
+          previousIsActive: true,
+        },
+      },
+    });
+    expect(result).toEqual({
+      riderId: 'rider-user-1',
+      isActive: false,
+    });
+  });
+
+  it('rejects rider status updates for non-rider accounts', async () => {
+    const { prisma, service } = createService();
+
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'driver-user-1',
+      role: 'DRIVER',
+      isActive: true,
+      fullName: 'Issa Driver',
+    });
+
+    await expect(
+      service.setRiderStatus(
+        'driver-user-1',
+        {
+          isActive: false,
+          reason: 'Mauvaise cible.',
+        },
+        authContext(),
+      ),
+    ).rejects.toThrow('Rider not found.');
+
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
   });
 
   it('returns the current dispatch learning settings snapshot', async () => {

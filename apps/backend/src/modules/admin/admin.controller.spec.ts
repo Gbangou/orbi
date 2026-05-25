@@ -16,6 +16,8 @@ describe('AdminController', () => {
       launchReadiness: jest.fn(),
       acknowledgeLaunchReadinessAction: jest.fn(),
       supportTickets: jest.fn(),
+      listRiders: jest.fn(),
+      setRiderStatus: jest.fn(),
       driverOnboardingQueue: jest.fn(),
       driverOnboardingExportHistory: jest.fn(),
       driverOnboardingExportCsv: jest.fn(),
@@ -151,6 +153,38 @@ describe('AdminController', () => {
     await controller.driverWallets(query as never);
 
     expect(adminService.driverWallets).toHaveBeenCalledWith(query);
+  });
+
+  it('delegates rider account reads to the admin service', async () => {
+    const { adminService, controller } = createController();
+    const query = {
+      page: 1,
+      pageSize: 30,
+      search: 'awa',
+    };
+
+    await controller.riders(query as never);
+
+    expect(adminService.listRiders).toHaveBeenCalledWith(query);
+  });
+
+  it('delegates rider status changes with the current auth context', async () => {
+    const { adminService, controller } = createController();
+    const payload = {
+      isActive: false,
+      reason: 'Signal support confirme.',
+    };
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.setRiderStatus('rider-user-1', payload, auth as never);
+
+    expect(adminService.setRiderStatus).toHaveBeenCalledWith(
+      'rider-user-1',
+      payload,
+      auth,
+    );
   });
 
   it('delegates driver payout preparation with notes and auth', async () => {
