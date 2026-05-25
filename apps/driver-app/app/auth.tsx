@@ -92,6 +92,8 @@ export default function DriverAuthScreen() {
   }
 
   async function handleSubmit() {
+    const normalizedEmail = email.trim().toLowerCase();
+
     setIsSubmitting(true);
     setStatus(
       mode === 'sign-in'
@@ -102,13 +104,13 @@ export default function DriverAuthScreen() {
     try {
       if (mode === 'sign-in') {
         await signInDriverAccount({
-          email: email.trim(),
+          email: normalizedEmail,
           password,
         });
       } else {
         await signUpDriverAccount({
           fullName: fullName.trim(),
-          email: email.trim(),
+          email: normalizedEmail,
           password,
         });
       }

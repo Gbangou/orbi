@@ -441,6 +441,21 @@ describe('driver smoke flows', () => {
     expect(router.replace).toHaveBeenCalledWith('/accueil');
   });
 
+  it('normalizes driver sign-in email before submitting', async () => {
+    mockedSignInDriverAccount.mockResolvedValue(buildDriverSession() as never);
+
+    const renderer = await renderScreen(<DriverAuthScreen />);
+    await changeInputByPlaceholder(renderer, 'driver@orbi.app', ' Driver@Orbi.App ');
+    await changeInputByPlaceholder(renderer, 'Mot de passe', 'Orbi123!');
+    await pressByText(renderer, 'Se connecter');
+
+    expect(mockedSignInDriverAccount).toHaveBeenCalledWith({
+      email: 'driver@orbi.app',
+      password: 'Orbi123!',
+    });
+    expect(router.replace).toHaveBeenCalledWith('/accueil');
+  });
+
   it('loads the driver home cockpit', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverOffers.mockResolvedValue(driverOffers.slice(0, 2) as never);
@@ -729,6 +744,7 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<ProfilScreen />);
     await flushMicrotasks();
 
+    await changeInputByPlaceholder(renderer, '+22670000000', '+22676000000');
     await changeInputByPlaceholder(renderer, 'BF-12345', 'BF-99887');
     await changeInputByPlaceholder(renderer, 'ex: carte-identite.pdf', 'carte-identite.pdf');
     await changeInputByPlaceholder(renderer, 'ex: permis.pdf', 'permis.pdf');
