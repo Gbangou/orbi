@@ -1,14 +1,12 @@
-'use client';
+"use client";
 
-import { useMemo, useRef, useState } from 'react';
-import {
-  type AdminDriversResponse,
-} from '@orbi/api';
+import { useMemo, useRef, useState } from "react";
+import { type AdminDriversResponse } from "@orbi/api";
 import {
   createAdminMutationHeaders,
   fetchAdminJson,
-} from './admin-client-fetch';
-import { formatAdminDateTime } from './admin-ops-kernel';
+} from "./admin-client-fetch";
+import { formatAdminDateTime } from "./admin-ops-kernel";
 
 type DriversBoardProps = {
   initialDrivers: AdminDriversResponse;
@@ -16,16 +14,16 @@ type DriversBoardProps = {
 
 async function fetchDrivers(search: string, status: string) {
   const params = new URLSearchParams({
-    page: '1',
-    pageSize: '30',
+    page: "1",
+    pageSize: "30",
   });
 
   if (search.trim()) {
-    params.set('search', search.trim());
+    params.set("search", search.trim());
   }
 
-  if (status && status !== 'ALL') {
-    params.set('status', status);
+  if (status && status !== "ALL") {
+    params.set("status", status);
   }
 
   return fetchAdminJson<AdminDriversResponse>(`/api/admin/drivers?${params}`);
@@ -35,9 +33,9 @@ async function suspendDriver(driverId: string, reason: string) {
   return fetchAdminJson<{ driverId: string; status: string }>(
     `/api/admin/drivers/${driverId}/suspend`,
     {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...createAdminMutationHeaders(),
       },
       body: JSON.stringify({ reason }),
@@ -49,60 +47,65 @@ async function reactivateDriver(driverId: string) {
   return fetchAdminJson<{ driverId: string; status: string }>(
     `/api/admin/drivers/${driverId}/reactivate`,
     {
-      method: 'POST',
+      method: "POST",
       headers: createAdminMutationHeaders(),
     },
   );
 }
 
 const DRIVER_STATUS_LABELS: Record<string, string> = {
-  ACTIVE: 'Actif',
-  PENDING: 'En attente',
-  SUSPENDED: 'Suspendu',
-  REJECTED: 'Rejete',
+  ACTIVE: "Actif",
+  PENDING: "En attente",
+  SUSPENDED: "Suspendu",
+  REJECTED: "Rejete",
 };
 
 const DRIVER_STATUS_CSS: Record<string, string> = {
-  ACTIVE: 'phase-status-completed',
-  PENDING: 'phase-status-next',
-  SUSPENDED: 'phase-status-next',
-  REJECTED: 'phase-status-blocked',
+  ACTIVE: "phase-status-completed",
+  PENDING: "phase-status-next",
+  SUSPENDED: "phase-status-next",
+  REJECTED: "phase-status-blocked",
 };
 
 const STATUS_OPTIONS = [
-  { value: 'ALL', label: 'Tous les statuts' },
-  { value: 'ACTIVE', label: 'Actifs' },
-  { value: 'PENDING', label: 'En attente' },
-  { value: 'SUSPENDED', label: 'Suspendus' },
-  { value: 'REJECTED', label: 'Rejetes' },
+  { value: "ALL", label: "Tous les statuts" },
+  { value: "ACTIVE", label: "Actifs" },
+  { value: "PENDING", label: "En attente" },
+  { value: "SUSPENDED", label: "Suspendus" },
+  { value: "REJECTED", label: "Rejetes" },
 ];
 
 export function DriversBoard({ initialDrivers }: DriversBoardProps) {
   const [drivers, setDrivers] = useState(initialDrivers.drivers);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [status, setStatus] = useState('Chauffeurs synchronises.');
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [status, setStatus] = useState("Chauffeurs synchronises.");
   const [busyDriverId, setBusyDriverId] = useState<string | null>(null);
-  const [suspendReason, setSuspendReason] = useState('');
-  const [confirmingDriverId, setConfirmingDriverId] = useState<string | null>(null);
+  const [suspendReason, setSuspendReason] = useState("");
+  const [confirmingDriverId, setConfirmingDriverId] = useState<string | null>(
+    null,
+  );
   const inFlightRef = useRef(new Set<string>());
 
   const summary = useMemo(() => {
-    const active = drivers.filter((d) => d.status === 'ACTIVE').length;
-    const pending = drivers.filter((d) => d.status === 'PENDING').length;
-    const suspended = drivers.filter((d) => d.status === 'SUSPENDED').length;
+    const active = drivers.filter((d) => d.status === "ACTIVE").length;
+    const pending = drivers.filter((d) => d.status === "PENDING").length;
+    const suspended = drivers.filter((d) => d.status === "SUSPENDED").length;
     const trips = drivers.reduce((t, d) => t + d.completedTripsCount, 0);
 
     return { active, pending, suspended, trips };
   }, [drivers]);
 
-  async function refreshDrivers(nextSearch = search, nextStatus = statusFilter) {
-    setStatus('Actualisation chauffeurs...');
+  async function refreshDrivers(
+    nextSearch = search,
+    nextStatus = statusFilter,
+  ) {
+    setStatus("Actualisation chauffeurs...");
 
     try {
       const response = await fetchDrivers(nextSearch, nextStatus);
       setDrivers(response.drivers);
-      setStatus('Chauffeurs actualises.');
+      setStatus("Chauffeurs actualises.");
     } catch {
       setStatus("Impossible d'actualiser les chauffeurs.");
     }
@@ -123,13 +126,15 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
     const reason = suspendReason.trim();
 
     if (reason.length < 10) {
-      setStatus('La raison de suspension doit contenir au moins 10 caracteres.');
+      setStatus(
+        "La raison de suspension doit contenir au moins 10 caracteres.",
+      );
       return;
     }
 
     inFlightRef.current.add(driverId);
     setBusyDriverId(driverId);
-    setStatus('Suspension chauffeur...');
+    setStatus("Suspension chauffeur...");
 
     try {
       const response = await suspendDriver(driverId, reason);
@@ -138,9 +143,9 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
           d.id === response.driverId ? { ...d, status: response.status } : d,
         ),
       );
-      setStatus('Chauffeur suspendu.');
+      setStatus("Chauffeur suspendu.");
       setConfirmingDriverId(null);
-      setSuspendReason('');
+      setSuspendReason("");
     } catch {
       setStatus("Le statut chauffeur n'a pas pu etre mis a jour.");
     } finally {
@@ -154,7 +159,7 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
 
     inFlightRef.current.add(driverId);
     setBusyDriverId(driverId);
-    setStatus('Reactivation chauffeur...');
+    setStatus("Reactivation chauffeur...");
 
     try {
       const response = await reactivateDriver(driverId);
@@ -163,7 +168,7 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
           d.id === response.driverId ? { ...d, status: response.status } : d,
         ),
       );
-      setStatus('Chauffeur reactive.');
+      setStatus("Chauffeur reactive.");
     } catch {
       setStatus("Le statut chauffeur n'a pas pu etre mis a jour.");
     } finally {
@@ -182,7 +187,8 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
         <div className="queue-meta">
           <p className="lede">
             Gestion des comptes chauffeurs avec suspension/reactivation auditee.
-            Utilisez les filtres pour cibler les chauffeurs en attente ou suspendus.
+            Utilisez les filtres pour cibler les chauffeurs en attente ou
+            suspendus.
           </p>
           <div className="queue-actions">
             <input
@@ -245,13 +251,15 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
                 <h3>{driver.fullName}</h3>
                 <p>{driver.email}</p>
                 <p>
-                  {driver.phoneNumber ?? 'Telephone non renseigne'} - cree le{' '}
+                  {driver.phoneNumber ?? "Telephone non renseigne"} - cree le{" "}
                   {formatAdminDateTime(driver.createdAt)}
                 </p>
                 {driver.vehicle ? (
                   <p className="ops-row-sub">
-                    {driver.vehicle.vehicleType === 'MOTORCYCLE' ? 'Moto' : 'Voiture'}{' '}
-                    · {driver.vehicle.make} {driver.vehicle.model} ·{' '}
+                    {driver.vehicle.vehicleType === "MOTORCYCLE"
+                      ? "Moto"
+                      : "Voiture"}{" "}
+                    · {driver.vehicle.make} {driver.vehicle.model} ·{" "}
                     {driver.vehicle.plateNumber}
                   </p>
                 ) : (
@@ -261,7 +269,7 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
               <div className="ops-row-metrics">
                 <span
                   className={`phase-status ${
-                    DRIVER_STATUS_CSS[driver.status] ?? 'phase-status-next'
+                    DRIVER_STATUS_CSS[driver.status] ?? "phase-status-next"
                   }`}
                 >
                   {DRIVER_STATUS_LABELS[driver.status] ?? driver.status}
@@ -269,7 +277,7 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
                 <strong>{driver.completedTripsCount} trajets</strong>
               </div>
               <div className="ops-row-actions">
-                {driver.status === 'ACTIVE' && (
+                {driver.status === "ACTIVE" && (
                   <>
                     {confirmingDriverId === driver.id ? (
                       <div className="suspend-confirm">
@@ -282,17 +290,22 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
                         />
                         <button
                           className="danger-button"
-                          disabled={busyDriverId === driver.id || suspendReason.trim().length < 10}
+                          disabled={
+                            busyDriverId === driver.id ||
+                            suspendReason.trim().length < 10
+                          }
                           onClick={() => void handleSuspend(driver.id)}
                           type="button"
                         >
-                          {busyDriverId === driver.id ? 'Mise a jour...' : 'Confirmer suspension'}
+                          {busyDriverId === driver.id
+                            ? "Mise a jour..."
+                            : "Confirmer suspension"}
                         </button>
                         <button
                           className="ghost-button"
                           onClick={() => {
                             setConfirmingDriverId(null);
-                            setSuspendReason('');
+                            setSuspendReason("");
                           }}
                           type="button"
                         >
@@ -311,14 +324,16 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
                     )}
                   </>
                 )}
-                {driver.status === 'SUSPENDED' && (
+                {driver.status === "SUSPENDED" && (
                   <button
                     className="ghost-button"
                     disabled={busyDriverId === driver.id}
                     onClick={() => void handleReactivate(driver.id)}
                     type="button"
                   >
-                    {busyDriverId === driver.id ? 'Mise a jour...' : 'Reactiver'}
+                    {busyDriverId === driver.id
+                      ? "Mise a jour..."
+                      : "Reactiver"}
                   </button>
                 )}
               </div>

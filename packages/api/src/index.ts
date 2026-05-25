@@ -15,7 +15,7 @@ import type {
   ServiceTier,
   VehicleCategory,
   VoiceSuggestion,
-} from '@orbi/domain';
+} from "@orbi/domain";
 export type {
   AdminMetric,
   ApiDemandLevel,
@@ -48,7 +48,7 @@ export type {
   UserRole,
   VehicleCategory,
   VoiceSuggestion,
-} from '@orbi/domain';
+} from "@orbi/domain";
 export {
   activeRideRequestLifecycleStatuses,
   activeTripLifecycleStatuses,
@@ -85,109 +85,109 @@ export {
   tripLifecycleStatuses,
   userRoles,
   vehicleCategories,
-} from '@orbi/domain';
+} from "@orbi/domain";
 
 export const apiConfig = {
-  versionPrefix: 'v1',
+  versionPrefix: "v1",
   defaultPort: 3000,
-  apiPrefix: '/api',
-  swaggerPath: '/docs',
+  apiPrefix: "/api",
+  swaggerPath: "/docs",
 } as const;
 
 export const apiRoutes = {
-  health: '/health',
+  health: "/health",
   auth: {
-    signUp: '/auth/sign-up',
-    signIn: '/auth/sign-in',
-    me: '/auth/me',
-    sessions: '/auth/sessions',
-    signOut: '/auth/sign-out',
-    supportTickets: '/auth/support-tickets',
-    dataExport: '/auth/data-export',
-    deleteAccount: '/auth/account',
+    signUp: "/auth/sign-up",
+    signIn: "/auth/sign-in",
+    me: "/auth/me",
+    sessions: "/auth/sessions",
+    signOut: "/auth/sign-out",
+    supportTickets: "/auth/support-tickets",
+    dataExport: "/auth/data-export",
+    deleteAccount: "/auth/account",
   },
   mobile: {
-    errorReports: '/mobile/error-reports',
+    errorReports: "/mobile/error-reports",
   },
   admin: {
-    preview: '/admin/preview',
-    overview: '/admin/overview',
-    liveOps: '/admin/live-ops',
-    tripsAudit: '/admin/trips/audit',
-    launchReadiness: '/admin/launch-readiness',
-    jobQueue: '/admin/job-queue',
-    stream: '/admin/stream',
-    healthIncidents: '/admin/health-incidents',
-    supportTickets: '/admin/support-tickets',
-    riders: '/admin/riders',
-    drivers: '/admin/drivers',
-    driverWallets: '/admin/driver-wallets',
-    driverPayouts: '/admin/driver-payouts',
-    driverPayoutSettlementCsv: '/admin/driver-payouts/settlement.csv',
-    driverPayoutSettlementPdf: '/admin/driver-payouts/settlement.pdf',
-    featureFlags: '/admin/feature-flags',
-    dispatchSettings: '/admin/dispatch-settings',
-    pricingCalibration: '/admin/pricing-calibration',
-    paymentWebhookEvents: '/admin/payment-webhook-events',
-    paymentAttempts: '/admin/payment-attempts',
-    driverOnboarding: '/admin/driver-onboarding',
-    driverOnboardingQueue: '/admin/driver-onboarding-queue',
-    driverOnboardingExportHistory: '/admin/driver-onboarding/export-history',
-    driverOnboardingExportCsv: '/admin/driver-onboarding/export.csv',
-    tripsExportCsv: '/admin/trips/export.csv',
+    preview: "/admin/preview",
+    overview: "/admin/overview",
+    liveOps: "/admin/live-ops",
+    tripsAudit: "/admin/trips/audit",
+    launchReadiness: "/admin/launch-readiness",
+    jobQueue: "/admin/job-queue",
+    stream: "/admin/stream",
+    healthIncidents: "/admin/health-incidents",
+    supportTickets: "/admin/support-tickets",
+    riders: "/admin/riders",
+    drivers: "/admin/drivers",
+    driverWallets: "/admin/driver-wallets",
+    driverPayouts: "/admin/driver-payouts",
+    driverPayoutSettlementCsv: "/admin/driver-payouts/settlement.csv",
+    driverPayoutSettlementPdf: "/admin/driver-payouts/settlement.pdf",
+    featureFlags: "/admin/feature-flags",
+    dispatchSettings: "/admin/dispatch-settings",
+    pricingCalibration: "/admin/pricing-calibration",
+    paymentWebhookEvents: "/admin/payment-webhook-events",
+    paymentAttempts: "/admin/payment-attempts",
+    driverOnboarding: "/admin/driver-onboarding",
+    driverOnboardingQueue: "/admin/driver-onboarding-queue",
+    driverOnboardingExportHistory: "/admin/driver-onboarding/export-history",
+    driverOnboardingExportCsv: "/admin/driver-onboarding/export.csv",
+    tripsExportCsv: "/admin/trips/export.csv",
   },
   riders: {
-    me: '/riders/me',
-    overview: '/riders/overview',
-    savedPlaces: '/riders/saved-places',
-    trustedContact: '/riders/trusted-contact',
+    me: "/riders/me",
+    overview: "/riders/overview",
+    savedPlaces: "/riders/saved-places",
+    trustedContact: "/riders/trusted-contact",
   },
   drivers: {
-    root: '/drivers',
-    nearby: '/drivers/nearby',
-    previewOffers: '/drivers/preview-offers',
-    me: '/drivers/me',
-    earnings: '/drivers/earnings',
-    overview: '/drivers/overview',
-    offers: '/drivers/offers',
-    declineOffer: '/drivers/offers',
-    availability: '/drivers/availability',
-    presence: '/drivers/presence',
-    onboarding: '/drivers/onboarding',
-    onboardingDocumentUploadLinks: '/drivers/onboarding/document-upload-links',
+    root: "/drivers",
+    nearby: "/drivers/nearby",
+    previewOffers: "/drivers/preview-offers",
+    me: "/drivers/me",
+    earnings: "/drivers/earnings",
+    overview: "/drivers/overview",
+    offers: "/drivers/offers",
+    declineOffer: "/drivers/offers",
+    availability: "/drivers/availability",
+    presence: "/drivers/presence",
+    onboarding: "/drivers/onboarding",
+    onboardingDocumentUploadLinks: "/drivers/onboarding/document-upload-links",
   },
-  vehicles: '/vehicles',
+  vehicles: "/vehicles",
   rideRequests: {
-    root: '/ride-requests',
-    active: '/ride-requests/active',
+    root: "/ride-requests",
+    active: "/ride-requests/active",
   },
   trips: {
-    root: '/trips',
-    dashboard: '/trips/dashboard',
-    mine: '/trips/mine',
-    stream: '/trips/stream',
-    shared: '/trips/shared',
-    acceptRideRequest: '/trips/accept',
-    verifyPickupCode: '/trips',
-    shareLink: '/trips',
-    reportIncident: '/trips',
-    safetySos: '/trips',
-    rate: '/trips',
+    root: "/trips",
+    dashboard: "/trips/dashboard",
+    mine: "/trips/mine",
+    stream: "/trips/stream",
+    shared: "/trips/shared",
+    acceptRideRequest: "/trips/accept",
+    verifyPickupCode: "/trips",
+    shareLink: "/trips",
+    reportIncident: "/trips",
+    safetySos: "/trips",
+    rate: "/trips",
   },
   pricing: {
-    rules: '/pricing/rules',
-    estimate: '/pricing/estimate',
-    rideOptions: '/pricing/ride-options',
+    rules: "/pricing/rules",
+    estimate: "/pricing/estimate",
+    rideOptions: "/pricing/ride-options",
   },
   payments: {
-    checkoutIntents: '/payments/checkout-intents',
-    webhooks: '/payments/webhooks',
+    checkoutIntents: "/payments/checkout-intents",
+    webhooks: "/payments/webhooks",
   },
   voice: {
-    locationIntent: '/voice/location-intent',
+    locationIntent: "/voice/location-intent",
   },
   users: {
-    pushToken: '/users/me/push-token',
+    pushToken: "/users/me/push-token",
   },
 } as const;
 
@@ -200,7 +200,7 @@ export type ApiClientOptions = {
 };
 
 export type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   headers?: Record<string, string>;
   query?: Record<string, string | number | boolean | undefined>;
@@ -213,7 +213,7 @@ export class OrbiApiError extends Error {
     public readonly payload?: unknown,
   ) {
     super(message);
-    this.name = 'OrbiApiError';
+    this.name = "OrbiApiError";
   }
 }
 
@@ -223,7 +223,7 @@ export function isOrbiApiError(error: unknown): error is OrbiApiError {
 
 export function extractApiErrorMessage(
   error: unknown,
-  fallback = 'Une erreur reseau ou serveur est survenue.',
+  fallback = "Une erreur reseau ou serveur est survenue.",
 ) {
   if (isOrbiApiError(error)) {
     return error.message;
@@ -237,92 +237,92 @@ export function extractApiErrorMessage(
 }
 
 export type OrbiClientErrorSurface =
-  | 'auth'
-  | 'booking'
-  | 'payments'
-  | 'active-trip'
-  | 'safety'
-  | 'profile'
-  | 'driver-availability'
-  | 'network'
-  | 'unknown';
+  | "auth"
+  | "booking"
+  | "payments"
+  | "active-trip"
+  | "safety"
+  | "profile"
+  | "driver-availability"
+  | "network"
+  | "unknown";
 
 export type OrbiClientErrorClassification = {
   code:
-    | 'MOB-AUTH-SESSION'
-    | 'MOB-BOOKING-DISPATCH'
-    | 'MOB-PAYMENT-PROVIDER'
-    | 'MOB-REALTIME-DEGRADED'
-    | 'MOB-SAFETY-INCIDENT'
-    | 'MOB-NETWORK-OFFLINE'
-    | 'MOB-VALIDATION-INPUT'
-    | 'MOB-GENERIC-API';
+    | "MOB-AUTH-SESSION"
+    | "MOB-BOOKING-DISPATCH"
+    | "MOB-PAYMENT-PROVIDER"
+    | "MOB-REALTIME-DEGRADED"
+    | "MOB-SAFETY-INCIDENT"
+    | "MOB-NETWORK-OFFLINE"
+    | "MOB-VALIDATION-INPUT"
+    | "MOB-GENERIC-API";
   surface: OrbiClientErrorSurface;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  owner: 'engineering' | 'ops' | 'support' | 'finance';
+  severity: "low" | "medium" | "high" | "critical";
+  owner: "engineering" | "ops" | "support" | "finance";
   retryPolicy:
-    | 'silent-refresh-once-then-relogin'
-    | 'idempotent-retry-with-visible-status'
-    | 'server-reconcile-before-client-retry'
-    | 'fallback-polling-with-last-known-state'
-    | 'store-local-and-escalate-to-support'
-    | 'retry-when-network-recovers'
-    | 'fix-input-before-retry'
-    | 'manual-refresh';
+    | "silent-refresh-once-then-relogin"
+    | "idempotent-retry-with-visible-status"
+    | "server-reconcile-before-client-retry"
+    | "fallback-polling-with-last-known-state"
+    | "store-local-and-escalate-to-support"
+    | "retry-when-network-recovers"
+    | "fix-input-before-retry"
+    | "manual-refresh";
   userMessage: string;
   shouldClearSessionToken: boolean;
   shouldNavigateToAuth: boolean;
   reportable: boolean;
 };
 
-export type OrbiClientAppRole = 'rider' | 'driver';
+export type OrbiClientAppRole = "rider" | "driver";
 
 const orbiClientErrorCodes = [
-  'MOB-AUTH-SESSION',
-  'MOB-BOOKING-DISPATCH',
-  'MOB-PAYMENT-PROVIDER',
-  'MOB-REALTIME-DEGRADED',
-  'MOB-SAFETY-INCIDENT',
-  'MOB-NETWORK-OFFLINE',
-  'MOB-VALIDATION-INPUT',
-  'MOB-GENERIC-API',
+  "MOB-AUTH-SESSION",
+  "MOB-BOOKING-DISPATCH",
+  "MOB-PAYMENT-PROVIDER",
+  "MOB-REALTIME-DEGRADED",
+  "MOB-SAFETY-INCIDENT",
+  "MOB-NETWORK-OFFLINE",
+  "MOB-VALIDATION-INPUT",
+  "MOB-GENERIC-API",
 ] as const;
 
 const orbiClientErrorSurfaces = [
-  'auth',
-  'booking',
-  'payments',
-  'active-trip',
-  'safety',
-  'profile',
-  'driver-availability',
-  'network',
-  'unknown',
+  "auth",
+  "booking",
+  "payments",
+  "active-trip",
+  "safety",
+  "profile",
+  "driver-availability",
+  "network",
+  "unknown",
 ] as const;
 
 const orbiClientErrorSeverities = [
-  'low',
-  'medium',
-  'high',
-  'critical',
+  "low",
+  "medium",
+  "high",
+  "critical",
 ] as const;
 
 const orbiClientErrorOwners = [
-  'engineering',
-  'ops',
-  'support',
-  'finance',
+  "engineering",
+  "ops",
+  "support",
+  "finance",
 ] as const;
 
 const orbiClientErrorRetryPolicies = [
-  'silent-refresh-once-then-relogin',
-  'idempotent-retry-with-visible-status',
-  'server-reconcile-before-client-retry',
-  'fallback-polling-with-last-known-state',
-  'store-local-and-escalate-to-support',
-  'retry-when-network-recovers',
-  'fix-input-before-retry',
-  'manual-refresh',
+  "silent-refresh-once-then-relogin",
+  "idempotent-retry-with-visible-status",
+  "server-reconcile-before-client-retry",
+  "fallback-polling-with-last-known-state",
+  "store-local-and-escalate-to-support",
+  "retry-when-network-recovers",
+  "fix-input-before-retry",
+  "manual-refresh",
 ] as const;
 
 export type OrbiClientErrorReport = {
@@ -389,13 +389,13 @@ export function classifyOrbiClientError(
 
   if (isOrbiApiError(error) && [401, 403].includes(error.status)) {
     return {
-      code: 'MOB-AUTH-SESSION',
-      surface: 'auth',
-      severity: 'high',
-      owner: 'engineering',
-      retryPolicy: 'silent-refresh-once-then-relogin',
+      code: "MOB-AUTH-SESSION",
+      surface: "auth",
+      severity: "high",
+      owner: "engineering",
+      retryPolicy: "silent-refresh-once-then-relogin",
       userMessage:
-        'Session expiree. Reconnecte-toi pour continuer sans melanger les actions.',
+        "Session expiree. Reconnecte-toi pour continuer sans melanger les actions.",
       shouldClearSessionToken: true,
       shouldNavigateToAuth: true,
       reportable: true,
@@ -404,13 +404,13 @@ export function classifyOrbiClientError(
 
   if (isLikelyOrbiNetworkError(error)) {
     return {
-      code: 'MOB-NETWORK-OFFLINE',
-      surface: 'network',
-      severity: 'medium',
-      owner: 'engineering',
-      retryPolicy: 'retry-when-network-recovers',
+      code: "MOB-NETWORK-OFFLINE",
+      surface: "network",
+      severity: "medium",
+      owner: "engineering",
+      retryPolicy: "retry-when-network-recovers",
       userMessage:
-        'Connexion instable. Orbi garde le dernier etat connu pendant la reprise reseau.',
+        "Connexion instable. Orbi garde le dernier etat connu pendant la reprise reseau.",
       shouldClearSessionToken: false,
       shouldNavigateToAuth: false,
       reportable: false,
@@ -419,14 +419,15 @@ export function classifyOrbiClientError(
 
   if (isOrbiApiError(error) && error.status === 400) {
     return {
-      code: 'MOB-VALIDATION-INPUT',
+      code: "MOB-VALIDATION-INPUT",
       surface,
-      severity: 'low',
-      owner: surface === 'payments' ? 'finance' : 'ops',
-      retryPolicy: 'fix-input-before-retry',
+      severity: "low",
+      owner: surface === "payments" ? "finance" : "ops",
+      retryPolicy: "fix-input-before-retry",
       userMessage: extractApiErrorMessage(
         error,
-        input.fallbackMessage ?? 'Certaines informations doivent etre corrigees.',
+        input.fallbackMessage ??
+          "Certaines informations doivent etre corrigees.",
       ),
       shouldClearSessionToken: false,
       shouldNavigateToAuth: false,
@@ -434,64 +435,64 @@ export function classifyOrbiClientError(
     };
   }
 
-  if (surface === 'booking') {
+  if (surface === "booking") {
     return {
-      code: 'MOB-BOOKING-DISPATCH',
+      code: "MOB-BOOKING-DISPATCH",
       surface,
-      severity: 'critical',
-      owner: 'ops',
-      retryPolicy: 'idempotent-retry-with-visible-status',
+      severity: "critical",
+      owner: "ops",
+      retryPolicy: "idempotent-retry-with-visible-status",
       userMessage:
         input.fallbackMessage ??
-        'La demande est en verification. Aucun double trajet ne sera cree.',
+        "La demande est en verification. Aucun double trajet ne sera cree.",
       shouldClearSessionToken: false,
       shouldNavigateToAuth: false,
       reportable: true,
     };
   }
 
-  if (surface === 'payments') {
+  if (surface === "payments") {
     return {
-      code: 'MOB-PAYMENT-PROVIDER',
+      code: "MOB-PAYMENT-PROVIDER",
       surface,
-      severity: 'critical',
-      owner: 'finance',
-      retryPolicy: 'server-reconcile-before-client-retry',
+      severity: "critical",
+      owner: "finance",
+      retryPolicy: "server-reconcile-before-client-retry",
       userMessage:
         input.fallbackMessage ??
-        'Paiement en verification. Le support voit deja la transaction.',
+        "Paiement en verification. Le support voit deja la transaction.",
       shouldClearSessionToken: false,
       shouldNavigateToAuth: false,
       reportable: true,
     };
   }
 
-  if (surface === 'safety' || normalizedMessage.includes('sos')) {
+  if (surface === "safety" || normalizedMessage.includes("sos")) {
     return {
-      code: 'MOB-SAFETY-INCIDENT',
-      surface: 'safety',
-      severity: 'critical',
-      owner: 'support',
-      retryPolicy: 'store-local-and-escalate-to-support',
+      code: "MOB-SAFETY-INCIDENT",
+      surface: "safety",
+      severity: "critical",
+      owner: "support",
+      retryPolicy: "store-local-and-escalate-to-support",
       userMessage:
         input.fallbackMessage ??
-        'Alerte securite en reprise. Garde le telephone disponible et reessaie si besoin.',
+        "Alerte securite en reprise. Garde le telephone disponible et reessaie si besoin.",
       shouldClearSessionToken: false,
       shouldNavigateToAuth: false,
       reportable: true,
     };
   }
 
-  if (surface === 'active-trip' || normalizedMessage.includes('realtime')) {
+  if (surface === "active-trip" || normalizedMessage.includes("realtime")) {
     return {
-      code: 'MOB-REALTIME-DEGRADED',
-      surface: 'active-trip',
-      severity: 'medium',
-      owner: 'engineering',
-      retryPolicy: 'fallback-polling-with-last-known-state',
+      code: "MOB-REALTIME-DEGRADED",
+      surface: "active-trip",
+      severity: "medium",
+      owner: "engineering",
+      retryPolicy: "fallback-polling-with-last-known-state",
       userMessage:
         input.fallbackMessage ??
-        'Connexion live instable. Le trajet reste suivi par Orbi.',
+        "Connexion live instable. Le trajet reste suivi par Orbi.",
       shouldClearSessionToken: false,
       shouldNavigateToAuth: false,
       reportable: true,
@@ -499,14 +500,14 @@ export function classifyOrbiClientError(
   }
 
   return {
-    code: 'MOB-GENERIC-API',
+    code: "MOB-GENERIC-API",
     surface,
-    severity: 'medium',
-    owner: 'engineering',
-    retryPolicy: 'manual-refresh',
+    severity: "medium",
+    owner: "engineering",
+    retryPolicy: "manual-refresh",
     userMessage: extractApiErrorMessage(
       error,
-      input.fallbackMessage ?? 'Une erreur reseau ou serveur est survenue.',
+      input.fallbackMessage ?? "Une erreur reseau ou serveur est survenue.",
     ),
     shouldClearSessionToken: false,
     shouldNavigateToAuth: false,
@@ -567,7 +568,7 @@ export function createOrbiClientErrorReportFromClassification(
   });
 
   return {
-    id: `moberr_${occurredAt.replace(/[^0-9]/g, '').slice(0, 14)}_${fingerprint}`,
+    id: `moberr_${occurredAt.replace(/[^0-9]/g, "").slice(0, 14)}_${fingerprint}`,
     occurredAt,
     appRole: input.appRole,
     appVersion: input.appVersion,
@@ -593,11 +594,11 @@ function sanitizeOrbiErrorReportContext(context?: Record<string, unknown>) {
       continue;
     }
 
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       sanitized[cleanKey] = sanitizeOrbiErrorReportValue(value, 160);
-    } else if (typeof value === 'number' && Number.isFinite(value)) {
+    } else if (typeof value === "number" && Number.isFinite(value)) {
       sanitized[cleanKey] = value;
-    } else if (typeof value === 'boolean' || value === null) {
+    } else if (typeof value === "boolean" || value === null) {
       sanitized[cleanKey] = value;
     }
   }
@@ -607,13 +608,13 @@ function sanitizeOrbiErrorReportContext(context?: Record<string, unknown>) {
 
 function sanitizeOrbiErrorReportValue(value: string, maxLength: number) {
   return value
-    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
-    .replace(/\+?\d[\d\s().-]{7,}\d/g, '[phone]')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email]")
+    .replace(/\+?\d[\d\s().-]{7,}\d/g, "[phone]")
     .replace(
       /\b(sessiontoken|session|token|authorization|password|secret)\s*[=:]\s*(?:bearer\s+)?["']?[^"'&\s,;)]+["']?/gi,
-      '$1=[redacted]',
+      "$1=[redacted]",
     )
-    .replace(/bearer\s+["']?[a-z0-9._~+/=-]+["']?/gi, 'Bearer [token]')
+    .replace(/bearer\s+["']?[a-z0-9._~+/=-]+["']?/gi, "Bearer [token]")
     .slice(0, maxLength);
 }
 
@@ -625,7 +626,7 @@ function normalizeOrbiClientErrorReport(
     return null;
   }
 
-  const appRole = parseEnumValue(value.appRole, ['rider', 'driver'] as const);
+  const appRole = parseEnumValue(value.appRole, ["rider", "driver"] as const);
   const classification = normalizeOrbiClientErrorClassification(
     value.classification,
   );
@@ -682,9 +683,9 @@ function normalizeOrbiClientErrorClassification(
   }
 
   if (
-    typeof value.shouldClearSessionToken !== 'boolean' ||
-    typeof value.shouldNavigateToAuth !== 'boolean' ||
-    typeof value.reportable !== 'boolean'
+    typeof value.shouldClearSessionToken !== "boolean" ||
+    typeof value.shouldNavigateToAuth !== "boolean" ||
+    typeof value.reportable !== "boolean"
   ) {
     return null;
   }
@@ -703,7 +704,7 @@ function normalizeOrbiClientErrorClassification(
 }
 
 function normalizeOrbiErrorReportContext(value: unknown) {
-  const normalized: OrbiClientErrorReport['context'] = {};
+  const normalized: OrbiClientErrorReport["context"] = {};
 
   if (!isRecord(value)) {
     return normalized;
@@ -716,11 +717,11 @@ function normalizeOrbiErrorReportContext(value: unknown) {
       continue;
     }
 
-    if (typeof entry === 'string') {
+    if (typeof entry === "string") {
       normalized[cleanKey] = normalizeErrorReportText(entry, 160);
-    } else if (typeof entry === 'number' && Number.isFinite(entry)) {
+    } else if (typeof entry === "number" && Number.isFinite(entry)) {
       normalized[cleanKey] = entry;
-    } else if (typeof entry === 'boolean' || entry === null) {
+    } else if (typeof entry === "boolean" || entry === null) {
       normalized[cleanKey] = entry;
     }
   }
@@ -729,7 +730,7 @@ function normalizeOrbiErrorReportContext(value: unknown) {
 }
 
 function normalizeIsoDate(value: unknown) {
-  if (typeof value !== 'string' || value.length > 40) {
+  if (typeof value !== "string" || value.length > 40) {
     return null;
   }
 
@@ -752,25 +753,25 @@ function normalizeOptionalErrorReportText(value: unknown, maxLength: number) {
 }
 
 function normalizeErrorReportText(value: unknown, maxLength: number) {
-  if (typeof value !== 'string') {
-    return '';
+  if (typeof value !== "string") {
+    return "";
   }
 
   return sanitizeOrbiErrorReportValue(
-    value.replace(/[\u0000-\u001f\u007f]/g, '').trim(),
+    value.replace(/[\u0000-\u001f\u007f]/g, "").trim(),
     maxLength,
   );
 }
 
 function normalizeErrorReportIdentifier(value: unknown, maxLength: number) {
-  if (typeof value !== 'string') {
-    return '';
+  if (typeof value !== "string") {
+    return "";
   }
 
   return value
-    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/[\u0000-\u001f\u007f]/g, "")
     .trim()
-    .replace(/[^a-z0-9._:-]/gi, '')
+    .replace(/[^a-z0-9._:-]/gi, "")
     .slice(0, maxLength);
 }
 
@@ -778,7 +779,7 @@ function parseEnumValue<const T extends readonly string[]>(
   value: unknown,
   values: T,
 ): T[number] | null {
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     return null;
   }
 
@@ -786,12 +787,12 @@ function parseEnumValue<const T extends readonly string[]>(
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function buildOrbiClientErrorFingerprint(input: {
   appRole: OrbiClientAppRole;
-  code: OrbiClientErrorClassification['code'];
+  code: OrbiClientErrorClassification["code"];
   surface: OrbiClientErrorSurface;
   message: string;
 }) {
@@ -862,8 +863,11 @@ export class OrbiApiClient {
     this.requestTimeoutMs = options.requestTimeoutMs ?? defaultRequestTimeoutMs;
   }
 
-  endpoint(path: string, query?: RequestOptions['query']) {
-    const url = new URL(`${apiConfig.apiPrefix}/${this.version}${path}`, this.options.baseUrl);
+  endpoint(path: string, query?: RequestOptions["query"]) {
+    const url = new URL(
+      `${apiConfig.apiPrefix}/${this.version}${path}`,
+      this.options.baseUrl,
+    );
 
     if (query) {
       for (const [key, value] of Object.entries(query)) {
@@ -887,9 +891,9 @@ export class OrbiApiClient {
 
     try {
       response = await this.fetcher(this.endpoint(path, options.query), {
-        method: options.method ?? 'GET',
+        method: options.method ?? "GET",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...this.headers,
           ...options.headers,
         },
@@ -929,9 +933,9 @@ export class OrbiApiClient {
 
   async requestText(path: string, options: RequestOptions = {}) {
     const response = await this.fetcher(this.endpoint(path, options.query), {
-      method: options.method ?? 'GET',
+      method: options.method ?? "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...this.headers,
         ...options.headers,
       },
@@ -975,7 +979,7 @@ function normalizeOrbiErrorMessage(error: unknown) {
     return error.message.toLowerCase();
   }
 
-  return '';
+  return "";
 }
 
 function isLikelyOrbiNetworkError(error: unknown) {
@@ -986,10 +990,10 @@ function isLikelyOrbiNetworkError(error: unknown) {
   const message = normalizeOrbiErrorMessage(error);
 
   return (
-    message.includes('network request failed') ||
-    message.includes('fetch failed') ||
-    message.includes('load failed') ||
-    message.includes('networkerror')
+    message.includes("network request failed") ||
+    message.includes("fetch failed") ||
+    message.includes("load failed") ||
+    message.includes("networkerror")
   );
 }
 
@@ -997,55 +1001,58 @@ function inferOrbiErrorSurface(error: unknown): OrbiClientErrorSurface {
   const message = normalizeOrbiErrorMessage(error);
 
   if (
-    message.includes('session') ||
-    message.includes('token') ||
-    message.includes('unauthorized')
+    message.includes("session") ||
+    message.includes("token") ||
+    message.includes("unauthorized")
   ) {
-    return 'auth';
+    return "auth";
   }
 
   if (
-    message.includes('payment') ||
-    message.includes('paiement') ||
-    message.includes('webhook') ||
-    message.includes('refund')
+    message.includes("payment") ||
+    message.includes("paiement") ||
+    message.includes("webhook") ||
+    message.includes("refund")
   ) {
-    return 'payments';
+    return "payments";
   }
 
   if (
-    message.includes('ride request') ||
-    message.includes('reservation') ||
-    message.includes('booking') ||
-    message.includes('dispatch')
+    message.includes("ride request") ||
+    message.includes("reservation") ||
+    message.includes("booking") ||
+    message.includes("dispatch")
   ) {
-    return 'booking';
+    return "booking";
   }
 
   if (
-    message.includes('trip') ||
-    message.includes('trajet') ||
-    message.includes('realtime')
+    message.includes("trip") ||
+    message.includes("trajet") ||
+    message.includes("realtime")
   ) {
-    return 'active-trip';
+    return "active-trip";
   }
 
   if (
-    message.includes('sos') ||
-    message.includes('incident') ||
-    message.includes('safety')
+    message.includes("sos") ||
+    message.includes("incident") ||
+    message.includes("safety")
   ) {
-    return 'safety';
+    return "safety";
   }
 
   if (isLikelyOrbiNetworkError(error)) {
-    return 'network';
+    return "network";
   }
 
-  return 'unknown';
+  return "unknown";
 }
 
-export function createOrbiApiClient(baseUrl: string, init?: Omit<ApiClientOptions, 'baseUrl'>) {
+export function createOrbiApiClient(
+  baseUrl: string,
+  init?: Omit<ApiClientOptions, "baseUrl">,
+) {
   return new OrbiApiClient({
     baseUrl,
     ...init,
@@ -1063,24 +1070,24 @@ export function buildRealtimeStreamUrl(
 
 export const riderRideOptions: RideOption[] = [
   {
-    id: 'moto-standard',
-    category: 'motorcycle',
-    tier: 'moto-standard',
-    title: 'Moto Express',
+    id: "moto-standard",
+    category: "motorcycle",
+    tier: "moto-standard",
+    title: "Moto Express",
     etaMinutes: 3,
     fare: 1200,
-    capacity: '1 place',
-    accent: '#2dd4bf',
-    badge: 'Le plus rapide',
-    paymentMethods: ['mobile-money', 'cash', 'wallet'],
-    safetyNote: 'Code de prise en charge et partage du trajet actifs.',
+    capacity: "1 place",
+    accent: "#2dd4bf",
+    badge: "Le plus rapide",
+    paymentMethods: ["mobile-money", "cash", "wallet"],
+    safetyNote: "Code de prise en charge et partage du trajet actifs.",
     marketplace: {
-      availabilityLabel: 'Tres disponible',
+      availabilityLabel: "Tres disponible",
       nearbyDrivers: 9,
       pickupRadiusKm: 1.8,
-      etaConfidence: 'HIGH',
-      vehicleExamples: ['Yamaha Crypton', 'TVS HLX', 'Bajaj Boxer'],
-      pricePromise: 'Prix upfront verrouille avant confirmation.',
+      etaConfidence: "HIGH",
+      vehicleExamples: ["Yamaha Crypton", "TVS HLX", "Bajaj Boxer"],
+      pricePromise: "Prix upfront verrouille avant confirmation.",
     },
     fareBreakdown: {
       baseFare: 600,
@@ -1089,24 +1096,24 @@ export const riderRideOptions: RideOption[] = [
     },
   },
   {
-    id: 'car-standard',
-    category: 'car',
-    tier: 'car-standard',
-    title: 'Voiture Ville',
+    id: "car-standard",
+    category: "car",
+    tier: "car-standard",
+    title: "Voiture Ville",
     etaMinutes: 6,
     fare: 2400,
-    capacity: '4 places',
-    accent: '#f59e0b',
-    badge: 'Le plus populaire',
-    paymentMethods: ['mobile-money', 'cash', 'wallet'],
-    safetyNote: 'Tarif transparent avant confirmation et suivi partageable.',
+    capacity: "4 places",
+    accent: "#f59e0b",
+    badge: "Le plus populaire",
+    paymentMethods: ["mobile-money", "cash", "wallet"],
+    safetyNote: "Tarif transparent avant confirmation et suivi partageable.",
     marketplace: {
-      availabilityLabel: 'Disponible',
+      availabilityLabel: "Disponible",
       nearbyDrivers: 5,
       pickupRadiusKm: 2.6,
-      etaConfidence: 'MEDIUM',
-      vehicleExamples: ['Toyota Corolla', 'Hyundai Accent', 'Suzuki Dzire'],
-      pricePromise: 'Prix upfront affiche sans frais de pickup caches.',
+      etaConfidence: "MEDIUM",
+      vehicleExamples: ["Toyota Corolla", "Hyundai Accent", "Suzuki Dzire"],
+      pricePromise: "Prix upfront affiche sans frais de pickup caches.",
     },
     fareBreakdown: {
       baseFare: 1200,
@@ -1115,24 +1122,24 @@ export const riderRideOptions: RideOption[] = [
     },
   },
   {
-    id: 'car-confort',
-    category: 'car',
-    tier: 'car-comfort',
-    title: 'Confort',
+    id: "car-confort",
+    category: "car",
+    tier: "car-comfort",
+    title: "Confort",
     etaMinutes: 8,
     fare: 3500,
-    capacity: '4 places',
-    accent: '#38bdf8',
-    badge: 'Premium',
-    paymentMethods: ['mobile-money', 'wallet'],
-    safetyNote: 'Verification chauffeur renforcee et experience plus calme.',
+    capacity: "4 places",
+    accent: "#38bdf8",
+    badge: "Premium",
+    paymentMethods: ["mobile-money", "wallet"],
+    safetyNote: "Verification chauffeur renforcee et experience plus calme.",
     marketplace: {
-      availabilityLabel: 'Selection limitee',
+      availabilityLabel: "Selection limitee",
       nearbyDrivers: 3,
       pickupRadiusKm: 3.4,
-      etaConfidence: 'MEDIUM',
-      vehicleExamples: ['Toyota Yaris', 'Hyundai Elantra', 'Kia Rio'],
-      pricePromise: 'Prix upfront avec confort et verification renforces.',
+      etaConfidence: "MEDIUM",
+      vehicleExamples: ["Toyota Yaris", "Hyundai Elantra", "Kia Rio"],
+      pricePromise: "Prix upfront avec confort et verification renforces.",
     },
     fareBreakdown: {
       baseFare: 1500,
@@ -1148,66 +1155,85 @@ function createPreviewReservationExpiry(windowSeconds: number) {
 
 export const driverOffers: DriverOffer[] = [
   {
-    id: 'offer-001',
-    riderName: 'Awa Ouedraogo',
-    pickup: 'Universite Joseph Ki-Zerbo',
-    destination: 'Ouaga 2000',
-    category: 'motorcycle',
+    id: "offer-001",
+    riderName: "Awa Ouedraogo",
+    pickup: "Universite Joseph Ki-Zerbo",
+    destination: "Ouaga 2000",
+    category: "motorcycle",
     fare: 1600,
     distanceKm: 5.8,
     etaToPickupMinutes: 4,
     driverPayout: 1440,
     pickupCodeRequired: true,
     pickupDistanceKm: 1.2,
-    pickupDistanceSource: 'DRIVER_AND_PICKUP_COORDINATES',
+    pickupDistanceSource: "DRIVER_AND_PICKUP_COORDINATES",
     reservationExpiresAt: createPreviewReservationExpiry(45),
     serviceRadiusKm: 8,
     dispatchScore: 86,
-    matchedTier: 'MOTO_STANDARD',
-    dispatchContextSummary: 'HIGH - HEAVY - dispo 74/100',
+    matchedTier: "MOTO_STANDARD",
+    dispatchContextSummary: "HIGH - HEAVY - dispo 74/100",
     offerConfidenceScore: 91,
-    offerConfidenceLabel: 'PRIORITY',
+    offerConfidenceLabel: "PRIORITY",
     reservationWindowSeconds: 45,
     dispatchLearningSummary:
-      'Memoire dispatch solide: acceptations recentes elevees. Signal recent.',
+      "Memoire dispatch solide: acceptations recentes elevees. Signal recent.",
   },
   {
-    id: 'offer-002',
-    riderName: 'Moussa Traore',
-    pickup: 'Zone du Bois',
-    destination: 'Koulouba',
-    category: 'car',
+    id: "offer-002",
+    riderName: "Moussa Traore",
+    pickup: "Zone du Bois",
+    destination: "Koulouba",
+    category: "car",
     fare: 2900,
     distanceKm: 7.2,
     etaToPickupMinutes: 6,
     driverPayout: 2378,
     pickupCodeRequired: true,
     pickupDistanceKm: 2.8,
-    pickupDistanceSource: 'DRIVER_AND_PICKUP_COORDINATES',
+    pickupDistanceSource: "DRIVER_AND_PICKUP_COORDINATES",
     reservationExpiresAt: createPreviewReservationExpiry(35),
     serviceRadiusKm: 8,
     dispatchScore: 71,
-    matchedTier: 'CAR_STANDARD',
-    dispatchContextSummary: 'BALANCED - MODERATE - dispo 81/100',
+    matchedTier: "CAR_STANDARD",
+    dispatchContextSummary: "BALANCED - MODERATE - dispo 81/100",
     offerConfidenceScore: 68,
-    offerConfidenceLabel: 'HIGH',
+    offerConfidenceLabel: "HIGH",
     reservationWindowSeconds: 35,
     dispatchLearningSummary:
-      'Memoire dispatch correcte: quelques expirations recentes a surveiller. Signal recent.',
+      "Memoire dispatch correcte: quelques expirations recentes a surveiller. Signal recent.",
   },
 ];
 
 export const adminMetrics: AdminMetric[] = [
-  { label: 'Reservations brutes', value: 'XOF 3,2M', trend: '+14% cette semaine' },
-  { label: 'Taux de completion', value: '94,8%', trend: '+2,1 pts' },
-  { label: 'Temps moyen pickup', value: '3 min 12 s', trend: '-28 s' },
-  { label: 'Incidents en direct', value: '3', trend: '2 a revoir' },
+  {
+    label: "Reservations brutes",
+    value: "XOF 3,2M",
+    trend: "+14% cette semaine",
+  },
+  { label: "Taux de completion", value: "94,8%", trend: "+2,1 pts" },
+  { label: "Temps moyen pickup", value: "3 min 12 s", trend: "-28 s" },
+  { label: "Incidents en direct", value: "3", trend: "2 a revoir" },
 ];
 
 export const voiceSuggestions: VoiceSuggestion[] = [
-  { id: 'loc-1', name: 'Ouaga 2000', district: 'Ouagadougou', confidence: 0.98 },
-  { id: 'loc-2', name: 'Universite Joseph Ki-Zerbo', district: 'Ouagadougou', confidence: 0.96 },
-  { id: 'loc-3', name: 'Aeroport de Ouagadougou', district: 'Ouagadougou', confidence: 0.91 },
+  {
+    id: "loc-1",
+    name: "Ouaga 2000",
+    district: "Ouagadougou",
+    confidence: 0.98,
+  },
+  {
+    id: "loc-2",
+    name: "Universite Joseph Ki-Zerbo",
+    district: "Ouagadougou",
+    confidence: 0.96,
+  },
+  {
+    id: "loc-3",
+    name: "Aeroport de Ouagadougou",
+    district: "Ouagadougou",
+    confidence: 0.91,
+  },
 ];
 
 export type SignUpPayload = {
@@ -1226,7 +1252,7 @@ export type SignUpApiPayload = {
   fullName: string;
   email: string;
   password: string;
-  role: 'RIDER' | 'DRIVER';
+  role: "RIDER" | "DRIVER";
 };
 
 export type AuthSessionResponse = {
@@ -1336,7 +1362,7 @@ export type AdminLiveOpsResponse = {
     hasIncident: boolean;
     incidentCount: number;
     routeMonitoring: {
-      state: 'clear' | 'warning' | 'critical' | 'unknown';
+      state: "clear" | "warning" | "critical" | "unknown";
       alertCount: number;
       lastAlertType: string | null;
       lastAlertAt: string | null;
@@ -1353,7 +1379,7 @@ export type AdminLiveOpsResponse = {
       } | null;
     };
     completionGate: {
-      state: 'ready' | 'blocked' | 'not_applicable';
+      state: "ready" | "blocked" | "not_applicable";
       label: string;
       reason: string;
       action: string;
@@ -1431,7 +1457,7 @@ export type AdminTripsAuditResponse = {
     };
   };
   ownerQueue: Array<{
-    owner: 'finance' | 'ops' | 'support' | 'engineering';
+    owner: "finance" | "ops" | "support" | "engineering";
     count: number;
     critical: number;
     moneyAtRisk: number;
@@ -1446,8 +1472,8 @@ export type AdminTripsAuditResponse = {
     currency: string;
     paymentMethod: string;
     paymentStatus: string;
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    owner: 'ops' | 'finance' | 'support' | 'engineering';
+    severity: "low" | "medium" | "high" | "critical";
+    owner: "ops" | "finance" | "support" | "engineering";
     reasons: string[];
     createdAt: string;
   }>;
@@ -1458,7 +1484,7 @@ export type AdminLaunchReadinessResponse = {
   generatedAt: string;
   environment: string;
   decision: {
-    state: 'approved' | 'limited' | 'blocked';
+    state: "approved" | "limited" | "blocked";
     label: string;
     detail: string;
   };
@@ -1471,20 +1497,20 @@ export type AdminLaunchReadinessResponse = {
   checks: Array<{
     id: string;
     label: string;
-    state: 'pass' | 'warn' | 'fail';
+    state: "pass" | "warn" | "fail";
     detail: string;
   }>;
   nextActions?: Array<{
     checkId: string;
-    severity: 'warning' | 'blocking';
-    owner: 'ops' | 'engineering' | 'support' | 'finance';
+    severity: "warning" | "blocking";
+    owner: "ops" | "engineering" | "support" | "finance";
     action: string;
     runbookAnchor: string;
   }>;
   acknowledgements?: Array<{
     checkId: string;
-    owner: 'ops' | 'engineering' | 'support' | 'finance';
-    severity: 'warning' | 'blocking';
+    owner: "ops" | "engineering" | "support" | "finance";
+    severity: "warning" | "blocking";
     acknowledgedAt: string;
     actor: {
       id: string;
@@ -1514,8 +1540,8 @@ export type AdminLaunchReadinessResponse = {
     capabilities: Array<{
       id: string;
       label: string;
-      status: 'active' | 'partial' | 'planned';
-      priority: 'critical' | 'high' | 'medium';
+      status: "active" | "partial" | "planned";
+      priority: "critical" | "high" | "medium";
       orbiSignal: string;
       competitorSignal: string;
       nextStep: string;
@@ -1529,14 +1555,14 @@ export type AdminLaunchReadinessResponse = {
       missingGates: number;
       criticalOpenGates: number;
       coverageRate: number;
-      launchPosture: 'ready' | 'limited';
+      launchPosture: "ready" | "limited";
     };
     gates: Array<{
       id: string;
       label: string;
-      status: 'covered' | 'partial' | 'missing';
-      priority: 'critical' | 'high' | 'medium';
-      owner: 'ops' | 'engineering' | 'support' | 'finance';
+      status: "covered" | "partial" | "missing";
+      priority: "critical" | "high" | "medium";
+      owner: "ops" | "engineering" | "support" | "finance";
       frameworks: string[];
       currentSignal: string;
       nextStep: string;
@@ -1544,30 +1570,30 @@ export type AdminLaunchReadinessResponse = {
   };
   fieldQuality?: {
     score: number;
-    state: 'excellent' | 'watch' | 'blocked';
+    state: "excellent" | "watch" | "blocked";
     blockedSignals: number;
     watchSignals: number;
     signals: Array<{
       id: string;
       label: string;
       score: number;
-      state: 'excellent' | 'watch' | 'blocked';
-      owner: 'ops' | 'engineering' | 'support' | 'finance';
+      state: "excellent" | "watch" | "blocked";
+      owner: "ops" | "engineering" | "support" | "finance";
       competitorReference: string;
       orbiSignal: string;
       nextStep: string;
     }>;
   };
   productionReadiness: NonNullable<
-    HealthCheckResponse['operations']['productionReadiness']
+    HealthCheckResponse["operations"]["productionReadiness"]
   >;
 };
 
 export type AdminLaunchReadinessActionAcknowledgementResponse = {
   acknowledgement: {
     checkId: string;
-    owner: 'ops' | 'engineering' | 'support' | 'finance';
-    severity: 'warning' | 'blocking';
+    owner: "ops" | "engineering" | "support" | "finance";
+    severity: "warning" | "blocking";
     acknowledgedAt: string;
   };
 };
@@ -1577,7 +1603,7 @@ export type SupportTicketQueueResponse = {
     id: string;
     subject: string;
     description: string;
-    status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
+    status: "OPEN" | "IN_REVIEW" | "RESOLVED" | "CLOSED";
     priority: number;
     adminNote: string | null;
     requesterName: string;
@@ -1591,7 +1617,7 @@ export type SupportTicketQueueResponse = {
 export type SupportTicketUpdateResponse = {
   ticket: {
     id: string;
-    status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
+    status: "OPEN" | "IN_REVIEW" | "RESOLVED" | "CLOSED";
     priority: number;
     adminNote: string | null;
     updatedAt: string;
@@ -1669,7 +1695,7 @@ export type AdminDriverWalletsResponse = {
       id: string;
       amount: number;
       currency: string;
-      status: 'PREPARED' | 'PAID' | 'CANCELLED';
+      status: "PREPARED" | "PAID" | "CANCELLED";
       reference: string;
       notes: string | null;
       preparedAt: string;
@@ -1678,7 +1704,7 @@ export type AdminDriverWalletsResponse = {
       id: string;
       amount: number;
       currency: string;
-      status: 'PREPARED' | 'PAID' | 'CANCELLED';
+      status: "PREPARED" | "PAID" | "CANCELLED";
       reference: string;
       notes: string | null;
       preparedAt: string;
@@ -1686,7 +1712,7 @@ export type AdminDriverWalletsResponse = {
     }>;
     recentTransactions: Array<{
       id: string;
-      type: 'CREDIT' | 'DEBIT' | 'ADJUSTMENT' | 'PAYOUT' | 'REFUND';
+      type: "CREDIT" | "DEBIT" | "ADJUSTMENT" | "PAYOUT" | "REFUND";
       amount: number;
       reference: string | null;
       description: string | null;
@@ -1705,13 +1731,18 @@ export type AdminDriverWalletsResponse = {
 };
 
 export type AdminDriverPayoutResponse = {
-  action: 'prepared' | 'existing_prepared_payout' | 'paid' | 'already_paid' | 'already_finalized';
+  action:
+    | "prepared"
+    | "existing_prepared_payout"
+    | "paid"
+    | "already_paid"
+    | "already_finalized";
   payout: {
     id: string;
     walletId: string;
     amount: number;
     currency: string;
-    status: 'PREPARED' | 'PAID' | 'CANCELLED';
+    status: "PREPARED" | "PAID" | "CANCELLED";
     reference: string;
     notes: string | null;
     preparedAt: string;
@@ -1720,7 +1751,7 @@ export type AdminDriverPayoutResponse = {
 };
 
 export type AdminDriverWalletRecoveryAdjustmentResponse = {
-  action: 'recorded' | 'already_recorded';
+  action: "recorded" | "already_recorded";
   wallet: {
     id: string;
     balance: number;
@@ -1729,7 +1760,7 @@ export type AdminDriverWalletRecoveryAdjustmentResponse = {
   };
   transaction: {
     id: string;
-    type: 'ADJUSTMENT';
+    type: "ADJUSTMENT";
     amount: number;
     reference: string | null;
     description: string | null;
@@ -1740,7 +1771,7 @@ export type AdminDriverWalletRecoveryAdjustmentResponse = {
 export type AdminPaymentWebhookEventsResponse = {
   events: Array<{
     id: string;
-    provider: 'FLUTTERWAVE' | 'CINETPAY';
+    provider: "FLUTTERWAVE" | "CINETPAY";
     eventType: string;
     transactionRef: string | null;
     providerReference: string | null;
@@ -1752,13 +1783,13 @@ export type AdminPaymentWebhookEventsResponse = {
     paymentAttemptId: string | null;
     paymentAttempt: {
       status:
-        | 'INITIATED'
-        | 'PENDING'
-        | 'SUCCEEDED'
-        | 'FAILED'
-        | 'CANCELLED'
-        | 'REFUND_PENDING'
-        | 'REFUNDED';
+        | "INITIATED"
+        | "PENDING"
+        | "SUCCEEDED"
+        | "FAILED"
+        | "CANCELLED"
+        | "REFUND_PENDING"
+        | "REFUNDED";
       amount: number;
       currency: string;
       rideRequestId: string;
@@ -1782,7 +1813,7 @@ export type AdminPaymentWebhookEventsResponse = {
 };
 
 export type AdminPaymentWebhookEventDetailResponse = {
-  event: AdminPaymentWebhookEventsResponse['events'][number] & {
+  event: AdminPaymentWebhookEventsResponse["events"][number] & {
     payload: unknown;
     paymentAttempt: {
       status: string;
@@ -1798,10 +1829,10 @@ export type AdminPaymentWebhookEventDetailResponse = {
 export type AdminPaymentWebhookInvestigationResponse = {
   investigation: {
     eventId: string;
-    status: 'STARTED';
+    status: "STARTED";
     supportTicket: {
       id: string;
-      status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
+      status: "OPEN" | "IN_REVIEW" | "RESOLVED" | "CLOSED";
       priority: number;
     } | null;
   };
@@ -1815,7 +1846,7 @@ export type AdminPaymentWebhookReplayResponse = {
       received: true;
       event: string;
       transactionRef: string | null;
-      provider: 'flutterwave' | 'cinetpay';
+      provider: "flutterwave" | "cinetpay";
       providerReference?: string;
       reconciledAttemptCount: number;
       nextAction: string;
@@ -1827,13 +1858,13 @@ export type AdminPaymentAttemptProviderVerificationResponse = {
   verification: {
     verified: true;
     paymentAttemptId: string;
-    provider: 'flutterwave' | 'cinetpay';
+    provider: "flutterwave" | "cinetpay";
     transactionRef: string;
     result: {
       received: true;
       event: string;
       transactionRef: string | null;
-      provider: 'flutterwave' | 'cinetpay';
+      provider: "flutterwave" | "cinetpay";
       providerReference?: string;
       reconciledAttemptCount: number;
       nextAction: string;
@@ -1843,12 +1874,12 @@ export type AdminPaymentAttemptProviderVerificationResponse = {
 
 export type AdminPaymentAttemptRefundResponse = {
   refund: {
-    action: 'refunded' | 'refund_pending' | 'already_refunded';
+    action: "refunded" | "refund_pending" | "already_refunded";
     providerRefundReference: string;
     paymentAttempt: {
       id: string;
-      provider: 'FLUTTERWAVE' | 'CINETPAY';
-      status: 'REFUND_PENDING' | 'REFUNDED';
+      provider: "FLUTTERWAVE" | "CINETPAY";
+      status: "REFUND_PENDING" | "REFUNDED";
       amount: number;
       currency: string;
       transactionRef: string;
@@ -1866,11 +1897,11 @@ export type AdminPaymentAttemptRefundResponse = {
 };
 
 export type AdminJobQueueKind =
-  | 'PAYMENT_WEBHOOK'
-  | 'PAYMENT_REFUND_VERIFICATION'
-  | 'DRIVER_DOCUMENT'
-  | 'NOTIFICATION'
-  | 'DRIVER_RESERVATION_EXPIRY';
+  | "PAYMENT_WEBHOOK"
+  | "PAYMENT_REFUND_VERIFICATION"
+  | "DRIVER_DOCUMENT"
+  | "NOTIFICATION"
+  | "DRIVER_RESERVATION_EXPIRY";
 
 export type DriverOnboardingQueueResponse = {
   drivers: Array<{
@@ -1878,14 +1909,14 @@ export type DriverOnboardingQueueResponse = {
     driverName: string;
     email: string;
     phoneNumber: string | null;
-    driverStatus: 'ONLINE' | 'OFFLINE' | 'SUSPENDED';
-    verificationStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+    driverStatus: "ONLINE" | "OFFLINE" | "SUSPENDED";
+    verificationStatus: "PENDING" | "APPROVED" | "REJECTED";
     reviewStatus:
-      | 'SUBMITTED'
-      | 'UNDER_REVIEW'
-      | 'APPROVED'
-      | 'REJECTED'
-      | 'CHANGES_REQUESTED';
+      | "SUBMITTED"
+      | "UNDER_REVIEW"
+      | "APPROVED"
+      | "REJECTED"
+      | "CHANGES_REQUESTED";
     latestReviewAt: string | null;
     latestReviewActor: string | null;
     latestDecisionReason: string | null;
@@ -1901,8 +1932,8 @@ export type DriverOnboardingQueueResponse = {
       missingRequired: number;
     };
     decisionGuidance: {
-      level: 'approve' | 'review' | 'resubmit';
-      recommendedStatus: 'APPROVED' | 'UNDER_REVIEW' | 'CHANGES_REQUESTED';
+      level: "approve" | "review" | "resubmit";
+      recommendedStatus: "APPROVED" | "UNDER_REVIEW" | "CHANGES_REQUESTED";
       label: string;
       detail: string;
       blockers: string[];
@@ -1910,17 +1941,17 @@ export type DriverOnboardingQueueResponse = {
     reviewHistory: Array<{
       id: string;
       status:
-        | 'SUBMITTED'
-        | 'UNDER_REVIEW'
-        | 'APPROVED'
-        | 'REJECTED'
-        | 'CHANGES_REQUESTED';
+        | "SUBMITTED"
+        | "UNDER_REVIEW"
+        | "APPROVED"
+        | "REJECTED"
+        | "CHANGES_REQUESTED";
       actorName: string;
       decisionReason: string | null;
       createdAt: string;
       decisionGuidance: {
-        level: 'approve' | 'review' | 'resubmit';
-        recommendedStatus: 'APPROVED' | 'UNDER_REVIEW' | 'CHANGES_REQUESTED';
+        level: "approve" | "review" | "resubmit";
+        recommendedStatus: "APPROVED" | "UNDER_REVIEW" | "CHANGES_REQUESTED";
         label: string;
         detail: string;
         blockers: string[];
@@ -1937,25 +1968,25 @@ export type DriverOnboardingQueueResponse = {
     documents: Array<{
       id: string;
       type:
-        | 'IDENTITY_DOCUMENT'
-        | 'DRIVER_LICENSE'
-        | 'VEHICLE_REGISTRATION'
-        | 'INSURANCE_PROOF'
-        | 'SELFIE_VERIFICATION';
-      status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+        | "IDENTITY_DOCUMENT"
+        | "DRIVER_LICENSE"
+        | "VEHICLE_REGISTRATION"
+        | "INSURANCE_PROOF"
+        | "SELFIE_VERIFICATION";
+      status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
       fileName: string;
       uploadedAt: string;
       expiresAt: string | null;
       rejectionReason: string | null;
       integrity: {
-        state: 'complete' | 'partial' | 'missing';
+        state: "complete" | "partial" | "missing";
         score: number;
         sizeBytes: number | null;
         sha256: string | null;
         uploadSource: string | null;
         capturedAt: string | null;
         objectVerification: {
-          state: 'confirmed' | 'pending' | 'failed' | 'missing';
+          state: "confirmed" | "pending" | "failed" | "missing";
           provider: string | null;
           objectId: string | null;
           verifiedAt: string | null;
@@ -1964,21 +1995,21 @@ export type DriverOnboardingQueueResponse = {
           failureReason: string | null;
         };
         safetyScan: {
-          state: 'clear' | 'pending' | 'quarantined';
+          state: "clear" | "pending" | "quarantined";
           engine: string | null;
           scannedAt: string | null;
           findings: string[];
           quarantineReason: string | null;
         };
         guidance: {
-          level: 'clear' | 'review' | 'resubmit';
+          level: "clear" | "review" | "resubmit";
           label: string;
           detail: string;
         };
         checks: Array<{
           id: string;
           label: string;
-          state: 'pass' | 'warn';
+          state: "pass" | "warn";
         }>;
       };
     }>;
@@ -1998,14 +2029,14 @@ export type DriverOnboardingExportHistoryResponse = {
     actor: {
       id: string;
       name: string;
-      role: 'ADMIN' | 'OPS' | 'SUPPORT' | 'RIDER' | 'DRIVER';
+      role: "ADMIN" | "OPS" | "SUPPORT" | "RIDER" | "DRIVER";
     };
-    guidanceFilter: 'all' | 'approve' | 'review' | 'resubmit';
+    guidanceFilter: "all" | "approve" | "review" | "resubmit";
     searchQuery: string | null;
     exportedCount: number;
     scannedCount: number;
     limit: number | null;
-    format: 'csv' | 'unknown';
+    format: "csv" | "unknown";
   }>;
   meta: {
     page: number;
@@ -2019,12 +2050,8 @@ export type DriverOnboardingReviewUpdateResponse = {
   review: {
     id: string;
     driverId: string;
-    verificationStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
-    status:
-      | 'UNDER_REVIEW'
-      | 'APPROVED'
-      | 'REJECTED'
-      | 'CHANGES_REQUESTED';
+    verificationStatus: "PENDING" | "APPROVED" | "REJECTED";
+    status: "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
     decisionReason: string | null;
     createdAt: string;
   };
@@ -2032,7 +2059,7 @@ export type DriverOnboardingReviewUpdateResponse = {
 
 export type AdminFeatureFlagsResponse = {
   flags: Array<{
-    flag: 'payments' | 'pricing' | 'realtime' | 'driverOnboarding' | 'voice';
+    flag: "payments" | "pricing" | "realtime" | "driverOnboarding" | "voice";
     mode: string;
     allowlist: string[];
     effectiveForAnonymous: boolean;
@@ -2057,7 +2084,7 @@ export type AdminDispatchSettingsResponse = {
     halfLifeHours: number;
     declineCooldownMinutes: number;
     historyLimit: number;
-    source: 'DEFAULT' | 'DATABASE_OVERRIDE';
+    source: "DEFAULT" | "DATABASE_OVERRIDE";
     updatedAt: string | null;
     updatedBy: {
       id: string;
@@ -2069,7 +2096,7 @@ export type AdminDispatchSettingsResponse = {
     id: string;
     createdAt: string;
     resetToDefaults: boolean;
-    source: 'DEFAULT' | 'DATABASE_OVERRIDE';
+    source: "DEFAULT" | "DATABASE_OVERRIDE";
     actor: {
       id: string;
       name: string | null;
@@ -2167,7 +2194,7 @@ export type AdminPricingCalibrationResponse = {
   }>;
   recommendations: Array<{
     scope: string;
-    priority: 'LOW' | 'MEDIUM' | 'HIGH';
+    priority: "LOW" | "MEDIUM" | "HIGH";
     action: string;
     rationale: string;
   }>;
@@ -2175,7 +2202,7 @@ export type AdminPricingCalibrationResponse = {
 };
 
 export type HealthCheckResponse = {
-  status: 'ok' | 'degraded';
+  status: "ok" | "degraded";
   service: string;
   timestamp: string;
   uptimeSeconds: number;
@@ -2189,10 +2216,10 @@ export type HealthCheckResponse = {
     };
   };
   dependencies: {
-    database: 'up' | 'down';
-    rateLimit: 'up' | 'degraded';
-    realtime: 'up' | 'degraded';
-    driverReservationExpiry: 'up' | 'degraded' | 'disabled';
+    database: "up" | "down";
+    rateLimit: "up" | "degraded";
+    realtime: "up" | "degraded";
+    driverReservationExpiry: "up" | "degraded" | "disabled";
   };
   lifecycle: {
     state: string;
@@ -2226,7 +2253,7 @@ export type HealthCheckResponse = {
       families: AdminJobQueueKind[];
       counts: Array<{
         kind: AdminJobQueueKind;
-        status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
+        status: "PENDING" | "RUNNING" | "SUCCEEDED" | "DEAD_LETTER";
         count: number;
       }>;
     };
@@ -2234,18 +2261,18 @@ export type HealthCheckResponse = {
   operations: {
     productionReadiness?: {
       environment: string;
-      riskLevel: 'low' | 'medium' | 'high';
+      riskLevel: "low" | "medium" | "high";
       failedChecks: number;
       warningChecks: number;
       checks: Array<{
         id: string;
         label: string;
-        state: 'pass' | 'warn' | 'fail';
+        state: "pass" | "warn" | "fail";
         detail: string;
       }>;
     };
     serviceLevelObjectives?: {
-      posture: 'healthy' | 'watch' | 'breached';
+      posture: "healthy" | "watch" | "breached";
       failingObjectives: number;
       warningObjectives: number;
       objectives: Array<{
@@ -2253,16 +2280,16 @@ export type HealthCheckResponse = {
         label: string;
         target: string;
         window: string;
-        owner: 'engineering' | 'ops' | 'support' | 'finance';
-        state: 'pass' | 'warn' | 'fail';
+        owner: "engineering" | "ops" | "support" | "finance";
+        state: "pass" | "warn" | "fail";
         currentSignal: string;
-        burnRate: 'normal' | 'elevated' | 'critical';
+        burnRate: "normal" | "elevated" | "critical";
       }>;
       mobileErrorTaxonomy: Array<{
         code: string;
         surface: string;
-        severity: 'medium' | 'high' | 'critical';
-        owner: 'engineering' | 'ops' | 'support' | 'finance';
+        severity: "medium" | "high" | "critical";
+        owner: "engineering" | "ops" | "support" | "finance";
         retryPolicy: string;
         userMessage: string;
       }>;
@@ -2283,8 +2310,8 @@ export type HealthCheckResponse = {
     };
     healthHistory: Array<{
       id: string;
-      tone: 'alert' | 'recovered';
-      status: 'ok' | 'degraded';
+      tone: "alert" | "recovered";
+      status: "ok" | "degraded";
       createdAt: string;
       title: string;
       detail: string;
@@ -2308,7 +2335,7 @@ export type AdminJobQueueResponse = {
   jobs: Array<{
     id: string;
     kind: AdminJobQueueKind;
-    status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
+    status: "PENDING" | "RUNNING" | "SUCCEEDED" | "DEAD_LETTER";
     dedupeKey: string | null;
     entityType: string | null;
     entityId: string | null;
@@ -2323,10 +2350,10 @@ export type AdminJobQueueResponse = {
     diagnostics: {
       attemptPressure: number;
       canRequeueSafely: boolean;
-      owner: 'ops' | 'engineering' | 'finance' | 'trust-and-safety';
+      owner: "ops" | "engineering" | "finance" | "trust-and-safety";
       riskSignals: string[];
       recommendedAction: string;
-      severity: 'low' | 'medium' | 'high' | 'critical';
+      severity: "low" | "medium" | "high" | "critical";
     };
     createdAt: string;
     updatedAt: string;
@@ -2337,14 +2364,14 @@ export type AdminJobQueueResponse = {
     total: number;
     pageCount: number;
   };
-  snapshot: NonNullable<HealthCheckResponse['infrastructure']['jobQueue']>;
+  snapshot: NonNullable<HealthCheckResponse["infrastructure"]["jobQueue"]>;
 };
 
 export type AdminJobQueueRequeueResponse = {
   job: {
     id: string;
     kind: AdminJobQueueKind;
-    status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
+    status: "PENDING" | "RUNNING" | "SUCCEEDED" | "DEAD_LETTER";
     attempts: number;
     nextRunAt: string;
   };
@@ -2355,9 +2382,9 @@ export type DriverDocumentUploadLinksResponse = {
     storageKey: string;
     expiresAt: string;
     uploadUrl: string;
-    method: 'PUT';
+    method: "PUT";
     headers: {
-      'content-type': string;
+      "content-type": string;
     };
     constraints: {
       allowedMimeTypes: string[];
@@ -2370,11 +2397,11 @@ export type DriverDocumentUploadLinksResponse = {
 export type DriverDocumentViewLinkResponse = {
   documentId: string;
   type:
-    | 'IDENTITY_DOCUMENT'
-    | 'DRIVER_LICENSE'
-    | 'VEHICLE_REGISTRATION'
-    | 'INSURANCE_PROOF'
-    | 'SELFIE_VERIFICATION';
+    | "IDENTITY_DOCUMENT"
+    | "DRIVER_LICENSE"
+    | "VEHICLE_REGISTRATION"
+    | "INSURANCE_PROOF"
+    | "SELFIE_VERIFICATION";
   expiresAt: string;
   signedUrl: string;
 };
@@ -2384,13 +2411,13 @@ export type DriverDocumentObjectVerificationResponse = {
     id: string;
     driverId: string;
     type:
-      | 'IDENTITY_DOCUMENT'
-      | 'DRIVER_LICENSE'
-      | 'VEHICLE_REGISTRATION'
-      | 'INSURANCE_PROOF'
-      | 'SELFIE_VERIFICATION';
+      | "IDENTITY_DOCUMENT"
+      | "DRIVER_LICENSE"
+      | "VEHICLE_REGISTRATION"
+      | "INSURANCE_PROOF"
+      | "SELFIE_VERIFICATION";
     objectVerification: {
-      state: 'confirmed' | 'failed';
+      state: "confirmed" | "failed";
       provider: string;
       objectId: string | null;
       verifiedAt: string;
@@ -2403,7 +2430,7 @@ export type DriverDocumentObjectVerificationResponse = {
       };
     };
     safetyScan: {
-      state: 'clear' | 'pending' | 'quarantined';
+      state: "clear" | "pending" | "quarantined";
       engine: string | null;
       scannedAt: string | null;
       findings: string[];
@@ -2422,7 +2449,7 @@ export type TripIncidentResponse = {
     status: string;
     voluntaryEvidence: {
       declared: boolean;
-      type: 'AUDIO' | 'PHOTO' | 'VIDEO' | 'TEXT_NOTE' | null;
+      type: "AUDIO" | "PHOTO" | "VIDEO" | "TEXT_NOTE" | null;
       retentionHours: number | null;
       storagePolicy: string | null;
     };
@@ -2434,7 +2461,7 @@ export type TripSafetySosResponse = {
     tripId: string;
     ticketId: string;
     priority: number;
-    incidentType: 'SOS_TRIGGERED';
+    incidentType: "SOS_TRIGGERED";
     reportedByRole: string;
     status: string;
     localEmergencyNumber: string;
@@ -2460,8 +2487,8 @@ export type RiderProfileResponse = {
     emergencyPhone: string | null;
     trustedContact: {
       phoneNumber: string | null;
-      shareMode: 'DISABLED' | 'MANUAL' | 'NIGHT' | 'ALL_TRIPS';
-      status: 'MISSING' | 'READY';
+      shareMode: "DISABLED" | "MANUAL" | "NIGHT" | "ALL_TRIPS";
+      status: "MISSING" | "READY";
       safetyNote: string;
     };
     savedPlaces: Array<{
@@ -2481,15 +2508,15 @@ export type RiderProfileResponse = {
 };
 
 export type SavedPlaceMutationResponse = {
-  savedPlace: RiderProfileResponse['profile']['savedPlaces'][number];
+  savedPlace: RiderProfileResponse["profile"]["savedPlaces"][number];
 };
 
 export type TrustedContactMutationResponse = {
   trustedContact: {
     riderProfileId: string;
     phoneNumber: string | null;
-    shareMode: 'DISABLED' | 'MANUAL' | 'NIGHT' | 'ALL_TRIPS';
-    status: 'MISSING' | 'READY';
+    shareMode: "DISABLED" | "MANUAL" | "NIGHT" | "ALL_TRIPS";
+    status: "MISSING" | "READY";
     safetyNote: string;
   };
 };
@@ -2516,11 +2543,11 @@ export type DriverProfileResponse = {
     onboarding: {
       verificationStatus: string;
       reviewStatus:
-        | 'SUBMITTED'
-        | 'UNDER_REVIEW'
-        | 'APPROVED'
-        | 'REJECTED'
-        | 'CHANGES_REQUESTED';
+        | "SUBMITTED"
+        | "UNDER_REVIEW"
+        | "APPROVED"
+        | "REJECTED"
+        | "CHANGES_REQUESTED";
       completedItems: number;
       totalItems: number;
       readinessPercent: number;
@@ -2538,12 +2565,12 @@ export type DriverProfileResponse = {
       }>;
       documents: Array<{
         type:
-          | 'IDENTITY_DOCUMENT'
-          | 'DRIVER_LICENSE'
-          | 'VEHICLE_REGISTRATION'
-          | 'INSURANCE_PROOF'
-          | 'SELFIE_VERIFICATION';
-        status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+          | "IDENTITY_DOCUMENT"
+          | "DRIVER_LICENSE"
+          | "VEHICLE_REGISTRATION"
+          | "INSURANCE_PROOF"
+          | "SELFIE_VERIFICATION";
+        status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
         fileName: string | null;
         uploadedAt: string | null;
         expiresAt: string | null;
@@ -2553,11 +2580,11 @@ export type DriverProfileResponse = {
       reviewTimeline: Array<{
         id: string;
         status:
-          | 'SUBMITTED'
-          | 'UNDER_REVIEW'
-          | 'APPROVED'
-          | 'REJECTED'
-          | 'CHANGES_REQUESTED';
+          | "SUBMITTED"
+          | "UNDER_REVIEW"
+          | "APPROVED"
+          | "REJECTED"
+          | "CHANGES_REQUESTED";
         actorName: string;
         decisionReason: string | null;
         createdAt: string;
@@ -2569,7 +2596,7 @@ export type DriverProfileResponse = {
       make: string;
       model: string;
       color: string;
-      type: 'MOTORCYCLE' | 'CAR';
+      type: "MOTORCYCLE" | "CAR";
       tier: ApiServiceTier;
       isActive: boolean;
     }>;
@@ -2579,13 +2606,13 @@ export type DriverProfileResponse = {
 export type DriverAvailabilityResponse = {
   availability: {
     driverId: string;
-    status: 'ONLINE' | 'OFFLINE';
+    status: "ONLINE" | "OFFLINE";
     fatigue: DriverFatigueStatus;
   };
 };
 
 export type DriverFatigueStatus = {
-  state: 'clear' | 'warning' | 'blocked';
+  state: "clear" | "warning" | "blocked";
   completedTrips: number;
   drivingMinutes: number;
   windowHours: number;
@@ -2606,7 +2633,7 @@ export type DriverPresenceResponse = {
 };
 
 export type DriverOnboardingResponse = {
-  onboarding: DriverProfileResponse['profile']['onboarding'];
+  onboarding: DriverProfileResponse["profile"]["onboarding"];
 };
 
 export type DriverEarningsResponse = {
@@ -2620,14 +2647,14 @@ export type DriverEarningsResponse = {
   };
   settlement: {
     currency: string;
-    source: 'COMPLETED_TRIPS';
+    source: "COMPLETED_TRIPS";
     payoutRateBps: number;
     payoutRate: number;
     recentTripCount: number;
     recentGrossFare: number;
     recentNetPayout: number;
     recentPlatformFee: number;
-    state: 'RECONCILED' | 'REVIEW_REQUIRED';
+    state: "RECONCILED" | "REVIEW_REQUIRED";
     anomalies: string[];
     calculatedAt: string;
   };
@@ -2695,7 +2722,7 @@ export type TripLifecycleResponse = {
 export type DriverOfferDeclineResponse = {
   offer: {
     rideRequestId: string;
-    status: 'DECLINED';
+    status: "DECLINED";
   };
 };
 
@@ -2727,9 +2754,9 @@ export type TripDetailResponse = {
       };
     };
     routeMonitoring: {
-      state: 'unknown' | 'clear' | 'warning' | 'critical';
+      state: "unknown" | "clear" | "warning" | "critical";
       alertCount: number;
-      lastAlertType: 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS' | null;
+      lastAlertType: "LONG_STOP" | "ROUTE_DEVIATION" | "NO_PROGRESS" | null;
       lastAlertAt: string | null;
       lastPositionAt: string | null;
       latestPosition: {
@@ -2778,7 +2805,7 @@ export type TripShareLinkResponse = {
 export type TripRoutePositionResponse = {
   routeMonitoring: {
     tripId: string;
-    state: 'clear' | 'alert';
+    state: "clear" | "alert";
     checkedAt: string;
     latestPosition: {
       latitude: number;
@@ -2791,8 +2818,8 @@ export type TripRoutePositionResponse = {
       sourceRole: string | null;
     } | null;
     alerts: Array<{
-      alertType: 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS';
-      severity: 'warning' | 'critical';
+      alertType: "LONG_STOP" | "ROUTE_DEVIATION" | "NO_PROGRESS";
+      severity: "warning" | "critical";
       priority: 2 | 3;
       message: string;
       measuredValue: number;
@@ -2827,23 +2854,33 @@ export type CreateRideRequestPayload = {
   destinationAddress: string;
   destinationLatitude?: number;
   destinationLongitude?: number;
-  requestedVehicleType: 'MOTORCYCLE' | 'CAR';
-  requestedServiceTier?: 'MOTO_STANDARD' | 'MOTO_PLUS' | 'CAR_STANDARD' | 'CAR_COMFORT' | 'CAR_XL';
+  requestedVehicleType: "MOTORCYCLE" | "CAR";
+  requestedServiceTier?:
+    | "MOTO_STANDARD"
+    | "MOTO_PLUS"
+    | "CAR_STANDARD"
+    | "CAR_COMFORT"
+    | "CAR_XL";
   estimatedDistanceKm: number;
   estimatedDurationMinutes: number;
-  paymentMethod?: 'MOBILE_MONEY' | 'CASH' | 'WALLET';
-  pickupAreaType?: 'URBAN_CORE' | 'URBAN_EDGE' | 'SEMI_URBAN';
-  city?: 'OUAGADOUGOU' | 'BOBO_DIOULASSO' | 'KOUDOUGOU' | 'BANFORA' | 'OUAHIGOUYA';
+  paymentMethod?: "MOBILE_MONEY" | "CASH" | "WALLET";
+  pickupAreaType?: "URBAN_CORE" | "URBAN_EDGE" | "SEMI_URBAN";
+  city?:
+    | "OUAGADOUGOU"
+    | "BOBO_DIOULASSO"
+    | "KOUDOUGOU"
+    | "BANFORA"
+    | "OUAHIGOUYA";
   districtProfile?:
-    | 'CBD'
-    | 'UNIVERSITY'
-    | 'GOVERNMENT'
-    | 'AIRPORT'
-    | 'RESIDENTIAL_STANDARD'
-    | 'RESIDENTIAL_PERIPHERAL'
-    | 'MARKET_DENSE'
-    | 'INDUSTRIAL'
-    | 'INTERCITY_GATE';
+    | "CBD"
+    | "UNIVERSITY"
+    | "GOVERNMENT"
+    | "AIRPORT"
+    | "RESIDENTIAL_STANDARD"
+    | "RESIDENTIAL_PERIPHERAL"
+    | "MARKET_DENSE"
+    | "INDUSTRIAL"
+    | "INTERCITY_GATE";
   notes?: string;
   promoCode?: string;
 };
@@ -2856,10 +2893,10 @@ export type RideRequestResponse = {
   estimatedFare?: number | string | null;
   estimatedDistanceKm?: number | string | null;
   estimatedDurationMinutes?: number | null;
-  routeMetricsSource?: 'SERVER_COORDINATES' | 'CLIENT_ESTIMATE';
-  requestedVehicleType: 'MOTORCYCLE' | 'CAR';
+  routeMetricsSource?: "SERVER_COORDINATES" | "CLIENT_ESTIMATE";
+  requestedVehicleType: "MOTORCYCLE" | "CAR";
   requestedServiceTier?: string | null;
-  paymentMethod?: 'MOBILE_MONEY' | 'CASH' | 'WALLET' | string | null;
+  paymentMethod?: "MOBILE_MONEY" | "CASH" | "WALLET" | string | null;
   city?: string | null;
   districtProfile?: string | null;
   createdAt?: string;
@@ -2883,7 +2920,7 @@ export type VoiceLocationIntentResponse = {
   transcript: string;
   normalizedTranscript: string;
   interpretation: string;
-  intentType: 'pickup' | 'destination' | 'unknown';
+  intentType: "pickup" | "destination" | "unknown";
   confidence: number;
   needsClarification: boolean;
   suggestions: Array<{
@@ -2899,9 +2936,14 @@ export type VoiceLocationIntentResponse = {
 
 export type CheckoutIntentPayload = {
   rideRequestId: string;
-  channel: 'MOBILE_MONEY' | 'CARD' | 'WALLET';
+  channel: "MOBILE_MONEY" | "CARD" | "WALLET";
   amount?: number;
-  mobileMoneyNetwork?: 'ORANGE_MONEY' | 'MOBICASH' | 'MOOV' | 'WAVE' | 'FREE_MONEY';
+  mobileMoneyNetwork?:
+    | "ORANGE_MONEY"
+    | "MOBICASH"
+    | "MOOV"
+    | "WAVE"
+    | "FREE_MONEY";
   customerPhoneNumber?: string;
   redirectUrl?: string;
 };
@@ -2912,14 +2954,14 @@ export type SignOutResponse = {
 };
 
 export type CheckoutIntentResponse = {
-  provider: 'FLUTTERWAVE' | 'CINETPAY';
+  provider: "FLUTTERWAVE" | "CINETPAY";
   transactionRef: string;
-  checkoutMode: 'REDIRECT_OR_INLINE' | 'REDIRECT_OR_WIDGET';
+  checkoutMode: "REDIRECT_OR_INLINE" | "REDIRECT_OR_WIDGET";
   amount: number;
   currency: string;
-  channel: 'MOBILE_MONEY' | 'CARD' | 'WALLET';
+  channel: "MOBILE_MONEY" | "CARD" | "WALLET";
   supportedMobileMoneyNetworks: Array<
-    'ORANGE_MONEY' | 'MOBICASH' | 'MOOV' | 'WAVE' | 'FREE_MONEY'
+    "ORANGE_MONEY" | "MOBICASH" | "MOOV" | "WAVE" | "FREE_MONEY"
   >;
   providerMetadata: {
     publicKeyPresent?: boolean;
@@ -2930,7 +2972,7 @@ export type CheckoutIntentResponse = {
   trustNotes: {
     providerAbstractionEnabled: boolean;
     webhookVerificationRequired: boolean;
-    settlementModel: 'aggregator';
+    settlementModel: "aggregator";
   };
 };
 
@@ -2944,32 +2986,34 @@ export type PricingEstimateQuery = {
   city?: ApiPricingCity;
   districtProfile?: ApiDistrictProfile;
   demandLevel?: ApiDemandLevel;
-  trafficLevel?: 'FREE_FLOW' | 'MODERATE' | 'HEAVY' | 'GRIDLOCK';
-  weatherCondition?: 'CLEAR' | 'HEAT' | 'WIND' | 'DUST' | 'RAIN' | 'STORM';
-  roadCondition?: 'OPEN' | 'SLOW' | 'CONGESTED' | 'BLOCKED';
+  trafficLevel?: "FREE_FLOW" | "MODERATE" | "HEAVY" | "GRIDLOCK";
+  weatherCondition?: "CLEAR" | "HEAT" | "WIND" | "DUST" | "RAIN" | "STORM";
+  roadCondition?: "OPEN" | "SLOW" | "CONGESTED" | "BLOCKED";
   isPeakHour?: boolean;
   activeDriverCount?: number;
   openRequestCount?: number;
   driverOnboardingDays?: number;
 };
 
-export function toApiVehicleType(category: VehicleCategory): CreateRideRequestPayload['requestedVehicleType'] {
-  return category === 'motorcycle' ? 'MOTORCYCLE' : 'CAR';
+export function toApiVehicleType(
+  category: VehicleCategory,
+): CreateRideRequestPayload["requestedVehicleType"] {
+  return category === "motorcycle" ? "MOTORCYCLE" : "CAR";
 }
 
 export function toApiServiceTier(
   tier: ServiceTier,
-): NonNullable<CreateRideRequestPayload['requestedServiceTier']> {
-  return tier.replace(/-/g, '_').toUpperCase() as NonNullable<
-    CreateRideRequestPayload['requestedServiceTier']
+): NonNullable<CreateRideRequestPayload["requestedServiceTier"]> {
+  return tier.replace(/-/g, "_").toUpperCase() as NonNullable<
+    CreateRideRequestPayload["requestedServiceTier"]
   >;
 }
 
 export function toApiPaymentMethod(
   method: PaymentMethod,
-): NonNullable<CreateRideRequestPayload['paymentMethod']> {
-  return method.replace(/-/g, '_').toUpperCase() as NonNullable<
-    CreateRideRequestPayload['paymentMethod']
+): NonNullable<CreateRideRequestPayload["paymentMethod"]> {
+  return method.replace(/-/g, "_").toUpperCase() as NonNullable<
+    CreateRideRequestPayload["paymentMethod"]
   >;
 }
 
@@ -2978,7 +3022,7 @@ export async function signInWithApi(
   payload: SignInPayload,
 ) {
   return client.request<AuthSessionResponse>(apiRoutes.auth.signIn, {
-    method: 'POST',
+    method: "POST",
     body: payload,
   });
 }
@@ -2988,7 +3032,7 @@ export async function signUpWithApi(
   payload: SignUpApiPayload,
 ) {
   return client.request<AuthSessionResponse>(apiRoutes.auth.signUp, {
-    method: 'POST',
+    method: "POST",
     body: payload,
   });
 }
@@ -3027,7 +3071,7 @@ export async function restoreOrAuthenticateSession(
 
       return {
         session: {
-          message: 'Restored existing session.',
+          message: "Restored existing session.",
           sessionToken: existingToken,
           user: {
             id: me.user.id,
@@ -3062,7 +3106,7 @@ export async function restorePersistedSession(
   const existingToken = await storage.getItem(storageKey);
 
   if (!existingToken) {
-    throw new Error('Aucune session enregistree sur cet appareil.');
+    throw new Error("Aucune session enregistree sur cet appareil.");
   }
 
   try {
@@ -3071,7 +3115,7 @@ export async function restorePersistedSession(
 
     return {
       session: {
-        message: 'Restored existing session.',
+        message: "Restored existing session.",
         sessionToken: existingToken,
         user: {
           id: me.user.id,
@@ -3101,7 +3145,10 @@ export async function persistSessionToken(
   await storage.setItem(storageKey, sessionToken);
 }
 
-export async function clearPersistedSession(storage: SessionStorageAdapter, storageKey: string) {
+export async function clearPersistedSession(
+  storage: SessionStorageAdapter,
+  storageKey: string,
+) {
   await storage.removeItem(storageKey);
 }
 
@@ -3112,7 +3159,7 @@ export async function signOutWithApi(
   },
 ) {
   return client.request<SignOutResponse>(apiRoutes.auth.signOut, {
-    method: 'POST',
+    method: "POST",
     body: payload,
   });
 }
@@ -3124,7 +3171,7 @@ export async function submitMobileErrorReportsWithApi(
   return client.request<SubmitMobileErrorReportsResponse>(
     apiRoutes.mobile.errorReports,
     {
-      method: 'POST',
+      method: "POST",
       body: payload,
     },
   );
@@ -3157,7 +3204,7 @@ export async function fetchAdminJobQueue(
     page?: number;
     pageSize?: number;
     kind?: AdminJobQueueKind;
-    status?: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
+    status?: "PENDING" | "RUNNING" | "SUCCEEDED" | "DEAD_LETTER";
   },
 ) {
   return client.request<AdminJobQueueResponse>(apiRoutes.admin.jobQueue, {
@@ -3172,7 +3219,7 @@ export async function requeueAdminJobQueueEntry(
   return client.request<AdminJobQueueRequeueResponse>(
     `${apiRoutes.admin.jobQueue}/${jobId}/requeue`,
     {
-      method: 'POST',
+      method: "POST",
     },
   );
 }
@@ -3187,7 +3234,7 @@ export async function acknowledgeAdminLaunchReadinessAction(
   client: OrbiApiClient,
   checkId: string,
   payload: {
-    owner: 'ops' | 'engineering' | 'support' | 'finance';
+    owner: "ops" | "engineering" | "support" | "finance";
     notes: string;
     idempotencyKey?: string;
   },
@@ -3195,14 +3242,16 @@ export async function acknowledgeAdminLaunchReadinessAction(
   return client.request<AdminLaunchReadinessActionAcknowledgementResponse>(
     `${apiRoutes.admin.launchReadiness}/actions/${checkId}/acknowledge`,
     {
-      method: 'POST',
+      method: "POST",
       body: payload,
     },
   );
 }
 
 export async function fetchAdminSupportTickets(client: OrbiApiClient) {
-  return client.request<SupportTicketQueueResponse>(apiRoutes.admin.supportTickets);
+  return client.request<SupportTicketQueueResponse>(
+    apiRoutes.admin.supportTickets,
+  );
 }
 
 export async function fetchAdminDrivers(
@@ -3214,10 +3263,9 @@ export async function fetchAdminDrivers(
     status?: string;
   } = {},
 ) {
-  return client.request<AdminDriversResponse>(
-    apiRoutes.admin.drivers,
-    { query },
-  );
+  return client.request<AdminDriversResponse>(apiRoutes.admin.drivers, {
+    query,
+  });
 }
 
 export async function fetchAdminRiders(
@@ -3229,10 +3277,7 @@ export async function fetchAdminRiders(
     activeOnly?: boolean;
   } = {},
 ) {
-  return client.request<AdminRidersResponse>(
-    apiRoutes.admin.riders,
-    { query },
-  );
+  return client.request<AdminRidersResponse>(apiRoutes.admin.riders, { query });
 }
 
 export async function updateAdminRiderStatus(
@@ -3243,7 +3288,7 @@ export async function updateAdminRiderStatus(
   return client.request<AdminRiderStatusResponse>(
     `${apiRoutes.admin.riders}/${userId}/status`,
     {
-      method: 'PATCH',
+      method: "PATCH",
       body: payload,
     },
   );
@@ -3263,7 +3308,7 @@ export async function prepareAdminDriverWalletPayout(
   return client.request<AdminDriverPayoutResponse>(
     `${apiRoutes.admin.driverWallets}/${walletId}/payouts/prepare`,
     {
-      method: 'POST',
+      method: "POST",
       body: payload,
     },
   );
@@ -3277,7 +3322,7 @@ export async function recordAdminDriverWalletRecoveryAdjustment(
   return client.request<AdminDriverWalletRecoveryAdjustmentResponse>(
     `${apiRoutes.admin.driverWallets}/${walletId}/recovery-adjustments`,
     {
-      method: 'POST',
+      method: "POST",
       body: payload,
     },
   );
@@ -3291,20 +3336,20 @@ export async function markAdminDriverPayoutPaid(
   return client.request<AdminDriverPayoutResponse>(
     `${apiRoutes.admin.driverPayouts}/${payoutId}/paid`,
     {
-      method: 'POST',
+      method: "POST",
       body: payload,
     },
   );
 }
 
 export function buildAdminDriverPayoutSettlementCsvUrl(
-  status: 'PREPARED' | 'PAID' | 'CANCELLED' = 'PREPARED',
+  status: "PREPARED" | "PAID" | "CANCELLED" = "PREPARED",
 ) {
   return `${apiRoutes.admin.driverPayoutSettlementCsv}?status=${status}`;
 }
 
 export function buildAdminDriverPayoutSettlementPdfUrl(
-  status: 'PREPARED' | 'PAID' | 'CANCELLED' = 'PREPARED',
+  status: "PREPARED" | "PAID" | "CANCELLED" = "PREPARED",
 ) {
   return `${apiRoutes.admin.driverPayoutSettlementPdf}?status=${status}`;
 }
@@ -3313,15 +3358,18 @@ export async function updateAdminSupportTicket(
   client: OrbiApiClient,
   ticketId: string,
   payload: {
-    status?: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
+    status?: "OPEN" | "IN_REVIEW" | "RESOLVED" | "CLOSED";
     priority?: number;
     adminNote?: string;
   },
 ) {
-  return client.request<SupportTicketUpdateResponse>(`${apiRoutes.admin.supportTickets}/${ticketId}`, {
-    method: 'PATCH',
-    body: payload,
-  });
+  return client.request<SupportTicketUpdateResponse>(
+    `${apiRoutes.admin.supportTickets}/${ticketId}`,
+    {
+      method: "PATCH",
+      body: payload,
+    },
+  );
 }
 
 export async function fetchAdminDriverOnboardingQueue(
@@ -3342,7 +3390,7 @@ export async function fetchAdminDriverOnboardingQueue(
 export async function fetchAdminDriverOnboardingExportCsv(
   client: OrbiApiClient,
   query?: {
-    guidanceFilter?: 'all' | 'approve' | 'review' | 'resubmit';
+    guidanceFilter?: "all" | "approve" | "review" | "resubmit";
     searchQuery?: string;
     limit?: number;
   },
@@ -3371,11 +3419,11 @@ export async function fetchAdminTripsExportCsv(
   client: OrbiApiClient,
   query?: {
     status?:
-      | 'MATCHED'
-      | 'DRIVER_ARRIVING'
-      | 'IN_PROGRESS'
-      | 'COMPLETED'
-      | 'CANCELLED';
+      | "MATCHED"
+      | "DRIVER_ARRIVING"
+      | "IN_PROGRESS"
+      | "COMPLETED"
+      | "CANCELLED";
     limit?: number;
   },
 ) {
@@ -3385,7 +3433,9 @@ export async function fetchAdminTripsExportCsv(
 }
 
 export async function fetchAdminFeatureFlags(client: OrbiApiClient) {
-  return client.request<AdminFeatureFlagsResponse>(apiRoutes.admin.featureFlags);
+  return client.request<AdminFeatureFlagsResponse>(
+    apiRoutes.admin.featureFlags,
+  );
 }
 
 export async function fetchAdminDispatchSettings(client: OrbiApiClient) {
@@ -3405,9 +3455,9 @@ export async function fetchAdminPaymentWebhookEvents(
   query?: {
     page?: number;
     pageSize?: number;
-    provider?: 'FLUTTERWAVE' | 'CINETPAY';
+    provider?: "FLUTTERWAVE" | "CINETPAY";
     action?: string;
-    kind?: 'payment' | 'refund' | 'ignored';
+    kind?: "payment" | "refund" | "ignored";
     transactionRef?: string;
     providerReference?: string;
   },
@@ -3436,7 +3486,7 @@ export async function startAdminPaymentWebhookInvestigation(
   return client.request<AdminPaymentWebhookInvestigationResponse>(
     `${apiRoutes.admin.paymentWebhookEvents}/${eventId}/investigation`,
     {
-      method: 'POST',
+      method: "POST",
     },
   );
 }
@@ -3448,7 +3498,7 @@ export async function replayAdminPaymentWebhookEvent(
   return client.request<AdminPaymentWebhookReplayResponse>(
     `${apiRoutes.admin.paymentWebhookEvents}/${eventId}/replay`,
     {
-      method: 'POST',
+      method: "POST",
     },
   );
 }
@@ -3460,7 +3510,7 @@ export async function verifyAdminPaymentAttemptWithProvider(
   return client.request<AdminPaymentAttemptProviderVerificationResponse>(
     `${apiRoutes.admin.paymentAttempts}/${paymentAttemptId}/verify-provider`,
     {
-      method: 'POST',
+      method: "POST",
     },
   );
 }
@@ -3473,7 +3523,7 @@ export async function refundAdminPaymentAttempt(
   return client.request<AdminPaymentAttemptRefundResponse>(
     `${apiRoutes.admin.paymentAttempts}/${paymentAttemptId}/refund`,
     {
-      method: 'POST',
+      method: "POST",
       body: payload,
     },
   );
@@ -3492,7 +3542,7 @@ export async function updateAdminDispatchSettings(
   return client.request<AdminDispatchSettingsResponse>(
     apiRoutes.admin.dispatchSettings,
     {
-      method: 'PATCH',
+      method: "PATCH",
       body: payload,
     },
   );
@@ -3507,9 +3557,9 @@ export async function acknowledgeAdminHealthIncident(
   incidentId: string,
 ) {
   return client.request<{
-    incident: HealthCheckResponse['operations']['healthHistory'][number];
+    incident: HealthCheckResponse["operations"]["healthHistory"][number];
   }>(`${apiRoutes.admin.healthIncidents}/${incidentId}/acknowledge`, {
-    method: 'PATCH',
+    method: "PATCH",
   });
 }
 
@@ -3518,9 +3568,9 @@ export async function muteAdminHealthIncident(
   incidentId: string,
 ) {
   return client.request<{
-    incident: HealthCheckResponse['operations']['healthHistory'][number];
+    incident: HealthCheckResponse["operations"]["healthHistory"][number];
   }>(`${apiRoutes.admin.healthIncidents}/${incidentId}/mute`, {
-    method: 'PATCH',
+    method: "PATCH",
   });
 }
 
@@ -3528,13 +3578,13 @@ export async function updateAdminDriverOnboardingReview(
   client: OrbiApiClient,
   driverId: string,
   payload: {
-    status: 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED';
+    status: "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
     notesInternal?: string;
     decisionReason?: string;
     supportPriority?: number;
     documentDecisions?: Array<{
       documentId: string;
-      status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+      status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
       rejectionReason?: string;
       expiresAt?: string;
     }>;
@@ -3543,7 +3593,7 @@ export async function updateAdminDriverOnboardingReview(
   return client.request<DriverOnboardingReviewUpdateResponse>(
     `${apiRoutes.admin.driverOnboarding}/${driverId}/review`,
     {
-      method: 'PATCH',
+      method: "PATCH",
       body: payload,
     },
   );
@@ -3554,9 +3604,9 @@ export async function suspendAdminDriver(
   driverId: string,
   reason: string,
 ) {
-  return client.request<{ driverId: string; status: 'SUSPENDED' }>(
+  return client.request<{ driverId: string; status: "SUSPENDED" }>(
     `/admin/drivers/${driverId}/suspend`,
-    { method: 'POST', body: { reason } },
+    { method: "POST", body: { reason } },
   );
 }
 
@@ -3564,9 +3614,9 @@ export async function reactivateAdminDriver(
   client: OrbiApiClient,
   driverId: string,
 ) {
-  return client.request<{ driverId: string; status: 'OFFLINE' }>(
+  return client.request<{ driverId: string; status: "OFFLINE" }>(
     `/admin/drivers/${driverId}/reactivate`,
-    { method: 'POST' },
+    { method: "POST" },
   );
 }
 
@@ -3585,7 +3635,7 @@ export async function updateAdminDriverDocumentObjectVerification(
   driverId: string,
   documentId: string,
   payload: {
-    state: 'confirmed' | 'failed';
+    state: "confirmed" | "failed";
     provider: string;
     objectId?: string;
     sizeBytes?: number;
@@ -3596,7 +3646,7 @@ export async function updateAdminDriverDocumentObjectVerification(
   return client.request<DriverDocumentObjectVerificationResponse>(
     `${apiRoutes.admin.driverOnboarding}/${driverId}/documents/${documentId}/object-verification`,
     {
-      method: 'PATCH',
+      method: "PATCH",
       body: payload,
     },
   );
@@ -3610,7 +3660,7 @@ export async function verifyAdminDriverDocumentObjectWithProvider(
   return client.request<DriverDocumentObjectVerificationResponse>(
     `${apiRoutes.admin.driverOnboarding}/${driverId}/documents/${documentId}/object-verification/verify-provider`,
     {
-      method: 'POST',
+      method: "POST",
     },
   );
 }
@@ -3628,24 +3678,27 @@ export async function createSavedPlaceWithApi(
     longitude: number;
   },
 ) {
-  return client.request<SavedPlaceMutationResponse>(apiRoutes.riders.savedPlaces, {
-    method: 'POST',
-    body: payload,
-  });
+  return client.request<SavedPlaceMutationResponse>(
+    apiRoutes.riders.savedPlaces,
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
 }
 
 export async function updateTrustedContactWithApi(
   client: OrbiApiClient,
   payload: {
     phoneNumber?: string;
-    shareMode?: 'MANUAL' | 'NIGHT' | 'ALL_TRIPS';
+    shareMode?: "MANUAL" | "NIGHT" | "ALL_TRIPS";
     notes?: string;
   },
 ) {
   return client.request<TrustedContactMutationResponse>(
     apiRoutes.riders.trustedContact,
     {
-      method: 'PATCH',
+      method: "PATCH",
       body: payload,
     },
   );
@@ -3664,7 +3717,7 @@ export async function updateSavedPlaceWithApi(
   return client.request<SavedPlaceMutationResponse>(
     `${apiRoutes.riders.savedPlaces}/${savedPlaceId}`,
     {
-      method: 'PATCH',
+      method: "PATCH",
       body: payload,
     },
   );
@@ -3677,7 +3730,7 @@ export async function deleteSavedPlaceWithApi(
   return client.request<SavedPlaceDeleteResponse>(
     `${apiRoutes.riders.savedPlaces}/${savedPlaceId}`,
     {
-      method: 'DELETE',
+      method: "DELETE",
     },
   );
 }
@@ -3723,11 +3776,11 @@ export async function upsertDriverOnboarding(
     phoneNumber?: string;
     licenseNumber: string;
     city:
-      | 'OUAGADOUGOU'
-      | 'BOBO_DIOULASSO'
-      | 'KOUDOUGOU'
-      | 'BANFORA'
-      | 'OUAHIGOUYA';
+      | "OUAGADOUGOU"
+      | "BOBO_DIOULASSO"
+      | "KOUDOUGOU"
+      | "BANFORA"
+      | "OUAHIGOUYA";
     serviceRadiusKm: number;
     documents: {
       identityDocumentProvided: boolean;
@@ -3738,11 +3791,11 @@ export async function upsertDriverOnboarding(
     };
     documentArtifacts?: Array<{
       type:
-        | 'IDENTITY_DOCUMENT'
-        | 'DRIVER_LICENSE'
-        | 'VEHICLE_REGISTRATION'
-        | 'INSURANCE_PROOF'
-        | 'SELFIE_VERIFICATION';
+        | "IDENTITY_DOCUMENT"
+        | "DRIVER_LICENSE"
+        | "VEHICLE_REGISTRATION"
+        | "INSURANCE_PROOF"
+        | "SELFIE_VERIFICATION";
       fileName: string;
       storageKey: string;
       mimeType?: string;
@@ -3757,21 +3810,24 @@ export async function upsertDriverOnboarding(
       model: string;
       color: string;
       year?: number;
-      type: 'MOTORCYCLE' | 'CAR';
+      type: "MOTORCYCLE" | "CAR";
       tier:
-        | 'MOTO_STANDARD'
-        | 'MOTO_PLUS'
-        | 'CAR_STANDARD'
-        | 'CAR_COMFORT'
-        | 'CAR_XL';
+        | "MOTO_STANDARD"
+        | "MOTO_PLUS"
+        | "CAR_STANDARD"
+        | "CAR_COMFORT"
+        | "CAR_XL";
       seats?: number;
     }>;
   },
 ) {
-  return client.request<DriverOnboardingResponse>(apiRoutes.drivers.onboarding, {
-    method: 'PATCH',
-    body: payload,
-  });
+  return client.request<DriverOnboardingResponse>(
+    apiRoutes.drivers.onboarding,
+    {
+      method: "PATCH",
+      body: payload,
+    },
+  );
 }
 
 export async function requestDriverDocumentUploadLinks(
@@ -3779,11 +3835,11 @@ export async function requestDriverDocumentUploadLinks(
   payload: {
     documents: Array<{
       type:
-        | 'IDENTITY_DOCUMENT'
-        | 'DRIVER_LICENSE'
-        | 'VEHICLE_REGISTRATION'
-        | 'INSURANCE_PROOF'
-        | 'SELFIE_VERIFICATION';
+        | "IDENTITY_DOCUMENT"
+        | "DRIVER_LICENSE"
+        | "VEHICLE_REGISTRATION"
+        | "INSURANCE_PROOF"
+        | "SELFIE_VERIFICATION";
       fileName: string;
       mimeType?: string;
       expiresAt?: string;
@@ -3793,7 +3849,7 @@ export async function requestDriverDocumentUploadLinks(
   return client.request<DriverDocumentUploadLinksResponse>(
     apiRoutes.drivers.onboardingDocumentUploadLinks,
     {
-      method: 'PATCH',
+      method: "PATCH",
       body: payload,
     },
   );
@@ -3814,21 +3870,24 @@ export async function declineDriverOfferWithApi(
   return client.request<DriverOfferDeclineResponse>(
     `${apiRoutes.drivers.declineOffer}/${rideRequestId}/decline`,
     {
-      method: 'POST',
+      method: "POST",
     },
   );
 }
 
 export async function updateDriverAvailabilityWithApi(
   client: OrbiApiClient,
-  status: 'ONLINE' | 'OFFLINE',
+  status: "ONLINE" | "OFFLINE",
 ) {
-  return client.request<DriverAvailabilityResponse>(apiRoutes.drivers.availability, {
-    method: 'PATCH',
-    body: {
-      status,
+  return client.request<DriverAvailabilityResponse>(
+    apiRoutes.drivers.availability,
+    {
+      method: "PATCH",
+      body: {
+        status,
+      },
     },
-  });
+  );
 }
 
 export async function updateDriverPresenceWithApi(
@@ -3839,7 +3898,7 @@ export async function updateDriverPresenceWithApi(
   },
 ) {
   return client.request<DriverPresenceResponse>(apiRoutes.drivers.presence, {
-    method: 'PATCH',
+    method: "PATCH",
     body: payload,
   });
 }
@@ -3849,7 +3908,9 @@ export async function fetchMyTrips(client: OrbiApiClient) {
 }
 
 export async function fetchTripDetail(client: OrbiApiClient, tripId: string) {
-  return client.request<TripDetailResponse>(`${apiRoutes.trips.root}/${tripId}`);
+  return client.request<TripDetailResponse>(
+    `${apiRoutes.trips.root}/${tripId}`,
+  );
 }
 
 export async function createTripShareLinkWithApi(
@@ -3859,7 +3920,7 @@ export async function createTripShareLinkWithApi(
   return client.request<TripShareLinkResponse>(
     `${apiRoutes.trips.shareLink}/${tripId}/share-link`,
     {
-      method: 'POST',
+      method: "POST",
     },
   );
 }
@@ -3878,7 +3939,7 @@ export async function recordTripRoutePositionWithApi(
   return client.request<TripRoutePositionResponse>(
     `${apiRoutes.trips.root}/${tripId}/route-position`,
     {
-      method: 'POST',
+      method: "POST",
       body: payload,
     },
   );
@@ -3900,7 +3961,7 @@ export async function acceptRideRequestWithApi(
   return client.request<TripLifecycleResponse>(
     `${apiRoutes.trips.acceptRideRequest}/${rideRequestId}`,
     {
-      method: 'POST',
+      method: "POST",
     },
   );
 }
@@ -3908,16 +3969,21 @@ export async function acceptRideRequestWithApi(
 export async function updateTripStatusWithApi(
   client: OrbiApiClient,
   tripId: string,
-  status: 'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED',
+  status: "DRIVER_ARRIVING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED",
   cancellationReason?: string,
 ) {
-  return client.request<TripLifecycleResponse>(`${apiRoutes.trips.root ?? '/trips'}/${tripId}/status`, {
-    method: 'PATCH',
-    body: {
-      status,
-      ...(status === 'CANCELLED' && cancellationReason ? { cancellationReason } : {}),
+  return client.request<TripLifecycleResponse>(
+    `${apiRoutes.trips.root ?? "/trips"}/${tripId}/status`,
+    {
+      method: "PATCH",
+      body: {
+        status,
+        ...(status === "CANCELLED" && cancellationReason
+          ? { cancellationReason }
+          : {}),
+      },
     },
-  });
+  );
 }
 
 export async function verifyPickupCodeWithApi(
@@ -3925,12 +3991,15 @@ export async function verifyPickupCodeWithApi(
   tripId: string,
   pickupCode: string,
 ) {
-  return client.request<TripLifecycleResponse>(`${apiRoutes.trips.verifyPickupCode}/${tripId}/verify-pickup-code`, {
-    method: 'POST',
-    body: {
-      pickupCode,
+  return client.request<TripLifecycleResponse>(
+    `${apiRoutes.trips.verifyPickupCode}/${tripId}/verify-pickup-code`,
+    {
+      method: "POST",
+      body: {
+        pickupCode,
+      },
     },
-  });
+  );
 }
 
 export async function reportTripIncidentWithApi(
@@ -3941,14 +4010,17 @@ export async function reportTripIncidentWithApi(
     details?: string;
     priority?: number;
     evidenceConsent?: boolean;
-    evidenceType?: 'AUDIO' | 'PHOTO' | 'VIDEO' | 'TEXT_NOTE';
+    evidenceType?: "AUDIO" | "PHOTO" | "VIDEO" | "TEXT_NOTE";
     evidenceRetentionHours?: number;
   },
 ) {
-  return client.request<TripIncidentResponse>(`${apiRoutes.trips.reportIncident}/${tripId}/report-incident`, {
-    method: 'POST',
-    body: payload,
-  });
+  return client.request<TripIncidentResponse>(
+    `${apiRoutes.trips.reportIncident}/${tripId}/report-incident`,
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
 }
 
 export async function triggerTripSafetySosWithApi(
@@ -3964,7 +4036,7 @@ export async function triggerTripSafetySosWithApi(
   return client.request<TripSafetySosResponse>(
     `${apiRoutes.trips.safetySos}/${tripId}/sos`,
     {
-      method: 'POST',
+      method: "POST",
       body: payload,
     },
   );
@@ -3988,7 +4060,7 @@ export async function rateTripWithApi(
   return client.request<TripRatingResponse>(
     `${apiRoutes.trips.rate}/${tripId}/rate`,
     {
-      method: 'POST',
+      method: "POST",
       body: payload,
     },
   );
@@ -3998,9 +4070,12 @@ export async function fetchRideOptionsPreview(
   client: OrbiApiClient,
   query: PricingEstimateQuery,
 ) {
-  return client.request<RideOptionsPreviewResponse>(apiRoutes.pricing.rideOptions, {
-    query,
-  });
+  return client.request<RideOptionsPreviewResponse>(
+    apiRoutes.pricing.rideOptions,
+    {
+      query,
+    },
+  );
 }
 
 export async function fetchPricingEstimate(
@@ -4018,10 +4093,10 @@ export async function createRideRequestWithApi(
   options: { idempotencyKey?: string } = {},
 ) {
   return client.request<RideRequestResponse>(apiRoutes.rideRequests.root, {
-    method: 'POST',
+    method: "POST",
     body: payload,
     headers: options.idempotencyKey
-      ? { 'Idempotency-Key': options.idempotencyKey }
+      ? { "Idempotency-Key": options.idempotencyKey }
       : undefined,
   });
 }
@@ -4033,7 +4108,7 @@ export async function cancelRideRequestWithApi(
   return client.request<RideRequestLifecycleResponse>(
     `${apiRoutes.rideRequests.root}/${rideRequestId}`,
     {
-      method: 'DELETE',
+      method: "DELETE",
     },
   );
 }
@@ -4043,23 +4118,29 @@ export async function createCheckoutIntentWithApi(
   payload: CheckoutIntentPayload,
   options: { idempotencyKey?: string } = {},
 ) {
-  return client.request<CheckoutIntentResponse>(apiRoutes.payments.checkoutIntents, {
-    method: 'POST',
-    body: payload,
-    headers: options.idempotencyKey
-      ? { 'Idempotency-Key': options.idempotencyKey }
-      : undefined,
-  });
+  return client.request<CheckoutIntentResponse>(
+    apiRoutes.payments.checkoutIntents,
+    {
+      method: "POST",
+      body: payload,
+      headers: options.idempotencyKey
+        ? { "Idempotency-Key": options.idempotencyKey }
+        : undefined,
+    },
+  );
 }
 
 export async function resolveVoiceLocationIntentWithApi(
   client: OrbiApiClient,
   payload: { transcript: string },
 ) {
-  return client.request<VoiceLocationIntentResponse>(apiRoutes.voice.locationIntent, {
-    method: 'POST',
-    body: payload,
-  });
+  return client.request<VoiceLocationIntentResponse>(
+    apiRoutes.voice.locationIntent,
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
 }
 
 export async function registerPushTokenWithApi(
@@ -4067,7 +4148,7 @@ export async function registerPushTokenWithApi(
   token: string,
 ): Promise<void> {
   await client.requestText(apiRoutes.users.pushToken, {
-    method: 'POST',
+    method: "POST",
     body: { token },
   });
 }
@@ -4075,14 +4156,14 @@ export async function registerPushTokenWithApi(
 // ── Support tickets (rider & driver) ──────────────────────────────────────
 
 export type TicketCategory =
-  | 'payment'
-  | 'trip'
-  | 'account'
-  | 'driver'
-  | 'safety'
-  | 'other';
+  | "payment"
+  | "trip"
+  | "account"
+  | "driver"
+  | "safety"
+  | "other";
 
-export type SupportTicketStatus = 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED';
+export type SupportTicketStatus = "OPEN" | "IN_REVIEW" | "RESOLVED" | "CLOSED";
 
 export interface SupportTicket {
   id: string;
@@ -4115,14 +4196,16 @@ export async function createSupportTicketWithApi(
 ): Promise<CreateSupportTicketResponse> {
   return client.request<CreateSupportTicketResponse>(
     apiRoutes.auth.supportTickets,
-    { method: 'POST', body: payload },
+    { method: "POST", body: payload },
   );
 }
 
 export async function getMySupportTicketsWithApi(
   client: OrbiApiClient,
 ): Promise<MySupportTicketsResponse> {
-  return client.request<MySupportTicketsResponse>(apiRoutes.auth.supportTickets);
+  return client.request<MySupportTicketsResponse>(
+    apiRoutes.auth.supportTickets,
+  );
 }
 
 export type PromoValidationResponse = {
@@ -4139,8 +4222,8 @@ export async function validatePromoCodeWithApi(
   client: OrbiApiClient,
   code: string,
 ): Promise<PromoValidationResponse> {
-  return client.request<PromoValidationResponse>('/auth/validate-promo-code', {
-    method: 'POST',
+  return client.request<PromoValidationResponse>("/auth/validate-promo-code", {
+    method: "POST",
     body: { code },
   });
 }
@@ -4176,15 +4259,15 @@ export type CreateAdminPromoCodePayload = {
 export async function listAdminPromoCodes(
   client: OrbiApiClient,
 ): Promise<ListAdminPromoCodesResponse> {
-  return client.request<ListAdminPromoCodesResponse>('/admin/promo-codes');
+  return client.request<ListAdminPromoCodesResponse>("/admin/promo-codes");
 }
 
 export async function createAdminPromoCode(
   client: OrbiApiClient,
   payload: CreateAdminPromoCodePayload,
 ): Promise<PromoCodeItem> {
-  return client.request<PromoCodeItem>('/admin/promo-codes', {
-    method: 'POST',
+  return client.request<PromoCodeItem>("/admin/promo-codes", {
+    method: "POST",
     body: payload,
   });
 }
@@ -4195,25 +4278,26 @@ export async function deactivateAdminPromoCode(
 ): Promise<{ promoCodeId: string; active: false }> {
   return client.request<{ promoCodeId: string; active: false }>(
     `/admin/promo-codes/${promoCodeId}`,
-    { method: 'DELETE' },
+    { method: "DELETE" },
   );
 }
 
 function resolveApiErrorMessage(payload: unknown) {
-  if (!payload || typeof payload !== 'object') {
+  if (!payload || typeof payload !== "object") {
     return null;
   }
 
   const record = payload as Record<string, unknown>;
   const message = record.message;
 
-  if (typeof message === 'string' && message.trim()) {
+  if (typeof message === "string" && message.trim()) {
     return message.trim();
   }
 
   if (Array.isArray(message)) {
     const firstMessage = message.find(
-      (entry): entry is string => typeof entry === 'string' && entry.trim().length > 0,
+      (entry): entry is string =>
+        typeof entry === "string" && entry.trim().length > 0,
     );
 
     if (firstMessage) {

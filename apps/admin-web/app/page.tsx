@@ -36,61 +36,61 @@ import {
   type AdminPreviewResponse,
   type PricingEstimate,
   type SupportTicketQueueResponse,
-} from '@orbi/api';
-import { orbiCopy } from '@orbi/ui';
+} from "@orbi/api";
+import { orbiCopy } from "@orbi/ui";
 import {
   executionPhases,
   orbiDemoAccounts,
   orbiRuntimeConfig,
-} from '@orbi/config';
-import { redirect } from 'next/navigation';
+} from "@orbi/config";
+import { redirect } from "next/navigation";
 import {
   clearAdminServerSession,
   createAdminServerSessionFromCredentials,
   getAdminServerAuthSession,
-} from './admin-server-auth';
-import { LiveOpsBoard } from './live-ops-board';
-import { PricingStrategyBoard } from './pricing-strategy-board';
-import { DriverOnboardingReviewBoard } from './driver-onboarding-review-board';
-import { SupportQueue } from './support-queue';
-import { FeatureFlagsBoard } from './feature-flags-board';
-import { LaunchReadinessBoard } from './launch-readiness-board';
-import { SystemHealthBoard } from './system-health-board';
-import { DispatchControlBoard } from './dispatch-control-board';
-import { PricingCalibrationBoard } from './pricing-calibration-board';
-import { PaymentWebhookJournalBoard } from './payment-webhook-journal-board';
-import { DriverWalletsBoard } from './driver-wallets-board';
-import { TripsAuditBoard } from './trips-audit-board';
-import { PromoCodesBoard } from './promo-codes-board';
-import { RidersBoard } from './riders-board';
-import { DriversBoard } from './drivers-board';
+} from "./admin-server-auth";
+import { LiveOpsBoard } from "./live-ops-board";
+import { PricingStrategyBoard } from "./pricing-strategy-board";
+import { DriverOnboardingReviewBoard } from "./driver-onboarding-review-board";
+import { SupportQueue } from "./support-queue";
+import { FeatureFlagsBoard } from "./feature-flags-board";
+import { LaunchReadinessBoard } from "./launch-readiness-board";
+import { SystemHealthBoard } from "./system-health-board";
+import { DispatchControlBoard } from "./dispatch-control-board";
+import { PricingCalibrationBoard } from "./pricing-calibration-board";
+import { PaymentWebhookJournalBoard } from "./payment-webhook-journal-board";
+import { DriverWalletsBoard } from "./driver-wallets-board";
+import { TripsAuditBoard } from "./trips-audit-board";
+import { PromoCodesBoard } from "./promo-codes-board";
+import { RidersBoard } from "./riders-board";
+import { DriversBoard } from "./drivers-board";
 
 const fallbackIncidents = [
-  '2 chauffeurs moto en attente de verification',
-  '1 demande support a priorite haute',
-  'Zone Koulouba en forte demande sur voitures',
+  "2 chauffeurs moto en attente de verification",
+  "1 demande support a priorite haute",
+  "Zone Koulouba en forte demande sur voitures",
 ];
 
 const calmIncidentFeed = [
-  'Aucun signalement d incident sur les trajets actifs.',
-  'La file de reservations ouvertes reste sous controle.',
+  "Aucun signalement d incident sur les trajets actifs.",
+  "La file de reservations ouvertes reste sous controle.",
 ];
 
 const fallbackOperations = [
   {
-    title: 'Passagers',
-    value: '12 480',
-    note: 'Croissance stable sur Ouagadougou',
+    title: "Passagers",
+    value: "12 480",
+    note: "Croissance stable sur Ouagadougou",
   },
   {
-    title: 'Chauffeurs actifs',
-    value: '928',
-    note: 'Motos et voitures confondues',
+    title: "Chauffeurs actifs",
+    value: "928",
+    note: "Motos et voitures confondues",
   },
   {
-    title: 'Demandes ouvertes',
-    value: '41',
-    note: 'A surveiller pendant le pic de 18h',
+    title: "Demandes ouvertes",
+    value: "41",
+    note: "A surveiller pendant le pic de 18h",
   },
 ];
 
@@ -130,8 +130,8 @@ const fallbackLiveOps: AdminLiveOpsResponse = {
 const fallbackTripsAudit: AdminTripsAuditResponse = {
   window: {
     lookbackHours: 24,
-    since: new Date('2026-05-23T00:00:00.000Z').toISOString(),
-    generatedAt: new Date('2026-05-24T00:00:00.000Z').toISOString(),
+    since: new Date("2026-05-23T00:00:00.000Z").toISOString(),
+    generatedAt: new Date("2026-05-24T00:00:00.000Z").toISOString(),
   },
   summary: {
     totalTrips: 0,
@@ -146,7 +146,7 @@ const fallbackTripsAudit: AdminTripsAuditResponse = {
     riskTripCount: 0,
     criticalRiskTripCount: 0,
     moneyAtRisk: 0,
-    currency: 'XOF',
+    currency: "XOF",
     byStatus: {
       matched: 0,
       arriving: 0,
@@ -156,14 +156,14 @@ const fallbackTripsAudit: AdminTripsAuditResponse = {
     },
   },
   ownerQueue: [
-    { owner: 'finance', count: 0, critical: 0, moneyAtRisk: 0 },
-    { owner: 'ops', count: 0, critical: 0, moneyAtRisk: 0 },
-    { owner: 'support', count: 0, critical: 0, moneyAtRisk: 0 },
-    { owner: 'engineering', count: 0, critical: 0, moneyAtRisk: 0 },
+    { owner: "finance", count: 0, critical: 0, moneyAtRisk: 0 },
+    { owner: "ops", count: 0, critical: 0, moneyAtRisk: 0 },
+    { owner: "support", count: 0, critical: 0, moneyAtRisk: 0 },
+    { owner: "engineering", count: 0, critical: 0, moneyAtRisk: 0 },
   ],
   riskTrips: [],
   recommendations: [
-    'Connecter le backend local pour obtenir l audit trajets officiel.',
+    "Connecter le backend local pour obtenir l audit trajets officiel.",
   ],
 };
 
@@ -182,12 +182,12 @@ const fallbackDrivers: AdminDriversResponse = {
 };
 
 const fallbackHealth: HealthCheckResponse = {
-  status: 'ok',
-  service: 'orbi-backend',
-  timestamp: new Date('2026-04-19T00:00:00.000Z').toISOString(),
+  status: "ok",
+  service: "orbi-backend",
+  timestamp: new Date("2026-04-19T00:00:00.000Z").toISOString(),
   uptimeSeconds: 0,
   runtime: {
-    nodeVersion: 'unknown',
+    nodeVersion: "unknown",
     pid: 0,
     memory: {
       rss: 0,
@@ -196,119 +196,119 @@ const fallbackHealth: HealthCheckResponse = {
     },
   },
   dependencies: {
-    database: 'up',
-    rateLimit: 'up',
-    realtime: 'up',
-    driverReservationExpiry: 'up',
+    database: "up",
+    rateLimit: "up",
+    realtime: "up",
+    driverReservationExpiry: "up",
   },
   lifecycle: {
-    state: 'ready',
+    state: "ready",
     drainReason: null,
     lastTransitionAt: null,
   },
   infrastructure: {
     rateLimit: {
-      configuredAdapter: 'in-memory',
+      configuredAdapter: "in-memory",
       strict: false,
-      adapter: 'in-memory',
+      adapter: "in-memory",
       sharedBackplane: false,
       degraded: false,
       degradeReason: null,
       trackedKeys: 0,
     },
     realtime: {
-      configuredAdapter: 'in-memory',
+      configuredAdapter: "in-memory",
       strict: false,
-      adapter: 'in-memory',
+      adapter: "in-memory",
       sharedBackplane: false,
       degraded: false,
       degradeReason: null,
       activeStreams: 0,
       publishedEvents: 0,
-      featureFlagMode: 'on',
+      featureFlagMode: "on",
       featureFlagEnabled: true,
     },
     jobQueue: {
       durable: true,
       families: [
-        'PAYMENT_WEBHOOK',
-        'PAYMENT_REFUND_VERIFICATION',
-        'DRIVER_DOCUMENT',
-        'NOTIFICATION',
-        'DRIVER_RESERVATION_EXPIRY',
+        "PAYMENT_WEBHOOK",
+        "PAYMENT_REFUND_VERIFICATION",
+        "DRIVER_DOCUMENT",
+        "NOTIFICATION",
+        "DRIVER_RESERVATION_EXPIRY",
       ],
       counts: [],
     },
   },
   operations: {
     productionReadiness: {
-      environment: 'development',
-      riskLevel: 'medium',
+      environment: "development",
+      riskLevel: "medium",
       failedChecks: 0,
       warningChecks: 4,
       checks: [
         {
-          id: 'rate-limit-backplane',
-          label: 'Rate limit partage',
-          state: 'warn',
-          detail: 'Fallback local utilise par la preview.',
+          id: "rate-limit-backplane",
+          label: "Rate limit partage",
+          state: "warn",
+          detail: "Fallback local utilise par la preview.",
         },
         {
-          id: 'realtime-backplane',
-          label: 'Realtime partage',
-          state: 'warn',
-          detail: 'Fallback local utilise par la preview.',
+          id: "realtime-backplane",
+          label: "Realtime partage",
+          state: "warn",
+          detail: "Fallback local utilise par la preview.",
         },
         {
-          id: 'provider-refunds',
-          label: 'Refunds provider',
-          state: 'warn',
-          detail: 'Refunds en mode manual/console.',
+          id: "provider-refunds",
+          label: "Refunds provider",
+          state: "warn",
+          detail: "Refunds en mode manual/console.",
         },
         {
-          id: 'payment-provider-evidence',
-          label: 'Preuves provider paiement',
-          state: 'warn',
+          id: "payment-provider-evidence",
+          label: "Preuves provider paiement",
+          state: "warn",
           detail:
-            'Aucune fixture paiement sandbox confirmee dans le fallback admin.',
+            "Aucune fixture paiement sandbox confirmee dans le fallback admin.",
         },
       ],
     },
     serviceLevelObjectives: {
-      posture: 'watch',
+      posture: "watch",
       failingObjectives: 0,
       warningObjectives: 1,
       objectives: [
         {
-          id: 'critical-api-availability',
-          label: 'Disponibilite API critique',
-          target: '>= 99.9%',
-          window: 'rolling-30d',
-          owner: 'engineering',
-          state: 'pass',
-          currentSignal: 'Preview admin sans backend live.',
-          burnRate: 'normal',
+          id: "critical-api-availability",
+          label: "Disponibilite API critique",
+          target: ">= 99.9%",
+          window: "rolling-30d",
+          owner: "engineering",
+          state: "pass",
+          currentSignal: "Preview admin sans backend live.",
+          burnRate: "normal",
         },
         {
-          id: 'realtime-critical-event-latency',
-          label: 'Evenement realtime critique p95',
-          target: '< 2 s',
-          window: 'rolling-15m',
-          owner: 'engineering',
-          state: 'warn',
-          currentSignal: 'Preview admin en mode fallback local.',
-          burnRate: 'elevated',
+          id: "realtime-critical-event-latency",
+          label: "Evenement realtime critique p95",
+          target: "< 2 s",
+          window: "rolling-15m",
+          owner: "engineering",
+          state: "warn",
+          currentSignal: "Preview admin en mode fallback local.",
+          burnRate: "elevated",
         },
       ],
       mobileErrorTaxonomy: [
         {
-          code: 'MOB-REALTIME-DEGRADED',
-          surface: 'active-trip',
-          severity: 'medium',
-          owner: 'engineering',
-          retryPolicy: 'fallback-polling-with-last-known-state',
+          code: "MOB-REALTIME-DEGRADED",
+          surface: "active-trip",
+          severity: "medium",
+          owner: "engineering",
+          retryPolicy: "fallback-polling-with-last-known-state",
           userMessage:
-            'Connexion live instable. Le trajet reste suivi par Orbi.',
+            "Connexion live instable. Le trajet reste suivi par Orbi.",
         },
       ],
     },
@@ -333,7 +333,7 @@ const fallbackHealth: HealthCheckResponse = {
 const fallbackPricingCalibration: AdminPricingCalibrationResponse = {
   window: {
     lookbackDays: 14,
-    since: new Date('2026-04-12T00:00:00.000Z').toISOString(),
+    since: new Date("2026-04-12T00:00:00.000Z").toISOString(),
   },
   summary: {
     totalRequests: 0,
@@ -372,15 +372,15 @@ const fallbackPricingCalibration: AdminPricingCalibrationResponse = {
   geographySegments: [],
   recommendations: [
     {
-      scope: 'Global',
-      priority: 'LOW',
-      action: 'Collecter des courses de test avant tout ajustement.',
+      scope: "Global",
+      priority: "LOW",
+      action: "Collecter des courses de test avant tout ajustement.",
       rationale:
-        'La calibration automatique attend des demandes, paiements et trajets reels.',
+        "La calibration automatique attend des demandes, paiements et trajets reels.",
     },
   ],
   alerts: [
-    'Aucune donnee terrain disponible: lancer des courses de test pour calibrer le pricing.',
+    "Aucune donnee terrain disponible: lancer des courses de test pour calibrer le pricing.",
   ],
 };
 
@@ -418,46 +418,46 @@ const fallbackDriverWallets: AdminDriverWalletsResponse = {
 };
 
 function shouldShowDemoPasswords() {
-  return process.env.NODE_ENV !== 'production';
+  return process.env.NODE_ENV !== "production";
 }
 
 type AdminAuthNotice = {
-  tone: 'success' | 'warning';
+  tone: "success" | "warning";
   message: string;
 } | null;
 
 async function signInAdminAction(formData: FormData) {
-  'use server';
+  "use server";
 
   try {
     await createAdminServerSessionFromCredentials({
-      email: String(formData.get('email') ?? ''),
-      password: String(formData.get('password') ?? ''),
+      email: String(formData.get("email") ?? ""),
+      password: String(formData.get("password") ?? ""),
     });
   } catch {
-    redirect('/?adminAuth=failed');
+    redirect("/?adminAuth=failed");
   }
 
-  redirect('/?adminAuth=signed-in');
+  redirect("/?adminAuth=signed-in");
 }
 
 async function signInDemoAdminAction() {
-  'use server';
+  "use server";
 
   try {
     await createAdminServerSessionFromCredentials(orbiDemoAccounts.admin);
   } catch {
-    redirect('/?adminAuth=demo-failed');
+    redirect("/?adminAuth=demo-failed");
   }
 
-  redirect('/?adminAuth=signed-in');
+  redirect("/?adminAuth=signed-in");
 }
 
 async function signOutAdminAction() {
-  'use server';
+  "use server";
 
   await clearAdminServerSession();
-  redirect('/?adminAuth=signed-out');
+  redirect("/?adminAuth=signed-out");
 }
 
 function resolveAdminAuthNotice(
@@ -465,33 +465,33 @@ function resolveAdminAuthNotice(
 ): AdminAuthNotice {
   const code = Array.isArray(value) ? value[0] : value;
 
-  if (code === 'signed-in') {
+  if (code === "signed-in") {
     return {
-      tone: 'success',
-      message: 'Session admin ouverte avec succes.',
+      tone: "success",
+      message: "Session admin ouverte avec succes.",
     };
   }
 
-  if (code === 'signed-out') {
+  if (code === "signed-out") {
     return {
-      tone: 'success',
-      message: 'Session admin fermee sur cette console.',
+      tone: "success",
+      message: "Session admin fermee sur cette console.",
     };
   }
 
-  if (code === 'demo-failed') {
+  if (code === "demo-failed") {
     return {
-      tone: 'warning',
+      tone: "warning",
       message:
-        'Connexion demo admin indisponible. Verifiez le backend et les identifiants seed.',
+        "Connexion demo admin indisponible. Verifiez le backend et les identifiants seed.",
     };
   }
 
-  if (code === 'failed') {
+  if (code === "failed") {
     return {
-      tone: 'warning',
+      tone: "warning",
       message:
-        'Connexion admin refusee. Utilisez un compte ADMIN, OPS ou SUPPORT valide.',
+        "Connexion admin refusee. Utilisez un compte ADMIN, OPS ou SUPPORT valide.",
     };
   }
 
@@ -499,13 +499,13 @@ function resolveAdminAuthNotice(
 }
 
 const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
-  generatedAt: new Date('2026-04-19T00:00:00.000Z').toISOString(),
-  environment: 'development',
+  generatedAt: new Date("2026-04-19T00:00:00.000Z").toISOString(),
+  environment: "development",
   decision: {
-    state: 'limited',
-    label: 'pilote limite seulement',
+    state: "limited",
+    label: "pilote limite seulement",
     detail:
-      'Signal fallback admin: garder le pilote en mode encadre tant que le backend local n est pas joignable.',
+      "Signal fallback admin: garder le pilote en mode encadre tant que le backend local n est pas joignable.",
   },
   summary: {
     failedChecks: 0,
@@ -515,20 +515,20 @@ const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
   },
   checks: [
     {
-      id: 'fallback-runtime',
-      label: 'Runtime preview',
-      state: 'warn',
-      detail: 'Donnees de readiness produites par le fallback admin.',
+      id: "fallback-runtime",
+      label: "Runtime preview",
+      state: "warn",
+      detail: "Donnees de readiness produites par le fallback admin.",
     },
   ],
   nextActions: [
     {
-      checkId: 'fallback-runtime',
-      severity: 'warning',
-      owner: 'engineering',
+      checkId: "fallback-runtime",
+      severity: "warning",
+      owner: "engineering",
       action:
-        'Redemarrer ou connecter le backend local pour recuperer la decision de lancement officielle.',
-      runbookAnchor: 'checklist-avant-de-deployer',
+        "Redemarrer ou connecter le backend local pour recuperer la decision de lancement officielle.",
+      runbookAnchor: "checklist-avant-de-deployer",
     },
   ],
   acknowledgements: [],
@@ -552,15 +552,15 @@ const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
     },
     capabilities: [
       {
-        id: 'fallback-safety',
-        label: 'Benchmark securite',
-        status: 'planned',
-        priority: 'critical',
+        id: "fallback-safety",
+        label: "Benchmark securite",
+        status: "planned",
+        priority: "critical",
         orbiSignal:
-          'Fallback admin: reconnecter le backend pour obtenir la matrice officielle.',
-        competitorSignal: 'Uber, Bolt et Yango exposent SOS et partage trajet.',
+          "Fallback admin: reconnecter le backend pour obtenir la matrice officielle.",
+        competitorSignal: "Uber, Bolt et Yango exposent SOS et partage trajet.",
         nextStep:
-          'Restaurer le backend puis traiter les gaps critiques avant extension.',
+          "Restaurer le backend puis traiter les gaps critiques avant extension.",
       },
     ],
   },
@@ -572,41 +572,41 @@ const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
       missingGates: 5,
       criticalOpenGates: 5,
       coverageRate: 8.3,
-      launchPosture: 'limited',
+      launchPosture: "limited",
     },
     gates: [
       {
-        id: 'fallback-security-assurance',
-        label: 'Assurance OWASP/NIST',
-        status: 'missing',
-        priority: 'critical',
-        owner: 'engineering',
-        frameworks: ['OWASP API Top 10', 'OWASP MASVS', 'NIST SSDF'],
+        id: "fallback-security-assurance",
+        label: "Assurance OWASP/NIST",
+        status: "missing",
+        priority: "critical",
+        owner: "engineering",
+        frameworks: ["OWASP API Top 10", "OWASP MASVS", "NIST SSDF"],
         currentSignal:
-          'Fallback admin: reconnecter le backend pour obtenir les gates officiels.',
+          "Fallback admin: reconnecter le backend pour obtenir les gates officiels.",
         nextStep:
-          'Restaurer launch-readiness puis assigner API/BOLA, mobile MASVS, paiements, GPS/fraude et resilience.',
+          "Restaurer launch-readiness puis assigner API/BOLA, mobile MASVS, paiements, GPS/fraude et resilience.",
       },
     ],
   },
   fieldQuality: {
     score: 72,
-    state: 'watch',
+    state: "watch",
     blockedSignals: 0,
     watchSignals: 1,
     signals: [
       {
-        id: 'fallback-field-quality',
-        label: 'Qualite terrain',
+        id: "fallback-field-quality",
+        label: "Qualite terrain",
         score: 72,
-        state: 'watch',
-        owner: 'engineering',
+        state: "watch",
+        owner: "engineering",
         competitorReference:
-          'Les leaders pilotent leur qualite avec support, paiement, disponibilite et stabilite mobile.',
+          "Les leaders pilotent leur qualite avec support, paiement, disponibilite et stabilite mobile.",
         orbiSignal:
-          'Fallback admin: reconnecter le backend pour obtenir le score terrain officiel.',
+          "Fallback admin: reconnecter le backend pour obtenir le score terrain officiel.",
         nextStep:
-          'Relancer le backend puis verifier launch-readiness et System Health.',
+          "Relancer le backend puis verifier launch-readiness et System Health.",
       },
     ],
   },
@@ -640,13 +640,14 @@ async function loadAdminData(): Promise<{
     version: orbiRuntimeConfig.apiVersion,
   });
   const ouagaPreset =
-    burkinaPricingCityPresets.find((preset) => preset.id === 'OUAGADOUGOU') ??
+    burkinaPricingCityPresets.find((preset) => preset.id === "OUAGADOUGOU") ??
     burkinaPricingCityPresets[0];
   const boboPreset =
-    burkinaPricingCityPresets.find((preset) => preset.id === 'BOBO_DIOULASSO') ??
-    burkinaPricingCityPresets[1];
+    burkinaPricingCityPresets.find(
+      (preset) => preset.id === "BOBO_DIOULASSO",
+    ) ?? burkinaPricingCityPresets[1];
   const northPreset =
-    burkinaPricingCityPresets.find((preset) => preset.id === 'OUAHIGOUYA') ??
+    burkinaPricingCityPresets.find((preset) => preset.id === "OUAHIGOUYA") ??
     burkinaPricingCityPresets[burkinaPricingCityPresets.length - 1];
 
   try {
@@ -672,108 +673,108 @@ async function loadAdminData(): Promise<{
       boboEstimate,
       northEstimate,
     ] = await Promise.all([
-        fetchAdminOverview(authClient),
-        fetchAdminLiveOps(authClient),
-        fetchAdminTripsAudit(authClient, { lookbackHours: 24 }),
-        fetchAdminSupportTickets(authClient),
-        fetchAdminDriverOnboardingQueue(authClient),
-        fetchAdminFeatureFlags(authClient),
-        fetchAdminDispatchSettings(authClient),
-        fetchAdminPricingCalibration(authClient),
-        fetchAdminPaymentWebhookEvents(authClient, {
-          page: 1,
-          pageSize: 8,
-        }),
-        fetchAdminDriverWallets(authClient),
-        fetchAdminRiders(authClient, { page: 1, pageSize: 30 }),
-        fetchAdminDrivers(authClient, { page: 1, pageSize: 30 }),
-        fetchAdminLaunchReadiness(authClient),
-        fetchHealthCheck(client),
-        listAdminPromoCodes(authClient),
-        fetchPricingEstimate(client, {
-          distanceKm: ouagaPreset.estimatedDistanceKm,
-          durationMinutes: ouagaPreset.estimatedDurationMinutes,
-          vehicleType: 'MOTORCYCLE',
-          paymentMethod: 'MOBILE_MONEY',
-          zone: ouagaPreset.zone,
-          city: ouagaPreset.id,
-          districtProfile: ouagaPreset.districtProfile,
-          isPeakHour: true,
-          trafficLevel: 'HEAVY',
-          weatherCondition: 'HEAT',
-          roadCondition: 'CONGESTED',
-          activeDriverCount: 8,
-          openRequestCount: 11,
-        }),
-        fetchPricingEstimate(client, {
-          distanceKm: boboPreset.estimatedDistanceKm,
-          durationMinutes: boboPreset.estimatedDurationMinutes,
-          vehicleType: 'CAR',
-          paymentMethod: 'CASH',
-          zone: boboPreset.zone,
-          city: boboPreset.id,
-          districtProfile: boboPreset.districtProfile,
-          trafficLevel: 'MODERATE',
-          weatherCondition: 'CLEAR',
-          roadCondition: 'SLOW',
-          activeDriverCount: 6,
-          openRequestCount: 7,
-        }),
-        fetchPricingEstimate(client, {
-          distanceKm: northPreset.estimatedDistanceKm,
-          durationMinutes: northPreset.estimatedDurationMinutes,
-          vehicleType: 'MOTORCYCLE',
-          paymentMethod: 'MOBILE_MONEY',
-          zone: northPreset.zone,
-          city: northPreset.id,
-          districtProfile: northPreset.districtProfile,
-          trafficLevel: 'HEAVY',
-          weatherCondition: 'DUST',
-          roadCondition: 'BLOCKED',
-          activeDriverCount: 4,
-          openRequestCount: 5,
-        }),
-      ]);
+      fetchAdminOverview(authClient),
+      fetchAdminLiveOps(authClient),
+      fetchAdminTripsAudit(authClient, { lookbackHours: 24 }),
+      fetchAdminSupportTickets(authClient),
+      fetchAdminDriverOnboardingQueue(authClient),
+      fetchAdminFeatureFlags(authClient),
+      fetchAdminDispatchSettings(authClient),
+      fetchAdminPricingCalibration(authClient),
+      fetchAdminPaymentWebhookEvents(authClient, {
+        page: 1,
+        pageSize: 8,
+      }),
+      fetchAdminDriverWallets(authClient),
+      fetchAdminRiders(authClient, { page: 1, pageSize: 30 }),
+      fetchAdminDrivers(authClient, { page: 1, pageSize: 30 }),
+      fetchAdminLaunchReadiness(authClient),
+      fetchHealthCheck(client),
+      listAdminPromoCodes(authClient),
+      fetchPricingEstimate(client, {
+        distanceKm: ouagaPreset.estimatedDistanceKm,
+        durationMinutes: ouagaPreset.estimatedDurationMinutes,
+        vehicleType: "MOTORCYCLE",
+        paymentMethod: "MOBILE_MONEY",
+        zone: ouagaPreset.zone,
+        city: ouagaPreset.id,
+        districtProfile: ouagaPreset.districtProfile,
+        isPeakHour: true,
+        trafficLevel: "HEAVY",
+        weatherCondition: "HEAT",
+        roadCondition: "CONGESTED",
+        activeDriverCount: 8,
+        openRequestCount: 11,
+      }),
+      fetchPricingEstimate(client, {
+        distanceKm: boboPreset.estimatedDistanceKm,
+        durationMinutes: boboPreset.estimatedDurationMinutes,
+        vehicleType: "CAR",
+        paymentMethod: "CASH",
+        zone: boboPreset.zone,
+        city: boboPreset.id,
+        districtProfile: boboPreset.districtProfile,
+        trafficLevel: "MODERATE",
+        weatherCondition: "CLEAR",
+        roadCondition: "SLOW",
+        activeDriverCount: 6,
+        openRequestCount: 7,
+      }),
+      fetchPricingEstimate(client, {
+        distanceKm: northPreset.estimatedDistanceKm,
+        durationMinutes: northPreset.estimatedDurationMinutes,
+        vehicleType: "MOTORCYCLE",
+        paymentMethod: "MOBILE_MONEY",
+        zone: northPreset.zone,
+        city: northPreset.id,
+        districtProfile: northPreset.districtProfile,
+        trafficLevel: "HEAVY",
+        weatherCondition: "DUST",
+        roadCondition: "BLOCKED",
+        activeDriverCount: 4,
+        openRequestCount: 5,
+      }),
+    ]);
 
     return {
       preview: {
         metrics: [
           {
-            label: 'Reservations brutes',
-            value: `XOF ${(overview.openRequests * 1850).toLocaleString('fr-FR')}`,
-            trend: 'Projection live authentifiee',
+            label: "Reservations brutes",
+            value: `XOF ${(overview.openRequests * 1850).toLocaleString("fr-FR")}`,
+            trend: "Projection live authentifiee",
           },
           {
-            label: 'Taux de completion',
-            value: overview.users ? '94,8%' : '0%',
+            label: "Taux de completion",
+            value: overview.users ? "94,8%" : "0%",
             trend: `${overview.activeTrips} trajets actifs`,
           },
           {
-            label: 'Temps moyen pickup',
-            value: '3 min 12 s',
+            label: "Temps moyen pickup",
+            value: "3 min 12 s",
             trend: `${overview.openRequests} demandes ouvertes`,
           },
           {
-            label: 'Incidents en direct',
+            label: "Incidents en direct",
             value: String(liveOps.summary.urgentSupportTickets),
             trend: `Console ${me.user.fullName}`,
           },
         ],
         operations: [
           {
-            title: 'Passagers',
+            title: "Passagers",
             value: String(overview.riders),
-            note: 'Comptes passagers relies a un profil actif',
+            note: "Comptes passagers relies a un profil actif",
           },
           {
-            title: 'Chauffeurs actifs',
+            title: "Chauffeurs actifs",
             value: String(overview.drivers),
-            note: 'Motos et voitures confondues',
+            note: "Motos et voitures confondues",
           },
           {
-            title: 'Demandes ouvertes',
+            title: "Demandes ouvertes",
             value: String(overview.openRequests),
-            note: 'Flux de reservation authentifie depuis le backend',
+            note: "Flux de reservation authentifie depuis le backend",
           },
         ],
         incidents: liveOps.alerts.length ? liveOps.alerts : calmIncidentFeed,
@@ -794,21 +795,21 @@ async function loadAdminData(): Promise<{
       promoCodes,
       pricingScenarios: [
         {
-          id: 'ouaga-campus',
-          title: 'Moto campus vers Ouaga 2000',
-          note: 'Scenario de pointe campus avec trafic dense, chaleur et congestion explicable sans explosion de prix.',
+          id: "ouaga-campus",
+          title: "Moto campus vers Ouaga 2000",
+          note: "Scenario de pointe campus avec trafic dense, chaleur et congestion explicable sans explosion de prix.",
           estimate: ouagaEstimate,
         },
         {
-          id: 'bobo-market',
-          title: 'Voiture zone marche Bobo',
-          note: 'Course car orientee commerce urbain avec circulation ralentie et disponibilite encore defendable.',
+          id: "bobo-market",
+          title: "Voiture zone marche Bobo",
+          note: "Course car orientee commerce urbain avec circulation ralentie et disponibilite encore defendable.",
           estimate: boboEstimate,
         },
         {
-          id: 'north-peripheral',
-          title: 'Moto peripherique Ouahigouya',
-          note: 'Scenario periurbain sous poussiere et voirie contrainte avec soutien d accessibilite et tension flotte.',
+          id: "north-peripheral",
+          title: "Moto peripherique Ouahigouya",
+          note: "Scenario periurbain sous poussiere et voirie contrainte avec soutien d accessibilite et tension flotte.",
           estimate: northEstimate,
         },
       ],
@@ -828,45 +829,45 @@ async function loadAdminData(): Promise<{
       featureFlags: {
         flags: [
           {
-            flag: 'payments',
-            mode: 'on',
+            flag: "payments",
+            mode: "on",
             allowlist: [],
             effectiveForAnonymous: false,
           },
           {
-            flag: 'pricing',
-            mode: 'on',
+            flag: "pricing",
+            mode: "on",
             allowlist: [],
             effectiveForAnonymous: true,
           },
           {
-            flag: 'realtime',
-            mode: 'on',
+            flag: "realtime",
+            mode: "on",
             allowlist: [],
             effectiveForAnonymous: false,
           },
           {
-            flag: 'driverOnboarding',
-            mode: 'on',
+            flag: "driverOnboarding",
+            mode: "on",
             allowlist: [],
             effectiveForAnonymous: false,
           },
           {
-            flag: 'voice',
-            mode: 'on',
+            flag: "voice",
+            mode: "on",
             allowlist: [],
             effectiveForAnonymous: true,
           },
         ],
         infrastructure: {
           realtime: {
-            adapter: 'in-memory',
+            adapter: "in-memory",
             sharedBackplane: false,
             degraded: false,
             degradeReason: null,
             activeStreams: 0,
             publishedEvents: 0,
-            featureFlagMode: 'on',
+            featureFlagMode: "on",
             featureFlagEnabled: true,
           },
         },
@@ -877,7 +878,7 @@ async function loadAdminData(): Promise<{
           halfLifeHours: 18,
           declineCooldownMinutes: 20,
           historyLimit: 48,
-          source: 'DEFAULT',
+          source: "DEFAULT",
           updatedAt: null,
           updatedBy: null,
         },
@@ -930,7 +931,9 @@ export default async function AdminHomePage({
     pricingScenarios,
   } = await loadAdminData();
   const showDemoPasswords = shouldShowDemoPasswords();
-  const adminAuthNotice = resolveAdminAuthNotice(resolvedSearchParams.adminAuth);
+  const adminAuthNotice = resolveAdminAuthNotice(
+    resolvedSearchParams.adminAuth,
+  );
 
   return (
     <main className="shell">
@@ -1180,9 +1183,7 @@ export default async function AdminHomePage({
         <div className="roadmap-grid">
           {executionPhases.map((phase) => (
             <article className="phase-card" key={phase.id}>
-              <span
-                className={`phase-status phase-status-${phase.status}`}
-              >
+              <span className={`phase-status phase-status-${phase.status}`}>
                 {phase.status}
               </span>
               <h3>{phase.title}</h3>

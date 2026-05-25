@@ -2722,7 +2722,8 @@ export class AdminService {
 
     const byStatus = {
       matched: trips.filter((trip) => trip.status === 'MATCHED').length,
-      arriving: trips.filter((trip) => trip.status === 'DRIVER_ARRIVING').length,
+      arriving: trips.filter((trip) => trip.status === 'DRIVER_ARRIVING')
+        .length,
       inProgress: trips.filter((trip) => trip.status === 'IN_PROGRESS').length,
       completed: trips.filter((trip) => trip.status === 'COMPLETED').length,
       cancelled: trips.filter((trip) => trip.status === 'CANCELLED').length,
@@ -2770,7 +2771,9 @@ export class AdminService {
         const hasRefundPending = trip.rideRequest.paymentAttempts.some(
           (attempt) => attempt.status === 'REFUND_PENDING',
         );
-        const fare = Number(trip.actualFare ?? trip.rideRequest.estimatedFare ?? 0);
+        const fare = Number(
+          trip.actualFare ?? trip.rideRequest.estimatedFare ?? 0,
+        );
         const reasons: string[] = [];
         let severity: 'low' | 'medium' | 'high' | 'critical' = 'low';
         let owner: 'ops' | 'finance' | 'support' | 'engineering' = 'ops';
@@ -2800,7 +2803,9 @@ export class AdminService {
         if (trip.status === 'CANCELLED' && trip.startedAt) {
           reasons.push('Course annulee apres demarrage declare.');
           severity =
-            severity === 'critical' || severity === 'high' ? severity : 'medium';
+            severity === 'critical' || severity === 'high'
+              ? severity
+              : 'medium';
           owner = owner === 'finance' ? owner : 'support';
         }
 
@@ -2810,7 +2815,9 @@ export class AdminService {
         ) {
           reasons.push('Signal GPS chauffeur absent ou trop ancien.');
           severity =
-            severity === 'critical' || severity === 'high' ? severity : 'medium';
+            severity === 'critical' || severity === 'high'
+              ? severity
+              : 'medium';
           owner = owner === 'finance' ? owner : 'ops';
         }
 
@@ -2870,12 +2877,7 @@ export class AdminService {
         currency: 'XOF',
         byStatus,
       },
-      ownerQueue: [
-        'finance',
-        'ops',
-        'support',
-        'engineering',
-      ].map((owner) => {
+      ownerQueue: ['finance', 'ops', 'support', 'engineering'].map((owner) => {
         const ownerTrips = riskTrips.filter((trip) => trip.owner === owner);
         return {
           owner,
@@ -5513,7 +5515,9 @@ export class AdminService {
       data: {
         status: payload.status ?? existing.status,
         priority: payload.priority ?? existing.priority,
-        ...(trimmedNote !== undefined ? { adminNote: trimmedNote || null } : {}),
+        ...(trimmedNote !== undefined
+          ? { adminNote: trimmedNote || null }
+          : {}),
       },
     });
 
@@ -5543,17 +5547,18 @@ export class AdminService {
     });
 
     const shouldNotifyUser =
-      trimmedNote !== undefined || payload.status === 'RESOLVED' || payload.status === 'CLOSED';
+      trimmedNote !== undefined ||
+      payload.status === 'RESOLVED' ||
+      payload.status === 'CLOSED';
 
     if (shouldNotifyUser) {
       const notifTitle =
         updated.status === 'RESOLVED' || updated.status === 'CLOSED'
           ? 'Ticket support résolu'
           : 'Réponse du support';
-      const notifBody =
-        trimmedNote
-          ? `L'équipe support a répondu à votre demande "${updated.subject.slice(0, 40)}".`
-          : `Votre ticket "${updated.subject.slice(0, 40)}" a été mis à jour.`;
+      const notifBody = trimmedNote
+        ? `L'équipe support a répondu à votre demande "${updated.subject.slice(0, 40)}".`
+        : `Votre ticket "${updated.subject.slice(0, 40)}" a été mis à jour.`;
 
       void this.notificationsService.enqueue({
         userId: existing.userId,
@@ -6207,7 +6212,13 @@ export class AdminService {
   }
 
   async tripsExportCsv(
-    query: { status?: string; limit?: number; fromDate?: string; toDate?: string; search?: string },
+    query: {
+      status?: string;
+      limit?: number;
+      fromDate?: string;
+      toDate?: string;
+      search?: string;
+    },
     auth: RequestAuthContext,
   ) {
     const limit = Math.min(query.limit ?? 200, 500);
@@ -6228,8 +6239,20 @@ export class AdminService {
       ...(query.search
         ? {
             OR: [
-              { rider: { user: { fullName: { contains: query.search, mode: 'insensitive' } } } },
-              { driver: { user: { fullName: { contains: query.search, mode: 'insensitive' } } } },
+              {
+                rider: {
+                  user: {
+                    fullName: { contains: query.search, mode: 'insensitive' },
+                  },
+                },
+              },
+              {
+                driver: {
+                  user: {
+                    fullName: { contains: query.search, mode: 'insensitive' },
+                  },
+                },
+              },
             ],
           }
         : {}),
@@ -6254,7 +6277,9 @@ export class AdminService {
         createdAt: true,
         rider: { select: { user: { select: { fullName: true } } } },
         driver: { select: { user: { select: { fullName: true } } } },
-        vehicle: { select: { make: true, model: true, type: true, plateNumber: true } },
+        vehicle: {
+          select: { make: true, model: true, type: true, plateNumber: true },
+        },
         rideRequest: { select: { paymentMethod: true, estimatedFare: true } },
       },
     });
@@ -6450,7 +6475,9 @@ export class AdminService {
     });
 
     if (existing) {
-      throw new ConflictException(`Promo code "${normalizedCode}" already exists.`);
+      throw new ConflictException(
+        `Promo code "${normalizedCode}" already exists.`,
+      );
     }
 
     const created = await this.prisma.promoCode.create({
@@ -6531,7 +6558,12 @@ export class AdminService {
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 30));
     const searchTerm = query.search?.trim();
-    const allowedStatuses = new Set(['PENDING', 'ACTIVE', 'SUSPENDED', 'REJECTED']);
+    const allowedStatuses = new Set([
+      'PENDING',
+      'ACTIVE',
+      'SUSPENDED',
+      'REJECTED',
+    ]);
     const filterStatus =
       query.status && allowedStatuses.has(query.status.toUpperCase())
         ? (query.status.toUpperCase() as DriverStatus)
@@ -6541,8 +6573,14 @@ export class AdminService {
       ...(searchTerm
         ? {
             OR: [
-              { user: { fullName: { contains: searchTerm, mode: 'insensitive' } } },
-              { user: { email: { contains: searchTerm, mode: 'insensitive' } } },
+              {
+                user: {
+                  fullName: { contains: searchTerm, mode: 'insensitive' },
+                },
+              },
+              {
+                user: { email: { contains: searchTerm, mode: 'insensitive' } },
+              },
               { user: { phoneNumber: { contains: searchTerm } } },
             ],
           }
