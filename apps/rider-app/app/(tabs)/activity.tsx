@@ -72,6 +72,124 @@ const fallbackHistory: MyTripsResponse = {
   recentTrips: [],
 };
 
+const MILESTONES = [
+  { trips: 5, badge: "Pionnier", emoji: "🌱" },
+  { trips: 20, badge: "Fidele", emoji: "⭐" },
+  { trips: 50, badge: "Ambassadeur", emoji: "🏆" },
+] as const;
+
+function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
+  const earned = MILESTONES.filter((m) => completedTrips >= m.trips);
+  const next = MILESTONES.find((m) => completedTrips < m.trips);
+  const progress = next
+    ? Math.min(
+        Math.round((completedTrips / next.trips) * 100),
+        100,
+      )
+    : 100;
+
+  return (
+    <View style={loyaltyStyles.card}>
+      <View style={loyaltyStyles.header}>
+        <Text style={loyaltyStyles.eyebrow}>Programme Fidélité</Text>
+        {earned.length > 0 ? (
+          <View style={loyaltyStyles.badgeRow}>
+            {earned.map((m) => (
+              <View key={m.badge} style={loyaltyStyles.earnedBadge}>
+                <Text style={loyaltyStyles.earnedBadgeText}>
+                  {m.emoji} {m.badge}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
+
+      {next ? (
+        <>
+          <Text style={loyaltyStyles.nextLabel}>
+            {next.emoji} {next.badge} — encore{" "}
+            {next.trips - completedTrips} course(s)
+          </Text>
+          <View style={loyaltyStyles.progressTrack}>
+            <View
+              style={[
+                loyaltyStyles.progressFill,
+                { width: `${progress}%` as `${number}%` },
+              ]}
+            />
+          </View>
+          <Text style={loyaltyStyles.progressMeta}>
+            {completedTrips} / {next.trips} courses
+          </Text>
+        </>
+      ) : (
+        <Text style={loyaltyStyles.nextLabel}>
+          🎉 Statut maximum atteint — merci de votre fidélité !
+        </Text>
+      )}
+    </View>
+  );
+}
+
+const loyaltyStyles = StyleSheet.create({
+  card: {
+    backgroundColor: "rgba(61,215,192,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(61,215,192,0.18)",
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    color: orbiTheme.colors.teal,
+  },
+  badgeRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
+  earnedBadge: {
+    backgroundColor: "rgba(61,215,192,0.14)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  earnedBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: orbiTheme.colors.teal,
+  },
+  nextLabel: {
+    fontSize: 13,
+    color: orbiTheme.colors.text,
+    fontWeight: "600",
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: 99,
+    backgroundColor: "rgba(61,215,192,0.12)",
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 99,
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  progressMeta: {
+    fontSize: 11,
+    color: orbiTheme.colors.muted,
+    fontWeight: "600",
+  },
+});
+
 function LiveApproachPreview({
   progressPercent,
   title,
@@ -827,6 +945,8 @@ export default function ActivityScreen() {
           `Etat principal: ${primaryStatusLabel}`,
         ]}
       />
+
+      <LoyaltyMilestoneCard completedTrips={history.stats.completedTrips} />
 
       {activeTrip ? (
         <RouteSignalCard
