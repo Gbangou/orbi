@@ -4290,4 +4290,123 @@ describe('AdminService', () => {
     });
     expect(result.incident.mutedBy?.id).toBe('admin-1');
   });
+
+  it('lists driver accounts with bounded pagination and search filters', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findMany.mockResolvedValue([
+      {
+        id: 'driver-profile-1',
+        status: 'ACTIVE',
+        completedTripsCount: 12,
+        createdAt: new Date('2026-05-01T08:00:00.000Z'),
+        user: {
+          id: 'driver-user-1',
+          fullName: 'Moussa Traore',
+          email: 'moussa@orbi.test',
+          phoneNumber: '+22670000001',
+          isActive: true,
+        },
+        vehicles: [
+          {
+            make: 'Honda',
+            model: 'CB150',
+            plateNumber: '01-BF-1234',
+            type: 'MOTORCYCLE',
+          },
+        ],
+      },
+    ]);
+    prisma.driverProfile.count.mockResolvedValue(1);
+
+    const result = await service.listDrivers({
+      page: 0,
+      pageSize: 200,
+      search: ' moussa ',
+      status: 'ACTIVE',
+    });
+
+    expect(prisma.driverProfile.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: 'ACTIVE',
+          OR: expect.arrayContaining([
+            {
+              user: {
+                fullName: { contains: 'moussa', mode: 'insensitive' },
+              },
+            },
+          ]),
+        }),
+        skip: 0,
+        take: 100,
+      }),
+    );
+    expect(result).toEqual({
+      drivers: [
+        {
+          id: 'driver-profile-1',
+          userId: 'driver-user-1',
+          fullName: 'Moussa Traore',
+          email: 'moussa@orbi.test',
+          phoneNumber: '+22670000001',
+          isActive: true,
+          status: 'ACTIVE',
+          createdAt: '2026-05-01T08:00:00.000Z',
+          completedTripsCount: 12,
+          vehicle: {
+            make: 'Honda',
+            model: 'CB150',
+            plateNumber: '01-BF-1234',
+            vehicleType: 'MOTORCYCLE',
+          },
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 100,
+    });
+  });
+
+  it('returns null vehicle when driver has no active vehicle registered', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findMany.mockResolvedValue([
+      {
+        id: 'driver-profile-2',
+        status: 'PENDING',
+        completedTripsCount: 0,
+        createdAt: new Date('2026-05-10T09:00:00.000Z'),
+        user: {
+          id: 'driver-user-2',
+          fullName: 'Fatima Kone',
+          email: 'fatima@orbi.test',
+          phoneNumber: null,
+          isActive: true,
+        },
+        vehicles: [],
+      },
+    ]);
+    prisma.driverProfile.count.mockResolvedValue(1);
+
+    const result = await service.listDrivers({});
+
+    expect(result.drivers[0].vehicle).toBeNull();
+    expect(result.drivers[0].phoneNumber).toBeNull();
+  });
+
+  it('rejects unknown status filters without crashing', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findMany.mockResolvedValue([]);
+    prisma.driverProfile.count.mockResolvedValue(0);
+
+    await service.listDrivers({ status: 'INVALID_STATUS' });
+
+    expect(prisma.driverProfile.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.not.objectContaining({ status: 'INVALID_STATUS' }),
+      }),
+    );
+  });
 });

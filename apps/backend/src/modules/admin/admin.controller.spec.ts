@@ -16,6 +16,7 @@ describe('AdminController', () => {
       launchReadiness: jest.fn(),
       acknowledgeLaunchReadinessAction: jest.fn(),
       supportTickets: jest.fn(),
+      listDrivers: jest.fn(),
       listRiders: jest.fn(),
       setRiderStatus: jest.fn(),
       driverOnboardingQueue: jest.fn(),
@@ -594,6 +595,43 @@ describe('AdminController', () => {
       GUARDS_METADATA,
       controller.tripsExportCsv,
     ) as unknown[];
+    expect(guards).toContain(SessionAuthGuard);
+    expect(guards).toContain(RolesGuard);
+  });
+
+  it('delegates driver account list reads to the admin service', async () => {
+    const { adminService, controller } = createController();
+    const query = {
+      page: 1,
+      pageSize: 30,
+      search: 'bakary',
+      status: 'ACTIVE',
+    };
+
+    await controller.listDrivers(query as never);
+
+    expect(adminService.listDrivers).toHaveBeenCalledWith(query);
+  });
+
+  it('allows ADMIN, OPS and SUPPORT to list drivers', () => {
+    const handler = AdminController.prototype['listDrivers'];
+    const roles: UserRole[] = Reflect.getMetadata(
+      ROLES_KEY,
+      handler,
+    ) as UserRole[];
+
+    expect(roles).toContain(UserRole.ADMIN);
+    expect(roles).toContain(UserRole.OPS);
+    expect(roles).toContain(UserRole.SUPPORT);
+  });
+
+  it('requires session auth guard on the drivers list endpoint', () => {
+    const handler = AdminController.prototype['listDrivers'];
+    const guards: unknown[] = Reflect.getMetadata(
+      GUARDS_METADATA,
+      handler,
+    ) as unknown[];
+
     expect(guards).toContain(SessionAuthGuard);
     expect(guards).toContain(RolesGuard);
   });
