@@ -107,6 +107,19 @@ describe('admin server security', () => {
     expect(secondKey).not.toBe(key);
   });
 
+  it('keeps launch readiness acknowledgement idempotency generated server-side', () => {
+    const source = readFileSync(
+      join(
+        process.cwd(),
+        'app/api/admin/launch-readiness/actions/[checkId]/acknowledge/route.ts',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('createAdminIdempotencyKey');
+    expect(source).toContain("createAdminIdempotencyKey('launch-ack')");
+  });
+
   it('bounds driver payout settlement status before proxying exports', () => {
     expect(resolveDriverPayoutSettlementStatus('PAID')).toBe('PAID');
     expect(resolveDriverPayoutSettlementStatus('CANCELLED')).toBe('CANCELLED');

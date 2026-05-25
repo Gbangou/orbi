@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { acknowledgeAdminLaunchReadinessAction } from '@orbi/api';
+import { createAdminIdempotencyKey } from '../../../../../../admin-idempotency';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,
@@ -53,7 +54,10 @@ function normalizeAcknowledgementPayload(value: unknown) {
   return {
     owner: input.owner as LaunchReadinessOwner,
     notes,
-    ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
+    idempotencyKey:
+      typeof input.idempotencyKey === 'string'
+        ? input.idempotencyKey
+        : createAdminIdempotencyKey('launch-ack'),
   };
 }
 

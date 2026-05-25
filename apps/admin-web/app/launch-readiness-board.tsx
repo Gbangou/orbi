@@ -16,6 +16,7 @@ import {
   fetchAdminJson,
   postAdminMutation,
 } from './admin-client-fetch';
+import { createAdminIdempotencyKey } from './admin-idempotency';
 import {
   describeProductionReadiness,
   describeReadinessState,
@@ -424,7 +425,7 @@ export function LaunchReadinessBoard({
         {
           owner: action.owner,
           notes: `Owner ${action.owner} confirme sur la console launch readiness.`,
-          idempotencyKey: `${action.checkId}-${Date.now()}`,
+          idempotencyKey: createAdminIdempotencyKey(action.checkId),
         },
       );
 
