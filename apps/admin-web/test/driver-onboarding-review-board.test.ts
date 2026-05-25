@@ -24,5 +24,8 @@ describe('driver onboarding review board', () => {
     expect(source).toContain(
       'documentActionInFlightRef.current.delete(documentId)',
     );
+    expect(source).toContain('exportCsvInFlightRef');
+    expect(source).toContain('exportCsvInFlightRef.current = true');
+    expect(source).toContain('exportCsvInFlightRef.current = false');
   });
 });

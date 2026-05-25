@@ -290,6 +290,7 @@ export function DriverOnboardingReviewBoard({
     useRef<DriverOnboardingReviewBoardProps['initialQueue'] | null>(null);
   const driverActionInFlightRef = useRef(new Set<string>());
   const documentActionInFlightRef = useRef(new Set<string>());
+  const exportCsvInFlightRef = useRef(false);
 
   function beginDriverAction(driverId: string) {
     if (driverActionInFlightRef.current.has(driverId)) {
@@ -608,6 +609,11 @@ export function DriverOnboardingReviewBoard({
   }
 
   async function handleExportCsv() {
+    if (exportCsvInFlightRef.current) {
+      return;
+    }
+
+    exportCsvInFlightRef.current = true;
     setStatus('Generation export CSV audite...');
 
     try {
@@ -637,6 +643,8 @@ export function DriverOnboardingReviewBoard({
       await refreshExportHistory();
     } catch {
       setStatus("L export CSV onboarding n a pas pu etre genere.");
+    } finally {
+      exportCsvInFlightRef.current = false;
     }
   }
 
