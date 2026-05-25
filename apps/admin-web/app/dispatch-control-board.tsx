@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   type AdminDispatchSettingsResponse,
 } from '@orbi/api';
@@ -161,6 +161,7 @@ export function DispatchControlBoard({
   const [liveSettings, setLiveSettings] = useState(initialSettings);
   const [status, setStatus] = useState('Parametres dispatch synchronises.');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const dispatchMutationInFlightRef = useRef(false);
   const [historyTypeFilter, setHistoryTypeFilter] =
     useState<DispatchHistoryTypeFilter>('ALL');
   const [historyActorFilter, setHistoryActorFilter] =
@@ -209,6 +210,11 @@ export function DispatchControlBoard({
   );
 
   async function handleSubmit() {
+    if (dispatchMutationInFlightRef.current) {
+      return;
+    }
+
+    dispatchMutationInFlightRef.current = true;
     setIsSubmitting(true);
     setStatus('Enregistrement des reglages dispatch persistants...');
 
@@ -225,11 +231,17 @@ export function DispatchControlBoard({
     } catch {
       setStatus("La mise a jour des reglages dispatch a echoue.");
     } finally {
+      dispatchMutationInFlightRef.current = false;
       setIsSubmitting(false);
     }
   }
 
   async function handleReset() {
+    if (dispatchMutationInFlightRef.current) {
+      return;
+    }
+
+    dispatchMutationInFlightRef.current = true;
     setIsSubmitting(true);
     setStatus('Retour aux reglages dispatch par defaut...');
 
@@ -243,6 +255,7 @@ export function DispatchControlBoard({
     } catch {
       setStatus('Le reset des reglages dispatch a echoue.');
     } finally {
+      dispatchMutationInFlightRef.current = false;
       setIsSubmitting(false);
     }
   }
