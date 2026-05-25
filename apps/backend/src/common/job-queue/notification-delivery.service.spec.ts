@@ -120,4 +120,76 @@ describe('NotificationDeliveryService', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('rejects when the userId is empty', async () => {
+    const { service } = createService();
+
+    await expect(
+      service.dispatch({
+        notificationId: 'notification-1',
+        userId: '   ',
+        channel: NotificationChannel.PUSH,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('throws when a push token exists but the notification record is missing', async () => {
+    const { service } = createService({
+      pushToken: 'ExponentPushToken[test-token]',
+    });
+
+    await expect(
+      service.dispatch({
+        notificationId: 'notification-missing',
+        userId: 'user-1',
+        channel: NotificationChannel.PUSH,
+      }),
+    ).rejects.toThrow('notification_missing_for_push_delivery');
+  });
+
+  it('throws when the Expo API returns a non-2xx HTTP response', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+    }) as never;
+
+    const { service } = createService({
+      pushToken: 'ExponentPushToken[test-token]',
+      notificationTitle: 'Test',
+      notificationBody: 'Body',
+    });
+
+    await expect(
+      service.dispatch({
+        notificationId: 'notification-1',
+        userId: 'user-1',
+        channel: NotificationChannel.PUSH,
+      }),
+    ).rejects.toThrow('expo_push_api_http_error:503');
+  });
+
+  it('returns an expo result with a fallback ticket id when the push ticket has no id', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: { status: 'error', message: 'DeviceNotRegistered' },
+      }),
+    }) as never;
+
+    const { service } = createService({
+      pushToken: 'ExponentPushToken[test-token]',
+      notificationTitle: 'Test',
+      notificationBody: 'Body',
+    });
+
+    const result = await service.dispatch({
+      notificationId: 'notification-1',
+      userId: 'user-1',
+      channel: NotificationChannel.PUSH,
+    });
+
+    expect(result.provider).toBe('expo');
+    expect(result.providerMessageId).toBe('expo:notification-1');
+    expect(result.deliveredAt).toBeInstanceOf(Date);
+  });
 });
