@@ -421,6 +421,15 @@ const promoStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  strikePrice: {
+    fontSize: 13,
+    color: orbiTheme.colors.muted,
+    textDecorationLine: 'line-through',
+    fontWeight: '600',
+  },
+  discountedPrice: {
+    color: orbiTheme.colors.teal,
+  },
 });
 
 export default function BookingScreen() {
@@ -1356,9 +1365,20 @@ export default function BookingScreen() {
                     </Text>
                   </View>
                   <View style={styles.optionPriceBlock}>
-                    <Text style={styles.optionPrice}>
-                      {formatXof(option.fare)}
-                    </Text>
+                    {promoValidation ? (
+                      <>
+                        <Text style={promoStyles.strikePrice}>
+                          {formatXof(option.fare)}
+                        </Text>
+                        <Text style={[styles.optionPrice, promoStyles.discountedPrice]}>
+                          {formatXof(Math.round(option.fare * (1 - promoValidation.discountBps / 10000)))}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.optionPrice}>
+                        {formatXof(option.fare)}
+                      </Text>
+                    )}
                     <Text style={styles.optionEta}>{option.etaMinutes} min</Text>
                   </View>
                 </View>
