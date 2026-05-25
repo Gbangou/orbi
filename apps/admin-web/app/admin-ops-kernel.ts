@@ -432,25 +432,38 @@ type DriverOnboardingQueueItem = DriverOnboardingQueueResponse['drivers'][number
 export type DriverOnboardingGuidanceFilter =
   | 'all'
   | DriverOnboardingQueueItem['decisionGuidance']['level'];
+export type DriverStatusFilter = 'all' | 'SUSPENDED' | 'ONLINE' | 'OFFLINE';
 
 export function normalizeAdminSearch(value: string) {
   return value.trim().toLowerCase();
 }
+
+const driverStatusSortPriority: Record<string, number> = {
+  SUSPENDED: 0,
+  ONLINE: 1,
+  OFFLINE: 2,
+};
 
 export function resolveVisibleDriverOnboardingQueue(
   drivers: DriverOnboardingQueueItem[],
   options: {
     guidanceFilter: DriverOnboardingGuidanceFilter;
     searchQuery: string;
+    driverStatusFilter?: DriverStatusFilter;
   },
 ) {
   const query = normalizeAdminSearch(options.searchQuery);
+  const statusFilter = options.driverStatusFilter ?? 'all';
 
   return [...drivers]
     .filter(
       (driver) =>
         options.guidanceFilter === 'all' ||
         driver.decisionGuidance.level === options.guidanceFilter,
+    )
+    .filter(
+      (driver) =>
+        statusFilter === 'all' || driver.driverStatus === statusFilter,
     )
     .filter((driver) => {
       if (!query) {
@@ -490,6 +503,14 @@ export function resolveVisibleDriverOnboardingQueue(
 
       if (priorityDelta !== 0) {
         return priorityDelta;
+      }
+
+      const statusDelta =
+        (driverStatusSortPriority[left.driverStatus] ?? 3) -
+        (driverStatusSortPriority[right.driverStatus] ?? 3);
+
+      if (statusDelta !== 0) {
+        return statusDelta;
       }
 
       return (

@@ -15,6 +15,7 @@ import {
   resolveDriverOnboardingDelta,
   resolveVisibleDriverOnboardingQueue,
   type DriverOnboardingGuidanceFilter,
+  type DriverStatusFilter,
 } from './admin-ops-kernel';
 import {
   createAdminMutationHeaders,
@@ -281,6 +282,8 @@ export function DriverOnboardingReviewBoard({
   const [freshDocumentIds, setFreshDocumentIds] = useState<string[]>([]);
   const [guidanceFilter, setGuidanceFilter] =
     useState<DriverOnboardingGuidanceFilter>('all');
+  const [driverStatusFilter, setDriverStatusFilter] =
+    useState<DriverStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [suspendReasons, setSuspendReasons] = useState<Record<string, string>>({});
   const previousDriversRef =
@@ -352,8 +355,9 @@ export function DriverOnboardingReviewBoard({
     return resolveVisibleDriverOnboardingQueue(drivers, {
       guidanceFilter,
       searchQuery,
+      driverStatusFilter,
     });
-  }, [drivers, guidanceFilter, searchQuery]);
+  }, [drivers, guidanceFilter, searchQuery, driverStatusFilter]);
 
   useEffect(() => {
     const stream = subscribeToAdminRealtime({
@@ -681,6 +685,37 @@ export function DriverOnboardingReviewBoard({
             value={searchQuery}
           />
         </label>
+        <div className="segmented-control" aria-label="Filtrer par statut compte">
+          {(
+            [
+              { label: 'Tous comptes', value: 'all' },
+              { label: 'Suspendu', value: 'SUSPENDED' },
+              { label: 'En ligne', value: 'ONLINE' },
+              { label: 'Hors ligne', value: 'OFFLINE' },
+            ] as Array<{ label: string; value: DriverStatusFilter }>
+          ).map((sf) => {
+            const count =
+              sf.value === 'all'
+                ? drivers.length
+                : drivers.filter((d) => d.driverStatus === sf.value).length;
+            return (
+              <button
+                aria-pressed={driverStatusFilter === sf.value}
+                className={
+                  driverStatusFilter === sf.value
+                    ? 'segmented-control-button segmented-control-button-active'
+                    : 'segmented-control-button'
+                }
+                key={sf.value}
+                onClick={() => setDriverStatusFilter(sf.value)}
+                type="button"
+              >
+                {sf.label}
+                <span>{count}</span>
+              </button>
+            );
+          })}
+        </div>
         <div className="segmented-control">
           {guidanceFilters.map((filter) => {
             const count = filter.level

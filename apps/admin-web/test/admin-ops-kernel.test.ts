@@ -732,6 +732,70 @@ describe('admin-ops-kernel', () => {
     ).toEqual(['driver-resubmit', 'driver-ready']);
   });
 
+  it('filtre les chauffeurs par statut compte (SUSPENDED)', () => {
+    const suspendedDriver = createDriver({
+      id: 'driver-suspended',
+      driverName: 'Oumar Suspendu',
+      driverStatus: 'SUSPENDED',
+    });
+    const onlineDriver = createDriver({
+      id: 'driver-online',
+      driverName: 'Fatou Online',
+      driverStatus: 'ONLINE',
+    });
+    const offlineDriver = createDriver({
+      id: 'driver-offline',
+      driverName: 'Ibou Offline',
+      driverStatus: 'OFFLINE',
+    });
+
+    expect(
+      resolveVisibleDriverOnboardingQueue(
+        [onlineDriver, suspendedDriver, offlineDriver],
+        { guidanceFilter: 'all', searchQuery: '', driverStatusFilter: 'SUSPENDED' },
+      ).map((d) => d.id),
+    ).toEqual(['driver-suspended']);
+
+    expect(
+      resolveVisibleDriverOnboardingQueue(
+        [onlineDriver, suspendedDriver, offlineDriver],
+        { guidanceFilter: 'all', searchQuery: '', driverStatusFilter: 'ONLINE' },
+      ).map((d) => d.id),
+    ).toEqual(['driver-online']);
+  });
+
+  it("trie les comptes suspendus en premier quand le filtre statut est 'all'", () => {
+    const suspendedDriver = createDriver({
+      id: 'driver-suspended',
+      driverStatus: 'SUSPENDED',
+      decisionGuidance: {
+        level: 'review',
+        recommendedStatus: 'UNDER_REVIEW',
+        label: 'Revue',
+        detail: '',
+        blockers: [],
+      },
+    });
+    const onlineDriver = createDriver({
+      id: 'driver-online',
+      driverStatus: 'ONLINE',
+      decisionGuidance: {
+        level: 'review',
+        recommendedStatus: 'UNDER_REVIEW',
+        label: 'Revue',
+        detail: '',
+        blockers: [],
+      },
+    });
+
+    expect(
+      resolveVisibleDriverOnboardingQueue(
+        [onlineDriver, suspendedDriver],
+        { guidanceFilter: 'all', searchQuery: '', driverStatusFilter: 'all' },
+      ).map((d) => d.id),
+    ).toEqual(['driver-suspended', 'driver-online']);
+  });
+
   it('describes health transitions from status degradation and recovery signals', () => {
     expect(
       resolveHealthTransitionLabel(
