@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   type AdminPaymentAttemptProviderVerificationResponse,
   type AdminPaymentAttemptRefundResponse,
@@ -97,6 +97,28 @@ export function PaymentWebhookJournalBoard({
   const [busyByEventId, setBusyByEventId] = useState<Record<string, boolean>>(
     {},
   );
+  const eventActionInFlightRef = useRef(new Set<string>());
+
+  function beginEventAction(eventId: string) {
+    if (eventActionInFlightRef.current.has(eventId)) {
+      return false;
+    }
+
+    eventActionInFlightRef.current.add(eventId);
+    setBusyByEventId((current) => ({
+      ...current,
+      [eventId]: true,
+    }));
+    return true;
+  }
+
+  function endEventAction(eventId: string) {
+    eventActionInFlightRef.current.delete(eventId);
+    setBusyByEventId((current) => ({
+      ...current,
+      [eventId]: false,
+    }));
+  }
 
   async function filterJournal(kind: PaymentWebhookJournalKind) {
     setActiveKind(kind);
@@ -120,10 +142,10 @@ export function PaymentWebhookJournalBoard({
   }
 
   async function startInvestigation(eventId: string) {
-    setBusyByEventId((current) => ({
-      ...current,
-      [eventId]: true,
-    }));
+    if (!beginEventAction(eventId)) {
+      return;
+    }
+
     setStatusByEventId((current) => ({
       ...current,
       [eventId]: 'Investigation en cours...',
@@ -147,18 +169,15 @@ export function PaymentWebhookJournalBoard({
         [eventId]: "L investigation n'a pas pu etre lancee.",
       }));
     } finally {
-      setBusyByEventId((current) => ({
-        ...current,
-        [eventId]: false,
-      }));
+      endEventAction(eventId);
     }
   }
 
   async function replayEvent(eventId: string) {
-    setBusyByEventId((current) => ({
-      ...current,
-      [eventId]: true,
-    }));
+    if (!beginEventAction(eventId)) {
+      return;
+    }
+
     setStatusByEventId((current) => ({
       ...current,
       [eventId]: 'Replay en cours...',
@@ -188,18 +207,15 @@ export function PaymentWebhookJournalBoard({
         [eventId]: "Le replay n'a pas pu etre execute.",
       }));
     } finally {
-      setBusyByEventId((current) => ({
-        ...current,
-        [eventId]: false,
-      }));
+      endEventAction(eventId);
     }
   }
 
   async function verifyAttempt(eventId: string, paymentAttemptId: string) {
-    setBusyByEventId((current) => ({
-      ...current,
-      [eventId]: true,
-    }));
+    if (!beginEventAction(eventId)) {
+      return;
+    }
+
     setStatusByEventId((current) => ({
       ...current,
       [eventId]: 'Verification fournisseur...',
@@ -230,18 +246,15 @@ export function PaymentWebhookJournalBoard({
         [eventId]: "La verification fournisseur n'a pas pu aboutir.",
       }));
     } finally {
-      setBusyByEventId((current) => ({
-        ...current,
-        [eventId]: false,
-      }));
+      endEventAction(eventId);
     }
   }
 
   async function refundAttempt(eventId: string, paymentAttemptId: string) {
-    setBusyByEventId((current) => ({
-      ...current,
-      [eventId]: true,
-    }));
+    if (!beginEventAction(eventId)) {
+      return;
+    }
+
     setStatusByEventId((current) => ({
       ...current,
       [eventId]: 'Remboursement en cours...',
@@ -283,10 +296,7 @@ export function PaymentWebhookJournalBoard({
         [eventId]: "Le remboursement n'a pas pu etre execute.",
       }));
     } finally {
-      setBusyByEventId((current) => ({
-        ...current,
-        [eventId]: false,
-      }));
+      endEventAction(eventId);
     }
   }
 
