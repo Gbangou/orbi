@@ -2227,6 +2227,36 @@ body {
   color: var(--muted);
 }
 
+.launch-decision-signal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.launch-decision-signal span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.launch-decision-signal strong {
+  width: fit-content;
+  margin: 0;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(7, 17, 29, 0.42);
+  border: 1px solid rgba(123, 154, 190, 0.2);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.launch-decision-signal p {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.86rem;
+}
+
 .launch-action-list {
   display: flex;
   flex-wrap: wrap;

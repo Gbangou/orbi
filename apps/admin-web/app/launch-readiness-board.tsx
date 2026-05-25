@@ -497,6 +497,16 @@ export function LaunchReadinessBoard({
           <strong>
             {currentLaunchReadiness?.decision.label ?? productionPilotDecision.title}
           </strong>
+          <div className="launch-decision-signal">
+            <span>signal applique</span>
+            <strong>{describeReadinessState(combinedProductionState)}</strong>
+            {backendDecisionState && backendDecisionState !== prodState ? (
+              <p>
+                Backend {describeReadinessState(backendDecisionState)}, ops{' '}
+                {describeReadinessState(prodState)}.
+              </p>
+            ) : null}
+          </div>
           <p>{currentLaunchReadiness?.decision.detail ?? productionPilotDecision.detail}</p>
           {runtimeAttentionChecks.length ? (
             <div className="launch-action-list">
