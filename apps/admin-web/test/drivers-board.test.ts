@@ -108,4 +108,33 @@ describe('drivers board', () => {
     expect(source).toContain('100');
     expect(source).toContain('.slice(0, 120)');
   });
+
+  it('keeps the reactivate route no-store and auth-guarded', () => {
+    const source = readFileSync(
+      join(
+        process.cwd(),
+        'app/api/admin/drivers/[driverId]/reactivate/route.ts',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('force-dynamic');
+    expect(source).toContain('getAdminServerAuthClient');
+    expect(source).toContain('createAdminServerAuthErrorResponse');
+    expect(source).toContain('createNoStoreAdminHeaders()');
+    expect(source).toContain('isSafeAdminMutationRequest');
+  });
+
+  it('keeps the suspend route no-store and auth-guarded', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/api/admin/drivers/[driverId]/suspend/route.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain('force-dynamic');
+    expect(source).toContain('getAdminServerAuthClient');
+    expect(source).toContain('createAdminServerAuthErrorResponse');
+    expect(source).toContain('createNoStoreAdminHeaders()');
+    expect(source).toContain('isSafeAdminMutationRequest');
+  });
 });
