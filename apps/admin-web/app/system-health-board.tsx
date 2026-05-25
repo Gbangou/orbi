@@ -392,6 +392,8 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
   );
   const [activeIncidentId, setActiveIncidentId] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const incidentActionInFlightRef = useRef(new Set<string>());
+  const jobActionInFlightRef = useRef(new Set<string>());
   const [jobQueueDetails, setJobQueueDetails] =
     useState<AdminJobQueueResponse | null>(null);
   const [jobQueueStatus, setJobQueueStatus] = useState(
@@ -582,6 +584,11 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
 
   const acknowledgeIncident = useCallback(
     async (incidentId: string) => {
+      if (incidentActionInFlightRef.current.has(incidentId)) {
+        return;
+      }
+
+      incidentActionInFlightRef.current.add(incidentId);
       try {
         setActiveIncidentId(incidentId);
 
@@ -595,6 +602,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
       } catch {
         setStatus("Impossible de marquer l'incident comme vu.");
       } finally {
+        incidentActionInFlightRef.current.delete(incidentId);
         setActiveIncidentId(null);
       }
     },
@@ -603,6 +611,11 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
 
   const muteIncident = useCallback(
     async (incidentId: string) => {
+      if (incidentActionInFlightRef.current.has(incidentId)) {
+        return;
+      }
+
+      incidentActionInFlightRef.current.add(incidentId);
       try {
         setActiveIncidentId(incidentId);
 
@@ -616,6 +629,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
       } catch {
         setStatus("Impossible de masquer l'incident.");
       } finally {
+        incidentActionInFlightRef.current.delete(incidentId);
         setActiveIncidentId(null);
       }
     },
@@ -635,6 +649,11 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
         return;
       }
 
+      if (jobActionInFlightRef.current.has(job.id)) {
+        return;
+      }
+
+      jobActionInFlightRef.current.add(job.id);
       try {
         setActiveJobId(job.id);
 
@@ -647,6 +666,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
       } catch {
         setJobQueueStatus('Impossible de remettre ce job en file.');
       } finally {
+        jobActionInFlightRef.current.delete(job.id);
         setActiveJobId(null);
       }
     },
