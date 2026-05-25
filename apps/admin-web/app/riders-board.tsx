@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   type AdminRiderStatusResponse,
   type AdminRidersResponse,
@@ -50,6 +50,7 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('Riders synchronises.');
   const [busyRiderId, setBusyRiderId] = useState<string | null>(null);
+  const riderStatusInFlightRef = useRef(new Set<string>());
 
   const summary = useMemo(() => {
     const active = riders.filter((rider) => rider.isActive).length;
@@ -75,6 +76,11 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
   }
 
   async function handleStatusChange(userId: string, isActive: boolean) {
+    if (riderStatusInFlightRef.current.has(userId)) {
+      return;
+    }
+
+    riderStatusInFlightRef.current.add(userId);
     setBusyRiderId(userId);
     setStatus(isActive ? 'Reactivation rider...' : 'Suspension rider...');
 
@@ -96,6 +102,7 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
     } catch {
       setStatus("Le statut rider n'a pas pu etre mis a jour.");
     } finally {
+      riderStatusInFlightRef.current.delete(userId);
       setBusyRiderId(null);
     }
   }
