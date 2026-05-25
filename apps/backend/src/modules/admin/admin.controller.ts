@@ -41,6 +41,8 @@ import { UpdateSupportTicketDto } from './dto/update-support-ticket.dto';
 import { DriverSuspensionDto } from './dto/driver-suspension.dto';
 import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-action-acknowledgement.dto';
 import { CreatePromoCodeDto } from './dto/create-promo-code.dto';
+import { RidersQueryDto } from './dto/riders-query.dto';
+import { SetRiderStatusDto } from './dto/set-rider-status.dto';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
@@ -152,6 +154,28 @@ export class AdminController {
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   supportTickets(@Query() query: PageQueryDto) {
     return this.adminService.supportTickets(query);
+  }
+
+  @Get('riders')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  riders(@Query() query: RidersQueryDto) {
+    return this.adminService.listRiders(query);
+  }
+
+  @Patch('riders/:userId/status')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  setRiderStatus(
+    @Param('userId', new OpaqueIdPipe('userId')) userId: string,
+    @Body() payload: SetRiderStatusDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.setRiderStatus(userId, payload, auth);
   }
 
   @Get('driver-onboarding-queue')

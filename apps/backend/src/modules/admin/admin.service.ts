@@ -6486,6 +6486,115 @@ export class AdminService {
     return { promoCodeId, active: false };
   }
 
+  async listRiders(query: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    activeOnly?: boolean;
+  }) {
+    const page = Math.max(1, query.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 30));
+    const searchTerm = query.search?.trim();
+
+    const where: Prisma.UserWhereInput = {
+      role: UserRole.RIDER,
+      ...(searchTerm
+        ? {
+            OR: [
+              { fullName: { contains: searchTerm, mode: 'insensitive' } },
+              { email: { contains: searchTerm, mode: 'insensitive' } },
+              { phoneNumber: { contains: searchTerm } },
+            ],
+          }
+        : {}),
+      ...(query.activeOnly ? { isActive: true } : {}),
+    };
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phoneNumber: true,
+          isActive: true,
+          createdAt: true,
+          riderProfile: {
+            select: {
+              id: true,
+              _count: { select: { trips: true, rideRequests: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return {
+      riders: users.map((u) => ({
+        id: u.id,
+        fullName: u.fullName,
+        email: u.email,
+        phoneNumber: u.phoneNumber ?? null,
+        isActive: u.isActive,
+        createdAt: u.createdAt.toISOString(),
+        riderId: u.riderProfile?.id ?? null,
+        completedTripsCount: u.riderProfile?._count.trips ?? 0,
+        rideRequestsCount: u.riderProfile?._count.rideRequests ?? 0,
+      })),
+      total,
+      page,
+      pageSize,
+    };
+  }
+
+  async setRiderStatus(
+    userId: string,
+    payload: { isActive: boolean; reason?: string },
+    auth: RequestAuthContext,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, isActive: true, fullName: true },
+    });
+
+    if (!user || user.role !== UserRole.RIDER) {
+      throw new NotFoundException('Rider not found.');
+    }
+
+    if (user.isActive === payload.isActive) {
+      throw new BadRequestException(
+        payload.isActive
+          ? 'Ce compte rider est déjà actif.'
+          : 'Ce compte rider est déjà suspendu.',
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive: payload.isActive },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: payload.isActive ? 'RIDER_ACTIVATED' : 'RIDER_SUSPENDED',
+        entityType: 'USER',
+        entityId: userId,
+        metadata: {
+          reason: payload.reason ?? null,
+          previousIsActive: user.isActive,
+        } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    return { riderId: userId, isActive: payload.isActive };
+  }
+
   private resolveDocumentExtension(value: string) {
     const leafName = value.trim().split(/[\\/]/).pop()?.trim() ?? '';
 
