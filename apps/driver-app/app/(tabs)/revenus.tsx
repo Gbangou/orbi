@@ -62,6 +62,96 @@ const fallbackEarnings: DriverEarningsResponse = {
 
 const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
 
+const DRIVER_MILESTONES = [
+  { trips: 10, badge: 'Debutant', emoji: '🌱' },
+  { trips: 50, badge: 'Confirme', emoji: '⭐' },
+  { trips: 200, badge: 'Expert', emoji: '🏆' },
+] as const;
+
+function DriverMilestoneCard({ completedTrips }: { completedTrips: number }) {
+  const earned = DRIVER_MILESTONES.filter((m) => completedTrips >= m.trips);
+  const next = DRIVER_MILESTONES.find((m) => completedTrips < m.trips);
+  const progress = next
+    ? Math.min(Math.round((completedTrips / next.trips) * 100), 100)
+    : 100;
+
+  return (
+    <View style={milestoneStyles.card}>
+      <View style={milestoneStyles.header}>
+        <Text style={milestoneStyles.eyebrow}>Niveau chauffeur</Text>
+        {earned.length > 0 ? (
+          <View style={milestoneStyles.badgeRow}>
+            {earned.map((m) => (
+              <View key={m.badge} style={milestoneStyles.earnedBadge}>
+                <Text style={milestoneStyles.earnedBadgeText}>{m.emoji} {m.badge}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
+      {next ? (
+        <>
+          <Text style={milestoneStyles.nextLabel}>
+            {next.emoji} {next.badge} — encore {next.trips - completedTrips} course(s)
+          </Text>
+          <View style={milestoneStyles.progressTrack}>
+            <View style={[milestoneStyles.progressFill, { width: `${progress}%` as `${number}%` }]} />
+          </View>
+          <Text style={milestoneStyles.progressMeta}>{completedTrips} / {next.trips} courses</Text>
+        </>
+      ) : (
+        <Text style={milestoneStyles.nextLabel}>🎉 Niveau maximum — vous êtes un Expert Orbi !</Text>
+      )}
+    </View>
+  );
+}
+
+const milestoneStyles = StyleSheet.create({
+  card: {
+    backgroundColor: 'rgba(251,191,36,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.2)',
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: orbiTheme.colors.amber,
+  },
+  badgeRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  earnedBadge: {
+    backgroundColor: 'rgba(251,191,36,0.14)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  earnedBadgeText: { fontSize: 12, fontWeight: '700', color: orbiTheme.colors.amber },
+  nextLabel: { fontSize: 13, color: orbiTheme.colors.text, fontWeight: '600' },
+  progressTrack: {
+    height: 6,
+    borderRadius: 99,
+    backgroundColor: 'rgba(251,191,36,0.12)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 99,
+    backgroundColor: orbiTheme.colors.amber,
+  },
+  progressMeta: { fontSize: 11, color: orbiTheme.colors.muted, fontWeight: '600' },
+});
+
 export default function RevenusScreen() {
   const [earnings, setEarnings] = useState<DriverEarningsResponse>(fallbackEarnings);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
@@ -299,6 +389,8 @@ export default function RevenusScreen() {
           <Text style={styles.meta}>cap de rentabilite par trajet</Text>
         </View>
       </View>
+
+      <DriverMilestoneCard completedTrips={earnings.summary.completedTrips} />
 
       <DriverJourneySection
         currentStep="revenus"
