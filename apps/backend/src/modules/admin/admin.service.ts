@@ -51,6 +51,51 @@ import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-d
 import { CreatePromoCodeDto } from './dto/create-promo-code.dto';
 
 const reviewDecisionRoles = new Set(['ADMIN', 'OPS']);
+type AdminSupportTicketQueueResponse = {
+  tickets: Array<{
+    id: string;
+    subject: string;
+    description: string;
+    status: SupportTicketStatus;
+    priority: number;
+    adminNote: string | null;
+    requesterName: string;
+    requesterRole: UserRole;
+    tripId: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+    pageCount: number;
+  };
+};
+type AdminSupportTicketUpdateResponse = {
+  ticket: {
+    id: string;
+    status: SupportTicketStatus;
+    priority: number;
+    adminNote: string | null;
+    updatedAt: string;
+  };
+};
+type AdminPromoCodesResponse = {
+  promoCodes: Array<{
+    id: string;
+    code: string;
+    description: string | null;
+    discountBps: number;
+    maxUses: number | null;
+    usedCount: number;
+    validFrom: string;
+    validTo: string;
+    firstTripOnly: boolean;
+    active: boolean;
+    createdAt: string;
+  }>;
+};
 const pricingCalibrationLookbackDays = 14;
 const platformCommissionRate = 0.18;
 const routeCompletionMaxSignalAgeMinutes = 10;
@@ -4103,7 +4148,9 @@ export class AdminService {
     };
   }
 
-  async supportTickets(query: PageQueryDto = new PageQueryDto()) {
+  async supportTickets(
+    query: PageQueryDto = new PageQueryDto(),
+  ): Promise<AdminSupportTicketQueueResponse> {
     const { page, pageSize, skip, take } = resolvePageQuery(query);
     const [tickets, total] = await Promise.all([
       this.prisma.supportTicket.findMany({
@@ -5495,7 +5542,7 @@ export class AdminService {
       adminNote?: string;
     },
     auth: RequestAuthContext,
-  ) {
+  ): Promise<AdminSupportTicketUpdateResponse> {
     const existing = await this.prisma.supportTicket.findUnique({
       where: {
         id: ticketId,
@@ -6438,7 +6485,7 @@ export class AdminService {
     return { driverId, status: 'OFFLINE' };
   }
 
-  async listPromoCodes() {
+  async listPromoCodes(): Promise<AdminPromoCodesResponse> {
     const codes = await this.prisma.promoCode.findMany({
       orderBy: [{ active: 'desc' }, { createdAt: 'desc' }],
     });
