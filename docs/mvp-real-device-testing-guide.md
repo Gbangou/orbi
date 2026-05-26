@@ -264,8 +264,8 @@ Important:
 Dans PowerShell:
 
 ```powershell
-cd C:\Users\LENOVO\Desktop\orbi\apps\rider-app
-eas build --platform android --profile preview
+cd C:\Users\LENOVO\Desktop\orbi
+pnpm build:android:rider:mvp
 ```
 
 Ce qui va se passer:
@@ -287,8 +287,8 @@ Quand le build est termine:
 Dans PowerShell:
 
 ```powershell
-cd C:\Users\LENOVO\Desktop\orbi\apps\driver-app
-eas build --platform android --profile preview
+cd C:\Users\LENOVO\Desktop\orbi
+pnpm build:android:driver:mvp
 ```
 
 Puis faire pareil:

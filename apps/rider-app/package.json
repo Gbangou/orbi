@@ -11,6 +11,9 @@
     "test:smoke": "jest --config ./jest.config.cjs --runInBand",
     "typecheck": "tsc --noEmit",
     "build": "echo rider app build handled by Expo application services",
+    "build:android:preview": "eas build --platform android --profile preview",
+    "build:android:mvp": "eas build --platform android --profile mvp",
+    "build:android:production": "eas build --platform android --profile production",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

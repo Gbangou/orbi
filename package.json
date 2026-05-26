@@ -16,6 +16,8 @@
     "dev:driver": "pnpm --filter @orbi/driver-app start",
     "dev:rider:web": "pnpm --filter @orbi/rider-app web",
     "dev:driver:web": "pnpm --filter @orbi/driver-app web",
+    "build:android:rider:mvp": "pnpm --filter @orbi/rider-app build:android:mvp",
+    "build:android:driver:mvp": "pnpm --filter @orbi/driver-app build:android:mvp",
     "dev:stack": "concurrently -n backend,admin,rider -c blue,green,magenta \"pnpm dev:backend\" \"pnpm dev:admin\" \"pnpm dev:rider\"",
     "dev:web-preview": "pnpm local:ports:free && concurrently -n backend,admin,rider-web -c blue,green,magenta \"pnpm dev:backend\" \"pnpm dev:admin\" \"pnpm dev:rider:web\"",
     "dev:web-driver-preview": "pnpm local:ports:free && concurrently -n backend,admin,driver-web -c blue,green,yellow \"pnpm dev:backend\" \"pnpm dev:admin\" \"pnpm dev:driver:web\"",
