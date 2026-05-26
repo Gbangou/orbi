@@ -56,9 +56,18 @@ describe('promo codes board', () => {
       'utf8',
     );
 
-    expect(routeSource).toContain('Date.parse(input.validFrom)');
-    expect(routeSource).toContain('Date.parse(input.validTo)');
+    expect(routeSource).toContain('Date.parse(validFrom)');
+    expect(routeSource).toContain('Date.parse(validTo)');
     expect(routeSource).toContain('Number.isNaN');
+  });
+
+  it('rejects promo windows where validTo is not after validFrom', () => {
+    const routeSource = readFileSync(
+      join(process.cwd(), 'app/api/admin/promo-codes/route.ts'),
+      'utf8',
+    );
+
+    expect(routeSource).toContain('validToMs <= validFromMs');
   });
 
   it('keeps the promo-codes list route no-store and auth-guarded', () => {

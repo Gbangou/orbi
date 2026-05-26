@@ -50,11 +50,16 @@ function normalizePromoCodePayload(value: unknown) {
     return null;
   }
 
+  const validFrom =
+    typeof input.validFrom === 'string' ? input.validFrom : '';
+  const validTo = typeof input.validTo === 'string' ? input.validTo : '';
+  const validFromMs = Date.parse(validFrom);
+  const validToMs = Date.parse(validTo);
+
   if (
-    typeof input.validFrom !== 'string' ||
-    Number.isNaN(Date.parse(input.validFrom)) ||
-    typeof input.validTo !== 'string' ||
-    Number.isNaN(Date.parse(input.validTo))
+    Number.isNaN(validFromMs) ||
+    Number.isNaN(validToMs) ||
+    validToMs <= validFromMs
   ) {
     return null;
   }
@@ -69,8 +74,8 @@ function normalizePromoCodePayload(value: unknown) {
   const payload: CreateAdminPromoCodePayload = {
     code,
     discountBps: input.discountBps,
-    validFrom: input.validFrom,
-    validTo: input.validTo,
+    validFrom,
+    validTo,
     firstTripOnly:
       typeof input.firstTripOnly === 'boolean' ? input.firstTripOnly : true,
   };
