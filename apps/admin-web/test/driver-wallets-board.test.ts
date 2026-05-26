@@ -79,9 +79,17 @@ describe('driver wallets board', () => {
       ),
       'utf8',
     );
+    const paidSource = readFileSync(
+      join(
+        process.cwd(),
+        'app/api/admin/driver-payouts/[payoutId]/paid/route.ts',
+      ),
+      'utf8',
+    );
 
     expect(prepareSource).toContain('isSafeOpaqueAdminId');
     expect(recoverySource).toContain('isSafeOpaqueAdminId');
+    expect(paidSource).toContain('isSafeOpaqueAdminId(payoutId)');
   });
 
   it('keeps payouts prepare route responses no-store and auth-guarded', () => {
@@ -93,6 +101,21 @@ describe('driver wallets board', () => {
       'utf8',
     );
 
+    expect(source).toContain('createNoStoreAdminHeaders()');
+    expect(source).toContain('getAdminServerAuthClient');
+    expect(source).toContain('createAdminServerAuthErrorResponse');
+  });
+
+  it('keeps mark-paid route responses no-store and mutation-guarded', () => {
+    const source = readFileSync(
+      join(
+        process.cwd(),
+        'app/api/admin/driver-payouts/[payoutId]/paid/route.ts',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('isSafeAdminMutationRequest');
     expect(source).toContain('createNoStoreAdminHeaders()');
     expect(source).toContain('getAdminServerAuthClient');
     expect(source).toContain('createAdminServerAuthErrorResponse');
