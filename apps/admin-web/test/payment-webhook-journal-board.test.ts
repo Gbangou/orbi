@@ -16,4 +16,30 @@ describe('payment webhook journal board', () => {
     expect(source).toContain('eventActionInFlightRef.current.delete(eventId)');
     expect(source).toContain('if (!beginEventAction(eventId))');
   });
+
+  it('only enables refunds for succeeded payment attempts', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/payment-webhook-journal-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain("event.paymentAttempt?.status === 'SUCCEEDED'");
+    expect(source).toContain('!canRefundPaymentAttempt(event)');
+  });
+
+  it('keeps the refund proxy guarded, no-store, and id-bounded', () => {
+    const source = readFileSync(
+      join(
+        process.cwd(),
+        'app/api/admin/payment-attempts/[paymentAttemptId]/refund/route.ts',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('isSafeAdminMutationRequest');
+    expect(source).toContain('isSafeOpaqueAdminId(paymentAttemptId)');
+    expect(source).toContain('createNoStoreAdminHeaders()');
+    expect(source).toContain('getAdminServerAuthClient');
+    expect(source).toContain('createAdminServerAuthErrorResponse');
+  });
 });
