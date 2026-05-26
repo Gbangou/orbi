@@ -28,6 +28,19 @@ describe('promo codes board', () => {
     expect(source).toContain('createAdminMutationHeaders');
   });
 
+  it('validates promo creation bounds before submitting from the board', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/promo-codes-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('Number.isInteger(discountBps)');
+    expect(source).toContain('discountBps > 10000');
+    expect(source).toContain('Number.isInteger(maxUses)');
+    expect(source).toContain('maxUses > 100000');
+    expect(source).toContain('validToMs <= validFromMs');
+  });
+
   it('validates discount bps is a positive integer within bounds before submitting', () => {
     const routeSource = readFileSync(
       join(process.cwd(), 'app/api/admin/promo-codes/route.ts'),

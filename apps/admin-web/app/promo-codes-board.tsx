@@ -113,11 +113,31 @@ export function PromoCodesBoard({ initialCodes }: PromoCodesBoardProps) {
       return;
     }
 
-    const discountBps = parseInt(form.discountBps, 10);
-    const maxUses = form.maxUses ? parseInt(form.maxUses, 10) : undefined;
+    const discountBps = Number(form.discountBps);
+    const maxUses = form.maxUses ? Number(form.maxUses) : undefined;
+    const validFromMs = Date.parse(form.validFrom);
+    const validToMs = Date.parse(form.validTo);
 
-    if (!form.code.trim() || !form.validFrom || !form.validTo || isNaN(discountBps)) {
+    if (!form.code.trim() || !form.validFrom || !form.validTo) {
       setStatus('Remplissez tous les champs obligatoires.');
+      return;
+    }
+
+    if (!Number.isInteger(discountBps) || discountBps < 1 || discountBps > 10000) {
+      setStatus('La remise doit etre un entier entre 1 et 10000 bps.');
+      return;
+    }
+
+    if (
+      maxUses !== undefined &&
+      (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 100000)
+    ) {
+      setStatus('Le nombre maximum d utilisations doit etre entre 1 et 100000.');
+      return;
+    }
+
+    if (Number.isNaN(validFromMs) || Number.isNaN(validToMs) || validToMs <= validFromMs) {
+      setStatus('La date de fin doit etre apres la date de debut.');
       return;
     }
 
