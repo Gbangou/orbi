@@ -55,6 +55,9 @@ jest.mock(
       Linking: {
         openURL: jest.fn(async () => undefined),
       },
+      Share: {
+        share: jest.fn(async () => ({ action: "sharedAction" })),
+      },
       Platform: {
         OS: "test",
         select: <T>(values: { test?: T; default?: T }) =>

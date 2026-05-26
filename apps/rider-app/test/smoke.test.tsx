@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Linking } from 'react-native';
+import { Alert, Linking, Share } from 'react-native';
 import type { ReactTestInstance } from 'react-test-renderer';
 import { router } from 'expo-router';
 import {
@@ -354,6 +354,7 @@ beforeEach(() => {
   mockedUpdateTripStatusWithApi.mockReset();
   mockedResolveRiderAppError.mockReset();
   jest.mocked(Linking.openURL).mockReset();
+  jest.mocked(Share.share).mockReset();
 
   jest.mocked(createOrbiApiClient).mockReturnValue({ kind: 'mock-client' } as never);
   mockedResolveVoiceLocationIntentWithApi.mockResolvedValue({
@@ -382,6 +383,7 @@ beforeEach(() => {
     shouldClearSessionToken: false,
   });
   jest.mocked(Linking.openURL).mockResolvedValue(undefined);
+  jest.mocked(Share.share).mockResolvedValue({ action: 'sharedAction' });
   mockedGetMySupportTicketsWithApi.mockResolvedValue({ tickets: [] } as never);
   mockedTriggerTripSafetySosWithApi.mockResolvedValue({
     sos: {
@@ -1107,6 +1109,28 @@ describe('rider smoke flows', () => {
       },
     );
     expect(Linking.openURL).toHaveBeenCalledWith('tel:112');
+  });
+
+  it('creates and shares a bounded rider trip tracking link from activity', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderRealtimeHistory('IN_PROGRESS') as never);
+    mockedFetchTripDetail.mockResolvedValue(
+      buildTripDetail(['timeline-1'], ['Course demarree']) as never,
+    );
+
+    const renderer = await renderScreen(<ActivityScreen />);
+    await pressByText(renderer, 'Actualiser le suivi');
+    await pressByText(renderer, 'Partager le trajet');
+
+    expect(mockedCreateTripShareLinkWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      'trip-rider-1',
+    );
+    expect(Share.share).toHaveBeenCalledWith({
+      message:
+        'Suivi securise de ma course Orbi: http://localhost:3000/trips/shared/share-token',
+      url: 'http://localhost:3000/trips/shared/share-token',
+    });
   });
 
   it('absorbs double taps while reporting a rider incident from activity', async () => {
