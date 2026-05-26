@@ -1,4 +1,5 @@
 import React from 'react';
+import { Linking } from 'react-native';
 import type { ReactTestInstance } from 'react-test-renderer';
 import { router } from 'expo-router';
 import {
@@ -387,11 +388,13 @@ beforeEach(() => {
   mockedUpdateTripStatusWithApi.mockReset();
   mockedVerifyPickupCodeWithApi.mockReset();
   mockedResolveDriverAppError.mockReset();
+  jest.mocked(Linking.openURL).mockReset();
 
   mockedResolveDriverAppError.mockResolvedValue({
     message: 'Fallback driver error.',
     shouldClearSessionToken: false,
   });
+  jest.mocked(Linking.openURL).mockResolvedValue(undefined);
   mockedTriggerTripSafetySosWithApi.mockResolvedValue({
     sos: {
       tripId: 'trip-1',
@@ -1207,5 +1210,34 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Course active');
     expectText(renderer, 'Ride Check: Warning (1)');
     expectText(renderer, 'Dernier signal: Long Stop');
+  });
+
+  it('triggers driver SOS from offers and opens the local emergency dialer', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never);
+    mockedFetchMyTrips
+      .mockResolvedValueOnce(buildDriverTripsWithStatus('IN_PROGRESS') as never)
+      .mockResolvedValueOnce(buildDriverTripsWithStatus('IN_PROGRESS') as never);
+    mockedFetchDriverProfile
+      .mockResolvedValueOnce(buildDriverProfile() as never)
+      .mockResolvedValueOnce(buildDriverProfile() as never);
+    mockedFetchTripDetail.mockResolvedValue(
+      buildDriverTripDetail(['driver-timeline-1'], ['Course demarree']) as never,
+    );
+
+    const renderer = await renderScreen(<OffersScreen />);
+    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'SOS securite');
+
+    expect(mockedTriggerTripSafetySosWithApi).toHaveBeenCalledWith(
+      { token: 'driver-auth-client' },
+      'trip-driver-1',
+      {
+        details: 'SOS declenche depuis le cockpit chauffeur.',
+      },
+    );
+    expect(Linking.openURL).toHaveBeenCalledWith('tel:112');
   });
 });
