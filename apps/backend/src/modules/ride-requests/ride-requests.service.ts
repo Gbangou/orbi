@@ -82,7 +82,15 @@ export class RideRequestsService {
     if (payload.promoCode) {
       const promo = await this.prisma.promoCode.findUnique({
         where: { code: payload.promoCode },
-        select: { id: true, discountBps: true, maxUses: true, usedCount: true, validFrom: true, validTo: true, active: true },
+        select: {
+          id: true,
+          discountBps: true,
+          maxUses: true,
+          usedCount: true,
+          validFrom: true,
+          validTo: true,
+          active: true,
+        },
       });
       const now = new Date();
       if (
@@ -92,7 +100,9 @@ export class RideRequestsService {
         promo.validTo > now &&
         (promo.maxUses === null || promo.usedCount < promo.maxUses)
       ) {
-        applicableFare = Math.round(Number(pricing.estimatedFare) * (1 - promo.discountBps / 10000));
+        applicableFare = Math.round(
+          Number(pricing.estimatedFare) * (1 - promo.discountBps / 10000),
+        );
         resolvedPromoCodeId = promo.id;
       }
     }

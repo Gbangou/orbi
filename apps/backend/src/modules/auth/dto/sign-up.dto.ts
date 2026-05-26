@@ -49,7 +49,8 @@ export class SignUpDto {
   @IsOptional()
   @IsString()
   @Matches(/^\+[1-9]\d{7,14}$/, {
-    message: 'Phone number must be in E.164 format: +[country code][number], e.g. +22670123456',
+    message:
+      'Phone number must be in E.164 format: +[country code][number], e.g. +22670123456',
   })
   phoneNumber?: string;
 }

@@ -38,7 +38,8 @@ describe('serializeCheckoutIntent', () => {
       });
 
       expect(
-        (result as { providerMetadata: { publicKeyPresent: boolean } }).providerMetadata.publicKeyPresent,
+        (result as { providerMetadata: { publicKeyPresent: boolean } })
+          .providerMetadata.publicKeyPresent,
       ).toBe(true);
     });
 
@@ -49,7 +50,8 @@ describe('serializeCheckoutIntent', () => {
       });
 
       expect(
-        (result as { providerMetadata: { publicKeyPresent: boolean } }).providerMetadata.publicKeyPresent,
+        (result as { providerMetadata: { publicKeyPresent: boolean } })
+          .providerMetadata.publicKeyPresent,
       ).toBe(false);
     });
 
@@ -93,7 +95,8 @@ describe('serializeCheckoutIntent', () => {
       });
 
       expect(
-        (result as { providerMetadata: { siteIdPresent: boolean } }).providerMetadata.siteIdPresent,
+        (result as { providerMetadata: { siteIdPresent: boolean } })
+          .providerMetadata.siteIdPresent,
       ).toBe(true);
     });
 

@@ -28,7 +28,7 @@ import type { RequestAuthContext } from './auth.types';
 const LOCKOUT_THRESHOLDS: Array<{ minCount: number; lockMs: number }> = [
   { minCount: 20, lockMs: 24 * 60 * 60_000 },
   { minCount: 10, lockMs: 60 * 60_000 },
-  { minCount: 5,  lockMs: 15 * 60_000 },
+  { minCount: 5, lockMs: 15 * 60_000 },
 ];
 
 function computeLockoutDuration(failedCount: number): number {
@@ -324,113 +324,119 @@ export class AuthService {
   async dataExport(auth: RequestAuthContext) {
     const userId = auth.user.id;
 
-    const [user, sessions, wallet, notifications, supportTickets, paymentAttempts] =
-      await Promise.all([
-        this.prisma.user.findUniqueOrThrow({
-          where: { id: userId },
-          include: {
-            riderProfile: {
-              include: {
-                savedPlaces: true,
-                trips: {
-                  orderBy: { createdAt: 'desc' as const },
-                  take: 200,
-                },
-                ratingsGiven: {
-                  select: { score: true, comment: true, createdAt: true },
-                  orderBy: { createdAt: 'desc' as const },
-                },
+    const [
+      user,
+      sessions,
+      wallet,
+      notifications,
+      supportTickets,
+      paymentAttempts,
+    ] = await Promise.all([
+      this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        include: {
+          riderProfile: {
+            include: {
+              savedPlaces: true,
+              trips: {
+                orderBy: { createdAt: 'desc' as const },
+                take: 200,
               },
-            },
-            driverProfile: {
-              include: {
-                vehicles: true,
-                assignedTrips: {
-                  orderBy: { createdAt: 'desc' as const },
-                  take: 200,
-                },
-                ratingsReceived: {
-                  select: { score: true, comment: true, createdAt: true },
-                  orderBy: { createdAt: 'desc' as const },
-                },
-                onboardingDocuments: {
-                  select: {
-                    type: true,
-                    status: true,
-                    uploadedAt: true,
-                    expiresAt: true,
-                  },
-                },
+              ratingsGiven: {
+                select: { score: true, comment: true, createdAt: true },
+                orderBy: { createdAt: 'desc' as const },
               },
             },
           },
-        }),
-        this.prisma.userSession.findMany({
-          where: { userId },
-          select: {
-            userAgent: true,
-            ipAddress: true,
-            createdAt: true,
-            expiresAt: true,
-            revokedAt: true,
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 100,
-        }),
-        this.prisma.wallet.findFirst({
-          where: { userId },
-          include: {
-            transactions: {
-              select: {
-                type: true,
-                amount: true,
-                reference: true,
-                description: true,
-                createdAt: true,
+          driverProfile: {
+            include: {
+              vehicles: true,
+              assignedTrips: {
+                orderBy: { createdAt: 'desc' as const },
+                take: 200,
               },
-              orderBy: { createdAt: 'desc' },
-              take: 500,
+              ratingsReceived: {
+                select: { score: true, comment: true, createdAt: true },
+                orderBy: { createdAt: 'desc' as const },
+              },
+              onboardingDocuments: {
+                select: {
+                  type: true,
+                  status: true,
+                  uploadedAt: true,
+                  expiresAt: true,
+                },
+              },
             },
           },
-        }),
-        this.prisma.notification.findMany({
-          where: { userId },
-          select: {
-            title: true,
-            body: true,
-            channel: true,
-            isRead: true,
-            sentAt: true,
-            createdAt: true,
+        },
+      }),
+      this.prisma.userSession.findMany({
+        where: { userId },
+        select: {
+          userAgent: true,
+          ipAddress: true,
+          createdAt: true,
+          expiresAt: true,
+          revokedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+      this.prisma.wallet.findFirst({
+        where: { userId },
+        include: {
+          transactions: {
+            select: {
+              type: true,
+              amount: true,
+              reference: true,
+              description: true,
+              createdAt: true,
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 500,
           },
-          orderBy: { createdAt: 'desc' },
-          take: 200,
-        }),
-        this.prisma.supportTicket.findMany({
-          where: { userId },
-          select: {
-            subject: true,
-            description: true,
-            status: true,
-            createdAt: true,
-          },
-          orderBy: { createdAt: 'desc' },
-        }),
-        this.prisma.paymentAttempt.findMany({
-          where: { userId },
-          select: {
-            provider: true,
-            channel: true,
-            status: true,
-            amount: true,
-            currency: true,
-            mobileMoneyNetwork: true,
-            createdAt: true,
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 200,
-        }),
-      ]);
+        },
+      }),
+      this.prisma.notification.findMany({
+        where: { userId },
+        select: {
+          title: true,
+          body: true,
+          channel: true,
+          isRead: true,
+          sentAt: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }),
+      this.prisma.supportTicket.findMany({
+        where: { userId },
+        select: {
+          subject: true,
+          description: true,
+          status: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.paymentAttempt.findMany({
+        where: { userId },
+        select: {
+          provider: true,
+          channel: true,
+          status: true,
+          amount: true,
+          currency: true,
+          mobileMoneyNetwork: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }),
+    ]);
 
     await this.logAuthEvent(userId, 'DATA_EXPORT', {
       ipAddress: auth.session.ipAddress ?? undefined,
@@ -529,7 +535,8 @@ export class AuthService {
             driverProfile: {
               licenseNumber: user.driverProfile.licenseNumber,
               verificationStatus: user.driverProfile.verificationStatus,
-              averageRating: user.driverProfile.averageRating?.toString() ?? null,
+              averageRating:
+                user.driverProfile.averageRating?.toString() ?? null,
               completedTripsCount: user.driverProfile.completedTripsCount,
               vehicles: user.driverProfile.vehicles.map((v) => ({
                 make: v.make,
@@ -668,7 +675,9 @@ export class AuthService {
     }
 
     if (promo.maxUses !== null && promo.usedCount >= promo.maxUses) {
-      throw new BadRequestException('Ce code promo a atteint son nombre maximum d utilisations.');
+      throw new BadRequestException(
+        'Ce code promo a atteint son nombre maximum d utilisations.',
+      );
     }
 
     if (promo.firstTripOnly) {
@@ -683,7 +692,9 @@ export class AuthService {
         });
 
         if (completedTripsCount > 0) {
-          throw new BadRequestException('Ce code est reserve aux nouveaux passagers (premier trajet).');
+          throw new BadRequestException(
+            'Ce code est reserve aux nouveaux passagers (premier trajet).',
+          );
         }
       }
     }

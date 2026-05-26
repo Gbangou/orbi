@@ -232,7 +232,9 @@ describe('parseRealtimeEvent — rejects malformed backplane messages', () => {
   });
 
   it('rejects an event with a missing id', () => {
-    const { id: _, ...noId } = validRaw;
+    const noId: Partial<typeof validRaw> = { ...validRaw };
+    delete noId.id;
+
     expect(parseRealtimeEvent(noId)).toBeNull();
   });
 

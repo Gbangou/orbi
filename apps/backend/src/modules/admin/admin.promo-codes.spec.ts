@@ -1,4 +1,8 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { AdminService } from './admin.service';
 
 function createService() {
@@ -41,7 +45,9 @@ function createService() {
     { enqueue: jest.fn() } as never,
   );
 
-  const auth = { user: { id: 'admin-1', role: 'ADMIN', fullName: 'Admin Test' } };
+  const auth = {
+    user: { id: 'admin-1', role: 'ADMIN', fullName: 'Admin Test' },
+  };
 
   return { prisma, service, auth, baseCode };
 }
@@ -80,7 +86,10 @@ describe('AdminService.createPromoCode', () => {
 
     expect(prisma.promoCode.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ code: 'BIENVENUE20', discountBps: 2000 }),
+        data: expect.objectContaining({
+          code: 'BIENVENUE20',
+          discountBps: 2000,
+        }),
       }),
     );
     expect(prisma.auditLog.create).toHaveBeenCalledWith(
@@ -171,7 +180,10 @@ describe('AdminService.deactivatePromoCode', () => {
 
   it('lance BadRequestException si le code est deja inactif', async () => {
     const { service, prisma, auth, baseCode } = createService();
-    prisma.promoCode.findUnique.mockResolvedValue({ ...baseCode(), active: false });
+    prisma.promoCode.findUnique.mockResolvedValue({
+      ...baseCode(),
+      active: false,
+    });
 
     await expect(
       service.deactivatePromoCode('promo-1', auth as never),

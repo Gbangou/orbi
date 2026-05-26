@@ -73,7 +73,7 @@ describe('AuthService — support tickets', () => {
       expect(result.ticket.createdAt).toBe(now.toISOString());
     });
 
-    it('associe le ticket à userId de l\'utilisateur authentifié', async () => {
+    it("associe le ticket à userId de l'utilisateur authentifié", async () => {
       const { prisma, service, auth } = createService();
       prisma.supportTicket.create.mockResolvedValue({
         id: 'ticket-1',
@@ -169,7 +169,7 @@ describe('AuthService — support tickets', () => {
   });
 
   describe('getMySupportTickets', () => {
-    it('filtre strictement par userId de l\'utilisateur authentifié', async () => {
+    it("filtre strictement par userId de l'utilisateur authentifié", async () => {
       const { prisma, service, auth } = createService();
       prisma.supportTicket.findMany.mockResolvedValue([]);
 
@@ -182,7 +182,7 @@ describe('AuthService — support tickets', () => {
       );
     });
 
-    it('retourne les tickets dans l\'ordre décroissant (plus récent en premier)', async () => {
+    it("retourne les tickets dans l'ordre décroissant (plus récent en premier)", async () => {
       const { prisma, service, auth } = createService();
       prisma.supportTicket.findMany.mockResolvedValue([]);
 
@@ -227,7 +227,7 @@ describe('AuthService — support tickets', () => {
       expect(result.tickets[0].updatedAt).toBe('2026-05-24T10:00:00.000Z');
     });
 
-    it('retourne un tableau vide quand l\'utilisateur n\'a pas de tickets', async () => {
+    it("retourne un tableau vide quand l'utilisateur n'a pas de tickets", async () => {
       const { prisma, service, auth } = createService();
       prisma.supportTicket.findMany.mockResolvedValue([]);
 

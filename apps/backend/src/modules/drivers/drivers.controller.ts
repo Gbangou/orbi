@@ -28,7 +28,9 @@ import { UpsertDriverOnboardingDto } from './dto/upsert-driver-onboarding.dto';
 import { DriversService } from './drivers.service';
 
 function clampParam(value: number, min: number, max: number, fallback: number) {
-  return Number.isFinite(value) ? Math.min(Math.max(value, min), max) : fallback;
+  return Number.isFinite(value)
+    ? Math.min(Math.max(value, min), max)
+    : fallback;
 }
 
 @Controller('drivers')

@@ -315,7 +315,9 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
     const userId = this.requiredString(payload.userId, 'userId');
     const channel = this.requiredString(payload.channel, 'channel');
     const data =
-      payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+      payload.data &&
+      typeof payload.data === 'object' &&
+      !Array.isArray(payload.data)
         ? (payload.data as Record<string, string>)
         : {};
     const notification = await this.prisma.notification.findUnique({

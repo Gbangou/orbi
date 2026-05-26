@@ -150,7 +150,9 @@ describe('AuthService', () => {
     expect(prisma.$transaction).toHaveBeenCalled();
     // Driver single-device: other sessions revoked.
     expect(prisma.userSession.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ userId: 'user-1' }) }),
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: 'user-1' }),
+      }),
     );
   });
 
@@ -263,7 +265,10 @@ describe('AuthService', () => {
     // La transaction doit inclure un update qui remet failedLoginCount à 0.
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ failedLoginCount: 0, lockedUntil: null }),
+        data: expect.objectContaining({
+          failedLoginCount: 0,
+          lockedUntil: null,
+        }),
       }),
     );
   });
@@ -425,7 +430,11 @@ describe('AuthService', () => {
 
     const result = await service.signOut({
       user: { id: 'user-1' },
-      session: { id: 'session-current', ipAddress: '127.0.0.1', userAgent: 'jest' },
+      session: {
+        id: 'session-current',
+        ipAddress: '127.0.0.1',
+        userAgent: 'jest',
+      },
     } as never);
 
     expect(result.revokedSessionId).toBe('session-current');
@@ -440,7 +449,11 @@ describe('AuthService', () => {
 
     const result = await service.deleteAccount({
       user: { id: 'user-1' },
-      session: { id: 'session-current', ipAddress: '127.0.0.1', userAgent: 'jest' },
+      session: {
+        id: 'session-current',
+        ipAddress: '127.0.0.1',
+        userAgent: 'jest',
+      },
     } as never);
 
     expect(result.message).toContain('anonymized');

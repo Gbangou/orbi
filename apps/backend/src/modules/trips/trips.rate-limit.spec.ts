@@ -9,7 +9,6 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { of } from 'rxjs';
-import { RateLimitGuard } from '../../common/rate-limit/rate-limit.guard';
 import { RateLimitService } from '../../common/rate-limit/rate-limit.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { RolesGuard } from '../auth/roles.guard';

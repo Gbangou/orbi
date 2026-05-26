@@ -47,13 +47,17 @@ function createBaseTrip(overrides: Record<string, unknown> = {}) {
 
 describe('serializeTripDetail — privacy guards', () => {
   it('hides driver phone number when trip is COMPLETED', () => {
-    const { trip } = serializeTripDetail(createBaseTrip({ status: 'COMPLETED' }) as never);
+    const { trip } = serializeTripDetail(
+      createBaseTrip({ status: 'COMPLETED' }) as never,
+    );
 
     expect(trip.driverPhoneNumber).toBeNull();
   });
 
   it('hides rider phone number when trip is COMPLETED', () => {
-    const { trip } = serializeTripDetail(createBaseTrip({ status: 'COMPLETED' }) as never);
+    const { trip } = serializeTripDetail(
+      createBaseTrip({ status: 'COMPLETED' }) as never,
+    );
 
     expect(trip.riderPhoneNumber).toBeNull();
   });

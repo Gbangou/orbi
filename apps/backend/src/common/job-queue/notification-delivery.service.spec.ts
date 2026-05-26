@@ -22,16 +22,14 @@ describe('NotificationDeliveryService', () => {
 
     const prisma = {
       notification: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue(
-            opts.notificationTitle
-              ? {
-                  title: opts.notificationTitle,
-                  body: opts.notificationBody ?? '',
-                }
-              : null,
-          ),
+        findUnique: jest.fn().mockResolvedValue(
+          opts.notificationTitle
+            ? {
+                title: opts.notificationTitle,
+                body: opts.notificationBody ?? '',
+              }
+            : null,
+        ),
       },
     };
 

@@ -53,7 +53,9 @@ describe('generateSessionToken', () => {
   });
 
   it('generates unique tokens on each call', () => {
-    const tokens = new Set(Array.from({ length: 10 }, () => generateSessionToken()));
+    const tokens = new Set(
+      Array.from({ length: 10 }, () => generateSessionToken()),
+    );
 
     expect(tokens.size).toBe(10);
   });

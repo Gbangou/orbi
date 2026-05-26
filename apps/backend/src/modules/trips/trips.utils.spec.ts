@@ -83,7 +83,9 @@ describe('formatTripEventLabel', () => {
   });
 
   it('falls back to the raw event type for unknown types', () => {
-    expect(formatTripEventLabel('UNKNOWN_EVENT_TYPE')).toBe('UNKNOWN_EVENT_TYPE');
+    expect(formatTripEventLabel('UNKNOWN_EVENT_TYPE')).toBe(
+      'UNKNOWN_EVENT_TYPE',
+    );
   });
 });
 

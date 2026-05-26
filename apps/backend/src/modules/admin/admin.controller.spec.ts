@@ -591,6 +591,7 @@ describe('AdminController', () => {
     const { controller } = createController();
     const roles: UserRole[] = Reflect.getMetadata(
       ROLES_KEY,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       controller.tripsExportCsv,
     ) as UserRole[];
     expect(roles).toContain(UserRole.ADMIN);
@@ -602,6 +603,7 @@ describe('AdminController', () => {
     const { controller } = createController();
     const guards: unknown[] = Reflect.getMetadata(
       GUARDS_METADATA,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       controller.tripsExportCsv,
     ) as unknown[];
     expect(guards).toContain(SessionAuthGuard);
@@ -728,7 +730,10 @@ describe('AdminController', () => {
 
     await controller.reactivateDriver('driver-1', auth as never);
 
-    expect(adminService.reactivateDriver).toHaveBeenCalledWith('driver-1', auth);
+    expect(adminService.reactivateDriver).toHaveBeenCalledWith(
+      'driver-1',
+      auth,
+    );
   });
 
   it('restricts driver reactivation to ADMIN only — OPS and SUPPORT are excluded', () => {

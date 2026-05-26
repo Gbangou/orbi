@@ -639,9 +639,6 @@ export class DispatchCoordinator {
     assignedDriverId: string | null;
     assignedUserId: string | null;
   }> {
-    const dispatchLearningSettings =
-      await this.resolveDispatchLearningSettingsValues();
-
     const candidates = await this.prisma.driverProfile.findMany({
       where: {
         status: DriverStatus.ONLINE,

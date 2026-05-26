@@ -48,13 +48,11 @@ describe('RideRequestsService — Sécurité', () => {
         .mockResolvedValue({ notification: { id: 'notif-sec' } }),
     };
     const dispatchCoordinator = {
-      proactiveDispatch: jest
-        .fn()
-        .mockResolvedValue({
-          dispatched: false,
-          assignedDriverId: null,
-          assignedUserId: null,
-        }),
+      proactiveDispatch: jest.fn().mockResolvedValue({
+        dispatched: false,
+        assignedDriverId: null,
+        assignedUserId: null,
+      }),
     };
 
     prisma.$transaction.mockImplementation(

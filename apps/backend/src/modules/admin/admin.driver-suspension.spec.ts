@@ -12,7 +12,9 @@ function createService() {
   const prisma = {
     driverProfile: {
       findUnique: jest.fn().mockResolvedValue(profile()),
-      update: jest.fn().mockResolvedValue({ id: 'driver-profile-1', status: 'SUSPENDED' }),
+      update: jest
+        .fn()
+        .mockResolvedValue({ id: 'driver-profile-1', status: 'SUSPENDED' }),
     },
     auditLog: { create: jest.fn().mockResolvedValue({ id: 'log-1' }) },
   };
@@ -33,7 +35,9 @@ function createService() {
     notifications as never,
   );
 
-  const auth = { user: { id: 'admin-1', role: 'ADMIN', fullName: 'Admin Test' } };
+  const auth = {
+    user: { id: 'admin-1', role: 'ADMIN', fullName: 'Admin Test' },
+  };
 
   return { prisma, service, auth, notifications, profile };
 }
@@ -52,7 +56,10 @@ describe('AdminService.suspendDriver', () => {
     );
     expect(prisma.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ action: 'DRIVER_SUSPENDED', entityId: 'driver-profile-1' }),
+        data: expect.objectContaining({
+          action: 'DRIVER_SUSPENDED',
+          entityId: 'driver-profile-1',
+        }),
       }),
     );
     expect(result.status).toBe('SUSPENDED');
@@ -79,16 +86,26 @@ describe('AdminService.suspendDriver', () => {
     prisma.driverProfile.findUnique.mockResolvedValue(null);
 
     await expect(
-      service.suspendDriver('unknown-driver', { reason: 'Comportement inapproprie.' }, auth as never),
+      service.suspendDriver(
+        'unknown-driver',
+        { reason: 'Comportement inapproprie.' },
+        auth as never,
+      ),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('leve BadRequestException si le chauffeur est deja suspendu', async () => {
     const { service, prisma, auth, profile } = createService();
-    prisma.driverProfile.findUnique.mockResolvedValue(profile({ status: 'SUSPENDED' }));
+    prisma.driverProfile.findUnique.mockResolvedValue(
+      profile({ status: 'SUSPENDED' }),
+    );
 
     await expect(
-      service.suspendDriver('driver-profile-1', { reason: 'Test doublon.' }, auth as never),
+      service.suspendDriver(
+        'driver-profile-1',
+        { reason: 'Test doublon.' },
+        auth as never,
+      ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
@@ -96,10 +113,18 @@ describe('AdminService.suspendDriver', () => {
 describe('AdminService.reactivateDriver', () => {
   it('remet le statut OFFLINE et cree un audit log', async () => {
     const { service, prisma, auth, profile } = createService();
-    prisma.driverProfile.findUnique.mockResolvedValue(profile({ status: 'SUSPENDED' }));
-    prisma.driverProfile.update.mockResolvedValue({ id: 'driver-profile-1', status: 'OFFLINE' });
+    prisma.driverProfile.findUnique.mockResolvedValue(
+      profile({ status: 'SUSPENDED' }),
+    );
+    prisma.driverProfile.update.mockResolvedValue({
+      id: 'driver-profile-1',
+      status: 'OFFLINE',
+    });
 
-    const result = await service.reactivateDriver('driver-profile-1', auth as never);
+    const result = await service.reactivateDriver(
+      'driver-profile-1',
+      auth as never,
+    );
 
     expect(prisma.driverProfile.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: 'OFFLINE' } }),
@@ -114,7 +139,9 @@ describe('AdminService.reactivateDriver', () => {
 
   it('envoie une push notification de reactivation au chauffeur', async () => {
     const { service, prisma, auth, profile, notifications } = createService();
-    prisma.driverProfile.findUnique.mockResolvedValue(profile({ status: 'SUSPENDED' }));
+    prisma.driverProfile.findUnique.mockResolvedValue(
+      profile({ status: 'SUSPENDED' }),
+    );
 
     await service.reactivateDriver('driver-profile-1', auth as never);
 

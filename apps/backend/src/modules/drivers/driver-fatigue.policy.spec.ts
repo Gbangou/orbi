@@ -34,12 +34,14 @@ describe('evaluateDriverFatigue', () => {
   });
 
   it('returns warning state when one trip below the threshold remains', () => {
-    const trips = Array.from({ length: driverFatigueMaxCompletedTrips - 1 }, (_, i) =>
-      makeTrip(
-        new Date(now.getTime() - (i + 1) * 30 * 60000),
-        new Date(now.getTime() - i * 30 * 60000),
-        `trip-${i}`,
-      ),
+    const trips = Array.from(
+      { length: driverFatigueMaxCompletedTrips - 1 },
+      (_, i) =>
+        makeTrip(
+          new Date(now.getTime() - (i + 1) * 30 * 60000),
+          new Date(now.getTime() - i * 30 * 60000),
+          `trip-${i}`,
+        ),
     );
 
     const result = evaluateDriverFatigue({ now, trips });
@@ -49,12 +51,14 @@ describe('evaluateDriverFatigue', () => {
   });
 
   it('blocks when completed trip count reaches the hard limit and rest has not elapsed', () => {
-    const trips = Array.from({ length: driverFatigueMaxCompletedTrips }, (_, i) =>
-      makeTrip(
-        new Date(now.getTime() - (i + 1) * 20 * 60000),
-        new Date(now.getTime() - i * 20 * 60000 - 60000),
-        `trip-${i}`,
-      ),
+    const trips = Array.from(
+      { length: driverFatigueMaxCompletedTrips },
+      (_, i) =>
+        makeTrip(
+          new Date(now.getTime() - (i + 1) * 20 * 60000),
+          new Date(now.getTime() - i * 20 * 60000 - 60000),
+          `trip-${i}`,
+        ),
     );
 
     const result = evaluateDriverFatigue({ now, trips });
@@ -68,12 +72,14 @@ describe('evaluateDriverFatigue', () => {
     const longAgo = new Date(
       now.getTime() - (driverFatigueRestMinutes + 5) * 60000,
     );
-    const trips = Array.from({ length: driverFatigueMaxCompletedTrips }, (_, i) =>
-      makeTrip(
-        new Date(longAgo.getTime() - (i + 1) * 20 * 60000),
-        new Date(longAgo.getTime() - i * 20 * 60000),
-        `trip-${i}`,
-      ),
+    const trips = Array.from(
+      { length: driverFatigueMaxCompletedTrips },
+      (_, i) =>
+        makeTrip(
+          new Date(longAgo.getTime() - (i + 1) * 20 * 60000),
+          new Date(longAgo.getTime() - i * 20 * 60000),
+          `trip-${i}`,
+        ),
     );
 
     const result = evaluateDriverFatigue({ now, trips });
@@ -92,7 +98,9 @@ describe('evaluateDriverFatigue', () => {
     const result = evaluateDriverFatigue({ now, trips: [trip] });
 
     expect(result.state).toBe('blocked');
-    expect(result.drivingMinutes).toBeGreaterThanOrEqual(driverFatigueMaxDrivingMinutes);
+    expect(result.drivingMinutes).toBeGreaterThanOrEqual(
+      driverFatigueMaxDrivingMinutes,
+    );
   });
 
   it('warns when driving minutes are within 45 minutes of the hard limit', () => {

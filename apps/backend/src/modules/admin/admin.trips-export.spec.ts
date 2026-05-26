@@ -53,7 +53,9 @@ function createService() {
     { enqueue: jest.fn() } as never,
   );
 
-  const auth = { user: { id: 'admin-1', role: 'ADMIN', fullName: 'Admin Test' } };
+  const auth = {
+    user: { id: 'admin-1', role: 'ADMIN', fullName: 'Admin Test' },
+  };
 
   return { prisma, service, auth, trip };
 }
@@ -100,7 +102,9 @@ describe('AdminService.tripsExportCsv', () => {
     const { prisma, service, auth } = createService();
     await service.tripsExportCsv({}, auth as never);
 
-    const call = prisma.trip.findMany.mock.calls[0][0] as { where: Record<string, unknown> };
+    const call = prisma.trip.findMany.mock.calls[0][0] as {
+      where: Record<string, unknown>;
+    };
     expect(call.where).not.toHaveProperty('status');
   });
 
@@ -112,7 +116,9 @@ describe('AdminService.tripsExportCsv', () => {
       where: { createdAt?: { gte?: Date } };
     };
     expect(call.where.createdAt?.gte).toBeInstanceOf(Date);
-    expect((call.where.createdAt?.gte as Date).toISOString()).toContain('2026-05-01');
+    expect((call.where.createdAt?.gte as Date).toISOString()).toContain(
+      '2026-05-01',
+    );
   });
 
   it('applique un filtre createdAt lte à fin de journée quand toDate est fourni', async () => {
@@ -176,9 +182,12 @@ describe('AdminService.tripsExportCsv', () => {
     expect(call.take).toBeLessThanOrEqual(500);
   });
 
-  it("écrit un audit log TRIPS_EXPORTED à chaque export", async () => {
+  it('écrit un audit log TRIPS_EXPORTED à chaque export', async () => {
     const { prisma, service, auth } = createService();
-    await service.tripsExportCsv({ status: 'COMPLETED', limit: 10 }, auth as never);
+    await service.tripsExportCsv(
+      { status: 'COMPLETED', limit: 10 },
+      auth as never,
+    );
 
     expect(prisma.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -230,7 +239,10 @@ describe('AdminService.tripsExportCsv', () => {
     const { prisma, service, auth } = createService();
     prisma.trip.findMany.mockResolvedValue([]);
 
-    const csv = await service.tripsExportCsv({ status: 'MATCHED' }, auth as never);
+    const csv = await service.tripsExportCsv(
+      { status: 'MATCHED' },
+      auth as never,
+    );
     const lines = csv.trim().split('\n');
     expect(lines.length).toBe(1);
     expect(lines[0]).toContain('trip_id');

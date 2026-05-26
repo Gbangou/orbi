@@ -147,6 +147,8 @@ export class CreateRideRequestDto {
   @MinLength(3)
   @MaxLength(32)
   @IsUppercase()
-  @Matches(/^[A-Z0-9]+$/, { message: 'Promo code must be alphanumeric uppercase.' })
+  @Matches(/^[A-Z0-9]+$/, {
+    message: 'Promo code must be alphanumeric uppercase.',
+  })
   promoCode?: string;
 }

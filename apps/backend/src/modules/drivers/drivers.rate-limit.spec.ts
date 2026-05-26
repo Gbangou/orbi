@@ -8,7 +8,6 @@ import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import { RateLimitGuard } from '../../common/rate-limit/rate-limit.guard';
 import { RateLimitService } from '../../common/rate-limit/rate-limit.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
@@ -288,8 +287,9 @@ describe('DriversController — Rate Limiting (integration)', () => {
         resetAt: Date.now() + 60_000,
       });
 
-      const res = await request(app.getHttpServer())
-        .get('/api/v1/drivers/nearby?lat=12.36&lng=-1.53');
+      const res = await request(app.getHttpServer()).get(
+        '/api/v1/drivers/nearby?lat=12.36&lng=-1.53',
+      );
 
       expect(res.status).toBe(429);
       expect(driversService.getNearbyDrivers).not.toHaveBeenCalled();
@@ -302,8 +302,9 @@ describe('DriversController — Rate Limiting (integration)', () => {
         resetAt: Date.now() + 60_000,
       });
 
-      const res = await request(app.getHttpServer())
-        .get('/api/v1/drivers/nearby?lat=12.36&lng=-1.53');
+      const res = await request(app.getHttpServer()).get(
+        '/api/v1/drivers/nearby?lat=12.36&lng=-1.53',
+      );
 
       expect(res.status).toBe(200);
       expect(res.headers['x-ratelimit-limit']).toBe('60');
@@ -317,11 +318,15 @@ describe('DriversController — Rate Limiting (integration)', () => {
         resetAt: Date.now() + 60_000,
       });
 
-      await request(app.getHttpServer())
-        .get('/api/v1/drivers/nearby?lat=12.36&lng=-1.53&radius=9999');
+      await request(app.getHttpServer()).get(
+        '/api/v1/drivers/nearby?lat=12.36&lng=-1.53&radius=9999',
+      );
 
-      const [, , radiusArg] = driversService.getNearbyDrivers.mock
-        .calls[0] as [number, number, number];
+      const [, , radiusArg] = driversService.getNearbyDrivers.mock.calls[0] as [
+        number,
+        number,
+        number,
+      ];
       expect(radiusArg).toBeLessThanOrEqual(50);
     });
 
@@ -332,8 +337,9 @@ describe('DriversController — Rate Limiting (integration)', () => {
         resetAt: Date.now() + 60_000,
       });
 
-      await request(app.getHttpServer())
-        .get('/api/v1/drivers/nearby?lat=invalid&lng=bad');
+      await request(app.getHttpServer()).get(
+        '/api/v1/drivers/nearby?lat=invalid&lng=bad',
+      );
 
       const [latArg, lngArg] = driversService.getNearbyDrivers.mock
         .calls[0] as [number, number, number];

@@ -57,7 +57,7 @@ function fuzzCoordinates(
   const u2 = Math.random() || Number.EPSILON;
   const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
   return {
-    latitude:  parseFloat((latitude  + z * noiseDegreesLat).toFixed(6)),
+    latitude: parseFloat((latitude + z * noiseDegreesLat).toFixed(6)),
     longitude: parseFloat((longitude + z * noiseDegreesLng).toFixed(6)),
   };
 }
@@ -836,10 +836,8 @@ export class DriversService {
 
     const R = 6371;
     const nearby = profiles.filter((p) => {
-      const dLat =
-        ((toNumber(p.currentLatitude)! - lat) * Math.PI) / 180;
-      const dLng =
-        ((toNumber(p.currentLongitude)! - lng) * Math.PI) / 180;
+      const dLat = ((toNumber(p.currentLatitude)! - lat) * Math.PI) / 180;
+      const dLng = ((toNumber(p.currentLongitude)! - lng) * Math.PI) / 180;
       const a =
         Math.sin(dLat / 2) ** 2 +
         Math.cos((lat * Math.PI) / 180) *

@@ -200,12 +200,14 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
     });
 
     it.each(readEndpoints)('%s %s → 403', async (method, path) => {
-      const res = await (
-        request(app.getHttpServer()) as unknown as Record<
-          string,
-          (p: string) => { expect: (s: number) => unknown }
-        >
-      )[method.toLowerCase()](path);
+      const res = await Promise.resolve(
+        (
+          request(app.getHttpServer()) as unknown as Record<
+            string,
+            (p: string) => { expect: (s: number) => unknown }
+          >
+        )[method.toLowerCase()](path),
+      );
       expect((res as unknown as { status: number }).status).toBe(403);
     });
 
@@ -395,15 +397,18 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
       expect(res.status).not.toBe(403);
     });
 
-    it.each(adminOnlyWriteEndpoints)('%s %s → not 403', async (method, path) => {
-      const res = await (
-        request(app.getHttpServer()) as unknown as Record<
-          string,
-          (p: string) => Promise<{ status: number }>
-        >
-      )[method.toLowerCase()](path);
-      expect(res.status).not.toBe(403);
-    });
+    it.each(adminOnlyWriteEndpoints)(
+      '%s %s → not 403',
+      async (method, path) => {
+        const res = await (
+          request(app.getHttpServer()) as unknown as Record<
+            string,
+            (p: string) => Promise<{ status: number }>
+          >
+        )[method.toLowerCase()](path);
+        expect(res.status).not.toBe(403);
+      },
+    );
   });
 
   // ── OPS is denied ADMIN-only write endpoints ──────────────────────────────

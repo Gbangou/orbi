@@ -49,7 +49,10 @@ jest.useFakeTimers().setSystemTime(now);
 describe('AuthService.validatePromoCode', () => {
   it('retourne les details du code valide avec le pourcentage de remise', async () => {
     const { service, auth } = createService();
-    const result = await service.validatePromoCode('bienvenue20', auth as never);
+    const result = await service.validatePromoCode(
+      'bienvenue20',
+      auth as never,
+    );
 
     expect(result.valid).toBe(true);
     expect(result.code).toBe('BIENVENUE20');
@@ -114,14 +117,20 @@ describe('AuthService.validatePromoCode', () => {
 
   it('accepte un code sans limite d utilisations (maxUses null)', async () => {
     const { service, auth } = createService({ maxUses: null, usedCount: 9999 });
-    const result = await service.validatePromoCode('BIENVENUE20', auth as never);
+    const result = await service.validatePromoCode(
+      'BIENVENUE20',
+      auth as never,
+    );
 
     expect(result.valid).toBe(true);
   });
 
   it('accepte un code firstTripOnly si le rider na aucun trajet complete', async () => {
     const { service, auth } = createService({ firstTripOnly: true });
-    const result = await service.validatePromoCode('BIENVENUE20', auth as never);
+    const result = await service.validatePromoCode(
+      'BIENVENUE20',
+      auth as never,
+    );
 
     expect(result.valid).toBe(true);
     expect(result.firstTripOnly).toBe(true);

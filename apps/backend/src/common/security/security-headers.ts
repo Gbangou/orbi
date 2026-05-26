@@ -17,7 +17,8 @@ const HSTS_VALUE = 'max-age=63072000; includeSubDomains; preload';
 
 // Toutes les réponses API contiennent des données métier potentiellement sensibles :
 // interdire la mise en cache partout, pas seulement sur les routes auth/payments.
-const NO_STORE = 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+const NO_STORE =
+  'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
 
 function isHttpsRequest(req: Request) {
   return req.secure || req.headers['x-forwarded-proto'] === 'https';

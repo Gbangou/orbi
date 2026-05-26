@@ -7,15 +7,21 @@ import {
 
 describe('hasDefinedCoordinates', () => {
   it('returns true when both latitude and longitude are finite numbers', () => {
-    expect(hasDefinedCoordinates({ latitude: 12.365, longitude: -1.534 })).toBe(true);
+    expect(hasDefinedCoordinates({ latitude: 12.365, longitude: -1.534 })).toBe(
+      true,
+    );
   });
 
   it('returns false when latitude is null', () => {
-    expect(hasDefinedCoordinates({ latitude: null, longitude: -1.534 })).toBe(false);
+    expect(hasDefinedCoordinates({ latitude: null, longitude: -1.534 })).toBe(
+      false,
+    );
   });
 
   it('returns false when longitude is undefined', () => {
-    expect(hasDefinedCoordinates({ latitude: 12.365, longitude: undefined })).toBe(false);
+    expect(
+      hasDefinedCoordinates({ latitude: 12.365, longitude: undefined }),
+    ).toBe(false);
   });
 
   it('returns false when both coordinates are missing', () => {
