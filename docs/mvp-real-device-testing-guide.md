@@ -165,23 +165,31 @@ Resultat attendu:
 
 Si ce test echoue, ne pas construire l'APK. Corriger d'abord.
 
-## 6. Creer le fichier EAS pour produire des APK
+## 6. Verifier les fichiers EAS pour produire des APK
 
-Le projet doit avoir un fichier `eas.json` a la racine.
+Le repo contient maintenant un fichier `eas.json` dans chaque app mobile:
 
-Dans le dossier:
+- `apps/rider-app/eas.json`
+- `apps/driver-app/eas.json`
+
+Ces fichiers disent a Expo comment fabriquer:
+
+- un APK interne pour le test MVP;
+- un AAB pour Google Play plus tard.
+
+### Rider app
 
 ```text
-C:\Users\LENOVO\Desktop\orbi
+C:\Users\LENOVO\Desktop\orbi\apps\rider-app\eas.json
 ```
 
-Creer un fichier:
+### Driver app
 
 ```text
-eas.json
+C:\Users\LENOVO\Desktop\orbi\apps\driver-app\eas.json
 ```
 
-Mettre dedans:
+Chaque fichier contient notamment:
 
 ```json
 {
@@ -207,8 +215,9 @@ Mettre dedans:
 Explication simple:
 
 - `preview` fabrique un `.apk` facile a installer sur telephone.
+- `mvp` fabrique aussi un `.apk` pour le pilote ferme.
 - `production` fabrique un `.aab` pour Google Play plus tard.
-- Pour le MVP terrain, utiliser `preview`.
+- Pour le MVP terrain, utiliser `mvp` ou `preview`.
 
 ## 7. Configurer l'adresse du backend dans les apps
 

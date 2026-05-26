@@ -24,6 +24,8 @@
       }
     },
     "android": {
+      "package": "app.orbi.driver",
+      "versionCode": 1,
       "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
       "usesCleartextTraffic": false,
       "allowBackup": false
