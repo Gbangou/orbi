@@ -100,7 +100,43 @@ Ces outils sont peut-etre deja installes. Si oui, passer a l'etape suivante.
 node -v
 ```
 
-Si une version s'affiche, par exemple `v22...`, c'est bon.
+Si une version s'affiche, il faut verifier le debut:
+
+- `v22...`: bon pour Orbi et Expo.
+- `v20...`: acceptable.
+- `v24...`: ne pas continuer pour les APK Expo. Expo SDK 52 peut echouer avec
+  `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`.
+
+Pour ce projet, la version recommandee est Node.js 22 LTS.
+
+### Installer Node.js 22 LTS si PowerShell affiche v24
+
+Faire ceci seulement si `node -v` affiche `v24...` ou une version plus recente.
+
+1. Ouvrir le site officiel:
+   - https://nodejs.org
+2. Cliquer sur la version `LTS`.
+3. Telecharger l'installateur Windows.
+4. Ouvrir le fichier telecharge.
+5. Cliquer sur `Next`.
+6. Accepter la licence.
+7. Garder les options par defaut.
+8. Cliquer sur `Install`.
+9. Fermer PowerShell completement.
+10. Rouvrir PowerShell.
+11. Taper:
+
+```powershell
+node -v
+```
+
+Le resultat doit commencer par `v22`.
+
+Si PowerShell affiche encore `v24`, redemarrer l'ordinateur puis verifier encore:
+
+```powershell
+node -v
+```
 
 ### Verifier pnpm
 

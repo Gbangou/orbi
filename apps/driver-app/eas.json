@@ -6,6 +6,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "node": "22.14.0",
       "android": {
         "buildType": "apk"
       }
@@ -13,6 +14,7 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "node": "22.14.0",
       "android": {
         "buildType": "apk"
       }
@@ -20,12 +22,14 @@
     "mvp": {
       "distribution": "internal",
       "channel": "mvp",
+      "node": "22.14.0",
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
       "channel": "production",
+      "node": "22.14.0",
       "android": {
         "buildType": "app-bundle"
       }
