@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import type { ReactTestInstance } from 'react-test-renderer';
 import { router } from 'expo-router';
 import {
@@ -353,6 +353,7 @@ beforeEach(() => {
   mockedUpdateTrustedContactWithApi.mockReset();
   mockedUpdateTripStatusWithApi.mockReset();
   mockedResolveRiderAppError.mockReset();
+  jest.mocked(Linking.openURL).mockReset();
 
   jest.mocked(createOrbiApiClient).mockReturnValue({ kind: 'mock-client' } as never);
   mockedResolveVoiceLocationIntentWithApi.mockResolvedValue({
@@ -380,6 +381,7 @@ beforeEach(() => {
     message: 'Fallback rider error.',
     shouldClearSessionToken: false,
   });
+  jest.mocked(Linking.openURL).mockResolvedValue(undefined);
   mockedGetMySupportTicketsWithApi.mockResolvedValue({ tickets: [] } as never);
   mockedTriggerTripSafetySosWithApi.mockResolvedValue({
     sos: {
@@ -1076,6 +1078,35 @@ describe('rider smoke flows', () => {
       }),
     );
     expectText(renderer, 'Course active');
+  });
+
+  it('triggers rider SOS from activity and opens the local emergency dialer', async () => {
+    riderPositionState.latestPosition = {
+      latitude: 12.365,
+      longitude: -1.533,
+      accuracyMeters: 18,
+    };
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderRealtimeHistory('IN_PROGRESS') as never);
+    mockedFetchTripDetail.mockResolvedValue(
+      buildTripDetail(['timeline-1'], ['Course demarree']) as never,
+    );
+
+    const renderer = await renderScreen(<ActivityScreen />);
+    await pressByText(renderer, 'Actualiser le suivi');
+    await pressByText(renderer, 'SOS securite');
+
+    expect(mockedTriggerTripSafetySosWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      'trip-rider-1',
+      {
+        details: 'SOS declenche depuis le cockpit passager.',
+        latitude: 12.365,
+        longitude: -1.533,
+        accuracyMeters: 18,
+      },
+    );
+    expect(Linking.openURL).toHaveBeenCalledWith('tel:112');
   });
 
   it('absorbs double taps while reporting a rider incident from activity', async () => {

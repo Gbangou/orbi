@@ -52,6 +52,9 @@ jest.mock(
       Alert: {
         alert: jest.fn(),
       },
+      Linking: {
+        openURL: jest.fn(async () => undefined),
+      },
       Platform: {
         OS: "test",
         select: <T>(values: { test?: T; default?: T }) =>
