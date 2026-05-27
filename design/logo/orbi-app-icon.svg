@@ -14,7 +14,7 @@
     Point-vehicule a 45° :
       cx = 512 + 350 × sin(45°) = 759.5 ≈ 760
       cy = 512 − 350 × cos(45°) = 264.5 ≈ 265
-      rayon = 72, lueur rayon = 115 opacite 0.22
+      rayon = 72, lueur rayon = 120 opacite 0.20
 -->
 <svg
   xmlns="http://www.w3.org/2000/svg"
@@ -28,7 +28,7 @@
   <rect width="1024" height="1024" fill="#07111d" rx="228"/>
 
   <!-- Lueur du point-vehicule -->
-  <circle cx="760" cy="265" r="115" fill="#2dd4bf" fill-opacity="0.20"/>
+  <circle cx="760" cy="265" r="120" fill="#2dd4bf" fill-opacity="0.20"/>
 
   <!-- Anneau orbital -->
   <circle

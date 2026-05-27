@@ -1,14 +1,15 @@
 <!-- Orbi — Logo horizontal (marque + logotype) -->
 <!--
-  USAGE: fond sombre (#07111d) de preference. Pour fond clair, remplacer fill="#f8fafc" par fill="#07111d".
+  USAGE: fond sombre (#07111d) de preference. Pour fond clair, voir orbi-logo-light.svg.
 
   GEOMETRIE DE LA MARQUE:
     Anneau : centre (30, 30), rayon 26, trait 3, couleur Orbi Teal
     Point-vehicule : a 45° du sommet sur le bord de l'anneau
       cx = 30 + 26 × sin(45°) = 48.38 ≈ 48.4
       cy = 30 − 26 × cos(45°) = 11.62 ≈ 11.6
-      rayon du point = 5.5, lueur = rayon 10 opacite 0.2
+      rayon du point = 5.5, lueur = rayon 11 opacite 0.20
 
+  POLICE: Raleway ExtraBold 800 — geometrique, elegante, disponible sur Google Fonts.
   FICHIERS DERIVES:
     orbi-icon.svg         → marque seule (60 × 60)
     orbi-app-icon.svg     → icone application (1024 × 1024, fond inclus)
@@ -16,16 +17,23 @@
 -->
 <svg
   xmlns="http://www.w3.org/2000/svg"
-  viewBox="0 0 220 60"
+  viewBox="0 0 210 60"
   role="img"
   aria-label="Orbi"
 >
   <title>Orbi</title>
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@800&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- Fond transparent — retirer le rect si necessaire -->
 
   <!-- === MARQUE : ORBITE === -->
 
   <!-- Lueur du point-vehicule (halo ambiant) -->
-  <circle cx="48.4" cy="11.6" r="10" fill="#2dd4bf" fill-opacity="0.18"/>
+  <circle cx="48.4" cy="11.6" r="11" fill="#2dd4bf" fill-opacity="0.20"/>
 
   <!-- Anneau orbital -->
   <circle
@@ -39,14 +47,14 @@
   <!-- Point-vehicule : sur le bord de l'anneau a 1h30 -->
   <circle cx="48.4" cy="11.6" r="5.5" fill="#2dd4bf"/>
 
-  <!-- === LOGOTYPE === -->
+  <!-- === LOGOTYPE : Orbi — Raleway ExtraBold === -->
   <text
-    x="72"
-    y="41"
-    font-family="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif"
-    font-size="32"
+    x="70"
+    y="42"
+    font-family="Raleway, 'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+    font-size="34"
     font-weight="800"
     fill="#f8fafc"
-    letter-spacing="3"
-  >orbi</text>
+    letter-spacing="1"
+  >Orbi</text>
 </svg>

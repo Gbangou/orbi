@@ -17,7 +17,7 @@
   <title>Orbi</title>
 
   <!-- Lueur -->
-  <circle cx="48.4" cy="11.6" r="10" fill="#2dd4bf" fill-opacity="0.18"/>
+  <circle cx="48.4" cy="11.6" r="11" fill="#2dd4bf" fill-opacity="0.20"/>
 
   <!-- Anneau -->
   <circle
@@ -25,6 +25,7 @@
     fill="none"
     stroke="#2dd4bf"
     stroke-width="3"
+    stroke-linecap="round"
   />
 
   <!-- Point-vehicule -->

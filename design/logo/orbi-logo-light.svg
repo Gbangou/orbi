@@ -1,26 +1,29 @@
 <!-- Orbi — Variante fond clair -->
 <!--
   USAGE: documents, presentations, impression sur fond blanc.
-  Le fond doit avoir un contraste suffisant avec #2dd4bf (WCAG AA : fond >= #5a6b6a).
-  Pour les fonds tres clairs, utiliser la variante monochrome sombre ci-dessous.
 
-  Variante monochrome sombre (fond blanc) :
-    Remplacer stroke="#2dd4bf" et fill="#2dd4bf" par fill="#07111d" / stroke="#07111d"
-    Remplacer fill="#f8fafc" (logotype) par fill="#07111d"
+  Variante monochrome sombre (fond blanc pur) :
+    Remplacer stroke="#2dd4bf" et fill="#2dd4bf" par "#07111d"
+    Remplacer fill="#07111d" (logotype) par "#07111d" — deja le cas ici.
 -->
 <svg
   xmlns="http://www.w3.org/2000/svg"
-  viewBox="0 0 220 60"
+  viewBox="0 0 210 60"
   role="img"
   aria-label="Orbi"
 >
   <title>Orbi</title>
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@800&amp;display=swap');
+    </style>
+  </defs>
 
-  <!-- Fond (a supprimer pour fond transparent) -->
-  <rect width="220" height="60" fill="#ffffff"/>
+  <!-- Fond blanc (a supprimer pour fond transparent) -->
+  <rect width="210" height="60" fill="#ffffff"/>
 
   <!-- Lueur -->
-  <circle cx="48.4" cy="11.6" r="10" fill="#2dd4bf" fill-opacity="0.22"/>
+  <circle cx="48.4" cy="11.6" r="11" fill="#2dd4bf" fill-opacity="0.22"/>
 
   <!-- Anneau -->
   <circle
@@ -28,19 +31,20 @@
     fill="none"
     stroke="#2dd4bf"
     stroke-width="3"
+    stroke-linecap="round"
   />
 
   <!-- Point-vehicule -->
   <circle cx="48.4" cy="11.6" r="5.5" fill="#2dd4bf"/>
 
-  <!-- Logotype sombre -->
+  <!-- Logotype sombre — Raleway ExtraBold -->
   <text
-    x="72"
-    y="41"
-    font-family="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif"
-    font-size="32"
+    x="70"
+    y="42"
+    font-family="Raleway, 'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+    font-size="34"
     font-weight="800"
     fill="#07111d"
-    letter-spacing="3"
-  >orbi</text>
+    letter-spacing="1"
+  >Orbi</text>
 </svg>
