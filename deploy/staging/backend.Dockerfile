@@ -1,0 +1,27 @@
+FROM node:22.14.0-bookworm-slim
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+RUN corepack enable
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches/ patches/
+COPY apps/backend/package.json apps/backend/package.json
+COPY packages/domain/package.json packages/domain/package.json
+COPY packages/api/package.json packages/api/package.json
+COPY packages/config/package.json packages/config/package.json
+COPY packages/ui/package.json packages/ui/package.json
+
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+
+RUN pnpm --filter backend prisma:generate
+RUN pnpm --filter backend build
+
+EXPOSE 3000
+
+CMD ["node", "-r", "./node_modules/ts-node/register", "-r", "./node_modules/tsconfig-paths/register", "./apps/backend/dist/src/main.js"]
