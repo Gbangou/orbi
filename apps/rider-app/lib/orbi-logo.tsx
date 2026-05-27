@@ -2,20 +2,6 @@ import { StyleSheet, Text, View } from 'react-native';
 
 export type OrbiLogoSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
-/**
- * Geometry per size:
- *   ring  = outer diameter of the orbit circle
- *   dot   = diameter of the vehicle dot
- *   border = stroke width of the orbit ring
- *   word  = wordmark font size
- *   gap   = space between mark and wordmark
- *   track = wordmark letter spacing
- *
- * Dot placement: center of dot is on the ring circumference at 45° from top
- * (1:30 clock position), mathematically verified:
- *   left = ring × sin²(45°) × (1 + √2/2)  ≈ ring × 0.854
- *   top  = ring × (1 − √2/2) / 2           ≈ ring × 0.146
- */
 const LOGO_CONFIG = {
   xs: { ring: 20, dot: 6,  border: 1.5, word: 12, gap: 6,  track: 1.5 },
   sm: { ring: 28, dot: 8,  border: 2,   word: 16, gap: 8,  track: 2   },
@@ -26,11 +12,39 @@ const LOGO_CONFIG = {
 
 const ORBI_TEAL = '#2dd4bf';
 
-interface OrbiLogoProps {
+// Dot sits on the ring at 1:30 clock position (45° from top):
+//   left = ring × 0.854   top = ring × 0.146
+
+export interface OrbiLogoProps {
   size?: OrbiLogoSize;
+  /**
+   * Color of the orbit ring and vehicle dot.
+   * Change this to adapt the logo to any background or theme.
+   * Default: '#2dd4bf' (Orbi teal)
+   */
   tint?: string;
+  /**
+   * Color of the "orbi" wordmark text.
+   * Use '#0a0c0e' on light backgrounds, '#f8fafc' on dark backgrounds.
+   * Default: '#f8fafc'
+   */
   wordmarkColor?: string;
+  /**
+   * Optional semi-transparent backdrop disc behind the vehicle dot.
+   * Creates the dark halo effect seen in the app icon.
+   * Example: 'rgba(7,17,29,0.75)' for dark backgrounds.
+   * Omit for a clean mark on transparent or light backgrounds.
+   */
+  dotBackdropColor?: string;
+  /**
+   * Whether to show the teal glow/shadow on the vehicle dot.
+   * Set to false for transparent or light backgrounds to avoid dark shadow artifacts.
+   * Default: true
+   */
+  showGlow?: boolean;
+  /** 'horizontal' (default) or 'vertical' — controls wordmark placement */
   orientation?: 'horizontal' | 'vertical';
+  /** Set to false to render the icon mark only, without the wordmark */
   showWordmark?: boolean;
 }
 
@@ -38,11 +52,14 @@ export function OrbiLogo({
   size = 'md',
   tint = ORBI_TEAL,
   wordmarkColor = '#f8fafc',
+  dotBackdropColor,
+  showGlow = true,
   orientation = 'horizontal',
   showWordmark = true,
 }: OrbiLogoProps) {
   const c = LOGO_CONFIG[size];
   const markSide = c.ring + c.dot;
+  const backdropPad = c.dot * 0.55;
 
   return (
     <View
@@ -65,6 +82,22 @@ export function OrbiLogo({
             borderColor: tint,
           }}
         />
+
+        {/* Optional dark halo behind the vehicle dot */}
+        {dotBackdropColor ? (
+          <View
+            style={{
+              position: 'absolute',
+              left: c.ring * 0.854 - backdropPad,
+              top: c.ring * 0.146 - backdropPad,
+              width: c.dot + backdropPad * 2,
+              height: c.dot + backdropPad * 2,
+              borderRadius: (c.dot + backdropPad * 2) / 2,
+              backgroundColor: dotBackdropColor,
+            }}
+          />
+        ) : null}
+
         {/* Vehicle dot — 1:30 position on the ring */}
         <View
           style={{
@@ -75,11 +108,15 @@ export function OrbiLogo({
             height: c.dot,
             borderRadius: c.dot / 2,
             backgroundColor: tint,
-            shadowColor: tint,
-            shadowOpacity: 0.85,
-            shadowRadius: c.dot * 0.65,
-            shadowOffset: { width: 0, height: 0 },
-            elevation: 8,
+            ...(showGlow
+              ? {
+                  shadowColor: tint,
+                  shadowOpacity: 0.85,
+                  shadowRadius: c.dot * 0.65,
+                  shadowOffset: { width: 0, height: 0 },
+                  elevation: 8,
+                }
+              : {}),
           }}
         />
       </View>
