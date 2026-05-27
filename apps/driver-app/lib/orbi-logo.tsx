@@ -2,12 +2,15 @@ import { StyleSheet, Text, View } from 'react-native';
 
 export type OrbiLogoSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
+// Font family loaded by _layout.tsx — keep this name in sync.
+export const ORBI_FONT_FAMILY = 'Raleway_800ExtraBold';
+
 const LOGO_CONFIG = {
-  xs: { ring: 20, dot: 6,  border: 1.5, word: 12, gap: 6,  track: 1.5 },
-  sm: { ring: 28, dot: 8,  border: 2,   word: 16, gap: 8,  track: 2   },
-  md: { ring: 38, dot: 10, border: 2.5, word: 22, gap: 10, track: 3   },
-  lg: { ring: 54, dot: 14, border: 3,   word: 30, gap: 12, track: 4   },
-  xl: { ring: 74, dot: 20, border: 4,   word: 42, gap: 16, track: 6   },
+  xs: { ring: 20, dot: 6,  border: 1.5, word: 12, gap: 6,  track: 0.5 },
+  sm: { ring: 28, dot: 8,  border: 2,   word: 16, gap: 8,  track: 0.8 },
+  md: { ring: 38, dot: 10, border: 2.5, word: 22, gap: 10, track: 1   },
+  lg: { ring: 54, dot: 14, border: 3,   word: 30, gap: 12, track: 1.2 },
+  xl: { ring: 74, dot: 20, border: 4,   word: 42, gap: 16, track: 1.5 },
 } as const;
 
 const ORBI_TEAL = '#2dd4bf';
@@ -19,26 +22,30 @@ export interface OrbiLogoProps {
   size?: OrbiLogoSize;
   /**
    * Color of the orbit ring and vehicle dot.
-   * Change this to adapt the logo to any background or theme.
    * Default: '#2dd4bf' (Orbi teal)
+   * Examples:
+   *   tint="#f59e0b"          amber — for driver screens
+   *   tint="#38bdf8"          sky blue
+   *   tint="#ffffff"          white — on dark photos or overlays
+   *   tint="#0a0c0e"          near-black — on light backgrounds
    */
   tint?: string;
   /**
-   * Color of the "orbi" wordmark text.
-   * Use '#0a0c0e' on light backgrounds, '#f8fafc' on dark backgrounds.
-   * Default: '#f8fafc'
+   * Color of the "Orbi" wordmark text.
+   * Default: '#f8fafc' (light, for dark backgrounds)
+   * Use '#0a0c0e' on white/light backgrounds.
    */
   wordmarkColor?: string;
   /**
    * Optional semi-transparent backdrop disc behind the vehicle dot.
-   * Creates the dark halo effect seen in the app icon.
+   * Creates the dark halo effect visible in the app icon.
    * Example: 'rgba(7,17,29,0.75)' for dark backgrounds.
-   * Omit for a clean mark on transparent or light backgrounds.
+   * Leave undefined for a clean mark on transparent or light backgrounds.
    */
   dotBackdropColor?: string;
   /**
-   * Whether to show the teal glow/shadow on the vehicle dot.
-   * Set to false for transparent or light backgrounds to avoid dark shadow artifacts.
+   * Whether to render the teal glow/shadow on the vehicle dot.
+   * Set to false on transparent or light backgrounds to avoid shadow artifacts.
    * Default: true
    */
   showGlow?: boolean;
@@ -126,12 +133,12 @@ export function OrbiLogo({
           style={{
             color: wordmarkColor,
             fontSize: c.word,
-            fontWeight: '800',
+            fontFamily: ORBI_FONT_FAMILY,
             letterSpacing: c.track,
             includeFontPadding: false,
           }}
         >
-          orbi
+          Orbi
         </Text>
       ) : null}
     </View>

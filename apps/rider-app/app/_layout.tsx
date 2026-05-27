@@ -7,6 +7,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useFonts, Raleway_800ExtraBold } from '@expo-google-fonts/raleway';
 import * as Notifications from 'expo-notifications';
 import { orbiTheme } from '@orbi/ui';
 import { hasPersistedRiderSession } from '../lib/auth';
@@ -18,6 +19,7 @@ export default function RootLayout() {
   const rootNavigationState = useRootNavigationState();
   const [isNavigationMounted, setIsNavigationMounted] = useState(false);
   const [isResolved, setIsResolved] = useState(false);
+  useFonts({ Raleway_800ExtraBold });
 
   useEffect(() => {
     const timer = setTimeout(() => {
