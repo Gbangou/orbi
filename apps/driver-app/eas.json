@@ -10,6 +10,10 @@
       "pnpm": "10.30.0",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "http://localhost:3000",
+        "EXPO_PUBLIC_API_VERSION": "v1"
       }
     },
     "preview": {
@@ -19,6 +23,10 @@
       "pnpm": "10.30.0",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "http://localhost:3000",
+        "EXPO_PUBLIC_API_VERSION": "v1"
       }
     },
     "mvp": {
@@ -28,6 +36,10 @@
       "pnpm": "10.30.0",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "http://localhost:3000",
+        "EXPO_PUBLIC_API_VERSION": "v1"
       }
     },
     "production": {
@@ -36,6 +48,9 @@
       "pnpm": "10.30.0",
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_VERSION": "v1"
       }
     }
   }
