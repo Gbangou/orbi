@@ -1,113 +1,58 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { extractApiErrorMessage } from '@orbi/api';
 import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
 import { orbiTheme } from '@orbi/ui';
 import { signInRiderAccount, signUpRiderAccount } from '../lib/auth';
 import { OrbiLogo } from '../lib/orbi-logo';
-import { RiderJourneySection } from '../lib/rider-journey';
-import {
-  InsightBadge,
-  LiveStatusBanner,
-  SectionCard,
-  SectionHeading,
-} from '../lib/realtime-widgets';
 
 export default function RiderAuthScreen() {
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [status, setStatus] = useState(
-    'Connectez-vous pour suivre vos reservations et votre historique.',
-  );
+  const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const canSubmit =
     Boolean(email.trim()) &&
     password.length >= 8 &&
     (mode === 'sign-in' || Boolean(fullName.trim()));
-  const authChecklist = [
-    email.trim()
-      ? 'Email pret'
-      : 'Saisissez un email pour ouvrir une session reelle.',
-    password.length >= 8
-      ? 'Mot de passe pret'
-      : 'Le mot de passe doit contenir au moins 8 caracteres.',
-    mode === 'sign-in' || fullName.trim()
-      ? mode === 'sign-in'
-        ? 'Connexion prete'
-        : 'Nom complet pret'
-      : 'Ajoutez le nom complet pour creer le compte.',
-  ];
 
-  function applyDemoAccount() {
-    setFullName('Awa Ouedraogo');
-    setEmail(orbiDemoAccounts.rider.email);
-    setPassword(orbiDemoAccounts.rider.password);
-    setStatus('Compte demo passager precharge pour ouvrir rapidement une session.');
-  }
-
-  async function handleDemoSignIn() {
-    setFullName('Awa Ouedraogo');
-    setEmail(orbiDemoAccounts.rider.email);
-    setPassword(orbiDemoAccounts.rider.password);
-    setMode('sign-in');
-    setIsSubmitting(true);
-    setStatus('Connexion immediate du compte demo passager...');
-
-    try {
-      await signInRiderAccount({
-        email: orbiDemoAccounts.rider.email,
-        password: orbiDemoAccounts.rider.password,
-      });
-      setStatus('Session passager active.');
-      router.replace('/home');
-    } catch (error) {
-      setStatus(describeAuthError(error));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  function describeAuthError(error: unknown) {
+  function describeAuthError(error: unknown): string {
     if (error instanceof TypeError) {
-      return 'Connexion reseau indisponible. Verifiez le backend avant de relancer la session passager.';
+      return 'Connexion impossible. Vérifiez votre réseau et réessayez.';
     }
-
     const message = error instanceof Error ? error.message.toLowerCase() : '';
-
     if (
       message.includes('network request failed') ||
       message.includes('fetch failed') ||
       message.includes('load failed') ||
       message.includes('networkerror')
     ) {
-      return 'Connexion reseau indisponible. Verifiez le backend avant de relancer la session passager.';
+      return 'Connexion impossible. Vérifiez votre réseau et réessayez.';
     }
-
-    return extractApiErrorMessage(
-      error,
-      "Impossible d'ouvrir la session passager.",
-    );
+    return extractApiErrorMessage(error, 'Identifiants incorrects. Réessayez.');
   }
 
   async function handleSubmit() {
-    const normalizedEmail = email.trim().toLowerCase();
-
+    setErrorMessage('');
     setIsSubmitting(true);
-    setStatus(
-      mode === 'sign-in'
-        ? 'Connexion du compte passager...'
-        : 'Creation du compte passager...',
-    );
+    const normalizedEmail = email.trim().toLowerCase();
 
     try {
       if (mode === 'sign-in') {
-        await signInRiderAccount({
-          email: normalizedEmail,
-          password,
-        });
+        await signInRiderAccount({ email: normalizedEmail, password });
       } else {
         await signUpRiderAccount({
           fullName: fullName.trim(),
@@ -115,327 +60,217 @@ export default function RiderAuthScreen() {
           password,
         });
       }
-
-      setStatus('Session passager active.');
       router.replace('/home');
     } catch (error) {
-      setStatus(describeAuthError(error));
+      setErrorMessage(describeAuthError(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDemoSignIn() {
+    setErrorMessage('');
+    setIsSubmitting(true);
+    try {
+      await signInRiderAccount({
+        email: orbiDemoAccounts.rider.email,
+        password: orbiDemoAccounts.rider.password,
+      });
+      router.replace('/home');
+    } catch (error) {
+      setErrorMessage(describeAuthError(error));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <OrbiLogo size="lg" />
-      <Text style={styles.title}>Connexion et compte</Text>
-      <LiveStatusBanner
-        label="Acces passager"
-        message={status}
-        secondaryMessage="Le compte passager donne acces a la reservation, au suivi live, a la voix et a l historique."
-      />
-      {orbiDemoAccessEnabled ? (
-        <View style={styles.quickActionPanel}>
-          <View style={styles.quickActionCopy}>
-            <Text style={styles.quickActionTitle}>Entrer maintenant</Text>
-            <Text style={styles.quickActionMeta}>
-              Lance une vraie session rider demo puis ouvre le cockpit.
-            </Text>
-          </View>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.screen}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Logo */}
+        <View style={styles.logoArea}>
+          <OrbiLogo size="xl" orientation="vertical" />
+          <Text style={styles.tagline}>Votre course en quelques secondes</Text>
+        </View>
+
+        {/* Mode toggle */}
+        <View style={styles.modeRow}>
           <Pressable
-            onPress={() => void handleDemoSignIn()}
-            disabled={isSubmitting}
-            style={[styles.quickActionButton, isSubmitting ? styles.buttonDisabled : null]}
+            onPress={() => { setMode('sign-in'); setErrorMessage(''); }}
+            style={[styles.modeChip, mode === 'sign-in' && styles.modeChipActive]}
           >
-            <Text style={styles.quickActionButtonLabel}>
-              {isSubmitting ? 'Connexion...' : 'Demo rider'}
+            <Text style={[styles.modeChipLabel, mode === 'sign-in' && styles.modeChipLabelActive]}>
+              Connexion
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { setMode('sign-up'); setErrorMessage(''); }}
+            style={[styles.modeChip, mode === 'sign-up' && styles.modeChipActive]}
+          >
+            <Text style={[styles.modeChipLabel, mode === 'sign-up' && styles.modeChipLabelActive]}>
+              Créer un compte
             </Text>
           </Pressable>
         </View>
-      ) : null}
 
-      <SectionCard tone="sky">
-        <SectionHeading
-          eyebrow="Parcours"
-          title="Reprenez vos trajets sans friction"
-          description={
-            orbiDemoAccessEnabled
-              ? 'Connexion, inscription et compte demo volontaire dans une entree plus nette pour lancer rapidement une reservation.'
-              : 'Connexion et inscription dans une entree plus nette pour lancer rapidement une reservation.'
-          }
-        />
-        <View style={styles.insightRow}>
-          <InsightBadge label="Booking" value="Prix clairs" tone="teal" />
-          <InsightBadge label="Suivi" value="Temps reel" tone="sky" />
-          <InsightBadge label="Paiement" value="Mobile Money" tone="amber" />
-        </View>
-      </SectionCard>
-
-      <RiderJourneySection
-        currentStep="auth"
-        description="Commencez ici, puis laissez le tunnel passager vous guider vers l accueil, la reservation, la voix et le suivi."
-      />
-
-      <View style={styles.modeRow}>
-        {(['sign-in', 'sign-up'] as const).map((value) => (
-          <Pressable
-            key={value}
-            onPress={() => setMode(value)}
-            style={[
-              styles.modeChip,
-              mode === value ? styles.modeChipActive : null,
-            ]}
-          >
-            <Text
-              style={[
-                styles.modeChipLabel,
-                mode === value ? styles.modeChipLabelActive : null,
-              ]}
-            >
-              {value === 'sign-in' ? 'Connexion' : 'Inscription'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>
-            {mode === 'sign-in' ? 'Reprendre votre session' : 'Creer un compte passager'}
-          </Text>
-          <Text style={styles.cardMeta}>
-            {mode === 'sign-in'
-              ? orbiDemoAccessEnabled
-                ? 'Reconnectez-vous avec vos identifiants ou chargez explicitement le compte demo.'
-                : 'Reconnectez-vous avec vos identifiants.'
-              : 'Le compte vous permettra ensuite de reserver et sauvegarder vos lieux favoris.'}
-          </Text>
-        </View>
-
-        {mode === 'sign-up' ? (
-          <>
-            <Text style={styles.label}>Nom complet</Text>
+        {/* Form */}
+        <View style={styles.form}>
+          {mode === 'sign-up' && (
             <TextInput
               value={fullName}
               onChangeText={setFullName}
-              placeholder="Awa Ouedraogo"
+              placeholder="Nom complet"
               placeholderTextColor={orbiTheme.colors.muted}
               style={styles.input}
             />
-          </>
-        ) : null}
+          )}
 
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="rider@orbi.app"
-          placeholderTextColor={orbiTheme.colors.muted}
-          style={styles.input}
-        />
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="Adresse email"
+            placeholderTextColor={orbiTheme.colors.muted}
+            style={styles.input}
+          />
 
-        <Text style={styles.label}>Mot de passe</Text>
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="Mot de passe"
-          placeholderTextColor={orbiTheme.colors.muted}
-          style={styles.input}
-        />
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholder="Mot de passe"
+            placeholderTextColor={orbiTheme.colors.muted}
+            style={styles.input}
+          />
 
-        {orbiDemoAccessEnabled ? (
+          {Boolean(errorMessage) && (
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          )}
+
           <Pressable
-            onPress={applyDemoAccount}
-            disabled={isSubmitting}
-            style={[styles.secondaryButton, isSubmitting ? styles.buttonDisabled : null]}
+            disabled={isSubmitting || !canSubmit}
+            onPress={() => void handleSubmit()}
+            style={[styles.primaryButton, (isSubmitting || !canSubmit) && styles.buttonDisabled]}
           >
-            <Text style={styles.secondaryButtonLabel}>Utiliser le compte demo</Text>
-          </Pressable>
-        ) : null}
-
-        <View style={styles.formReadiness}>
-          {authChecklist.map((item) => (
-            <Text key={item} style={styles.formReadinessText}>
-              {item}
+            <Text style={styles.primaryButtonLabel}>
+              {isSubmitting
+                ? '...'
+                : mode === 'sign-in'
+                  ? 'Se connecter'
+                  : 'Créer mon compte'}
             </Text>
-          ))}
-        </View>
+          </Pressable>
 
-        <Pressable
-          disabled={isSubmitting || !canSubmit}
-          onPress={() => void handleSubmit()}
-          style={[
-            styles.primaryButton,
-            isSubmitting || !canSubmit ? styles.buttonDisabled : null,
-          ]}
-        >
-          <Text style={styles.primaryButtonLabel}>
-            {isSubmitting
-              ? 'Traitement...'
-              : mode === 'sign-in'
-                ? 'Se connecter'
-                : 'Creer mon compte'}
-          </Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+          {orbiDemoAccessEnabled && (
+            <Pressable
+              onPress={() => void handleDemoSignIn()}
+              disabled={isSubmitting}
+              style={[styles.ghostButton, isSubmitting && styles.buttonDisabled]}
+            >
+              <Text style={styles.ghostButtonLabel}>Connexion rapide (compte test)</Text>
+            </Pressable>
+          )}
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    paddingTop: 96,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+  root: {
+    flex: 1,
     backgroundColor: orbiTheme.colors.background,
-    gap: 16,
   },
-  title: {
-    color: orbiTheme.colors.text,
-    fontSize: 34,
-    fontWeight: '800',
+  screen: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingVertical: 60,
+    gap: 24,
   },
-  subtitle: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 20,
-  },
-  quickActionPanel: {
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(45, 212, 191, 0.32)',
-    backgroundColor: 'rgba(45, 212, 191, 0.1)',
-    padding: 16,
+  logoArea: {
+    alignItems: 'center',
     gap: 12,
+    marginBottom: 8,
   },
-  quickActionCopy: {
-    gap: 4,
-  },
-  quickActionTitle: {
-    color: orbiTheme.colors.text,
-    fontWeight: '900',
-    fontSize: 18,
-  },
-  quickActionMeta: {
+  tagline: {
     color: orbiTheme.colors.muted,
-    lineHeight: 18,
-  },
-  quickActionButton: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    backgroundColor: orbiTheme.colors.teal,
-  },
-  quickActionButtonLabel: {
-    color: '#052a28',
-    fontWeight: '900',
-  },
-  insightRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    fontSize: 15,
+    textAlign: 'center',
   },
   modeRow: {
     flexDirection: 'row',
     gap: 10,
   },
   modeChip: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 12,
     backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
+    alignItems: 'center',
   },
   modeChipActive: {
     backgroundColor: orbiTheme.colors.teal,
     borderColor: orbiTheme.colors.teal,
   },
   modeChipLabel: {
-    color: orbiTheme.colors.text,
+    color: orbiTheme.colors.muted,
     fontWeight: '700',
+    fontSize: 14,
   },
   modeChipLabelActive: {
     color: '#052a28',
   },
-  card: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 18,
-    gap: 10,
-  },
-  cardHeader: {
-    gap: 4,
-    marginBottom: 4,
-  },
-  cardTitle: {
-    color: orbiTheme.colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  cardMeta: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 18,
-  },
-  label: {
-    color: orbiTheme.colors.text,
-    fontWeight: '700',
-    fontSize: 13,
+  form: {
+    gap: 12,
   },
   input: {
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
     backgroundColor: orbiTheme.colors.backgroundAlt,
     color: orbiTheme.colors.text,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+  },
+  errorText: {
+    color: '#f87171',
+    fontSize: 13,
+    textAlign: 'center',
+    paddingHorizontal: 4,
   },
   primaryButton: {
-    marginTop: 8,
+    marginTop: 4,
     backgroundColor: orbiTheme.colors.teal,
-    borderRadius: 18,
+    borderRadius: 14,
     paddingVertical: 16,
-    paddingHorizontal: 18,
+    alignItems: 'center',
   },
   primaryButtonLabel: {
     color: '#052a28',
     fontWeight: '800',
-    textAlign: 'center',
+    fontSize: 16,
   },
-  secondaryButton: {
-    marginTop: 4,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+  ghostButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
   },
-  secondaryButtonLabel: {
-    color: orbiTheme.colors.text,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  formReadiness: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: 'rgba(15, 23, 42, 0.32)',
-    padding: 12,
-    gap: 4,
-  },
-  formReadinessText: {
+  ghostButtonLabel: {
     color: orbiTheme.colors.muted,
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
   buttonDisabled: {
-    opacity: 0.65,
+    opacity: 0.5,
   },
 });
