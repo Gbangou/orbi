@@ -1,0 +1,10 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "deploy/staging/backend.Dockerfile"
+
+[deploy]
+startCommand = "pnpm --filter backend prisma:migrate && node -r ./node_modules/ts-node/register -r ./node_modules/tsconfig-paths/register ./apps/backend/dist/src/main.js"
+healthcheckPath = "/api/v1/health/ready"
+healthcheckTimeout = 60
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
