@@ -10,6 +10,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { orbiTheme } from '@orbi/ui';
 import { hasPersistedDriverSession } from '../lib/auth';
+import { OrbiLogo } from '../lib/orbi-logo';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -99,7 +100,7 @@ export default function RootLayout() {
       {!isResolved ? (
         <View style={styles.loadingScreen}>
           <View style={styles.loadingCard}>
-            <Text style={styles.loadingEyebrow}>Orbi Chauffeur</Text>
+            <OrbiLogo size="sm" />
             <Text style={styles.loadingTitle}>Preparation de votre espace</Text>
             <Text style={styles.loadingText}>
               Verification de la session, des acces proteges et de la reprise du
@@ -127,11 +128,6 @@ const styles = StyleSheet.create({
     borderColor: orbiTheme.colors.border,
     padding: 24,
     gap: 10,
-  },
-  loadingEyebrow: {
-    color: orbiTheme.colors.amber,
-    textTransform: 'uppercase',
-    letterSpacing: 1.8,
   },
   loadingTitle: {
     color: orbiTheme.colors.text,

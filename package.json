@@ -97,7 +97,8 @@
       "client-only@0.0.1": "patches/client-only@0.0.1.patch",
       "minimatch@9.0.7": "patches/minimatch@9.0.7.patch",
       "minimatch@10.2.5": "patches/minimatch@10.2.5.patch",
-      "server-only@0.0.1": "patches/server-only@0.0.1.patch"
+      "server-only@0.0.1": "patches/server-only@0.0.1.patch",
+      "@expo/cli@0.22.28": "patches/@expo__cli@0.22.28.patch"
     }
   },
   "devDependencies": {

@@ -5,6 +5,7 @@ import { extractApiErrorMessage } from '@orbi/api';
 import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
 import { orbiTheme } from '@orbi/ui';
 import { signInRiderAccount, signUpRiderAccount } from '../lib/auth';
+import { OrbiLogo } from '../lib/orbi-logo';
 import { RiderJourneySection } from '../lib/rider-journey';
 import {
   InsightBadge,
@@ -126,7 +127,7 @@ export default function RiderAuthScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.eyebrow}>Orbi Passager</Text>
+      <OrbiLogo size="lg" />
       <Text style={styles.title}>Connexion et compte</Text>
       <LiveStatusBanner
         label="Acces passager"
@@ -291,11 +292,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: orbiTheme.colors.background,
     gap: 16,
-  },
-  eyebrow: {
-    color: orbiTheme.colors.teal,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
   },
   title: {
     color: orbiTheme.colors.text,

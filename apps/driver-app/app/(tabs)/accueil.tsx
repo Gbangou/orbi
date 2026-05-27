@@ -51,6 +51,7 @@ import {
 } from '../../lib/offer-signal';
 import { useDriverPresence } from '../../lib/use-driver-presence';
 import { useDriverRealtimeStream } from '../../lib/use-driver-realtime-stream';
+import { OrbiLogo } from '../../lib/orbi-logo';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { buildDriverShiftReadiness } from '../../lib/driver-shift-readiness';
 import { DriverHomeMapView } from '../../lib/driver-home-map-view';
@@ -418,7 +419,7 @@ export default function DriverHomeScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.eyebrow}>Orbi Chauffeur</Text>
+        <OrbiLogo size="sm" />
         <Text style={styles.title}>{orbiCopy.driverHeadline}</Text>
 
       <LiveHeroCard
@@ -747,11 +748,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: orbiTheme.colors.background,
     gap: 16,
-  },
-  eyebrow: {
-    color: orbiTheme.colors.amber,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
   },
   title: {
     color: orbiTheme.colors.text,

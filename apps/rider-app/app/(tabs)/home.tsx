@@ -32,6 +32,7 @@ import {
 import { RiderJourneySection } from '../../lib/rider-journey';
 import { restoreRiderSession } from '../../lib/auth';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
+import { OrbiLogo } from '../../lib/orbi-logo';
 import { useRiderRealtimeStream } from '../../lib/use-rider-realtime-stream';
 import { createOrbiApiClient } from '@orbi/api';
 import {
@@ -262,7 +263,7 @@ export default function RiderHomeScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.eyebrow}>Orbi Passager</Text>
+        <OrbiLogo size="sm" />
         <Text style={styles.title}>{orbiCopy.riderHeadline}</Text>
 
         {/* Statut de connexion */}
@@ -471,12 +472,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingBottom: 40,
     gap: 14,
-  },
-  eyebrow: {
-    color: orbiTheme.colors.teal,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    fontSize: 11,
   },
   title: {
     color: orbiTheme.colors.text,

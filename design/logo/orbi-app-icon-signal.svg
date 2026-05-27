@@ -1,0 +1,60 @@
+<!-- Orbi Signal — Icone application 1024 × 1024 -->
+<!--
+  GEOMETRIE :
+    Origine : (190, 830)
+    Lueur origine : r=70, opacite 0.2
+    Point-vehicule : r=38
+    Arc 1 : centre (190,830), r=210  → M 400,830 A 210,210 0 0,0 190,620
+    Arc 2 : centre (190,830), r=380  → M 570,830 A 380,380 0 0,0 190,450
+    Arc 3 : centre (190,830), r=550  → M 740,830 A 550,550 0 0,0 190,280
+    stroke=40, stroke-linecap=round
+
+  Controle des bornes :
+    Arc 3 droite + trait/2 : 740+20 = 760 < 1024 ✓
+    Arc 3 haut - trait/2  : 280-20 = 260 > 0    ✓
+    Bas du contenu         : 830+38 = 868 < 1024 ✓
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1024 1024"
+  role="img"
+  aria-label="Orbi"
+>
+  <title>Orbi</title>
+
+  <!-- Fond -->
+  <rect width="1024" height="1024" fill="#07111d" rx="228"/>
+
+  <!-- Lueur de l'origine -->
+  <circle cx="190" cy="830" r="70" fill="#2dd4bf" fill-opacity="0.20"/>
+
+  <!-- Arc externe -->
+  <path
+    d="M 740,830 A 550,550 0 0,0 190,280"
+    fill="none"
+    stroke="#2dd4bf"
+    stroke-width="40"
+    stroke-linecap="round"
+  />
+
+  <!-- Arc median -->
+  <path
+    d="M 570,830 A 380,380 0 0,0 190,450"
+    fill="none"
+    stroke="#2dd4bf"
+    stroke-width="40"
+    stroke-linecap="round"
+  />
+
+  <!-- Arc interne -->
+  <path
+    d="M 400,830 A 210,210 0 0,0 190,620"
+    fill="none"
+    stroke="#2dd4bf"
+    stroke-width="40"
+    stroke-linecap="round"
+  />
+
+  <!-- Point-vehicule -->
+  <circle cx="190" cy="830" r="38" fill="#2dd4bf"/>
+</svg>

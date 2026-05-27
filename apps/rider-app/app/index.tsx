@@ -8,6 +8,7 @@ import {
   SectionCard,
   SectionHeading,
 } from '../lib/realtime-widgets';
+import { OrbiLogo } from '../lib/orbi-logo';
 
 export default function IndexScreen() {
   useEffect(() => {
@@ -32,7 +33,7 @@ export default function IndexScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.eyebrow}>Orbi Passager</Text>
+      <OrbiLogo size="sm" />
       <Text style={styles.title}>Ouverture du tunnel rider</Text>
       <Text style={styles.body}>
         Verification de la session et reprise du bon ecran pour continuer sans friction.
@@ -62,11 +63,6 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
     backgroundColor: orbiTheme.colors.background,
     gap: 16,
-  },
-  eyebrow: {
-    color: orbiTheme.colors.teal,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
   },
   title: {
     color: orbiTheme.colors.text,

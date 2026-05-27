@@ -12,6 +12,7 @@ import { fetchMyTrips, type MyTripsResponse } from '@orbi/api';
 import { formatXof, orbiTheme } from '@orbi/ui';
 import { restoreRiderSession } from '../../lib/auth';
 import { resolveRiderAppError } from '../../lib/session-feedback';
+import { OrbiLogo } from '../../lib/orbi-logo';
 
 type TripItem = MyTripsResponse['recentTrips'][number];
 type RequestItem = MyTripsResponse['pendingRequests'][number];
@@ -170,7 +171,7 @@ export default function TripsScreen() {
         />
       }
     >
-      <Text style={styles.eyebrow}>Orbi Passager</Text>
+      <OrbiLogo size="sm" />
       <Text style={styles.title}>Mes trajets</Text>
       <Text style={styles.statusText}>{status}</Text>
 
@@ -259,12 +260,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: orbiTheme.colors.background,
     gap: 14,
-  },
-  eyebrow: {
-    color: orbiTheme.colors.teal,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    fontSize: 11,
   },
   title: {
     color: orbiTheme.colors.text,

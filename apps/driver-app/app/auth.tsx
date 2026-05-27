@@ -5,6 +5,7 @@ import { extractApiErrorMessage } from '@orbi/api';
 import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
 import { orbiTheme } from '@orbi/ui';
 import { signInDriverAccount, signUpDriverAccount } from '../lib/auth';
+import { OrbiLogo } from '../lib/orbi-logo';
 import { DriverJourneySection } from '../lib/driver-journey';
 import {
   InsightBadge,
@@ -126,7 +127,7 @@ export default function DriverAuthScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.eyebrow}>Orbi Chauffeur</Text>
+      <OrbiLogo size="lg" />
       <Text style={styles.title}>Connexion et activation</Text>
       <LiveStatusBanner
         label="Acces securise"
@@ -292,11 +293,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: orbiTheme.colors.background,
     gap: 16,
-  },
-  eyebrow: {
-    color: orbiTheme.colors.amber,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
   },
   title: {
     color: orbiTheme.colors.text,

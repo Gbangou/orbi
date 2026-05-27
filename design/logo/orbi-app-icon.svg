@@ -1,0 +1,44 @@
+<!-- Orbi — Icone application 1024 × 1024 -->
+<!--
+  USAGE: generer depuis ce SVG les PNG suivants pour Expo :
+    icon.png           1024 × 1024   (iOS App Store + general)
+    adaptive-icon.png   108 dp        (Android adaptive foreground)
+    favicon.png          32 × 32      (web favicon)
+
+  Outils recommandes : Inkscape, Figma, ImageMagick, ou sharp (Node.js).
+  Exemple sharp : sharp('orbi-app-icon.svg').resize(1024).png().toFile('icon.png')
+
+  GEOMETRIE (1024 × 1024) :
+    Fond       : #07111d, rx=228 (arrondi squircle approximatif iOS)
+    Anneau     : centre (512, 512), rayon 350, trait 42
+    Point-vehicule a 45° :
+      cx = 512 + 350 × sin(45°) = 759.5 ≈ 760
+      cy = 512 − 350 × cos(45°) = 264.5 ≈ 265
+      rayon = 72, lueur rayon = 115 opacite 0.22
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1024 1024"
+  role="img"
+  aria-label="Orbi"
+>
+  <title>Orbi</title>
+
+  <!-- Fond -->
+  <rect width="1024" height="1024" fill="#07111d" rx="228"/>
+
+  <!-- Lueur du point-vehicule -->
+  <circle cx="760" cy="265" r="115" fill="#2dd4bf" fill-opacity="0.20"/>
+
+  <!-- Anneau orbital -->
+  <circle
+    cx="512" cy="512" r="350"
+    fill="none"
+    stroke="#2dd4bf"
+    stroke-width="42"
+    stroke-linecap="round"
+  />
+
+  <!-- Point-vehicule -->
+  <circle cx="760" cy="265" r="72" fill="#2dd4bf"/>
+</svg>

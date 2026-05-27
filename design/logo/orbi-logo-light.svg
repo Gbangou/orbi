@@ -1,0 +1,46 @@
+<!-- Orbi — Variante fond clair -->
+<!--
+  USAGE: documents, presentations, impression sur fond blanc.
+  Le fond doit avoir un contraste suffisant avec #2dd4bf (WCAG AA : fond >= #5a6b6a).
+  Pour les fonds tres clairs, utiliser la variante monochrome sombre ci-dessous.
+
+  Variante monochrome sombre (fond blanc) :
+    Remplacer stroke="#2dd4bf" et fill="#2dd4bf" par fill="#07111d" / stroke="#07111d"
+    Remplacer fill="#f8fafc" (logotype) par fill="#07111d"
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 220 60"
+  role="img"
+  aria-label="Orbi"
+>
+  <title>Orbi</title>
+
+  <!-- Fond (a supprimer pour fond transparent) -->
+  <rect width="220" height="60" fill="#ffffff"/>
+
+  <!-- Lueur -->
+  <circle cx="48.4" cy="11.6" r="10" fill="#2dd4bf" fill-opacity="0.22"/>
+
+  <!-- Anneau -->
+  <circle
+    cx="30" cy="30" r="26"
+    fill="none"
+    stroke="#2dd4bf"
+    stroke-width="3"
+  />
+
+  <!-- Point-vehicule -->
+  <circle cx="48.4" cy="11.6" r="5.5" fill="#2dd4bf"/>
+
+  <!-- Logotype sombre -->
+  <text
+    x="72"
+    y="41"
+    font-family="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif"
+    font-size="32"
+    font-weight="800"
+    fill="#07111d"
+    letter-spacing="3"
+  >orbi</text>
+</svg>

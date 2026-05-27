@@ -19,6 +19,7 @@ import {
 import { formatXof, orbiTheme } from '@orbi/ui';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
+import { OrbiLogo } from '../lib/orbi-logo';
 
 function ReceiptRow({
   label,
@@ -137,7 +138,7 @@ export default function ReceiptScreen() {
     return (
       <View style={styles.centered}>
         <View style={styles.loadingCard}>
-          <Text style={styles.loadingEyebrow}>Orbi Passager</Text>
+          <OrbiLogo size="xs" />
           <Text style={styles.loadingTitle}>Chargement du recu...</Text>
           <Text style={styles.loadingBody}>Recuperation des details de votre trajet.</Text>
         </View>
@@ -148,7 +149,7 @@ export default function ReceiptScreen() {
   if (errorMessage || !detail) {
     return (
       <ScrollView contentContainerStyle={styles.screen}>
-        <Text style={styles.eyebrow}>Orbi Passager</Text>
+        <OrbiLogo size="sm" />
         <Text style={styles.title}>Recu de course</Text>
         <View style={styles.errorCard}>
           <Text style={styles.errorText}>{errorMessage ?? 'Recu indisponible.'}</Text>
@@ -186,7 +187,7 @@ export default function ReceiptScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>Orbi Passager</Text>
+        <OrbiLogo size="sm" />
         <Text style={styles.title}>Recu de course</Text>
         {completedAt ? (
           <Text style={styles.subtitle}>{completedAt}</Text>
@@ -317,12 +318,6 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 10,
   },
-  loadingEyebrow: {
-    color: orbiTheme.colors.teal,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    fontSize: 11,
-  },
   loadingTitle: {
     color: orbiTheme.colors.text,
     fontSize: 24,
@@ -334,13 +329,6 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: 5,
-  },
-  eyebrow: {
-    color: orbiTheme.colors.teal,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    fontSize: 11,
-    fontWeight: '700',
   },
   title: {
     color: orbiTheme.colors.text,

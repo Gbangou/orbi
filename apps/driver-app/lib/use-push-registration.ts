@@ -7,6 +7,7 @@ import { restoreDriverSession } from './auth';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
+    shouldShowAlert: true,
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,

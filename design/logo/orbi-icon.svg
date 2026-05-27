@@ -1,0 +1,32 @@
+<!-- Orbi — Marque seule (sans logotype) -->
+<!--
+  USAGE: icone dans les headers, favicons, avatars, badges.
+  Fond transparent. Dimensionner a 16 px minimum.
+
+  GEOMETRIE:
+    viewBox 60 × 60
+    Anneau : centre (30, 30), rayon 26
+    Point-vehicule a 45° du sommet : cx=48.4, cy=11.6
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 60 60"
+  role="img"
+  aria-label="Orbi"
+>
+  <title>Orbi</title>
+
+  <!-- Lueur -->
+  <circle cx="48.4" cy="11.6" r="10" fill="#2dd4bf" fill-opacity="0.18"/>
+
+  <!-- Anneau -->
+  <circle
+    cx="30" cy="30" r="26"
+    fill="none"
+    stroke="#2dd4bf"
+    stroke-width="3"
+  />
+
+  <!-- Point-vehicule -->
+  <circle cx="48.4" cy="11.6" r="5.5" fill="#2dd4bf"/>
+</svg>

@@ -15,6 +15,7 @@ import { rateTripWithApi, type TripRatingResponse } from '@orbi/api';
 import { formatXof, orbiTheme } from '@orbi/ui';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
+import { OrbiLogo } from '../lib/orbi-logo';
 
 const MAX_COMMENT = 280;
 const STAR_LABELS = ['', 'Mauvais', 'Passable', 'Correct', 'Bien', 'Excellent'];
@@ -196,7 +197,7 @@ export default function RatingScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>Orbi Passager</Text>
+        <OrbiLogo size="sm" />
         <Text style={styles.title}>Evaluer votre course</Text>
         {destination ? (
           <Text style={styles.subtitle}>Vers {destination}</Text>
@@ -317,13 +318,6 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: 6,
-  },
-  eyebrow: {
-    color: orbiTheme.colors.teal,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    fontSize: 11,
-    fontWeight: '700',
   },
   title: {
     color: orbiTheme.colors.text,

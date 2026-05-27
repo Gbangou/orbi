@@ -14,6 +14,7 @@ import {
 import { formatOperationalStatus, orbiTheme } from '@orbi/ui';
 import { restoreDriverSession } from '../../lib/auth';
 import { resolveDriverAppError } from '../../lib/session-feedback';
+import { OrbiLogo } from '../../lib/orbi-logo';
 import {
   buildDriverEarningsStatusLabel,
   resolveDriverActiveFlow,
@@ -286,7 +287,7 @@ export default function RevenusScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.eyebrow}>Orbi Chauffeur</Text>
+      <OrbiLogo size="sm" />
       <Text style={styles.title}>Revenus et performance</Text>
       <Text style={styles.body}>
         Le recap financier reste branche au meme tunnel que le cockpit, le dispatch et le dossier chauffeur.
@@ -471,11 +472,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: orbiTheme.colors.background,
     gap: 14,
-  },
-  eyebrow: {
-    color: orbiTheme.colors.amber,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
   },
   title: {
     color: orbiTheme.colors.text,
