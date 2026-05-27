@@ -7,6 +7,7 @@
     "setup:local": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\bootstrap-local.ps1",
     "mobile:lan": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\set-mobile-lan-api.ps1",
     "mobile:check": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\testing\\mobile-field-readiness.ps1",
+    "mobile:brand-assets": "node ./scripts/generate-mobile-brand-assets.mjs",
     "local:doctor": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\testing\\local-doctor.ps1",
     "local:ports:free": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\free-local-ports.ps1",
     "db:start": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\start-local-db.ps1",
@@ -102,6 +103,8 @@
     }
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@expo/config-plugins": "9.0.17",
+    "concurrently": "^9.2.1",
+    "sharp": "^0.34.5"
   }
 }

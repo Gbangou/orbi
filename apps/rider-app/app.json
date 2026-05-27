@@ -6,6 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "icon": "./icon.png",
     "platforms": [
       "ios",
       "android",
@@ -21,7 +22,9 @@
           "locationWhenInUsePermission": "Orbi Passager utilise votre position pour definir le depart, partager les signaux securite et suivre la course active."
         }
       ],
-      "expo-asset"
+      "../../plugins/with-expo-core-compat",
+      "expo-asset",
+      "expo-font"
     ],
     "ios": {
       "infoPlist": {
@@ -39,10 +42,20 @@
         "android.permission.ACCESS_FINE_LOCATION"
       ],
       "usesCleartextTraffic": true,
-      "allowBackup": false
+      "allowBackup": false,
+      "adaptiveIcon": {
+        "foregroundImage": "./adaptive-icon.png",
+        "backgroundColor": "#07111d"
+      }
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./favicon.png"
+    },
+    "splash": {
+      "image": "./splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#07111d"
     },
     "extra": {
       "eas": {

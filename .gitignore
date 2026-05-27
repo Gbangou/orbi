@@ -16,6 +16,10 @@ apps/backend/dist/
 apps/admin-web/.next/
 apps/rider-app/.expo/
 apps/driver-app/.expo/
+apps/rider-app/android/
+apps/driver-app/android/
+apps/rider-app/ios/
+apps/driver-app/ios/
 
 *.log
 Thumbs.db
