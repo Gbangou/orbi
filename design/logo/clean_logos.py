@@ -9,7 +9,7 @@ from PIL import Image, ImageFilter, ImageEnhance
 import numpy as np
 import os
 
-SRC = "design/logo/source-image-options/orbi-blue-full-transparent.png"
+SRC = "design/logo/clean/orbi-logo-transparent.png"
 OUT_DIR = "design/logo/clean"
 os.makedirs(OUT_DIR, exist_ok=True)
 
