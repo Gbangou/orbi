@@ -12,6 +12,7 @@
     "mobile:apk:rider": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\build-apk-local.ps1 -App rider",
     "mobile:apk:driver": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\build-apk-local.ps1 -App driver",
     "mobile:field": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\eas-build-field.ps1",
+    "field:api:check": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\testing\\check-public-field-api.ps1",
     "local:doctor": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\testing\\local-doctor.ps1",
     "local:ports:free": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\free-local-ports.ps1",
     "db:start": "pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\start-local-db.ps1",

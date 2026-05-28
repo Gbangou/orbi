@@ -1,0 +1,16 @@
+.git
+.next
+.expo
+.turbo
+node_modules
+**/node_modules
+**/dist
+coverage
+tmp
+.tmp
+.orbi-document-store
+*.log
+apps/*/.env
+apps/*/.env.local
+deploy/staging/.env
+deploy/staging/backups

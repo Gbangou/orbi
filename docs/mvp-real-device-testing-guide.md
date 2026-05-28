@@ -1,605 +1,853 @@
-# Guide tres simple: tester le MVP Orbi en reel
+# Guide clic par clic: test terrain reel Orbi sur Android
 
-Ce guide s'adresse a une personne qui ne connait pas l'informatique. Il explique
-comment passer du projet Orbi sur ordinateur a un test reel avec:
+Ce document explique comment tester Orbi avec de vrais telephones Android, en
+donnees mobiles 4G/5G, sans que les testeurs soient sur le meme Wi-Fi.
 
-- une console admin ouverte sur ordinateur;
-- une app Android passager installee sur telephone;
-- une app Android chauffeur installee sur telephone;
-- un backend de test accessible par Internet;
-- des paiements CinetPay en mode test, puis eventuellement en petits montants
-  reels controles.
+Objectif: un test serieux et realiste avec:
 
-Le but n'est pas de lancer directement en production. Le but est de verifier,
-avec de vraies personnes et de vrais telephones, que le MVP fonctionne sans
-perdre d'argent, de securite ou de confiance.
+- 1 app Orbi Passager installee sur un telephone Android;
+- 1 app Orbi Chauffeur installee sur un autre telephone Android;
+- 1 backend Orbi accessible en HTTPS public;
+- 1 base de donnees PostgreSQL `orbi`;
+- 1 personne operations qui observe les tests et note les incidents.
 
-## 1. Ce qu'il faut comprendre avant de commencer
+Important: un tunnel gratuit est pratique pour un pilote terrain court, mais il
+depend du PC et peut changer d'URL. Pour un pilote permanent, utiliser ensuite
+un vrai backend staging, par exemple `https://api-staging.orbi.app`.
 
-Orbi contient plusieurs parties:
+## 1. Etat actuel a utiliser
 
-| Partie | Role | Test sur quoi |
-| --- | --- | --- |
-| Backend | Le serveur: comptes, trajets, paiements, admin, securite | Ordinateur ou serveur cloud |
-| Admin Web | La console operations | Navigateur ordinateur |
-| Rider App | App passager | Telephone Android |
-| Driver App | App chauffeur | Telephone Android |
-| PostgreSQL | Base de donnees | Serveur |
-| CinetPay | Paiement mobile money/carte via integrateur | Compte CinetPay |
+### Etat valide au 27 mai 2026
 
-Il ne faut pas convertir toute l'app en desktop. Le bon setup est:
+Backend local a verifier au moment du test:
 
-1. Admin sur ordinateur.
-2. Rider APK sur telephone Android.
-3. Driver APK sur telephone Android.
-4. Backend accessible en HTTPS.
-5. Paiements en test ou limites.
-
-## 2. Ce qu'il faut preparer
-
-### Materiel
-
-- 1 ordinateur Windows.
-- 1 telephone Android pour le passager.
-- 1 telephone Android pour le chauffeur.
-- Une connexion Internet stable.
-- Idealement 1 compte email pour Expo et 1 compte email pour CinetPay.
-
-### Comptes a creer
-
-1. Creer un compte Expo:
-   - Ouvrir https://expo.dev
-   - Cliquer sur `Sign Up`
-   - Creer un compte avec email et mot de passe
-   - Confirmer l'email si Expo le demande
-
-2. Creer ou demander un compte CinetPay:
-   - Ouvrir https://cinetpay.com
-   - Creer un compte marchand ou demander l'acces test
-   - Demander les informations suivantes:
-     - `APIKEY`
-     - `SITE_ID`
-     - mode test/sandbox si disponible
-     - URL de notification webhook a configurer
-
-Sans agrement direct Orange/Moov, c'est justement le role d'un integrateur comme
-CinetPay: il sert d'intermediaire entre ton application et plusieurs moyens de
-paiement. Tu dois quand meme avoir un compte marchand CinetPay et respecter
-leurs conditions.
-
-## 3. Regle importante sur les paiements
-
-Ne commence jamais avec de gros montants reels.
-
-Ordre recommande:
-
-1. Mode local sans argent reel.
-2. Mode CinetPay test/sandbox.
-3. Mode reel avec petits montants, par exemple 100 a 500 XOF.
-4. Pilote ferme avec reconciliation manuelle quotidienne.
-5. Production seulement apres validation.
-
-Pendant le pilote, garde un tableau manuel:
-
-| Date | Rider | Chauffeur | Montant | Moyen paiement | Statut backend | Statut CinetPay | Payout chauffeur |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-05-26 | Awa | Issa | 500 XOF | CinetPay test | SUCCEEDED | ACCEPTED | Non paye |
-
-## 4. Installer les outils sur l'ordinateur
-
-Ces outils sont peut-etre deja installes. Si oui, passer a l'etape suivante.
-
-### Verifier Node.js
-
-1. Ouvrir le menu Windows.
-2. Taper `PowerShell`.
-3. Ouvrir `Windows PowerShell`.
-4. Taper:
-
-```powershell
-node -v
+```text
+http://127.0.0.1:3000/api/v1/health/ready
 ```
 
-Si une version s'affiche, il faut verifier le debut:
+Pour le test terrain serieux, l'etat important n'est pas le backend du PC local.
+L'etat important est l'API publique staging:
 
-- `v22...`: bon pour Orbi et Expo.
-- `v20...`: acceptable.
-- `v24...`: ne pas continuer pour les APK Expo. Expo SDK 52 peut echouer avec
-  `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`.
-
-Pour ce projet, la version recommandee est Node.js 22 LTS.
-
-### Installer Node.js 22 LTS si PowerShell affiche v24
-
-Faire ceci seulement si `node -v` affiche `v24...` ou une version plus recente.
-
-1. Ouvrir le site officiel:
-   - https://nodejs.org
-2. Cliquer sur la version `LTS`.
-3. Telecharger l'installateur Windows.
-4. Ouvrir le fichier telecharge.
-5. Cliquer sur `Next`.
-6. Accepter la licence.
-7. Garder les options par defaut.
-8. Cliquer sur `Install`.
-9. Fermer PowerShell completement.
-10. Rouvrir PowerShell.
-11. Taper:
-
-```powershell
-node -v
+```text
+https://API_STAGING/api/v1/health/ready -> 200 ready
 ```
 
-Le resultat doit commencer par `v22`.
+Base de donnees:
 
-Si PowerShell affiche encore `v24`, redemarrer l'ordinateur puis verifier encore:
-
-```powershell
-node -v
+```text
+postgresql://postgres:postgres@localhost:5433/orbi?schema=public
 ```
 
-### Verifier pnpm
+API publique stable:
+
+```text
+Pas encore valide.
+```
+
+Ne pas lancer le test terrain tant qu'une URL HTTPS publique ne repond pas
+`200` sur `/api/v1/health/ready`.
+
+Solution recommandee pour un test terrain serieux:
+
+```text
+deploy/staging
+```
+
+Cette option deploie le backend sur un vrai serveur public avec PostgreSQL et
+HTTPS stable. C'est la solution a utiliser pour des telephones reels en data
+mobile independante.
+
+### APK Passager
+
+Ancien build disponible, mais a ne pas utiliser pour le test terrain actuel si
+l'URL publique a change:
+
+```text
+https://expo.dev/accounts/gbangou/projects/orbi-passager/builds/5b364263-689e-46ff-a8eb-f19f0eff8a44
+```
+
+### APK Chauffeur
+
+Ancien build disponible, mais a ne pas utiliser pour le test terrain actuel si
+l'URL publique a change:
+
+```text
+https://expo.dev/accounts/gbangou/projects/orbi-chauffeur/builds/e9e0376a-a58d-447d-8cb4-f50fb64e3013
+```
+
+### API publique de test
+
+Les anciennes APK appelaient cette URL, qui n'est plus consideree valide:
+
+```text
+https://lazy-carrots-smell.loca.lt
+```
+
+La verification obligatoire avant tout nouveau build est:
+
+```text
+https://NOUVELLE_URL_PUBLIQUE/api/v1/health/ready
+```
+
+La reponse doit indiquer `status: ready`.
+
+## 2. Regles avant de commencer
+
+Ne lance pas le test terrain si une de ces conditions est fausse:
+
+- le PC Orbi est allume;
+- Docker Desktop tourne;
+- le conteneur PostgreSQL tourne;
+- le backend Orbi tourne;
+- le tunnel HTTPS public tourne;
+- l'URL publique `/api/v1/health/ready` repond;
+- les deux telephones ont une connexion data mobile active;
+- les deux APK sont installes;
+- une personne ops suit le test et note les bugs.
+
+Pendant ce test:
+
+- ne pas utiliser de gros montants;
+- privilegier cash/test si le paiement reel n'est pas encore valide;
+- ne pas donner l'APK a des personnes hors pilote ferme;
+- noter chaque bug avec heure, telephone, compte, capture d'ecran et action faite.
+
+## 3. Demarrer le PC de test
+
+### 3.1 Ouvrir le dossier projet
+
+1. Allumer le PC.
+2. Ouvrir `Explorateur de fichiers`.
+3. Aller dans:
+
+```text
+C:\Users\LENOVO\Desktop\orbi
+```
+
+4. Cliquer dans la barre d'adresse.
+5. Taper `powershell`.
+6. Appuyer sur `Entree`.
+
+PowerShell doit s'ouvrir directement dans le dossier Orbi.
+
+### 3.2 Verifier Docker et PostgreSQL
 
 Dans PowerShell:
 
 ```powershell
-pnpm -v
+docker ps
 ```
 
-Si une version s'affiche, c'est bon.
+Resultat attendu: une ligne avec `backend-db-1` et `healthy`.
 
-### Installer EAS CLI
+Si rien n'apparait:
 
-EAS est l'outil Expo qui fabrique les APK Android dans le cloud Expo.
+```powershell
+pnpm db:start
+```
+
+Puis verifier encore:
+
+```powershell
+docker ps
+```
+
+## 4. Verifier que la base utilise bien `orbi`
 
 Dans PowerShell:
 
 ```powershell
-npm install --global eas-cli
+Get-Content apps\backend\.env
 ```
 
-Puis verifier:
+La ligne importante doit etre:
 
-```powershell
-eas --version
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/orbi?schema=public
 ```
 
-### Se connecter a Expo
+Si tu vois `mobilis`, ce n'est pas bon. Remplacer par `orbi`.
+
+## 5. Preparer la base de donnees `orbi`
 
 Dans PowerShell:
 
 ```powershell
-eas login
+docker exec backend-db-1 psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'orbi'"
 ```
 
-Expo demande email et mot de passe. Entrer le compte cree sur expo.dev.
-
-Verifier:
+Si la commande ne renvoie rien, creer la base:
 
 ```powershell
-eas whoami
+docker exec backend-db-1 psql -U postgres -c "CREATE DATABASE orbi"
 ```
 
-Si ton nom Expo s'affiche, c'est bon.
-
-## 5. Tester d'abord sur ordinateur
-
-Avant de faire un APK, il faut verifier que le projet est vert.
-
-Dans PowerShell:
+Appliquer les migrations:
 
 ```powershell
-cd C:\Users\LENOVO\Desktop\orbi
-pnpm test:production:gate
+pnpm prisma:migrate
+```
+
+Ajouter les donnees initiales:
+
+```powershell
+pnpm prisma:seed
 ```
 
 Resultat attendu:
 
 ```text
-[ok] Production readiness gate completed.
+All migrations have been successfully applied.
+Seeded Orbi foundation data
 ```
 
-Si ce test echoue, ne pas construire l'APK. Corriger d'abord.
+## 6. Demarrer le backend Orbi
 
-## 6. Verifier les fichiers EAS pour produire des APK
+Le backend doit ecouter sur le port `3000`.
 
-Le repo contient maintenant un fichier `eas.json` dans chaque app mobile:
+### Methode recommandee pour ce repo
 
-- `apps/rider-app/eas.json`
-- `apps/driver-app/eas.json`
+Dans PowerShell, depuis `C:\Users\LENOVO\Desktop\orbi`:
 
-Ces fichiers disent a Expo comment fabriquer:
+```powershell
+pnpm --filter backend build
+cd apps\backend
+node -r ./node_modules/ts-node/register -r ./node_modules/tsconfig-paths/register ./dist/src/main.js
+```
 
-- un APK interne pour le test MVP;
-- un AAB pour Google Play plus tard.
+Laisser cette fenetre ouverte.
 
-### Rider app
+Ne pas la fermer pendant le test.
+
+### Verifier le backend local
+
+Ouvrir une deuxieme fenetre PowerShell dans `C:\Users\LENOVO\Desktop\orbi`.
+
+Taper:
+
+```powershell
+Invoke-WebRequest -Uri http://127.0.0.1:3000/api/v1/health/ready -UseBasicParsing
+```
+
+Resultat attendu:
 
 ```text
-C:\Users\LENOVO\Desktop\orbi\apps\rider-app\eas.json
+StatusCode : 200
 ```
 
-### Driver app
+Si le port `3000` est deja occupe, cela peut vouloir dire qu'un backend tourne
+deja. Verifier avec:
+
+```powershell
+Invoke-WebRequest -Uri http://127.0.0.1:3000/api/v1/health/ready -UseBasicParsing
+```
+
+Si cela repond `200`, continuer.
+
+## 7. Ouvrir une URL HTTPS publique stable
+
+Cette etape rend le backend accessible depuis les telephones en data mobile.
+Pour un test terrain serieux, ne pas dependre du PC local ni d'une URL de tunnel
+gratuite qui change.
+
+### 7.1 Methode recommandee: serveur staging public
+
+Utiliser un VPS ou serveur cloud avec:
+
+- Docker;
+- PostgreSQL;
+- Caddy pour HTTPS automatique;
+- deux domaines stables, par exemple `api-staging.orbi.app` et
+  `admin-staging.orbi.app`.
+
+Le repo contient la configuration prete ici:
 
 ```text
-C:\Users\LENOVO\Desktop\orbi\apps\driver-app\eas.json
+deploy/staging
 ```
 
-Chaque fichier contient notamment:
+Sur le serveur:
 
-```json
-{
-  "cli": {
-    "version": ">= 10.0.0"
-  },
-  "build": {
-    "preview": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      }
-    },
-    "production": {
-      "android": {
-        "buildType": "aab"
-      }
-    }
-  }
-}
+```bash
+cd orbi/deploy/staging
+cp .env.example .env
+nano .env
+docker compose up -d --build
 ```
 
-Explication simple:
+Initialiser les donnees utiles au pilote ferme:
 
-- `preview` fabrique un `.apk` facile a installer sur telephone.
-- `mvp` fabrique aussi un `.apk` pour le pilote ferme.
-- `production` fabrique un `.aab` pour Google Play plus tard.
-- Pour le MVP terrain, utiliser `mvp` ou `preview`.
+```bash
+docker compose run --rm seed
+```
 
-## 7. Configurer l'adresse du backend dans les apps
+Verifier ensuite:
 
-Les telephones Android ne doivent pas appeler `localhost`, car `localhost`
-signifie le telephone lui-meme, pas ton ordinateur.
+```bash
+curl -i https://api-staging.orbi.app/api/v1/health/ready
+curl -I https://admin-staging.orbi.app
+```
 
-Pour un vrai test, le backend doit etre accessible avec une URL publique HTTPS,
-par exemple:
+Le resultat doit etre `HTTP/2 200` et contenir `status: ready`.
+
+Quand cette URL est valide, construire les APK:
+
+```powershell
+pnpm field:api:check --ApiUrl https://api-staging.orbi.app --AdminUrl https://admin-staging.orbi.app
+pnpm mobile:field --ApiUrl https://api-staging.orbi.app --App all --Profile mvp
+```
+
+Le script refuse maintenant:
+
+- les URLs `http://`;
+- `localhost`, `127.0.0.1`, `0.0.0.0`;
+- toute URL publique dont `/api/v1/health/ready` ne repond pas `200 ready`.
+
+### 7.2 Option temporaire seulement: ngrok avec authtoken
+
+Ngrok peut servir pour un test court, mais ce n'est pas la solution principale
+pour un terrain serieux: l'URL peut changer et le tunnel depend du PC.
+
+Une seule fois, creer un compte ngrok et installer l'authtoken:
+
+1. Ouvrir `https://dashboard.ngrok.com/signup`.
+2. Creer ou connecter le compte.
+3. Ouvrir `https://dashboard.ngrok.com/get-started/your-authtoken`.
+4. Copier la commande `ngrok config add-authtoken ...`.
+5. Dans PowerShell, executer cette commande.
+
+Ensuite, lancer le tunnel:
+
+```powershell
+Remove-Item Env:HTTP_PROXY -ErrorAction SilentlyContinue
+Remove-Item Env:HTTPS_PROXY -ErrorAction SilentlyContinue
+Remove-Item Env:ALL_PROXY -ErrorAction SilentlyContinue
+Remove-Item Env:GIT_HTTP_PROXY -ErrorAction SilentlyContinue
+Remove-Item Env:GIT_HTTPS_PROXY -ErrorAction SilentlyContinue
+
+& "C:\Users\LENOVO\AppData\Local\Microsoft\WinGet\Packages\Ngrok.Ngrok_Microsoft.Winget.Source_8wekyb3d8bbwe\ngrok.exe" http 3000
+```
+
+Laisser cette fenetre ouverte pendant tout le test.
+
+Ngrok affiche une URL du type:
 
 ```text
-https://api-staging.orbi.app
+https://quelque-chose.ngrok-free.app
 ```
 
-Dans:
+Copier cette URL. Elle devient `NOUVELLE_URL_PUBLIQUE`.
+
+### 7.3 Verifier l'URL publique ngrok
+
+Dans une autre fenetre PowerShell:
+
+```powershell
+node -e "fetch('https://NOUVELLE_URL_PUBLIQUE/api/v1/health/ready').then(async r=>{console.log(r.status); console.log(await r.text())}).catch(e=>console.error(e.message))"
+```
+
+Resultat attendu:
+
+```text
+200
+{"status":"ready", ...}
+```
+
+Ne pas continuer si ce test ne renvoie pas `200`.
+
+### 7.4 Alternative courte: Cloudflare Tunnel
+
+Ouvrir une nouvelle fenetre PowerShell.
+
+Taper:
+
+```powershell
+& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url http://127.0.0.1:3000
+```
+
+Laisser cette fenetre ouverte.
+
+Cloudflare affiche une URL du type:
+
+```text
+https://quelque-chose.trycloudflare.com
+```
+
+Si `cloudflared` affiche:
+
+```text
+failed to request quick Tunnel: Post "https://api.trycloudflare.com/tunnel": context deadline exceeded
+```
+
+alors Cloudflare est bloque depuis le reseau du PC. Revenir a ngrok avec
+authtoken ou utiliser un vrai backend staging.
+
+Important: si l'URL publique change, les APK deja construits ne pointeront plus
+vers la bonne API. Il faut modifier `.env` et reconstruire les APK.
+
+## 8. Installer l'APK Passager sur Android
+
+Sur le telephone passager:
+
+1. Couper le Wi-Fi.
+2. Activer les donnees mobiles.
+3. Ouvrir Chrome.
+4. Coller le lien:
+
+```text
+https://expo.dev/accounts/gbangou/projects/orbi-passager/builds/5b364263-689e-46ff-a8eb-f19f0eff8a44
+```
+
+5. Appuyer sur `Entree`.
+6. Sur la page Expo, appuyer sur `Install` ou `Download`.
+7. Attendre le telechargement du fichier `.apk`.
+8. Ouvrir le fichier telecharge.
+9. Si Android bloque l'installation, appuyer sur `Parametres`.
+10. Activer `Autoriser depuis cette source`.
+11. Revenir en arriere.
+12. Appuyer sur `Installer`.
+13. Attendre la fin.
+14. Appuyer sur `Ouvrir`.
+
+Verifier que l'icone Orbi apparait bien sur le telephone.
+
+## 9. Installer l'APK Chauffeur sur Android
+
+Sur le telephone chauffeur:
+
+1. Couper le Wi-Fi.
+2. Activer les donnees mobiles.
+3. Ouvrir Chrome.
+4. Coller le lien:
+
+```text
+https://expo.dev/accounts/gbangou/projects/orbi-chauffeur/builds/e9e0376a-a58d-447d-8cb4-f50fb64e3013
+```
+
+5. Appuyer sur `Entree`.
+6. Appuyer sur `Install` ou `Download`.
+7. Ouvrir le fichier `.apk`.
+8. Autoriser l'installation depuis Chrome si Android le demande.
+9. Appuyer sur `Installer`.
+10. Appuyer sur `Ouvrir`.
+
+Verifier que l'icone Orbi apparait bien sur le telephone.
+
+## 10. Test reseau avant de commencer une course
+
+Faire ce test avec le Wi-Fi coupe sur les deux telephones.
+
+### Telephone passager
+
+1. Ouvrir `Orbi Passager`.
+2. Essayer de se connecter ou creer un compte test.
+3. Si l'app charge sans erreur reseau, c'est bon.
+
+### Telephone chauffeur
+
+1. Ouvrir `Orbi Chauffeur`.
+2. Essayer de se connecter ou creer un compte test.
+3. Aller sur l'accueil chauffeur.
+4. Passer disponible/en ligne si l'option est presente.
+
+### PC operations
+
+Dans PowerShell:
+
+```powershell
+node -e "fetch('https://NOUVELLE_URL_PUBLIQUE/api/v1/health/ready').then(async r=>{console.log(r.status); console.log(await r.text())})"
+```
+
+Le resultat doit rester `200`.
+
+## 11. Scenario terrain minimal: une course complete
+
+Faire ce scenario une premiere fois sans paiement reel.
+
+### Preparation
+
+1. Mettre le passager et le chauffeur dans deux lieux differents si possible.
+2. Garder les deux telephones en donnees mobiles.
+3. Garder le PC allume.
+4. Garder la fenetre backend ouverte.
+5. Garder la fenetre du tunnel HTTPS ouverte.
+6. Noter l'heure de debut du test.
+
+### Cote chauffeur
+
+1. Ouvrir `Orbi Chauffeur`.
+2. Se connecter.
+3. Aller sur l'ecran accueil/cockpit.
+4. Passer disponible.
+5. Verifier que le telephone ne dort pas.
+
+### Cote passager
+
+1. Ouvrir `Orbi Passager`.
+2. Se connecter.
+3. Choisir un point de depart.
+4. Choisir une destination.
+5. Verifier le prix affiche.
+6. Confirmer la demande.
+
+### Acceptation chauffeur
+
+1. Sur le telephone chauffeur, attendre l'offre.
+2. Appuyer sur accepter.
+3. Verifier que l'app chauffeur passe dans le flux course active.
+4. Sur le telephone passager, verifier que le chauffeur apparait.
+
+### Pickup
+
+1. Le chauffeur indique son arrivee.
+2. Le passager donne le code pickup si l'app l'affiche.
+3. Le chauffeur saisit le code.
+4. Verifier que la course demarre.
+
+### Fin de course
+
+1. Le chauffeur termine la course.
+2. Le passager voit le statut termine.
+3. Noter le resultat:
+   - course creee;
+   - offre recue;
+   - offre acceptee;
+   - pickup OK;
+   - fin OK;
+   - aucun crash.
+
+## 12. Tests a faire pendant le pilote
+
+Faire ces tests un par un. Ne pas tout faire en meme temps.
+
+### Test A: connexion
+
+- passager cree un compte;
+- chauffeur cree un compte;
+- deconnexion;
+- reconnexion.
+
+### Test B: disponibilite chauffeur
+
+- chauffeur passe disponible;
+- chauffeur repasse indisponible;
+- chauffeur repasse disponible;
+- verifier que l'app ne plante pas.
+
+### Test C: demande de course
+
+- passager cree une demande;
+- chauffeur recoit l'offre;
+- chauffeur accepte;
+- course continue jusqu'a la fin.
+
+### Test D: refus ou silence chauffeur
+
+- passager cree une demande;
+- chauffeur refuse ou ne repond pas;
+- verifier que l'app passager reste comprehensible.
+
+### Test E: annulation
+
+- passager annule avant acceptation;
+- passager annule apres acceptation si l'app le permet;
+- chauffeur annule si l'app le permet;
+- noter ce que voit chaque personne.
+
+### Test F: reseau instable
+
+- garder la data mobile;
+- passer dans une zone de faible reseau;
+- mettre le telephone en veille puis rouvrir;
+- verifier si le statut revient correctement.
+
+### Test G: support/SOS
+
+- tester seulement en protocole interne;
+- ne pas appeler inutilement les urgences;
+- verifier qu'un incident ou ticket est cree si la fonctionnalite existe.
+
+## 13. Tableau de suivi terrain
+
+Remplir une ligne par test.
+
+| Heure | Testeur | Role | Telephone | Reseau | Action | Resultat | Bug | Capture |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 09:10 | Awa | Passager | Samsung A12 | Orange 4G | Connexion | OK | Non | Oui |
+| 09:15 | Issa | Chauffeur | Tecno | Moov 4G | Disponible | OK | Non | Oui |
+| 09:20 | Awa/Issa | Course | 2 telephones | Data mobile | Course complete | OK | Non | Oui |
+
+## 14. Que faire si ca ne marche pas
+
+### Probleme: Cloudflare Tunnel affiche `context deadline exceeded`
+
+Exemple d'erreur:
+
+```text
+failed to request quick Tunnel: Post "https://api.trycloudflare.com/tunnel": context deadline exceeded
+```
+
+Cela veut souvent dire que PowerShell ou Windows force les requetes Internet a
+passer par un proxy invalide.
+
+Dans la meme fenetre PowerShell, verifier:
+
+```powershell
+Get-ChildItem Env:*PROXY*
+```
+
+Si tu vois des valeurs comme:
+
+```text
+http://127.0.0.1:9
+```
+
+les supprimer pour la fenetre actuelle:
+
+```powershell
+Remove-Item Env:HTTP_PROXY -ErrorAction SilentlyContinue
+Remove-Item Env:HTTPS_PROXY -ErrorAction SilentlyContinue
+Remove-Item Env:ALL_PROXY -ErrorAction SilentlyContinue
+Remove-Item Env:GIT_HTTP_PROXY -ErrorAction SilentlyContinue
+Remove-Item Env:GIT_HTTPS_PROXY -ErrorAction SilentlyContinue
+```
+
+Tester Internet:
+
+```powershell
+node -e "fetch('https://www.cloudflare.com').then(r=>console.log(r.status)).catch(e=>console.error(e.message))"
+```
+
+Resultat attendu:
+
+```text
+200
+```
+
+Relancer ensuite:
+
+```powershell
+& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url http://127.0.0.1:3000
+```
+
+Si `cloudflared` cree une URL mais affiche ensuite des erreurs comme:
+
+```text
+UDP Connectivity ... FAIL
+TCP Connectivity ... FAIL
+Cloudflare API ... FAIL
+ERROR: Allow outbound QUIC traffic on port 7844 or use HTTP2.
+```
+
+tester d'abord l'URL creee. Exemple:
+
+```powershell
+node -e "fetch('https://outreach-based-enjoying-villas.trycloudflare.com/api/v1/health/ready').then(async r=>{console.log(r.status); console.log(await r.text())}).catch(e=>console.error(e.message))"
+```
+
+Remplacer l'URL par celle affichee dans ta fenetre `cloudflared`.
+
+Si le test ne renvoie pas `200`, fermer `cloudflared` avec `Ctrl+C`, puis
+relancer le tunnel en forcant HTTP/2:
+
+```powershell
+& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --protocol http2 --url http://127.0.0.1:3000
+```
+
+Si HTTP/2 echoue aussi, le reseau bloque Cloudflare Tunnel. Essayer un autre
+reseau Internet sur le PC, par exemple partage de connexion mobile, autre Wi-Fi
+ou VPN autorise.
+
+Si l'erreur arrive avant meme que l'URL soit creee:
+
+```text
+failed to request quick Tunnel: Post "https://api.trycloudflare.com/tunnel": context deadline exceeded
+```
+
+alors `cloudflared` ne peut pas joindre l'API qui cree les tunnels rapides.
+Tester:
+
+```powershell
+node -e "fetch('https://api.trycloudflare.com/tunnel',{method:'POST'}).then(async r=>{console.log(r.status); console.log((await r.text()).slice(0,300))}).catch(e=>console.error(e.message))"
+```
+
+Si cette commande affiche encore `fetch failed` ou expire, le reseau actuel du
+PC bloque `api.trycloudflare.com`. Dans ce cas:
+
+1. connecter le PC a un autre reseau;
+2. ou utiliser le partage de connexion mobile du telephone;
+3. ou utiliser un VPN autorise;
+4. puis relancer `cloudflared`.
+
+Ne reconstruire aucun APK tant que l'URL publique ne repond pas `200` sur
+`/api/v1/health/ready`.
+
+Si le proxy revient a chaque nouvelle fenetre PowerShell, supprimer aussi les
+variables proxy persistantes de ton utilisateur Windows:
+
+```powershell
+[Environment]::SetEnvironmentVariable('HTTP_PROXY', $null, 'User')
+[Environment]::SetEnvironmentVariable('HTTPS_PROXY', $null, 'User')
+[Environment]::SetEnvironmentVariable('ALL_PROXY', $null, 'User')
+[Environment]::SetEnvironmentVariable('GIT_HTTP_PROXY', $null, 'User')
+[Environment]::SetEnvironmentVariable('GIT_HTTPS_PROXY', $null, 'User')
+```
+
+Fermer PowerShell, rouvrir PowerShell, puis verifier:
+
+```powershell
+Get-ChildItem Env:*PROXY*
+```
+
+Important: `https://api.trycloudflare.com/tunnel` n'est pas l'URL Orbi. C'est
+l'API interne de Cloudflare utilisee par `cloudflared`. L'URL Orbi est seulement
+l'URL `https://...trycloudflare.com` affichee apres la creation reussie du tunnel.
+
+### Probleme: l'app affiche une erreur reseau
+
+Verifier dans cet ordre:
+
+1. Le telephone est bien en data mobile.
+2. Le PC est allume.
+3. Docker tourne.
+4. Le backend repond:
+
+```powershell
+Invoke-WebRequest -Uri http://127.0.0.1:3000/api/v1/health/ready -UseBasicParsing
+```
+
+5. Le tunnel repond:
+
+```powershell
+node -e "fetch('https://NOUVELLE_URL_PUBLIQUE/api/v1/health/ready').then(async r=>{console.log(r.status); console.log(await r.text())})"
+```
+
+6. La fenetre du tunnel n'a pas ete fermee.
+7. L'URL du tunnel n'a pas change.
+
+### Probleme: le tunnel a change d'URL
+
+Si ngrok ou Cloudflare donne une nouvelle URL:
+
+1. Copier la nouvelle URL.
+2. Modifier:
 
 ```text
 apps/rider-app/.env
 apps/driver-app/.env
 ```
 
-mettre:
+3. Mettre:
 
 ```env
-EXPO_PUBLIC_API_BASE_URL=https://api-staging.orbi.app
-EXPO_PUBLIC_API_VERSION=v1
-EXPO_PUBLIC_PAYMENT_REDIRECT_URL=orbi-passager://payment-return
-```
-
-Pour le chauffeur, garder aussi:
-
-```env
-EXPO_PUBLIC_API_BASE_URL=https://api-staging.orbi.app
+EXPO_PUBLIC_API_BASE_URL=https://NOUVELLE_URL_PUBLIQUE
 EXPO_PUBLIC_API_VERSION=v1
 ```
 
-Important:
-
-- Pour APK terrain, eviter `http://localhost:3000`.
-- Utiliser HTTPS.
-- Garder les secrets uniquement cote backend, jamais dans l'app mobile.
-
-## 8. Construire l'APK passager
-
-Dans PowerShell:
+4. Relancer:
 
 ```powershell
-cd C:\Users\LENOVO\Desktop\orbi
+pnpm test:mobile:smoke
+pnpm typecheck
 pnpm build:android:rider:mvp
-```
-
-Ce qui va se passer:
-
-1. Expo peut demander de configurer le projet.
-2. Expo peut demander les identifiants Android.
-3. Choisir l'option automatique quand Expo propose de gerer les credentials.
-4. Attendre la fin du build.
-5. Expo affiche un lien de telechargement.
-
-Quand le build est termine:
-
-- Copier le lien donne par Expo.
-- Ouvrir ce lien sur le telephone Android passager.
-- Telecharger le fichier `.apk`.
-
-## 9. Construire l'APK chauffeur
-
-Dans PowerShell:
-
-```powershell
-cd C:\Users\LENOVO\Desktop\orbi
 pnpm build:android:driver:mvp
 ```
 
-Puis faire pareil:
+5. Reinstaller les nouveaux APK.
 
-- attendre le build;
-- ouvrir le lien sur le telephone chauffeur;
-- telecharger le `.apk`.
-
-## 10. Installer l'APK sur Android
-
-Sur le telephone Android:
-
-1. Ouvrir le lien APK.
-2. Telecharger le fichier.
-3. Android peut afficher: `Pour votre securite, votre telephone n'est pas autorise a installer des apps inconnues`.
-4. Cliquer sur `Parametres`.
-5. Activer `Autoriser depuis cette source`.
-6. Revenir en arriere.
-7. Cliquer sur `Installer`.
-8. Attendre la fin.
-9. Cliquer sur `Ouvrir`.
-
-Faire cela pour:
-
-- Orbi Passager sur le telephone passager;
-- Orbi Chauffeur sur le telephone chauffeur.
-
-## 11. Tester que l'app parle bien au backend
-
-Sur le telephone passager:
-
-1. Ouvrir `Orbi Passager`.
-2. Se connecter avec un compte test rider.
-3. Si l'app dit probleme reseau, verifier:
-   - Internet du telephone;
-   - URL `EXPO_PUBLIC_API_BASE_URL`;
-   - backend en ligne;
-   - certificat HTTPS valide.
-
-Sur le telephone chauffeur:
-
-1. Ouvrir `Orbi Chauffeur`.
-2. Se connecter avec un compte test driver.
-3. Passer en ligne.
-4. Verifier que le statut change.
-
-Sur l'ordinateur:
-
-1. Ouvrir Admin Web.
-2. Se connecter avec compte admin test.
-3. Verifier que les riders/drivers apparaissent.
-
-## 12. Test MVP complet sans argent reel
-
-Faire ce test avant CinetPay reel.
-
-### Scenario
-
-1. Passager ouvre l'app.
-2. Passager choisit depart.
-3. Passager choisit destination.
-4. Passager choisit service.
-5. Passager choisit `cash` si disponible.
-6. Passager confirme.
-7. Chauffeur recoit l'offre.
-8. Chauffeur accepte.
-9. Passager voit le chauffeur.
-10. Chauffeur signale l'arrivee.
-11. Passager donne le code pickup.
-12. Chauffeur saisit le code.
-13. Course demarre.
-14. Chauffeur termine la course.
-15. Admin verifie:
-    - trip cree;
-    - timeline;
-    - audit logs;
-    - support vide;
-    - wallet chauffeur si paiement simule.
-
-Si ce scenario ne marche pas, ne pas tester l'argent.
-
-## 13. Tester CinetPay sans agrement Orange/Moov direct
-
-Tu n'as pas besoin d'un agrement direct avec Orange ou Moov pour commencer un
-test CinetPay. Tu as besoin d'un compte CinetPay et de leurs identifiants.
-
-CinetPay Checkout utilise notamment:
-
-- `apikey`;
-- `site_id`;
-- `transaction_id`;
-- `amount`;
-- `currency`;
-- `description`;
-- `notify_url`;
-- `return_url`;
-- donnees client.
-
-La documentation CinetPay indique aussi une URL de verification de paiement:
-
-```text
-https://api-checkout.cinetpay.com/v2/payment/check
-```
-
-### Etapes CinetPay
-
-1. Creer le compte CinetPay.
-2. Recuperer `APIKEY` et `SITE_ID`.
-3. Demander explicitement le mode test si le dashboard ne l'affiche pas.
-4. Creer une URL webhook publique dans le backend staging:
-
-```text
-https://api-staging.orbi.app/api/v1/payments/webhooks/cinetpay
-```
-
-5. Dans CinetPay, configurer `notify_url` avec cette URL.
-6. Dans backend staging, configurer les variables CinetPay.
-
-Exemple de variables cote backend:
-
-```env
-PAYMENTS_PROVIDER=cinetpay
-CINETPAY_API_KEY=xxxx
-CINETPAY_SITE_ID=xxxx
-PAYMENTS_DEFAULT_WEBHOOK_URL=https://api-staging.orbi.app/api/v1/payments/webhooks/cinetpay
-PAYMENTS_DEFAULT_REDIRECT_URL=orbi-passager://payment-return
-PAYMENTS_WEBHOOK_SECRET=une-valeur-longue-et-secrete
-```
-
-Ne jamais mettre `CINETPAY_API_KEY` dans l'app Android.
-
-## 14. Tester un paiement CinetPay
-
-### Premier test: tres petit montant ou mode test
-
-1. Ouvrir app passager.
-2. Choisir un trajet de test.
-3. Choisir paiement mobile money/CinetPay.
-4. Confirmer.
-5. L'app doit creer une tentative de paiement.
-6. CinetPay doit afficher une page ou un flux paiement.
-7. Finaliser selon le mode test.
-8. Attendre le webhook.
-9. Ouvrir Admin Web.
-10. Aller dans journal paiement/webhooks.
-11. Verifier:
-    - webhook recu;
-    - montant correct;
-    - reference correcte;
-    - statut `SUCCEEDED` ou equivalent;
-    - wallet chauffeur credite seulement apres paiement confirme.
-
-### Si le webhook ne vient pas
+### Probleme: le backend ne demarre pas
 
 Verifier:
 
-1. L'URL webhook est publique.
-2. L'URL est HTTPS.
-3. CinetPay a la bonne `notify_url`.
-4. Le backend staging tourne.
-5. Les logs backend ne montrent pas d'erreur.
-6. La transaction peut etre verifiee via l'endpoint CinetPay de verification.
-
-## 15. Remboursements et payouts pendant le MVP
-
-Au debut:
-
-- refund: tester en sandbox ou manuellement;
-- payout chauffeur: manuel;
-- ne pas automatiser le transfert chauffeur;
-- garder une reconciliation quotidienne.
-
-Procedure simple:
-
-1. Tous les soirs, ouvrir Admin Web.
-2. Exporter les paiements.
-3. Exporter les wallets/payouts.
-4. Comparer avec CinetPay.
-5. Comparer avec les notes terrain.
-6. Marquer payout prepare/paye seulement si tout correspond.
-
-## 16. Test terrain avec 5 personnes
-
-### Participants
-
-- 2 passagers internes.
-- 2 chauffeurs internes.
-- 1 personne ops/admin sur ordinateur.
-
-### Jour 1
-
-1. Installer les APK.
-2. Creer les comptes.
-3. Faire 3 trajets sans argent reel.
-4. Tester annulation.
-5. Tester SOS en protocole interne, sans appeler inutilement les urgences.
-6. Tester partage trajet.
-7. Tester support.
-
-### Jour 2
-
-1. Faire 5 trajets.
-2. Tester CinetPay test/sandbox.
-3. Comparer backend, admin et CinetPay.
-4. Corriger bugs.
-
-### Jour 3
-
-1. Faire 5 a 10 trajets.
-2. Petits montants reels seulement si CinetPay est pret.
-3. Reconciliation manuelle.
-4. Aucun payout automatique.
-
-## 17. Checklist avant de donner l'APK a quelqu'un
-
-Ne donne pas l'APK si une case est fausse.
-
-- [ ] `pnpm test:production:gate` est vert.
-- [ ] Backend staging HTTPS fonctionne.
-- [ ] Admin staging fonctionne.
-- [ ] Rider APK installe et ouvre.
-- [ ] Driver APK installe et ouvre.
-- [ ] Connexion rider OK.
-- [ ] Connexion driver OK.
-- [ ] Driver peut passer en ligne.
-- [ ] Rider peut creer une demande.
-- [ ] Driver peut accepter.
-- [ ] Code pickup marche.
-- [ ] Annulation marche.
-- [ ] SOS cree un ticket et ouvre le dialer.
-- [ ] Partage trajet marche.
-- [ ] Paiement test marche ou cash manuel choisi.
-- [ ] Admin voit les evenements.
-- [ ] Les logs sont accessibles.
-
-## 18. Que dire aux testeurs
-
-Message simple:
-
-```text
-Bonjour, voici une version test de Orbi.
-Elle sert uniquement au pilote ferme.
-N'utilisez pas de gros montants.
-Signalez chaque bug avec une capture d'ecran.
-Si une course ou un paiement semble incorrect, prevenez l'equipe Orbi avant de continuer.
+```powershell
+docker ps
+Get-Content apps\backend\.env
+pnpm prisma:migrate
+pnpm --filter backend build
 ```
 
-Demander aux testeurs de noter:
+La base doit etre `orbi`, pas `mobilis`.
 
-- ce qu'ils n'ont pas compris;
-- bouton introuvable;
-- ecran lent;
-- paiement confus;
-- prix juge trop haut;
-- probleme position GPS;
-- probleme appel/SOS;
-- probleme chauffeur/passager.
+### Probleme: Android bloque l'installation
 
-## 19. Quand passer a un pilote plus grand
+Sur le telephone:
 
-Passer de 5 personnes a 20 personnes seulement si:
+1. Ouvrir `Parametres`.
+2. Chercher `Installer applis inconnues`.
+3. Choisir `Chrome`.
+4. Activer `Autoriser depuis cette source`.
+5. Revenir au fichier APK.
+6. Installer.
 
-- 20 trajets supervises sans perte d'argent;
-- 0 paiement non explique;
-- 0 wallet chauffeur incorrect;
-- 0 bug de session critique;
-- 0 crash Android bloquant;
-- support sait traiter les incidents;
-- CinetPay/webhooks sont compris;
-- rollback procedure connue.
+## 15. Checklist avant de donner les APK aux testeurs
 
-## Sources officielles utiles
+- [ ] Base PostgreSQL `orbi` creee.
+- [ ] `apps/backend/.env` pointe vers `orbi`.
+- [ ] `pnpm prisma:migrate` OK.
+- [ ] `pnpm prisma:seed` OK.
+- [ ] Backend local `/health/ready` repond `200`.
+- [ ] API staging publique active, ou tunnel HTTPS valide seulement pour essai court.
+- [ ] URL publique `/health/ready` repond `200`.
+- [ ] `apps/rider-app/.env` contient la bonne URL HTTPS.
+- [ ] `apps/driver-app/.env` contient la bonne URL HTTPS.
+- [ ] `pnpm test:mobile:smoke` OK.
+- [ ] `pnpm typecheck` OK.
+- [ ] APK Passager reconstruit apres changement URL.
+- [ ] APK Chauffeur reconstruit apres changement URL.
+- [ ] Wi-Fi coupe sur les telephones.
+- [ ] Donnees mobiles actives sur les telephones.
+- [ ] Une personne ops suit le test.
 
-- Expo EAS Build: https://docs.expo.dev/build/
-- Expo APK Android: https://docs.expo.dev/build-reference/apk/
-- Expo `eas.json`: https://docs.expo.dev/build/eas-json/
-- CinetPay initialisation paiement: https://docs.cinetpay.com/api/1.0-fr/checkout/initialisation
-- CinetPay verification paiement: https://docs.cinetpay.com/api/1.0-fr/checkout/verification
+## 16. Message a envoyer aux testeurs
+
+```text
+Bonjour, voici la version test terrain de Orbi.
+
+Merci de tester uniquement avec les donnees mobiles, Wi-Fi coupe.
+Cette version est reservee au pilote ferme.
+Ne faites pas de gros paiements.
+Si vous voyez un bug, envoyez une capture d'ecran avec l'heure et ce que vous faisiez.
+Si l'app bloque ou affiche une erreur reseau, prevenez l'equipe Orbi avant de continuer.
+```
+
+Ajouter le bon lien selon le role:
+
+Passager:
+
+```text
+https://expo.dev/accounts/gbangou/projects/orbi-passager/builds/5b364263-689e-46ff-a8eb-f19f0eff8a44
+```
+
+Chauffeur:
+
+```text
+https://expo.dev/accounts/gbangou/projects/orbi-chauffeur/builds/e9e0376a-a58d-447d-8cb4-f50fb64e3013
+```
+
+## 17. Limites du setup actuel
+
+Ce setup est bon pour un test terrain court et supervise.
+
+Limites:
+
+- si le PC s'eteint, l'API tombe;
+- si Internet du PC tombe, l'API tombe;
+- si la fenetre du tunnel est fermee, l'API tombe;
+- l'URL publique peut changer au prochain lancement;
+- ce n'est pas une production permanente.
+
+Pour un pilote plus large, passer a:
+
+```text
+https://api-staging.orbi.app
+```
+
+avec:
+
+- serveur cloud permanent;
+- PostgreSQL cloud;
+- HTTPS stable;
+- logs centralises;
+- sauvegardes;
+- monitoring;
+- procedure de rollback.

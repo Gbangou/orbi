@@ -1,0 +1,10 @@
+{$ORBI_API_DOMAIN} {
+	@mobile_error_sink path /_internal/mobile-error-collector
+	respond @mobile_error_sink 204
+
+	reverse_proxy backend:3000
+}
+
+{$ORBI_ADMIN_DOMAIN} {
+	reverse_proxy admin-web:3001
+}

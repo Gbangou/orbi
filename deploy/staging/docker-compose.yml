@@ -1,0 +1,142 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-orbi}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-orbi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: deploy/staging/backend.Dockerfile
+    restart: "no"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-orbi}?schema=public
+      NODE_ENV: production
+    command: ["pnpm", "--filter", "backend", "prisma:migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: deploy/staging/backend.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-orbi}?schema=public
+      NODE_ENV: production
+      FRONTEND_ALLOWED_ORIGINS: https://${ORBI_ADMIN_DOMAIN}
+      HOST: 0.0.0.0
+      PORT: 3000
+      TRUST_PROXY: "true"
+      ENABLE_SWAGGER: "false"
+      RATE_LIMIT_ADAPTER: postgres
+      RATE_LIMIT_STRICT: "true"
+      REALTIME_ADAPTER: postgres
+      REALTIME_STRICT: "true"
+      JOB_QUEUE_WORKER_ENABLED: "true"
+      MOBILE_ERROR_COLLECTOR_PROVIDER: webhook
+      MOBILE_ERROR_COLLECTOR_WEBHOOK_URL: https://${ORBI_API_DOMAIN}/_internal/mobile-error-collector
+      PAYMENTS_DEFAULT_REDIRECT_URL: orbi-passager://payment-return
+      PAYMENTS_DEFAULT_WEBHOOK_URL: https://${ORBI_API_DOMAIN}/api/v1/payments/webhooks
+      DOCUMENT_UPLOAD_BASE_URL: https://${ORBI_API_DOMAIN}/api/v1/admin/driver-onboarding/documents/upload
+      DOCUMENT_VIEW_BASE_URL: https://${ORBI_API_DOMAIN}/api/v1/admin/driver-onboarding/documents/view
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+      admin-web:
+        condition: service_started
+
+  admin-web:
+    build:
+      context: ../..
+      dockerfile: deploy/staging/admin-web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: https://${ORBI_API_DOMAIN}
+        NEXT_PUBLIC_API_VERSION: v1
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: https://${ORBI_API_DOMAIN}
+      NEXT_PUBLIC_API_VERSION: v1
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  seed:
+    build:
+      context: ../..
+      dockerfile: deploy/staging/backend.Dockerfile
+    restart: "no"
+    profiles:
+      - seed
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-orbi}?schema=public
+      NODE_ENV: production
+      ENABLE_SWAGGER: "false"
+      RATE_LIMIT_ADAPTER: postgres
+      RATE_LIMIT_STRICT: "true"
+      REALTIME_ADAPTER: postgres
+      REALTIME_STRICT: "true"
+      MOBILE_ERROR_COLLECTOR_PROVIDER: webhook
+      MOBILE_ERROR_COLLECTOR_WEBHOOK_URL: https://${ORBI_API_DOMAIN}/_internal/mobile-error-collector
+      PAYMENTS_DEFAULT_REDIRECT_URL: orbi-passager://payment-return
+      PAYMENTS_DEFAULT_WEBHOOK_URL: https://${ORBI_API_DOMAIN}/api/v1/payments/webhooks
+      DOCUMENT_UPLOAD_BASE_URL: https://${ORBI_API_DOMAIN}/api/v1/admin/driver-onboarding/documents/upload
+      DOCUMENT_VIEW_BASE_URL: https://${ORBI_API_DOMAIN}/api/v1/admin/driver-onboarding/documents/view
+    command: ["pnpm", "--filter", "backend", "prisma:seed"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:
