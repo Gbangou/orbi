@@ -1121,24 +1121,16 @@ export default function OffersScreen() {
       return (
         <View style={styles.codeBlock}>
           <FlowActionButton
-            disabled={isSubmitting || driverRouteSafetyBrief.blocksCompletion}
-            label={
-              driverRouteSafetyBrief.blocksCompletion
-                ? "Finalisation bloquee par Ride Check"
-                : "Terminer la course"
-            }
+            disabled={isSubmitting}
+            label="Terminer la course"
             onPress={() => handleAdvanceTrip(activeTrip.id, "COMPLETED")}
             tone="amber"
             emphasis="primary"
-            style={
-              isSubmitting || driverRouteSafetyBrief.blocksCompletion
-                ? styles.disabled
-                : null
-            }
+            style={isSubmitting ? styles.disabled : null}
           />
           {driverRouteSafetyBrief.blocksCompletion ? (
             <Text style={styles.routeSafetyBlockNote}>
-              {driverRouteSafetyBrief.actionLabel}
+              GPS requis: {driverRouteSafetyBrief.actionLabel}
             </Text>
           ) : null}
         </View>

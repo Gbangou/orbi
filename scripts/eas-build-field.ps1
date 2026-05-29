@@ -77,14 +77,20 @@ eas-cli introuvable. Installez-le :
     exit 1
 }
 
-# Injection URL dans eas.json (temporaire pour ce build)
+# Injection URL dans eas.json (uniquement si le profil n'a pas deja une URL)
 function Set-EasApiUrl {
     param([string]$AppDir, [string]$AppLabel)
 
     $easPath = "$AppDir\eas.json"
     $easJson  = Get-Content $easPath -Raw | ConvertFrom-Json
 
-    # Injecter l'URL dans le profil cible
+    # Si l'URL est deja presente dans le profil, ne rien modifier
+    $existingUrl = $easJson.build.$Profile.env.EXPO_PUBLIC_API_BASE_URL
+    if ($existingUrl -and $existingUrl -eq $ApiUrl) {
+        Write-Host "  [$AppLabel] eas.json deja configure - URL: $ApiUrl" -ForegroundColor DarkGray
+        return
+    }
+
     if (-not $easJson.build.$Profile.env) {
         $easJson.build.$Profile | Add-Member -NotePropertyName 'env' -NotePropertyValue ([PSCustomObject]@{}) -Force
     }
@@ -95,12 +101,19 @@ function Set-EasApiUrl {
     Write-Host "  [$AppLabel] eas.json mis a jour - URL: $ApiUrl" -ForegroundColor DarkGray
 }
 
-# Restauration eas.json apres build
+# Restauration eas.json apres build (ne touche pas les profils qui avaient deja l'URL)
 function Reset-EasApiUrl {
     param([string]$AppDir, [string]$AppLabel)
 
     $easPath = "$AppDir\eas.json"
     $easJson  = Get-Content $easPath -Raw | ConvertFrom-Json
+
+    # Si l'URL baked est la meme que celle passee en parametre, ne pas la supprimer
+    $existingUrl = $easJson.build.$Profile.env.EXPO_PUBLIC_API_BASE_URL
+    if ($existingUrl -and $existingUrl -eq $ApiUrl) {
+        Write-Host "  [$AppLabel] eas.json conserve (URL deja presente dans le profil)" -ForegroundColor DarkGray
+        return
+    }
 
     $envObj = $easJson.build.$Profile.env
     if ($envObj.PSObject.Properties['EXPO_PUBLIC_API_BASE_URL']) {

@@ -1198,7 +1198,7 @@ export default function BookingScreen() {
         <View style={styles.assuranceCard}>
           <Text style={styles.assuranceTitle}>Paiement</Text>
           <Text style={styles.assuranceText}>
-            Mobile Money agrege prioritaire, cash disponible en secours.
+            Mobile Money agrégé prioritaire, cash disponible en secours.
           </Text>
         </View>
         <View style={styles.assuranceCard}>
@@ -1343,9 +1343,10 @@ export default function BookingScreen() {
             key={option.id}
             onPress={() => {
               setSelectedOptionId(option.id);
-              setSelectedPaymentMethod(
-                option.paymentMethods?.[0] ?? 'mobile-money',
-              );
+              const supported = option.paymentMethods ?? ['mobile-money'];
+              if (!supported.includes(selectedPaymentMethod)) {
+                setSelectedPaymentMethod(supported[0]);
+              }
             }}
             style={[styles.option, isSelected ? styles.optionSelected : null]}
           >
