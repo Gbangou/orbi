@@ -3,6 +3,7 @@ builder = "dockerfile"
 dockerfilePath = "deploy/staging/backend.Dockerfile"
 
 [deploy]
+preDeployCommand = "node --version && ls -la ./apps/backend/dist/src/main.js && echo MAIN_JS_OK && SKIP_DB_CONNECT=true PORT=3000 timeout 15 node ./apps/backend/dist/src/main.js 2>&1 | head -80; echo PREDEPLOY_DONE"
 startCommand = "node ./apps/backend/dist/src/main.js"
 healthcheckPath = "/api/v1/health"
 healthcheckTimeout = 120
