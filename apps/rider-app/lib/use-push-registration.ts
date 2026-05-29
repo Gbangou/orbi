@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { registerPushTokenWithApi } from '@orbi/api';
 import { restoreRiderSession } from './auth';
@@ -48,7 +49,8 @@ async function registerForPushNotifications(): Promise<string | null> {
     return null;
   }
 
-  const tokenData = await Notifications.getExpoPushTokenAsync();
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+  const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
   return tokenData.data;
 }
 
