@@ -3,7 +3,7 @@ builder = "dockerfile"
 dockerfilePath = "deploy/staging/backend.Dockerfile"
 
 [deploy]
-startCommand = "pnpm --filter backend prisma:migrate && node ./apps/backend/dist/src/main.js"
+startCommand = "node ./apps/backend/dist/src/main.js"
 healthcheckPath = "/api/v1/health"
 healthcheckTimeout = 120
 restartPolicyType = "on_failure"
