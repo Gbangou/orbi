@@ -24,7 +24,6 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason) => {
   process.stderr.write(`[orbi] unhandledRejection: ${String((reason as Error)?.stack ?? reason)}\n`);
-  process.exit(1);
 });
 
 async function bootstrap() {
