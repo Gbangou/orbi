@@ -5,6 +5,7 @@ dockerfilePath = "deploy/staging/backend.Dockerfile"
 [deploy]
 preDeployCommand = "pnpm --filter backend prisma:migrate"
 startCommand = "node ./apps/backend/dist/src/main.js"
-healthcheckPath = ""
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 120
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
