@@ -19,7 +19,6 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-RUN pnpm --filter @orbi/domain build
 RUN pnpm --filter backend prisma:generate
 RUN pnpm --filter backend build
 
