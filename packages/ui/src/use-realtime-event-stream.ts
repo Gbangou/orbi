@@ -9,10 +9,10 @@ export type RealtimeStatusCallbacks = {
 };
 
 type EventSourceLike = {
-  addEventListener(type: string, listener: () => void): void;
+  addEventListener(type: string, listener: (...args: unknown[]) => void): void;
   close(): void;
-  onopen: null | (() => void);
-  onerror: null | (() => void);
+  onopen?: null | (() => void);
+  onerror?: null | (() => void);
 };
 
 export function useRealtimeEventStream(
@@ -92,13 +92,25 @@ export function useRealtimeEventStream(
       callbacksRef.current?.onHeartbeat?.();
     });
 
-    stream.onopen = () => {
+    const handleOpen = () => {
       callbacksRef.current?.onOpen?.();
     };
 
-    stream.onerror = () => {
+    const handleError = () => {
       callbacksRef.current?.onError?.();
     };
+
+    if ('onopen' in stream) {
+      stream.onopen = handleOpen;
+    } else {
+      stream.addEventListener('open', handleOpen);
+    }
+
+    if ('onerror' in stream) {
+      stream.onerror = handleError;
+    } else {
+      stream.addEventListener('error', handleError);
+    }
 
     return () => {
       if (flushTimeoutRef.current) {

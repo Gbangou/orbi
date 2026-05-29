@@ -1,3 +1,4 @@
+import '../lib/polyfills';
 import {
   Stack,
   usePathname,
