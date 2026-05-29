@@ -44,10 +44,10 @@ export class UsersController {
   @UseGuards(RateLimitGuard)
   @RateLimit({ limit: 10, windowMs: 60_000, scope: 'user' })
   @HttpCode(HttpStatus.NO_CONTENT)
-  registerPushToken(
+  async registerPushToken(
     @CurrentAuth() auth: RequestAuthContext,
     @Body() body: RegisterPushTokenDto,
   ) {
-    this.pushTokenService.register(auth.user.id, body.token);
+    await this.pushTokenService.register(auth.user.id, body.token);
   }
 }

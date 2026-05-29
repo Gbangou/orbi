@@ -53,7 +53,7 @@ export class NotificationDeliveryService {
   private async dispatchExpoPush(
     input: NotificationDeliveryInput,
   ): Promise<NotificationDeliveryResult> {
-    const token = this.pushTokenService.getToken(input.userId);
+    const token = await this.pushTokenService.getToken(input.userId);
 
     if (!token) {
       this.logger.debug(

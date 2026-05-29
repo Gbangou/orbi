@@ -1,7 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { NotificationChannel } from '@prisma/client';
 import { NotificationDeliveryService } from './notification-delivery.service';
-import { PushTokenService } from '../../modules/notifications/push-token.service';
 
 describe('NotificationDeliveryService', () => {
   function createService(
@@ -15,10 +14,18 @@ describe('NotificationDeliveryService', () => {
       get: jest.fn(() => undefined),
     };
 
-    const pushTokenService = new PushTokenService();
+    const tokenStore = new Map<string, string>();
     if (opts.pushToken) {
-      pushTokenService.register('user-1', opts.pushToken);
+      tokenStore.set('user-1', opts.pushToken);
     }
+
+    const pushTokenService = {
+      register: jest.fn(async (userId: string, token: string) => {
+        tokenStore.set(userId, token);
+      }),
+      getToken: jest.fn(async (userId: string) => tokenStore.get(userId) ?? null),
+      revoke: jest.fn(async (userId: string) => { tokenStore.delete(userId); }),
+    };
 
     const prisma = {
       notification: {
@@ -39,7 +46,7 @@ describe('NotificationDeliveryService', () => {
       service: new NotificationDeliveryService(
         configService as never,
         prisma as never,
-        pushTokenService,
+        pushTokenService as never,
       ),
     };
   }

@@ -196,6 +196,7 @@ model User {
   lastLoginAt        DateTime?        @map("last_login_at")
   failedLoginCount   Int              @default(0) @map("failed_login_count")
   lockedUntil        DateTime?        @map("locked_until")
+  pushToken          String?          @map("push_token")
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
   riderProfile     RiderProfile?

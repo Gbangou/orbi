@@ -1,18 +1,35 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../../core/prisma/prisma.service';
 
 @Injectable()
 export class PushTokenService {
-  private readonly tokens = new Map<string, string>();
+  private readonly logger = new Logger(PushTokenService.name);
 
-  register(userId: string, token: string): void {
-    this.tokens.set(userId, token.trim());
+  constructor(private readonly prisma: PrismaService) {}
+
+  async register(userId: string, token: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pushToken: token.trim() },
+    });
   }
 
-  getToken(userId: string): string | null {
-    return this.tokens.get(userId) ?? null;
+  async getToken(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { pushToken: true },
+    });
+    return user?.pushToken ?? null;
   }
 
-  revoke(userId: string): void {
-    this.tokens.delete(userId);
+  async revoke(userId: string): Promise<void> {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { pushToken: null },
+      });
+    } catch (err) {
+      this.logger.warn(`Failed to revoke push token for user ${userId}: ${String(err)}`);
+    }
   }
 }
