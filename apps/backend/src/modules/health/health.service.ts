@@ -131,10 +131,7 @@ export class HealthService {
     const health = await this.check();
 
     return {
-      status:
-        health.status === 'ok' && this.appLifecycleService.isReady()
-          ? 'ready'
-          : 'not_ready',
+      status: this.appLifecycleService.isReady() ? 'ready' : 'not_ready',
       lifecycle: this.appLifecycleService.snapshot(),
       dependencies: health.dependencies,
       timestamp: new Date().toISOString(),
