@@ -24,4 +24,4 @@ RUN pnpm --filter backend build
 
 EXPOSE 3000
 
-CMD ["node", "./apps/backend/dist/src/main.js"]
+CMD ["node", "./apps/backend/dist/main.js"]
