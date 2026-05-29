@@ -53,6 +53,18 @@ function Build-App {
     Set-Content -Path "$AppDir\android\local.properties" -Value $localProps -Encoding UTF8
     Write-Host "  android/local.properties → $env:ANDROID_HOME" -ForegroundColor DarkGray
 
+    # Restaurer le keystore stable pour que la signature reste identique entre les builds.
+    # Sans ca, expo prebuild --clean genere un nouveau keystore a chaque fois et Android
+    # refuse d'installer l'APK par-dessus une version precedente (signature conflict).
+    $StableKeystore = "$AppDir\signing\debug.keystore"
+    $AndroidKeystore = "$AppDir\android\app\debug.keystore"
+    if (Test-Path $StableKeystore) {
+        Copy-Item $StableKeystore $AndroidKeystore -Force
+        Write-Host "  android/app/debug.keystore ← signing/debug.keystore (signature stable)" -ForegroundColor DarkGray
+    } else {
+        Write-Host "  WARNING: signing/debug.keystore absent — Gradle va generer un nouveau keystore (signature instable)" -ForegroundColor Yellow
+    }
+
     # Gradle assembleRelease → .apk
     Write-Host "  gradlew assembleRelease ..." -ForegroundColor Yellow
     Set-Location "$AppDir\android"
