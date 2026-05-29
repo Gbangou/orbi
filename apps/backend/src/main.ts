@@ -15,8 +15,22 @@ import { applyApiSecurityHeaders } from './common/security/security-headers';
 import { PrismaService } from './core/prisma/prisma.service';
 import { AppLifecycleService } from './core/runtime/app-lifecycle.service';
 
+process.stderr.write('[orbi] main.ts loaded\n');
+
+process.on('uncaughtException', (err) => {
+  process.stderr.write(`[orbi] uncaughtException: ${String(err?.stack ?? err)}\n`);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  process.stderr.write(`[orbi] unhandledRejection: ${String((reason as Error)?.stack ?? reason)}\n`);
+  process.exit(1);
+});
+
 async function bootstrap() {
+  process.stderr.write('[orbi] bootstrap() called\n');
   const app = await NestFactory.create(AppModule);
+  process.stderr.write('[orbi] NestFactory.create() completed\n');
   const configService = app.get(ConfigService);
   const prismaService = app.get(PrismaService);
   const appLifecycleService = app.get(AppLifecycleService);
@@ -134,10 +148,10 @@ async function bootstrap() {
     SwaggerModule.setup('docs', app, document);
   }
 
-  await app.listen(
-    configService.get<number>('app.port') ?? 3000,
-    configService.get<string>('app.host') ?? '0.0.0.0',
-  );
+  const port = configService.get<number>('app.port') ?? 3000;
+  const host = configService.get<string>('app.host') ?? '0.0.0.0';
+  process.stderr.write(`[orbi] listening on ${host}:${port}\n`);
+  await app.listen(port, host);
   appLifecycleService.markReady();
   const server = app.getHttpServer() as {
     keepAliveTimeout?: number;
