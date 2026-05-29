@@ -31,6 +31,13 @@ config.watchFolders = Array.from(
   new Set([...(config.watchFolders ?? []), workspaceRoot]),
 );
 
+// pnpm uses junctions/symlinks on Windows — needed for local Gradle builds
+config.resolver.unstable_enableSymlinks = true;
+config.resolver.nodeModulesPaths = [
+  path.resolve(workspaceRoot, 'node_modules'),
+  path.resolve(projectRoot, 'node_modules'),
+];
+
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules ?? {}),
   react: path.resolve(projectRoot, 'node_modules/react'),
