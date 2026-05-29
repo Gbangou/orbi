@@ -71,15 +71,42 @@ Le resultat admin doit etre un statut non-erreur.
 
 ## Build des APK terrain
 
-Depuis le PC de dev, quand l'URL publique repond en `200`:
+### Option 1 : build local (Windows, sans quota EAS)
+
+Depuis le PC de dev, depuis la racine du repo :
 
 ```powershell
-pnpm field:api:check --ApiUrl https://api-staging.orbi.example --AdminUrl https://admin-staging.orbi.example
-pnpm mobile:field --ApiUrl https://api-staging.orbi.example --App all --Profile mvp
+# Verifier que le backend Railway repond (optionnel, il est toujours actif)
+pnpm field:api:check -ApiUrl https://backend-production-d5d1.up.railway.app
+
+# Generer les deux APK en local (expo prebuild + Gradle)
+pnpm mobile:apk
+# ou, individuellement :
+pnpm mobile:apk:rider
+pnpm mobile:apk:driver
 ```
 
-Les APK generes par EAS embarquent cette URL HTTPS. Ils pourront donc parler au
-backend depuis deux telephones differents en 4G/5G, sans etre sur le meme Wi-Fi.
+Les APK sont deposes dans `dist/` (racine du repo).
+Installer via USB :
+
+```powershell
+adb install dist\orbi-rider-mvp.apk
+adb install dist\orbi-driver-mvp.apk
+```
+
+L'URL backend embarquee dans les APK est celle de Railway Production
+(`https://backend-production-d5d1.up.railway.app`).
+Pour pointer vers ce staging VPS, modifier `EXPO_PUBLIC_API_BASE_URL` dans
+`scripts/build-apk-local.ps1` avant de relancer `pnpm mobile:apk`.
+
+### Option 2 : EAS cloud build (quota mensuel requis)
+
+```powershell
+pnpm mobile:field
+```
+
+Les APK generes par EAS embarquent l'URL configuree dans `eas.json`.
+Ils peuvent parler au backend depuis deux telephones en 4G/5G independants.
 
 La console operations est accessible sur:
 
