@@ -22,6 +22,16 @@
           "locationWhenInUsePermission": "Orbi Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct."
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./icon.png",
+          "color": "#07111d",
+          "defaultChannel": "default",
+          "sounds": [],
+          "enableBackgroundRemoteNotifications": false
+        }
+      ],
       "../../plugins/with-expo-core-compat",
       "expo-asset",
       "expo-font"

@@ -22,6 +22,16 @@
           "locationWhenInUsePermission": "Orbi Passager utilise votre position pour definir le depart, partager les signaux securite et suivre la course active."
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./icon.png",
+          "color": "#07111d",
+          "defaultChannel": "default",
+          "sounds": [],
+          "enableBackgroundRemoteNotifications": false
+        }
+      ],
       "../../plugins/with-expo-core-compat",
       "expo-asset",
       "expo-font"
