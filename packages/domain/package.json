@@ -2,13 +2,20 @@
   "name": "@orbi/domain",
   "version": "0.1.0",
   "private": true,
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "devDependencies": {
     "typescript": "^5.7.3"
   },
   "scripts": {
-    "build": "tsc --noEmit",
-    "lint": "tsc --noEmit"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
   }
 }

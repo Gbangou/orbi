@@ -19,9 +19,10 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
+RUN pnpm --filter @orbi/domain build
 RUN pnpm --filter backend prisma:generate
 RUN pnpm --filter backend build
 
 EXPOSE 3000
 
-CMD ["node", "-r", "./node_modules/ts-node/register", "-r", "./node_modules/tsconfig-paths/register", "./apps/backend/dist/src/main.js"]
+CMD ["node", "./apps/backend/dist/src/main.js"]
