@@ -14,6 +14,14 @@ import { orbiTheme } from '@orbi/ui';
 import { hasPersistedRiderSession } from '../lib/auth';
 import { OrbiLogo } from '../lib/orbi-logo';
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 export default function RootLayout() {
   const router = useRouter();
   const pathname = usePathname();
