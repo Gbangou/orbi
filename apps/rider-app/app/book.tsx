@@ -442,7 +442,7 @@ export default function BookingScreen() {
     riderRideOptions[0]?.id ?? '',
   );
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
-    useState<PaymentMethod>('mobile-money');
+    useState<PaymentMethod>('cash');
   const [selectedCityId, setSelectedCityId] = useState<
     (typeof cityPresets)[number]['id']
   >(cityPresets[0].id);

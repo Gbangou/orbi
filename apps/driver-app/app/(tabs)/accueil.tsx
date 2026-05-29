@@ -152,6 +152,7 @@ export default function DriverHomeScreen() {
   const [driverFatigue, setDriverFatigue] = useState<DriverFatigueStatus>(fallbackFatigue);
   const [isTogglingAvailability, setIsTogglingAvailability] = useState(false);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [vehicleCount, setVehicleCount] = useState<number | null>(null);
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
 
@@ -174,6 +175,7 @@ export default function DriverHomeScreen() {
       setEarnings(earningsResponse);
       setDriverProfileStatus(profileResponse.profile.status);
       setDriverFatigue(profileResponse.profile.fatigue);
+      setVehicleCount(profileResponse.profile.vehicles.length);
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: offersResponse,
@@ -421,6 +423,22 @@ export default function DriverHomeScreen() {
       >
         <OrbiLogo size="sm" />
         <Text style={styles.title}>{orbiCopy.driverHeadline}</Text>
+
+        {vehicleCount === 0 ? (
+          <View style={styles.setupCard}>
+            <Text style={styles.setupEyebrow}>Configuration requise</Text>
+            <Text style={styles.setupTitle}>Enregistrez votre véhicule</Text>
+            <Text style={styles.setupBody}>
+              Un véhicule actif est nécessaire pour passer en ligne et recevoir des courses.
+            </Text>
+            <Pressable
+              style={styles.setupButton}
+              onPress={() => router.push('/onboarding')}
+            >
+              <Text style={styles.setupButtonLabel}>Configurer maintenant →</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
       <LiveHeroCard
         eyebrow="Statut"
@@ -946,5 +964,43 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: 12,
+  },
+  setupCard: {
+    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.35)',
+    padding: 20,
+    gap: 8,
+  },
+  setupEyebrow: {
+    color: orbiTheme.colors.amber,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1.4,
+  },
+  setupTitle: {
+    color: orbiTheme.colors.text,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  setupBody: {
+    color: orbiTheme.colors.muted,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  setupButton: {
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: orbiTheme.colors.amber,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  setupButtonLabel: {
+    color: '#3b2205',
+    fontWeight: '800',
+    fontSize: 14,
   },
 });

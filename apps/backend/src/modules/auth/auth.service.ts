@@ -4,7 +4,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { NotificationChannel, TripStatus, UserRole } from '@prisma/client';
+import { NotificationChannel, ServiceTier, TripStatus, UserRole, VehicleType, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DEFAULT_WALLET_CURRENCY, SESSION_TTL_IN_DAYS } from './auth.constants';
@@ -787,6 +787,31 @@ export class AuthService {
     };
   }
 
+  private buildDriverProfileSeed() {
+    const autoOnboard = process.env.FEATURE_FLAG_DRIVER_AUTO_ONBOARD === 'on';
+    if (!autoOnboard) {
+      return {};
+    }
+    const shortId = Date.now().toString(36).slice(-5).toUpperCase();
+    return {
+      verificationStatus: VerificationStatus.APPROVED,
+      licenseNumber: `FIELD-${shortId}`,
+      serviceRadiusKm: 15,
+      vehicles: {
+        create: {
+          plateNumber: `ORB-${shortId}`,
+          make: 'Honda',
+          model: 'CB125',
+          color: 'Rouge',
+          year: 2022,
+          type: VehicleType.MOTORCYCLE,
+          tier: ServiceTier.MOTO_STANDARD,
+          seats: 2,
+        },
+      },
+    };
+  }
+
   private buildUserSignUpData(
     payload: SignUpDto,
     normalizedEmail: string,
@@ -815,7 +840,7 @@ export class AuthService {
       driverProfile:
         role === UserRole.DRIVER
           ? {
-              create: {},
+              create: this.buildDriverProfileSeed(),
             }
           : undefined,
       sessions: {

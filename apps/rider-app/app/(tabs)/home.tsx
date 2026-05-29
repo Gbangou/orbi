@@ -125,7 +125,7 @@ export default function RiderHomeScreen() {
           distanceKm: 5.8,
           durationMinutes: 16,
           vehicleType: 'MOTORCYCLE',
-          paymentMethod: 'MOBILE_MONEY',
+          paymentMethod: 'CASH',
           zone: 'URBAN_CORE',
           isPeakHour: true,
           activeDriverCount: 8,

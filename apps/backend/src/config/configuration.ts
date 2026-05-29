@@ -134,6 +134,7 @@ export default () => ({
       process.env.FEATURE_FLAG_VOICE_ALLOWLIST?.split(',')
         .map((value) => value.trim())
         .filter(Boolean) ?? [],
+    driverAutoOnboard: process.env.FEATURE_FLAG_DRIVER_AUTO_ONBOARD ?? 'off',
   },
   payments: {
     provider: process.env.PAYMENTS_PROVIDER ?? 'flutterwave',

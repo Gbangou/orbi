@@ -283,7 +283,10 @@ export class DriversService {
       data: {
         licenseNumber: payload.licenseNumber.trim(),
         serviceRadiusKm: payload.serviceRadiusKm,
-        verificationStatus: VerificationStatus.PENDING,
+        verificationStatus:
+          process.env.FEATURE_FLAG_DRIVER_AUTO_ONBOARD === 'on'
+            ? VerificationStatus.APPROVED
+            : VerificationStatus.PENDING,
         status:
           profile.status === DriverStatus.SUSPENDED
             ? DriverStatus.SUSPENDED
