@@ -274,7 +274,7 @@ describe('HealthService', () => {
     expect(result.status).toBe('ready');
   });
 
-  it('reports degraded health when strict realtime mode detects a fallback adapter', async () => {
+  it('reports ready with degraded realtime dependency in strict mode', async () => {
     const { configService, prisma, realtimeService, service } = createService();
 
     configService.get = jest.fn((key: string) => {
@@ -299,10 +299,13 @@ describe('HealthService', () => {
 
     const result = await service.ready();
 
-    expect(result.status).toBe('not_ready');
+    // ready() gates only on app lifecycle state, not infrastructure degradation.
+    // Degraded strict-mode state is surfaced in check() / dependencies.
+    expect(result.status).toBe('ready');
+    expect(result.dependencies.realtime).toBe('degraded');
   });
 
-  it('reports degraded health when strict rate limit mode detects a fallback store', async () => {
+  it('reports ready with degraded rate-limit dependency in strict mode', async () => {
     const { configService, prisma, rateLimitService, service } =
       createService();
 
@@ -328,7 +331,9 @@ describe('HealthService', () => {
 
     const result = await service.ready();
 
-    expect(result.status).toBe('not_ready');
+    // ready() gates only on app lifecycle state, not infrastructure degradation.
+    expect(result.status).toBe('ready');
+    expect(result.dependencies.rateLimit).toBe('degraded');
   });
 
   it('reports degraded health when the reservation expiry sweeper has consecutive failures', async () => {
