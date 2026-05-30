@@ -38,15 +38,14 @@ import {
   SectionCard,
   SectionHeading,
 } from '../../lib/realtime-widgets';
-import { RiderJourneySection } from '../../lib/rider-journey';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { SavedPlacesMap } from '../../lib/saved-places-map';
 
 const fallbackProfile: RiderProfileResponse = {
   profile: {
-    id: 'fallback-rider',
-    fullName: 'Awa Ouedraogo',
-    email: 'rider@orbi.app',
+    id: 'loading',
+    fullName: '',
+    email: '',
     phoneNumber: null,
     preferredTier: 'MOTO_STANDARD',
     emergencyPhone: null,
@@ -54,17 +53,14 @@ const fallbackProfile: RiderProfileResponse = {
       phoneNumber: null,
       shareMode: 'DISABLED',
       status: 'MISSING',
-      safetyNote: 'Ajoutez un numero Burkina pour accelerer le partage en cas de trajet sensible.',
+      safetyNote: 'Ajoutez un numéro Burkina pour accélérer le partage en cas de trajet sensible.',
     },
-    savedPlaces: [
-      { id: 'home', label: 'Maison', address: 'Ouagadougou, Patte d Oie', latitude: 12.3412, longitude: -1.5601 },
-      { id: 'work', label: 'Bureau', address: 'Ouaga 2000', latitude: 12.3274, longitude: -1.5339 },
-    ],
+    savedPlaces: [],
     stats: {
       totalRideRequests: 0,
       totalTrips: 0,
       completedTrips: 0,
-      savedPlaces: 2,
+      savedPlaces: 0,
     },
   },
 };
@@ -76,6 +72,7 @@ export default function AccountScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSavingPlace, setIsSavingPlace] = useState(false);
+  const [isGeocodingPlace, setIsGeocodingPlace] = useState(false);
   const [isSavingTrustedContact, setIsSavingTrustedContact] = useState(false);
   const [accountTransitionLabel, setAccountTransitionLabel] = useState<string | null>(null);
   const [freshPlaceIds, setFreshPlaceIds] = useState<string[]>([]);
@@ -302,6 +299,45 @@ export default function AccountScreen() {
       setStatus(feedback.message);
     } finally {
       setIsSubmittingTicket(false);
+    }
+  }
+
+  async function geocodePlaceAddress() {
+    const address = placeForm.address.trim();
+    if (!address) {
+      setStatus('Entrez une adresse avant de localiser.');
+      return;
+    }
+    setIsGeocodingPlace(true);
+    try {
+      const params = new URLSearchParams({
+        q: `${address}, Burkina Faso`,
+        format: 'json',
+        limit: '1',
+        countrycodes: 'bf',
+        addressdetails: '1',
+      });
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+        { headers: { 'Accept-Language': 'fr', 'User-Agent': 'OrbiApp/1.0' }, signal: AbortSignal.timeout(8000) },
+      );
+      const data: Array<{ lat: string; lon: string; display_name: string }> = await response.json();
+      if (!data.length) {
+        setStatus('Adresse introuvable. Essayez avec plus de détails (ex: quartier, ville).');
+        return;
+      }
+      const result = data[0];
+      setPlaceForm((current) => ({
+        ...current,
+        latitude: result.lat,
+        longitude: result.lon,
+      }));
+      const shortName = result.display_name.split(', ').slice(0, 2).join(', ');
+      setStatus(`Localisé: ${shortName}`);
+    } catch {
+      setStatus('Localisation impossible. Vérifiez votre connexion internet.');
+    } finally {
+      setIsGeocodingPlace(false);
     }
   }
 
@@ -549,11 +585,6 @@ export default function AccountScreen() {
         </View>
       </SectionCard>
 
-      <RiderJourneySection
-        currentStep="account"
-        description="Le compte partage maintenant le meme tunnel rider que l accueil, la reservation, la voix et le suivi."
-      />
-
       <View style={styles.card}>
         <Text style={styles.heading}>Contact de confiance</Text>
         <Text style={styles.meta}>{profile.profile.trustedContact.safetyNote}</Text>
@@ -665,33 +696,32 @@ export default function AccountScreen() {
         />
         <TextInput
           value={placeForm.address}
-          onChangeText={(value) => setPlaceForm((current) => ({ ...current, address: value }))}
-          placeholder="Adresse"
+          onChangeText={(value) => setPlaceForm((current) => ({ ...current, address: value, latitude: '', longitude: '' }))}
+          placeholder="Adresse (ex: Patte d'Oie, Ouagadougou)"
           placeholderTextColor={orbiTheme.colors.muted}
           style={styles.input}
         />
-        <View style={styles.metricsRow}>
-          <TextInput
-            value={placeForm.latitude}
-            onChangeText={(value) => setPlaceForm((current) => ({ ...current, latitude: value }))}
-            placeholder="Latitude"
-            placeholderTextColor={orbiTheme.colors.muted}
-            keyboardType="decimal-pad"
-            style={[styles.input, styles.coordInput]}
-          />
-          <TextInput
-            value={placeForm.longitude}
-            onChangeText={(value) => setPlaceForm((current) => ({ ...current, longitude: value }))}
-            placeholder="Longitude"
-            placeholderTextColor={orbiTheme.colors.muted}
-            keyboardType="decimal-pad"
-            style={[styles.input, styles.coordInput]}
-          />
-        </View>
+        <Pressable
+          onPress={() => void geocodePlaceAddress()}
+          disabled={isGeocodingPlace || isSavingPlace || !placeForm.address.trim()}
+          style={[
+            styles.geocodeButton,
+            (isGeocodingPlace || !placeForm.address.trim()) && styles.refreshButtonDisabled,
+          ]}
+        >
+          <Text style={styles.geocodeButtonLabel}>
+            {isGeocodingPlace ? 'Localisation...' : placeForm.latitude ? 'Relocalisé ✓' : 'Localiser l\'adresse'}
+          </Text>
+        </Pressable>
+        {placeForm.latitude ? (
+          <Text style={styles.coordConfirm}>
+            Position trouvée · prêt à enregistrer
+          </Text>
+        ) : null}
         <View style={styles.actionsRow}>
           <Pressable
             onPress={() => void handleSavePlace()}
-            disabled={isSavingPlace}
+            disabled={isSavingPlace || !placeForm.latitude}
             style={[styles.primaryAction, isSavingPlace ? styles.refreshButtonDisabled : null]}
           >
             <Text style={styles.primaryActionLabel}>
@@ -731,11 +761,6 @@ export default function AccountScreen() {
               <Text style={styles.placeTransitionBadge}>Favori resynchronise</Text>
             ) : null}
             <Text style={styles.meta}>{place.address}</Text>
-            {place.latitude !== null && place.longitude !== null ? (
-              <Text style={styles.meta}>
-                {place.latitude}, {place.longitude}
-              </Text>
-            ) : null}
             <View style={styles.actionsRow}>
               <Pressable
                 onPress={() => startEditingPlace(place)}
@@ -966,9 +991,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  coordInput: {
-    flexGrow: 1,
-    minWidth: 140,
+  geocodeButton: {
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(56,189,248,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+    alignItems: 'center',
+  },
+  geocodeButtonLabel: {
+    color: orbiTheme.colors.sky,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  coordConfirm: {
+    color: orbiTheme.colors.teal,
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 2,
   },
   modeRow: {
     flexDirection: 'row',

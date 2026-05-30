@@ -28,7 +28,6 @@ import {
   SectionCard,
   SectionHeading,
 } from '../../lib/realtime-widgets';
-import { DriverJourneySection } from '../../lib/driver-journey';
 import {
   restoreDriverSession,
   signOutDriverAccount,
@@ -115,14 +114,14 @@ type OnboardingFormState = {
 
 const fallbackProfile: DriverProfileResponse = {
   profile: {
-    id: 'fallback-driver',
-    fullName: 'Issa Driver',
-    email: 'driver@orbi.app',
+    id: 'loading',
+    fullName: '',
+    email: '',
     phoneNumber: null,
-    status: 'ONLINE',
-    verificationStatus: 'APPROVED',
+    status: 'OFFLINE',
+    verificationStatus: 'PENDING',
     serviceRadiusKm: 8,
-    averageRating: 4.8,
+    averageRating: null,
     completedTripsCount: 0,
     fatigue: {
       state: 'clear',
@@ -133,111 +132,26 @@ const fallbackProfile: DriverProfileResponse = {
       maxDrivingMinutes: 300,
       restMinutes: 30,
       restUntil: null,
-      reason: 'Aucun signal fatigue bloquant sur la fenetre recente.',
+      reason: '',
     },
     onboarding: {
-      verificationStatus: 'APPROVED',
-      reviewStatus: 'APPROVED',
-      completedItems: 7,
+      verificationStatus: 'PENDING',
+      reviewStatus: 'PENDING',
+      completedItems: 0,
       totalItems: 7,
-      readinessPercent: 100,
+      readinessPercent: 0,
       serviceRadiusKm: 8,
       city: 'OUAGADOUGOU',
       submittedAt: null,
       latestReviewAt: null,
-      latestDecisionReason: 'Dossier valide.',
-      reviewActorName: 'Equipe operations',
-      notes: 'Profil approuve et pret pour les courses.',
-      checklist: [
-        { id: 'phone', label: 'Numero de telephone verifie', completed: true },
-        {
-          id: 'license',
-          label: 'Permis de conduire renseigne et securise',
-          completed: true,
-        },
-        { id: 'identity', label: 'Piece d identite securisee', completed: true },
-        {
-          id: 'vehicle-registration',
-          label: 'Carte grise securisee',
-          completed: true,
-        },
-        { id: 'insurance', label: 'Assurance securisee', completed: true },
-        {
-          id: 'selfie',
-          label: 'Selfie de verification securise',
-          completed: true,
-        },
-        { id: 'vehicle', label: 'Vehicule actif configure', completed: true },
-      ],
-      documents: [
-        {
-          type: 'IDENTITY_DOCUMENT',
-          status: 'APPROVED',
-          fileName: 'id-card.pdf',
-          uploadedAt: null,
-          expiresAt: null,
-          reviewedAt: null,
-          rejectionReason: null,
-        },
-        {
-          type: 'DRIVER_LICENSE',
-          status: 'APPROVED',
-          fileName: 'license.pdf',
-          uploadedAt: null,
-          expiresAt: null,
-          reviewedAt: null,
-          rejectionReason: null,
-        },
-        {
-          type: 'VEHICLE_REGISTRATION',
-          status: 'APPROVED',
-          fileName: 'registration.pdf',
-          uploadedAt: null,
-          expiresAt: null,
-          reviewedAt: null,
-          rejectionReason: null,
-        },
-        {
-          type: 'INSURANCE_PROOF',
-          status: 'APPROVED',
-          fileName: 'insurance.pdf',
-          uploadedAt: null,
-          expiresAt: null,
-          reviewedAt: null,
-          rejectionReason: null,
-        },
-        {
-          type: 'SELFIE_VERIFICATION',
-          status: 'APPROVED',
-          fileName: 'selfie.jpg',
-          uploadedAt: null,
-          expiresAt: null,
-          reviewedAt: null,
-          rejectionReason: null,
-        },
-      ],
-      reviewTimeline: [
-        {
-          id: 'review-approved',
-          status: 'APPROVED',
-          actorName: 'Equipe operations',
-          decisionReason: 'Dossier valide.',
-          createdAt: '2026-04-18T08:30:00.000Z',
-        },
-      ],
+      latestDecisionReason: null,
+      reviewActorName: null,
+      notes: null,
+      checklist: [],
+      documents: [],
+      reviewTimeline: [],
     },
-    vehicles: [
-      {
-        id: 'fallback-vehicle',
-        plateNumber: '11 JD 9021',
-        make: 'Toyota',
-        model: 'Corolla',
-        color: 'Blanc',
-        type: 'CAR',
-        tier: 'CAR_STANDARD',
-        isActive: true,
-      },
-    ],
+    vehicles: [],
   },
 };
 
@@ -896,11 +810,6 @@ export default function ProfilScreen() {
           />
         </View>
       </SectionCard>
-
-      <DriverJourneySection
-        currentStep="profil"
-        description="Le dossier operations reste connecte au meme tunnel que l acces, le cockpit, le dispatch et les revenus."
-      />
 
       <View style={[styles.card, profileTransitionLabel ? styles.cardHighlight : null]}>
         <Text style={styles.name}>Onboarding securise</Text>

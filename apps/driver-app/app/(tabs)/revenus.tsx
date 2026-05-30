@@ -33,7 +33,6 @@ import {
   SectionCard,
   SectionHeading,
 } from '../../lib/realtime-widgets';
-import { DriverJourneySection } from '../../lib/driver-journey';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 
 const fallbackEarnings: DriverEarningsResponse = {
@@ -392,11 +391,6 @@ export default function RevenusScreen() {
       </View>
 
       <DriverMilestoneCard completedTrips={earnings.summary.completedTrips} />
-
-      <DriverJourneySection
-        currentStep="revenus"
-        description="Le suivi financier partage maintenant le meme tunnel que l acces, le cockpit, le dispatch et le dossier operations."
-      />
 
       <SectionCard tone={earningsTrustSummary.settlementTone}>
         <SectionHeading

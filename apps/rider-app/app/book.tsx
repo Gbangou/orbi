@@ -67,7 +67,6 @@ import {
   validateBookingSelection,
 } from '../lib/booking-safety';
 import { useRiderRealtimeStream } from '../lib/use-rider-realtime-stream';
-import { RiderJourneySection } from '../lib/rider-journey';
 import {
   buildRiderFlowTransitionLabel,
   resolveRiderActiveFlow,
@@ -80,9 +79,9 @@ const cityPresets = burkinaPricingCityPresets;
 
 const fallbackRiderProfile: RiderProfileResponse = {
   profile: {
-    id: 'fallback-rider',
-    fullName: 'Awa Ouedraogo',
-    email: 'rider@orbi.app',
+    id: 'loading',
+    fullName: '',
+    email: '',
     phoneNumber: null,
     preferredTier: 'MOTO_STANDARD',
     emergencyPhone: null,
@@ -90,29 +89,14 @@ const fallbackRiderProfile: RiderProfileResponse = {
       phoneNumber: null,
       shareMode: 'DISABLED',
       status: 'MISSING',
-      safetyNote: 'Ajoutez un numero Burkina pour accelerer le partage en cas de trajet sensible.',
+      safetyNote: '',
     },
-    savedPlaces: [
-      {
-        id: 'saved-home',
-        label: 'Maison',
-        address: 'Patte d Oie, Ouagadougou',
-        latitude: 12.3412,
-        longitude: -1.5601,
-      },
-      {
-        id: 'saved-work',
-        label: 'Bureau',
-        address: 'Ouaga 2000, Ouagadougou',
-        latitude: 12.3274,
-        longitude: -1.5339,
-      },
-    ],
+    savedPlaces: [],
     stats: {
       totalRideRequests: 0,
       totalTrips: 0,
       completedTrips: 0,
-      savedPlaces: 2,
+      savedPlaces: 0,
     },
   },
 };
@@ -1068,11 +1052,6 @@ export default function BookingScreen() {
           style={styles.bookingMap}
         />
       ) : null}
-
-      <RiderJourneySection
-        currentStep="book"
-        description="La reservation reste connectee au meme tunnel passager que la connexion, la voix et le suivi live."
-      />
 
       <View style={styles.paymentSection}>
         <Text style={styles.section}>Ville et contexte local</Text>

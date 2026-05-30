@@ -37,7 +37,7 @@ export function resolveRiderActiveFlow(
       ? formatOperationalStatus(activeTrip.status)
       : activeRequest
         ? formatOperationalStatus(activeRequest.status)
-        : "Aucun flux actif",
+        : "Aucune course active",
     primaryRouteLabel: activeTrip
       ? `${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`
       : activeRequest

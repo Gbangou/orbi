@@ -14,7 +14,6 @@ import {
 import {
   acceptRideRequestWithApi,
   declineDriverOfferWithApi,
-  driverOffers,
   fetchDriverOffers,
   fetchDriverProfile,
   fetchMyTrips,
@@ -81,7 +80,6 @@ import { useDriverRealtimeStream } from "../../lib/use-driver-realtime-stream";
 import { TripMapView } from "../../lib/trip-map-view";
 import { ApproachMapView } from "../../lib/approach-map-view";
 import { useLiveRefresh } from "../../lib/use-live-refresh";
-import { DriverJourneySection } from "../../lib/driver-journey";
 import { buildDriverShiftReadiness } from "../../lib/driver-shift-readiness";
 import {
   normalizePickupCode,
@@ -398,7 +396,7 @@ function ActiveMissionMap({
 }
 
 export default function OffersScreen() {
-  const [offers, setOffers] = useState<DriverOffer[]>(driverOffers);
+  const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
   const [activeTripDetail, setActiveTripDetail] =
     useState<TripDetailResponse | null>(null);
@@ -1315,11 +1313,6 @@ export default function OffersScreen() {
                 : "Passer en ligne"}
         </Text>
       </Pressable>
-
-      <DriverJourneySection
-        currentStep="offres"
-        description="Le dispatch reste aligne avec l acces, le cockpit, les revenus et le dossier chauffeur pour garder les memes reperes live."
-      />
 
       {activeTrip ? (
         <RouteSignalCard

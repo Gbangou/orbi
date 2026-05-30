@@ -29,7 +29,6 @@ import {
   QuickActionCard,
   RouteSignalCard,
 } from '../../lib/realtime-widgets';
-import { RiderJourneySection } from '../../lib/rider-journey';
 import { restoreRiderSession } from '../../lib/auth';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { OrbiLogo } from '../../lib/orbi-logo';
@@ -77,18 +76,13 @@ function buildRideOptionInsights(option: RideOption): Array<{
 
 function buildRideOptionDetailLines(option: RideOption) {
   const lines = [
-    option.marketplace
-      ? `${option.marketplace.availabilityLabel}: ${option.marketplace.nearbyDrivers} chauffeurs proches dans ${option.marketplace.pickupRadiusKm.toFixed(1)} km`
-      : null,
-    option.marketplace?.vehicleExamples.length
-      ? `Exemples: ${option.marketplace.vehicleExamples.join(', ')}`
-      : null,
     option.paymentMethods?.length
       ? `Paiement: ${option.paymentMethods.join(', ')}`
       : null,
     option.fareBreakdown
       ? `Base ${formatXof(option.fareBreakdown.baseFare)} + frais ${formatXof(option.fareBreakdown.bookingFee)}`
       : null,
+    option.safetyNote ?? null,
   ];
   return lines.filter((line): line is string => Boolean(line));
 }
@@ -106,6 +100,7 @@ export default function RiderHomeScreen() {
     null,
   );
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [realNearbyCount, setRealNearbyCount] = useState(0);
   const previousFlowStateRef = useRef<string | null>(null);
 
   const riderPosition = useRiderPosition({ enabled: true });
@@ -199,9 +194,6 @@ export default function RiderHomeScreen() {
     return () => clearTimeout(timeout);
   }, [flowTransitionLabel]);
 
-  const nearbyDriverCount =
-    options[0]?.marketplace?.nearbyDrivers ?? 0;
-
   return (
     <View style={styles.root}>
       {/* Carte plein-largeur avec chauffeurs proches */}
@@ -210,6 +202,7 @@ export default function RiderHomeScreen() {
           riderLat={riderPosition.latestPosition?.latitude}
           riderLng={riderPosition.latestPosition?.longitude}
           style={styles.map}
+          onDriversUpdate={setRealNearbyCount}
         />
 
         {/* Badge realtime sur la carte */}
@@ -222,8 +215,8 @@ export default function RiderHomeScreen() {
           />
           <Text style={styles.mapBadgeText}>
             {formatRealtimeBadgeLabel(
-              nearbyDriverCount > 0
-                ? `${nearbyDriverCount} chauffeurs proches`
+              realNearbyCount > 0
+                ? `${realNearbyCount} chauffeur${realNearbyCount > 1 ? 's' : ''} proche${realNearbyCount > 1 ? 's' : ''}`
                 : 'Carte live',
               isRealtimeSyncing,
             )}
@@ -303,8 +296,8 @@ export default function RiderHomeScreen() {
           />
           <DashboardMetricCard
             label="Chauffeurs"
-            value={String(nearbyDriverCount)}
-            helper="a moins de 5 km"
+            value={String(realNearbyCount)}
+            helper="disponibles près de vous"
             tone="amber"
           />
         </View>
@@ -363,11 +356,6 @@ export default function RiderHomeScreen() {
             noteTone="teal"
           />
         ))}
-
-        <RiderJourneySection
-          currentStep="home"
-          description="Depuis l accueil, reservez, suivez et gerez votre compte avec les memes reperes visuels."
-        />
 
         <View style={styles.actions}>
           <QuickActionCard

@@ -30,7 +30,6 @@ import {
   SectionCard,
   SectionHeading,
 } from "../lib/realtime-widgets";
-import { RiderJourneySection } from "../lib/rider-journey";
 import { useLiveRefresh } from "../lib/use-live-refresh";
 
 const SAMPLE_TRANSCRIPTS = [
@@ -198,10 +197,7 @@ export default function VoiceScreen() {
         </View>
       </SectionCard>
 
-      <RiderJourneySection
-        currentStep="voice"
-        description="La voix n est plus une branche isolee. Elle fait partie du meme tunnel rider que l accueil, la reservation et le suivi."
-      />
+
 
       <View style={styles.voiceCard}>
         <Text style={styles.label}>Commande vocale a interpreter</Text>

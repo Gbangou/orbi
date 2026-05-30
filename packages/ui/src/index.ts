@@ -204,12 +204,39 @@ export function formatRealtimeBadgeLabel(
   return isRealtimeSyncing ? 'Resync live' : liveLabel;
 }
 
+const FRENCH_STATUS: Record<string, string> = {
+  REQUESTED: 'En attente',
+  MATCHED: 'Chauffeur assigné',
+  DRIVER_ARRIVING: 'Chauffeur en route',
+  IN_PROGRESS: 'En cours',
+  COMPLETED: 'Terminé',
+  CANCELLED: 'Annulé',
+  APPROVED: 'Approuvé',
+  PENDING: 'En attente',
+  REJECTED: 'Refusé',
+  SUSPENDED: 'Suspendu',
+  ONLINE: 'Disponible',
+  OFFLINE: 'Hors ligne',
+  BUSY: 'Occupé',
+  MOTORCYCLE: 'Moto',
+  MOTO: 'Moto',
+  CAR: 'Voiture',
+  MOTO_STANDARD: 'Moto Express',
+  CLEAR: 'Normal',
+  WARNING: 'Attention',
+  CRITICAL: 'Critique',
+  UNKNOWN: 'Inconnu',
+  VERIFIED: 'Vérifié',
+  UNVERIFIED: 'Non vérifié',
+};
+
 export function formatOperationalStatus(status: string) {
-  return status
-    .toLowerCase()
-    .split('_')
-    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
-    .join(' ');
+  return FRENCH_STATUS[status.toUpperCase()] ??
+    status
+      .toLowerCase()
+      .split('_')
+      .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+      .join(' ');
 }
 
 export function escapeHtmlText(value: string) {

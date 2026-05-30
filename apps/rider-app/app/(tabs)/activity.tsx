@@ -43,7 +43,6 @@ import {
   TransitionNoticeCard,
 } from "../../lib/realtime-widgets";
 import { restoreRiderSession } from "../../lib/auth";
-import { RiderJourneySection } from "../../lib/rider-journey";
 import {
   buildRiderFlowTransitionLabel,
   buildRiderDriverTrustSnapshot,
@@ -311,7 +310,7 @@ function LiveApproachPreview({
         <Text style={styles.approachPinLabel}>A</Text>
       </View>
       <View style={[styles.approachPersonPin, { left: `${riderProgress}%` }]}>
-        <Text style={styles.approachPersonLabel}>Rider</Text>
+        <Text style={styles.approachPersonLabel}>Vous</Text>
       </View>
       <Animated.View
         style={[
@@ -320,7 +319,7 @@ function LiveApproachPreview({
           vehicleMotion,
         ]}
       >
-        <Text style={styles.approachDriverLabelText}>Driver</Text>
+        <Text style={styles.approachDriverLabelText}>Chauffeur</Text>
       </Animated.View>
       <View style={styles.approachMapCopy}>
         <View style={styles.approachHudRow}>
@@ -898,11 +897,6 @@ export default function ActivityScreen() {
         </Text>
       </Pressable>
 
-      <RiderJourneySection
-        currentStep="activity"
-        description="Le suivi live reste branche au meme tunnel rider que la reservation, la voix et l accueil."
-      />
-
       {recentlyClearedRequestCount ? (
         <TransitionNoticeCard
           label={
@@ -917,9 +911,9 @@ export default function ActivityScreen() {
 
       <RouteSignalCard
         eyebrow="Vue rapide"
-        badgeLabel={isRealtimeSyncing ? "Sync live" : "Cockpit"}
+        badgeLabel={isRealtimeSyncing ? "Mise à jour" : "Récapitulatif"}
         badgeTone={isRealtimeSyncing ? "sky" : "teal"}
-        title="Pilotage des trajets"
+        title="Résumé de vos courses"
         description="Vue unifiee du flux passager, des demandes actives et du suivi de course."
         insights={[
           {
@@ -939,10 +933,9 @@ export default function ActivityScreen() {
           },
         ]}
         detailLines={[
-          `Demandes actives: ${history.pendingRequests.length}`,
-          `Trajets completes: ${history.stats.completedTrips}`,
-          `Depense totale connue: ${formatXof(history.stats.totalAmount)}`,
-          `Etat principal: ${primaryStatusLabel}`,
+          `Demandes en cours: ${history.pendingRequests.length}`,
+          `Trajets complétés: ${history.stats.completedTrips}`,
+          `Total dépensé: ${formatXof(history.stats.totalAmount)}`,
         ]}
       />
 
@@ -980,11 +973,9 @@ export default function ActivityScreen() {
             },
           ]}
           detailLines={[
-            "Partage, code pickup et monitoring route connectes aux operations.",
+            "Partage, code de prise en charge et suivi route connectés.",
             ...buildDriverVerificationLines(),
             ...buildRouteMonitoringLines(),
-            activeTrip.status,
-            `Etat principal: ${primaryStatusLabel}`,
           ]}
           note={
             activeTrip.pickupCode
@@ -1176,7 +1167,6 @@ export default function ActivityScreen() {
           ]}
           detailLines={[
             `Estimation: ${formatXof(request.estimatedFare)}`,
-            `Demande ${request.status}`,
           ]}
         >
           {request.status === "REQUESTED" ? (

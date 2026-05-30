@@ -28,7 +28,6 @@ import {
   QuickActionCard,
   RouteSignalCard,
 } from '../../lib/realtime-widgets';
-import { DriverJourneySection } from '../../lib/driver-journey';
 import { restoreDriverSession } from '../../lib/auth';
 import { formatDriverEarningsAmount } from '../../lib/driver-earnings-signal';
 import { resolveDriverAppError } from '../../lib/session-feedback';
@@ -572,11 +571,6 @@ export default function DriverHomeScreen() {
           tone="sky"
         />
       </View>
-
-      <DriverJourneySection
-        currentStep="accueil"
-        description="Depuis le cockpit chauffeur, vous pouvez enchainer dispatch, revenus et dossier ops avec les memes reperes produit."
-      />
 
       {activeTrip ? (
         <View
