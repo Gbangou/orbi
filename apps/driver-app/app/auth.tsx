@@ -24,9 +24,16 @@ export default function DriverAuthScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const isPasswordStrong = (pw: string) =>
+    pw.length >= 8 &&
+    /[A-Z]/.test(pw) &&
+    /[a-z]/.test(pw) &&
+    /\d/.test(pw) &&
+    /[^A-Za-z0-9]/.test(pw);
+
   const canSubmit =
     Boolean(email.trim()) &&
-    password.length >= 8 &&
+    (mode === 'sign-in' ? password.length >= 8 : isPasswordStrong(password)) &&
     (mode === 'sign-in' || Boolean(fullName.trim()));
 
   function describeAuthError(error: unknown): string {
@@ -150,6 +157,12 @@ export default function DriverAuthScreen() {
             style={styles.input}
           />
 
+          {mode === 'sign-up' && (
+            <Text style={styles.passwordHint}>
+              Minimum 8 caractères · une majuscule · un chiffre · un caractère spécial (ex: !)
+            </Text>
+          )}
+
           {Boolean(errorMessage) && (
             <Text style={styles.errorText}>{errorMessage}</Text>
           )}
@@ -269,6 +282,12 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.muted,
     fontSize: 13,
     fontWeight: '600',
+  },
+  passwordHint: {
+    color: orbiTheme.colors.muted,
+    fontSize: 11,
+    lineHeight: 16,
+    paddingHorizontal: 4,
   },
   buttonDisabled: {
     opacity: 0.5,

@@ -65,6 +65,14 @@ function Build-App {
         Write-Host "  WARNING: signing/debug.keystore absent — Gradle va generer un nouveau keystore (signature instable)" -ForegroundColor Yellow
     }
 
+    # Ecrire .env dans le dossier app avant Gradle pour que Metro charge les vars EXPO_PUBLIC_*.
+    # Metro (@expo/env) lit ce fichier au demarrage du bundler ; sans ca, les vars ne sont pas
+    # injectees dans le bundle et le fallback 'localhost:3000' de packages/config est utilise.
+    $EnvLines = $EnvVars.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }
+    $EnvFileContent = $EnvLines -join "`n"
+    Set-Content -Path "$AppDir\.env" -Value $EnvFileContent -Encoding UTF8
+    Write-Host "  $AppDir\.env ecrit ($($EnvVars.Count) vars EXPO_PUBLIC_*)" -ForegroundColor DarkGray
+
     # Gradle assembleRelease → .apk
     Write-Host "  gradlew assembleRelease ..." -ForegroundColor Yellow
     Set-Location "$AppDir\android"
@@ -90,6 +98,9 @@ if (-not (Test-Path "$env:ANDROID_HOME\platforms")) { Write-Host "  WARNING: AND
 Set-Location $Root
 pnpm install --frozen-lockfile
 if ($LASTEXITCODE -ne 0) { throw "pnpm install failed" }
+
+# NODE_ENV=production requis par expo-constants:createExpoConfig (sinon warning + mode-specific .env ignore)
+$env:NODE_ENV = "production"
 
 # Variables d'environnement communes aux deux apps
 $CommonEnv = @{
