@@ -26,7 +26,7 @@
         "expo-notifications",
         {
           "icon": "./icon.png",
-          "color": "#07111d",
+          "color": "#0A66C2",
           "defaultChannel": "default",
           "sounds": [],
           "enableBackgroundRemoteNotifications": false
@@ -55,7 +55,7 @@
       "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./adaptive-icon.png",
-        "backgroundColor": "#07111d"
+        "backgroundColor": "#0A66C2"
       }
     },
     "web": {
