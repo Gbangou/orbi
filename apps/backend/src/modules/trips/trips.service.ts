@@ -274,7 +274,7 @@ export class TripsService {
       }
     }
 
-    return serializeTripDetail({
+    const detail = serializeTripDetail({
       ...trip,
       driver: {
         ...trip.driver,
@@ -282,6 +282,12 @@ export class TripsService {
       },
       promoCode,
     });
+
+    if (auth.user.role === UserRole.DRIVER) {
+      detail.trip.pickupCode = null;
+    }
+
+    return detail;
   }
 
   async createShareLink(auth: RequestAuthContext, tripId: string) {
@@ -910,7 +916,7 @@ export class TripsService {
 
     return serializeTripLifecycle({
       ...trip,
-      pickupCode,
+      pickupCode: null,
     });
   }
 
@@ -950,25 +956,43 @@ export class TripsService {
       throw new BadRequestException('Pickup code is invalid.');
     }
 
-    const updatedTrip = await this.prisma.trip.update({
-      where: {
-        id: tripId,
-      },
-      data: {
-        status: 'IN_PROGRESS',
-        startedAt: trip.startedAt ?? new Date(),
-        events: {
-          create: {
-            eventType: 'PICKUP_CODE_VERIFIED',
-            payload: {
-              pickupCode,
+    const updatedTrip = await this.prisma.$transaction(async (tx) => {
+      const nextTrip = await tx.trip.update({
+        where: {
+          id: tripId,
+        },
+        data: {
+          status: 'IN_PROGRESS',
+          startedAt: trip.startedAt ?? new Date(),
+          events: {
+            create: {
+              eventType: 'PICKUP_CODE_VERIFIED',
+              payload: {
+                verifiedByRole: auth.user.role,
+                verifiedByUserId: auth.user.id,
+              },
             },
           },
         },
-      },
-      include: {
-        events: true,
-      },
+        include: {
+          events: true,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'TRIP_PICKUP_CODE_VERIFIED',
+          entityType: 'TRIP',
+          entityId: tripId,
+          metadata: {
+            driverId: trip.driverId,
+            rideRequestId: trip.rideRequestId,
+          },
+        },
+      });
+
+      return nextTrip;
     });
 
     this.realtimeService.publish({
@@ -985,7 +1009,7 @@ export class TripsService {
 
     return serializeTripLifecycle({
       ...updatedTrip,
-      pickupCode: expectedPickupCode,
+      pickupCode: null,
     });
   }
 
@@ -1397,6 +1421,12 @@ export class TripsService {
       if (auth.user.role === UserRole.RIDER && nextStatus !== 'CANCELLED') {
         throw new BadRequestException(
           'Riders can only cancel a trip from the app.',
+        );
+      }
+
+      if (auth.user.role === UserRole.DRIVER && nextStatus === 'IN_PROGRESS') {
+        throw new BadRequestException(
+          'Pickup code verification is required before starting the trip.',
         );
       }
 
@@ -1814,6 +1844,7 @@ export class TripsService {
       ...serializeTripHistoryItem(trip),
       amount: Math.round(toAmount(trip.actualFare) * 0.82),
       counterpartyName: trip.rider.user.fullName,
+      pickupCode: null,
     }));
 
     return {

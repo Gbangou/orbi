@@ -8,6 +8,8 @@ import {
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
 
+const TypedWebView = WebView as any;
+
 const OUAGA_LAT = 12.3647;
 const OUAGA_LNG = -1.5332;
 
@@ -112,7 +114,7 @@ export function SavedPlacesMap({
 
   return (
     <View style={[styles.container, { height }]}>
-      <WebView
+      <TypedWebView
         ref={webViewRef}
         source={{ html }}
         style={styles.webView}
@@ -120,7 +122,7 @@ export function SavedPlacesMap({
         onMessage={handleMessage}
         javaScriptEnabled
         originWhitelist={['about:blank', 'https://*']}
-        onShouldStartLoadWithRequest={(request) =>
+        onShouldStartLoadWithRequest={(request: { url: string }) =>
           shouldAllowLocalMapWebViewRequest(request.url)
         }
       />

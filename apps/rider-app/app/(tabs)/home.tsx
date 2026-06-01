@@ -11,7 +11,6 @@ import {
 import {
   fetchMyTrips,
   fetchRideOptionsPreview,
-  riderRideOptions,
   type MyTripsResponse,
   type RideOption,
 } from '@orbi/api';
@@ -89,7 +88,7 @@ function buildRideOptionDetailLines(option: RideOption) {
 
 export default function RiderHomeScreen() {
   const router = useRouter();
-  const [options, setOptions] = useState<RideOption[]>(riderRideOptions);
+  const [options, setOptions] = useState<RideOption[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [statusLabel, setStatusLabel] = useState(
     'Connexion du compte passager...',
@@ -144,9 +143,11 @@ export default function RiderHomeScreen() {
       }
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        network: 'Preview locale active en attendant la connexion API.',
+        network: 'Connexion API indisponible: aucune option fictive affichee.',
       });
       if (feedback.shouldClearSessionToken) setSessionToken(null);
+      setOptions([]);
+      setHistory(null);
       if (!silent) setStatusLabel(feedback.message);
     } finally {
       if (silent) setIsRealtimeSyncing(false);

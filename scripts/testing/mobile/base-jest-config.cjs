@@ -21,6 +21,9 @@ function createMobileJestConfig(rootDir) {
     transformIgnorePatterns: [
       '/node_modules/(?!(react|react-test-renderer)/)',
     ],
+    moduleNameMapper: {
+      '\\.(png|jpg|jpeg|gif|webp)$': path.resolve(__dirname, 'file-mock.cjs'),
+    },
   };
 }
 

@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
-  driverOffers,
   fetchDriverEarnings,
   fetchDriverOffers,
   fetchDriverProfile,
@@ -138,10 +137,10 @@ function OfferMissionPreview({ offer }: { offer: DriverOffer }) {
 
 export default function DriverHomeScreen() {
   const router = useRouter();
-  const [offers, setOffers] = useState<DriverOffer[]>(driverOffers);
+  const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [earnings, setEarnings] = useState<DriverEarningsResponse | null>(null);
-  const [statusNote, setStatusNote] = useState('Connexion du compte chauffeur de demonstration...');
+  const [statusNote, setStatusNote] = useState('Connexion du compte chauffeur...');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
   const [freshOfferIds, setFreshOfferIds] = useState<string[]>([]);
@@ -187,13 +186,18 @@ export default function DriverHomeScreen() {
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
         surface: 'profile',
-        network: 'Preview locale active en attendant la connexion API.',
+        network: 'Connexion API indisponible: aucune offre fictive affichee.',
       });
 
       if (feedback.shouldClearSessionToken) {
         setSessionToken(null);
       }
 
+      setOffers([]);
+      setHistory(null);
+      setEarnings(null);
+      setDriverProfileStatus('OFFLINE');
+      setVehicleCount(null);
       if (!silent) {
         setStatusNote(feedback.message);
       }

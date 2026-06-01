@@ -49,7 +49,7 @@ describe('rider-active-flow', () => {
     });
 
     expect(flow.hasOpenFlow).toBe(true);
-    expect(flow.primaryStatusLabel).toBe('Driver Arriving');
+    expect(flow.primaryStatusLabel).toBe('Chauffeur en route');
     expect(flow.primaryRouteLabel).toBe(
       'Universite Joseph Ki-Zerbo vers Ouaga 2000',
     );
@@ -97,7 +97,7 @@ describe('rider-active-flow', () => {
         'TRIP:DRIVER_ARRIVING',
         'activity',
       ),
-    ).toBe('Changement critique: Driver Arriving.');
+    ).toBe('Changement critique: Chauffeur en route.');
 
     expect(
       buildRiderFlowTransitionLabel(
@@ -105,7 +105,7 @@ describe('rider-active-flow', () => {
         'REQUEST:REQUESTED',
         'account',
       ),
-    ).toBe('Le compte reflete maintenant un flux actif: Requested.');
+    ).toBe('Le compte reflete maintenant un flux actif: En attente.');
 
     expect(
       buildRiderFlowTransitionLabel(
@@ -113,7 +113,7 @@ describe('rider-active-flow', () => {
         'TRIP:MATCHED',
         'voice',
       ),
-    ).toBe('Le contexte vocal a change de phase: Matched.');
+    ).toBe('Le contexte vocal a change de phase: Chauffeur assigné.');
   });
 
   it('builds peripheral status labels for account and voice surfaces', () => {
@@ -258,7 +258,7 @@ describe('rider-active-flow', () => {
       expect.arrayContaining([
         expect.objectContaining({
           label: 'Chauffeur',
-          value: 'Approved',
+          value: 'Approuvé',
           helper: 'rouge Yamaha Crypton',
         }),
         expect.objectContaining({

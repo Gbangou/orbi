@@ -50,7 +50,7 @@ describe('driver-active-flow', () => {
     });
 
     expect(flow.operationalStatus).toBe('BUSY');
-    expect(flow.primaryStatusLabel).toBe('Driver Arriving');
+    expect(flow.primaryStatusLabel).toBe('Chauffeur en route');
     expect(flow.primaryRouteLabel).toBe('Universite Joseph Ki-Zerbo vers Ouaga 2000');
     expect(flow.visibleOfferCount).toBe(0);
     expect(flow.availabilityLocked).toBe(true);
@@ -99,7 +99,7 @@ describe('driver-active-flow', () => {
   it('builds consistent transition and reservation delta messages', () => {
     expect(
       buildDriverFlowTransitionLabel(null, 'TRIP:MATCHED', 'home'),
-    ).toBe('Mission active ouverte: Matched.');
+    ).toBe('Mission active ouverte: Chauffeur assigné.');
 
     expect(
       buildDriverFlowTransitionLabel(
@@ -107,7 +107,7 @@ describe('driver-active-flow', () => {
         'TRIP:DRIVER_ARRIVING',
         'offers',
       ),
-    ).toBe('Statut critique mis a jour: Driver Arriving.');
+    ).toBe('Statut critique mis a jour: Chauffeur en route.');
 
     expect(
       resolveDriverReservationChangeSet(['offer-1', 'offer-2'], ['offer-2', 'offer-3']),
@@ -285,7 +285,7 @@ describe('driver-active-flow', () => {
         expect.objectContaining({
           label: 'Passager',
           value: 'Awa Ouedraogo',
-          helper: 'Code attendu: 1234',
+          helper: 'Saisir le code donne par le passager',
         }),
         expect.objectContaining({
           label: 'Pickup',

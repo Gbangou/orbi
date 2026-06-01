@@ -3,6 +3,10 @@ import { StyleSheet, View } from 'react-native';
 import { orbiTheme } from '@orbi/ui';
 import { usePushRegistration } from '../../lib/use-push-registration';
 
+const TypedTabs = Tabs as any;
+const TypedTabsScreen = Tabs.Screen as any;
+type TabIconProps = { color: string; focused: boolean };
+
 function HomeIcon({ color, focused }: { color: string; focused: boolean }) {
   return (
     <View style={styles.icon}>
@@ -64,7 +68,7 @@ export default function RiderTabsLayout() {
   usePushRegistration();
 
   return (
-    <Tabs
+    <TypedTabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
@@ -74,43 +78,43 @@ export default function RiderTabsLayout() {
         tabBarItemStyle: styles.tabItem,
       }}
     >
-      <Tabs.Screen
+      <TypedTabsScreen
         name="home"
         options={{
           title: 'Accueil',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, focused }: TabIconProps) => (
             <HomeIcon color={color} focused={focused} />
           ),
         }}
       />
-      <Tabs.Screen
+      <TypedTabsScreen
         name="activity"
         options={{
           title: 'Activité',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, focused }: TabIconProps) => (
             <ActivityIcon color={color} focused={focused} />
           ),
         }}
       />
-      <Tabs.Screen
+      <TypedTabsScreen
         name="trips"
         options={{
           title: 'Trajets',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, focused }: TabIconProps) => (
             <TripsIcon color={color} focused={focused} />
           ),
         }}
       />
-      <Tabs.Screen
+      <TypedTabsScreen
         name="account"
         options={{
           title: 'Compte',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, focused }: TabIconProps) => (
             <AccountIcon color={color} focused={focused} />
           ),
         }}
       />
-    </Tabs>
+    </TypedTabs>
   );
 }
 

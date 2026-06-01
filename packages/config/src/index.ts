@@ -45,12 +45,7 @@ export function resolveOrbiDemoAccessEnabled(
     return ['1', 'true', 'yes', 'on'].includes(explicitValue.toLowerCase());
   }
 
-  // Default: show demo accounts. Disable explicitly with EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS=false.
-  // In React Native release builds, process.env.EXPO_PUBLIC_* is NOT available on the runtime
-  // process.env object (Metro does static AST replacement, not runtime injection), so the
-  // explicit check above never fires. Defaulting to true ensures the demo quick-sign-in
-  // button is visible in field-test APKs.
-  return true;
+  return env.NODE_ENV !== 'production';
 }
 
 export const orbiDemoAccessEnabled = resolveOrbiDemoAccessEnabled();

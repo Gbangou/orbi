@@ -19,7 +19,6 @@ import {
   fetchRiderProfile,
   fetchRideOptionsPreview,
   roundDistanceKm,
-  riderRideOptions,
   resolveBurkinaPricingPresetForPlace,
   resolveVoiceLocationIntentWithApi,
   toApiPaymentMethod,
@@ -418,13 +417,11 @@ const promoStyles = StyleSheet.create({
 
 export default function BookingScreen() {
   const router = useRouter();
-  const [options, setOptions] = useState<RideOption[]>(riderRideOptions);
+  const [options, setOptions] = useState<RideOption[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [profile, setProfile] =
     useState<RiderProfileResponse>(fallbackRiderProfile);
-  const [selectedOptionId, setSelectedOptionId] = useState<string>(
-    riderRideOptions[0]?.id ?? '',
-  );
+  const [selectedOptionId, setSelectedOptionId] = useState<string>('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod>('cash');
   const [selectedCityId, setSelectedCityId] = useState<
@@ -605,8 +602,8 @@ export default function BookingScreen() {
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: 'profile',
-        network: 'Mode local actif, impossible de joindre la session reelle.',
-        fallback: 'Mode local actif, impossible de joindre la session reelle.',
+        network: 'Connexion API indisponible: aucune option fictive affichee.',
+        fallback: 'Connexion API indisponible: aucune option fictive affichee.',
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -614,6 +611,9 @@ export default function BookingScreen() {
       }
 
       setStatus(feedback.message);
+      setOptions([]);
+      setHistory(null);
+      setPaymentPreview(null);
       setProfile(fallbackRiderProfile);
     } finally {
       setIsRealtimeSyncing(false);

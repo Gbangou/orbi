@@ -6,6 +6,8 @@ import {
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
 
+const TypedWebView = WebView as any;
+
 export interface TripMapViewProps {
   pickupLat: number | null | undefined;
   pickupLng: number | null | undefined;
@@ -134,14 +136,14 @@ export function TripMapView({
 
   return (
     <View style={[styles.container, style]}>
-      <WebView
+      <TypedWebView
         ref={webRef}
         source={{ html: htmlRef.current }}
         scrollEnabled={false}
         style={styles.webview}
         javaScriptEnabled
         originWhitelist={['about:blank', 'https://*']}
-        onShouldStartLoadWithRequest={(request) =>
+        onShouldStartLoadWithRequest={(request: { url: string }) =>
           shouldAllowLocalMapWebViewRequest(request.url)
         }
         onError={() => {}}

@@ -718,6 +718,28 @@ export default function AccountScreen() {
             Position trouvée · prêt à enregistrer
           </Text>
         ) : null}
+        <View style={styles.coordinateRow}>
+          <TextInput
+            value={placeForm.latitude}
+            onChangeText={(value) =>
+              setPlaceForm((current) => ({ ...current, latitude: value }))
+            }
+            placeholder="Latitude"
+            placeholderTextColor={orbiTheme.colors.muted}
+            keyboardType="decimal-pad"
+            style={[styles.input, styles.coordinateInput]}
+          />
+          <TextInput
+            value={placeForm.longitude}
+            onChangeText={(value) =>
+              setPlaceForm((current) => ({ ...current, longitude: value }))
+            }
+            placeholder="Longitude"
+            placeholderTextColor={orbiTheme.colors.muted}
+            keyboardType="decimal-pad"
+            style={[styles.input, styles.coordinateInput]}
+          />
+        </View>
         <View style={styles.actionsRow}>
           <Pressable
             onPress={() => void handleSavePlace()}
@@ -1010,6 +1032,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     paddingHorizontal: 2,
+  },
+  coordinateRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  coordinateInput: {
+    flex: 1,
   },
   modeRow: {
     flexDirection: 'row',

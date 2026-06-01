@@ -46,10 +46,18 @@ export function validateOfferAction(input: {
   return { ok: true };
 }
 
-export function validateTripAdvance(_input: {
+export function validateTripAdvance(input: {
   blocksCompletion: boolean;
   nextStatus: 'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED';
 }): DriverActionValidationResult {
+  if (input.nextStatus === 'COMPLETED' && input.blocksCompletion) {
+    return {
+      ok: false,
+      message:
+        'Finalisation bloquee par Ride Check. Actualisez le direct ou contactez le support.',
+    };
+  }
+
   return { ok: true };
 }
 

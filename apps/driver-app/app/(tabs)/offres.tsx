@@ -485,8 +485,8 @@ export default function OffersScreen() {
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
         surface: "active-trip",
-        network: "Preview locale active en attendant la connexion API.",
-        fallback: "Preview locale active en attendant la connexion API.",
+        network: "Connexion API indisponible: aucune offre fictive affichee.",
+        fallback: "Connexion API indisponible: aucune offre fictive affichee.",
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -496,6 +496,10 @@ export default function OffersScreen() {
       if (!silent) {
         setStatus(feedback.message);
       }
+      setOffers([]);
+      setHistory(fallbackHistory);
+      setActiveTripDetail(null);
+      setDriverProfileStatus("OFFLINE");
     } finally {
       if (silent) {
         setIsRealtimeSyncing(false);

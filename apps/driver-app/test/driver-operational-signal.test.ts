@@ -31,7 +31,7 @@ describe('driver operational signal helpers', () => {
         lastPositionAt: null,
         latestPosition: null,
       }),
-    ).toEqual(['Ride Check: Warning (ND)', 'Dernier signal: Long Stop']);
+    ).toEqual(['Ride Check: Attention (ND)', 'Dernier signal: Long Stop']);
   });
 
   it('marks impossible route signals as blocking before sensitive trip actions', () => {

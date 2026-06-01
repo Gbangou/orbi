@@ -39,8 +39,10 @@ jest.mock(
         quad: jest.fn((value) => value),
       },
       ScrollView: "ScrollView",
+      KeyboardAvoidingView: "KeyboardAvoidingView",
       View: "View",
       Text: "Text",
+      Image: "Image",
       Pressable: "Pressable",
       TextInput: "TextInput",
       Dimensions: {

@@ -187,7 +187,7 @@ export default function DriverAuthScreen() {
               disabled={isSubmitting}
               style={[styles.ghostButton, isSubmitting && styles.buttonDisabled]}
             >
-              <Text style={styles.ghostButtonLabel}>Connexion rapide (compte test)</Text>
+              <Text style={styles.ghostButtonLabel}>Acces terrain securise</Text>
             </Pressable>
           )}
         </View>

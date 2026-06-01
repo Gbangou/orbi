@@ -22,8 +22,8 @@ Le backend est disponible 24h/24, independamment de tout PC local.
 
 ## Comptes de demonstration
 
-Les APK contiennent les identifiants de demonstration directement dans le build.
-Un bouton "Connexion demo" apparait sur l'ecran de connexion de chaque app.
+Les APK terrain contiennent les identifiants controles directement dans le build.
+Un bouton "Acces terrain securise" apparait sur l'ecran de connexion de chaque app.
 
 | Role      | Email                       | Mot de passe    |
 | --------- | --------------------------- | --------------- |
@@ -152,7 +152,7 @@ premier pour valider que tout fonctionne.
 ### Etape 1 — Connexion chauffeur
 
 1. Ouvrir `Orbi Chauffeur`.
-2. Appuyer sur `Connexion demo` ou entrer `testchauffeur@orbi.test` /
+2. Appuyer sur `Acces terrain securise` ou entrer `testchauffeur@orbi.test` /
    `TestOrbi2026!`.
 3. Sur l'ecran accueil, verifier que la carte affiche le statut.
 4. Passer `En ligne` (disponible).
@@ -163,7 +163,7 @@ suivre les etapes d'onboarding (automatiquement approuve).
 ### Etape 2 — Connexion passager
 
 1. Ouvrir `Orbi Passager`.
-2. Appuyer sur `Connexion demo` ou entrer `testpassager@orbi.test` /
+2. Appuyer sur `Acces terrain securise` ou entrer `testpassager@orbi.test` /
    `TestOrbi2026!`.
 3. Sur l'ecran accueil, verifier que la carte s'affiche.
 
@@ -199,8 +199,13 @@ suivre les etapes d'onboarding (automatiquement approuve).
 
 1. Sur le telephone chauffeur:
    - Saisir le code a 4 chiffres reçu du passager.
-   - Appuyer sur `Demarrer la course` (IN_PROGRESS).
+   - Appuyer sur `Verifier le code et demarrer` (IN_PROGRESS).
 2. La course est maintenant en cours.
+
+Le chauffeur ne voit pas le code dans son application. Le demarrage direct sans
+verification est bloque par le backend; seul le code affiche cote passager peut
+ouvrir le trajet. Si l'API est indisponible, les apps doivent afficher un etat
+vide ou une erreur reseau, pas des offres ou options fictives.
 
 ### Etape 7 — Fin de course
 
@@ -356,7 +361,7 @@ INSTALLATION:
 - Si Android demande une autorisation, accepter dans Parametres.
 
 CONNEXION:
-- Utiliser le bouton "Connexion demo" sur l'ecran de connexion.
+- Utiliser le bouton "Acces terrain securise" sur l'ecran de connexion.
 - Ou creer votre propre compte.
 
 TEST:

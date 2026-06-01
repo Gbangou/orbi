@@ -136,7 +136,7 @@ const fallbackProfile: DriverProfileResponse = {
     },
     onboarding: {
       verificationStatus: 'PENDING',
-      reviewStatus: 'PENDING',
+      reviewStatus: 'SUBMITTED',
       completedItems: 0,
       totalItems: 7,
       readinessPercent: 0,
@@ -146,7 +146,7 @@ const fallbackProfile: DriverProfileResponse = {
       latestReviewAt: null,
       latestDecisionReason: null,
       reviewActorName: null,
-      notes: null,
+      notes: '',
       checklist: [],
       documents: [],
       reviewTimeline: [],

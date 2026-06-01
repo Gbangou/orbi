@@ -8,6 +8,8 @@ import {
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
 
+const TypedWebView = WebView as any;
+
 const OUAGA_LAT = 12.3647;
 const OUAGA_LNG = -1.5332;
 const REFRESH_INTERVAL_MS = 15_000;
@@ -163,14 +165,14 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
 
   return (
     <View style={[styles.container, style]}>
-      <WebView
+      <TypedWebView
         ref={webRef}
         source={{ html: htmlRef.current }}
         scrollEnabled={false}
         style={styles.webview}
         javaScriptEnabled
         originWhitelist={['about:blank', 'https://*']}
-        onShouldStartLoadWithRequest={(request) =>
+        onShouldStartLoadWithRequest={(request: { url: string }) =>
           shouldAllowLocalMapWebViewRequest(request.url)
         }
         onError={() => {}}

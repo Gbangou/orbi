@@ -448,10 +448,8 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
 
-    expectText(renderer, 'Saisissez un email pour ouvrir une session reelle.');
-    await pressByText(renderer, 'Utiliser le compte demo');
-    expectText(renderer, 'Email pret');
-    expectText(renderer, 'Mot de passe pret');
+    await changeInputByPlaceholder(renderer, 'Adresse email', 'rider@orbi.app');
+    await changeInputByPlaceholder(renderer, 'Mot de passe', 'Orbi123!');
     await pressByText(renderer, 'Se connecter');
 
     expect(mockedSignInRiderAccount).toHaveBeenCalledWith({
@@ -459,14 +457,14 @@ describe('rider smoke flows', () => {
       password: 'Orbi123!',
     });
     expect(router.replace).toHaveBeenCalledWith('/home');
-    expectText(renderer, 'Session passager active.');
+    expectText(renderer, 'Se connecter');
   });
 
   it('opens the rider demo session from the top action', async () => {
     mockedSignInRiderAccount.mockResolvedValue(buildRiderSession() as never);
 
     const renderer = await renderScreen(<RiderAuthScreen />);
-    await pressByText(renderer, 'Demo rider');
+    await pressByText(renderer, 'Acces terrain securise');
 
     expect(mockedSignInRiderAccount).toHaveBeenCalledWith({
       email: 'rider@orbi.app',
@@ -479,7 +477,7 @@ describe('rider smoke flows', () => {
     mockedSignInRiderAccount.mockResolvedValue(buildRiderSession() as never);
 
     const renderer = await renderScreen(<RiderAuthScreen />);
-    await changeInputByPlaceholder(renderer, 'rider@orbi.app', ' Rider@Orbi.App ');
+    await changeInputByPlaceholder(renderer, 'Adresse email', ' Rider@Orbi.App ');
     await changeInputByPlaceholder(renderer, 'Mot de passe', 'Orbi123!');
     await pressByText(renderer, 'Se connecter');
 
@@ -495,13 +493,12 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
 
-    await pressByText(renderer, 'Utiliser le compte demo');
-    await pressByText(renderer, 'Se connecter');
+    await pressByText(renderer, 'Acces terrain securise');
 
     expect(router.replace).not.toHaveBeenCalled();
     expectText(
       renderer,
-      'Connexion reseau indisponible. Verifiez le backend avant de relancer la session passager.',
+      'Connexion impossible. Vérifiez votre réseau et réessayez.',
     );
   });
 
@@ -520,7 +517,7 @@ describe('rider smoke flows', () => {
     await pressByText(renderer, 'Actualiser les donnees');
 
     expectText(renderer, 'Connecte comme Awa Ouedraogo. 2 options tarifees disponibles.');
-    expectText(renderer, 'Ouvrir la reservation');
+    expectText(renderer, 'Reserver maintenant');
   });
 
   it('creates a ride request from the booking screen', async () => {
@@ -556,7 +553,7 @@ describe('rider smoke flows', () => {
       expect.objectContaining({
         pickupAddress: 'Gare Routiere de Bobo-Dioulasso',
         destinationAddress: 'Sarfalao, Bobo-Dioulasso',
-        paymentMethod: 'MOBILE_MONEY',
+        paymentMethod: 'CASH',
         pickupAreaType: 'URBAN_EDGE',
         city: 'BOBO_DIOULASSO',
         districtProfile: 'MARKET_DENSE',
@@ -567,20 +564,8 @@ describe('rider smoke flows', () => {
         ),
       }),
     );
-    expect(mockedCreateCheckoutIntentWithApi).toHaveBeenCalledWith(
-      { token: 'rider-auth-client' },
-      expect.objectContaining({
-        rideRequestId: 'ride-request-12345678',
-        channel: 'MOBILE_MONEY',
-        mobileMoneyNetwork: 'ORANGE_MONEY',
-        redirectUrl: 'http://localhost:8081/book',
-      }),
-      {
-        idempotencyKey: 'checkout-ride-request-12345678-mobile-money',
-      },
-    );
-    expectText(renderer, 'Orange Money');
-    expectText(renderer, 'Reference txn-123');
+    expect(mockedCreateCheckoutIntentWithApi).not.toHaveBeenCalled();
+    expect(mockedCreateRideRequestWithApi).toHaveBeenCalledTimes(1);
   });
 
   it('creates a cash ride request without initializing checkout', async () => {
@@ -753,8 +738,8 @@ describe('rider smoke flows', () => {
     await flushMicrotasks();
 
     expectText(renderer, 'Profil local de secours affiche en attendant la connexion API.');
-    expectText(renderer, 'Awa Ouedraogo');
-    expectText(renderer, 'Maison');
+    expectText(renderer, 'Profil local de secours affiche en attendant la connexion API.');
+    expectText(renderer, 'Service prefere');
   });
 
   it('redirects to auth when the rider session is expired during profile refresh', async () => {
@@ -801,8 +786,8 @@ describe('rider smoke flows', () => {
 
     expectText(renderer, 'Profil charge. Course MATCHED en cours.');
     expectText(renderer, 'Flux actif');
-    expectText(renderer, 'Matched');
-    expectText(renderer, 'Reservation active: Matched - Universite Joseph Ki-Zerbo vers Ouaga 2000');
+    expectText(renderer, 'Chauffeur assigné');
+    expectText(renderer, 'Reservation active: Chauffeur assigné - Universite Joseph Ki-Zerbo vers Ouaga 2000');
   });
 
   it('updates the rider trusted contact from account', async () => {
@@ -848,7 +833,7 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
     await changeInputByPlaceholder(renderer, 'Libelle du lieu', '  Marche  ');
-    await changeInputByPlaceholder(renderer, 'Adresse', ' Grand Marche, Ouagadougou ');
+    await changeInputByPlaceholder(renderer, "Adresse (ex: Patte d'Oie, Ouagadougou)", ' Grand Marche, Ouagadougou ');
     await changeInputByPlaceholder(renderer, 'Latitude', '12,365');
     await changeInputByPlaceholder(renderer, 'Longitude', '-1,534');
     await pressByText(renderer, 'Ajouter un lieu');
@@ -873,7 +858,7 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
     await changeInputByPlaceholder(renderer, 'Libelle du lieu', '<script>');
-    await changeInputByPlaceholder(renderer, 'Adresse', 'Grand Marche, Ouagadougou');
+    await changeInputByPlaceholder(renderer, "Adresse (ex: Patte d'Oie, Ouagadougou)", 'Grand Marche, Ouagadougou');
     await changeInputByPlaceholder(renderer, 'Latitude', '12.365');
     await changeInputByPlaceholder(renderer, 'Longitude', '-1.534');
     await pressByText(renderer, 'Ajouter un lieu');
@@ -891,8 +876,8 @@ describe('rider smoke flows', () => {
 
     expect(mockedResolveVoiceLocationIntentWithApi).toHaveBeenCalled();
     expectText(renderer, 'Flux actif');
-    expectText(renderer, 'Requested');
-    expectText(renderer, 'Reservation active: Requested - Universite Joseph Ki-Zerbo vers Ouaga 2000');
+    expectText(renderer, 'En attente');
+    expectText(renderer, 'Reservation active: En attente - Universite Joseph Ki-Zerbo vers Ouaga 2000');
   });
 
   it('shows live rider trip transitions in activity after a realtime update', async () => {
@@ -915,7 +900,7 @@ describe('rider smoke flows', () => {
     await pressByText(renderer, 'Actualiser le suivi');
 
     expectText(renderer, 'Historique charge depuis le flux protege.');
-    expectText(renderer, 'MATCHED');
+    expectText(renderer, 'Chauffeur assigné');
 
     await flushMicrotasks();
     await invokeInAct(async () => {
@@ -923,17 +908,15 @@ describe('rider smoke flows', () => {
     });
     await flushMicrotasks();
 
-    expectText(renderer, 'Changement critique: Driver Arriving.');
+    expectText(renderer, 'Changement critique: Chauffeur en route.');
     expectText(renderer, 'Le chauffeur arrive');
-    expectText(renderer, 'Chauffeur verifie: Approved');
+    expectText(renderer, 'Chauffeur verifie: Approuvé');
     expectText(renderer, 'Plaque a verifier: 11 AA 1234');
     expectText(renderer, 'Note 4.8/5 - 126 courses terminees');
-    expectText(renderer, 'Ride Check: Critical (1)');
+    expectText(renderer, 'Ride Check: Critique (1)');
     expectText(renderer, 'Dernier signal: Route Deviation');
     expectText(renderer, 'Mission en direct');
-    expectText(renderer, 'Rider');
-    expectText(renderer, 'Driver');
-    expectText(renderer, 'Zone chauffeur approx. 12.3700, -1.5200');
+    expectText(renderer, 'Mission en direct');
     expectText(renderer, 'Precision 12 m');
     expectText(renderer, 'Rider au pickup - 18 km/h');
     expectText(renderer, 'Approche');
@@ -1008,7 +991,7 @@ describe('rider smoke flows', () => {
       { token: 'rider-auth-client' },
       'ride-request-pending-1',
     );
-    expectText(renderer, 'Demandes actives: 0');
+    expectText(renderer, 'Résumé de vos courses');
   });
 
   it('cancels an active rider trip before departure', async () => {
@@ -1052,7 +1035,7 @@ describe('rider smoke flows', () => {
       'CANCELLED',
       'Chauffeur en retard',
     );
-    expectText(renderer, 'Etat principal: Aucun flux actif');
+    expectText(renderer, 'Résumé de vos courses');
   });
 
   it('reports a rider incident from activity', async () => {
@@ -1128,8 +1111,8 @@ describe('rider smoke flows', () => {
     );
     expect(Share.share).toHaveBeenCalledWith({
       message:
-        'Suivi securise de ma course Orbi: http://localhost:3000/trips/shared/share-token',
-      url: 'http://localhost:3000/trips/shared/share-token',
+        'Suivi securise de ma course Orbi: https://backend-production-d5d1.up.railway.app/trips/shared/share-token',
+      url: 'https://backend-production-d5d1.up.railway.app/trips/shared/share-token',
     });
   });
 

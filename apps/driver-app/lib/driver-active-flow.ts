@@ -160,9 +160,12 @@ export function buildDriverMissionSnapshot(input: {
     {
       label: "Passager",
       value: activeTrip.counterpartyName ?? detail?.riderName ?? "Assigne",
-      helper: pickupCode
-        ? `Code attendu: ${pickupCode}`
-        : "Verifier le passager avant depart",
+      helper:
+        activeTrip.status === "DRIVER_ARRIVING"
+          ? "Saisir le code donne par le passager"
+          : pickupCode
+            ? "Code passager requis avant depart"
+            : "Verifier le passager avant depart",
     },
     {
       label: activeTrip.status === "IN_PROGRESS" ? "Destination" : "Pickup",

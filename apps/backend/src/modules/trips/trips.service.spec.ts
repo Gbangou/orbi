@@ -340,7 +340,7 @@ describe('TripsService', () => {
         id: 'trip-accept-1',
         riderName: 'Awa Rider',
         vehicleLabel: 'Yamaha Crypton',
-        pickupCode: expect.any(String),
+        pickupCode: null,
       }),
     );
   });
@@ -720,13 +720,22 @@ describe('TripsService', () => {
             create: {
               eventType: 'PICKUP_CODE_VERIFIED',
               payload: {
-                pickupCode: '4821',
+                verifiedByRole: undefined,
+                verifiedByUserId: 'user-driver-1',
               },
             },
           },
         }),
       }),
     );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-driver-1',
+        action: 'TRIP_PICKUP_CODE_VERIFIED',
+        entityType: 'TRIP',
+        entityId: 'trip-verify-1',
+      }),
+    });
     expect(realtimeService.publish).toHaveBeenCalledWith({
       channel: 'trip',
       type: 'trip.pickup-code-verified',
@@ -739,7 +748,51 @@ describe('TripsService', () => {
       },
     });
     expect(result.trip.status).toBe('IN_PROGRESS');
-    expect(result.trip.pickupCode).toBe('4821');
+    expect(result.trip.pickupCode).toBeNull();
+  });
+
+  it('blocks drivers from starting a trip without pickup code verification', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-direct-start-1',
+      rideRequestId: 'request-direct-start-1',
+      driverId: 'driver-1',
+      status: 'DRIVER_ARRIVING',
+      startedAt: null,
+      completedAt: null,
+      actualFare: 1800,
+      currency: 'XOF',
+      events: [
+        {
+          eventType: 'PICKUP_CODE_ISSUED',
+          payload: {
+            pickupCode: '4821',
+          },
+        },
+      ],
+    });
+
+    await expect(
+      service.updateStatus(
+        {
+          user: {
+            role: 'DRIVER',
+            driverProfile: {
+              id: 'driver-1',
+            },
+          },
+        } as never,
+        'trip-direct-start-1',
+        'IN_PROGRESS',
+      ),
+    ).rejects.toThrow(
+      'Pickup code verification is required before starting the trip.',
+    );
+
+    expect(prisma.trip.update).not.toHaveBeenCalled();
+    expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+    expect(realtimeService.publish).not.toHaveBeenCalled();
   });
 
   it('creates a support incident for an active trip and records an event', async () => {

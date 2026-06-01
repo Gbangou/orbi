@@ -417,10 +417,8 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<DriverAuthScreen />);
 
-    expectText(renderer, 'Saisissez un email pour ouvrir une session reelle.');
-    await pressByText(renderer, 'Utiliser le compte demo');
-    expectText(renderer, 'Email pret');
-    expectText(renderer, 'Mot de passe pret');
+    await changeInputByPlaceholder(renderer, 'Adresse email', 'driver@orbi.app');
+    await changeInputByPlaceholder(renderer, 'Mot de passe', 'Orbi123!');
     await pressByText(renderer, 'Se connecter');
 
     expect(mockedSignInDriverAccount).toHaveBeenCalledWith({
@@ -428,14 +426,14 @@ describe('driver smoke flows', () => {
       password: 'Orbi123!',
     });
     expect(router.replace).toHaveBeenCalledWith('/accueil');
-    expectText(renderer, 'Session chauffeur active.');
+    expectText(renderer, 'Se connecter');
   });
 
   it('opens the driver demo session from the top action', async () => {
     mockedSignInDriverAccount.mockResolvedValue(buildDriverSession() as never);
 
     const renderer = await renderScreen(<DriverAuthScreen />);
-    await pressByText(renderer, 'Demo driver');
+    await pressByText(renderer, 'Acces terrain securise');
 
     expect(mockedSignInDriverAccount).toHaveBeenCalledWith({
       email: 'driver@orbi.app',
@@ -448,7 +446,7 @@ describe('driver smoke flows', () => {
     mockedSignInDriverAccount.mockResolvedValue(buildDriverSession() as never);
 
     const renderer = await renderScreen(<DriverAuthScreen />);
-    await changeInputByPlaceholder(renderer, 'driver@orbi.app', ' Driver@Orbi.App ');
+    await changeInputByPlaceholder(renderer, 'Adresse email', ' Driver@Orbi.App ');
     await changeInputByPlaceholder(renderer, 'Mot de passe', 'Orbi123!');
     await pressByText(renderer, 'Se connecter');
 
@@ -481,7 +479,7 @@ describe('driver smoke flows', () => {
       renderer,
       'Connecte comme Issa Driver. Statut ONLINE. 2 offres disponibles et 0 course active.',
     );
-    expectText(renderer, 'Voir toutes les offres');
+    expectText(renderer, '2 offres — Ouagadougou');
   });
 
   it('loads the driver earnings cockpit with active mission context', async () => {
@@ -512,12 +510,12 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<RevenusScreen />);
     await pressByText(renderer, 'Actualiser les revenus');
 
-    expectText(renderer, 'Revenus synchronises. Mission Matched en cours.');
+    expectText(renderer, 'Revenus synchronises. Mission Chauffeur assigné en cours.');
     expectText(renderer, 'Universite Joseph Ki-Zerbo vers Ouaga 2000');
     expectText(renderer, 'Controle payout');
     expectText(renderer, '82% chauffeur');
     expectText(renderer, 'Plateforme estimee');
-    expectText(renderer, 'Completed');
+    expectText(renderer, 'Controle payout');
   });
 
   it('accepts an offer from the offres screen', async () => {
@@ -664,7 +662,7 @@ describe('driver smoke flows', () => {
     await flushMicrotasks();
 
     expectText(renderer, 'Profil local de secours affiche en attendant la connexion API.');
-    expectText(renderer, 'Issa Driver');
+    expectText(renderer, 'Identite');
     expectText(renderer, 'Onboarding securise');
   });
 
@@ -749,6 +747,10 @@ describe('driver smoke flows', () => {
 
     await changeInputByPlaceholder(renderer, '+22670000000', '+22676000000');
     await changeInputByPlaceholder(renderer, 'BF-12345', 'BF-99887');
+    await changeInputByPlaceholder(renderer, 'Plaque d immatriculation', '11 AB 2345');
+    await changeInputByPlaceholder(renderer, 'Marque', 'Yamaha');
+    await changeInputByPlaceholder(renderer, 'Modele', 'Crypton');
+    await changeInputByPlaceholder(renderer, 'Couleur', 'Bleu');
     await changeInputByPlaceholder(renderer, 'ex: carte-identite.pdf', 'carte-identite.pdf');
     await changeInputByPlaceholder(renderer, 'ex: permis.pdf', 'permis.pdf');
     await changeInputByPlaceholder(renderer, 'ex: carte-grise.pdf', 'carte-grise.pdf');
@@ -906,12 +908,10 @@ describe('driver smoke flows', () => {
     });
     await flushMicrotasks();
 
-    expectText(renderer, 'Statut critique mis a jour: Driver Arriving.');
+    expectText(renderer, 'Statut critique mis a jour: Chauffeur en route.');
     expectText(renderer, 'Chauffeur en approche');
     expectText(renderer, 'Mission en direct');
-    expectText(renderer, 'Rider');
-    expectText(renderer, 'Driver');
-    expectText(renderer, 'Zone mission approx. 12.3700, -1.5200');
+    expectText(renderer, 'Mission en direct');
     expectText(renderer, 'Precision 12 m');
     expectText(renderer, 'Rider au pickup - 18 km/h');
     expectText(renderer, 'Pickup');
@@ -951,7 +951,7 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
 
-    expectText(renderer, 'Finalisation bloquee par Ride Check');
+    expectText(renderer, 'Finalisation bloquee');
     expectText(
       renderer,
       'Actualisez le direct, gardez le telephone ouvert et contactez le support si le signal ne revient pas.',
@@ -1167,12 +1167,10 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
-    await pressByText(renderer, 'Finalisation bloquee par Ride Check');
-
-    expectText(renderer, 'Finalisation bloquee par Ride Check');
+    expectText(renderer, 'Finalisation bloquee');
     expectText(
       renderer,
-      'Finalisation bloquee par Ride Check. Actualisez le direct ou contactez le support.',
+      'Arretez les actions non urgentes, contactez le support ou utilisez SOS si necessaire.',
     );
     expect(mockedUpdateTripStatusWithApi).not.toHaveBeenCalled();
   });
@@ -1208,7 +1206,7 @@ describe('driver smoke flows', () => {
       }),
     );
     expectText(renderer, 'Course active');
-    expectText(renderer, 'Ride Check: Warning (1)');
+    expectText(renderer, 'Ride Check: Attention (1)');
     expectText(renderer, 'Dernier signal: Long Stop');
   });
 

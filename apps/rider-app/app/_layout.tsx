@@ -14,6 +14,8 @@ import { orbiTheme } from '@orbi/ui';
 import { hasPersistedRiderSession } from '../lib/auth';
 import { OrbiLogo } from '../lib/orbi-logo';
 
+const TypedStack = Stack as any;
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -105,7 +107,7 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="light" />
-      <Stack
+      <TypedStack
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: '#07111d' },
