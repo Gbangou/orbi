@@ -14,6 +14,17 @@ function isPickupCodeVisibleStatus(status: string) {
   return (PICKUP_CODE_VISIBLE_STATUSES as readonly string[]).includes(status);
 }
 
+function shouldExposePickupCode(
+  status: string,
+  viewerRole?: string | null,
+) {
+  if (viewerRole === 'DRIVER') {
+    return false;
+  }
+
+  return isPickupCodeVisibleStatus(status);
+}
+
 function toFiniteNumber(value: unknown) {
   const numeric = Number(value);
 
@@ -159,7 +170,7 @@ export function serializeTripDetail(trip: {
     payload?: unknown;
     createdAt: Date;
   }>;
-}) {
+}, options: { viewerRole?: string | null } = {}) {
   const activeStatuses = ['MATCHED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
   const isActiveTrip = activeStatuses.includes(trip.status);
   const driverPhoneNumber =
@@ -237,7 +248,7 @@ export function serializeTripDetail(trip: {
         },
       },
       routeMonitoring,
-      pickupCode: isPickupCodeVisibleStatus(trip.status)
+      pickupCode: shouldExposePickupCode(trip.status, options.viewerRole)
         ? extractPickupCode(trip.events)
         : null,
       driverPhoneNumber,
@@ -307,7 +318,7 @@ export function serializeTripHistoryItem(trip: {
   createdAt: Date;
   events: Array<{ eventType: string; payload?: unknown }>;
   vehicle: { make: string; model: string };
-}) {
+}, options: { viewerRole?: string | null } = {}) {
   return {
     id: trip.id,
     pickupAddress: trip.pickupAddress,
@@ -316,7 +327,7 @@ export function serializeTripHistoryItem(trip: {
     amount: toAmount(trip.actualFare),
     currency: trip.currency,
     vehicleLabel: formatVehicleLabel(trip.vehicle),
-    pickupCode: isPickupCodeVisibleStatus(trip.status)
+    pickupCode: shouldExposePickupCode(trip.status, options.viewerRole)
       ? extractPickupCode(trip.events)
       : null,
     completedAt: trip.completedAt?.toISOString() ?? null,

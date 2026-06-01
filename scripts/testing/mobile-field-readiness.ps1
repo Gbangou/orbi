@@ -47,21 +47,32 @@ function Test-MobileApiUrl {
   }
 }
 
+function Test-IsLocalApiUrl {
+  param([string]$Url)
+
+  return $Url -match "localhost|127\.0\.0\.1|0\.0\.0\.0|\.local($|/)"
+}
+
 function Test-BackendHealth {
   param([string]$ApiBaseUrl)
 
-  $healthUrl = "$ApiBaseUrl/api/v1/health"
+  $healthUrl = "$ApiBaseUrl/api/v1/health/ready"
 
   try {
-    $response = Invoke-WebRequest -Uri $healthUrl -Method Get -UseBasicParsing -TimeoutSec 5
-    if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) {
-      Write-Host "[ok] Backend health reachable: $healthUrl" -ForegroundColor Green
+    $response = Invoke-WebRequest -Uri $healthUrl -Method Get -UseBasicParsing -TimeoutSec 15
+    $body = $response.Content | ConvertFrom-Json
+    if ($response.StatusCode -eq 200 -and $body.status -eq "ready") {
+      Write-Host "[ok] Backend readiness reachable: $healthUrl" -ForegroundColor Green
       return
     }
 
-    throw "Backend health returned HTTP $($response.StatusCode): $healthUrl"
+    throw "Backend readiness returned HTTP $($response.StatusCode) with status '$($body.status)': $healthUrl"
   } catch {
-    throw "Backend health is not reachable from configured mobile URL: $healthUrl. Start pnpm dev:backend and check firewall/Wi-Fi."
+    if (Test-IsLocalApiUrl -Url $ApiBaseUrl) {
+      throw "Backend readiness is not reachable from configured mobile URL: $healthUrl. Start pnpm dev:backend and check firewall/Wi-Fi."
+    }
+
+    throw "Backend readiness is not reachable from configured mobile URL: $healthUrl. Check public API uptime before APK generation."
   }
 }
 
@@ -96,8 +107,15 @@ Write-Section "Backend"
 Test-BackendHealth -ApiBaseUrl $riderApiBaseUrl
 
 Write-Section "Next"
-Write-Host "1. Keep PC and phones on the same Wi-Fi."
-Write-Host "2. Keep pnpm dev:backend running."
-Write-Host "3. Run pnpm dev:rider and scan with Expo Go."
-Write-Host "4. Run pnpm dev:driver and scan with Expo Go on the driver phone."
-Write-Host "5. Complete the field checklist in docs/local-e2e-field-session.md."
+if (Test-IsLocalApiUrl -Url $riderApiBaseUrl) {
+  Write-Host "1. Keep PC and phones on the same Wi-Fi."
+  Write-Host "2. Keep pnpm dev:backend running."
+  Write-Host "3. Run pnpm dev:rider and scan with Expo Go."
+  Write-Host "4. Run pnpm dev:driver and scan with Expo Go on the driver phone."
+  Write-Host "5. Complete the field checklist in docs/local-e2e-field-session.md."
+} else {
+  Write-Host "1. Keep rider and driver apps on the same API URL shown above."
+  Write-Host "2. Use field accounts connected to the public backend."
+  Write-Host "3. Confirm pickup-code handoff on two real phones before APK generation."
+  Write-Host "4. Complete the MVP checklist in docs/mvp-real-device-testing-guide.md."
+}

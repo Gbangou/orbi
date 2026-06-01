@@ -228,11 +228,10 @@ describe('driver-active-flow', () => {
       driverProfileStatus: 'BUSY',
     });
 
-    expect(
-      buildDriverMissionSnapshot({
-        flow,
-        tripDetail: {
-          trip: {
+    const snapshot = buildDriverMissionSnapshot({
+      flow,
+      tripDetail: {
+        trip: {
             id: 'trip-driver-1',
             rideRequestId: 'request-1',
             status: 'DRIVER_ARRIVING',
@@ -279,8 +278,9 @@ describe('driver-active-flow', () => {
             timeline: [],
           },
         },
-      }),
-    ).toEqual(
+      });
+
+    expect(snapshot).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           label: 'Passager',
@@ -297,6 +297,7 @@ describe('driver-active-flow', () => {
         }),
       ]),
     );
+    expect(JSON.stringify(snapshot)).not.toContain('1234');
   });
 
   it('builds driver live route and rider trust signals from trip detail', () => {

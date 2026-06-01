@@ -274,18 +274,17 @@ export class TripsService {
       }
     }
 
-    const detail = serializeTripDetail({
-      ...trip,
-      driver: {
-        ...trip.driver,
-        profilePhotoUrl,
+    const detail = serializeTripDetail(
+      {
+        ...trip,
+        driver: {
+          ...trip.driver,
+          profilePhotoUrl,
+        },
+        promoCode,
       },
-      promoCode,
-    });
-
-    if (auth.user.role === UserRole.DRIVER) {
-      detail.trip.pickupCode = null;
-    }
+      { viewerRole: auth.user.role },
+    );
 
     return detail;
   }
@@ -1780,7 +1779,7 @@ export class TripsService {
           createdAt: request.createdAt.toISOString(),
         })),
         recentTrips: trips.map((trip) => ({
-          ...serializeTripHistoryItem(trip),
+          ...serializeTripHistoryItem(trip, { viewerRole: auth.user.role }),
           counterpartyName: trip.driver.user.fullName,
         })),
       };
@@ -1841,10 +1840,9 @@ export class TripsService {
       ]);
 
     const recentTrips = trips.map((trip) => ({
-      ...serializeTripHistoryItem(trip),
+      ...serializeTripHistoryItem(trip, { viewerRole: auth.user.role }),
       amount: Math.round(toAmount(trip.actualFare) * 0.82),
       counterpartyName: trip.rider.user.fullName,
-      pickupCode: null,
     }));
 
     return {

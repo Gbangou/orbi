@@ -113,6 +113,25 @@ describe('serializeTripDetail — privacy guards', () => {
 
     expect(trip.pickupCode).toBe('4821');
   });
+
+  it('hides pickup code from driver detail even before departure', () => {
+    const { trip } = serializeTripDetail(
+      createBaseTrip({
+        status: 'DRIVER_ARRIVING',
+        events: [
+          {
+            id: 'e-1',
+            eventType: 'PICKUP_CODE_ISSUED',
+            payload: { pickupCode: '4821' },
+            createdAt: new Date(),
+          },
+        ],
+      }) as never,
+      { viewerRole: 'DRIVER' },
+    );
+
+    expect(trip.pickupCode).toBeNull();
+  });
 });
 
 describe('serializeTripDetail — route monitoring', () => {
@@ -242,6 +261,31 @@ describe('serializeTripHistoryItem', () => {
       ],
       vehicle: { make: 'Yamaha', model: 'Crypton' },
     });
+
+    expect(result.pickupCode).toBeNull();
+  });
+
+  it('hides active pickup code from driver trip history', () => {
+    const result = serializeTripHistoryItem(
+      {
+        id: 'trip-1',
+        pickupAddress: 'Ouaga 2000',
+        destinationAddress: 'Koulouba',
+        status: 'DRIVER_ARRIVING',
+        actualFare: 1800,
+        currency: 'XOF',
+        completedAt: null,
+        createdAt: new Date(),
+        events: [
+          {
+            eventType: 'PICKUP_CODE_ISSUED',
+            payload: { pickupCode: '4821' },
+          },
+        ],
+        vehicle: { make: 'Yamaha', model: 'Crypton' },
+      },
+      { viewerRole: 'DRIVER' },
+    );
 
     expect(result.pickupCode).toBeNull();
   });

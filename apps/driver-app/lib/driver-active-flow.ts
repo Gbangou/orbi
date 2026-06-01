@@ -145,7 +145,6 @@ export function buildDriverMissionSnapshot(input: {
   const detail = input.tripDetail?.trip ?? null;
   const routeMonitoring = detail?.routeMonitoring ?? null;
   const latestPosition = routeMonitoring?.latestPosition ?? null;
-  const pickupCode = detail?.pickupCode ?? activeTrip.pickupCode ?? null;
   const approachDistance =
     activeTrip.status === "IN_PROGRESS"
       ? latestPosition?.distanceToDestinationKm
@@ -163,9 +162,7 @@ export function buildDriverMissionSnapshot(input: {
       helper:
         activeTrip.status === "DRIVER_ARRIVING"
           ? "Saisir le code donne par le passager"
-          : pickupCode
-            ? "Code passager requis avant depart"
-            : "Verifier le passager avant depart",
+          : "Verifier le passager avant depart",
     },
     {
       label: activeTrip.status === "IN_PROGRESS" ? "Destination" : "Pickup",
