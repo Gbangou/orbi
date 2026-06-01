@@ -293,7 +293,7 @@ describe('admin-ops-kernel', () => {
         latestPosition: null,
       }),
     ).toEqual({
-      statusLabel: 'Critical (2)',
+      statusLabel: 'Critique (2)',
       lastSignalLabel: 'Route Deviation',
       progressLabel: null,
     });
