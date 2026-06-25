@@ -614,6 +614,11 @@ const fallbackLaunchReadiness: AdminLaunchReadinessResponse = {
 };
 
 async function loadAdminData(): Promise<{
+  backendConnection: {
+    state: "connected" | "fallback";
+    label: string;
+    detail: string;
+  };
   preview: AdminPreviewResponse;
   liveOps: AdminLiveOpsResponse;
   tripsAudit: AdminTripsAuditResponse;
@@ -737,6 +742,11 @@ async function loadAdminData(): Promise<{
     ]);
 
     return {
+      backendConnection: {
+        state: "connected",
+        label: "Backend connecte",
+        detail: `Donnees synchronisees depuis l API pour ${me.user.fullName}.`,
+      },
       preview: {
         metrics: [
           {
@@ -816,6 +826,12 @@ async function loadAdminData(): Promise<{
     };
   } catch {
     return {
+      backendConnection: {
+        state: "fallback",
+        label: "Mode degrade",
+        detail:
+          "Le backend n est pas joignable. Les donnees sensibles sont masquees et seules les vues de secours sont affichees.",
+      },
       preview: {
         metrics: adminMetrics as AdminMetric[],
         operations: fallbackOperations,
@@ -914,6 +930,7 @@ export default async function AdminHomePage({
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const {
     preview,
+    backendConnection,
     liveOps,
     tripsAudit,
     support,
@@ -1000,6 +1017,16 @@ export default async function AdminHomePage({
             </button>
           </div>
         </form>
+      </section>
+
+      <section
+        className={`backend-status backend-status-${backendConnection.state}`}
+      >
+        <div>
+          <p className="eyebrow">Connexion plateforme</p>
+          <strong>{backendConnection.label}</strong>
+        </div>
+        <p>{backendConnection.detail}</p>
       </section>
 
       <section className="hero hero-grid">

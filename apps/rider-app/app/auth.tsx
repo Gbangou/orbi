@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,7 +15,6 @@ import { extractApiErrorMessage } from '@orbi/api';
 import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
 import { orbiTheme } from '@orbi/ui';
 import { signInRiderAccount, signUpRiderAccount } from '../lib/auth';
-import { OrbiLogo } from '../lib/orbi-logo';
 
 export default function RiderAuthScreen() {
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
@@ -25,11 +25,7 @@ export default function RiderAuthScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isPasswordStrong = (pw: string) =>
-    pw.length >= 8 &&
-    /[A-Z]/.test(pw) &&
-    /[a-z]/.test(pw) &&
-    /\d/.test(pw) &&
-    /[^A-Za-z0-9]/.test(pw);
+    pw.length >= 8 && /[A-Z]/.test(pw) && /[a-z]/.test(pw) && /\d/.test(pw) && /[^A-Za-z0-9]/.test(pw);
 
   const canSubmit =
     Boolean(email.trim()) &&
@@ -37,18 +33,13 @@ export default function RiderAuthScreen() {
     (mode === 'sign-in' || Boolean(fullName.trim()));
 
   function describeAuthError(error: unknown): string {
-    if (error instanceof TypeError) {
-      return 'Connexion impossible. Vérifiez votre réseau et réessayez.';
-    }
+    if (error instanceof TypeError) return 'Connexion impossible. Vérifiez votre réseau.';
     const message = error instanceof Error ? error.message.toLowerCase() : '';
     if (
       message.includes('network request failed') ||
       message.includes('fetch failed') ||
-      message.includes('load failed') ||
-      message.includes('networkerror')
-    ) {
-      return 'Connexion impossible. Vérifiez votre réseau et réessayez.';
-    }
+      message.includes('load failed')
+    ) return 'Connexion impossible. Vérifiez votre réseau.';
     return extractApiErrorMessage(error, 'Identifiants incorrects. Réessayez.');
   }
 
@@ -56,16 +47,11 @@ export default function RiderAuthScreen() {
     setErrorMessage('');
     setIsSubmitting(true);
     const normalizedEmail = email.trim().toLowerCase();
-
     try {
       if (mode === 'sign-in') {
         await signInRiderAccount({ email: normalizedEmail, password });
       } else {
-        await signUpRiderAccount({
-          fullName: fullName.trim(),
-          email: normalizedEmail,
-          password,
-        });
+        await signUpRiderAccount({ fullName: fullName.trim(), email: normalizedEmail, password });
       }
       router.replace('/home');
     } catch (error) {
@@ -92,204 +78,280 @@ export default function RiderAuthScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={styles.screen}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Logo */}
-        <View style={styles.logoArea}>
-          <OrbiLogo size="xl" orientation="vertical" />
-          <Text style={styles.tagline}>Votre course en quelques secondes</Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Wordmark */}
+          <View style={styles.brand}>
+            <Text style={styles.wordmark}>orbi</Text>
+            <Text style={styles.tagline}>Votre course en quelques secondes</Text>
+          </View>
 
-        {/* Mode toggle */}
-        <View style={styles.modeRow}>
-          <Pressable
-            onPress={() => { setMode('sign-in'); setErrorMessage(''); }}
-            style={[styles.modeChip, mode === 'sign-in' && styles.modeChipActive]}
-          >
-            <Text style={[styles.modeChipLabel, mode === 'sign-in' && styles.modeChipLabelActive]}>
-              Connexion
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => { setMode('sign-up'); setErrorMessage(''); }}
-            style={[styles.modeChip, mode === 'sign-up' && styles.modeChipActive]}
-          >
-            <Text style={[styles.modeChipLabel, mode === 'sign-up' && styles.modeChipLabelActive]}>
-              Créer un compte
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* Form */}
-        <View style={styles.form}>
-          {mode === 'sign-up' && (
-            <TextInput
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="Nom complet"
-              placeholderTextColor={orbiTheme.colors.muted}
-              style={styles.input}
-            />
-          )}
-
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="Adresse email"
-            placeholderTextColor={orbiTheme.colors.muted}
-            style={styles.input}
-          />
-
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="Mot de passe"
-            placeholderTextColor={orbiTheme.colors.muted}
-            style={styles.input}
-          />
-
-          {mode === 'sign-up' && (
-            <Text style={styles.passwordHint}>
-              Minimum 8 caractères · une majuscule · un chiffre · un caractère spécial (ex: !)
-            </Text>
-          )}
-
-          {Boolean(errorMessage) && (
-            <Text style={styles.errorText}>{errorMessage}</Text>
-          )}
-
-          <Pressable
-            disabled={isSubmitting || !canSubmit}
-            onPress={() => void handleSubmit()}
-            style={[styles.primaryButton, (isSubmitting || !canSubmit) && styles.buttonDisabled]}
-          >
-            <Text style={styles.primaryButtonLabel}>
-              {isSubmitting
-                ? '...'
-                : mode === 'sign-in'
-                  ? 'Se connecter'
-                  : 'Créer mon compte'}
-            </Text>
-          </Pressable>
-
-          {orbiDemoAccessEnabled && (
+          {/* Mode toggle */}
+          <View style={styles.toggle}>
             <Pressable
-              onPress={() => void handleDemoSignIn()}
-              disabled={isSubmitting}
-              style={[styles.ghostButton, isSubmitting && styles.buttonDisabled]}
+              onPress={() => { setMode('sign-in'); setErrorMessage(''); }}
+              style={[styles.toggleBtn, mode === 'sign-in' && styles.toggleBtnActive]}
             >
-              <Text style={styles.ghostButtonLabel}>Acces terrain securise</Text>
+              <Text style={[styles.toggleLabel, mode === 'sign-in' && styles.toggleLabelActive]}>
+                Connexion
+              </Text>
             </Pressable>
-          )}
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Pressable
+              onPress={() => { setMode('sign-up'); setErrorMessage(''); }}
+              style={[styles.toggleBtn, mode === 'sign-up' && styles.toggleBtnActive]}
+            >
+              <Text style={[styles.toggleLabel, mode === 'sign-up' && styles.toggleLabelActive]}>
+                Créer un compte
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Form */}
+          <View style={styles.form}>
+            {mode === 'sign-up' ? (
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>Nom complet</Text>
+                <TextInput
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="Ex : Aminata Traoré"
+                  placeholderTextColor={orbiTheme.colors.textMuted}
+                  style={styles.input}
+                  autoCapitalize="words"
+                />
+              </View>
+            ) : null}
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Adresse email</Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="exemple@gmail.com"
+                placeholderTextColor={orbiTheme.colors.textMuted}
+                style={styles.input}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Mot de passe</Text>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                placeholder={mode === 'sign-up' ? 'Min. 8 car. · Maj · Chiffre · Symbole' : '••••••••'}
+                placeholderTextColor={orbiTheme.colors.textMuted}
+                style={styles.input}
+              />
+            </View>
+
+            {Boolean(errorMessage) ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
+
+            <Pressable
+              disabled={isSubmitting || !canSubmit}
+              onPress={() => void handleSubmit()}
+              style={({ pressed }) => [
+                styles.primaryBtn,
+                (isSubmitting || !canSubmit) && styles.primaryBtnDisabled,
+                pressed && styles.primaryBtnPressed,
+              ]}
+            >
+              <Text style={styles.primaryBtnLabel}>
+                {isSubmitting ? 'Chargement…' : mode === 'sign-in' ? 'Se connecter' : 'Créer mon compte'}
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Demo access */}
+          {orbiDemoAccessEnabled ? (
+            <View style={styles.demoSection}>
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerLabel}>Accès démo</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <Pressable
+                onPress={() => void handleDemoSignIn()}
+                disabled={isSubmitting}
+                style={({ pressed }) => [styles.demoBtn, pressed && styles.demoBtnPressed]}
+              >
+                <Text style={styles.demoBtnLabel}>Connexion compte de démonstration</Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  safe: {
     flex: 1,
     backgroundColor: orbiTheme.colors.background,
   },
-  screen: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-    paddingVertical: 60,
-    gap: 24,
+  flex: {
+    flex: 1,
   },
-  logoArea: {
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
+  scroll: {
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 48,
+    gap: 28,
+  },
+
+  // Brand
+  brand: {
+    gap: 8,
+    marginBottom: 4,
+  },
+  wordmark: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: orbiTheme.colors.text,
+    letterSpacing: -1.5,
   },
   tagline: {
-    color: orbiTheme.colors.muted,
-    fontSize: 15,
-    textAlign: 'center',
+    fontSize: 16,
+    color: orbiTheme.colors.textMuted,
+    fontWeight: '400',
   },
-  modeRow: {
+
+  // Mode toggle
+  toggle: {
     flexDirection: 'row',
-    gap: 10,
-  },
-  modeChip: {
-    flex: 1,
-    borderRadius: 14,
-    paddingVertical: 12,
     backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderRadius: 12,
+    padding: 3,
+    gap: 2,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
   },
-  modeChipActive: {
-    backgroundColor: orbiTheme.colors.teal,
-    borderColor: orbiTheme.colors.teal,
+  toggleBtnActive: {
+    backgroundColor: orbiTheme.colors.background,
+    ...orbiTheme.shadows.card,
   },
-  modeChipLabel: {
-    color: orbiTheme.colors.muted,
-    fontWeight: '700',
+  toggleLabel: {
     fontSize: 14,
+    fontWeight: '600',
+    color: orbiTheme.colors.textMuted,
   },
-  modeChipLabelActive: {
-    color: '#052a28',
+  toggleLabelActive: {
+    color: orbiTheme.colors.text,
   },
+
+  // Form
   form: {
-    gap: 12,
+    gap: 14,
+  },
+  field: {
+    gap: 6,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: orbiTheme.colors.textSoft,
+    paddingLeft: 2,
   },
   input: {
-    borderRadius: 14,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    color: orbiTheme.colors.text,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 15,
+    fontSize: 16,
+    color: orbiTheme.colors.text,
+  },
+
+  // Error
+  errorBox: {
+    backgroundColor: 'rgba(255, 59, 48, 0.08)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.2)',
+    padding: 12,
   },
   errorText: {
-    color: '#f87171',
+    color: orbiTheme.colors.danger,
     fontSize: 13,
-    textAlign: 'center',
-    paddingHorizontal: 4,
+    fontWeight: '500',
+    lineHeight: 18,
   },
-  primaryButton: {
-    marginTop: 4,
-    backgroundColor: orbiTheme.colors.teal,
+
+  // Primary button
+  primaryBtn: {
+    backgroundColor: orbiTheme.colors.text,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
+    marginTop: 4,
+    ...orbiTheme.shadows.button,
   },
-  primaryButtonLabel: {
-    color: '#052a28',
-    fontWeight: '800',
+  primaryBtnDisabled: {
+    opacity: 0.38,
+  },
+  primaryBtnPressed: {
+    opacity: 0.82,
+  },
+  primaryBtnLabel: {
+    color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '700',
   },
-  ghostButton: {
+
+  // Demo section
+  demoSection: {
+    gap: 14,
+    marginTop: 4,
+  },
+  divider: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    gap: 10,
   },
-  ghostButtonLabel: {
-    color: orbiTheme.colors.muted,
-    fontSize: 13,
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: orbiTheme.colors.border,
+  },
+  dividerLabel: {
+    fontSize: 12,
     fontWeight: '600',
+    color: orbiTheme.colors.textMuted,
   },
-  passwordHint: {
-    color: orbiTheme.colors.muted,
-    fontSize: 11,
-    lineHeight: 16,
-    paddingHorizontal: 4,
+  demoBtn: {
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.background,
   },
-  buttonDisabled: {
-    opacity: 0.5,
+  demoBtnPressed: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+  },
+  demoBtnLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: orbiTheme.colors.textSoft,
   },
 });

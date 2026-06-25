@@ -3,6 +3,7 @@ import {
   extractApiErrorMessage,
   type OrbiClientErrorSurface,
 } from '@orbi/api';
+import { orbiCopy } from '@orbi/ui';
 import { router } from 'expo-router';
 import { clearDriverPersistedSession } from './auth';
 import { enqueueDriverMobileErrorReport } from './mobile-error-reporting';
@@ -27,9 +28,8 @@ export type DriverAppErrorFeedback = {
 const defaultDriverErrorCopy: DriverErrorCopy = {
   expiredSession:
     'Votre session chauffeur a expire. Reconnectez-vous pour reprendre le direct.',
-  network:
-    'Connexion API indisponible pour le moment. La vue locale reste visible en attendant la reprise reseau.',
-  fallback: 'Une erreur reseau ou serveur est survenue.',
+  network: orbiCopy.driverNetworkUnavailable,
+  fallback: orbiCopy.serviceUnavailable,
 };
 
 export async function resolveDriverAppError(

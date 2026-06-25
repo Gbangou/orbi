@@ -7,12 +7,15 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useFonts, Raleway_800ExtraBold } from '@expo-google-fonts/raleway';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import {
+  useFonts,
+  Raleway_700Bold,
+  Raleway_800ExtraBold,
+} from '@expo-google-fonts/raleway';
 import * as Notifications from 'expo-notifications';
 import { orbiTheme } from '@orbi/ui';
 import { hasPersistedRiderSession } from '../lib/auth';
-import { OrbiLogo } from '../lib/orbi-logo';
 
 const TypedStack = Stack as any;
 
@@ -30,16 +33,15 @@ export default function RootLayout() {
   const rootNavigationState = useRootNavigationState();
   const [isNavigationMounted, setIsNavigationMounted] = useState(false);
   const [isResolved, setIsResolved] = useState(false);
-  useFonts({ Raleway_800ExtraBold });
+
+  const [fontsLoaded] = useFonts({
+    Raleway_700Bold,
+    Raleway_800ExtraBold,
+  });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsNavigationMounted(true);
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-    };
+    const timer = setTimeout(() => setIsNavigationMounted(true), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -58,71 +60,56 @@ export default function RootLayout() {
         }
       },
     );
-
     return () => subscription.remove();
   }, [router]);
 
   useEffect(() => {
-    if (!isNavigationMounted || !rootNavigationState?.key) {
-      return;
-    }
+    if (!isNavigationMounted || !rootNavigationState?.key) return;
 
     let isMounted = true;
 
     async function resolveSession() {
       const hasSession = await hasPersistedRiderSession();
-
-      if (!isMounted) {
-        return;
-      }
+      if (!isMounted) return;
 
       let targetPath: '/auth' | '/home' | null = null;
-
-      if (!hasSession && pathname !== '/auth') {
-        targetPath = '/auth';
-      }
-
-      if (hasSession && pathname === '/auth') {
-        targetPath = '/home';
-      }
+      if (!hasSession && pathname !== '/auth') targetPath = '/auth';
+      if (hasSession && pathname === '/auth') targetPath = '/home';
 
       setIsResolved(true);
 
       if (targetPath) {
         setTimeout(() => {
-          if (isMounted) {
-            router.replace(targetPath);
-          }
+          if (isMounted) router.replace(targetPath);
         }, 0);
       }
     }
 
     void resolveSession();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [isNavigationMounted, pathname, rootNavigationState?.key, router]);
+
+  const showSplash = !isResolved || !fontsLoaded;
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <TypedStack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#07111d' },
+          contentStyle: { backgroundColor: orbiTheme.colors.background },
         }}
       />
-      {!isResolved ? (
-        <View style={styles.loadingScreen}>
-          <View style={styles.loadingCard}>
-            <OrbiLogo size="sm" />
-            <Text style={styles.loadingTitle}>Preparation de votre trajet</Text>
-            <Text style={styles.loadingText}>
-              Verification de la session, des acces et de la reprise de vos
-              reservations et suivis en direct.
-            </Text>
+      {showSplash ? (
+        <View style={styles.splash}>
+          <View style={styles.splashLogo}>
+            <Text style={styles.splashWordmark}>orbi</Text>
           </View>
+          <ActivityIndicator
+            size="small"
+            color={orbiTheme.colors.teal}
+            style={styles.splashSpinner}
+          />
         </View>
       ) : null}
     </>
@@ -130,28 +117,24 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  loadingScreen: {
+  splash: {
     ...StyleSheet.absoluteFillObject,
-    flex: 1,
     backgroundColor: orbiTheme.colors.background,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    gap: 32,
   },
-  loadingCard: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 24,
-    gap: 10,
+  splashLogo: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  loadingTitle: {
-    color: orbiTheme.colors.text,
-    fontSize: 28,
+  splashWordmark: {
+    fontSize: 42,
     fontWeight: '800',
+    color: orbiTheme.colors.text,
+    letterSpacing: -1,
   },
-  loadingText: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 21,
+  splashSpinner: {
+    marginTop: 8,
   },
 });

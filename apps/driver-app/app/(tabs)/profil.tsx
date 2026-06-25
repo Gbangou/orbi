@@ -20,7 +20,7 @@ import {
   upsertDriverOnboarding,
 } from '@orbi/api';
 import { router } from 'expo-router';
-import { formatOperationalStatus, orbiTheme } from '@orbi/ui';
+import { formatOperationalStatus, orbiCopy, orbiTheme } from '@orbi/ui';
 import {
   InsightBadge,
   LiveStatusBanner,
@@ -531,8 +531,8 @@ export default function ProfilScreen() {
       }
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
-        network: 'Profil local de secours affiche en attendant la connexion API.',
-        fallback: 'Profil local de secours affiche en attendant la connexion API.',
+        network: orbiCopy.driverNetworkUnavailable,
+        fallback: orbiCopy.serviceUnavailable,
       });
 
       if (!silent) {
@@ -726,7 +726,7 @@ export default function ProfilScreen() {
               ? `Mission active: ${flow.primaryRouteLabel}.`
               : flow.operationalStatus === 'SUSPENDED'
                 ? 'Le compte est suspendu. Les operations doivent lever le blocage avant reprise du direct.'
-                : 'Le dossier, les documents et les donnees vehicule restent alignes avec le backend et la revue operations.'
+                : 'Le dossier, les documents et les donnees vehicule restent alignes avec la revue operations.'
         }
         tone={profileTransitionLabel ? 'sky' : flow.operationalStatus === 'SUSPENDED' ? 'rose' : 'amber'}
       />
@@ -1331,7 +1331,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: 'rgba(248, 113, 113, 0.12)',
+    backgroundColor: 'rgba(255, 59, 48, 0.07)',
     borderWidth: 1,
     borderColor: orbiTheme.colors.danger,
   },
@@ -1349,8 +1349,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardHighlight: {
-    borderColor: 'rgba(56, 189, 248, 0.42)',
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    borderColor: orbiTheme.colors.teal,
+    backgroundColor: orbiTheme.colors.accentLight,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -1526,7 +1526,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   documentStatusRowFresh: {
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingBottom: 10,
@@ -1558,7 +1558,7 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.success,
   },
   badgeDanger: {
-    backgroundColor: 'rgba(248, 113, 113, 0.18)',
+    backgroundColor: 'rgba(255, 59, 48, 0.08)',
     color: orbiTheme.colors.danger,
   },
   badgePending: {
@@ -1572,7 +1572,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   timelineRowFresh: {
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingBottom: 10,

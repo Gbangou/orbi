@@ -485,8 +485,8 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   heroCardHighlight: {
-    borderColor: 'rgba(56, 189, 248, 0.42)',
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    borderColor: orbiTheme.colors.teal,
+    backgroundColor: orbiTheme.colors.accentLight,
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -603,8 +603,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tripCardFresh: {
-    borderColor: 'rgba(56, 189, 248, 0.4)',
-    backgroundColor: 'rgba(56, 189, 248, 0.07)',
+    borderColor: orbiTheme.colors.teal,
+    backgroundColor: orbiTheme.colors.accentLight,
   },
   tripBadge: {
     alignSelf: 'flex-start',

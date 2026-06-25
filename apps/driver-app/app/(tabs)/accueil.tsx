@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import {
   fetchDriverEarnings,
   fetchDriverOffers,
@@ -15,23 +15,14 @@ import {
 import {
   describeRealtimeEvent,
   describeRealtimeConnection,
-  formatRealtimeBadgeLabel,
-  formatOperationalStatus,
   orbiCopy,
   orbiTheme,
 } from '@orbi/ui';
-import {
-  DashboardMetricCard,
-  LiveHeroCard,
-  MetricTile,
-  QuickActionCard,
-  RouteSignalCard,
-} from '../../lib/realtime-widgets';
+import { MetricTile } from '../../lib/realtime-widgets';
 import { restoreDriverSession } from '../../lib/auth';
 import { formatDriverEarningsAmount } from '../../lib/driver-earnings-signal';
 import { resolveDriverAppError } from '../../lib/session-feedback';
 import {
-  formatReservationCountdown,
   useReservationExpiryRefresh,
   useReservationClock,
 } from '../../lib/offer-reservation';
@@ -41,21 +32,12 @@ import {
   resolveDriverActiveFlow,
   resolveDriverReservationChangeSet,
 } from '../../lib/driver-active-flow';
-import {
-  buildDriverOfferDetailLines,
-  formatDriverOfferFare,
-  buildDriverOfferInsights,
-  buildDriverOfferNote,
-} from '../../lib/offer-signal';
 import { useDriverPresence } from '../../lib/use-driver-presence';
 import { useDriverRealtimeStream } from '../../lib/use-driver-realtime-stream';
-import { OrbiLogo } from '../../lib/orbi-logo';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { buildDriverShiftReadiness } from '../../lib/driver-shift-readiness';
 import { DriverHomeMapView } from '../../lib/driver-home-map-view';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const MAP_HEIGHT = Math.round(SCREEN_HEIGHT * 0.38);
 const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
 
 const fallbackFatigue: DriverFatigueStatus = {
@@ -71,69 +53,50 @@ const fallbackFatigue: DriverFatigueStatus = {
 };
 
 function buildInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('') || 'OR';
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join('') || 'OR'
+  );
 }
 
-function OfferMissionPreview({ offer }: { offer: DriverOffer }) {
+// Mini offer preview — used inside the offer cards
+function OfferChip({ offer }: { offer: DriverOffer }) {
   const isMoto = offer.category === 'motorcycle';
-  const accent = isMoto ? orbiTheme.colors.teal : orbiTheme.colors.amber;
-
   return (
-    <View style={styles.offerMission}>
-      <View style={styles.offerMissionTop}>
-        <View style={[styles.offerAvatar, { borderColor: accent }]}>
-          <Text style={[styles.offerAvatarText, { color: accent }]}>
-            {buildInitials(offer.riderName)}
-          </Text>
-        </View>
-        <View style={styles.offerRoutePreview}>
-          <View style={[styles.offerRouteDot, { backgroundColor: orbiTheme.colors.sky }]} />
-          <View style={styles.offerRouteLine} />
-          <View style={[styles.offerRouteDot, { backgroundColor: orbiTheme.colors.amber }]} />
-        </View>
-        <View style={styles.offerVehicleBadge}>
-          <View
-            style={[
-              styles.offerVehicleBody,
-              isMoto ? styles.offerMotoBody : styles.offerCarBody,
-              { backgroundColor: accent },
-            ]}
-          />
-          <View style={styles.offerVehicleWheelRow}>
-            <View style={[styles.offerVehicleWheel, { borderColor: accent }]} />
-            <View style={[styles.offerVehicleWheel, { borderColor: accent }]} />
-          </View>
-        </View>
-      </View>
-      <View style={styles.offerMissionMetrics}>
-        <MetricTile
-          label="Approche"
-          value={
-            typeof offer.pickupDistanceKm === 'number'
-              ? `${offer.pickupDistanceKm.toFixed(1)} km`
-              : `${offer.etaToPickupMinutes} min`
-          }
-          helper="Vers pickup"
-        />
-        <MetricTile
-          label="Trajet"
-          value={`${offer.distanceKm.toFixed(1)} km`}
-          helper={isMoto ? 'Mission moto' : 'Mission voiture'}
-        />
-        <MetricTile
-          label="Net"
-          value={formatDriverEarningsAmount(offer.driverPayout ?? offer.fare)}
-          helper="Gain chauffeur"
-        />
-      </View>
+    <View style={chip.wrap}>
+      <View style={[chip.dot, { backgroundColor: isMoto ? orbiTheme.colors.teal : orbiTheme.colors.amber }]} />
+      <Text style={chip.name}>{buildInitials(offer.riderName)}</Text>
+      <Text style={chip.dist}>
+        {typeof offer.pickupDistanceKm === 'number'
+          ? `${offer.pickupDistanceKm.toFixed(1)} km`
+          : `${offer.etaToPickupMinutes} min`}
+      </Text>
+      <Text style={chip.fare}>{formatDriverEarningsAmount(offer.driverPayout ?? offer.fare)}</Text>
     </View>
   );
 }
+
+const chip = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  name: { fontSize: 13, fontWeight: '700', color: orbiTheme.colors.text },
+  dist: { fontSize: 12, color: orbiTheme.colors.textMuted, flex: 1 },
+  fare: { fontSize: 13, fontWeight: '700', color: orbiTheme.colors.text },
+});
 
 export default function DriverHomeScreen() {
   const router = useRouter();
@@ -155,9 +118,7 @@ export default function DriverHomeScreen() {
   const previousFlowStateRef = useRef<string | null>(null);
 
   const loadDriverHome = useCallback(async (silent = false) => {
-    if (!silent) {
-      setIsRefreshing(true);
-    }
+    if (!silent) setIsRefreshing(true);
 
     try {
       const { authClient, me, session } = await restoreDriverSession();
@@ -186,32 +147,23 @@ export default function DriverHomeScreen() {
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
         surface: 'profile',
-        network: 'Connexion API indisponible: aucune offre fictive affichee.',
+        network: orbiCopy.driverNetworkUnavailable,
       });
-
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
-      }
-
+      if (feedback.shouldClearSessionToken) setSessionToken(null);
       setOffers([]);
       setHistory(null);
       setEarnings(null);
       setDriverProfileStatus('OFFLINE');
       setVehicleCount(null);
-      if (!silent) {
-        setStatusNote(feedback.message);
-      }
+      if (!silent) setStatusNote(feedback.message);
     } finally {
-      if (silent) {
-        setIsRealtimeSyncing(false);
-      }
-      if (!silent) {
-        setIsRefreshing(false);
-      }
+      if (silent) setIsRealtimeSyncing(false);
+      if (!silent) setIsRefreshing(false);
     }
   }, []);
 
   useLiveRefresh(() => loadDriverHome(true), 25000);
+
   useDriverRealtimeStream(
     sessionToken,
     (eventType) => {
@@ -220,105 +172,59 @@ export default function DriverHomeScreen() {
       void loadDriverHome(true);
     },
     {
-      onHeartbeat: () => {
-        setStatusNote(describeRealtimeConnection('driver', 'active'));
-      },
-      onOpen: () => {
-        setIsRealtimeSyncing(false);
-        setStatusNote(describeRealtimeConnection('driver', 'connected'));
-      },
-      onError: () => {
-        setIsRealtimeSyncing(false);
-        setStatusNote(describeRealtimeConnection('driver', 'reconnecting'));
-      },
+      onHeartbeat: () => setStatusNote(describeRealtimeConnection('driver', 'active')),
+      onOpen: () => { setIsRealtimeSyncing(false); setStatusNote(describeRealtimeConnection('driver', 'connected')); },
+      onError: () => { setIsRealtimeSyncing(false); setStatusNote(describeRealtimeConnection('driver', 'reconnecting')); },
     },
   );
 
   const reservationNow = useReservationClock();
-  const flow = resolveDriverActiveFlow({
-    history,
-    offers,
-    reservationNow,
-    driverProfileStatus,
-  });
+  const flow = resolveDriverActiveFlow({ history, offers, reservationNow, driverProfileStatus });
   const { activeTrip, activeFlowState, visibleOffers } = flow;
-  const shiftReadiness = buildDriverShiftReadiness({
-    flow,
-    fatigue: driverFatigue,
-    earningsToday: earnings?.summary.today,
-  });
-  const { presenceNote, latestPosition: driverPosition } = useDriverPresence(
+
+  void buildDriverShiftReadiness({ flow, fatigue: driverFatigue, earningsToday: earnings?.summary.today });
+
+  const { latestPosition: driverPosition } = useDriverPresence(
     flow.availabilityStatus === 'ONLINE' || Boolean(activeTrip),
   );
-  useReservationExpiryRefresh(
-    visibleOffers,
-    () => loadDriverHome(true),
-    flow.canReceiveOffers,
-  );
+  useReservationExpiryRefresh(visibleOffers, () => loadDriverHome(true), flow.canReceiveOffers);
 
   useEffect(() => {
     const previousVisibleOfferIds = previousVisibleOfferIdsRef.current;
-    const nextVisibleOfferIds = visibleOffers.map((offer) => offer.id);
-
+    const nextVisibleOfferIds = visibleOffers.map((o) => o.id);
     if (previousVisibleOfferIds && flow.canReceiveOffers) {
-      const { freshOfferIds: nextFreshOfferIds, expiredOfferIds } =
+      const { freshOfferIds: next, expiredOfferIds } =
         resolveDriverReservationChangeSet(previousVisibleOfferIds, nextVisibleOfferIds);
-
-      if (nextFreshOfferIds.length > 0) {
-        setFreshOfferIds(nextFreshOfferIds);
-      }
-
-      if (expiredOfferIds.length > 0) {
-        setRecentlyExpiredCount(expiredOfferIds.length);
-      }
+      if (next.length > 0) setFreshOfferIds(next);
+      if (expiredOfferIds.length > 0) setRecentlyExpiredCount(expiredOfferIds.length);
     }
-
     previousVisibleOfferIdsRef.current = nextVisibleOfferIds;
   }, [flow.canReceiveOffers, visibleOffers]);
 
   useEffect(() => {
-    if (!freshOfferIds.length) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setFreshOfferIds([]);
-    }, 5000);
-
-    return () => clearTimeout(timeout);
+    if (!freshOfferIds.length) return;
+    const t = setTimeout(() => setFreshOfferIds([]), 5000);
+    return () => clearTimeout(t);
   }, [freshOfferIds]);
 
   useEffect(() => {
-    if (!recentlyExpiredCount) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setRecentlyExpiredCount(0);
-    }, 5000);
-
-    return () => clearTimeout(timeout);
+    if (!recentlyExpiredCount) return;
+    const t = setTimeout(() => setRecentlyExpiredCount(0), 5000);
+    return () => clearTimeout(t);
   }, [recentlyExpiredCount]);
 
   useEffect(() => {
-    const previousFlowState = previousFlowStateRef.current;
+    const prev = previousFlowStateRef.current;
     setActiveTripTransitionLabel(
-      buildDriverFlowTransitionLabel(previousFlowState, activeFlowState, 'home'),
+      buildDriverFlowTransitionLabel(prev, activeFlowState, 'home'),
     );
-
     previousFlowStateRef.current = activeFlowState;
   }, [activeFlowState]);
 
   useEffect(() => {
-    if (!activeTripTransitionLabel) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setActiveTripTransitionLabel(null);
-    }, 5000);
-
-    return () => clearTimeout(timeout);
+    if (!activeTripTransitionLabel) return;
+    const t = setTimeout(() => setActiveTripTransitionLabel(null), 5000);
+    return () => clearTimeout(t);
   }, [activeTripTransitionLabel]);
 
   async function handleToggleAvailability() {
@@ -329,13 +235,9 @@ export default function DriverHomeScreen() {
         ? 'Passage en ligne du compte chauffeur...'
         : 'Passage hors ligne du compte chauffeur...',
     );
-
     try {
       const { authClient } = await restoreDriverSession();
-      const response = await updateDriverAvailabilityWithApi(
-        authClient,
-        nextStatus,
-      );
+      const response = await updateDriverAvailabilityWithApi(authClient, nextStatus);
       setDriverProfileStatus(response.availability.status);
       setStatusNote(
         response.availability.status === 'ONLINE'
@@ -348,337 +250,132 @@ export default function DriverHomeScreen() {
         surface: 'driver-availability',
         fallback: "Le changement de disponibilite n'a pas pu etre applique.",
       });
-
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
-      }
-
+      if (feedback.shouldClearSessionToken) setSessionToken(null);
       setStatusNote(feedback.message);
     } finally {
       setIsTogglingAvailability(false);
     }
   }
 
+  // suppress unused state warnings for vars managed by callbacks
+  void statusNote; void isRefreshing; void isRealtimeSyncing; void recentlyExpiredCount;
+
+  const isOnline = flow.availabilityStatus === 'ONLINE';
+  const sheetH = activeTrip ? 250 : isOnline ? 220 : 190;
+
   return (
     <View style={styles.root}>
-      {/* Carte position driver + demandes autour */}
-      <View style={[styles.mapContainer, { height: MAP_HEIGHT }]}>
-        <DriverHomeMapView
-          driverLat={driverPosition?.latitude}
-          driverLng={driverPosition?.longitude}
-          offers={visibleOffers}
-          style={styles.map}
-        />
+      {/* Full-screen map */}
+      <DriverHomeMapView
+        driverLat={driverPosition?.latitude}
+        driverLng={driverPosition?.longitude}
+        offers={visibleOffers}
+        style={styles.map}
+      />
 
-        {/* Badge statut GPS */}
-        <View style={styles.mapBadge}>
-          <View
-            style={[
-              styles.mapBadgeDot,
-              { backgroundColor: flow.availabilityStatus === 'ONLINE' ? orbiTheme.colors.teal : orbiTheme.colors.muted },
-            ]}
-          />
-          <Text style={styles.mapBadgeText}>
-            {flow.availabilityStatus === 'ONLINE'
-              ? `${visibleOffers.length > 0 ? `${visibleOffers.length} offre${visibleOffers.length > 1 ? 's' : ''}` : 'En ligne'} — Ouagadougou`
-              : 'Hors ligne'}
-          </Text>
+      {/* Floating top bar */}
+      <SafeAreaView style={styles.topBarSafe} pointerEvents="box-none">
+        <View style={styles.topBar}>
+          <View style={styles.earningsBadge}>
+            <Text style={styles.earningsLabel}>Aujourd'hui</Text>
+            <Text style={styles.earningsValue}>
+              {earnings?.summary.today
+                ? `${earnings.summary.today.toLocaleString('fr-BF')} XOF`
+                : '— XOF'}
+            </Text>
+          </View>
+          <View style={styles.statusPill}>
+            <View style={[styles.statusDot, { backgroundColor: isOnline ? orbiTheme.colors.teal : '#BBBBBB' }]} />
+            <Text style={[styles.statusPillText, { color: isOnline ? orbiTheme.colors.teal : orbiTheme.colors.textMuted }]}>
+              {isOnline ? 'En ligne' : 'Hors ligne'}
+            </Text>
+          </View>
         </View>
+      </SafeAreaView>
 
-        {/* Overlay disponibilité en bas de la carte */}
-        <View style={styles.mapOverlay}>
+      {/* Big Bolt-style toggle (floating, shown when no active trip) */}
+      {!activeTrip ? (
+        <View style={styles.toggleFloat} pointerEvents="box-none">
           <Pressable
-            accessibilityLabel={
-              flow.availabilityStatus === 'ONLINE'
-                ? 'Passer le chauffeur hors ligne'
-                : 'Passer le chauffeur en ligne'
-            }
             accessibilityRole="button"
             hitSlop={touchHitSlop}
             onPress={() => void handleToggleAvailability()}
-            disabled={isRefreshing || isTogglingAvailability || flow.availabilityLocked}
-            style={[
-              styles.availabilityOverlayButton,
-              flow.availabilityStatus === 'ONLINE'
-                ? styles.availabilityOverlayOffline
-                : styles.availabilityOverlayOnline,
-              isRefreshing || isTogglingAvailability || flow.availabilityLocked
-                ? styles.inlineButtonDisabled
-                : null,
+            disabled={isTogglingAvailability || flow.availabilityLocked}
+            style={({ pressed }) => [
+              styles.toggleBtn,
+              isOnline ? styles.toggleOnline : styles.toggleOffline,
+              (isTogglingAvailability || flow.availabilityLocked) && styles.toggleDisabled,
+              pressed && styles.togglePressed,
             ]}
           >
-            <Text style={styles.availabilityOverlayLabel}>
-              {isTogglingAvailability
-                ? 'Mise a jour...'
-                : activeTrip
-                  ? `Course active — ${flow.primaryRouteLabel}`
-                  : flow.availabilityStatus === 'ONLINE'
-                    ? 'En ligne · Passer hors ligne'
-                    : 'Hors ligne · Passer en ligne'}
+            <Text style={[styles.toggleLabel, { color: isOnline ? orbiTheme.colors.textSoft : '#FFFFFF' }]}>
+              {isTogglingAvailability ? '...' : isOnline ? 'Passer hors ligne' : 'Passer en ligne'}
             </Text>
           </Pressable>
         </View>
-      </View>
+      ) : null}
 
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        <OrbiLogo size="sm" />
-        <Text style={styles.title}>{orbiCopy.driverHeadline}</Text>
+      {/* Bottom sheet */}
+      <View style={[styles.sheet, { height: sheetH }]}>
+        <View style={styles.handle} />
 
-        {vehicleCount === 0 ? (
-          <View style={styles.setupCard}>
-            <Text style={styles.setupEyebrow}>Configuration requise</Text>
-            <Text style={styles.setupTitle}>Enregistrez votre véhicule</Text>
-            <Text style={styles.setupBody}>
-              Un véhicule actif est nécessaire pour passer en ligne et recevoir des courses.
-            </Text>
-            <Pressable
-              style={styles.setupButton}
-              onPress={() => router.push('/onboarding')}
-            >
-              <Text style={styles.setupButtonLabel}>Configurer maintenant →</Text>
-            </Pressable>
+        {activeTrip ? (
+          <Pressable style={styles.tripCard} onPress={() => router.push('/offres')}>
+            <View style={styles.tripStatusDot} />
+            <View style={styles.tripInfo}>
+              <Text style={styles.tripTitle}>Course active</Text>
+              <Text style={styles.tripRoute} numberOfLines={1}>
+                {flow.primaryRouteLabel ?? 'Trajet en cours'}
+              </Text>
+              <Text style={styles.tripStatus}>{flow.primaryStatusLabel}</Text>
+              {activeTripTransitionLabel ? (
+                <Text style={styles.tripTransition}>{activeTripTransitionLabel}</Text>
+              ) : null}
+            </View>
+            <View style={styles.tripArrow}>
+              <Text style={styles.tripArrowText}>›</Text>
+            </View>
+          </Pressable>
+        ) : isOnline ? (
+          <View style={styles.onlineSheet}>
+            <View style={styles.onlineRow}>
+              <View>
+                <Text style={styles.onlineTitle}>
+                  {visibleOffers.length > 0
+                    ? `${visibleOffers.length} offre${visibleOffers.length > 1 ? 's' : ''} disponible${visibleOffers.length > 1 ? 's' : ''}`
+                    : 'En attente de courses…'}
+                </Text>
+                <Text style={styles.onlineSub}>Ouagadougou — zone urbaine</Text>
+              </View>
+              {visibleOffers.length > 0 ? (
+                <Pressable onPress={() => router.push('/offres')} style={styles.viewOffersBtn}>
+                  <Text style={styles.viewOffersBtnLabel}>Voir</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            {visibleOffers.slice(0, 2).map((o) => (
+              <OfferChip key={o.id} offer={o} />
+            ))}
+            {vehicleCount === 0 ? (
+              <Pressable onPress={() => router.push('/onboarding')} style={styles.setupBtn}>
+                <Text style={styles.setupBtnLabel}>Configurer un véhicule →</Text>
+              </Pressable>
+            ) : null}
           </View>
-        ) : null}
-
-      <LiveHeroCard
-        eyebrow="Statut"
-        isHighlighted={Boolean(freshOfferIds.length || activeTripTransitionLabel)}
-        liveLabel={formatRealtimeBadgeLabel('Temps reel', isRealtimeSyncing)}
-        liveTone={isRealtimeSyncing ? 'sky' : 'teal'}
-        message={statusNote}
-        syncMessage={
-          isRealtimeSyncing
-            ? 'Synchronisation silencieuse en cours apres evenement live.'
-            : null
-        }
-        title={flow.heroTitle}
-        transitionMessage={
-          freshOfferIds.length
-            ? freshOfferIds.length > 1
-              ? `${freshOfferIds.length} offres fraiches viennent d etre resynchronisees.`
-              : 'Une nouvelle offre vient d etre resynchronisee.'
-            : activeTripTransitionLabel
-        }
-      >
-        {recentlyExpiredCount ? (
-          <Text style={styles.transitionMetaMuted}>
-            {recentlyExpiredCount > 1
-              ? `${recentlyExpiredCount} reservations ont disparu apres expiration.`
-              : 'Une reservation a disparu apres expiration.'
-            }
-          </Text>
-        ) : null}
-        <Text style={styles.meta}>{presenceNote}</Text>
-        <View style={styles.signalGrid}>
-          <MetricTile
-            label="Mission"
-            value={flow.primaryStatusLabel}
-          />
-          <MetricTile
-            label="Reservations"
-            value={String(flow.visibleOfferCount)}
-          />
-          <MetricTile
-            label="Profil"
-            value={formatOperationalStatus(driverProfileStatus)}
-          />
-          <MetricTile
-            label="Cap aujourd hui"
-            value={formatDriverEarningsAmount(earnings?.summary.today ?? 0)}
-          />
-        </View>
-        {flow.operationalStatus === 'SUSPENDED' ? (
-          <Text style={styles.meta}>
-            Le profil est suspendu. Le support operations doit reautoriser le compte avant toute reprise.
-          </Text>
-        ) : driverProfileStatus === 'BUSY' ? (
-          <Text style={styles.meta}>Le backend vous maintient occupe pendant la course en cours.</Text>
-        ) : null}
-        <Pressable
-          accessibilityLabel={
-            flow.availabilityStatus === 'ONLINE'
-              ? 'Passer le chauffeur hors ligne'
-              : 'Passer le chauffeur en ligne'
-          }
-          accessibilityRole="button"
-          hitSlop={touchHitSlop}
-          onPress={() => void handleToggleAvailability()}
-          disabled={isRefreshing || isTogglingAvailability || flow.availabilityLocked}
-          style={[
-            styles.availabilityButton,
-            flow.availabilityStatus === 'ONLINE'
-              ? styles.availabilityButtonOffline
-              : styles.availabilityButtonOnline,
-            isRefreshing || isTogglingAvailability || flow.availabilityLocked
-              ? styles.inlineButtonDisabled
-              : null,
-          ]}
-        >
-          <Text
-            style={[
-              styles.availabilityButtonLabel,
-              flow.availabilityStatus === 'ONLINE'
-                ? styles.availabilityButtonLabelOffline
-                : styles.availabilityButtonLabelOnline,
-            ]}
-          >
-            {isTogglingAvailability
-              ? 'Mise a jour...'
-              : activeTrip
-                ? 'Statut verrouille pendant la course'
-                : flow.operationalStatus === 'SUSPENDED'
-                  ? 'Suspension geree par les operations'
-                  : flow.availabilityStatus === 'ONLINE'
-                  ? 'Passer hors ligne'
-                  : 'Passer en ligne'}
-          </Text>
-        </Pressable>
-        <Pressable
-          accessibilityLabel="Actualiser les donnees chauffeur en direct"
-          accessibilityRole="button"
-          hitSlop={touchHitSlop}
-          onPress={() => void loadDriverHome()}
-          disabled={isRefreshing || isTogglingAvailability}
-          style={[styles.inlineButton, isRefreshing ? styles.inlineButtonDisabled : null]}
-        >
-          <Text style={styles.inlineButtonLabel}>
-            {isRefreshing ? 'Actualisation...' : 'Actualiser le direct'}
-          </Text>
-        </Pressable>
-      </LiveHeroCard>
-
-      <RouteSignalCard
-        eyebrow={shiftReadiness.eyebrow}
-        badgeLabel={shiftReadiness.scoreLabel}
-        badgeTone={shiftReadiness.tone}
-        title={shiftReadiness.title}
-        description={shiftReadiness.description}
-        insights={shiftReadiness.insights}
-        note={shiftReadiness.note}
-        noteTone={shiftReadiness.noteTone}
-      />
-
-      <View style={styles.metricsGrid}>
-        <DashboardMetricCard
-          label="Aujourd hui"
-          value={formatDriverEarningsAmount(earnings?.summary.today ?? 0)}
-          helper="Revenus du jour"
-          tone="amber"
-        />
-        <DashboardMetricCard
-          label="Semaine"
-          value={formatDriverEarningsAmount(earnings?.summary.week ?? 0)}
-          helper={`${earnings?.summary.completedTrips ?? 0} courses completees`}
-          tone="sky"
-        />
+        ) : (
+          <View style={styles.offlineSheet}>
+            <Text style={styles.offlineTitle}>Vous êtes hors ligne</Text>
+            <Text style={styles.offlineSub}>
+              Appuyez sur "Passer en ligne" pour recevoir des courses.
+            </Text>
+            {vehicleCount === 0 ? (
+              <Pressable onPress={() => router.push('/onboarding')} style={styles.setupBtn}>
+                <Text style={styles.setupBtnLabel}>Configurer un véhicule d'abord →</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        )}
       </View>
-
-      {activeTrip ? (
-        <View
-          style={[
-            styles.activeTripCard,
-            activeTripTransitionLabel ? styles.activeTripCardHighlight : null,
-          ]}
-        >
-          <Text style={styles.activeTripEyebrow}>Course active</Text>
-          <Text style={styles.activeTripTitle}>{flow.primaryRouteLabel}</Text>
-          <Text style={styles.meta}>Client: {activeTrip.counterpartyName ?? 'Affecte automatiquement'}</Text>
-          <Text style={styles.meta}>Vehicule: {activeTrip.vehicleLabel ?? 'Vehicule actif'}</Text>
-          <Text style={styles.activeTripStatus}>Statut {flow.primaryStatusLabel}</Text>
-          {activeTripTransitionLabel ? (
-            <Text style={styles.transitionMeta}>{activeTripTransitionLabel}</Text>
-          ) : null}
-          <QuickActionCard
-            eyebrow="Direct"
-            title="Ouvrir la course en direct"
-            description="Retrouver la navigation, le client et le suivi d execution."
-            tone="amber"
-            emphasis="primary"
-            onPress={() => router.push('/offres')}
-          />
-        </View>
-      ) : null}
-
-      <Text style={styles.section}>Offres en attente</Text>
-      {flow.operationalStatus === 'SUSPENDED' ? (
-        <RouteSignalCard
-          eyebrow="Dispatch"
-          title="Compte suspendu"
-          description="Les reservations sont masquees tant que les operations n ont pas reactive le profil chauffeur."
-          insights={[
-            { label: 'Profil', value: 'Suspendu', tone: 'rose' },
-            { label: 'Flux', value: 'Bloque', tone: 'amber' },
-          ]}
-          note="Le cockpit reviendra automatiquement au dispatch des que la suspension sera levee."
-          noteTone="rose"
-        />
-      ) : flow.availabilityStatus !== 'ONLINE' ? (
-        <RouteSignalCard
-          eyebrow="Dispatch"
-          title="Aucune offre pendant le mode hors ligne"
-          description="Passez en ligne pour recevoir des demandes compatibles avec votre vehicule."
-          insights={[
-            { label: 'Statut', value: 'Hors ligne', tone: 'amber' },
-            { label: 'Flux', value: 'Suspendu', tone: 'rose' },
-          ]}
-          note="Le cockpit relancera les reservations des que votre disponibilite sera reactivee."
-          noteTone="amber"
-        />
-      ) : null}
-      {visibleOffers.map((offer) => {
-        const offerNote = buildDriverOfferNote(offer);
-
-        return (
-          <RouteSignalCard
-            key={offer.id}
-            eyebrow={freshOfferIds.includes(offer.id) ? 'Nouvelle offre live' : 'Offre reservee'}
-            badgeLabel={
-              offer.reservationExpiresAt
-                ? `Reservation ${formatReservationCountdown(offer.reservationExpiresAt, reservationNow)}`
-                : null
-            }
-            badgeTone={freshOfferIds.includes(offer.id) ? 'sky' : 'amber'}
-            title={offer.riderName}
-            titleAside={formatDriverOfferFare(offer)}
-            titleAsideColor={orbiTheme.colors.amber}
-            description={`${offer.pickup} vers ${offer.destination}`}
-            insights={buildDriverOfferInsights(offer)}
-            detailLines={buildDriverOfferDetailLines(offer)}
-            note={offerNote?.text}
-            noteTone={offerNote?.tone ?? 'sky'}
-            isHighlighted={freshOfferIds.includes(offer.id)}
-          >
-            <OfferMissionPreview offer={offer} />
-          </RouteSignalCard>
-        );
-      })}
-      {flow.canReceiveOffers && visibleOffers.length === 0 ? (
-        <RouteSignalCard
-          eyebrow="Dispatch"
-          title="Aucune reservation active"
-          description="Le dispatch n a pas encore bloque d offre pour vous ou la fenetre d acceptation est terminee."
-          insights={[
-            { label: 'Statut', value: 'En ligne', tone: 'teal' },
-            { label: 'Attente', value: 'Aucune offre', tone: 'sky' },
-          ]}
-          note="Le flux live reste branche et mettra en avant la prochaine reservation compatible."
-          noteTone="sky"
-        />
-      ) : null}
-
-      <View style={styles.actions}>
-        <QuickActionCard
-          eyebrow="Finance"
-          title="Consulter les revenus"
-          description="Suivre les gains du jour, de la semaine et les tendances."
-          tone="sky"
-          onPress={() => router.push('/revenus')}
-        />
-      </View>
-      </ScrollView>
     </View>
   );
 }
@@ -686,319 +383,182 @@ export default function DriverHomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.background,
-  },
-  mapContainer: {
-    position: 'relative',
-    width: '100%',
+    backgroundColor: orbiTheme.colors.backgroundDim,
   },
   map: {
-    flex: 1,
-    borderRadius: 0,
+    ...StyleSheet.absoluteFillObject,
   },
-  mapBadge: {
+
+  // Top bar
+  topBarSafe: {
     position: 'absolute',
-    top: 52,
-    left: 16,
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+    gap: 10,
+  },
+  earningsBadge: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    ...orbiTheme.shadows.float,
+  },
+  earningsLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  earningsValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: orbiTheme.colors.text,
+  },
+  statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(10,12,14,0.82)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    ...orbiTheme.shadows.float,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  // Toggle
+  toggleFloat: {
+    position: 'absolute',
+    bottom: 260,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  toggleBtn: {
+    borderRadius: 999,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    ...orbiTheme.shadows.button,
+  },
+  toggleOnline: {
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
   },
-  mapBadgeDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+  toggleOffline: {
+    backgroundColor: orbiTheme.colors.text,
   },
-  mapBadgeText: {
-    color: orbiTheme.colors.text,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  mapOverlay: {
+  toggleDisabled: { opacity: 0.5 },
+  togglePressed: { opacity: 0.8 },
+  toggleLabel: { fontSize: 16, fontWeight: '700' },
+
+  // Bottom sheet
+  sheet: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
     paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingBottom: 32,
+    paddingTop: 10,
+    ...orbiTheme.shadows.sheet,
   },
-  availabilityOverlayButton: {
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 8,
+  handle: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E0E0E0',
+    alignSelf: 'center',
+    marginBottom: 14,
   },
-  availabilityOverlayOnline: {
-    backgroundColor: orbiTheme.colors.teal,
-  },
-  availabilityOverlayOffline: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-  },
-  availabilityOverlayLabel: {
-    color: orbiTheme.colors.text,
-    fontWeight: '800',
-    fontSize: 15,
-  },
-  scroll: {
-    paddingTop: 16,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    gap: 14,
-  },
-  screen: {
-    paddingTop: 88,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    backgroundColor: orbiTheme.colors.background,
-    gap: 16,
-  },
-  title: {
-    color: orbiTheme.colors.text,
-    fontSize: 38,
-    lineHeight: 40,
-    fontWeight: '800',
-  },
-  body: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 22,
-  },
-  inlineButton: {
-    marginTop: 10,
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-  },
-  signalGrid: {
+
+  // Active trip
+  tripCard: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 6,
-  },
-  inlineButtonDisabled: {
-    opacity: 0.65,
-  },
-  inlineButtonLabel: {
-    color: orbiTheme.colors.text,
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  activeTripCard: {
+    alignItems: 'center',
     backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    borderRadius: 24,
-    padding: 20,
-    gap: 8,
-  },
-  activeTripCardHighlight: {
-    borderColor: 'rgba(56, 189, 248, 0.42)',
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
-  },
-  activeTripEyebrow: {
-    color: orbiTheme.colors.teal,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    fontSize: 12,
-  },
-  activeTripTitle: {
-    color: orbiTheme.colors.text,
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  activeTripStatus: {
-    color: orbiTheme.colors.amber,
-    fontWeight: '800',
-  },
-  availabilityButton: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-  },
-  availabilityButtonOnline: {
-    backgroundColor: 'rgba(45, 212, 191, 0.16)',
-    borderColor: orbiTheme.colors.teal,
-  },
-  availabilityButtonOffline: {
-    backgroundColor: 'rgba(245, 158, 11, 0.16)',
-    borderColor: orbiTheme.colors.amber,
-  },
-  availabilityButtonLabel: {
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  availabilityButtonLabelOnline: {
-    color: orbiTheme.colors.teal,
-  },
-  availabilityButtonLabelOffline: {
-    color: orbiTheme.colors.amber,
-  },
-  meta: {
-    color: orbiTheme.colors.muted,
-  },
-  syncMeta: {
-    color: orbiTheme.colors.sky,
-    fontWeight: '700',
-  },
-  transitionMeta: {
-    color: orbiTheme.colors.sky,
-    fontWeight: '700',
-    lineHeight: 19,
-  },
-  transitionMetaMuted: {
-    color: orbiTheme.colors.rose,
-    lineHeight: 19,
-  },
-  safety: {
-    color: orbiTheme.colors.amber,
-  },
-  section: {
-    color: orbiTheme.colors.text,
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  offerMission: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 16,
     padding: 14,
     gap: 12,
-  },
-  offerMissionTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  offerAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
     borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  tripStatusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: orbiTheme.colors.teal,
+    flexShrink: 0,
+  },
+  tripInfo: { flex: 1, gap: 2 },
+  tripTitle: { fontSize: 14, fontWeight: '700', color: orbiTheme.colors.text },
+  tripRoute: { fontSize: 13, color: orbiTheme.colors.textSoft },
+  tripStatus: { fontSize: 12, color: orbiTheme.colors.teal, fontWeight: '600' },
+  tripTransition: { fontSize: 12, color: orbiTheme.colors.sky, fontWeight: '600' },
+  tripArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: orbiTheme.colors.text,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: orbiTheme.colors.panel,
+    flexShrink: 0,
   },
-  offerAvatarText: {
-    fontSize: 17,
-    fontWeight: '900',
-  },
-  offerRoutePreview: {
-    flex: 1,
-    minHeight: 34,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  offerRouteDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  offerRouteLine: {
-    flex: 1,
-    height: 3,
-    borderRadius: 999,
-    backgroundColor: 'rgba(148, 163, 184, 0.28)',
-  },
-  offerVehicleBadge: {
-    width: 58,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  offerVehicleBody: {
-    borderRadius: 8,
-  },
-  offerMotoBody: {
-    width: 34,
-    height: 9,
-    transform: [{ rotate: '-8deg' }],
-  },
-  offerCarBody: {
-    width: 44,
-    height: 18,
-  },
-  offerVehicleWheelRow: {
-    width: 46,
+  tripArrowText: { color: '#FFFFFF', fontSize: 20, fontWeight: '700', marginTop: -2 },
+
+  // Online sheet
+  onlineSheet: { gap: 10 },
+  onlineRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: -4,
-  },
-  offerVehicleWheel: {
-    width: 13,
-    height: 13,
-    borderRadius: 7,
-    borderWidth: 3,
-    backgroundColor: orbiTheme.colors.background,
-  },
-  offerMissionMetrics: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     gap: 10,
   },
-  actions: {
-    gap: 12,
+  onlineTitle: { fontSize: 16, fontWeight: '700', color: orbiTheme.colors.text },
+  onlineSub: { fontSize: 13, color: orbiTheme.colors.textMuted, marginTop: 2 },
+  viewOffersBtn: {
+    backgroundColor: orbiTheme.colors.text,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    ...orbiTheme.shadows.button,
   },
-  setupCard: {
-    backgroundColor: 'rgba(245,158,11,0.08)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.35)',
-    padding: 20,
-    gap: 8,
-  },
-  setupEyebrow: {
-    color: orbiTheme.colors.amber,
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.4,
-  },
-  setupTitle: {
-    color: orbiTheme.colors.text,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  setupBody: {
-    color: orbiTheme.colors.muted,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  setupButton: {
-    marginTop: 4,
+  viewOffersBtnLabel: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+
+  // Offline sheet
+  offlineSheet: { gap: 8 },
+  offlineTitle: { fontSize: 16, fontWeight: '700', color: orbiTheme.colors.text },
+  offlineSub: { fontSize: 13, color: orbiTheme.colors.textMuted, lineHeight: 18 },
+
+  // Setup
+  setupBtn: {
     alignSelf: 'flex-start',
-    backgroundColor: orbiTheme.colors.amber,
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    backgroundColor: orbiTheme.colors.text,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 4,
   },
-  setupButtonLabel: {
-    color: '#3b2205',
-    fontWeight: '800',
-    fontSize: 14,
-  },
+  setupBtnLabel: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
 });

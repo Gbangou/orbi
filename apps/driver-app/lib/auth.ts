@@ -15,7 +15,7 @@ import type { AuthenticatedApiContext } from '@orbi/api';
 import { flushDriverMobileErrorReports } from './mobile-error-reporting';
 import { driverSessionStorage, driverSessionStorageKey } from './session-storage';
 
-function createDriverClient() {
+export function createDriverPublicClient() {
   return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
     version: orbiRuntimeConfig.apiVersion,
   });
@@ -23,7 +23,7 @@ function createDriverClient() {
 
 export async function restoreDriverSession() {
   const context = await restorePersistedSession(
-    createDriverClient(),
+    createDriverPublicClient(),
     driverSessionStorage,
     driverSessionStorageKey,
   );
@@ -36,7 +36,7 @@ export async function signInDriverAccount(payload: {
   email: string;
   password: string;
 }) {
-  const client = createDriverClient();
+  const client = createDriverPublicClient();
   const session = await signInWithApi(client, payload);
   await persistSessionToken(
     driverSessionStorage,
@@ -59,7 +59,7 @@ export async function signUpDriverAccount(payload: {
   email: string;
   password: string;
 }) {
-  const client = createDriverClient();
+  const client = createDriverPublicClient();
   const session = await signUpWithApi(client, {
     ...payload,
     role: 'DRIVER',

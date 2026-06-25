@@ -83,8 +83,8 @@ export default function DriverTabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: orbiTheme.colors.amber,
-        tabBarInactiveTintColor: orbiTheme.colors.muted,
+        tabBarActiveTintColor: orbiTheme.colors.text,
+        tabBarInactiveTintColor: '#BBBBBB',
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
       }}
@@ -131,23 +131,23 @@ export default function DriverTabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderTopColor: orbiTheme.colors.border,
+    backgroundColor: '#FFFFFF',
+    borderTopColor: '#F0F0F0',
     borderTopWidth: 1,
-    height: 80,
-    paddingBottom: 14,
-    paddingTop: 8,
-    elevation: 24,
+    height: 82,
+    paddingBottom: 16,
+    paddingTop: 10,
+    elevation: 0,
     shadowColor: '#000',
-    shadowOpacity: 0.32,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -2 },
   },
   tabLabel: {
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    marginTop: 2,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+    marginTop: 3,
   },
   tabItem: {
     paddingTop: 2,

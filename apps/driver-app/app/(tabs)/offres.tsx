@@ -35,6 +35,7 @@ import {
   formatRealtimeBadgeLabel,
   formatOperationalStatus,
   formatXof,
+  orbiCopy,
   orbiTheme,
 } from "@orbi/ui";
 import {
@@ -471,7 +472,7 @@ export default function OffersScreen() {
         } catch {
           setActiveTripDetail(null);
           setTripDetailStatus(
-            "Detail de mission indisponible: le dispatch principal reste actif.",
+            "Detail de mission indisponible: la course principale reste active.",
           );
         }
       } else {
@@ -485,8 +486,8 @@ export default function OffersScreen() {
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
         surface: "active-trip",
-        network: "Connexion API indisponible: aucune offre fictive affichee.",
-        fallback: "Connexion API indisponible: aucune offre fictive affichee.",
+        network: orbiCopy.driverNetworkUnavailable,
+        fallback: orbiCopy.serviceUnavailable,
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -798,9 +799,7 @@ export default function OffersScreen() {
     }
 
     await runExclusiveDriverAction(async () => {
-      setStatus(
-        "Refus explicite de l offre et liberation de la reservation...",
-      );
+      setStatus("Refus de l offre en cours...");
 
       try {
         const { authClient } = await restoreDriverSession();
@@ -809,7 +808,7 @@ export default function OffersScreen() {
           rideRequestId,
         );
         setStatus(
-          `Offre ${response.offer.rideRequestId.slice(0, 8)} refusee. Le dispatch memorise ce signal.`,
+          `Offre ${response.offer.rideRequestId.slice(0, 8)} refusee. Votre prochaine proposition sera ajustee.`,
         );
         await loadDriverData();
       } catch (error) {
@@ -997,7 +996,7 @@ export default function OffersScreen() {
         await reportTripIncidentWithApi(authClient, tripId, {
           incidentType: "DRIVER_VOLUNTARY_EVIDENCE",
           details:
-            "Preuve conservee localement par le chauffeur. Upload support uniquement sur action explicite.",
+            "Preuve conservee par le chauffeur. Envoi au support uniquement sur action explicite.",
           priority: 3,
           evidenceConsent: true,
           evidenceType: "AUDIO",
@@ -1188,10 +1187,10 @@ export default function OffersScreen() {
       />
       <View style={styles.snapshotRow}>
         <MetricTile label="Mission" value={flow.primaryStatusLabel} />
-        <MetricTile
-          label="Reservations"
-          value={String(flow.visibleOfferCount)}
-        />
+          <MetricTile
+            label="Offres"
+            value={String(flow.visibleOfferCount)}
+          />
         <MetricTile
           label="Profil"
           value={formatOperationalStatus(driverProfileStatus)}
@@ -1235,7 +1234,7 @@ export default function OffersScreen() {
               ? `${freshOfferIds.length} nouvelles offres live`
               : "Nouvelle offre live"
           }
-          message="Les cartes fraichement resynchronisees restent surlignees quelques secondes."
+          message="Les nouvelles cartes restent surlignees quelques secondes."
           tone="sky"
         />
       ) : null}
@@ -1243,8 +1242,8 @@ export default function OffersScreen() {
         <TransitionNoticeCard
           label={
             recentlyExpiredCount > 1
-              ? `${recentlyExpiredCount} reservations ont expire`
-              : "Une reservation a expire"
+              ? `${recentlyExpiredCount} offres ont expire`
+              : "Une offre a expire"
           }
           message="Les elements sortis du flux live ont ete retires pour garder la liste fiable."
           tone="rose"
@@ -1259,7 +1258,7 @@ export default function OffersScreen() {
       ) : null}
       {flow.operationalStatus === "SUSPENDED" ? (
         <Text style={styles.subtitle}>
-          Le compte est suspendu. Les actions dispatch sont verrouillees jusqu a
+          Le compte est suspendu. Les actions de course sont verrouillees jusqu a
           reactivation operations.
         </Text>
       ) : driverProfileStatus === "BUSY" ? (
@@ -1532,26 +1531,26 @@ export default function OffersScreen() {
       ) : null}
       {flow.operationalStatus === "SUSPENDED" && !activeTrip ? (
         <RouteSignalCard
-          eyebrow="Dispatch"
+          eyebrow="Offres"
           title="Compte suspendu"
-          description="Le dispatch reste coupe pendant que les operations traitent la suspension du compte."
+          description="Les offres restent fermees pendant que les operations traitent la suspension du compte."
           insights={[
             { label: "Profil", value: "Suspendu", tone: "rose" },
             { label: "Flux", value: "Bloque", tone: "amber" },
           ]}
-          note="Les reservations reapparaitront automatiquement apres reactivation."
+          note="Les offres reapparaitront automatiquement apres reactivation."
           noteTone="rose"
         />
       ) : flow.availabilityStatus !== "ONLINE" && !activeTrip ? (
         <RouteSignalCard
-          eyebrow="Dispatch"
+          eyebrow="Offres"
           title="Mode hors ligne"
           description="Activez votre disponibilite pour voir et accepter les demandes."
           insights={[
             { label: "Statut", value: "Hors ligne", tone: "amber" },
             { label: "Flux", value: "Suspendu", tone: "rose" },
           ]}
-          note="Les reservations reviendront automatiquement dans cette liste apres reactivation."
+          note="Les offres reviendront automatiquement dans cette liste apres reactivation."
           noteTone="amber"
         />
       ) : null}
@@ -1566,12 +1565,12 @@ export default function OffersScreen() {
             key={offer.id}
             eyebrow={
               freshOfferIds.includes(offer.id)
-                ? "Nouvelle reservation live"
-                : "Offre reservee"
+                ? "Nouvelle offre"
+                : "Offre disponible"
             }
             badgeLabel={
               offer.reservationExpiresAt
-                ? `Reservation ${formatReservationCountdown(offer.reservationExpiresAt, reservationNow)}`
+                ? `Expire ${formatReservationCountdown(offer.reservationExpiresAt, reservationNow)}`
                 : null
             }
             badgeTone={freshOfferIds.includes(offer.id) ? "sky" : "amber"}
@@ -1675,14 +1674,14 @@ export default function OffersScreen() {
       })}
       {flow.canReceiveOffers && visibleOffers.length === 0 ? (
         <RouteSignalCard
-          eyebrow="Dispatch"
-          title="Aucune reservation active"
-          description="Le dispatch n a pas encore verrouille de demande pour vous ou la fenetre vient d expirer."
+          eyebrow="Offres"
+          title="Aucune offre active"
+          description="Aucune demande compatible n est disponible pour vous ou la fenetre vient d expirer."
           insights={[
             { label: "Statut", value: "En ligne", tone: "teal" },
             { label: "Attente", value: "Aucune offre", tone: "sky" },
           ]}
-          note="Le flux live reste branche et mettra en avant la prochaine reservation compatible."
+          note="La prochaine offre compatible apparaitra ici automatiquement."
           noteTone="sky"
         />
       ) : null}
@@ -1733,7 +1732,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   toggleButtonOnline: {
-    backgroundColor: "rgba(45, 212, 191, 0.16)",
+    backgroundColor: orbiTheme.colors.accentLight,
     borderColor: orbiTheme.colors.teal,
   },
   toggleButtonOffline: {
@@ -1783,13 +1782,11 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(56, 189, 248, 0.16)",
-    borderWidth: 1,
-    borderColor: "rgba(56, 189, 248, 0.36)",
+    backgroundColor: orbiTheme.colors.text,
   },
   avatarInitials: {
-    color: orbiTheme.colors.sky,
-    fontWeight: "900",
+    color: '#FFFFFF',
+    fontWeight: '700',
     fontSize: 18,
   },
   identityCopy: {
@@ -1814,8 +1811,8 @@ const styles = StyleSheet.create({
     minHeight: 154,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(56, 189, 248, 0.32)",
-    backgroundColor: "rgba(8, 47, 73, 0.18)",
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     overflow: "hidden",
     justifyContent: "center",
     padding: 16,
@@ -1924,13 +1921,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: "rgba(56, 189, 248, 0.94)",
+    backgroundColor: orbiTheme.colors.sky,
     alignItems: "center",
   },
   activeMissionDriverLabelText: {
-    color: "#082f49",
+    color: "#FFFFFF",
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   activeMissionPinLabel: {
     color: "#052a28",

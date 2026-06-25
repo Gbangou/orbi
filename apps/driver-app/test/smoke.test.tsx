@@ -624,7 +624,7 @@ describe('driver smoke flows', () => {
       { token: 'driver-auth-client' },
       driverOffers[0]?.id,
     );
-    expectText(renderer, 'Aucune reservation active');
+    expectText(renderer, 'Aucune offre active');
   });
 
   it('shows offer confidence and adaptive reservation window on the offres screen', async () => {
@@ -842,8 +842,7 @@ describe('driver smoke flows', () => {
     });
     await flushMicrotasks();
 
-    expectText(renderer, 'Une nouvelle offre vient d etre resynchronisee.');
-    expectText(renderer, 'Nouvelle offre live');
+    expectText(renderer, 'Une nouvelle offre est disponible.');
   });
 
   it('shows expired reservation notice on offers after realtime sync removes an offer', async () => {
@@ -871,7 +870,7 @@ describe('driver smoke flows', () => {
     });
     await flushMicrotasks();
 
-    expectText(renderer, 'Une reservation a expire');
+    expectText(renderer, 'Une offre a expire');
     expectText(
       renderer,
       'Les elements sortis du flux live ont ete retires pour garder la liste fiable.',
@@ -936,7 +935,7 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Mission en direct');
     expectText(
       renderer,
-      'Detail de mission indisponible: le dispatch principal reste actif.',
+      'Detail de mission indisponible: la course principale reste active.',
     );
     expectText(renderer, 'Verifier le code et demarrer');
   });
@@ -1142,7 +1141,7 @@ describe('driver smoke flows', () => {
       'trip-driver-1',
       'COMPLETED',
     );
-    expectText(renderer, 'Aucune reservation active');
+    expectText(renderer, 'Aucune offre active');
   });
 
   it('blocks trip completion when route safety is critical', async () => {

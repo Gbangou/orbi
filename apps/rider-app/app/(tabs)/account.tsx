@@ -973,8 +973,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardHighlight: {
-    borderColor: 'rgba(56, 189, 248, 0.42)',
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    borderColor: orbiTheme.colors.teal,
+    backgroundColor: orbiTheme.colors.accentLight,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -1054,16 +1054,16 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.backgroundAlt,
   },
   modeChipActive: {
-    borderColor: orbiTheme.colors.sky,
-    backgroundColor: 'rgba(56, 189, 248, 0.14)',
+    borderColor: orbiTheme.colors.text,
+    backgroundColor: orbiTheme.colors.text,
   },
   modeChipLabel: {
-    color: orbiTheme.colors.muted,
+    color: orbiTheme.colors.textSoft,
     fontWeight: '700',
     fontSize: 12,
   },
   modeChipLabelActive: {
-    color: orbiTheme.colors.text,
+    color: '#FFFFFF',
   },
   placeRow: {
     paddingTop: 10,
@@ -1099,13 +1099,14 @@ const styles = StyleSheet.create({
   },
   primaryAction: {
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: orbiTheme.colors.teal,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    backgroundColor: orbiTheme.colors.text,
+    ...orbiTheme.shadows.button,
   },
   primaryActionLabel: {
-    color: '#052a28',
-    fontWeight: '800',
+    color: '#FFFFFF',
+    fontWeight: '700',
     fontSize: 13,
   },
   secondaryAction: {

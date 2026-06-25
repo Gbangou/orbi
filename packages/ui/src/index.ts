@@ -1,36 +1,58 @@
 export const orbiTheme = {
   colors: {
-    background: '#07111d',
-    backgroundAlt: '#0d1828',
-    panel: '#0f1d30',
-    surface: '#0f1d30',
-    panelSoft: '#132338',
-    surfaceSoft: '#132338',
-    surfaceStrong: '#182b43',
-    text: '#f8fafc',
-    muted: '#94a3b8',
-    textMuted: '#94a3b8',
-    textSoft: '#cbd5e1',
-    teal: '#2dd4bf',
-    amber: '#f59e0b',
-    sky: '#38bdf8',
-    rose: '#fb7185',
-    success: '#34d399',
-    danger: '#f87171',
-    border: '#24364d',
-    borderSoft: 'rgba(148, 163, 184, 0.18)',
-    overlay: 'rgba(7, 17, 29, 0.72)',
+    // Backgrounds
+    background: '#FFFFFF',
+    backgroundAlt: '#F7F7F7',
+    backgroundDim: '#EFEFEF',
+
+    // Surfaces
+    panel: '#FFFFFF',
+    surface: '#FFFFFF',
+    panelSoft: '#F7F7F7',
+    surfaceSoft: '#F7F7F7',
+    surfaceStrong: '#EFEFEF',
+
+    // Text hierarchy
+    text: '#111111',
+    textMuted: '#9E9E9E',
+    textSoft: '#545454',
+    muted: '#9E9E9E',
+
+    // Orbi brand — teal
+    teal: '#00C9A7',
+    accentDark: '#00A389',
+    accentLight: 'rgba(0, 201, 167, 0.10)',
+
+    // Semantic
+    amber: '#FF9500',
+    sky: '#007AFF',
+    rose: '#FF3B30',
+    success: '#00C9A7',
+    danger: '#FF3B30',
+    warning: '#FF9500',
+
+    // Borders
+    border: '#E8E8E8',
+    borderSoft: 'rgba(0, 0, 0, 0.06)',
+
+    // Overlay
+    overlay: 'rgba(0, 0, 0, 0.48)',
+    overlayLight: 'rgba(0, 0, 0, 0.08)',
+
+    // Inverse
+    textInverse: '#FFFFFF',
   },
   gradients: {
-    hero: ['#0b1d33', '#07111d'],
-    accent: ['#2dd4bf', '#38bdf8'],
-    warm: ['#f59e0b', '#fb7185'],
+    hero: ['#F7F7F7', '#FFFFFF'],
+    accent: ['#00C9A7', '#00E5C5'],
+    warm: ['#FF9500', '#FF6B00'],
   },
   radius: {
-    card: 24,
-    button: 18,
+    card: 16,
+    button: 12,
     pill: 999,
-    panel: 28,
+    panel: 20,
+    input: 12,
   },
   spacing: {
     xs: 8,
@@ -41,28 +63,57 @@ export const orbiTheme = {
     xxl: 48,
   },
   typography: {
-    hero: 38,
-    title: 32,
+    hero: 36,
+    title: 28,
     section: 20,
     body: 16,
-    caption: 12,
+    label: 14,
+    caption: 13,
+    small: 11,
   },
   shadows: {
     card: {
-      shadowColor: '#020617',
-      shadowOpacity: 0.25,
-      shadowRadius: 24,
-      shadowOffset: { width: 0, height: 12 },
-      elevation: 10,
+      shadowColor: '#000000',
+      shadowOpacity: 0.07,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 6,
+    },
+    sheet: {
+      shadowColor: '#000000',
+      shadowOpacity: 0.14,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: -6 },
+      elevation: 16,
+    },
+    button: {
+      shadowColor: '#000000',
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+    },
+    float: {
+      shadowColor: '#000000',
+      shadowOpacity: 0.10,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 8,
     },
   },
 } as const;
 
 export const orbiCopy = {
-  riderHeadline: 'Moto quand chaque minute compte. Voiture quand le confort compte.',
-  driverHeadline: 'De meilleures courses, une conduite plus claire, des revenus mieux maitrises.',
-  adminHeadline: 'Pilotez la mobilite urbaine avec confiance entre motos et voitures.',
-  voiceHeadline: 'Parlez naturellement. Orbi transforme la voix en trajet.',
+  riderHeadline: 'Bougez vite, payez clair, restez suivi.',
+  driverHeadline: 'Recevez les bonnes courses, gardez le controle.',
+  adminHeadline: 'Controlez les courses, les paiements et la confiance.',
+  voiceHeadline: 'Dites le lieu. Orbi prepare le trajet.',
+  riderNetworkUnavailable:
+    'Connexion instable. Orbi garde votre ecran pret et relancera la synchronisation automatiquement.',
+  driverNetworkUnavailable:
+    'Connexion instable. Le cockpit reste pret et reprendra les offres des que le reseau revient.',
+  serviceUnavailable:
+    'Service momentanement indisponible. Reessayez dans un instant.',
 } as const;
 
 export const orbiLayout = {
@@ -71,9 +122,9 @@ export const orbiLayout = {
   appHorizontalPadding: 24,
 } as const;
 
-export function createGlassPanel(opacity = 0.78) {
+export function createGlassPanel(opacity = 1) {
   return {
-    backgroundColor: `rgba(15, 29, 48, ${opacity})`,
+    backgroundColor: `rgba(255, 255, 255, ${opacity})`,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
     borderRadius: orbiTheme.radius.panel,
@@ -113,7 +164,7 @@ const realtimeLabelsByAudience: Record<
     'ride-request.created': 'Une nouvelle demande compatible est arrivee.',
     'ride-request.cancelled': 'Une demande vient d etre retiree du flux.',
     'ride-request.reservation-assigned':
-      'Le dispatch vient de vous reserver une offre.',
+      'Une nouvelle offre est disponible pour vous.',
     'ride-request.reservation-released':
       'Une reservation vous a ete retiree et remise au flux.',
     'ride-request.reservation-expired':
@@ -253,8 +304,8 @@ export function serializeHtmlScriptJson(value: unknown) {
     .replaceAll('<', '\\u003c')
     .replaceAll('>', '\\u003e')
     .replaceAll('&', '\\u0026')
-    .replaceAll('\u2028', '\\u2028')
-    .replaceAll('\u2029', '\\u2029');
+    .replaceAll(' ', '\\u2028')
+    .replaceAll(' ', '\\u2029');
 }
 
 const allowedMapWebViewHosts = new Set([
@@ -263,6 +314,13 @@ const allowedMapWebViewHosts = new Set([
   'a.tile.openstreetmap.org',
   'b.tile.openstreetmap.org',
   'c.tile.openstreetmap.org',
+  // CartoDB Positron / Voyager (clean light tiles)
+  'a.basemaps.cartocdn.com',
+  'b.basemaps.cartocdn.com',
+  'c.basemaps.cartocdn.com',
+  'd.basemaps.cartocdn.com',
+  'basemaps.cartocdn.com',
+  // OSRM routing
   'router.project-osrm.org',
 ]);
 

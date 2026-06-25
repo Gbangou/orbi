@@ -3,6 +3,7 @@ import {
   extractApiErrorMessage,
   type OrbiClientErrorSurface,
 } from '@orbi/api';
+import { orbiCopy } from '@orbi/ui';
 import { router } from 'expo-router';
 import { clearRiderPersistedSession } from './auth';
 import { enqueueRiderMobileErrorReport } from './mobile-error-reporting';
@@ -27,9 +28,8 @@ export type RiderAppErrorFeedback = {
 const defaultRiderErrorCopy: RiderErrorCopy = {
   expiredSession:
     'Votre session passager a expire. Reconnectez-vous pour reprendre vos reservations.',
-  network:
-    'Connexion API indisponible pour le moment. La vue locale reste visible en attendant la reprise reseau.',
-  fallback: 'Une erreur reseau ou serveur est survenue.',
+  network: orbiCopy.riderNetworkUnavailable,
+  fallback: orbiCopy.serviceUnavailable,
 };
 
 export async function resolveRiderAppError(

@@ -7,12 +7,11 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useFonts, Raleway_800ExtraBold } from '@expo-google-fonts/raleway';
 import * as Notifications from 'expo-notifications';
 import { orbiTheme } from '@orbi/ui';
 import { hasPersistedDriverSession } from '../lib/auth';
-import { OrbiLogo } from '../lib/orbi-logo';
 
 const TypedStack = Stack as any;
 
@@ -103,23 +102,17 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <TypedStack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#07111d' },
+          contentStyle: { backgroundColor: orbiTheme.colors.background },
         }}
       />
       {!isResolved ? (
         <View style={styles.loadingScreen}>
-          <View style={styles.loadingCard}>
-            <OrbiLogo size="sm" />
-            <Text style={styles.loadingTitle}>Preparation de votre espace</Text>
-            <Text style={styles.loadingText}>
-              Verification de la session, des acces proteges et de la reprise du
-              cockpit chauffeur.
-            </Text>
-          </View>
+          <Text style={styles.loadingWordmark}>orbi</Text>
+          <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
         </View>
       ) : null}
     </>
@@ -129,26 +122,15 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   loadingScreen: {
     ...StyleSheet.absoluteFillObject,
-    flex: 1,
     backgroundColor: orbiTheme.colors.background,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    gap: 32,
   },
-  loadingCard: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 24,
-    gap: 10,
-  },
-  loadingTitle: {
-    color: orbiTheme.colors.text,
-    fontSize: 28,
+  loadingWordmark: {
+    fontSize: 42,
     fontWeight: '800',
-  },
-  loadingText: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 21,
+    color: orbiTheme.colors.text,
+    letterSpacing: -1,
   },
 });

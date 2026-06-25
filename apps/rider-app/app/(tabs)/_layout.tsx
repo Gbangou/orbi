@@ -7,59 +7,44 @@ const TypedTabs = Tabs as any;
 const TypedTabsScreen = Tabs.Screen as any;
 type TabIconProps = { color: string; focused: boolean };
 
-function HomeIcon({ color, focused }: { color: string; focused: boolean }) {
+// Simple clean SVG-style icons using pure View shapes
+
+function HomeIcon({ color }: TabIconProps) {
   return (
-    <View style={styles.icon}>
-      <View style={[styles.roof, { borderBottomColor: color, opacity: focused ? 1 : 0.55 }]} />
-      <View style={[styles.walls, { borderColor: color, backgroundColor: focused ? `${color}20` : 'transparent' }]}>
-        <View style={[styles.door, { borderColor: color, opacity: focused ? 0.7 : 0.4 }]} />
+    <View style={icon.wrap}>
+      <View style={[icon.roofBase, { borderBottomColor: color }]} />
+      <View style={[icon.wallBase, { borderColor: color }]}>
+        <View style={[icon.door, { borderColor: color, backgroundColor: color + '22' }]} />
       </View>
     </View>
   );
 }
 
-function ActivityIcon({ color, focused }: { color: string; focused: boolean }) {
+function ActivityIcon({ color }: TabIconProps) {
   return (
-    <View style={styles.icon}>
-      <View style={[styles.routeDot, { backgroundColor: color }]} />
-      <View style={[styles.routeLine, { backgroundColor: color, opacity: focused ? 0.7 : 0.4 }]} />
-      <View style={[styles.routeDotEnd, { borderColor: color, backgroundColor: focused ? `${color}28` : 'transparent' }]} />
+    <View style={icon.wrap}>
+      <View style={[icon.dotA, { backgroundColor: color }]} />
+      <View style={[icon.lineA, { backgroundColor: color }]} />
+      <View style={[icon.dotB, { borderColor: color }]} />
     </View>
   );
 }
 
-function TripsIcon({ color, focused }: { color: string; focused: boolean }) {
+function TripsIcon({ color }: TabIconProps) {
   return (
-    <View style={styles.icon}>
-      <View style={[styles.tripLine, { backgroundColor: color, opacity: focused ? 1 : 0.5 }]} />
-      <View style={[styles.tripLine, { backgroundColor: color, opacity: focused ? 0.75 : 0.35, width: 14 }]} />
-      <View style={[styles.tripLine, { backgroundColor: color, opacity: focused ? 0.5 : 0.25, width: 10 }]} />
+    <View style={icon.wrap}>
+      <View style={[icon.tripLine, { backgroundColor: color }]} />
+      <View style={[icon.tripLine, { backgroundColor: color, width: 14, opacity: 0.7 }]} />
+      <View style={[icon.tripLine, { backgroundColor: color, width: 10, opacity: 0.45 }]} />
     </View>
   );
 }
 
-function AccountIcon({ color, focused }: { color: string; focused: boolean }) {
+function AccountIcon({ color }: TabIconProps) {
   return (
-    <View style={styles.icon}>
-      <View
-        style={[
-          styles.head,
-          {
-            borderColor: color,
-            backgroundColor: focused ? `${color}28` : 'transparent',
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.shoulders,
-          {
-            borderColor: color,
-            borderTopColor: 'transparent',
-            backgroundColor: focused ? `${color}18` : 'transparent',
-          },
-        ]}
-      />
+    <View style={icon.wrap}>
+      <View style={[icon.head, { borderColor: color }]} />
+      <View style={[icon.shoulders, { borderColor: color }]} />
     </View>
   );
 }
@@ -72,46 +57,38 @@ export default function RiderTabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: orbiTheme.colors.teal,
-        tabBarInactiveTintColor: orbiTheme.colors.muted,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarItemStyle: styles.tabItem,
+        tabBarActiveTintColor: orbiTheme.colors.text,
+        tabBarInactiveTintColor: '#BBBBBB',
+        tabBarLabelStyle: styles.label,
+        tabBarItemStyle: styles.item,
       }}
     >
       <TypedTabsScreen
         name="home"
         options={{
           title: 'Accueil',
-          tabBarIcon: ({ color, focused }: TabIconProps) => (
-            <HomeIcon color={color} focused={focused} />
-          ),
+          tabBarIcon: (p: TabIconProps) => <HomeIcon {...p} />,
         }}
       />
       <TypedTabsScreen
         name="activity"
         options={{
           title: 'Activité',
-          tabBarIcon: ({ color, focused }: TabIconProps) => (
-            <ActivityIcon color={color} focused={focused} />
-          ),
+          tabBarIcon: (p: TabIconProps) => <ActivityIcon {...p} />,
         }}
       />
       <TypedTabsScreen
         name="trips"
         options={{
           title: 'Trajets',
-          tabBarIcon: ({ color, focused }: TabIconProps) => (
-            <TripsIcon color={color} focused={focused} />
-          ),
+          tabBarIcon: (p: TabIconProps) => <TripsIcon {...p} />,
         }}
       />
       <TypedTabsScreen
         name="account"
         options={{
           title: 'Compte',
-          tabBarIcon: ({ color, focused }: TabIconProps) => (
-            <AccountIcon color={color} focused={focused} />
-          ),
+          tabBarIcon: (p: TabIconProps) => <AccountIcon {...p} />,
         }}
       />
     </TypedTabs>
@@ -120,99 +97,103 @@ export default function RiderTabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderTopColor: orbiTheme.colors.border,
+    backgroundColor: '#FFFFFF',
+    borderTopColor: '#F0F0F0',
     borderTopWidth: 1,
-    height: 80,
-    paddingBottom: 14,
-    paddingTop: 8,
-    elevation: 24,
+    height: 82,
+    paddingBottom: 16,
+    paddingTop: 10,
+    elevation: 0,
     shadowColor: '#000',
-    shadowOpacity: 0.32,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -2 },
   },
-  tabLabel: {
+  label: {
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    marginTop: 2,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+    marginTop: 3,
   },
-  tabItem: {
+  item: {
     paddingTop: 2,
   },
-  icon: {
+});
+
+const icon = StyleSheet.create({
+  wrap: {
     width: 26,
     height: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  roof: {
+  roofBase: {
     width: 0,
     height: 0,
-    borderLeftWidth: 11,
-    borderRightWidth: 11,
-    borderBottomWidth: 9,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderBottomWidth: 8,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     marginBottom: -1,
   },
-  walls: {
-    width: 16,
-    height: 10,
+  wallBase: {
+    width: 15,
+    height: 9,
     borderWidth: 1.5,
     borderTopWidth: 0,
     borderRadius: 2,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: 0,
   },
   door: {
     width: 5,
-    height: 6,
+    height: 5,
     borderWidth: 1.5,
-    borderRadius: 2,
+    borderRadius: 1,
   },
-  routeDot: {
-    width: 8,
-    height: 8,
+  dotA: {
+    width: 7,
+    height: 7,
     borderRadius: 4,
     alignSelf: 'flex-start',
   },
-  routeLine: {
-    width: 2,
-    height: 7,
+  lineA: {
+    width: 1.5,
+    height: 6,
     borderRadius: 1,
     alignSelf: 'flex-start',
-    marginLeft: 3,
+    marginLeft: 2.5,
+    opacity: 0.6,
   },
-  routeDotEnd: {
-    width: 8,
-    height: 8,
+  dotB: {
+    width: 7,
+    height: 7,
     borderRadius: 4,
     borderWidth: 1.5,
     alignSelf: 'flex-start',
   },
   tripLine: {
     width: 18,
-    height: 2.5,
+    height: 2,
     borderRadius: 2,
     alignSelf: 'flex-start',
-    marginBottom: 3,
+    marginBottom: 3.5,
   },
   head: {
-    width: 12,
-    height: 12,
+    width: 11,
+    height: 11,
     borderRadius: 6,
     borderWidth: 1.5,
     alignSelf: 'center',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   shoulders: {
-    width: 20,
-    height: 9,
+    width: 18,
+    height: 8,
     borderRadius: 10,
     borderWidth: 1.5,
     alignSelf: 'center',
+    borderTopColor: 'transparent',
   },
 });

@@ -13,6 +13,7 @@ import {
   burkinaPricingCityPresets,
   createCheckoutIntentWithApi,
   createRideRequestWithApi,
+  createOrbiApiClient,
   createSavedPlaceWithApi,
   estimateDurationMinutes,
   fetchMyTrips,
@@ -37,9 +38,9 @@ import {
   describeRealtimeConnection,
   formatRealtimeBadgeLabel,
   formatXof,
+  orbiCopy,
   orbiTheme,
 } from '@orbi/ui';
-import { createOrbiApiClient } from '@orbi/api';
 import {
   orbiRuntimeConfig,
   resolveOrbiApiBaseUrlForRuntime,
@@ -602,8 +603,8 @@ export default function BookingScreen() {
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: 'profile',
-        network: 'Connexion API indisponible: aucune option fictive affichee.',
-        fallback: 'Connexion API indisponible: aucune option fictive affichee.',
+        network: orbiCopy.riderNetworkUnavailable,
+        fallback: orbiCopy.serviceUnavailable,
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -1598,8 +1599,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   routeCardHighlight: {
-    borderColor: 'rgba(56, 189, 248, 0.42)',
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    borderColor: orbiTheme.colors.teal,
+    backgroundColor: orbiTheme.colors.accentLight,
   },
   label: {
     color: orbiTheme.colors.teal,
@@ -1760,7 +1761,7 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.teal,
   },
   voiceActionLabel: {
-    color: '#052a28',
+    color: '#FFFFFF',
     fontWeight: '800',
   },
   assuranceTitle: {
@@ -1876,7 +1877,7 @@ const styles = StyleSheet.create({
   },
   optionSignal: {
     color: orbiTheme.colors.text,
-    backgroundColor: 'rgba(15, 23, 42, 0.34)',
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderColor: orbiTheme.colors.border,
     borderWidth: 1,
     borderRadius: 12,
@@ -1930,7 +1931,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 13,
     borderRadius: 5,
-    backgroundColor: 'rgba(56,189,248,0.26)',
+    backgroundColor: 'rgba(0, 122, 255, 0.18)',
   },
   vRearWindow: {
     position: 'absolute',
@@ -1939,7 +1940,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 13,
     borderRadius: 5,
-    backgroundColor: 'rgba(56,189,248,0.20)',
+    backgroundColor: 'rgba(0, 122, 255, 0.12)',
   },
   vRoof: {
     position: 'absolute',
@@ -2090,8 +2091,8 @@ const styles = StyleSheet.create({
   marketplaceBlock: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.28)',
-    backgroundColor: 'rgba(8, 47, 73, 0.16)',
+    borderColor: 'rgba(0, 122, 255, 0.2)',
+    backgroundColor: 'rgba(0, 122, 255, 0.05)',
     padding: 12,
     gap: 5,
   },
@@ -2153,19 +2154,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   paymentChipLabelActive: {
-    color: '#052a28',
+    color: '#FFFFFF',
   },
   confirmButton: {
-    backgroundColor: orbiTheme.colors.teal,
-    borderRadius: 18,
+    backgroundColor: orbiTheme.colors.text,
+    borderRadius: 14,
     paddingHorizontal: 18,
     paddingVertical: 16,
+    ...orbiTheme.shadows.button,
   },
   confirmButtonDisabled: {
     opacity: 0.7,
   },
   confirmLabel: {
-    color: '#052a28',
+    color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 16,
     textAlign: 'center',

@@ -15,7 +15,7 @@ import type { AuthenticatedApiContext } from '@orbi/api';
 import { flushRiderMobileErrorReports } from './mobile-error-reporting';
 import { riderSessionStorage, riderSessionStorageKey } from './session-storage';
 
-function createRiderClient() {
+export function createRiderPublicClient() {
   return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
     version: orbiRuntimeConfig.apiVersion,
   });
@@ -23,7 +23,7 @@ function createRiderClient() {
 
 export async function restoreRiderSession() {
   const context = await restorePersistedSession(
-    createRiderClient(),
+    createRiderPublicClient(),
     riderSessionStorage,
     riderSessionStorageKey,
   );
@@ -36,7 +36,7 @@ export async function signInRiderAccount(payload: {
   email: string;
   password: string;
 }) {
-  const client = createRiderClient();
+  const client = createRiderPublicClient();
   const session = await signInWithApi(client, payload);
   await persistSessionToken(
     riderSessionStorage,
@@ -59,7 +59,7 @@ export async function signUpRiderAccount(payload: {
   email: string;
   password: string;
 }) {
-  const client = createRiderClient();
+  const client = createRiderPublicClient();
   const session = await signUpWithApi(client, {
     ...payload,
     role: 'RIDER',

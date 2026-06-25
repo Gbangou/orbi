@@ -1,7 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
+  SafeAreaView,
   ScrollView,
   Share,
   StyleSheet,
@@ -12,37 +14,47 @@ import {
   preventScreenCaptureAsync,
   allowScreenCaptureAsync,
 } from 'expo-screen-capture';
-import {
-  fetchTripDetail,
-  type TripDetailResponse,
-} from '@orbi/api';
+import { fetchTripDetail, type TripDetailResponse } from '@orbi/api';
 import { formatXof, orbiTheme } from '@orbi/ui';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
-import { OrbiLogo } from '../lib/orbi-logo';
 
-function ReceiptRow({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
+function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
-    <View style={styles.receiptRow}>
-      <Text style={styles.receiptRowLabel}>{label}</Text>
-      <Text style={[styles.receiptRowValue, accent ? styles.receiptRowValueAccent : null]}>
-        {value}
-      </Text>
+    <View style={row.wrap}>
+      <Text style={row.label}>{label}</Text>
+      <Text style={[row.value, bold && row.valueBold]}>{value}</Text>
     </View>
   );
 }
 
-function Divider() {
-  return <View style={styles.divider} />;
-}
+const row = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 11,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: orbiTheme.colors.border,
+  },
+  label: {
+    fontSize: 14,
+    color: orbiTheme.colors.textSoft,
+    flex: 1,
+  },
+  value: {
+    fontSize: 14,
+    color: orbiTheme.colors.text,
+    fontWeight: '500',
+    textAlign: 'right',
+    flex: 1,
+  },
+  valueBold: {
+    fontWeight: '700',
+    color: orbiTheme.colors.text,
+  },
+});
 
 export default function ReceiptScreen() {
   const router = useRouter();
@@ -55,9 +67,7 @@ export default function ReceiptScreen() {
 
   useEffect(() => {
     void preventScreenCaptureAsync();
-    return () => {
-      void allowScreenCaptureAsync();
-    };
+    return () => { void allowScreenCaptureAsync(); };
   }, []);
 
   useEffect(() => {
@@ -73,47 +83,36 @@ export default function ReceiptScreen() {
       try {
         const { authClient } = await restoreRiderSession();
         const response = await fetchTripDetail(authClient, tripId);
-        if (isMounted) {
-          setDetail(response);
-        }
+        if (isMounted) setDetail(response);
       } catch (error) {
         if (!isMounted) return;
         const feedback = await resolveRiderAppError(error, {
-          fallback: 'Le recu de course est temporairement indisponible.',
+          fallback: 'Le reçu de course est temporairement indisponible.',
         });
         setErrorMessage(feedback.message);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     }
 
     void load();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [tripId]);
 
   async function handleShare() {
     if (!detail) return;
-
+    const trip = detail.trip;
     try {
-      const trip = detail.trip;
-      const shareText = [
-        'Mon trajet Orbi',
-        `De: ${trip.pickupAddress}`,
-        `Vers: ${trip.destinationAddress}`,
-        `Montant: ${formatXof(trip.actualFare)}`,
-        `Chauffeur: ${trip.driverName}`,
-        `Vehicule: ${trip.vehicleLabel}`,
-      ].join('\n');
-
-      await Share.share({ message: shareText });
-    } catch {
-      // Partage annulé ou échoué silencieusement
-    }
+      await Share.share({
+        message: [
+          'Mon trajet Orbi',
+          `De : ${trip.pickupAddress}`,
+          `Vers : ${trip.destinationAddress}`,
+          `Montant : ${formatXof(trip.actualFare)}`,
+          `Chauffeur : ${trip.driverName}`,
+        ].join('\n'),
+      });
+    } catch { /* silent */ }
   }
 
   function handleRate() {
@@ -130,53 +129,41 @@ export default function ReceiptScreen() {
     });
   }
 
-  function handleHome() {
-    router.replace('/home');
-  }
-
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <View style={styles.loadingCard}>
-          <OrbiLogo size="xs" />
-          <Text style={styles.loadingTitle}>Chargement du recu...</Text>
-          <Text style={styles.loadingBody}>Recuperation des details de votre trajet.</Text>
-        </View>
-      </View>
+      <SafeAreaView style={styles.centered}>
+        <ActivityIndicator size="large" color={orbiTheme.colors.teal} />
+        <Text style={styles.loadingText}>Chargement du reçu…</Text>
+      </SafeAreaView>
     );
   }
 
   if (errorMessage || !detail) {
     return (
-      <ScrollView contentContainerStyle={styles.screen}>
-        <OrbiLogo size="sm" />
-        <Text style={styles.title}>Recu de course</Text>
-        <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{errorMessage ?? 'Recu indisponible.'}</Text>
-        </View>
-        <Pressable onPress={handleHome} style={styles.primaryButton}>
-          <Text style={styles.primaryButtonLabel}>Retour a l accueil</Text>
+      <SafeAreaView style={styles.errorScreen}>
+        <Text style={styles.errorTitle}>Reçu indisponible</Text>
+        <Text style={styles.errorMessage}>{errorMessage ?? 'Une erreur est survenue.'}</Text>
+        <Pressable onPress={() => router.replace('/home')} style={styles.primaryBtn}>
+          <Text style={styles.primaryBtnLabel}>Retour à l'accueil</Text>
         </Pressable>
-      </ScrollView>
+      </SafeAreaView>
     );
   }
 
   const trip = detail.trip;
+
   const completedAt = trip.completedAt
     ? new Date(trip.completedAt).toLocaleString('fr-BF', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
+        day: '2-digit', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
       })
     : null;
 
-  const distanceToDestinationKm =
-    trip.routeMonitoring.latestPosition?.distanceToDestinationKm;
-  const distanceLabel =
-    typeof distanceToDestinationKm === 'number' && distanceToDestinationKm > 0
-      ? `${distanceToDestinationKm.toFixed(1)} km (signal GPS)`
+  const durationMin =
+    trip.startedAt && trip.completedAt
+      ? Math.round(
+          (new Date(trip.completedAt).getTime() - new Date(trip.startedAt).getTime()) / 60000,
+        )
       : null;
 
   const driverRatingLabel =
@@ -185,296 +172,203 @@ export default function ReceiptScreen() {
       : null;
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <View style={styles.header}>
-        <OrbiLogo size="sm" />
-        <Text style={styles.title}>Recu de course</Text>
-        {completedAt ? (
-          <Text style={styles.subtitle}>{completedAt}</Text>
-        ) : null}
-      </View>
-
-      <View style={styles.fareHero}>
-        <Text style={styles.fareHeroLabel}>Montant total</Text>
-        <Text style={styles.fareHeroAmount}>{formatXof(trip.actualFare)}</Text>
-        <View
-          style={[
-            styles.fareStatusBadge,
-            trip.status === 'COMPLETED'
-              ? styles.fareStatusCompleted
-              : styles.fareStatusOther,
-          ]}
-        >
-          <Text style={styles.fareStatusLabel}>
-            {trip.status === 'COMPLETED' ? 'Course terminee' : trip.status}
-          </Text>
+    <SafeAreaView style={styles.safe}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Fare hero */}
+        <View style={styles.hero}>
+          <Text style={styles.heroLabel}>Course terminée</Text>
+          <Text style={styles.heroFare}>{formatXof(trip.actualFare)}</Text>
+          {completedAt ? <Text style={styles.heroDate}>{completedAt}</Text> : null}
         </View>
-      </View>
 
-      <View style={styles.receiptCard}>
-        <Text style={styles.receiptSection}>Trajet</Text>
-        <ReceiptRow label="Depart" value={trip.pickupAddress} />
-        <Divider />
-        <ReceiptRow label="Arrivee" value={trip.destinationAddress} />
-        {distanceLabel ? (
-          <>
-            <Divider />
-            <ReceiptRow label="Distance" value={distanceLabel} />
-          </>
-        ) : null}
-        {trip.startedAt && trip.completedAt ? (
-          <>
-            <Divider />
-            <ReceiptRow
-              label="Duree"
-              value={`${Math.round(
-                (new Date(trip.completedAt).getTime() -
-                  new Date(trip.startedAt).getTime()) /
-                  60000,
-              )} min`}
-            />
-          </>
-        ) : null}
-      </View>
+        {/* Route */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Trajet</Text>
+          <Row label="Départ" value={trip.pickupAddress} />
+          <Row label="Arrivée" value={trip.destinationAddress} />
+          {durationMin ? <Row label="Durée" value={`${durationMin} min`} /> : null}
+        </View>
 
-      <View style={styles.receiptCard}>
-        <Text style={styles.receiptSection}>Chauffeur</Text>
-        <ReceiptRow
-          label="Nom"
-          value={trip.driverName}
-        />
-        {driverRatingLabel ? (
-          <>
-            <Divider />
-            <ReceiptRow label="Note chauffeur" value={driverRatingLabel} />
-          </>
-        ) : null}
-        {trip.vehicleLabel ? (
-          <>
-            <Divider />
-            <ReceiptRow label="Vehicule" value={trip.vehicleLabel} />
-          </>
-        ) : null}
-        <Divider />
-        <ReceiptRow
-          label="Courses effectuees"
-          value={String(trip.driverVerification.completedTripsCount)}
-        />
-      </View>
+        {/* Driver */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Chauffeur</Text>
+          <Row label="Nom" value={trip.driverName} />
+          {driverRatingLabel ? <Row label="Note" value={driverRatingLabel} /> : null}
+          {trip.vehicleLabel ? <Row label="Véhicule" value={trip.vehicleLabel} /> : null}
+          <Row
+            label="Courses effectuées"
+            value={String(trip.driverVerification.completedTripsCount)}
+          />
+        </View>
 
-      <View style={styles.receiptCard}>
-        <Text style={styles.receiptSection}>Paiement</Text>
-        <ReceiptRow label="Montant course" value={formatXof(trip.actualFare)} accent />
-        {trip.promoCode ? (
-          <>
-            <Divider />
-            <ReceiptRow
+        {/* Payment */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Paiement</Text>
+          <Row label="Montant" value={formatXof(trip.actualFare)} bold />
+          {trip.promoCode ? (
+            <Row
               label="Code promo"
               value={`${trip.promoCode.code} (−${trip.promoCode.discountBps / 100}%)`}
             />
-          </>
-        ) : null}
-        <Divider />
-        <ReceiptRow
-          label="Reference"
-          value={trip.id.slice(0, 12).toUpperCase()}
-        />
-      </View>
+          ) : null}
+          <Row label="Référence" value={trip.id.slice(0, 12).toUpperCase()} />
+        </View>
 
-      <View style={styles.actions}>
-        <Pressable onPress={handleRate} style={styles.primaryButton}>
-          <Text style={styles.primaryButtonLabel}>Evaluer ce trajet</Text>
-        </Pressable>
-        <Pressable onPress={handleShare} style={styles.secondaryButton}>
-          <Text style={styles.secondaryButtonLabel}>Partager le recu</Text>
-        </Pressable>
-        <Pressable onPress={handleHome} style={styles.ghostButton}>
-          <Text style={styles.ghostButtonLabel}>Retour a l accueil</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+        {/* Actions */}
+        <View style={styles.actions}>
+          <Pressable
+            onPress={handleRate}
+            style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+          >
+            <Text style={styles.primaryBtnLabel}>Évaluer ce trajet</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => void handleShare()}
+            style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
+          >
+            <Text style={styles.secondaryBtnLabel}>Partager le reçu</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.replace('/home')}
+            style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
+          >
+            <Text style={styles.ghostBtnLabel}>Retour à l'accueil</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    paddingTop: 72,
-    paddingHorizontal: 24,
-    paddingBottom: 48,
+  safe: {
+    flex: 1,
     backgroundColor: orbiTheme.colors.background,
-    gap: 18,
   },
+  scroll: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 48,
+    gap: 14,
+  },
+
+  // Loading / error
   centered: {
     flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
     backgroundColor: orbiTheme.colors.background,
-  },
-  loadingCard: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: orbiTheme.radius.card,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 24,
-    gap: 10,
-  },
-  loadingTitle: {
-    color: orbiTheme.colors.text,
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  loadingBody: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 20,
-  },
-  header: {
-    gap: 5,
-  },
-  title: {
-    color: orbiTheme.colors.text,
-    fontSize: 32,
-    fontWeight: '800',
-  },
-  subtitle: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 20,
-  },
-  fareHero: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: orbiTheme.radius.card,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 24,
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
+    gap: 12,
   },
-  fareHeroLabel: {
-    color: orbiTheme.colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    fontSize: 11,
+  loadingText: {
+    fontSize: 15,
+    color: orbiTheme.colors.textMuted,
+  },
+  errorScreen: {
+    flex: 1,
+    backgroundColor: orbiTheme.colors.background,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+    gap: 12,
+  },
+  errorTitle: {
+    fontSize: 22,
     fontWeight: '700',
-  },
-  fareHeroAmount: {
     color: orbiTheme.colors.text,
-    fontSize: 42,
-    fontWeight: '900',
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: orbiTheme.colors.textSoft,
+    lineHeight: 20,
+  },
+
+  // Hero
+  hero: {
+    alignItems: 'center',
+    paddingVertical: 28,
+    gap: 6,
+  },
+  heroLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: orbiTheme.colors.teal,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  heroFare: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: orbiTheme.colors.text,
     letterSpacing: -1,
   },
-  fareStatusBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
+  heroDate: {
+    fontSize: 13,
+    color: orbiTheme.colors.textMuted,
   },
-  fareStatusCompleted: {
-    backgroundColor: 'rgba(45, 212, 191, 0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(45, 212, 191, 0.35)',
-  },
-  fareStatusOther: {
-    backgroundColor: 'rgba(245, 158, 11, 0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.35)',
-  },
-  fareStatusLabel: {
-    color: orbiTheme.colors.teal,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  receiptCard: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: 20,
+
+  // Cards
+  card: {
+    backgroundColor: orbiTheme.colors.surface,
+    borderRadius: orbiTheme.radius.card,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 2,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
-    padding: 18,
-    gap: 4,
+    ...orbiTheme.shadows.card,
   },
-  receiptSection: {
-    color: orbiTheme.colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
+  sectionTitle: {
     fontSize: 11,
     fontWeight: '700',
-    marginBottom: 8,
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 4,
   },
-  receiptRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-    paddingVertical: 6,
-  },
-  receiptRowLabel: {
-    color: orbiTheme.colors.muted,
-    flex: 1,
-    fontSize: 14,
-  },
-  receiptRowValue: {
-    color: orbiTheme.colors.text,
-    fontWeight: '700',
-    flex: 2,
-    textAlign: 'right',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  receiptRowValueAccent: {
-    color: orbiTheme.colors.teal,
-    fontSize: 16,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: orbiTheme.colors.border,
-    opacity: 0.5,
-  },
+
+  // Buttons
   actions: {
     gap: 10,
-    marginTop: 4,
+    marginTop: 8,
   },
-  primaryButton: {
-    backgroundColor: orbiTheme.colors.teal,
-    borderRadius: orbiTheme.radius.button,
+  primaryBtn: {
+    backgroundColor: orbiTheme.colors.text,
+    borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
+    ...orbiTheme.shadows.button,
   },
-  primaryButtonLabel: {
-    color: '#04282a',
-    fontWeight: '900',
+  primaryBtnLabel: {
+    color: '#FFFFFF',
     fontSize: 16,
-  },
-  secondaryButton: {
-    borderRadius: orbiTheme.radius.button,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.teal,
-    backgroundColor: 'rgba(45, 212, 191, 0.08)',
-  },
-  secondaryButtonLabel: {
-    color: orbiTheme.colors.teal,
     fontWeight: '700',
-    fontSize: 15,
   },
-  ghostButton: {
-    borderRadius: orbiTheme.radius.button,
-    paddingVertical: 12,
+  secondaryBtn: {
+    backgroundColor: orbiTheme.colors.background,
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: orbiTheme.colors.border,
   },
-  ghostButtonLabel: {
-    color: orbiTheme.colors.muted,
-    fontWeight: '700',
+  secondaryBtnLabel: {
+    color: orbiTheme.colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  ghostBtn: {
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  ghostBtnLabel: {
+    color: orbiTheme.colors.textMuted,
     fontSize: 14,
+    fontWeight: '500',
   },
-  errorCard: {
-    backgroundColor: 'rgba(251, 113, 133, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(251, 113, 133, 0.3)',
-    borderRadius: 16,
-    padding: 16,
-  },
-  errorText: {
-    color: orbiTheme.colors.rose,
-    lineHeight: 20,
+  btnPressed: {
+    opacity: 0.75,
   },
 });

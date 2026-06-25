@@ -351,10 +351,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   submitLabelTeal: {
-    color: '#052a28',
+    color: '#FFFFFF',
   },
   submitLabelAmber: {
-    color: '#3b2205',
+    color: '#FFFFFF',
   },
   note: {
     color: orbiTheme.colors.muted,
