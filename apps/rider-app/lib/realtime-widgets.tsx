@@ -1081,6 +1081,7 @@ const lt = StyleSheet.create({
 // ── Transition notice card ────────────────────────────────────────────────────
 
 export function TransitionNoticeCard({
+  label,
   message,
   tone = 'teal',
 }: {
@@ -1092,7 +1093,10 @@ export function TransitionNoticeCard({
   return (
     <View style={[tnc.wrap, { backgroundColor: t.bg, borderColor: t.border }]}>
       <View style={[tnc.dot, { backgroundColor: t.dot }]} />
-      <Text style={[tnc.text, { color: t.text }]}>{message}</Text>
+      <View style={{ flex: 1 }}>
+        {label ? <Text style={[tnc.text, { color: t.text, fontWeight: '700' }]}>{label}</Text> : null}
+        <Text style={[tnc.text, { color: t.text }]}>{message}</Text>
+      </View>
     </View>
   );
 }

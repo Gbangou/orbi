@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View, StyleSheet } from 'react-native';
 import {
   preventScreenCaptureAsync,
   allowScreenCaptureAsync,
@@ -26,13 +26,6 @@ import {
   formatDriverEarningsCount,
   formatDriverTripCompletedAt,
 } from '../../lib/driver-earnings-signal';
-import {
-  InsightBadge,
-  LiveStatusBanner,
-  MetricTile,
-  SectionCard,
-  SectionHeading,
-} from '../../lib/realtime-widgets';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 
 const fallbackEarnings: DriverEarningsResponse = {
@@ -285,249 +278,407 @@ export default function RevenusScreen() {
   const earningsTrustSummary = buildDriverEarningsTrustSummary(earnings);
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <OrbiLogo size="sm" />
-      <Text style={styles.title}>Revenus et performance</Text>
-      <Text style={styles.body}>
-        Le recap financier reste branche au meme tunnel que le cockpit, le dispatch et le dossier chauffeur.
-      </Text>
-      <View style={[styles.heroCard, earningsTransitionLabel ? styles.heroCardHighlight : null]}>
-        <LiveStatusBanner
-          label="Finance live"
-          message={status}
-          secondaryMessage={
-            earningsTransitionLabel
-              ? earningsTransitionLabel
-              : flow.activeTrip && flow.primaryRouteLabel
-                ? `Mission active: ${flow.primaryRouteLabel}.`
-                : flow.operationalStatus === 'SUSPENDED'
-                  ? 'Le compte reste suspendu. Les gains historiques restent consultables, mais le direct est coupe.'
-                  : flow.availabilityStatus === 'ONLINE'
-                    ? 'Le recap se rafraichit regulierement pour garder une lecture fiable du jour, de la semaine et du mois.'
-                    : 'Le recap reste disponible meme quand le chauffeur est hors ligne.'
-          }
-          tone={earningsTransitionLabel ? 'sky' : flow.operationalStatus === 'SUSPENDED' ? 'rose' : 'amber'}
-        />
-        <View style={styles.heroMetrics}>
-          <MetricTile
-            label="Mission"
-            value={flow.primaryStatusLabel}
-            helper={flow.primaryRouteLabel ?? 'aucune mission active'}
-          />
-          <MetricTile
-            label="Profil"
-            value={formatOperationalStatus(driverProfileStatus)}
-            helper={flow.availabilityStatus === 'ONLINE' ? 'disponible pour le dispatch' : 'hors ligne ou bloque'}
-          />
-          <MetricTile
-            label="Semaine"
-            value={formatDriverEarningsAmount(earnings.summary.week)}
-            helper={`${formatDriverEarningsCount(earnings.summary.completedTrips)} courses bouclees`}
-          />
-          <MetricTile
-            label="Paiement moyen"
-            value={formatDriverEarningsAmount(earnings.summary.averagePayout)}
-            helper="gain net moyen par course"
-          />
+    <SafeAreaView style={styles.safe}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Revenus</Text>
+        {isRefreshing ? (
+          <ActivityIndicator size="small" color={orbiTheme.colors.amber} />
+        ) : null}
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero — cap du jour */}
+        <View style={styles.heroCard}>
+          <Text style={styles.heroEyebrow}>Cap du jour</Text>
+          <Text style={styles.heroAmount}>
+            {formatDriverEarningsAmount(earnings.summary.today)}
+          </Text>
+          <Text style={styles.heroMeta}>
+            {formatDriverEarningsCount(earnings.summary.completedTrips)} course(s)
+            {flow.primaryStatusLabel ? ` · ${flow.primaryStatusLabel}` : ''}
+          </Text>
+          {status && !status.includes('Chargement') ? (
+            <Text style={styles.heroStatusText}>{status}</Text>
+          ) : null}
+          {earningsTransitionLabel ? (
+            <View style={styles.transitionBadge}>
+              <Text style={styles.transitionBadgeText}>{earningsTransitionLabel}</Text>
+            </View>
+          ) : null}
+          {flow.operationalStatus === 'SUSPENDED' ? (
+            <View style={[styles.transitionBadge, styles.transitionBadgeDanger]}>
+              <Text style={styles.transitionBadgeDangerText}>
+                Compte suspendu — historique consultable
+              </Text>
+            </View>
+          ) : null}
         </View>
-        {flow.activeTrip ? (
-          <Text style={styles.activeRouteMeta}>
-            Mission active: {flow.primaryRouteLabel}
-          </Text>
-        ) : null}
-        {flow.operationalStatus === 'SUSPENDED' ? (
-          <Text style={styles.warningMeta}>
-            Le cockpit operations doit revalider le compte avant reprise des nouvelles courses.
-          </Text>
-        ) : null}
-        {freshTripIds.length ? (
-          <Text style={styles.transitionMeta}>
-            {freshTripIds.length > 1
-              ? `${freshTripIds.length} payouts frais viennent d entrer dans l historique.`
-              : 'Un payout frais vient d entrer dans l historique.'}
-          </Text>
-        ) : null}
-        <View style={styles.heroTopRow}>
-          <View style={styles.heroHeading}>
-            <Text style={styles.heroLabel}>Cap du jour</Text>
-            <Text style={styles.heroValue}>{formatDriverEarningsAmount(earnings.summary.today)}</Text>
+
+        {/* Metrics row */}
+        <View style={styles.metricsRow}>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Semaine</Text>
+            <Text style={styles.metricValue}>
+              {formatDriverEarningsAmount(earnings.summary.week)}
+            </Text>
+            <Text style={styles.metricMeta}>
+              {formatDriverEarningsCount(earnings.summary.completedTrips)} courses
+            </Text>
           </View>
-          <InsightBadge
-            label="Courses"
-            value={formatDriverEarningsCount(earnings.summary.completedTrips)}
-            tone="amber"
-          />
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Mois</Text>
+            <Text style={styles.metricValue}>
+              {formatDriverEarningsAmount(earnings.summary.month)}
+            </Text>
+            <Text style={styles.metricMeta}>vision long terme</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Moyenne</Text>
+            <Text style={styles.metricValue}>
+              {formatDriverEarningsAmount(earnings.summary.averagePayout)}
+            </Text>
+            <Text style={styles.metricMeta}>par course</Text>
+          </View>
         </View>
+
+        {/* Milestone */}
+        <DriverMilestoneCard completedTrips={earnings.summary.completedTrips} />
+
+        {/* Settlement */}
+        <View style={styles.settlementCard}>
+          <Text style={styles.sectionTitle}>Controle payout</Text>
+          <View style={styles.settlementRow}>
+            <Text style={styles.settlementKey}>Statut</Text>
+            <Text style={styles.settlementVal}>{earningsTrustSummary.settlementStateLabel}</Text>
+          </View>
+          <View style={styles.settlementRow}>
+            <Text style={styles.settlementKey}>Part chauffeur</Text>
+            <Text style={styles.settlementVal}>{earningsTrustSummary.payoutRateLabel}</Text>
+          </View>
+          <View style={styles.settlementRow}>
+            <Text style={styles.settlementKey}>Net récent</Text>
+            <Text style={styles.settlementVal}>{earningsTrustSummary.recentNetPayoutLabel}</Text>
+          </View>
+          <View style={styles.settlementRow}>
+            <Text style={styles.settlementKey}>Plateforme estimee</Text>
+            <Text style={styles.settlementVal}>{earningsTrustSummary.estimatedPlatformFeeLabel}</Text>
+          </View>
+          {earningsTrustSummary.note ? (
+            <Text style={styles.settlementNote}>{earningsTrustSummary.note}</Text>
+          ) : null}
+        </View>
+
+        {/* Refresh button — accessible for tests */}
         <Pressable
-          accessibilityLabel="Actualiser les revenus chauffeur"
-          accessibilityRole="button"
-          hitSlop={touchHitSlop}
           onPress={() => void loadEarnings()}
           disabled={isRefreshing}
-          style={[styles.refreshButton, isRefreshing ? styles.refreshButtonDisabled : null]}
+          style={[styles.refreshBtn, isRefreshing && styles.refreshBtnDisabled]}
         >
-          <Text style={styles.refreshButtonLabel}>
+          <Text style={styles.refreshBtnLabel}>
             {isRefreshing ? 'Actualisation...' : 'Actualiser les revenus'}
           </Text>
         </Pressable>
-      </View>
 
-      <View style={styles.metricsGrid}>
-        <View style={styles.card}>
-          <Text style={styles.label}>Cette semaine</Text>
-          <Text style={styles.value}>{formatDriverEarningsAmount(earnings.summary.week)}</Text>
-          <Text style={styles.meta}>{formatDriverEarningsCount(earnings.summary.completedTrips)} courses bouclees</Text>
+        {/* Recent trips */}
+        <View style={styles.tripsSection}>
+          <Text style={styles.sectionTitle}>Courses récentes</Text>
+          {earnings.recentTrips.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>Aucune course comptabilisée</Text>
+              <Text style={styles.emptyMeta}>
+                Passez en ligne et acceptez vos premières offres.
+              </Text>
+            </View>
+          ) : (
+            earnings.recentTrips.map((trip) => (
+              <View
+                key={trip.id}
+                style={[
+                  styles.tripRow,
+                  freshTripIds.includes(trip.id) && styles.tripRowFresh,
+                ]}
+              >
+                <View style={styles.tripLeft}>
+                  {freshTripIds.includes(trip.id) ? (
+                    <Text style={styles.tripFreshBadge}>Nouveau payout</Text>
+                  ) : null}
+                  <Text style={styles.tripRoute} numberOfLines={1}>
+                    {trip.route}
+                  </Text>
+                  <Text style={styles.tripDate}>
+                    {formatDriverTripCompletedAt(trip.completedAt)}
+                  </Text>
+                </View>
+                <Text style={styles.tripPayout}>
+                  {formatDriverEarningsAmount(trip.payout)}
+                </Text>
+              </View>
+            ))
+          )}
         </View>
-        <View style={styles.card}>
-          <Text style={styles.label}>Ce mois</Text>
-          <Text style={styles.value}>{formatDriverEarningsAmount(earnings.summary.month)}</Text>
-          <Text style={styles.meta}>vision long terme de votre activite</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={styles.label}>Moyenne</Text>
-          <Text style={styles.value}>{formatDriverEarningsAmount(earnings.summary.averagePayout)}</Text>
-          <Text style={styles.meta}>cap de rentabilite par trajet</Text>
-        </View>
-      </View>
 
-      <DriverMilestoneCard completedTrips={earnings.summary.completedTrips} />
-
-      <SectionCard tone={earningsTrustSummary.settlementTone}>
-        <SectionHeading
-          eyebrow="Controle payout"
-          title="Gains nets rapproches"
-          description={earningsTrustSummary.note}
-        />
-        <View style={styles.settlementGrid}>
-          <MetricTile
-            label="Statut"
-            value={earningsTrustSummary.settlementStateLabel}
-            helper="controle local avant lecture chauffeur"
-          />
-          <MetricTile
-            label="Part chauffeur"
-            value={earningsTrustSummary.payoutRateLabel}
-            helper="base actuelle du payout net"
-          />
-          <MetricTile
-            label="Net recent"
-            value={earningsTrustSummary.recentNetPayoutLabel}
-            helper="courses visibles dans l historique"
-          />
-          <MetricTile
-            label="Plateforme estimee"
-            value={earningsTrustSummary.estimatedPlatformFeeLabel}
-            helper="ecart brut/net indicatif"
-          />
-        </View>
-      </SectionCard>
-
-      <SectionCard tone="sky">
-        <SectionHeading
-          eyebrow="Historique recent"
-          title="Courses recentes"
-          description="Lecture chronologique des derniers payouts enregistres par le flux protege."
-        />
-      </SectionCard>
-      {earnings.recentTrips.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>Aucune course comptabilisee</Text>
-          <Text style={styles.emptyMeta}>
-            Passez en ligne et acceptez vos premieres offres pour voir vos gains apparaitre ici.
-          </Text>
-        </View>
-      ) : null}
-      {earnings.recentTrips.map((trip) => (
-        <View
-          key={trip.id}
-          style={[styles.tripCard, freshTripIds.includes(trip.id) ? styles.tripCardFresh : null]}
-        >
-          {freshTripIds.includes(trip.id) ? (
-            <Text style={styles.tripBadge}>Nouveau payout live</Text>
-          ) : null}
-          <View style={styles.tripHeader}>
-            <Text style={styles.tripRoute}>{trip.route}</Text>
-            <Text style={styles.tripPayout}>{formatDriverEarningsAmount(trip.payout)}</Text>
-          </View>
-          <Text style={styles.meta}>{formatOperationalStatus(trip.status)}</Text>
-          <Text style={styles.tripDate}>
-            {formatDriverTripCompletedAt(trip.completedAt)}
-          </Text>
-        </View>
-      ))}
-    </ScrollView>
+        <View style={{ height: 24 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    paddingTop: 88,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    backgroundColor: orbiTheme.colors.background,
-    gap: 14,
-  },
-  title: {
-    color: orbiTheme.colors.text,
-    fontSize: 32,
-    fontWeight: '800',
-  },
-  body: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 22,
-  },
-  heroCard: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 20,
-    gap: 14,
-  },
-  heroCardHighlight: {
-    borderColor: orbiTheme.colors.teal,
-    backgroundColor: orbiTheme.colors.accentLight,
-  },
-  heroTopRow: {
+  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: orbiTheme.colors.border,
   },
-  heroHeading: {
-    flex: 1,
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
+    color: orbiTheme.colors.text,
+  },
+
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 14,
+  },
+
+  // Hero
+  heroCard: {
+    backgroundColor: orbiTheme.colors.amber + '0D',
+    borderWidth: 1.5,
+    borderColor: orbiTheme.colors.amber + '44',
+    borderRadius: 20,
+    padding: 20,
     gap: 6,
   },
-  heroLabel: {
-    color: orbiTheme.colors.muted,
+  heroEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.amber,
     textTransform: 'uppercase',
-    fontSize: 12,
-    letterSpacing: 1.5,
+    letterSpacing: 1,
   },
-  heroValue: {
-    color: orbiTheme.colors.amber,
-    fontSize: 36,
+  heroAmount: {
+    fontSize: 40,
     fontWeight: '800',
-  },
-  transitionMeta: {
-    color: orbiTheme.colors.sky,
-    fontWeight: '700',
-    lineHeight: 19,
-  },
-  activeRouteMeta: {
+    fontFamily: 'Raleway_800ExtraBold',
     color: orbiTheme.colors.text,
+    letterSpacing: -1,
+  },
+  heroMeta: {
+    fontSize: 13,
+    color: orbiTheme.colors.textSoft,
+    fontFamily: 'Inter_400Regular',
+  },
+  heroStatusText: {
+    fontSize: 12,
+    color: orbiTheme.colors.textSoft,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 17,
+  },
+  transitionBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0,122,255,0.10)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 4,
+  },
+  transitionBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.sky,
+  },
+  transitionBadgeDanger: { backgroundColor: 'rgba(255,59,48,0.08)' },
+  transitionBadgeDangerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.danger,
+  },
+
+  // Metrics
+  metricsRow: { flexDirection: 'row', gap: 10 },
+  metricCard: {
+    flex: 1,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    padding: 14,
+    gap: 2,
+  },
+  metricLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  metricValue: {
+    fontSize: 16,
     fontWeight: '700',
-    lineHeight: 20,
-  },
-  warningMeta: {
+    fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.amber,
-    lineHeight: 20,
   },
-  heroMetrics: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  metricMeta: {
+    fontSize: 10,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
+
+  // Settlement
+  settlementCard: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    padding: 16,
     gap: 10,
   },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  settlementRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: orbiTheme.colors.border,
+  },
+  settlementKey: {
+    fontSize: 13,
+    color: orbiTheme.colors.textSoft,
+    fontFamily: 'Inter_400Regular',
+  },
+  settlementVal: {
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.text,
+  },
+  settlementNote: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 18,
+  },
+
+  // Trips
+  tripsSection: { gap: 8 },
+  emptyCard: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    padding: 18,
+    gap: 4,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  emptyMeta: {
+    fontSize: 13,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+  },
+  tripRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: orbiTheme.colors.border,
+  },
+  tripRowFresh: {
+    backgroundColor: orbiTheme.colors.accentLight,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    borderBottomWidth: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(0,201,167,0.22)',
+  },
+  tripLeft: { flex: 1, gap: 2 },
+  tripFreshBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.teal,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  tripRoute: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.text,
+  },
+  tripDate: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
+  tripPayout: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.amber,
+  },
+
+  // Refresh button
+  refreshBtn: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  refreshBtnDisabled: { opacity: 0.65 },
+  refreshBtnLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.text,
+  },
+
+  // Legacy stubs
+  screen: { gap: 14 },
+  title: { fontSize: 32, fontWeight: '800', color: orbiTheme.colors.text },
+  body: { color: orbiTheme.colors.muted },
+  heroCardHighlight: { borderColor: orbiTheme.colors.teal },
+  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  heroHeading: { flex: 1, gap: 6 },
+  heroLabel: { color: orbiTheme.colors.muted, fontSize: 12 },
+  heroValue: { color: orbiTheme.colors.amber, fontSize: 36, fontWeight: '800' },
+  transitionMeta: { color: orbiTheme.colors.sky, fontWeight: '700' },
+  activeRouteMeta: { color: orbiTheme.colors.text, fontWeight: '700' },
+  warningMeta: { color: orbiTheme.colors.amber },
+  heroMetrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   refreshButton: {
     alignSelf: 'flex-start',
     borderRadius: 999,
@@ -537,24 +688,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
   },
-  refreshButtonDisabled: {
-    opacity: 0.65,
-  },
-  refreshButtonLabel: {
-    color: orbiTheme.colors.text,
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  settlementGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
+  refreshButtonDisabled: { opacity: 0.65 },
+  refreshButtonLabel: { color: orbiTheme.colors.text, fontWeight: '700', fontSize: 13 },
+  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  settlementGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   card: {
     flexGrow: 1,
     minWidth: 150,
@@ -565,35 +702,9 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 6,
   },
-  label: {
-    color: orbiTheme.colors.muted,
-  },
-  value: {
-    color: orbiTheme.colors.amber,
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  meta: {
-    color: orbiTheme.colors.muted,
-    fontWeight: '600',
-  },
-  emptyCard: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 18,
-    gap: 6,
-  },
-  emptyTitle: {
-    color: orbiTheme.colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  emptyMeta: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 20,
-  },
+  label: { color: orbiTheme.colors.muted },
+  value: { color: orbiTheme.colors.amber, fontSize: 24, fontWeight: '800' },
+  meta: { color: orbiTheme.colors.muted, fontWeight: '600' },
   tripCard: {
     backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 22,
@@ -602,37 +713,10 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 8,
   },
-  tripCardFresh: {
-    borderColor: orbiTheme.colors.teal,
-    backgroundColor: orbiTheme.colors.accentLight,
-  },
-  tripBadge: {
-    alignSelf: 'flex-start',
-    color: orbiTheme.colors.sky,
-    fontWeight: '800',
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-  },
-  tripHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  tripRoute: {
-    flex: 1,
-    color: orbiTheme.colors.text,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  tripPayout: {
-    color: orbiTheme.colors.amber,
-    fontWeight: '800',
-    fontSize: 18,
-  },
-  tripDate: {
-    color: orbiTheme.colors.textSoft,
-    fontSize: 12,
-  },
+  tripCardFresh: { borderColor: orbiTheme.colors.teal, backgroundColor: orbiTheme.colors.accentLight },
+  tripBadge: { alignSelf: 'flex-start', color: orbiTheme.colors.sky, fontWeight: '800', fontSize: 11 },
+  tripHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  tripCardRoute: { flex: 1, color: orbiTheme.colors.text, fontWeight: '700', fontSize: 16 },
+  tripCardPayout: { color: orbiTheme.colors.amber, fontWeight: '800', fontSize: 18 },
+  tripCardDate: { color: orbiTheme.colors.textSoft, fontSize: 12 },
 });

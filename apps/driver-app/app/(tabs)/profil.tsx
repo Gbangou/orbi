@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,13 +23,6 @@ import {
 } from '@orbi/api';
 import { router } from 'expo-router';
 import { formatOperationalStatus, orbiCopy, orbiTheme } from '@orbi/ui';
-import {
-  InsightBadge,
-  LiveStatusBanner,
-  MetricTile,
-  SectionCard,
-  SectionHeading,
-} from '../../lib/realtime-widgets';
 import {
   restoreDriverSession,
   signOutDriverAccount,
@@ -713,103 +708,101 @@ export default function ProfilScreen() {
     driverProfileStatus: profile.profile.status,
   });
 
-  return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>Profil chauffeur</Text>
-      <LiveStatusBanner
-        label="Driver ops"
-        message={status}
-        secondaryMessage={
-          profileTransitionLabel
-            ? profileTransitionLabel
-            : flow.activeTrip && flow.primaryRouteLabel
-              ? `Mission active: ${flow.primaryRouteLabel}.`
-              : flow.operationalStatus === 'SUSPENDED'
-                ? 'Le compte est suspendu. Les operations doivent lever le blocage avant reprise du direct.'
-                : 'Le dossier, les documents et les donnees vehicule restent alignes avec la revue operations.'
-        }
-        tone={profileTransitionLabel ? 'sky' : flow.operationalStatus === 'SUSPENDED' ? 'rose' : 'amber'}
-      />
-      <Pressable
-        accessibilityLabel="Actualiser le profil chauffeur"
-        accessibilityRole="button"
-        hitSlop={touchHitSlop}
-        onPress={() => void loadProfile()}
-        disabled={isRefreshing || isSubmitting || isSigningOut}
-        style={[
-          styles.refreshButton,
-          isRefreshing || isSubmitting ? styles.refreshButtonDisabled : null,
-        ]}
-      >
-        <Text style={styles.refreshButtonLabel}>
-          {isRefreshing ? 'Actualisation...' : 'Actualiser le profil'}
-        </Text>
-      </Pressable>
-      <Pressable
-        accessibilityLabel="Se deconnecter du compte chauffeur"
-        accessibilityRole="button"
-        hitSlop={touchHitSlop}
-        onPress={() => void handleSignOut()}
-        disabled={isSigningOut || isRefreshing || isSubmitting}
-        style={[
-          styles.signOutButton,
-          isSigningOut ? styles.refreshButtonDisabled : null,
-        ]}
-      >
-        <Text style={styles.signOutButtonLabel}>
-          {isSigningOut ? 'Deconnexion...' : 'Se deconnecter'}
-        </Text>
-      </Pressable>
+  const initials = profile.profile.fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('') || 'OR';
 
-      <SectionCard tone="sky">
-        <SectionHeading
-          eyebrow="Identite"
-          title={profile.profile.fullName}
-          description={profile.profile.email}
-        />
-        <View style={styles.heroBadgeRow}>
-          <InsightBadge
-            label="Verification"
-            value={formatOperationalStatus(profile.profile.verificationStatus)}
-            tone="teal"
-          />
-          <InsightBadge
-            label="Profil"
-            value={formatOperationalStatus(profile.profile.status)}
-            tone="amber"
-          />
-          <InsightBadge
-            label="Mission"
-            value={flow.primaryStatusLabel}
-            tone="sky"
-          />
-          <InsightBadge
-            label="Readiness"
-            value={formatDriverProfilePercent(profile.profile.onboarding.readinessPercent)}
-            tone="sky"
-          />
+  return (
+    <SafeAreaView style={styles.safe}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Profil</Text>
+        <View style={styles.headerRight}>
+          {isRefreshing ? (
+            <ActivityIndicator size="small" color={orbiTheme.colors.amber} />
+          ) : null}
+          <Pressable
+            onPress={() => void handleSignOut()}
+            disabled={isSigningOut || isRefreshing || isSubmitting}
+            style={styles.signOutBtn}
+          >
+            <Text style={styles.signOutBtnLabel}>
+              {isSigningOut ? '...' : 'Se deconnecter'}
+            </Text>
+          </Pressable>
         </View>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Section label: Identite */}
+        <Text style={styles.sectionEyebrow}>Identite</Text>
+
+        {/* User card */}
+        <View style={styles.userCard}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarInitials}>{initials}</Text>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>
+              {profile.profile.fullName || 'Chargement…'}
+            </Text>
+            <Text style={styles.userEmail}>{profile.profile.email}</Text>
+          </View>
+        </View>
+
+        {/* Status row */}
+        <View style={styles.statusRowCard}>
+          <View style={styles.statusItem}>
+            <Text style={styles.statusItemLabel}>Vérification</Text>
+            <Text style={[styles.statusItemValue, { color: orbiTheme.colors.teal }]}>
+              {formatOperationalStatus(profile.profile.verificationStatus)}
+            </Text>
+          </View>
+          <View style={styles.statusDivider} />
+          <View style={styles.statusItem}>
+            <Text style={styles.statusItemLabel}>Statut</Text>
+            <Text style={styles.statusItemValue}>
+              {formatOperationalStatus(profile.profile.status)}
+            </Text>
+          </View>
+          <View style={styles.statusDivider} />
+          <View style={styles.statusItem}>
+            <Text style={styles.statusItemLabel}>Dossier</Text>
+            <Text style={[styles.statusItemValue, { color: orbiTheme.colors.amber }]}>
+              {formatDriverProfilePercent(profile.profile.onboarding.readinessPercent)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Active mission */}
         {flow.activeTrip && flow.primaryRouteLabel ? (
-          <Text style={styles.subtitle}>Mission active: {flow.primaryRouteLabel}</Text>
+          <View style={styles.missionBanner}>
+            <View style={styles.missionDot} />
+            <Text style={styles.missionText} numberOfLines={1}>
+              Mission active — {flow.primaryRouteLabel}
+            </Text>
+          </View>
         ) : null}
-        <View style={styles.metricsRow}>
-          <MetricTile
-            label="Rayon"
-            value={formatDriverProfileDistanceKm(profile.profile.serviceRadiusKm)}
-            helper="zone de prise en charge"
-          />
-          <MetricTile
-            label="Note"
-            value={formatDriverProfileRating(profile.profile.averageRating, 'Nouvelle')}
-            helper="moyenne qualite"
-          />
-          <MetricTile
-            label="Vehicules"
-            value={formatDriverProfileCount(profile.profile.vehicles.length)}
-            helper="vehicules synchronises"
-          />
-        </View>
-      </SectionCard>
+
+        {/* Suspension notice */}
+        {flow.operationalStatus === 'SUSPENDED' ? (
+          <View style={styles.suspensionBanner}>
+            <Text style={styles.suspensionText}>
+              Compte suspendu — les opérations doivent lever le blocage avant reprise.
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Status notice (shown when non-idle) */}
+        {status && status !== 'Chargement du profil chauffeur...' ? (
+          <Text style={styles.statusNotice}>{status}</Text>
+        ) : null}
 
       <View style={[styles.card, profileTransitionLabel ? styles.cardHighlight : null]}>
         <Text style={styles.name}>Onboarding securise</Text>
@@ -1284,11 +1277,158 @@ export default function ProfilScreen() {
           </Pressable>
         )}
       </View>
-    </ScrollView>
+
+      <View style={{ height: 24 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  // ── New consumer styles ────────────────────────────────────────────────────
+  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: orbiTheme.colors.border,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
+    color: orbiTheme.colors.text,
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  signOutBtn: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255,59,48,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,48,0.22)',
+  },
+  signOutBtnLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.danger,
+  },
+  content: { paddingHorizontal: 16, paddingTop: 16, gap: 14 },
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    padding: 16,
+    ...orbiTheme.shadows.card,
+  },
+  avatarCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: orbiTheme.colors.amber,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitials: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
+  },
+  userInfo: { flex: 1, gap: 2 },
+  userName: {
+    fontSize: 17,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  userEmail: {
+    fontSize: 13,
+    color: orbiTheme.colors.textSoft,
+    fontFamily: 'Inter_400Regular',
+  },
+  statusRowCard: {
+    flexDirection: 'row',
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    overflow: 'hidden',
+  },
+  statusItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    gap: 3,
+  },
+  statusItemLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statusItemValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+    textAlign: 'center',
+  },
+  statusDivider: {
+    width: 1,
+    backgroundColor: orbiTheme.colors.border,
+    alignSelf: 'stretch',
+  },
+  missionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(0,201,167,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,201,167,0.22)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  missionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: orbiTheme.colors.teal },
+  missionText: { flex: 1, fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.text },
+  suspensionBanner: {
+    backgroundColor: 'rgba(255,59,48,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,48,0.22)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  suspensionText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.danger },
+  statusNotice: {
+    fontSize: 13,
+    color: orbiTheme.colors.textSoft,
+    fontFamily: 'Inter_400Regular',
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  sectionEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.teal,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    paddingHorizontal: 2,
+  },
+
+  // ── Legacy styles (form sections below header) ─────────────────────────────
   screen: {
     paddingTop: 88,
     paddingHorizontal: 24,

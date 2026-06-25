@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, TextInput, View, Text, StyleSheet } from 'react-native';
 import {
   preventScreenCaptureAsync,
   allowScreenCaptureAsync,
@@ -31,13 +31,6 @@ import {
   buildRiderPeripheralStatusLabel,
   resolveRiderActiveFlow,
 } from '../../lib/rider-active-flow';
-import {
-  InsightBadge,
-  LiveStatusBanner,
-  MetricTile,
-  SectionCard,
-  SectionHeading,
-} from '../../lib/realtime-widgets';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { SavedPlacesMap } from '../../lib/saved-places-map';
 
@@ -500,113 +493,111 @@ export default function AccountScreen() {
     }
   }
 
-  return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>Mon compte</Text>
-      <LiveStatusBanner
-        label="Compte"
-        message={status}
-        secondaryMessage={
-          accountTransitionLabel
-            ? accountTransitionLabel
-            : flow.primaryRouteLabel
-              ? `Flux actif: ${flow.primaryRouteLabel}.`
-              : 'Votre profil, vos lieux enregistres et vos stats se resynchronisent regulierement avec la session passager.'
-        }
-        tone={accountTransitionLabel ? 'sky' : 'teal'}
-      />
-      <Pressable
-        onPress={() => void loadProfile()}
-        disabled={isRefreshing || isSigningOut}
-        style={[styles.refreshButton, isRefreshing ? styles.refreshButtonDisabled : null]}
-      >
-        <Text style={styles.refreshButtonLabel}>
-          {isRefreshing ? 'Actualisation...' : 'Actualiser le profil'}
-        </Text>
-      </Pressable>
-      <Pressable
-        onPress={() => void handleSignOut()}
-        disabled={isSigningOut || isRefreshing}
-        style={[styles.signOutButton, isSigningOut ? styles.refreshButtonDisabled : null]}
-      >
-        <Text style={styles.signOutButtonLabel}>
-          {isSigningOut ? 'Deconnexion...' : 'Se deconnecter'}
-        </Text>
-      </Pressable>
+  const initials = profile.profile.fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('') || 'OR';
 
-      <SectionCard tone="sky">
-        <SectionHeading
-          title={profile.profile.fullName}
-          subtitle={profile.profile.email}
-        />
-        <View style={styles.insightRow}>
-          <InsightBadge
-            label="Service prefere"
-            value={
-              profile.profile.preferredTier === 'MOTO_STANDARD'
-                ? 'Moto Express'
-                : profile.profile.preferredTier ?? 'A definir'
-            }
-            tone="teal"
-          />
-          <InsightBadge
-            label="Favoris"
-            value={String(profile.profile.savedPlaces.length)}
-            tone="sky"
-          />
-          <InsightBadge
-            label="Flux actif"
-            value={flow.primaryStatusLabel}
-            tone={flow.hasOpenFlow ? 'amber' : 'teal'}
-          />
-          <InsightBadge
-            label="Urgence"
-            value={profile.profile.trustedContact.status === 'READY' ? 'Configure' : 'A definir'}
-            tone={profile.profile.trustedContact.status === 'READY' ? 'teal' : 'amber'}
-          />
+  return (
+    <SafeAreaView style={styles.safe}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Mon compte</Text>
+        <View style={styles.headerRight}>
+          {isRefreshing ? (
+            <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
+          ) : null}
+          <Pressable
+            onPress={() => void handleSignOut()}
+            disabled={isSigningOut || isRefreshing}
+            style={styles.signOutBtn}
+          >
+            <Text style={styles.signOutBtnLabel}>
+              {isSigningOut ? '...' : 'Déco.'}
+            </Text>
+          </Pressable>
         </View>
-        <View style={styles.metricsRow}>
-          <MetricTile
-            label="Demandes"
-            value={String(profile.profile.stats.totalRideRequests)}
-            helper="reservations creees"
-          />
-          <MetricTile
-            label="Completes"
-            value={String(profile.profile.stats.completedTrips)}
-            helper="trajets termines"
-          />
-          <MetricTile
-            label="Lieux"
-            value={String(profile.profile.stats.savedPlaces)}
-            helper="favoris memorises"
-          />
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* User card */}
+        <View style={styles.userCard}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarInitials}>{initials}</Text>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>
+              {profile.profile.fullName || 'Chargement…'}
+            </Text>
+            <Text style={styles.userEmail}>{profile.profile.email}</Text>
+            {profile.profile.phoneNumber ? (
+              <Text style={styles.userPhone}>{profile.profile.phoneNumber}</Text>
+            ) : null}
+          </View>
         </View>
-      </SectionCard>
+
+        {/* Stats row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>
+              {profile.profile.stats.completedTrips}
+            </Text>
+            <Text style={styles.statLabel}>Courses</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>
+              {profile.profile.stats.totalRideRequests}
+            </Text>
+            <Text style={styles.statLabel}>Demandes</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>
+              {profile.profile.savedPlaces.length}
+            </Text>
+            <Text style={styles.statLabel}>Favoris</Text>
+          </View>
+        </View>
+
+        {/* Active flow notice */}
+        {flow.hasOpenFlow ? (
+          <Pressable
+            style={styles.flowBanner}
+            onPress={() => router.push('/book')}
+          >
+            <View style={styles.flowDot} />
+            <Text style={styles.flowText} numberOfLines={1}>
+              {flow.primaryStatusLabel}
+              {flow.primaryRouteLabel ? ` — ${flow.primaryRouteLabel}` : ''}
+            </Text>
+            <Text style={styles.flowArrow}>›</Text>
+          </Pressable>
+        ) : null}
 
       <View style={styles.card}>
-        <Text style={styles.heading}>Contact de confiance</Text>
-        <Text style={styles.meta}>{profile.profile.trustedContact.safetyNote}</Text>
-        <View style={styles.trustedStatusRow}>
-          <InsightBadge
-            label="Etat"
-            value={profile.profile.trustedContact.status === 'READY' ? 'Pret' : 'A definir'}
-            tone={profile.profile.trustedContact.status === 'READY' ? 'teal' : 'amber'}
-          />
-          <InsightBadge
-            label="Partage"
-            value={
-              profile.profile.trustedContact.shareMode === 'ALL_TRIPS'
-                ? 'Tous trajets'
-                : profile.profile.trustedContact.shareMode === 'NIGHT'
-                  ? 'Nuit'
-                  : profile.profile.trustedContact.shareMode === 'MANUAL'
-                    ? 'Manuel'
-                    : 'Desactive'
-            }
-            tone="sky"
-          />
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Contact de confiance</Text>
+          <View style={[
+            styles.statusPill,
+            profile.profile.trustedContact.status === 'READY'
+              ? styles.statusPillReady
+              : styles.statusPillPending,
+          ]}>
+            <Text style={[
+              styles.statusPillText,
+              profile.profile.trustedContact.status === 'READY'
+                ? styles.statusPillTextReady
+                : styles.statusPillTextPending,
+            ]}>
+              {profile.profile.trustedContact.status === 'READY' ? 'Configuré' : 'À définir'}
+            </Text>
+          </View>
         </View>
+        <Text style={styles.cardMeta}>{profile.profile.trustedContact.safetyNote}</Text>
         <TextInput
           value={trustedContactForm.phoneNumber}
           onChangeText={(value) =>
@@ -672,20 +663,13 @@ export default function AccountScreen() {
         </View>
       </View>
 
-      <View style={[styles.card, accountTransitionLabel ? styles.cardHighlight : null]}>
-        <Text style={styles.heading}>Lieux enregistres</Text>
-        <Text style={styles.meta}>
-          Ajoutez des coordonnees valides pour reutiliser rapidement vos lieux dans le flow de reservation.
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Lieux enregistrés</Text>
+        </View>
+        <Text style={styles.cardMeta}>
+          Ajoutez des lieux favoris pour les retrouver rapidement lors de vos réservations.
         </Text>
-        {flow.hasOpenFlow ? (
-          <Text style={styles.flowMeta}>
-            Reservation active: {flow.primaryStatusLabel}
-            {flow.primaryRouteLabel ? ` - ${flow.primaryRouteLabel}` : ''}
-          </Text>
-        ) : null}
-        {accountTransitionLabel ? (
-          <Text style={styles.transitionMeta}>{accountTransitionLabel}</Text>
-        ) : null}
         <TextInput
           value={placeForm.label}
           onChangeText={(value) => setPlaceForm((current) => ({ ...current, label: value }))}
@@ -804,8 +788,10 @@ export default function AccountScreen() {
 
       {/* ── Support ── */}
       <View style={styles.card}>
-        <Text style={styles.heading}>Support</Text>
-        <Text style={styles.meta}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Support</Text>
+        </View>
+        <Text style={styles.cardMeta}>
           Un probleme avec une course, un paiement ou votre compte ? Notre equipe repond en moins de 24h.
         </Text>
 
@@ -907,18 +893,174 @@ export default function AccountScreen() {
           </Pressable>
         )}
       </View>
-    </ScrollView>
+
+      <View style={{ height: 24 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    paddingTop: 88,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    backgroundColor: orbiTheme.colors.background,
-    gap: 14,
+  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: orbiTheme.colors.border,
   },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
+    color: orbiTheme.colors.text,
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  signOutBtn: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255,59,48,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,48,0.22)',
+  },
+  signOutBtnLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.danger,
+  },
+
+  content: { paddingHorizontal: 16, paddingTop: 16, gap: 14 },
+
+  // User card
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    padding: 16,
+    ...orbiTheme.shadows.card,
+  },
+  avatarCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: orbiTheme.colors.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitials: {
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
+  },
+  userInfo: { flex: 1, gap: 2 },
+  userName: {
+    fontSize: 17,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  userEmail: {
+    fontSize: 13,
+    color: orbiTheme.colors.textSoft,
+    fontFamily: 'Inter_400Regular',
+  },
+  userPhone: {
+    fontSize: 13,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
+
+  // Stats
+  statsRow: { flexDirection: 'row', gap: 10 },
+  statCard: {
+    flex: 1,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    padding: 12,
+    alignItems: 'center',
+    gap: 3,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
+
+  // Flow banner
+  flowBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(0,201,167,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,201,167,0.22)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  flowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: orbiTheme.colors.teal },
+  flowText: { flex: 1, fontSize: 13, fontWeight: '500', fontFamily: 'Inter_500Medium', color: orbiTheme.colors.text },
+  flowArrow: { fontSize: 20, color: orbiTheme.colors.teal },
+
+  // Cards (cardHeader/Title/Meta use the existing card style below)
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  cardMeta: {
+    fontSize: 13,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 18,
+  },
+
+  // Status pill
+  statusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderWidth: 1,
+  },
+  statusPillReady: {
+    backgroundColor: 'rgba(0,201,167,0.08)',
+    borderColor: 'rgba(0,201,167,0.28)',
+  },
+  statusPillPending: {
+    backgroundColor: 'rgba(255,149,0,0.08)',
+    borderColor: 'rgba(255,149,0,0.28)',
+  },
+  statusPillText: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  statusPillTextReady: { color: orbiTheme.colors.teal },
+  statusPillTextPending: { color: orbiTheme.colors.amber },
+
+  // Form elements
+  screen: { gap: 14 },
   title: {
     color: orbiTheme.colors.text,
     fontSize: 32,

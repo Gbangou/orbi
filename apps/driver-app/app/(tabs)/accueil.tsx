@@ -258,7 +258,7 @@ export default function DriverHomeScreen() {
   }
 
   // suppress unused state warnings for vars managed by callbacks
-  void statusNote; void isRefreshing; void isRealtimeSyncing; void recentlyExpiredCount;
+  void isRealtimeSyncing; void recentlyExpiredCount;
 
   const isOnline = flow.availabilityStatus === 'ONLINE';
   const sheetH = activeTrip ? 250 : isOnline ? 220 : 190;
@@ -342,10 +342,9 @@ export default function DriverHomeScreen() {
               <View>
                 <Text style={styles.onlineTitle}>
                   {visibleOffers.length > 0
-                    ? `${visibleOffers.length} offre${visibleOffers.length > 1 ? 's' : ''} disponible${visibleOffers.length > 1 ? 's' : ''}`
-                    : 'En attente de courses…'}
+                    ? `${visibleOffers.length} offre${visibleOffers.length > 1 ? 's' : ''} — Ouagadougou`
+                    : 'En attente — Ouagadougou'}
                 </Text>
-                <Text style={styles.onlineSub}>Ouagadougou — zone urbaine</Text>
               </View>
               {visibleOffers.length > 0 ? (
                 <Pressable onPress={() => router.push('/offres')} style={styles.viewOffersBtn}>
@@ -375,6 +374,23 @@ export default function DriverHomeScreen() {
             ) : null}
           </View>
         )}
+
+        {/* Status note (operational feedback) */}
+        {statusNote ? (
+          <Text style={styles.statusNoteText}>{statusNote}</Text>
+        ) : null}
+
+        {/* Refresh — accessible for tests */}
+        <Pressable
+          onPress={() => void loadDriverHome(false)}
+          disabled={isRefreshing}
+          style={styles.refreshDirectBtn}
+          accessibilityLabel="Actualiser le direct"
+        >
+          <Text style={styles.refreshDirectBtnLabel}>
+            {isRefreshing ? 'Actualisation...' : 'Actualiser le direct'}
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -561,4 +577,27 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   setupBtnLabel: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  refreshDirectBtn: {
+    alignSelf: 'center',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    marginTop: 6,
+  },
+  refreshDirectBtnLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: orbiTheme.colors.textMuted,
+  },
+  statusNoteText: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    paddingHorizontal: 8,
+    paddingTop: 4,
+  },
 });

@@ -170,7 +170,7 @@ const realtimeLabelsByAudience: Record<
     "ride-request.created": "Une nouvelle demande compatible est arrivee.",
     "ride-request.cancelled": "Une demande vient d etre retiree du flux.",
     "ride-request.reservation-assigned":
-      "Une nouvelle offre est disponible pour vous.",
+      "Une nouvelle offre est disponible.",
     "ride-request.reservation-released":
       "Une reservation vous a ete retiree et remise au flux.",
     "ride-request.reservation-expired":
