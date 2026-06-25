@@ -1,12 +1,14 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Easing,
   Image,
   Linking,
   Pressable,
+  SafeAreaView,
   ScrollView,
   Share,
   Text,
@@ -33,15 +35,6 @@ import {
   formatXof,
   orbiTheme,
 } from "@orbi/ui";
-import {
-  FlowActionButton,
-  LiveStatusBanner,
-  LiveRouteProgressCard,
-  LiveTimeline,
-  MetricTile,
-  RouteSignalCard,
-  TransitionNoticeCard,
-} from "../../lib/realtime-widgets";
 import { restoreRiderSession } from "../../lib/auth";
 import {
   buildRiderFlowTransitionLabel,
@@ -189,159 +182,6 @@ const loyaltyStyles = StyleSheet.create({
   },
 });
 
-function LiveApproachPreview({
-  progressPercent,
-  title,
-  distanceLabel,
-  stateLabel,
-  etaLabel,
-  freshnessLabel,
-  coordinateLabel,
-  accuracyLabel,
-  speedLabel,
-  isInProgress,
-}: {
-  progressPercent: number;
-  title: string;
-  distanceLabel: string;
-  stateLabel: string;
-  etaLabel?: string;
-  freshnessLabel: string;
-  coordinateLabel: string;
-  accuracyLabel: string;
-  speedLabel: string;
-  isInProgress: boolean;
-}) {
-  const boundedProgress = Math.max(12, Math.min(88, progressPercent));
-  const riderProgress = isInProgress ? 88 : 12;
-  const motion = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(motion, {
-          toValue: 1,
-          duration: 900,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(motion, {
-          toValue: 0,
-          duration: 900,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-
-    animation.start();
-
-    return () => animation.stop();
-  }, [motion]);
-
-  const vehicleMotion = {
-    transform: [
-      {
-        translateY: motion.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, -4],
-        }),
-      },
-      {
-        scale: motion.interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 1.035],
-        }),
-      },
-    ],
-  };
-
-  return (
-    <View style={styles.approachMap}>
-      <View style={styles.approachGridLayer}>
-        <View style={styles.approachGridLine} />
-        <View style={[styles.approachGridLine, styles.approachGridLineLower]} />
-      </View>
-      <View style={styles.approachRoad} />
-      <Animated.View
-        style={[
-          styles.approachRoadPulse,
-          {
-            opacity: motion.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.18, 0.55],
-            }),
-            transform: [
-              {
-                translateX: motion.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-18, 22],
-                }),
-              },
-            ],
-          },
-        ]}
-      />
-      <View style={styles.approachRoadMuted} />
-      <View style={styles.approachTrail}>
-        <View style={styles.approachTrailDot} />
-        <View style={[styles.approachTrailDot, styles.approachTrailDotMuted]} />
-        <View style={[styles.approachTrailDot, styles.approachTrailDotSoft]} />
-      </View>
-      <Animated.View
-        style={[
-          styles.approachVehiclePin,
-          { left: `${boundedProgress}%` },
-          vehicleMotion,
-        ]}
-      >
-        <View style={styles.approachVehicleBody}>
-          <View style={styles.approachVehicleCabin} />
-          <View style={styles.approachVehicleWheelRow}>
-            <View style={styles.approachVehicleWheel} />
-            <View style={styles.approachVehicleWheel} />
-          </View>
-        </View>
-      </Animated.View>
-      <View style={styles.approachOriginPin}>
-        <Text style={styles.approachPinLabel}>P</Text>
-      </View>
-      <View style={styles.approachDestinationPin}>
-        <Text style={styles.approachPinLabel}>A</Text>
-      </View>
-      <View style={[styles.approachPersonPin, { left: `${riderProgress}%` }]}>
-        <Text style={styles.approachPersonLabel}>Vous</Text>
-      </View>
-      <Animated.View
-        style={[
-          styles.approachDriverLabel,
-          { left: `${boundedProgress}%` },
-          vehicleMotion,
-        ]}
-      >
-        <Text style={styles.approachDriverLabelText}>Chauffeur</Text>
-      </Animated.View>
-      <View style={styles.approachMapCopy}>
-        <View style={styles.approachHudRow}>
-          <Text style={styles.approachHudLabel}>{etaLabel ?? "ETA live"}</Text>
-          <Text style={styles.approachHudLabel}>{freshnessLabel}</Text>
-          <Text style={styles.approachHudLabel}>{accuracyLabel}</Text>
-        </View>
-        <Text style={styles.approachMapTitle}>{title}</Text>
-        <Text style={styles.approachMapMeta}>
-          {distanceLabel} - {stateLabel}
-        </Text>
-        <View style={styles.approachSignalRow}>
-          <Text style={styles.approachSignalText}>{coordinateLabel}</Text>
-          <Text style={styles.approachSignalText}>
-            {isInProgress ? "Rider vers destination" : "Rider au pickup"} -{" "}
-            {speedLabel}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-}
 
 export default function ActivityScreen() {
   const router = useRouter();
@@ -862,724 +702,669 @@ export default function ActivityScreen() {
     ];
   }
 
-  return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>Historique des trajets</Text>
-      <LiveStatusBanner
-        label="Suivi direct"
-        message={status}
-        secondaryMessage={
-          activityTransitionLabel ??
-          (recentlyClearedRequestCount
-            ? `${recentlyClearedRequestCount} demande${recentlyClearedRequestCount > 1 ? "s" : ""} a disparu du flux actif.`
-            : null)
-        }
-        tone={isRealtimeSyncing || activityTransitionLabel ? "sky" : "teal"}
-      />
-      {isRealtimeSyncing ? (
-        <Text style={styles.syncMeta}>
-          Resynchronisation silencieuse en cours apres evenement live.
-        </Text>
-      ) : null}
-      {activeTrip ? (
-        <Text style={styles.syncMeta}>{riderPosition.positionNote}</Text>
-      ) : null}
-      <Pressable
-        disabled={isRefreshing || isSubmitting}
-        onPress={() => void loadHistory()}
-        style={[
-          styles.refreshButton,
-          isRefreshing || isSubmitting ? styles.actionButtonDisabled : null,
-        ]}
-      >
-        <Text style={styles.refreshButtonLabel}>
-          {isRefreshing ? "Actualisation..." : "Actualiser le suivi"}
-        </Text>
-      </Pressable>
+  function getStatusColor(status: string) {
+    if (status === 'MATCHED') return orbiTheme.colors.sky;
+    if (status === 'DRIVER_APPROACHING') return orbiTheme.colors.amber;
+    if (status === 'DRIVER_AT_PICKUP') return orbiTheme.colors.amber;
+    if (status === 'IN_PROGRESS') return orbiTheme.colors.teal;
+    return orbiTheme.colors.sky;
+  }
 
-      {recentlyClearedRequestCount ? (
-        <TransitionNoticeCard
-          label={
-            recentlyClearedRequestCount > 1
-              ? `${recentlyClearedRequestCount} demandes mises a jour`
-              : "Demande mise a jour"
-          }
-          message={`${recentlyClearedRequestCount} demande${recentlyClearedRequestCount > 1 ? "s" : ""} a disparu du flux actif.`}
-          tone="rose"
-        />
-      ) : null}
+  function getStatusBg(status: string) {
+    if (status === 'MATCHED') return 'rgba(0,122,255,0.10)';
+    if (status === 'DRIVER_APPROACHING') return 'rgba(255,149,0,0.10)';
+    if (status === 'DRIVER_AT_PICKUP') return 'rgba(255,149,0,0.10)';
+    if (status === 'IN_PROGRESS') return 'rgba(0,201,167,0.10)';
+    return 'rgba(0,122,255,0.10)';
+  }
 
-      <RouteSignalCard
-        eyebrow="Vue rapide"
-        badgeLabel={isRealtimeSyncing ? "Mise à jour" : "Récapitulatif"}
-        badgeTone={isRealtimeSyncing ? "sky" : "teal"}
-        title="Résumé de vos courses"
-        description="Vue unifiee du flux passager, des demandes actives et du suivi de course."
-        insights={[
-          {
-            label: "Demandes",
-            value: String(history.pendingRequests.length),
-            tone: history.pendingRequests.length ? "amber" : "sky",
-          },
-          {
-            label: "Completes",
-            value: String(history.stats.completedTrips),
-            tone: "teal",
-          },
-          {
-            label: "Total",
-            value: formatXof(history.stats.totalAmount),
-            tone: "sky",
-          },
-        ]}
-        detailLines={[
-          `Demandes en cours: ${history.pendingRequests.length}`,
-          `Trajets complétés: ${history.stats.completedTrips}`,
-          `Total dépensé: ${formatXof(history.stats.totalAmount)}`,
-        ]}
-      />
+  // ── Active trip view ────────────────────────────────────────────────────────
+  if (activeTrip) {
+    const hasTripCoords = activeTripDetail?.trip.pickupLatitude != null;
+    const driverLat =
+      activeTripDetail?.trip.routeMonitoring.latestPosition?.latitude ?? null;
+    const driverLng =
+      activeTripDetail?.trip.routeMonitoring.latestPosition?.longitude ?? null;
+    const canCancel =
+      activeTrip.status === 'MATCHED' ||
+      activeTrip.status === 'DRIVER_APPROACHING';
 
-      <LoyaltyMilestoneCard completedTrips={history.stats.completedTrips} />
-
-      {activeTrip ? (
-        <RouteSignalCard
-          eyebrow="Course active"
-          badgeLabel={
-            freshTimelineEventIds.length
-              ? freshTimelineEventIds.length > 1
-                ? `${freshTimelineEventIds.length} evenements live`
-                : "Evenement live"
-              : activityTransitionLabel
-                ? "Transition live"
-                : primaryStatusLabel
-          }
-          badgeTone={
-            activityTransitionLabel || freshTimelineEventIds.length
-              ? "sky"
-              : "teal"
-          }
-          title={`${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`}
-          description={`Chauffeur: ${activeTrip.counterpartyName ?? "Assigne"}`}
-          insights={[
-            {
-              label: "Statut",
-              value: primaryStatusLabel,
-              tone: "teal",
-            },
-            {
-              label: "Support",
-              value: "Actif",
-              tone: "sky",
-            },
-          ]}
-          detailLines={[
-            "Partage, code de prise en charge et suivi route connectés.",
-            ...buildDriverVerificationLines(),
-            ...buildRouteMonitoringLines(),
-          ]}
-          note={
-            activeTrip.pickupCode
-              ? `Code a donner au chauffeur: ${activeTrip.pickupCode}`
-              : null
-          }
-          noteTone="amber"
-          isHighlighted={Boolean(
-            activityTransitionLabel || freshTimelineEventIds.length,
-          )}
-        >
-          <TransitionNoticeCard
-            label="Prochaine action"
-            message={riderNextActionHint}
-            tone={activeTrip.status === "IN_PROGRESS" ? "sky" : "amber"}
+    return (
+      <View style={styles.tripRoot}>
+        {/* Map */}
+        {hasTripCoords ? (
+          <TripMapView
+            pickupLat={activeTripDetail!.trip.pickupLatitude!}
+            pickupLng={activeTripDetail!.trip.pickupLongitude!}
+            destLat={activeTripDetail!.trip.destinationLatitude!}
+            destLng={activeTripDetail!.trip.destinationLongitude!}
+            driverLat={driverLat}
+            driverLng={driverLng}
+            style={StyleSheet.absoluteFill}
           />
-          <Text style={styles.snapshotTitle}>Mission en direct</Text>
-          <View style={styles.snapshotStrip}>
-            {riderMissionSnapshot.map((item) => (
-              <MetricTile
-                key={`${item.label}:${item.value}`}
-                label={item.label}
-                value={item.value}
-                helper={item.helper}
-              />
-            ))}
-          </View>
-          {tripDetailStatus ? (
-            <TransitionNoticeCard
-              label="Mode degrade"
-              message={tripDetailStatus}
-              tone="amber"
-            />
-          ) : null}
-          {driverTrustSnapshot ? (
-            <View style={styles.trustCard}>
-              <View style={styles.identityRow}>
-                {driverTrustSnapshot.profilePhotoUrl ? (
-                  <Image
-                    source={{ uri: driverTrustSnapshot.profilePhotoUrl }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <View style={styles.avatarFallback}>
-                    <Text style={styles.avatarInitials}>
-                      {driverTrustSnapshot.initials}
-                    </Text>
-                  </View>
-                )}
-                <View style={styles.identityCopy}>
-                  <Text style={styles.identityTitle}>
-                    {driverTrustSnapshot.driverName}
-                  </Text>
-                  <Text style={styles.identityMeta}>
-                    {driverTrustSnapshot.verificationLabel} -{" "}
-                    {driverTrustSnapshot.ratingLabel}
-                  </Text>
-                  <Text style={styles.identityMeta}>
-                    {driverTrustSnapshot.photoLabel}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.identityDetails}>
-                <MetricTile
-                  label="Vehicule"
-                  value={driverTrustSnapshot.vehicleLabel}
-                  helper={
-                    driverTrustSnapshot.vehicleMeta.join(" - ") ||
-                    "Type confirme par dossier"
-                  }
-                />
-                <MetricTile
-                  label="Plaque"
-                  value={driverTrustSnapshot.plateLabel}
-                  helper={driverTrustSnapshot.phoneLabel}
-                />
-              </View>
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: orbiTheme.colors.backgroundDim }]} />
+        )}
+
+        {/* Bottom sheet */}
+        <View style={styles.tripSheet}>
+          {/* Handle */}
+          <View style={styles.sheetHandle} />
+
+          {/* Status pill */}
+          <View style={styles.statusRow}>
+            <View style={[styles.statusPill, { backgroundColor: getStatusBg(activeTrip.status) }]}>
+              <View style={[styles.statusDot, { backgroundColor: getStatusColor(activeTrip.status) }]} />
+              <Text style={[styles.statusLabel, { color: getStatusColor(activeTrip.status) }]}>
+                {primaryStatusLabel}
+              </Text>
             </View>
-          ) : null}
-          {riderRouteProgress ? (
-            <>
-              {activeTripDetail?.trip.pickupLatitude != null ? (
-                <TripMapView
-                  pickupLat={activeTripDetail.trip.pickupLatitude}
-                  pickupLng={activeTripDetail.trip.pickupLongitude}
-                  destLat={activeTripDetail.trip.destinationLatitude}
-                  destLng={activeTripDetail.trip.destinationLongitude}
-                  driverLat={
-                    activeTripDetail.trip.routeMonitoring.latestPosition
-                      ?.latitude ?? null
-                  }
-                  driverLng={
-                    activeTripDetail.trip.routeMonitoring.latestPosition
-                      ?.longitude ?? null
-                  }
-                  style={styles.tripMap}
+            {isRealtimeSyncing ? (
+              <ActivityIndicator size="small" color={orbiTheme.colors.teal} style={{ marginLeft: 8 }} />
+            ) : null}
+          </View>
+
+          {/* Driver card */}
+          <View style={styles.driverCard}>
+            <View style={styles.driverAvatar}>
+              {driverTrustSnapshot?.profilePhotoUrl ? (
+                <Image
+                  source={{ uri: driverTrustSnapshot.profilePhotoUrl }}
+                  style={styles.driverAvatarImg}
                 />
               ) : (
-                <LiveApproachPreview
-                  progressPercent={riderRouteProgress.progressPercent}
-                  title={riderRouteProgress.title}
-                  distanceLabel={riderRouteProgress.distanceLabel}
-                  stateLabel={riderRouteProgress.stateLabel}
-                  etaLabel={riderRouteProgress.etaLabel}
-                  freshnessLabel={riderRouteProgress.freshnessLabel}
-                  coordinateLabel={riderRouteProgress.coordinateLabel}
-                  accuracyLabel={riderRouteProgress.accuracyLabel}
-                  speedLabel={riderRouteProgress.speedLabel}
-                  isInProgress={activeTrip.status === "IN_PROGRESS"}
-                />
+                <Text style={styles.driverAvatarInitials}>
+                  {driverTrustSnapshot?.initials ?? 'OR'}
+                </Text>
               )}
-              <LiveRouteProgressCard {...riderRouteProgress} />
-            </>
-          ) : null}
-          {activityTransitionLabel ? (
-            <Text style={styles.transitionMeta}>{activityTransitionLabel}</Text>
-          ) : null}
-          {activeTripDetail ? (
-            <LiveTimeline
-              events={activeTripDetail.trip.timeline}
-              freshEventIds={freshTimelineEventIds}
-            />
-          ) : null}
-          {["MATCHED", "DRIVER_ARRIVING"].includes(activeTrip.status) ? (
-            <FlowActionButton
-              disabled={isSubmitting}
-              label="Annuler avant depart"
-              onPress={() => handleCancelActiveTrip(activeTrip.id)}
-              emphasis="secondary"
-              style={isSubmitting ? styles.actionButtonDisabled : null}
-            />
-          ) : null}
-          {activeTripDetail?.trip.driverPhoneNumber ? (
-            <FlowActionButton
-              label="Appeler le chauffeur"
-              onPress={() =>
-                void Linking.openURL(
-                  `tel:${activeTripDetail.trip.driverPhoneNumber}`,
-                )
-              }
-              emphasis="secondary"
-            />
-          ) : null}
-          <FlowActionButton
-            disabled={isSubmitting}
-            label="SOS securite"
-            onPress={() => handleTriggerSos(activeTrip.id)}
-            emphasis="primary"
-            style={isSubmitting ? styles.actionButtonDisabled : null}
-          />
-          <FlowActionButton
-            disabled={isSubmitting}
-            label="Partager le trajet"
-            onPress={() => handleShareTrip(activeTrip.id)}
-            emphasis="secondary"
-            style={isSubmitting ? styles.actionButtonDisabled : null}
-          />
-          <FlowActionButton
-            disabled={isSubmitting}
-            label="Signaler un incident"
-            onPress={() => handleReportIncident(activeTrip.id)}
-            emphasis="secondary"
-            style={isSubmitting ? styles.actionButtonDisabled : null}
-          />
-          <FlowActionButton
-            disabled={isSubmitting}
-            label="Preuve volontaire"
-            onPress={() => handleDeclareIncidentEvidence(activeTrip.id)}
-            emphasis="secondary"
-            style={isSubmitting ? styles.actionButtonDisabled : null}
-          />
-        </RouteSignalCard>
-      ) : null}
+            </View>
+            <View style={styles.driverInfo}>
+              <Text style={styles.driverName}>
+                {driverTrustSnapshot?.driverName ?? activeTrip.counterpartyName ?? 'Chauffeur assigné'}
+              </Text>
+              <Text style={styles.driverMeta}>
+                {driverTrustSnapshot
+                  ? `${driverTrustSnapshot.ratingLabel} · ${driverTrustSnapshot.vehicleLabel}`
+                  : 'En route vers vous'}
+              </Text>
+              {driverTrustSnapshot?.plateLabel ? (
+                <Text style={styles.driverPlate}>{driverTrustSnapshot.plateLabel}</Text>
+              ) : null}
+            </View>
+          </View>
 
-      {history.pendingRequests.map((request) => (
-        <RouteSignalCard
-          key={request.id}
-          eyebrow="Demande active"
-          badgeLabel={`Demande ${formatOperationalStatus(request.status)}`}
-          badgeTone={request.status === "REQUESTED" ? "amber" : "sky"}
-          title={`${request.pickupAddress} vers ${request.destinationAddress}`}
-          description={`Estimation: ${formatXof(request.estimatedFare)}`}
-          insights={[
-            {
-              label: "Statut",
-              value: formatOperationalStatus(request.status),
-              tone: request.status === "REQUESTED" ? "amber" : "sky",
-            },
-          ]}
-          detailLines={[
-            `Estimation: ${formatXof(request.estimatedFare)}`,
-          ]}
-        >
-          {request.status === "REQUESTED" ? (
-            <FlowActionButton
-              disabled={isSubmitting}
-              label="Annuler cette demande"
-              onPress={() => handleCancelPendingRequest(request.id)}
-              emphasis="secondary"
-              style={isSubmitting ? styles.actionButtonDisabled : null}
-            />
-          ) : null}
-        </RouteSignalCard>
-      ))}
-
-      {history.recentTrips.map((trip) => (
-        <RouteSignalCard
-          key={trip.id}
-          eyebrow="Trajet recent"
-          badgeLabel={formatOperationalStatus(trip.status)}
-          badgeTone={trip.status === "COMPLETED" ? "teal" : "amber"}
-          title={`${trip.pickupAddress} vers ${trip.destinationAddress}`}
-          titleAside={formatXof(trip.amount)}
-          description={`Chauffeur: ${trip.counterpartyName ?? "Attribue automatiquement"}`}
-          insights={[
-            {
-              label: "Statut",
-              value: formatOperationalStatus(trip.status),
-              tone: trip.status === "COMPLETED" ? "teal" : "amber",
-            },
-          ]}
-          detailLines={[
-            `Chauffeur: ${trip.counterpartyName ?? "Attribue automatiquement"}`,
-          ]}
-        >
-          {trip.status === "COMPLETED" ? (
-            <View style={styles.tripCompletedActions}>
-              <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: "/receipt",
-                    params: { tripId: trip.id },
-                  })
-                }
-                style={styles.receiptButton}
-              >
-                <Text style={styles.receiptButtonLabel}>Voir le recu</Text>
-              </Pressable>
-              <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: "/rating",
-                    params: {
-                      tripId: trip.id,
-                      driverName: trip.counterpartyName ?? "",
-                      fare: String(trip.amount),
-                      destination: trip.destinationAddress,
-                    },
-                  })
-                }
-                style={styles.rateButton}
-              >
-                <Text style={styles.rateButtonLabel}>Evaluer</Text>
-              </Pressable>
+          {/* Pickup code */}
+          {activeTrip.pickupCode && canCancel ? (
+            <View style={styles.pickupCodeCard}>
+              <Text style={styles.pickupCodeEyebrow}>Code de départ</Text>
+              <Text style={styles.pickupCodeValue}>{activeTrip.pickupCode}</Text>
+              <Text style={styles.pickupCodeHint}>
+                Communiquez ce code à votre chauffeur
+              </Text>
             </View>
           ) : null}
-        </RouteSignalCard>
-      ))}
-    </ScrollView>
+
+          {/* Route */}
+          <View style={styles.routeCard}>
+            <View style={styles.routeRow}>
+              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.teal }]} />
+              <Text style={styles.routeText} numberOfLines={1}>
+                {activeTrip.pickupAddress}
+              </Text>
+            </View>
+            <View style={styles.routeLineSep} />
+            <View style={styles.routeRow}>
+              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.text }]} />
+              <Text style={styles.routeText} numberOfLines={1}>
+                {activeTrip.destinationAddress}
+              </Text>
+            </View>
+          </View>
+
+          {/* Actions */}
+          <View style={styles.actionsRow}>
+            <Pressable
+              onPress={() => void handleShareTrip(activeTrip.id)}
+              disabled={isSubmitting}
+              style={styles.actionBtn}
+            >
+              <Text style={styles.actionBtnIcon}>↑</Text>
+              <Text style={styles.actionBtnLabel}>Partager</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void handleTriggerSos(activeTrip.id)}
+              disabled={isSubmitting}
+              style={[styles.actionBtn, styles.actionBtnSos]}
+            >
+              <Text style={[styles.actionBtnIcon, styles.actionBtnIconSos]}>!</Text>
+              <Text style={[styles.actionBtnLabel, styles.actionBtnLabelSos]}>SOS</Text>
+            </Pressable>
+            {canCancel ? (
+              <Pressable
+                onPress={() => handleCancelActiveTrip(activeTrip.id)}
+                disabled={isSubmitting}
+                style={styles.actionBtn}
+              >
+                <Text style={styles.actionBtnIcon}>✕</Text>
+                <Text style={styles.actionBtnLabel}>Annuler</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // ── History view ────────────────────────────────────────────────────────────
+  return (
+    <SafeAreaView style={styles.safe}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Activité</Text>
+        {isRealtimeSyncing ? (
+          <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
+        ) : null}
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Stats */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>
+              {history.stats.completedTrips}
+            </Text>
+            <Text style={styles.statLabel}>Courses</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>
+              {formatXof(history.stats.totalAmount)}
+            </Text>
+            <Text style={styles.statLabel}>Dépensé</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>
+              {history.pendingRequests.length}
+            </Text>
+            <Text style={styles.statLabel}>En attente</Text>
+          </View>
+        </View>
+
+        {/* Loyalty card */}
+        <LoyaltyMilestoneCard completedTrips={history.stats.completedTrips} />
+
+        {/* Pending requests */}
+        {history.pendingRequests.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Demandes en cours</Text>
+            {history.pendingRequests.map((req) => (
+              <View key={req.id} style={styles.requestCard}>
+                <View style={styles.requestDot} />
+                <View style={styles.requestInfo}>
+                  <Text style={styles.requestTitle} numberOfLines={1}>
+                    {req.pickupAddress}
+                  </Text>
+                  <Text style={styles.requestSub} numberOfLines={1}>
+                    → {req.destinationAddress}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => void handleCancelPendingRequest(req.id)}
+                  disabled={isSubmitting}
+                  style={styles.cancelBtn}
+                >
+                  <Text style={styles.cancelBtnText}>Annuler</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Recent trips */}
+        {history.recentTrips.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Courses récentes</Text>
+            {history.recentTrips.slice(0, 10).map((trip) => {
+              const dateStr = trip.completedAt ?? trip.createdAt;
+              const date = dateStr
+                ? new Date(dateStr).toLocaleDateString('fr-BF', {
+                    day: '2-digit',
+                    month: 'short',
+                  })
+                : '—';
+              const isDone = trip.status === 'COMPLETED';
+              return (
+                <View key={trip.id} style={styles.tripHistRow}>
+                  <View style={styles.tripHistDate}>
+                    <Text style={styles.tripHistDateText}>{date}</Text>
+                  </View>
+                  <View style={styles.tripHistInfo}>
+                    <Text style={styles.tripHistRoute} numberOfLines={1}>
+                      {trip.pickupAddress} → {trip.destinationAddress}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.tripHistStatus,
+                        isDone && styles.tripHistStatusDone,
+                      ]}
+                    >
+                      {isDone
+                        ? 'Terminé'
+                        : trip.status === 'CANCELLED'
+                          ? 'Annulé'
+                          : trip.status}
+                    </Text>
+                  </View>
+                  {trip.amount ? (
+                    <Text style={styles.tripHistFare}>
+                      {formatXof(trip.amount)}
+                    </Text>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        ) : history.pendingRequests.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>Aucun trajet</Text>
+            <Text style={styles.emptyMeta}>
+              Vos courses apparaîtront ici après votre première réservation.
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={{ height: 24 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    paddingTop: 88,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    backgroundColor: orbiTheme.colors.background,
-    gap: 14,
-  },
-  title: {
-    color: orbiTheme.colors.text,
-    fontSize: 32,
-    fontWeight: "800",
-  },
-  syncMeta: {
-    color: orbiTheme.colors.sky,
-    fontWeight: "700",
-  },
-  refreshButton: {
-    alignSelf: "flex-start",
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  refreshButtonLabel: {
-    color: orbiTheme.colors.text,
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  transitionMeta: {
-    color: orbiTheme.colors.sky,
-    fontWeight: "700",
-    lineHeight: 19,
-  },
-  snapshotTitle: {
-    color: orbiTheme.colors.text,
-    fontWeight: "800",
-    marginTop: 4,
-  },
-  snapshotStrip: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  trustCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    padding: 14,
-    gap: 12,
-  },
-  identityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  avatarFallback: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: orbiTheme.colors.text,
-  },
-  avatarImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-  },
-  avatarInitials: {
-    color: "#FFFFFF",
-    fontWeight: "900",
-    fontSize: 18,
-  },
-  identityCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  identityTitle: {
-    color: orbiTheme.colors.text,
-    fontWeight: "800",
-    fontSize: 17,
-  },
-  identityMeta: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 18,
-  },
-  identityDetails: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  approachMap: {
-    minHeight: 142,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    overflow: "hidden",
-    justifyContent: "center",
-    padding: 16,
-  },
-  approachGridLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  approachGridLine: {
-    position: "absolute",
+  // ── Active trip layout
+  tripRoot: { flex: 1 },
+  tripSheet: {
+    position: 'absolute',
+    bottom: 0,
     left: 0,
     right: 0,
-    top: 34,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingBottom: 36,
+    paddingTop: 8,
+    gap: 14,
+    ...orbiTheme.shadows.sheet,
+  },
+  sheetHandle: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E0E0E0',
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  statusRow: { flexDirection: 'row', alignItems: 'center' },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  statusDot: { width: 7, height: 7, borderRadius: 4 },
+  statusLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+  },
+
+  // Driver card
+  driverCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  driverAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: orbiTheme.colors.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  driverAvatarImg: { width: 48, height: 48, borderRadius: 24 },
+  driverAvatarInitials: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
+  },
+  driverInfo: { flex: 1, gap: 2 },
+  driverName: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  driverMeta: {
+    fontSize: 13,
+    color: orbiTheme.colors.textSoft,
+    fontFamily: 'Inter_400Regular',
+  },
+  driverPlate: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.teal,
+    letterSpacing: 1,
+  },
+
+  // Pickup code
+  pickupCodeCard: {
+    backgroundColor: 'rgba(0,201,167,0.06)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,201,167,0.28)',
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+    gap: 4,
+  },
+  pickupCodeEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.teal,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  pickupCodeValue: {
+    fontSize: 36,
+    fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
+    color: orbiTheme.colors.text,
+    letterSpacing: 8,
+  },
+  pickupCodeHint: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
+
+  // Route card
+  routeCard: {
+    gap: 0,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+  },
+  routeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+  },
+  routeDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  routeText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
+    color: orbiTheme.colors.text,
+  },
+  routeLineSep: {
     height: 1,
-    backgroundColor: "rgba(148, 163, 184, 0.12)",
+    backgroundColor: orbiTheme.colors.border,
+    marginLeft: 18,
   },
-  approachGridLineLower: {
-    top: 112,
+
+  // Actions row
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  approachRoad: {
-    position: "absolute",
-    left: 24,
-    right: 24,
-    top: 70,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: "rgba(0, 122, 255, 0.28)",
+  actionBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
   },
-  approachRoadPulse: {
-    position: "absolute",
-    left: 56,
-    top: 69,
-    width: 64,
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: "rgba(0, 201, 167, 0.6)",
+  actionBtnIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: orbiTheme.colors.text,
   },
-  approachRoadMuted: {
-    position: "absolute",
-    left: 34,
-    right: 34,
-    top: 84,
-    height: 2,
-    borderRadius: 999,
-    backgroundColor: "rgba(148, 163, 184, 0.28)",
+  actionBtnLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.textSoft,
   },
-  approachTrail: {
-    position: "absolute",
-    left: 54,
-    right: 54,
-    top: 66,
-    height: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
+  actionBtnSos: {
+    backgroundColor: 'rgba(255,59,48,0.08)',
+    borderColor: 'rgba(255,59,48,0.28)',
   },
-  approachTrailDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: "rgba(0, 201, 167, 0.55)",
+  actionBtnIconSos: { color: orbiTheme.colors.danger },
+  actionBtnLabelSos: { color: orbiTheme.colors.danger },
+
+  // ── History layout
+  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: orbiTheme.colors.border,
   },
-  approachTrailDotMuted: {
-    opacity: 0.46,
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
+    color: orbiTheme.colors.text,
   },
-  approachTrailDotSoft: {
-    opacity: 0.28,
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 14,
   },
-  approachVehiclePin: {
-    position: "absolute",
-    top: 42,
-    width: 50,
-    marginLeft: -25,
-    alignItems: "center",
+
+  // Stats row
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  approachVehicleBody: {
-    width: 44,
-    height: 25,
-    borderRadius: 9,
-    backgroundColor: orbiTheme.colors.teal,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: 3,
+  statCard: {
+    flex: 1,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
   },
-  approachVehicleCabin: {
-    position: "absolute",
-    top: -8,
-    width: 24,
-    height: 12,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    backgroundColor: "rgba(0, 201, 167, 0.55)",
+  statValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
   },
-  approachVehicleWheelRow: {
-    width: 36,
-    flexDirection: "row",
-    justifyContent: "space-between",
+  statLabel: {
+    fontSize: 11,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
   },
-  approachVehicleWheel: {
+
+  // Sections
+  section: { gap: 8 },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+    paddingHorizontal: 2,
+  },
+
+  // Pending requests
+  requestCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255,149,0,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,149,0,0.22)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  requestDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: orbiTheme.colors.background,
-  },
-  approachOriginPin: {
-    position: "absolute",
-    left: 18,
-    top: 56,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: orbiTheme.colors.sky,
-  },
-  approachDestinationPin: {
-    position: "absolute",
-    right: 18,
-    top: 56,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
     backgroundColor: orbiTheme.colors.amber,
+    flexShrink: 0,
   },
-  approachPersonPin: {
-    position: "absolute",
-    top: 91,
-    minWidth: 48,
-    marginLeft: -24,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: "rgba(251, 191, 36, 0.92)",
-    alignItems: "center",
-  },
-  approachPersonLabel: {
-    color: "#3b2205",
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  approachDriverLabel: {
-    position: "absolute",
-    top: 24,
-    minWidth: 52,
-    marginLeft: -26,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: orbiTheme.colors.teal,
-    alignItems: "center",
-  },
-  approachDriverLabelText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  approachPinLabel: {
+  requestInfo: { flex: 1 },
+  requestTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.text,
+  },
+  requestSub: {
     fontSize: 12,
-    fontWeight: "900",
-  },
-  approachMapCopy: {
-    marginTop: 78,
-    gap: 3,
-  },
-  approachHudRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 2,
-  },
-  approachHudLabel: {
-    overflow: "hidden",
-    borderRadius: 999,
-    backgroundColor: orbiTheme.colors.backgroundDim,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
     color: orbiTheme.colors.textSoft,
-    fontSize: 11,
-    fontWeight: "800",
+    fontFamily: 'Inter_400Regular',
   },
-  approachMapTitle: {
+  cancelBtn: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: 'rgba(255,59,48,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,48,0.22)',
+  },
+  cancelBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.danger,
+  },
+
+  // Trip history rows
+  tripHistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: orbiTheme.colors.border,
+  },
+  tripHistDate: {
+    width: 40,
+    alignItems: 'center',
+  },
+  tripHistDateText: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.textMuted,
+    textAlign: 'center',
+  },
+  tripHistInfo: { flex: 1 },
+  tripHistRoute: {
+    fontSize: 13,
+    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: orbiTheme.colors.text,
-    fontSize: 16,
-    fontWeight: "800",
   },
-  approachMapMeta: {
-    color: orbiTheme.colors.sky,
-    fontWeight: "700",
-  },
-  approachSignalRow: {
-    marginTop: 5,
-    gap: 2,
-  },
-  approachSignalText: {
-    color: orbiTheme.colors.muted,
+  tripHistStatus: {
     fontSize: 11,
-    fontWeight: "700",
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
   },
-  actionButtonDisabled: {
-    opacity: 0.6,
+  tripHistStatusDone: { color: orbiTheme.colors.teal },
+  tripHistFare: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
   },
-  tripCompletedActions: {
-    flexDirection: "row",
+
+  // Empty state
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 48,
     gap: 8,
-    marginTop: 4,
-    flexWrap: "wrap",
   },
-  receiptButton: {
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  emptyMeta: {
+    fontSize: 14,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    maxWidth: 280,
+  },
+
+  // ── Legacy stubs
+  screen: { gap: 16 },
+  title: { fontSize: 24, fontWeight: '800', color: orbiTheme.colors.text },
+  syncMeta: { color: orbiTheme.colors.muted, fontSize: 12 },
+  refreshButton: {
     borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
+    alignSelf: 'flex-start',
   },
-  receiptButtonLabel: {
-    color: orbiTheme.colors.text,
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  rateButton: {
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    backgroundColor: orbiTheme.colors.text,
-    borderWidth: 0,
-    ...orbiTheme.shadows.button,
-  },
-  rateButtonLabel: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  tripMap: {
-    height: 220,
+  refreshButtonLabel: { color: orbiTheme.colors.text, fontWeight: '700', fontSize: 13 },
+  snapshotTitle: { fontSize: 13, fontWeight: '700', color: orbiTheme.colors.text },
+  snapshotStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  trustCard: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 14,
-    marginBottom: 12,
+    padding: 14,
+    gap: 10,
   },
+  identityRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  identityCopy: { flex: 1, gap: 2 },
+  identityTitle: { fontSize: 15, fontWeight: '700', color: orbiTheme.colors.text },
+  identityMeta: { fontSize: 12, color: orbiTheme.colors.textSoft },
+  identityDetails: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  avatarImage: { width: 48, height: 48, borderRadius: 24 },
+  avatarFallback: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: orbiTheme.colors.text,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarInitials: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  actionButtonDisabled: { opacity: 0.6 },
+  tripCompletedActions: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
 });

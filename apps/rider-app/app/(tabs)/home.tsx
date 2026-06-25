@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -71,6 +70,29 @@ function StatusDot({ active }: { active: boolean }) {
   );
 }
 
+// ── Vehicle mini icon ─────────────────────────────────────────────────────────
+
+function ServiceVehicleIcon({ isMoto }: { isMoto: boolean }) {
+  const color = isMoto ? orbiTheme.colors.teal : orbiTheme.colors.amber;
+  if (isMoto) {
+    return (
+      <View style={{ width: 28, height: 22, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <View style={{ width: 9, height: 9, borderRadius: 5, borderWidth: 2, borderColor: color }} />
+          <View style={{ width: 10, height: 4, borderRadius: 2, backgroundColor: color, opacity: 0.85 }} />
+          <View style={{ width: 9, height: 9, borderRadius: 5, borderWidth: 2, borderColor: color }} />
+        </View>
+      </View>
+    );
+  }
+  return (
+    <View style={{ width: 28, height: 22, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: 14, height: 5, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: color, opacity: 0.7, alignSelf: 'center', marginBottom: -1 }} />
+      <View style={{ width: 24, height: 9, borderRadius: 3, backgroundColor: color, opacity: 0.9 }} />
+    </View>
+  );
+}
+
 // ── Service option row ────────────────────────────────────────────────────────
 
 function ServiceRow({ option, onPress }: { option: RideOption; onPress: () => void }) {
@@ -81,11 +103,7 @@ function ServiceRow({ option, onPress }: { option: RideOption; onPress: () => vo
       style={({ pressed }) => [styles.serviceRow, pressed && styles.serviceRowPressed]}
     >
       <View style={[styles.serviceIcon, { backgroundColor: isMoto ? orbiTheme.colors.accentLight : 'rgba(255, 149, 0, 0.10)' }]}>
-        <Ionicons
-          name={isMoto ? 'bicycle-outline' : 'car-outline'}
-          size={22}
-          color={isMoto ? orbiTheme.colors.teal : orbiTheme.colors.amber}
-        />
+        <ServiceVehicleIcon isMoto={isMoto} />
       </View>
       <View style={styles.serviceInfo}>
         <Text style={styles.serviceTitle}>{option.title}</Text>

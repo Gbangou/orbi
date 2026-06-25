@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -36,7 +38,6 @@ import {
 } from '@orbi/api';
 import {
   describeRealtimeConnection,
-  formatRealtimeBadgeLabel,
   formatXof,
   orbiCopy,
   orbiTheme,
@@ -47,17 +48,6 @@ import {
 } from '@orbi/config';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
-import {
-  FlowActionButton,
-  InsightBadge,
-  LiveStatusBanner,
-  MetricTile,
-  QuickActionCard,
-  RouteSignalCard,
-  SectionCard,
-  SectionHeading,
-  TransitionNoticeCard,
-} from '../lib/realtime-widgets';
 import { buildSavedPlacePayload } from '../lib/account-safety';
 import {
   areBookingPlacesEquivalent,
@@ -459,6 +449,7 @@ export default function BookingScreen() {
   } | null>(null);
   const [autoAppliedRiderPosition, setAutoAppliedRiderPosition] =
     useState(false);
+  const [showPromo, setShowPromo] = useState(false);
   const previousFlowStateRef = useRef<string | null>(null);
   const bookingMutationInFlightRef = useRef(false);
   const riderPosition = useRiderPosition({
@@ -952,1229 +943,936 @@ export default function BookingScreen() {
     }
   }
 
+  // suppress unused voice vars (feature available in advanced mode)
+  void voiceResolvedPlaces;
+
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>Reserver un trajet</Text>
-      <LiveStatusBanner
-        label={formatRealtimeBadgeLabel('Booking live', isRealtimeSyncing)}
-        message={status}
-        secondaryMessage={
-          isRealtimeSyncing
-            ? 'Resynchronisation silencieuse en cours pour consolider reservation, paiement et historique.'
-            : bookingTransitionLabel
-              ? bookingTransitionLabel
-              : 'Le flux croise tarification, historique, paiement et temps reel pour garder une reservation plus explicite.'
-        }
-        tone={isRealtimeSyncing || bookingTransitionLabel ? 'sky' : 'teal'}
-      />
-      <Pressable
-        onPress={() => void loadBookingContext()}
-        disabled={isRefreshing || isSubmitting}
-        style={[
-          styles.refreshButton,
-          isRefreshing || isSubmitting ? styles.confirmButtonDisabled : null,
-        ]}
-      >
-        <Text style={styles.refreshButtonLabel}>
-          {isRefreshing ? 'Actualisation...' : 'Actualiser les options'}
-        </Text>
-      </Pressable>
-
-      {bookingTransitionLabel ? (
-        <TransitionNoticeCard
-          label="Transition live"
-          message={bookingTransitionLabel}
-          tone="sky"
-        />
-      ) : null}
-
-      <SectionCard tone="sky">
-        <SectionHeading
-          eyebrow="Vue rapide"
-          title={`${pickupPlace.label} vers ${destinationPlace.label}`}
-          description={`Trajet estime ${tripEstimate.distanceKm} km, ${tripEstimate.durationMinutes} min avec source ${
-            tripEstimate.source === 'coordinates' ? 'coordonnees reelles' : 'preset local'
-          }.`}
-        />
-        <View style={styles.insightRow}>
-          <InsightBadge label="Ville" value={selectedCity.label} tone="sky" />
-          <InsightBadge
-            label="Paiement"
-            value={formatPaymentMethodLabel(selectedPaymentMethod)}
-            tone="teal"
-          />
-          <InsightBadge
-            label="Etat"
-            value={hasOpenFlow ? primaryStatusLabel : 'Pret'}
-            tone={hasOpenFlow ? 'amber' : 'teal'}
-          />
-        </View>
-        <View style={styles.heroMetrics}>
-          <MetricTile
-            label="Distance"
-            value={`${tripEstimate.distanceKm} km`}
-            helper={selectedCity.districtProfile.toLowerCase().replace(/_/g, ' ')}
-          />
-          <MetricTile
-            label="Duree"
-            value={`${tripEstimate.durationMinutes} min`}
-            helper={`zone ${selectedCity.zone.toLowerCase().replace(/_/g, ' ')}`}
-          />
-          <MetricTile
-            label="Services"
-            value={String(options.length)}
-            helper="options pricees disponibles"
-          />
-          {selectedOption?.marketplace ? (
-            <MetricTile
-              label="Chauffeurs"
-              value={String(selectedOption.marketplace.nearbyDrivers)}
-              helper={`${selectedOption.marketplace.pickupRadiusKm.toFixed(1)} km autour du depart`}
-            />
-          ) : null}
-        </View>
-      </SectionCard>
-
-      {(pickupPlace.coordinates || riderPosition.latestPosition) &&
-      destinationPlace.coordinates ? (
-        <TripMapView
-          pickupLat={
-            pickupPlace.coordinates?.latitude ??
-            riderPosition.latestPosition?.latitude
-          }
-          pickupLng={
-            pickupPlace.coordinates?.longitude ??
-            riderPosition.latestPosition?.longitude
-          }
-          destLat={destinationPlace.coordinates.latitude}
-          destLng={destinationPlace.coordinates.longitude}
-          driverLat={null}
-          driverLng={null}
-          style={styles.bookingMap}
-        />
-      ) : null}
-
-      <View style={styles.paymentSection}>
-        <Text style={styles.section}>Ville et contexte local</Text>
-        <View style={styles.paymentRow}>
-          {cityPresets.map((city) => {
-            const isActive = city.id === selectedCityId;
-
-            return (
-              <Pressable
-                key={city.id}
-                onPress={() => handleSelectCity(city)}
-                style={[
-                  styles.paymentChip,
-                  isActive ? styles.paymentChipActive : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.paymentChipLabel,
-                    isActive ? styles.paymentChipLabelActive : null,
-                  ]}
-                >
-                  {city.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+    <SafeAreaView style={styles.safe}>
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
+        >
+          <Text style={styles.backArrow}>‹</Text>
+        </Pressable>
+        <Text style={styles.headerTitle}>Réserver</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <RouteSignalCard
-        eyebrow="Trajet en preparation"
-        badgeLabel={hasOpenFlow ? 'Flux actif' : 'Pret a reserver'}
-        badgeTone={hasOpenFlow ? 'amber' : 'teal'}
-        title={`${pickupPlace.label} vers ${destinationPlace.label}`}
-        description={`${pickupPlace.address} vers ${destinationPlace.address}`}
-        insights={[
-          {
-            label: 'Distance',
-            value: `${tripEstimate.distanceKm} km`,
-            tone: 'sky',
-          },
-          {
-            label: 'Duree',
-            value: `${tripEstimate.durationMinutes} min`,
-            tone: 'teal',
-          },
-          {
-            label: 'Paiement',
-            value: selectedPaymentMethod,
-            tone: 'amber',
-          },
-        ]}
-        detailLines={[
-          `Depart: ${pickupPlace.address}`,
-          `Destination: ${destinationPlace.address}`,
-          riderPosition.latestPosition
-            ? `Position passager: precision ${Math.round(riderPosition.latestPosition.accuracyMeters ?? 0)} m.`
-            : riderPosition.positionNote,
-          `Source du calcul: ${tripEstimate.source === 'coordinates' ? 'coordonnees reelles' : 'preset local'}.`,
-          selectedOption
-            ? `Selection: ${selectedOption.title}, ${formatXof(selectedOption.fare)}, paiement ${formatPaymentMethodLabel(selectedPaymentMethod)}, ville ${selectedCity.label}`
-            : `Ville ${selectedCity.label}`,
-        ]}
-        note={
-          hasOpenFlow
-            ? 'Une demande ou une course est deja en cours. Finalisez-la depuis l historique avant de reserver a nouveau.'
-            : null
-        }
-        noteTone="amber"
-        isHighlighted={Boolean(bookingTransitionLabel)}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        {hasOpenFlow ? (
-          <QuickActionCard
-            title="Suivre le flux actif"
-            description={
-              activeTrip
-                ? `${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`
-                : activeRequest
-                  ? `${activeRequest.pickupAddress} vers ${activeRequest.destinationAddress}`
-                  : 'Ouvrir le suivi pour finaliser la demande en cours.'
-            }
-            tone="amber"
-            emphasis="primary"
-            onPress={() => router.push('/activity')}
-            style={styles.inlineActionCard}
-          />
-        ) : (
-          <View style={styles.routeActionStack}>
-            <FlowActionButton
-              onPress={() => handleUseCurrentPositionAsPickup()}
-              disabled={isSubmitting || !riderPosition.latestPosition}
-              label="Utiliser ma position"
-              emphasis="secondary"
-              style={isSubmitting || !riderPosition.latestPosition ? styles.confirmButtonDisabled : null}
-            />
-            <FlowActionButton
-              onPress={() => void handleSaveCurrentPlace('pickup')}
-              disabled={isSubmitting || !pickupPlace.coordinates}
-              label="Enregistrer ce depart"
-              emphasis="secondary"
-              style={isSubmitting ? styles.confirmButtonDisabled : null}
-            />
-            <FlowActionButton
-              onPress={() => void handleSaveCurrentPlace('destination')}
-              disabled={isSubmitting || !destinationPlace.coordinates}
-              label="Enregistrer cette destination"
-              emphasis="secondary"
-              style={isSubmitting ? styles.confirmButtonDisabled : null}
-            />
+        {/* ── Route summary card ── */}
+        <View style={styles.routeSummaryCard}>
+          <View style={styles.routeSummaryRow}>
+            <View style={styles.routeDotGreen} />
+            <View style={styles.routeSummaryField}>
+              <Text style={styles.routeSummaryLabel}>Départ</Text>
+              <Text style={styles.routeSummaryValue} numberOfLines={1}>
+                {pickupPlace.label}
+              </Text>
+            </View>
+            <Pressable
+              onPress={handleUseCurrentPositionAsPickup}
+              style={styles.gpsBtn}
+              hitSlop={8}
+            >
+              <Text style={styles.gpsBtnText}>◎</Text>
+            </Pressable>
           </View>
-        )}
-      </RouteSignalCard>
+          <View style={styles.routeSummarySep} />
+          <View style={styles.routeSummaryRow}>
+            <View style={styles.routeDotDark} />
+            <View style={styles.routeSummaryField}>
+              <Text style={styles.routeSummaryLabel}>Destination</Text>
+              <Text
+                style={[
+                  styles.routeSummaryValue,
+                  !destinationPlace.coordinates && styles.routeSummaryPlaceholder,
+                ]}
+                numberOfLines={1}
+              >
+                {destinationPlace.label}
+              </Text>
+            </View>
+          </View>
+        </View>
 
-      <View style={styles.assuranceRow}>
-        <View style={styles.assuranceCard}>
-          <Text style={styles.assuranceTitle}>Contexte marche</Text>
-          <Text style={styles.assuranceText}>
-            Tarification locale pour {selectedCity.label}, profil{' '}
-            {selectedCity.districtProfile.toLowerCase().replace(/_/g, ' ')}.
-          </Text>
-        </View>
-        <View style={styles.assuranceCard}>
-          <Text style={styles.assuranceTitle}>Paiement</Text>
-          <Text style={styles.assuranceText}>
-            Mobile Money agrégé prioritaire, cash disponible en secours.
-          </Text>
-        </View>
-        <View style={styles.assuranceCard}>
-          <Text style={styles.assuranceTitle}>Securite</Text>
-          <Text style={styles.assuranceText}>
-            Code pickup, timeline et signalement incident actifs.
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.selectorCard}>
-        <Text style={styles.section}>Rechercher un lieu</Text>
-        <Text style={styles.helperText}>
-          Tapez une adresse, un quartier ou un monument a Ouagadougou.
-        </Text>
-        <View style={styles.searchRow}>
+        {/* ── Search fields ── */}
+        <View style={styles.searchSection}>
           <View style={styles.searchField}>
-            <Text style={styles.searchLabel}>Depart</Text>
+            <Text style={styles.searchFieldLabel}>Départ</Text>
             <PlaceSearch
-              placeholder="Ex: Patte d Oie, marche, universite..."
+              placeholder="Quartier, monument, adresse…"
               tone="teal"
               onSelectPlace={(place) => applyPlace('pickup', place)}
             />
           </View>
           <View style={styles.searchField}>
-            <Text style={styles.searchLabel}>Destination</Text>
+            <Text style={styles.searchFieldLabel}>Destination</Text>
             <PlaceSearch
-              placeholder="Ex: Ouaga 2000, aeroport, hotel..."
+              placeholder="Où allez-vous ?"
               tone="amber"
               onSelectPlace={(place) => applyPlace('destination', place)}
             />
           </View>
         </View>
-      </View>
 
-      <View style={styles.selectorCard}>
-        <Text style={styles.section}>Lieux enregistres</Text>
-        <Text style={styles.helperText}>
-          Utilisez vos lieux favoris comme point de depart ou destination.
-        </Text>
-        <View style={styles.placeChipRow}>
-          {savedPlaces.map((place) => (
-            <RouteSignalCard
-              key={place.id}
-              eyebrow="Favori"
-              title={place.label}
-              description={place.address}
-              detailLines={['Choisissez si ce lieu devient le depart ou la destination.']}
+        {/* ── City chips ── */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cityScrollContent}
+        >
+          {cityPresets.map((city) => (
+            <Pressable
+              key={city.id}
+              onPress={() => handleSelectCity(city)}
+              style={[
+                styles.cityChip,
+                selectedCityId === city.id && styles.cityChipActive,
+              ]}
             >
-              <View style={styles.inlineActions}>
-                <QuickActionCard
-                  title="Comme depart"
-                  onPress={() => applyPlace('pickup', place)}
-                  tone="sky"
-                  style={styles.inlineActionCard}
-                />
-                <QuickActionCard
-                  title="Comme destination"
-                  onPress={() => applyPlace('destination', place)}
-                  tone="teal"
-                  style={styles.inlineActionCard}
-                />
-              </View>
-            </RouteSignalCard>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.selectorCard}>
-        <Text style={styles.section}>Suggestion vocale de lieu</Text>
-        <TextInput
-          value={voiceTranscript}
-          onChangeText={setVoiceTranscript}
-          placeholder="Ex: viens me chercher a l universite de Ouaga"
-          placeholderTextColor={orbiTheme.colors.muted}
-          style={styles.voiceInput}
-        />
-        <FlowActionButton
-          onPress={() => void handleResolveVoiceIntent()}
-          disabled={isResolvingVoice}
-          label={isResolvingVoice ? 'Analyse...' : 'Analyser le lieu'}
-          tone="teal"
-          emphasis="primary"
-          style={isResolvingVoice ? styles.confirmButtonDisabled : null}
-        />
-        {voiceResolvedPlaces.length ? (
-          <View style={styles.placeChipRow}>
-            {voiceResolvedPlaces.map((place) => (
-              <RouteSignalCard
-                key={`voice-${place.id}`}
-                eyebrow="Suggestion vocale"
-                title={place.label}
-                description={place.address}
-                detailLines={['Appliquez cette suggestion au depart ou a l arrivee.']}
+              <Text
+                style={[
+                  styles.cityChipLabel,
+                  selectedCityId === city.id && styles.cityChipLabelActive,
+                ]}
               >
-                <View style={styles.inlineActions}>
-                  <QuickActionCard
-                    title="Appliquer au depart"
-                    onPress={() => applyPlace('pickup', place)}
-                    tone="sky"
-                    style={styles.inlineActionCard}
+                {city.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {/* ── Map preview ── */}
+        {(pickupPlace.coordinates || riderPosition.latestPosition) &&
+        destinationPlace.coordinates ? (
+          <View style={styles.mapPreviewWrap}>
+            <TripMapView
+              pickupLat={
+                pickupPlace.coordinates?.latitude ??
+                riderPosition.latestPosition?.latitude
+              }
+              pickupLng={
+                pickupPlace.coordinates?.longitude ??
+                riderPosition.latestPosition?.longitude
+              }
+              destLat={destinationPlace.coordinates.latitude}
+              destLng={destinationPlace.coordinates.longitude}
+              driverLat={null}
+              driverLng={null}
+              style={styles.mapPreview}
+            />
+            <View style={styles.mapBadge}>
+              <Text style={styles.mapBadgeText}>
+                {tripEstimate.distanceKm} km · {tripEstimate.durationMinutes} min
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        {/* ── Active flow notice ── */}
+        {hasOpenFlow ? (
+          <Pressable
+            style={styles.activeFlowBanner}
+            onPress={() => router.push('/activity')}
+          >
+            <View style={styles.activeFlowDot} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.activeFlowTitle}>
+                Course ou demande en cours
+              </Text>
+              <Text style={styles.activeFlowSub} numberOfLines={1}>
+                {activeTrip
+                  ? `${activeTrip.pickupAddress} → ${activeTrip.destinationAddress}`
+                  : activeRequest
+                    ? `${activeRequest.pickupAddress} → ${activeRequest.destinationAddress}`
+                    : "Voir l'activité"}
+              </Text>
+            </View>
+            <Text style={styles.activeFlowArrow}>›</Text>
+          </Pressable>
+        ) : null}
+
+        {/* ── Vehicle selector ── */}
+        {options.length > 0 ? (
+          <View style={styles.vehicleSection}>
+            <Text style={styles.sectionTitle}>Choisir un service</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.vehicleScroll}
+            >
+              {options.map((option) => {
+                const { tone } = buildRideOptionVisual(option);
+                const isSelected =
+                  option.id === (selectedOptionId || options[0]?.id);
+                const accentColor =
+                  tone === 'teal'
+                    ? orbiTheme.colors.teal
+                    : tone === 'sky'
+                      ? orbiTheme.colors.sky
+                      : orbiTheme.colors.amber;
+                const discountedFare =
+                  promoValidation
+                    ? Math.round(
+                        option.fare *
+                          (1 - promoValidation.discountBps / 10000),
+                      )
+                    : option.fare;
+                return (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => setSelectedOptionId(option.id)}
+                    style={[
+                      styles.vehicleCard,
+                      isSelected && {
+                        borderColor: accentColor,
+                        backgroundColor: accentColor + '0D',
+                      },
+                    ]}
+                  >
+                    <VehicleOptionAvatar
+                      category={option.category}
+                      isSelected={isSelected}
+                      tone={tone}
+                      tier={option.tier}
+                    />
+                    <Text
+                      style={[
+                        styles.vehicleName,
+                        isSelected && { color: orbiTheme.colors.text },
+                      ]}
+                    >
+                      {option.title}
+                    </Text>
+                    <Text style={styles.vehicleEta}>
+                      {option.etaMinutes} min
+                    </Text>
+                    <Text
+                      style={[
+                        styles.vehicleFare,
+                        isSelected && { color: accentColor },
+                      ]}
+                    >
+                      {formatXof(discountedFare)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : isRefreshing ? (
+          <View style={styles.vehicleLoading}>
+            <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
+            <Text style={styles.vehicleLoadingText}>Calcul des options…</Text>
+          </View>
+        ) : null}
+
+        {/* ── Payment method ── */}
+        <View style={styles.paymentSection}>
+          <Text style={styles.sectionTitle}>Paiement</Text>
+          <View style={styles.paymentTabs}>
+            {(selectedOption?.paymentMethods ?? (['cash'] as PaymentMethod[])).map(
+              (method) => {
+                const isActive = selectedPaymentMethod === method;
+                const label =
+                  method === 'mobile-money'
+                    ? 'Mobile Money'
+                    : method === 'cash'
+                      ? 'Espèces'
+                      : 'Wallet';
+                return (
+                  <Pressable
+                    key={method}
+                    onPress={() => setSelectedPaymentMethod(method)}
+                    style={[
+                      styles.paymentTab,
+                      isActive && styles.paymentTabActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.paymentTabLabel,
+                        isActive && styles.paymentTabLabelActive,
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              },
+            )}
+          </View>
+        </View>
+
+        {/* ── Promo code ── */}
+        <View style={promoStyles.container}>
+          {promoValidation ? (
+            <>
+              <Text style={promoStyles.label}>Code promo appliqué</Text>
+              <View style={promoStyles.successBox}>
+                <Text style={promoStyles.successText}>
+                  {promoValidation.code}
+                </Text>
+                <Text style={promoStyles.successMeta}>
+                  Réduction de {promoValidation.discountBps / 100}%
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  setPromoValidation(null);
+                  setPromoCodeInput('');
+                }}
+                style={promoStyles.clearButton}
+              >
+                <Text style={promoStyles.clearButtonLabel}>
+                  Retirer le code
+                </Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Pressable
+                onPress={() => setShowPromo(!showPromo)}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={promoStyles.label}>Code promo</Text>
+                <Text style={styles.promoToggleLink}>
+                  {showPromo ? 'Annuler' : 'Ajouter'}
+                </Text>
+              </Pressable>
+              {showPromo ? (
+                <View style={promoStyles.row}>
+                  <TextInput
+                    value={promoCodeInput}
+                    onChangeText={setPromoCodeInput}
+                    placeholder="CODE PROMO"
+                    autoCapitalize="characters"
+                    placeholderTextColor={orbiTheme.colors.textMuted}
+                    style={promoStyles.input}
                   />
-                  <QuickActionCard
-                    title="Appliquer a l arrivee"
-                    onPress={() => applyPlace('destination', place)}
-                    tone="teal"
-                    style={styles.inlineActionCard}
-                  />
+                  <Pressable
+                    onPress={() => void handleValidatePromo()}
+                    disabled={isValidatingPromo || !promoCodeInput.trim()}
+                    style={[
+                      promoStyles.applyButton,
+                      (isValidatingPromo || !promoCodeInput.trim()) &&
+                        promoStyles.applyButtonDisabled,
+                    ]}
+                  >
+                    <Text style={promoStyles.applyButtonLabel}>
+                      {isValidatingPromo ? '…' : 'OK'}
+                    </Text>
+                  </Pressable>
                 </View>
-              </RouteSignalCard>
+              ) : null}
+              {promoError ? (
+                <Text style={promoStyles.errorText}>{promoError}</Text>
+              ) : null}
+            </>
+          )}
+        </View>
+
+        {/* ── Saved places ── */}
+        {savedPlaces.length > 0 ? (
+          <View style={styles.savedSection}>
+            <Text style={styles.sectionTitle}>Lieux enregistrés</Text>
+            {savedPlaces.slice(0, 4).map((place) => (
+              <Pressable
+                key={place.id}
+                style={styles.savedRow}
+                onPress={() => applyPlace('destination', place)}
+              >
+                <View style={styles.savedIconWrap}>
+                  <Text style={styles.savedStar}>★</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.savedLabel}>{place.label}</Text>
+                  <Text style={styles.savedAddress} numberOfLines={1}>
+                    {place.address}
+                  </Text>
+                </View>
+                <Text style={styles.savedArrow}>›</Text>
+              </Pressable>
             ))}
           </View>
         ) : null}
-      </View>
 
-      {paymentPreview ? (
-        <RouteSignalCard
-          eyebrow="Paiement initialise"
-          badgeLabel={paymentPreview.channel}
-          badgeTone="teal"
-          title={paymentPreview.provider}
-          description={`Reference ${paymentPreview.transactionRef}`}
-          detailLines={
-            paymentPreview.supportedNetworks.length
-              ? [
-                  `Reseaux supportes: ${paymentPreview.supportedNetworks.join(', ')}`,
-                ]
-              : undefined
+        {/* ── Payment preview (after booking) ── */}
+        {paymentPreview ? (
+          <View style={styles.paymentPreviewCard}>
+            <Text style={styles.paymentPreviewTitle}>Paiement initié</Text>
+            <Text style={styles.paymentPreviewProvider}>
+              {paymentPreview.provider} · {paymentPreview.channel}
+            </Text>
+            <Text style={styles.paymentPreviewRef}>
+              Réf : {paymentPreview.transactionRef}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* ── Realtime sync indicator ── */}
+        {isRealtimeSyncing ? (
+          <View style={styles.syncNotice}>
+            <ActivityIndicator
+              size="small"
+              color={orbiTheme.colors.teal}
+              style={{ transform: [{ scale: 0.75 }] }}
+            />
+            <Text style={styles.syncNoticeText}>Mise à jour en cours…</Text>
+          </View>
+        ) : null}
+
+        <View style={{ height: 110 }} />
+      </ScrollView>
+
+      {/* ── CTA fixe en bas ── */}
+      <View style={styles.ctaWrap}>
+        <Pressable
+          onPress={
+            hasOpenFlow
+              ? () => router.push('/activity')
+              : () => void handleCreateRideRequest()
           }
-          note="Le paiement est prepare avant la progression du flux ride."
-          noteTone="teal"
-        />
-      ) : null}
-
-      <Text style={styles.section}>Choisissez votre service</Text>
-      {options.map((option) => {
-        const isSelected = option.id === selectedOption?.id;
-        const visual = buildRideOptionVisual(option);
-
-        return (
-          <Pressable
-            key={option.id}
-            onPress={() => {
-              setSelectedOptionId(option.id);
-              const supported = option.paymentMethods ?? ['mobile-money'];
-              if (!supported.includes(selectedPaymentMethod)) {
-                setSelectedPaymentMethod(supported[0]);
-              }
-            }}
-            style={[styles.option, isSelected ? styles.optionSelected : null]}
-          >
-            <View style={styles.optionHeader}>
-              <VehicleOptionAvatar
-                category={option.category}
-                isSelected={isSelected}
-                tone={visual.tone}
-                tier={option.tier}
-              />
-              <View style={styles.optionCopy}>
-                <View style={styles.optionTop}>
-                  <View style={styles.optionTitleBlock}>
-                    <Text style={styles.optionTitle}>{option.title}</Text>
-                    <Text style={styles.optionCategory}>
-                      {visual.categoryLabel} - {visual.promiseLabel}
-                    </Text>
-                  </View>
-                  <View style={styles.optionPriceBlock}>
-                    {promoValidation ? (
-                      <>
-                        <Text style={promoStyles.strikePrice}>
-                          {formatXof(option.fare)}
-                        </Text>
-                        <Text style={[styles.optionPrice, promoStyles.discountedPrice]}>
-                          {formatXof(Math.round(option.fare * (1 - promoValidation.discountBps / 10000)))}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text style={styles.optionPrice}>
-                        {formatXof(option.fare)}
-                      </Text>
-                    )}
-                    <Text style={styles.optionEta}>{option.etaMinutes} min</Text>
-                  </View>
-                </View>
-                <View style={styles.optionChipRow}>
-                  <Text style={styles.optionChip}>{visual.capacityLabel}</Text>
-                  <Text style={styles.optionChip}>{option.badge}</Text>
-                  {option.marketplace ? (
-                    <Text style={styles.optionChip}>
-                      {formatEtaConfidenceLabel(option.marketplace.etaConfidence)}
-                    </Text>
-                  ) : null}
-                  <Text style={styles.optionChip}>
-                    {formatPaymentMethodLabel(selectedPaymentMethod)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.optionSignalRow}>
-              {buildRideOptionDesignSignals(option).map((signal) => (
-                <Text key={`${option.id}:${signal}`} style={styles.optionSignal}>
-                  {signal}
-                </Text>
-              ))}
-            </View>
-            <Text style={styles.optionMeta}>
-              Tarif upfront estime, ETA separe et service {visual.categoryLabel.toLowerCase()} compatible avec ce trajet.
-            </Text>
-            {option.marketplace ? (
-              <View style={styles.marketplaceBlock}>
-                <View style={styles.marketplaceTopRow}>
-                  <Text style={styles.marketplaceTitle}>
-                    {option.marketplace.availabilityLabel}
-                  </Text>
-                  <Text style={styles.marketplaceMeta}>
-                    {option.marketplace.nearbyDrivers} proches - rayon{' '}
-                    {option.marketplace.pickupRadiusKm.toFixed(1)} km
-                  </Text>
-                </View>
-                <Text style={styles.marketplaceText}>
-                  Vehicules possibles: {option.marketplace.vehicleExamples.join(', ')}
-                </Text>
-                <Text style={styles.marketplacePromise}>
-                  {option.marketplace.pricePromise}
-                </Text>
-              </View>
-            ) : null}
-            {option.fareBreakdown ? (
-              <View style={styles.breakdownBlock}>
-                <Text style={styles.breakdown}>
-                  Base {formatXof(option.fareBreakdown.baseFare)} - Frais{' '}
-                  {formatXof(option.fareBreakdown.bookingFee)} - Demande x
-                  {option.fareBreakdown.demandMultiplier.toFixed(2)}
-                </Text>
-                {option.fareBreakdown.priceWindow ? (
-                  <Text style={styles.breakdownHint}>
-                    Fenetre estimee{' '}
-                    {formatXof(option.fareBreakdown.priceWindow.min)} a{' '}
-                    {formatXof(option.fareBreakdown.priceWindow.max)}
-                  </Text>
-                ) : null}
-                {option.fareBreakdown.reasons?.[0] ? (
-                  <Text style={styles.breakdownHint}>
-                    {option.fareBreakdown.reasons[0]}
-                  </Text>
-                ) : null}
-                {option.fareBreakdown.driverPickupDistancePolicy ? (
-                  <Text style={styles.breakdownHint}>
-                    {option.fareBreakdown.driverPickupDistancePolicy}
-                  </Text>
-                ) : option.fareBreakdown.reasons?.[1] ? (
-                  <Text style={styles.breakdownHint}>
-                    {option.fareBreakdown.reasons[1]}
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
-            {option.safetyNote ? (
-              <Text style={styles.safety}>{option.safetyNote}</Text>
-            ) : null}
-          </Pressable>
-        );
-      })}
-
-      {selectedOption?.paymentMethods?.length ? (
-        <View style={styles.paymentSection}>
-          <Text style={styles.section}>Choisissez votre paiement</Text>
-          <View style={styles.paymentRow}>
-            {selectedOption.paymentMethods.map((method) => {
-              const isActive = method === selectedPaymentMethod;
-
-              return (
-                <Pressable
-                  key={method}
-                  onPress={() => setSelectedPaymentMethod(method)}
-                  style={[
-                    styles.paymentChip,
-                    isActive ? styles.paymentChipActive : null,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.paymentChipLabel,
-                      isActive ? styles.paymentChipLabelActive : null,
-                    ]}
-                  >
-                    {formatPaymentMethodLabel(method)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      ) : null}
-
-      <View style={promoStyles.container}>
-        <Text style={promoStyles.label}>Code promo (optionnel)</Text>
-        <View style={promoStyles.row}>
-          <TextInput
-            autoCapitalize="characters"
-            autoCorrect={false}
-            editable={!isValidatingPromo && !promoValidation}
-            maxLength={32}
-            onChangeText={(v) => {
-              setPromoCodeInput(v.toUpperCase());
-              setPromoError(null);
-              setPromoValidation(null);
-            }}
-            placeholder="ex: BIENVENUE20"
-            placeholderTextColor={orbiTheme.colors.muted}
-            style={promoStyles.input}
-            value={promoCodeInput}
-          />
-          {promoValidation ? (
-            <Pressable
-              onPress={() => {
-                setPromoValidation(null);
-                setPromoCodeInput('');
-              }}
-              style={promoStyles.clearButton}
-            >
-              <Text style={promoStyles.clearButtonLabel}>Retirer</Text>
-            </Pressable>
-          ) : (
-            <Pressable
-              disabled={!promoCodeInput.trim() || isValidatingPromo}
-              onPress={() => void handleValidatePromo()}
-              style={[
-                promoStyles.applyButton,
-                (!promoCodeInput.trim() || isValidatingPromo) && promoStyles.applyButtonDisabled,
-              ]}
-            >
-              <Text style={promoStyles.applyButtonLabel}>
-                {isValidatingPromo ? '...' : 'Appliquer'}
-              </Text>
-            </Pressable>
-          )}
-        </View>
-        {promoValidation ? (
-          <View style={promoStyles.successBox}>
-            <Text style={promoStyles.successText}>
-              -{promoValidation.discountPercent.toFixed(0)} % applique
-              {promoValidation.firstTripOnly ? ' (1er trajet)' : ''}
-            </Text>
-            {promoValidation.description ? (
-              <Text style={promoStyles.successMeta}>{promoValidation.description}</Text>
-            ) : null}
-          </View>
-        ) : null}
-        {promoError ? (
-          <Text style={promoStyles.errorText}>{promoError}</Text>
-        ) : null}
+          disabled={
+            isSubmitting ||
+            (!hasOpenFlow && (!selectedOption || !destinationPlace.coordinates))
+          }
+          style={({ pressed }) => [
+            styles.ctaBtn,
+            (isSubmitting ||
+              (!hasOpenFlow &&
+                (!selectedOption || !destinationPlace.coordinates))) &&
+              styles.ctaBtnDisabled,
+            pressed && styles.ctaBtnPressed,
+          ]}
+        >
+          <Text style={styles.ctaBtnLabel}>
+            {isSubmitting
+              ? 'Confirmation en cours…'
+              : hasOpenFlow
+                ? "Voir l'activité en cours"
+                : selectedOption && destinationPlace.coordinates
+                  ? `Confirmer · ${formatXof(selectedOption.fare)}`
+                  : 'Sélectionner un service'}
+          </Text>
+        </Pressable>
       </View>
-
-      <FlowActionButton
-        disabled={isSubmitting || hasOpenFlow || !selectedOption}
-        onPress={handleCreateRideRequest}
-        label={
-          isSubmitting
-            ? 'Creation de la demande...'
-            : hasOpenFlow
-              ? 'Demande deja en cours'
-              : selectedOption
-                ? `Confirmer ${selectedOption.title}`
-                : 'Choisir un service'
-        }
-        tone="teal"
-        emphasis="primary"
-        style={
-          isSubmitting || hasOpenFlow || !selectedOption
-            ? styles.confirmButtonDisabled
-            : null
-        }
-      />
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    paddingTop: 88,
-    paddingHorizontal: 24,
+  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+  scroll: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
     paddingBottom: 40,
-    backgroundColor: orbiTheme.colors.background,
     gap: 16,
   },
-  title: {
-    color: orbiTheme.colors.text,
-    fontSize: 32,
-    fontWeight: '800',
-  },
-  subtitle: {
-    color: orbiTheme.colors.muted,
-  },
-  refreshButton: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-  },
-  refreshButtonLabel: {
-    color: orbiTheme.colors.text,
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  routeActionStack: {
-    gap: 10,
-  },
-  routeCard: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    gap: 6,
-  },
-  routeCardHighlight: {
-    borderColor: orbiTheme.colors.teal,
-    backgroundColor: orbiTheme.colors.accentLight,
-  },
-  label: {
-    color: orbiTheme.colors.teal,
-    textTransform: 'uppercase',
-    fontSize: 12,
-  },
-  value: {
-    color: orbiTheme.colors.text,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  routeMeta: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 18,
-  },
-  savePlaceButton: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    marginTop: 2,
-  },
-  savePlaceButtonLabel: {
-    color: orbiTheme.colors.text,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  selectionSummary: {
-    color: orbiTheme.colors.text,
-    marginTop: 8,
-    fontWeight: '600',
-  },
-  warning: {
-    color: orbiTheme.colors.amber,
-    marginTop: 8,
-    lineHeight: 18,
-  },
-  transitionMeta: {
-    color: orbiTheme.colors.sky,
-    marginTop: 6,
-    lineHeight: 18,
-    fontWeight: '700',
-  },
-  section: {
-    color: orbiTheme.colors.text,
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  assuranceRow: {
+
+  // Header
+  header: {
     flexDirection: 'row',
-    gap: 12,
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.background,
   },
-  assuranceCard: {
-    flexGrow: 1,
-    minWidth: 150,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+  backBtn: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    padding: 16,
-    gap: 6,
-  },
-  selectorCard: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 18,
-    gap: 12,
-  },
-  insightRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  heroMetrics: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  helperText: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 18,
-  },
-  searchRow: {
-    gap: 12,
-    marginTop: 6,
-  },
-  searchField: {
-    gap: 4,
-  },
-  searchLabel: {
-    color: orbiTheme.colors.muted,
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  placeChipRow: {
-    gap: 10,
-  },
-  placeChoiceCard: {
     backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 14,
-    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  placeChoiceLabel: {
-    color: orbiTheme.colors.text,
+  backArrow: { fontSize: 28, color: orbiTheme.colors.text, marginTop: -2 },
+  headerTitle: {
+    fontSize: 17,
     fontWeight: '700',
-    fontSize: 15,
-  },
-  placeChoiceMeta: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 18,
-  },
-  inlineActions: {
-    gap: 8,
-    marginTop: 4,
-  },
-  inlineActionCard: {
-    width: '100%',
-  },
-  inlineChip: {
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.panel,
-  },
-  inlineChipLabel: {
+    fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.text,
-    fontWeight: '700',
-    fontSize: 12,
   },
-  voiceInput: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 18,
+
+  // Route summary card
+  routeSummaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: orbiTheme.colors.text,
-    fontSize: 15,
+    paddingVertical: 4,
+    ...orbiTheme.shadows.card,
   },
-  voiceAction: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: orbiTheme.colors.teal,
-  },
-  voiceActionLabel: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  assuranceTitle: {
-    color: orbiTheme.colors.text,
-    fontWeight: '800',
-    fontSize: 15,
-  },
-  assuranceText: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 18,
-    fontSize: 13,
-  },
-  paymentPreviewCard: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    gap: 6,
-  },
-  paymentPreviewTitle: {
-    color: orbiTheme.colors.text,
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  paymentPreviewText: {
-    color: orbiTheme.colors.text,
-    fontSize: 13,
-  },
-  paymentPreviewHint: {
-    color: orbiTheme.colors.teal,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  option: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    borderRadius: 20,
-    padding: 16,
-    gap: 10,
-  },
-  optionSelected: {
-    borderColor: orbiTheme.colors.teal,
-    backgroundColor: orbiTheme.colors.panel,
-  },
-  optionHeader: {
+  routeSummaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-  },
-  optionCopy: {
-    flex: 1,
-    gap: 10,
-  },
-  optionTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    paddingVertical: 13,
     gap: 12,
   },
-  optionTitleBlock: {
-    flex: 1,
-    gap: 3,
-  },
-  optionTitle: {
-    color: orbiTheme.colors.text,
-    fontWeight: '800',
-    fontSize: 18,
-  },
-  optionCategory: {
-    color: orbiTheme.colors.muted,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  optionPriceBlock: {
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  optionPrice: {
-    color: orbiTheme.colors.text,
-    fontWeight: '900',
-    fontSize: 17,
-  },
-  optionEta: {
-    color: orbiTheme.colors.sky,
-    fontWeight: '800',
-    fontSize: 12,
-  },
-  optionChipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  optionChip: {
-    overflow: 'hidden',
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.panel,
-    color: orbiTheme.colors.text,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  optionSignalRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingLeft: 86,
-  },
-  optionSignal: {
-    color: orbiTheme.colors.text,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderColor: orbiTheme.colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  vehicleAvatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 20,
-    borderWidth: 1,
-    backgroundColor: orbiTheme.colors.panel,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  /* ── shared icon canvas ── */
-  vIcon: {
-    width: 72,
-    height: 72,
-    position: 'relative',
-  },
-  /* ── car top-down ── */
-  vWheel: {
-    position: 'absolute',
-    width: 11,
-    height: 17,
-    borderRadius: 3,
-    backgroundColor: '#080c12',
-  },
-  vWheelFL: { top: 11, left: 9 },
-  vWheelFR: { top: 11, right: 9 },
-  vWheelRL: { top: 44, left: 9 },
-  vWheelRR: { top: 44, right: 9 },
-  vCarBody: {
-    position: 'absolute',
-    top: 9,
-    left: 20,
-    width: 32,
-    height: 54,
-    borderRadius: 9,
-    borderWidth: 1.5,
-  },
-  vWindshield: {
-    position: 'absolute',
-    top: 9,
-    left: 22,
-    width: 28,
-    height: 13,
-    borderRadius: 5,
-    backgroundColor: 'rgba(0, 122, 255, 0.18)',
-  },
-  vRearWindow: {
-    position: 'absolute',
-    top: 50,
-    left: 22,
-    width: 28,
-    height: 13,
-    borderRadius: 5,
-    backgroundColor: 'rgba(0, 122, 255, 0.12)',
-  },
-  vRoof: {
-    position: 'absolute',
-    top: 23,
-    left: 22,
-    width: 28,
-    height: 26,
-    borderRadius: 2,
-  },
-  vMirrorL: {
-    position: 'absolute',
-    top: 23,
-    left: 10,
-    width: 10,
-    height: 12,
-    borderRadius: 3,
-    borderWidth: 1,
-  },
-  vMirrorR: {
-    position: 'absolute',
-    top: 23,
-    right: 10,
-    width: 10,
-    height: 12,
-    borderRadius: 3,
-    borderWidth: 1,
-  },
-  vHeadL: {
-    position: 'absolute',
-    top: 8,
-    left: 21,
-    width: 9,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,253,176,0.88)',
-  },
-  vHeadR: {
-    position: 'absolute',
-    top: 8,
-    right: 21,
-    width: 9,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,253,176,0.88)',
-  },
-  vTailL: {
-    position: 'absolute',
-    top: 61,
-    left: 21,
-    width: 9,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(248,113,113,0.88)',
-  },
-  vTailR: {
-    position: 'absolute',
-    top: 61,
-    right: 21,
-    width: 9,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(248,113,113,0.88)',
-  },
-  vPremiumBadge: {
-    position: 'absolute',
-    top: 34,
-    left: 34,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.7,
-  },
-  /* ── moto top-down ── */
-  vMotoWheelF: {
-    position: 'absolute',
-    top: 5,
-    left: 20,
-    width: 32,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-  },
-  vMotoWheelR: {
-    position: 'absolute',
-    top: 53,
-    left: 20,
-    width: 32,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-  },
-  vMotoBody: {
-    position: 'absolute',
-    top: 18,
-    left: 29,
-    width: 14,
-    height: 36,
-    borderRadius: 7,
-    borderWidth: 1.5,
-  },
-  vMotoHandlebar: {
-    position: 'absolute',
-    top: 17,
-    left: 10,
-    width: 52,
-    height: 5,
-    borderRadius: 2.5,
-    borderWidth: 1.5,
-  },
-  vMotoSeat: {
-    position: 'absolute',
-    top: 30,
-    left: 30,
-    width: 12,
-    height: 14,
-    borderRadius: 6,
-  },
-  vMotoEngine: {
-    position: 'absolute',
-    top: 22,
-    left: 31,
+  routeDotGreen: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    borderWidth: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: orbiTheme.colors.teal,
+    flexShrink: 0,
   },
-  badge: {
-    fontWeight: '800',
-    fontSize: 12,
+  routeDotDark: {
+    width: 10,
+    height: 10,
+    borderRadius: 3,
+    backgroundColor: orbiTheme.colors.text,
+    flexShrink: 0,
+  },
+  routeSummaryField: { flex: 1 },
+  routeSummaryLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 2,
   },
-  optionMeta: {
-    color: orbiTheme.colors.muted,
-  },
-  breakdownBlock: {
-    gap: 4,
-  },
-  breakdown: {
+  routeSummaryValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.text,
-    fontSize: 13,
   },
-  breakdownHint: {
-    color: orbiTheme.colors.muted,
-    fontSize: 12,
-    lineHeight: 17,
+  routeSummaryPlaceholder: {
+    color: orbiTheme.colors.textMuted,
+    fontWeight: '400',
+    fontFamily: 'Inter_400Regular',
   },
-  marketplaceBlock: {
+  routeSummarySep: {
+    height: 1,
+    backgroundColor: orbiTheme.colors.border,
+    marginLeft: 22,
+  },
+  gpsBtn: {
+    width: 32,
+    height: 32,
     borderRadius: 16,
+    backgroundColor: orbiTheme.colors.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  gpsBtnText: { fontSize: 16, color: orbiTheme.colors.teal },
+
+  // Search section
+  searchSection: { gap: 10 },
+  searchField: { gap: 4 },
+  searchFieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    paddingHorizontal: 2,
+  },
+
+  // City chips
+  cityScrollContent: { gap: 8, paddingHorizontal: 2 },
+  cityChip: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: 'rgba(0, 122, 255, 0.2)',
-    backgroundColor: 'rgba(0, 122, 255, 0.05)',
-    padding: 12,
-    gap: 5,
+    borderColor: orbiTheme.colors.border,
   },
-  marketplaceTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    flexWrap: 'wrap',
+  cityChipActive: {
+    backgroundColor: orbiTheme.colors.text,
+    borderColor: orbiTheme.colors.text,
   },
-  marketplaceTitle: {
-    color: orbiTheme.colors.text,
-    fontWeight: '900',
+  cityChipLabel: {
     fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.textSoft,
   },
-  marketplaceMeta: {
-    color: orbiTheme.colors.sky,
-    fontWeight: '800',
-    fontSize: 12,
+  cityChipLabelActive: { color: '#FFFFFF' },
+
+  // Map preview
+  mapPreviewWrap: {
+    height: 180,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    ...orbiTheme.shadows.card,
   },
-  marketplaceText: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 18,
-    fontSize: 12,
+  mapPreview: { width: '100%', height: '100%' },
+  mapBadge: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
   },
-  marketplacePromise: {
-    color: orbiTheme.colors.teal,
-    lineHeight: 18,
+  mapBadgeText: {
     fontSize: 12,
     fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
   },
-  safety: {
-    color: orbiTheme.colors.teal,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  paymentSection: {
-    gap: 12,
-  },
-  paymentRow: {
+
+  // Active flow banner
+  activeFlowBanner: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255,149,0,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,149,0,0.28)',
+    borderRadius: 14,
+    padding: 14,
   },
+  activeFlowDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: orbiTheme.colors.amber,
+    flexShrink: 0,
+  },
+  activeFlowTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  activeFlowSub: {
+    fontSize: 12,
+    color: orbiTheme.colors.textSoft,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
+  },
+  activeFlowArrow: { fontSize: 22, color: orbiTheme.colors.amber },
+
+  // Vehicle section
+  vehicleSection: { gap: 10 },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+    paddingHorizontal: 2,
+  },
+  vehicleScroll: { gap: 10, paddingHorizontal: 2 },
+  vehicleCard: {
+    width: 112,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: orbiTheme.colors.border,
+    padding: 12,
+    alignItems: 'center',
+    gap: 6,
+    ...orbiTheme.shadows.card,
+  },
+  vehicleAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+  },
+  vehicleName: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.textSoft,
+    textAlign: 'center',
+  },
+  vehicleEta: {
+    fontSize: 11,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+  },
+  vehicleFare: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.textSoft,
+    textAlign: 'center',
+  },
+  vehicleLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  vehicleLoadingText: {
+    fontSize: 14,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
+
+  // Payment
+  paymentSection: { gap: 10 },
+  paymentTabs: {
+    flexDirection: 'row',
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 12,
+    padding: 3,
+    gap: 2,
+  },
+  paymentTab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  paymentTabActive: {
+    backgroundColor: '#FFFFFF',
+    ...orbiTheme.shadows.card,
+  },
+  paymentTabLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.textMuted,
+  },
+  paymentTabLabelActive: { color: orbiTheme.colors.text },
+
+  // Promo
+  promoToggleLink: {
+    color: orbiTheme.colors.teal,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontSize: 13,
+  },
+
+  // Saved places
+  savedSection: { gap: 8 },
+  savedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  savedIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,201,167,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savedStar: { fontSize: 16, color: orbiTheme.colors.teal },
+  savedLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.text,
+  },
+  savedAddress: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
+  savedArrow: { fontSize: 20, color: orbiTheme.colors.textMuted },
+
+  // Payment preview
+  paymentPreviewCard: {
+    backgroundColor: 'rgba(0,201,167,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,201,167,0.22)',
+    borderRadius: 14,
+    padding: 14,
+    gap: 4,
+  },
+  paymentPreviewTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.teal,
+  },
+  paymentPreviewProvider: {
+    fontSize: 13,
+    color: orbiTheme.colors.textSoft,
+    fontFamily: 'Inter_500Medium',
+  },
+  paymentPreviewRef: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
+
+  // Sync notice
+  syncNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  syncNoticeText: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
+
+  // CTA
+  ctaWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 28,
+    paddingTop: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: orbiTheme.colors.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 12,
+  },
+  ctaBtn: {
+    backgroundColor: orbiTheme.colors.text,
+    borderRadius: 14,
+    paddingVertical: 17,
+    alignItems: 'center',
+    ...orbiTheme.shadows.button,
+  },
+  ctaBtnDisabled: { opacity: 0.38 },
+  ctaBtnPressed: { opacity: 0.85 },
+  ctaBtnLabel: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+  },
+
+  // Compat stubs (used in internal handlers only)
+  confirmButtonDisabled: { opacity: 0.38 },
+  bookingMap: { height: 180, borderRadius: 16, overflow: 'hidden' },
+  paymentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   paymentChip: {
     borderRadius: 999,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 8,
     backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
   },
   paymentChipActive: {
-    backgroundColor: orbiTheme.colors.teal,
-    borderColor: orbiTheme.colors.teal,
+    backgroundColor: orbiTheme.colors.text,
+    borderColor: orbiTheme.colors.text,
   },
   paymentChipLabel: {
-    color: orbiTheme.colors.text,
-    fontWeight: '700',
     fontSize: 13,
+    fontWeight: '600',
+    color: orbiTheme.colors.textSoft,
   },
-  paymentChipLabelActive: {
-    color: '#FFFFFF',
+  paymentChipLabelActive: { color: '#FFFFFF' },
+  routeActionStack: { gap: 10 },
+  inlineActions: { gap: 8 },
+  inlineActionCard: { width: '100%' },
+
+  // ── 3D top-down vehicle styles (used by CarTopView / MotoTopView) ──────────
+  vIcon: { width: 56, height: 56, position: 'relative' },
+  vWheel: { position: 'absolute', width: 7, height: 12, borderRadius: 2, backgroundColor: '#333' },
+  vWheelFL: { top: 4, left: 2 },
+  vWheelFR: { top: 4, right: 2 },
+  vWheelRL: { bottom: 4, left: 2 },
+  vWheelRR: { bottom: 4, right: 2 },
+  vCarBody: {
+    position: 'absolute', top: 6, bottom: 6, left: 8, right: 8,
+    borderRadius: 8, borderWidth: 1.5,
   },
-  confirmButton: {
-    backgroundColor: orbiTheme.colors.text,
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    ...orbiTheme.shadows.button,
+  vWindshield: {
+    position: 'absolute', top: 10, left: 14, right: 14, height: 8,
+    backgroundColor: 'rgba(255,255,255,0.4)', borderRadius: 4,
   },
-  confirmButtonDisabled: {
-    opacity: 0.7,
+  vRearWindow: {
+    position: 'absolute', bottom: 10, left: 14, right: 14, height: 6,
+    backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 3,
   },
-  confirmLabel: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 16,
-    textAlign: 'center',
+  vRoof: {
+    position: 'absolute', top: 18, left: 16, right: 16, height: 20,
+    borderRadius: 5,
   },
-  bookingMap: {
-    height: 200,
-    borderRadius: 14,
-    marginBottom: 4,
+  vMirrorL: {
+    position: 'absolute', top: 20, left: 5, width: 4, height: 6,
+    borderRadius: 2, borderWidth: 1,
+  },
+  vMirrorR: {
+    position: 'absolute', top: 20, right: 5, width: 4, height: 6,
+    borderRadius: 2, borderWidth: 1,
+  },
+  vHeadL: {
+    position: 'absolute', top: 6, left: 10, width: 5, height: 3,
+    backgroundColor: '#fffde7', borderRadius: 2,
+  },
+  vHeadR: {
+    position: 'absolute', top: 6, right: 10, width: 5, height: 3,
+    backgroundColor: '#fffde7', borderRadius: 2,
+  },
+  vTailL: {
+    position: 'absolute', bottom: 6, left: 10, width: 5, height: 3,
+    backgroundColor: '#ff3b30', borderRadius: 2,
+  },
+  vTailR: {
+    position: 'absolute', bottom: 6, right: 10, width: 5, height: 3,
+    backgroundColor: '#ff3b30', borderRadius: 2,
+  },
+  vPremiumBadge: {
+    position: 'absolute', top: 4, right: 4, width: 6, height: 6,
+    borderRadius: 3,
+  },
+  vMotoWheelF: {
+    position: 'absolute', top: 2, left: 10, right: 10, height: 12,
+    borderRadius: 6, borderWidth: 1.5,
+  },
+  vMotoWheelR: {
+    position: 'absolute', bottom: 2, left: 10, right: 10, height: 12,
+    borderRadius: 6, borderWidth: 1.5,
+  },
+  vMotoBody: {
+    position: 'absolute', top: 12, bottom: 12, left: 16, right: 16,
+    borderRadius: 8, borderWidth: 1.5,
+  },
+  vMotoHandlebar: {
+    position: 'absolute', top: 14, left: 6, right: 6, height: 5,
+    borderRadius: 3, borderWidth: 1,
+  },
+  vMotoSeat: {
+    position: 'absolute', top: 22, left: 18, right: 18, height: 12,
+    borderRadius: 4,
+  },
+  vMotoEngine: {
+    position: 'absolute', top: 28, left: 20, right: 20, height: 8,
+    borderRadius: 3, borderWidth: 1,
   },
 });

@@ -334,7 +334,7 @@ type QuickActionCardProps = PressableProps & {
   title: string;
   description?: string | null;
   tone?: Tone;
-  emphasis?: 'primary' | 'secondary';
+  emphasis?: 'primary' | 'secondary' | 'ghost';
 };
 
 export function QuickActionCard({
@@ -640,19 +640,23 @@ const sc = StyleSheet.create({
 export function SectionHeading({
   title,
   subtitle,
+  description,
   action,
   onAction,
 }: {
   title: string;
   subtitle?: string | null;
+  description?: string | null;
+  eyebrow?: string | null;
   action?: string | null;
   onAction?: () => void;
 }) {
+  const sub = subtitle ?? description ?? null;
   return (
     <View style={sh.wrap}>
       <View style={sh.text}>
         <Text style={sh.title}>{title}</Text>
-        {subtitle ? <Text style={sh.subtitle}>{subtitle}</Text> : null}
+        {sub ? <Text style={sh.subtitle}>{sub}</Text> : null}
       </View>
       {action ? (
         <Pressable onPress={onAction} hitSlop={8}>
@@ -704,7 +708,7 @@ export function FlowActionButton({
   label: string;
   sublabel?: string | null;
   tone?: Tone;
-  emphasis?: 'primary' | 'secondary';
+  emphasis?: 'primary' | 'secondary' | 'ghost';
   disabled?: boolean;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
@@ -968,7 +972,7 @@ export function LiveTimeline({
   freshEventIds,
 }: {
   events: Array<{ id: string; label: string; createdAt: string }>;
-  freshEventIds?: Set<string>;
+  freshEventIds?: Set<string> | string[];
 }) {
   if (!events.length) return null;
 
@@ -976,7 +980,9 @@ export function LiveTimeline({
     <View style={lt.wrap}>
       <Text style={lt.heading}>Historique</Text>
       {events.map((event, idx) => {
-        const isFresh = freshEventIds?.has(event.id);
+        const isFresh = Array.isArray(freshEventIds)
+          ? freshEventIds.includes(event.id)
+          : freshEventIds?.has(event.id);
         const isLast = idx === events.length - 1;
         return (
           <View key={event.id} style={lt.row}>
@@ -1078,6 +1084,7 @@ export function TransitionNoticeCard({
   message,
   tone = 'teal',
 }: {
+  label?: string | null;
   message: string;
   tone?: Tone;
 }) {

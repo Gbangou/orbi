@@ -536,9 +536,8 @@ export default function AccountScreen() {
 
       <SectionCard tone="sky">
         <SectionHeading
-          eyebrow="Identite"
           title={profile.profile.fullName}
-          description={profile.profile.email}
+          subtitle={profile.profile.email}
         />
         <View style={styles.insightRow}>
           <InsightBadge
