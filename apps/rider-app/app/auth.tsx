@@ -15,6 +15,7 @@ import { extractApiErrorMessage } from '@orbi/api';
 import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
 import { orbiTheme } from '@orbi/ui';
 import { signInRiderAccount, signUpRiderAccount } from '../lib/auth';
+import { OrbiLogo } from '../lib/orbi-logo';
 
 export default function RiderAuthScreen() {
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
@@ -90,7 +91,7 @@ export default function RiderAuthScreen() {
         >
           {/* Wordmark */}
           <View style={styles.brand}>
-            <Text style={styles.wordmark}>orbi</Text>
+            <OrbiLogo size="lg" />
             <Text style={styles.tagline}>Votre course en quelques secondes</Text>
           </View>
 
@@ -229,6 +230,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: orbiTheme.colors.textMuted,
     fontWeight: '400',
+    fontFamily: 'Inter_400Regular',
   },
 
   // Mode toggle
@@ -268,6 +270,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.textSoft,
     paddingLeft: 2,
   },
@@ -279,6 +282,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: orbiTheme.colors.text,
   },
 
@@ -316,6 +320,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
   },
 
   // Demo section

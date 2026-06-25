@@ -13,6 +13,12 @@ import {
   Raleway_700Bold,
   Raleway_800ExtraBold,
 } from '@expo-google-fonts/raleway';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
 import { orbiTheme } from '@orbi/ui';
 import { hasPersistedRiderSession } from '../lib/auth';
@@ -37,6 +43,10 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Raleway_700Bold,
     Raleway_800ExtraBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
   });
 
   useEffect(() => {
@@ -131,6 +141,7 @@ const styles = StyleSheet.create({
   splashWordmark: {
     fontSize: 42,
     fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
     color: orbiTheme.colors.text,
     letterSpacing: -1,
   },

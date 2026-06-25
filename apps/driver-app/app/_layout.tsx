@@ -9,6 +9,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useFonts, Raleway_800ExtraBold } from '@expo-google-fonts/raleway';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
 import { orbiTheme } from '@orbi/ui';
 import { hasPersistedDriverSession } from '../lib/auth';
@@ -29,7 +35,13 @@ export default function RootLayout() {
   const rootNavigationState = useRootNavigationState();
   const [isNavigationMounted, setIsNavigationMounted] = useState(false);
   const [isResolved, setIsResolved] = useState(false);
-  useFonts({ Raleway_800ExtraBold });
+  useFonts({
+    Raleway_800ExtraBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -130,6 +142,7 @@ const styles = StyleSheet.create({
   loadingWordmark: {
     fontSize: 42,
     fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
     color: orbiTheme.colors.text,
     letterSpacing: -1,
   },

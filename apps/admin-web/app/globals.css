@@ -272,6 +272,12 @@ body {
   background: rgba(7, 17, 29, 0.34);
   display: grid;
   gap: 6px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.signal-card:hover {
+  border-color: rgba(0, 201, 167, 0.2);
+  background: rgba(0, 201, 167, 0.04);
 }
 
 .signal-card span,
@@ -297,6 +303,13 @@ body {
   border: 1px solid var(--panel-border);
   background: var(--panel);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.24);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.card:hover {
+  border-color: rgba(0, 201, 167, 0.22);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.36);
+  transform: translateY(-1px);
 }
 
 .card span {
@@ -344,6 +357,12 @@ body {
   border-radius: 18px;
   border: 1px solid rgba(123, 154, 190, 0.16);
   background: rgba(7, 17, 29, 0.34);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.test-access-card:hover {
+  border-color: rgba(0, 201, 167, 0.22);
+  background: rgba(0, 201, 167, 0.04);
 }
 
 .test-access-card span {
@@ -395,6 +414,11 @@ body {
   background: var(--panel-strong);
   padding: 22px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.28);
+  transition: border-color 0.15s;
+}
+
+.panel:hover {
+  border-color: rgba(0, 201, 167, 0.18);
 }
 
 .panel h2 {
@@ -476,6 +500,12 @@ body {
   background:
     linear-gradient(180deg, rgba(255, 182, 72, 0.08), rgba(8, 17, 31, 0.26)),
     rgba(15, 23, 42, 0.7);
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.phase-card:hover {
+  border-color: rgba(255, 182, 72, 0.3);
+  transform: translateY(-1px);
 }
 
 .phase-card h3 {

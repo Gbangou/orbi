@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -79,8 +80,12 @@ function ServiceRow({ option, onPress }: { option: RideOption; onPress: () => vo
       onPress={onPress}
       style={({ pressed }) => [styles.serviceRow, pressed && styles.serviceRowPressed]}
     >
-      <View style={[styles.serviceIcon, { backgroundColor: isMoto ? orbiTheme.colors.accentLight : '#FFF4E0' }]}>
-        <Text style={styles.serviceEmoji}>{isMoto ? '🏍' : '🚗'}</Text>
+      <View style={[styles.serviceIcon, { backgroundColor: isMoto ? orbiTheme.colors.accentLight : 'rgba(255, 149, 0, 0.10)' }]}>
+        <Ionicons
+          name={isMoto ? 'bicycle-outline' : 'car-outline'}
+          size={22}
+          color={isMoto ? orbiTheme.colors.teal : orbiTheme.colors.amber}
+        />
       </View>
       <View style={styles.serviceInfo}>
         <Text style={styles.serviceTitle}>{option.title}</Text>
@@ -371,6 +376,7 @@ const styles = StyleSheet.create({
   greetingText: {
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.text,
   },
   nearbyBadge: {
@@ -391,6 +397,7 @@ const styles = StyleSheet.create({
   nearbyText: {
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.text,
   },
 
@@ -441,6 +448,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: orbiTheme.colors.textMuted,
     fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
   },
   searchIconWrap: {
     width: 28,
@@ -479,9 +487,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  serviceEmoji: {
-    fontSize: 22,
-  },
   serviceInfo: {
     flex: 1,
     gap: 2,
@@ -489,15 +494,18 @@ const styles = StyleSheet.create({
   serviceTitle: {
     fontSize: 15,
     fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.text,
   },
   serviceMeta: {
     fontSize: 13,
     color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
   },
   serviceFare: {
     fontSize: 15,
     fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.text,
   },
   servicesPlaceholder: {

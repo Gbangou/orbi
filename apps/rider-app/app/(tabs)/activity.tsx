@@ -72,9 +72,9 @@ const fallbackHistory: MyTripsResponse = {
 };
 
 const MILESTONES = [
-  { trips: 5, badge: "Pionnier", emoji: "🌱" },
-  { trips: 20, badge: "Fidele", emoji: "⭐" },
-  { trips: 50, badge: "Ambassadeur", emoji: "🏆" },
+  { trips: 5, badge: "Pionnier", icon: "▸" },
+  { trips: 20, badge: "Fidele", icon: "★" },
+  { trips: 50, badge: "Ambassadeur", icon: "◆" },
 ] as const;
 
 function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
@@ -96,7 +96,7 @@ function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
             {earned.map((m) => (
               <View key={m.badge} style={loyaltyStyles.earnedBadge}>
                 <Text style={loyaltyStyles.earnedBadgeText}>
-                  {m.emoji} {m.badge}
+                  {m.icon} {m.badge}
                 </Text>
               </View>
             ))}
@@ -107,7 +107,7 @@ function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
       {next ? (
         <>
           <Text style={loyaltyStyles.nextLabel}>
-            {next.emoji} {next.badge} — encore{" "}
+            {next.icon} {next.badge} — encore{" "}
             {next.trips - completedTrips} course(s)
           </Text>
           <View style={loyaltyStyles.progressTrack}>
@@ -124,7 +124,7 @@ function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
         </>
       ) : (
         <Text style={loyaltyStyles.nextLabel}>
-          🎉 Statut maximum atteint — merci de votre fidélité !
+          Statut maximum atteint — merci de votre fidélité.
         </Text>
       )}
     </View>
