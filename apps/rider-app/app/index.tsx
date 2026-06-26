@@ -1,81 +1,72 @@
 import { router } from 'expo-router';
-import { useEffect } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { orbiTheme } from '@orbi/ui';
 import { hasPersistedRiderSession } from '../lib/auth';
-import {
-  InsightBadge,
-  SectionCard,
-  SectionHeading,
-} from '../lib/realtime-widgets';
 import { OrbiLogo } from '../lib/orbi-logo';
 
+/**
+ * Splash screen propre — redirige vers /home ou /auth selon la session.
+ * Visible ~400ms maximum. Logo animé, aucun widget développeur.
+ */
 export default function IndexScreen() {
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.88)).current;
+
   useEffect(() => {
+    // Animation d'entrée du logo
+    Animated.parallel([
+      Animated.timing(fadeIn, { toValue: 1, duration: 350, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
+    ]).start();
+
     let isMounted = true;
 
     async function handoff() {
       const hasSession = await hasPersistedRiderSession();
-
-      if (!isMounted) {
-        return;
-      }
-
-      router.replace(hasSession ? '/home' : '/auth');
+      if (!isMounted) return;
+      // Transition fluide — laisse l'animation se terminer
+      setTimeout(() => {
+        router.replace(hasSession ? '/home' : '/auth');
+      }, 380);
     }
 
     void handoff();
 
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <OrbiLogo size="sm" />
-      <Text style={styles.title}>Ouverture du tunnel rider</Text>
-      <Text style={styles.body}>
-        Verification de la session et reprise du bon ecran pour continuer sans friction.
-      </Text>
-
-      <SectionCard tone="sky">
-        <SectionHeading
-          eyebrow="Handoff"
-          title="Preparation du bon ecran"
-          description="L application verifie d abord si une session passager existe, puis vous redirige vers l accueil ou l acces."
-        />
-        <View style={styles.insightRow}>
-          <InsightBadge label="Session" value="Verification" tone="sky" />
-          <InsightBadge label="Tunnel" value="Continu" tone="teal" />
-          <InsightBadge label="Etat" value="Redirection" tone="amber" />
-        </View>
-      </SectionCard>
-    </ScrollView>
+    <View style={styles.root}>
+      <Animated.View style={[styles.content, { opacity: fadeIn, transform: [{ scale }] }]}>
+        <OrbiLogo size="xl" />
+        <Text style={styles.tagline}>Votre course en quelques secondes</Text>
+      </Animated.View>
+      <Text style={styles.market}>Ouagadougou · Burkina Faso</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 48,
+  root: {
+    flex: 1,
     backgroundColor: orbiTheme.colors.background,
-    gap: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  title: {
-    color: orbiTheme.colors.text,
-    fontSize: 34,
-    fontWeight: '800',
+  content: { alignItems: 'center', gap: 16 },
+  tagline: {
+    fontSize: 16,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
   },
-  body: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 22,
-  },
-  insightRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+  market: {
+    position: 'absolute',
+    bottom: 40,
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    letterSpacing: 0.5,
   },
 });
