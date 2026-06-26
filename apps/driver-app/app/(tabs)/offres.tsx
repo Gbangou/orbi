@@ -270,21 +270,29 @@ export default function OffersScreen() {
       }),
     [activeTripDetail, reservationNow],
   );
-  const riderTrustSnapshot = buildDriverRiderTrustSnapshot({
-    tripDetail: activeTripDetail,
-  });
+  const riderTrustSnapshot = useMemo(
+    () => buildDriverRiderTrustSnapshot({ tripDetail: activeTripDetail }),
+    [activeTripDetail],
+  );
   const shiftReadiness = useMemo(
     () => buildDriverShiftReadiness({ flow, fatigue: driverFatigue }),
     [driverFatigue, flow],
   );
-  const driverRouteProgress = buildDriverLiveRouteProgress({
-    flow,
-    tripDetail: activeTripDetail,
-  });
-  const driverMissionSnapshot = buildDriverMissionSnapshot({ flow, tripDetail: activeTripDetail });
-  const driverNextActionHint = buildDriverNextActionHint(flow);
-  const routeMonitoringLines = buildDriverRouteMonitoringLines(
-    activeTripDetail?.trip.routeMonitoring,
+  const driverRouteProgress = useMemo(
+    () => buildDriverLiveRouteProgress({ flow, tripDetail: activeTripDetail }),
+    [flow, activeTripDetail],
+  );
+  const driverMissionSnapshot = useMemo(
+    () => buildDriverMissionSnapshot({ flow, tripDetail: activeTripDetail }),
+    [flow, activeTripDetail],
+  );
+  const driverNextActionHint = useMemo(
+    () => buildDriverNextActionHint(flow),
+    [flow],
+  );
+  const routeMonitoringLines = useMemo(
+    () => buildDriverRouteMonitoringLines(activeTripDetail?.trip.routeMonitoring),
+    [activeTripDetail],
   );
   const { latestPosition: driverGpsPosition } = useDriverPresence(
     flow.availabilityStatus === "ONLINE" || Boolean(activeTrip),

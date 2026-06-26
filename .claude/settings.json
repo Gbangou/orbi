@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Process java -ErrorAction SilentlyContinue)",
+      "PowerShell($env:JAVA_HOME = \"C:\\\\Android\\\\jdk17\\\\jdk-17.0.19+10\"; $env:ANDROID_HOME = \"C:\\\\Android\\\\Sdk\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;$env:ANDROID_HOME\\\\cmdline-tools\\\\latest\\\\bin;$env:ANDROID_HOME\\\\platform-tools;$env:PATH\"; $yesInput = \"y`ny`ny`ny`ny`ny`ny`ny`ny`ny`ny`ny`ny`ny`ny`ny`ny`ny`ny`ny`n\"; $yesInput | sdkmanager \"ndk;26.1.10909125\" --sdk_root=\"C:\\\\Android\\\\Sdk\" 2>&1 | Select-Object -Last 15)",
+      "PowerShell([System.IO.Directory]::Exists\\(\"C:\\\\Android\\\\Sdk\\\\ndk\"\\))",
+      "PowerShell(Get-Process -Name java -ErrorAction SilentlyContinue)",
+      "PowerShell([System.IO.Directory]::GetDirectories\\(\"C:\\\\Android\\\\Sdk\\\\ndk\"\\))",
+      "PowerShell($env:JAVA_HOME = \"C:\\\\Android\\\\jdk17\\\\jdk-17.0.19+10\"; $env:ANDROID_HOME = \"C:\\\\Android\\\\Sdk\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;$env:ANDROID_HOME\\\\cmdline-tools\\\\latest\\\\bin;$env:ANDROID_HOME\\\\platform-tools;$env:ANDROID_HOME\\\\ndk\\\\26.1.10909125;$env:PATH\"; $env:EXPO_PUBLIC_API_BASE_URL = \"https://backend-production-d5d1.up.railway.app\"; $env:EXPO_PUBLIC_API_VERSION = \"v1\"; $env:EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS = \"true\"; $env:EXPO_PUBLIC_ORBI_DEMO_RIDER_EMAIL = \"testpassager@orbi.test\"; $env:EXPO_PUBLIC_ORBI_DEMO_RIDER_PASSWORD = \"TestOrbi2026!\"; cd \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\apps\\\\rider-app\\\\android\"; .\\\\gradlew assembleRelease 2>&1)",
+      "Bash(pnpm -w run test --passWithNoTests)",
+      "PowerShell([System.IO.Directory]::GetFiles\\(\"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\scripts\"\\) | ForEach-Object { Split-Path $_ -Leaf })",
+      "PowerShell(Get-Process | Where-Object { $_.CPU -gt 1 } | Select-Object Name, Id, CPU, WorkingSet | Format-Table)",
+      "PowerShell([System.IO.Directory]::GetFiles\\(\"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\scripts\\\\testing\"\\) | ForEach-Object { Split-Path $_ -Leaf })",
+      "PowerShell(Get-Process | Where-Object { $_.Name -match \"clang|cmake|ninja|ld|cc|cpp\" } | Select-Object Name, Id, CPU | Format-Table)",
+      "PowerShell($link = Get-Item \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\apps\\\\rider-app\\\\node_modules\\\\expo-router\" -ErrorAction SilentlyContinue; $link.LinkType; $link.Target)",
+      "PowerShell($env:JAVA_HOME = \"C:\\\\Android\\\\jdk17\\\\jdk-17.0.19+10\"; $env:ANDROID_HOME = \"C:\\\\Android\\\\Sdk\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;$env:ANDROID_HOME\\\\cmdline-tools\\\\latest\\\\bin;$env:ANDROID_HOME\\\\platform-tools;$env:PATH\"; $env:EXPO_PUBLIC_API_BASE_URL = \"https://backend-production-d5d1.up.railway.app\"; $env:EXPO_PUBLIC_API_VERSION = \"v1\"; $env:EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS = \"true\"; $env:EXPO_PUBLIC_ORBI_DEMO_RIDER_EMAIL = \"testpassager@orbi.test\"; $env:EXPO_PUBLIC_ORBI_DEMO_RIDER_PASSWORD = \"TestOrbi2026!\"; $env:NODE_ENV = \"production\"; cd \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\apps\\\\rider-app\\\\android\"; .\\\\gradlew assembleRelease 2>&1)",
+      "Bash(Test-Path \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\apps\\\\rider-app\\\\android\\\\local.properties\")",
+      "Bash(Get-Content \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\apps\\\\rider-app\\\\android\\\\local.properties\")",
+      "Bash(node -e \"try{console.log\\(require.resolve\\('babel-preset-expo',{paths:['C:/Users/LENOVO/Desktop/orbi/apps/rider-app']}\\)\\);}catch\\(e\\){console.log\\('NOT FOUND from app root:',e.message\\);}\")",
+      "Bash(node -e \"try{console.log\\(require.resolve\\('babel-preset-expo',{paths:['C:/Users/LENOVO/Desktop/orbi']}\\)\\);}catch\\(e\\){console.log\\('NOT FOUND from workspace root:',e.message\\);}\")",
+      "Bash(nvm list *)",
+      "Bash(where nvm *)",
+      "Bash(where fnm *)",
+      "Bash(fnm list *)",
+      "PowerShell($env:EXPO_OFFLINE = '1'; cd C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi; pnpm --filter \"@orbi/rider-app\" exec expo start --port 8081 2>&1 | Select-Object -First 15)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/.pnpm/cosmiconfig@9.0.0/node_modules/cosmiconfig/package.json'\\).version\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/.pnpm'\\); console.log\\('checking'\\)\")",
+      "PowerShell(cd C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi; $env:EXPO_OFFLINE = '1'; pnpm --filter \"@orbi/rider-app\" exec expo start --port 8081 2>&1 | Select-Object -First 20)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['version']\\)\")",
+      "PowerShell(fnm env --json 2>$null)",
+      "PowerShell($node22Bin = \"C:\\\\Users\\\\LENOVO\\\\AppData\\\\Roaming\\\\fnm\\\\node-versions\\\\v22.23.1\\\\installation\\\\bin\"; $env:PATH = \"$node22Bin;\" + \\($env:PATH -replace [regex]::Escape\\(\"C:\\\\Program Files\\\\nodejs;\"\\), \"\"\\); & \"$node22Bin\\\\node.exe\" --version)",
+      "Bash(git checkout *)",
+      "Bash(grep -v \"//\\\\|build\\\\|style\\\\|onPress\\\\|disabled\\\\|label=\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('dependencies', {}\\)\\)\")",
+      "Bash(git config *)",
+      "Bash(node -e ' *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('\\\\n'.join\\(sorted\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)\\)\\)\")"
+    ]
+  }
+}

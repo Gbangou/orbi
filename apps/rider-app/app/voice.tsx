@@ -1,385 +1,463 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useRouter } from "expo-router";
 import {
   createOrbiApiClient,
-  extractApiErrorMessage,
-  fetchMyTrips,
   resolveVoiceLocationIntentWithApi,
-  type MyTripsResponse,
   type VoiceLocationIntentResponse,
 } from "@orbi/api";
-import { orbiCopy, orbiTheme } from "@orbi/ui";
+import { orbiTheme } from "@orbi/ui";
 import {
   orbiRuntimeConfig,
   resolveOrbiApiBaseUrlForRuntime,
 } from "@orbi/config";
-import { restoreRiderSession } from "../lib/auth";
-import { resolveRiderAppError } from "../lib/session-feedback";
-import {
-  buildRiderFlowTransitionLabel,
-  buildRiderPeripheralStatusLabel,
-  resolveRiderActiveFlow,
-} from "../lib/rider-active-flow";
-import {
-  DashboardMetricCard,
-  FlowActionButton,
-  InsightBadge,
-  LiveStatusBanner,
-  QuickActionCard,
-  RouteSignalCard,
-  SectionCard,
-  SectionHeading,
-} from "../lib/realtime-widgets";
-import { useLiveRefresh } from "../lib/use-live-refresh";
 
-const SAMPLE_TRANSCRIPTS = [
-  "Je vais a Ouaga 2000",
-  "Viens me chercher a l universite de Ouaga",
-  "Je suis a la zone du bois",
+// ── Sample prompts ────────────────────────────────────────────────────────────
+
+const SAMPLES = [
+  "Je vais à Ouaga 2000",
+  "Université de Ouagadougou",
+  "Zone du bois",
+  "Aéroport de Ouaga",
 ] as const;
 
-export default function VoiceScreen() {
-  const [transcript, setTranscript] = useState<string>(SAMPLE_TRANSCRIPTS[0]);
-  const [result, setResult] = useState<VoiceLocationIntentResponse | null>(
-    null,
+// ── Suggestion card ───────────────────────────────────────────────────────────
+
+function SuggestionCard({
+  name,
+  address,
+  district,
+  confidence,
+  onSelect,
+}: {
+  name: string;
+  address: string;
+  district: string;
+  confidence: number;
+  onSelect: () => void;
+}) {
+  const pct = Math.round(confidence * 100);
+  const isStrong = confidence >= 0.75;
+
+  return (
+    <Pressable
+      onPress={onSelect}
+      style={({ pressed }) => [styles.suggCard, pressed && styles.suggCardPressed]}
+    >
+      <View style={styles.suggHeader}>
+        <View style={[styles.confBadge, { backgroundColor: isStrong ? "rgba(0,201,167,0.12)" : "rgba(255,149,0,0.12)" }]}>
+          <Text style={[styles.confText, { color: isStrong ? orbiTheme.colors.teal : orbiTheme.colors.amber }]}>
+            {pct}%
+          </Text>
+        </View>
+        <Text style={styles.suggArrow}>›</Text>
+      </View>
+      <Text style={styles.suggName}>{name}</Text>
+      <Text style={styles.suggMeta}>{district} · {address}</Text>
+    </Pressable>
   );
-  const [history, setHistory] = useState<MyTripsResponse | null>(null);
-  const [status, setStatus] = useState("Analyse vocale en cours...");
+}
+
+// ── Main screen ───────────────────────────────────────────────────────────────
+
+export default function VoiceScreen() {
+  const router = useRouter();
+  const [transcript, setTranscript] = useState("");
+  const [result, setResult] = useState<VoiceLocationIntentResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [voiceTransitionLabel, setVoiceTransitionLabel] = useState<
-    string | null
-  >(null);
-  const previousFlowStateRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    void loadVoiceContext();
-    void resolveTranscript(SAMPLE_TRANSCRIPTS[0]);
-  }, []);
-
-  useLiveRefresh(() => loadVoiceContext(true), 45000);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const inputRef = useRef<TextInput>(null);
 
   const topSuggestion = useMemo(() => result?.suggestions[0] ?? null, [result]);
-  const flow = resolveRiderActiveFlow(history);
 
-  useEffect(() => {
-    const previousFlowState = previousFlowStateRef.current;
-    setVoiceTransitionLabel(
-      buildRiderFlowTransitionLabel(
-        previousFlowState,
-        flow.activeFlowState,
-        "voice",
-      ),
-    );
-
-    previousFlowStateRef.current = flow.activeFlowState;
-  }, [flow.activeFlowState]);
-
-  useEffect(() => {
-    if (!voiceTransitionLabel) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setVoiceTransitionLabel(null);
-    }, 5000);
-
-    return () => clearTimeout(timeout);
-  }, [voiceTransitionLabel]);
-
-  async function loadVoiceContext(silent = false) {
-    try {
-      const { authClient } = await restoreRiderSession();
-      const historyResponse = await fetchMyTrips(authClient);
-      setHistory(historyResponse);
-
-      if (!silent && !result) {
-        const nextFlow = resolveRiderActiveFlow(historyResponse);
-        setStatus(
-          buildRiderPeripheralStatusLabel({
-            flow: nextFlow,
-            surface: "voice",
-          }),
-        );
-      }
-    } catch (error) {
-      if (!silent) {
-        const feedback = await resolveRiderAppError(error, {
-          fallback: "Le contexte rider n a pas pu etre charge pour la voix.",
-        });
-        setStatus(feedback.message);
-      }
-    }
-  }
-
-  async function resolveTranscript(nextTranscript: string) {
-    const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
-      version: orbiRuntimeConfig.apiVersion,
-    });
-
-    if (!nextTranscript.trim()) {
-      setStatus("Saisissez ou dictez une commande avant de lancer l analyse.");
-      setResult(null);
-      return;
-    }
+  const analyse = useCallback(async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
 
     setIsLoading(true);
-    setStatus("Analyse vocale du lieu en cours...");
+    setErrorMsg(null);
+    setResult(null);
 
     try {
-      const response = await resolveVoiceLocationIntentWithApi(client, {
-        transcript: nextTranscript,
+      const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
+        version: orbiRuntimeConfig.apiVersion,
       });
-
+      const response = await resolveVoiceLocationIntentWithApi(client, { transcript: trimmed });
       setResult(response);
-      setStatus(
-        response.needsClarification
-          ? "La commande a besoin d une clarification avant de reserver."
-          : flow.hasOpenFlow
-            ? `Intention ${response.intentType} detectee avec succes. Flux rider ${flow.primaryStatusLabel}.`
-            : `Intention ${response.intentType} detectee avec succes.`,
-      );
-    } catch (error) {
-      setStatus(
-        extractApiErrorMessage(
-          error,
-          "Le service vocal backend est indisponible. Mode local a verifier.",
-        ),
-      );
-      setResult(null);
+    } catch {
+      setErrorMsg("Service momentanément indisponible. Réessayez dans un instant.");
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  function handleSelectSuggestion(suggestion: VoiceLocationIntentResponse["suggestions"][number]) {
+    router.push({
+      pathname: "/book",
+      params: {
+        suggestionName: suggestion.name,
+        suggestionAddress: suggestion.address,
+        suggestionLat: String(suggestion.latitude),
+        suggestionLng: String(suggestion.longitude),
+      },
+    });
+  }
+
+  function handleSample(sample: string) {
+    setTranscript(sample);
+    void analyse(sample);
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>Recherche vocale</Text>
-      <Text style={styles.body}>{orbiCopy.voiceHeadline}</Text>
-      <LiveStatusBanner
-        label="Voice live"
-        message={status}
-        secondaryMessage={
-          voiceTransitionLabel
-            ? voiceTransitionLabel
-            : flow.primaryRouteLabel
-              ? `Flux actif rattache: ${flow.primaryRouteLabel}.`
-              : "Le moteur vocal interprete une demande libre puis propose des lieux exploitables dans le contexte Burkina Faso."
-        }
-      />
+    <SafeAreaView style={styles.safe}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={12}
+        >
+          <Text style={styles.backArrow}>‹</Text>
+        </Pressable>
+        <Text style={styles.headerTitle}>Recherche vocale</Text>
+        <View style={{ width: 40 }} />
+      </View>
 
-      <SectionCard tone="sky">
-        <SectionHeading
-          eyebrow="Vue rapide"
-          title="Recherche de lieu par la voix"
-          description="Combinez une phrase libre, des exemples frequents et une interpretation structuree pour aller plus vite vers la reservation."
-        />
-        <View style={styles.insightRow}>
-          <InsightBadge
-            label="Locale"
-            value={result?.locale ?? "fr-BF"}
-            tone="sky"
-          />
-          <InsightBadge
-            label="Flux actif"
-            value={flow.primaryStatusLabel}
-            tone={flow.hasOpenFlow ? "amber" : "teal"}
-          />
-          <InsightBadge
-            label="Confiance"
-            value={`${Math.round((result?.confidence ?? 0) * 100)}%`}
-            tone={result?.needsClarification ? "amber" : "teal"}
-          />
-          <InsightBadge
-            label="Etat"
-            value={result?.needsClarification ? "Clarifier" : "Exploitable"}
-            tone={result?.needsClarification ? "amber" : "teal"}
-          />
-        </View>
-      </SectionCard>
-
-
-
-      <View style={styles.voiceCard}>
-        <Text style={styles.label}>Commande vocale a interpreter</Text>
-        {flow.hasOpenFlow ? (
-          <Text style={styles.flowMeta}>
-            Reservation active: {flow.primaryStatusLabel}
-            {flow.primaryRouteLabel ? ` - ${flow.primaryRouteLabel}` : ""}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Hero */}
+        <View style={styles.hero}>
+          <View style={styles.micIcon}>
+            <Text style={styles.micGlyph}>🎤</Text>
+          </View>
+          <Text style={styles.heroTitle}>Dites le lieu, Orbi trouve l'adresse</Text>
+          <Text style={styles.heroSub}>
+            Tapez une phrase en français — le moteur comprend les noms de quartiers,
+            monuments et zones de Ouagadougou.
           </Text>
-        ) : null}
-        <TextInput
-          value={transcript}
-          onChangeText={setTranscript}
-          placeholder="Ex: Je vais a Ouaga 2000"
-          placeholderTextColor={orbiTheme.colors.muted}
-          style={styles.input}
-        />
-        <View style={styles.sampleRow}>
-          {SAMPLE_TRANSCRIPTS.map((sample) => (
-            <QuickActionCard
-              key={sample}
-              title={sample}
-              description="Relancer cette phrase exemple"
-              onPress={() => {
-                setTranscript(sample);
-                void resolveTranscript(sample);
-              }}
-              tone="sky"
-            />
-          ))}
         </View>
-        <FlowActionButton
-          onPress={() => void resolveTranscript(transcript)}
-          disabled={isLoading}
-          label={isLoading ? "Analyse..." : "Analyser la commande"}
-          tone="teal"
-          emphasis="primary"
-          style={isLoading ? styles.buttonDisabled : null}
-        />
-      </View>
 
-      <View style={styles.metricsRow}>
-        <DashboardMetricCard
-          label="Langue"
-          value={result?.locale ?? "fr-BF"}
-          helper="priorite MVP Burkina Faso"
-          tone="sky"
-        />
-        <DashboardMetricCard
-          label="Confiance"
-          value={`${Math.round((result?.confidence ?? 0) * 100)}%`}
-          helper={
-            result?.needsClarification
-              ? "clarification requise"
-              : "intention exploitable"
-          }
-          tone={result?.needsClarification ? "amber" : "teal"}
-        />
-        <DashboardMetricCard
-          label="Suggestions"
-          value={String(result?.suggestions.length ?? 0)}
-          helper="lieux compris par la voix"
-          tone="sky"
-        />
-      </View>
+        {/* Input */}
+        <View style={styles.inputCard}>
+          <Text style={styles.inputLabel}>Votre destination</Text>
+          <TextInput
+            ref={inputRef}
+            value={transcript}
+            onChangeText={setTranscript}
+            placeholder="Ex : Je vais à Ouaga 2000"
+            placeholderTextColor={orbiTheme.colors.textMuted}
+            style={styles.input}
+            returnKeyType="search"
+            onSubmitEditing={() => void analyse(transcript)}
+            autoCorrect={false}
+            multiline={false}
+          />
+          <Pressable
+            onPress={() => void analyse(transcript)}
+            disabled={isLoading || !transcript.trim()}
+            style={({ pressed }) => [
+              styles.analyseBtn,
+              (isLoading || !transcript.trim()) && styles.analyseBtnDisabled,
+              pressed && styles.analyseBtnPressed,
+            ]}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.analyseBtnLabel}>Analyser</Text>
+            )}
+          </Pressable>
+        </View>
 
-      {result ? (
-        <RouteSignalCard
-          eyebrow="Interpretation"
-          badgeLabel={
-            result.needsClarification ? "Clarification" : "Exploitable"
-          }
-          badgeTone={result.needsClarification ? "amber" : "teal"}
-          title={result.interpretation}
-          description={`Transcription normalisee: ${result.normalizedTranscript}`}
-          insights={[
-            {
-              label: "Intent",
-              value: result.intentType,
-              tone: result.needsClarification ? "amber" : "teal",
-            },
-            {
-              label: "Confiance",
-              value: `${Math.round(result.confidence * 100)}%`,
-              tone: result.needsClarification ? "amber" : "sky",
-            },
-          ]}
-          note={
-            topSuggestion
-              ? `Meilleur lieu: ${topSuggestion.name}, ${topSuggestion.district}`
-              : null
-          }
-          noteTone="teal"
-        />
-      ) : null}
+        {/* Sample prompts */}
+        <View style={styles.samplesSection}>
+          <Text style={styles.samplesLabel}>Essayez avec</Text>
+          <View style={styles.samplesRow}>
+            {SAMPLES.map((sample) => (
+              <Pressable
+                key={sample}
+                onPress={() => handleSample(sample)}
+                style={({ pressed }) => [styles.sampleChip, pressed && styles.sampleChipPressed]}
+              >
+                <Text style={styles.sampleChipText}>{sample}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
 
-      <Text style={styles.section}>Lieux compris par la voix</Text>
-      {(result?.suggestions ?? []).map((item) => (
-        <RouteSignalCard
-          key={`${item.name}-${item.district}`}
-          eyebrow="Suggestion vocale"
-          badgeLabel={`${Math.round(item.confidence * 100)}%`}
-          badgeTone={item.confidence >= 0.75 ? "teal" : "amber"}
-          title={item.name}
-          description={item.address}
-          insights={[
-            { label: "Quartier", value: item.district, tone: "sky" },
-            {
-              label: "Confiance",
-              value: `${Math.round(item.confidence * 100)}%`,
-              tone: item.confidence >= 0.75 ? "teal" : "amber",
-            },
-          ]}
-        />
-      ))}
-    </ScrollView>
+        {/* Error */}
+        {errorMsg ? (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        ) : null}
+
+        {/* Results */}
+        {result ? (
+          <>
+            {/* Confidence summary */}
+            <View style={styles.resultSummary}>
+              <View style={styles.resultBadge}>
+                <View style={[
+                  styles.resultDot,
+                  { backgroundColor: result.needsClarification ? orbiTheme.colors.amber : orbiTheme.colors.teal },
+                ]} />
+                <Text style={[
+                  styles.resultBadgeText,
+                  { color: result.needsClarification ? orbiTheme.colors.amber : orbiTheme.colors.teal },
+                ]}>
+                  {result.needsClarification ? "Clarification utile" : "Résultat exploitable"}
+                </Text>
+              </View>
+              <Text style={styles.resultInterpretation}>{result.interpretation}</Text>
+            </View>
+
+            {/* Suggestions */}
+            {result.suggestions.length > 0 ? (
+              <View style={styles.suggsSection}>
+                <Text style={styles.suggsTitle}>
+                  {result.suggestions.length} lieu{result.suggestions.length > 1 ? "x" : ""} trouvé{result.suggestions.length > 1 ? "s" : ""}
+                </Text>
+                {result.suggestions.map((s) => (
+                  <SuggestionCard
+                    key={`${s.name}-${s.district}`}
+                    name={s.name}
+                    address={s.address}
+                    district={s.district}
+                    confidence={s.confidence}
+                    onSelect={() => handleSelectSuggestion(s)}
+                  />
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyResult}>
+                <Text style={styles.emptyTitle}>Aucun lieu identifié</Text>
+                <Text style={styles.emptyMeta}>
+                  Essayez d'être plus précis : "Marché central de Ouaga" ou "Quartier Patte d'Oie".
+                </Text>
+              </View>
+            )}
+          </>
+        ) : null}
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    paddingTop: 88,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    backgroundColor: orbiTheme.colors.background,
-    gap: 16,
-  },
-  title: {
-    color: orbiTheme.colors.text,
-    fontSize: 32,
-    fontWeight: "800",
-  },
-  body: {
-    color: orbiTheme.colors.muted,
-    lineHeight: 22,
-  },
-  insightRow: {
+  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+
+  // Header
+  header: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: orbiTheme.colors.border,
   },
-  voiceCard: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderColor: orbiTheme.colors.border,
-    borderWidth: 1,
-    borderRadius: 24,
-    padding: 20,
-    gap: 12,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  label: {
-    color: orbiTheme.colors.teal,
-    textTransform: "uppercase",
-    fontSize: 12,
-  },
-  flowMeta: {
-    color: orbiTheme.colors.text,
+  backArrow: { fontSize: 28, color: orbiTheme.colors.text, marginTop: -2 },
+  headerTitle: {
+    fontSize: 17,
     fontWeight: "700",
+    fontFamily: "Inter_700Bold",
+    color: orbiTheme.colors.text,
+  },
+
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    gap: 20,
+  },
+
+  // Hero
+  hero: { alignItems: "center", gap: 12, paddingHorizontal: 8 },
+  micIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(0,201,167,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  micGlyph: { fontSize: 32 },
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
+    color: orbiTheme.colors.text,
+    textAlign: "center",
+    lineHeight: 26,
+  },
+  heroSub: {
+    fontSize: 14,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
     lineHeight: 20,
   },
-  input: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+
+  // Input card
+  inputCard: {
+    backgroundColor: "#FFFFFF",
     borderRadius: 18,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: orbiTheme.colors.text,
-    fontSize: 16,
-  },
-  sampleRow: {
-    gap: 10,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  metricsRow: {
-    flexDirection: "row",
+    padding: 16,
     gap: 12,
-    flexWrap: "wrap",
+    ...orbiTheme.shadows.card,
   },
-  section: {
-    color: orbiTheme.colors.text,
-    fontSize: 20,
+  inputLabel: {
+    fontSize: 11,
     fontWeight: "700",
+    fontFamily: "Inter_700Bold",
+    color: orbiTheme.colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  input: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 16,
+    fontFamily: "Inter_400Regular",
+    color: orbiTheme.colors.text,
+  },
+  analyseBtn: {
+    backgroundColor: orbiTheme.colors.text,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    ...orbiTheme.shadows.button,
+  },
+  analyseBtnDisabled: { opacity: 0.38 },
+  analyseBtnPressed: { opacity: 0.85 },
+  analyseBtnLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
+    color: "#FFFFFF",
+  },
+
+  // Samples
+  samplesSection: { gap: 10 },
+  samplesLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
+    color: orbiTheme.colors.textMuted,
+  },
+  samplesRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  sampleChip: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  sampleChipPressed: { opacity: 0.75 },
+  sampleChipText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: orbiTheme.colors.textSoft,
+  },
+
+  // Error
+  errorCard: {
+    backgroundColor: "rgba(255,59,48,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,59,48,0.22)",
+    borderRadius: 12,
+    padding: 14,
+  },
+  errorText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: orbiTheme.colors.danger,
+    lineHeight: 18,
+  },
+
+  // Result summary
+  resultSummary: {
+    gap: 8,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    padding: 14,
+  },
+  resultBadge: { flexDirection: "row", alignItems: "center", gap: 6 },
+  resultDot: { width: 7, height: 7, borderRadius: 4 },
+  resultBadgeText: { fontSize: 12, fontWeight: "700", fontFamily: "Inter_700Bold" },
+  resultInterpretation: {
+    fontSize: 14,
+    color: orbiTheme.colors.textSoft,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
+  },
+
+  // Suggestions
+  suggsSection: { gap: 10 },
+  suggsTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
+    color: orbiTheme.colors.text,
+  },
+  suggCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    padding: 14,
+    gap: 6,
+    ...orbiTheme.shadows.card,
+  },
+  suggCardPressed: { opacity: 0.82 },
+  suggHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  confBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
+  confText: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold" },
+  suggArrow: { fontSize: 22, color: orbiTheme.colors.teal },
+  suggName: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
+  suggMeta: { fontSize: 12, color: orbiTheme.colors.textMuted, fontFamily: "Inter_400Regular" },
+
+  // Empty
+  emptyResult: { alignItems: "center", paddingVertical: 24, gap: 6 },
+  emptyTitle: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
+  emptyMeta: {
+    fontSize: 13,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    maxWidth: 280,
+    lineHeight: 18,
   },
 });
