@@ -1,8 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -444,9 +445,12 @@ export default function BookingScreen() {
   const [promoError, setPromoError] = useState<string | null>(null);
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [bookingTransitionLabel, setBookingTransitionLabel] = useState<
     string | null
   >(null);
+  const checkScale = useRef(new Animated.Value(0)).current;
+  const checkOpacity = useRef(new Animated.Value(0)).current;
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [paymentPreview, setPaymentPreview] = useState<{
     provider: string;
@@ -900,6 +904,22 @@ export default function BookingScreen() {
         );
       }
 
+      // Confirmation animation — green checkmark Uber-style
+      setBookingConfirmed(true);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Animated.sequence([
+        Animated.spring(checkScale, { toValue: 1, tension: 50, friction: 5, useNativeDriver: true }),
+        Animated.timing(checkOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+      ]).start();
+      setTimeout(() => {
+        Animated.timing(checkOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start();
+        setTimeout(() => {
+          setBookingConfirmed(false);
+          checkScale.setValue(0);
+          router.push('/activity');
+        }, 450);
+      }, 1800);
+
       await loadBookingContext({ resetPaymentPreview: false });
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
@@ -933,6 +953,16 @@ export default function BookingScreen() {
         <Text style={styles.headerTitle}>Réserver</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      {/* ── Booking confirmation overlay ── */}
+      {bookingConfirmed ? (
+        <Animated.View style={[styles.confirmOverlay, { opacity: checkOpacity }]}>
+          <Animated.View style={[styles.confirmCircle, { transform: [{ scale: checkScale }] }]}>
+            <Text style={styles.confirmCheck}>✓</Text>
+          </Animated.View>
+          <Text style={styles.confirmLabel}>Course confirmée !</Text>
+        </Animated.View>
+      ) : null}
 
       <ScrollView
         style={styles.scroll}
@@ -1741,6 +1771,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: orbiTheme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
+  },
+
+  // ── Booking confirmation overlay ────────────────────────────────────────────
+  confirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+    gap: 16,
+  },
+  confirmCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#00C9A7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#00C9A7',
+    shadowOpacity: 0.55,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 14,
+  },
+  confirmCheck: {
+    fontSize: 44,
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  confirmLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
   },
 
   // CTA

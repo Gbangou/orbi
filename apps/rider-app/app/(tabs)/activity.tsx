@@ -9,6 +9,7 @@ import {
   Image,
   Linking,
   Pressable,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   Share,
@@ -871,6 +872,14 @@ export default function ActivityScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => void loadHistory()}
+            tintColor={orbiTheme.colors.teal}
+            colors={[orbiTheme.colors.teal]}
+          />
+        }
       >
         {/* Stats */}
         <View style={styles.statsRow}>

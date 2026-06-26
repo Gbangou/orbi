@@ -453,6 +453,12 @@ export type RideOption = {
   badge?: string;
   paymentMethods?: PaymentMethod[];
   safetyNote?: string;
+  /** Driver net payout (after platform commission) */
+  driverPayout?: number;
+  /** True when demand multiplier > 1.0 */
+  surgeActive?: boolean;
+  /** Human-readable surge label e.g. "1.4x" — null when no surge */
+  surgeLabel?: string | null;
   marketplace?: {
     availabilityLabel: string;
     nearbyDrivers: number;

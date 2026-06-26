@@ -205,6 +205,12 @@ export class PricingService {
             estimate.operatingContext.availabilityScore,
             configuration.vehicleExamples,
           ),
+          driverPayout: estimate.driverEconomics.driverPayout,
+          surgeActive: estimate.fareBreakdown.demandMultiplier > 1.0,
+          surgeLabel:
+            estimate.fareBreakdown.demandMultiplier > 1.0
+              ? `${estimate.fareBreakdown.demandMultiplier.toFixed(1)}x`
+              : null,
           fareBreakdown: {
             baseFare: estimate.fareBreakdown.baseFare,
             bookingFee: estimate.fareBreakdown.bookingFee,

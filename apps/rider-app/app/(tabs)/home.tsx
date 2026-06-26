@@ -178,7 +178,12 @@ const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideO
           {`${option.etaMinutes} min · ${option.capacity}`}
         </Text>
       </View>
-      <Text style={styles.serviceFare}>{formatXof(option.fare)}</Text>
+      <View style={{ alignItems: 'flex-end', gap: 2 }}>
+        <Text style={styles.serviceFare}>{formatXof(option.fare)}</Text>
+        {option.surgeActive ? (
+          <Text style={styles.serviceSurge}>{option.surgeLabel}</Text>
+        ) : null}
+      </View>
     </Pressable>
   );
 });
@@ -389,18 +394,28 @@ export default function RiderHomeScreen() {
             )}
           </View>
 
-          {/* Right: nearby count + realtime dot */}
-          <Pressable
-            style={styles.nearbyBadge}
-            onPress={() => router.push('/book')}
-          >
-            <StatusDot active={isRealtimeSyncing} />
-            <Text style={styles.nearbyText}>
-              {realNearbyCount > 0
-                ? `${realNearbyCount} chauffeur${realNearbyCount > 1 ? 's' : ''}`
-                : 'Carte live'}
-            </Text>
-          </Pressable>
+          {/* Right: surge badge + nearby + realtime dot */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {/* Surge badge — visible quand demande élevée */}
+            {options.some(o => o.surgeActive) ? (
+              <View style={styles.surgeBadge}>
+                <Text style={styles.surgeBadgeText}>
+                  ⚡ {options.find(o => o.surgeActive)?.surgeLabel}
+                </Text>
+              </View>
+            ) : null}
+            <Pressable
+              style={styles.nearbyBadge}
+              onPress={() => router.push('/book')}
+            >
+              <StatusDot active={isRealtimeSyncing} />
+              <Text style={styles.nearbyText}>
+                {realNearbyCount > 0
+                  ? `${realNearbyCount} chauffeur${realNearbyCount > 1 ? 's' : ''}`
+                  : 'Carte live'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
 
@@ -778,6 +793,26 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     marginTop: -2,
+  },
+
+  // ── Surge badge ───────────────────────────────────────────────────────────
+  surgeBadge: {
+    backgroundColor: 'rgba(255, 149, 0, 0.90)',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  surgeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
+  },
+  serviceSurge: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.amber,
   },
 
   // ── Fare estimator hint ────────────────────────────────────────────────────

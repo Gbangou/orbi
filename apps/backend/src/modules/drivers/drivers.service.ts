@@ -220,7 +220,12 @@ export class DriversService {
   async getMe(auth: RequestAuthContext) {
     this.assertDriverOnboardingEnabled(auth);
     const profile = await this.loadDriverProfile(auth);
-    const onboardingSummary = await this.buildOnboardingSummary(profile.id);
+
+    const [onboardingSummary, fatigue, dispatchSignal] = await Promise.all([
+      this.buildOnboardingSummary(profile.id),
+      this.resolveDriverFatigue(profile.id),
+      this.dispatchCoordinator.getDriverAcceptanceSignal(profile.id),
+    ]);
 
     return {
       profile: {
@@ -235,7 +240,7 @@ export class DriversService {
         currentLongitude: toNumber(profile.currentLongitude),
         averageRating: toNumber(profile.averageRating),
         completedTripsCount: profile.completedTripsCount,
-        fatigue: await this.resolveDriverFatigue(profile.id),
+        fatigue,
         onboarding: onboardingSummary,
         vehicles: profile.vehicles.map((vehicle) => ({
           id: vehicle.id,
@@ -247,6 +252,11 @@ export class DriversService {
           tier: vehicle.tier,
           isActive: vehicle.isActive,
         })),
+        dispatchSignal: {
+          acceptanceRate: dispatchSignal.acceptanceRate,
+          score: dispatchSignal.score,
+          freshness: dispatchSignal.freshness,
+        },
       },
     };
   }
@@ -913,15 +923,39 @@ export class DriversService {
     }
 
     const profile = await this.prisma.driverProfile.findUnique({
-      where: {
-        id: driverProfileId,
-      },
-      include: {
-        user: true,
-        vehicles: {
-          orderBy: {
-            createdAt: 'asc',
+      where: { id: driverProfileId },
+      select: {
+        id: true,
+        status: true,
+        verificationStatus: true,
+        serviceRadiusKm: true,
+        currentLatitude: true,
+        currentLongitude: true,
+        averageRating: true,
+        completedTripsCount: true,
+        licenseNumber: true,
+        city: true,
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phoneNumber: true,
           },
+        },
+        vehicles: {
+          select: {
+            id: true,
+            plateNumber: true,
+            make: true,
+            model: true,
+            color: true,
+            type: true,
+            tier: true,
+            seats: true,
+            isActive: true,
+          },
+          orderBy: { createdAt: 'asc' },
         },
       },
     });

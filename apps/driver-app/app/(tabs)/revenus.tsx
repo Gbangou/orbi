@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, SafeAreaView, ScrollView, Text, View, StyleSheet } from 'react-native';
 import {
   preventScreenCaptureAsync,
   allowScreenCaptureAsync,
@@ -290,6 +290,14 @@ export default function RevenusScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => void loadEarnings()}
+            tintColor={orbiTheme.colors.amber}
+            colors={[orbiTheme.colors.amber]}
+          />
+        }
       >
         {/* Hero — cap du jour */}
         <View style={styles.heroCard}>

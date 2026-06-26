@@ -2600,6 +2600,12 @@ export type DriverProfileResponse = {
       tier: ApiServiceTier;
       isActive: boolean;
     }>;
+    /** Dispatch performance signal — acceptance rate & score over recent window */
+    dispatchSignal?: {
+      acceptanceRate: number | null;
+      score: number;
+      freshness: string;
+    };
   };
 };
 

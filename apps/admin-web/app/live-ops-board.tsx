@@ -193,6 +193,27 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
         </div>
       </div>
 
+      {/* Demand Intelligence banner */}
+      {(() => {
+        const ratio = liveOps.summary.openRequests / Math.max(1, liveOps.summary.activeTrips);
+        const isSurge = ratio >= 1.5;
+        const isBalanced = ratio >= 0.8 && ratio < 1.5;
+        const label = isSurge ? '⚡ Forte demande' : isBalanced ? '✓ Offre equilibree' : '↓ Faible demande';
+        const cls = isSurge ? 'backend-status backend-status-fallback' : 'backend-status backend-status-connected';
+        return (
+          <div className={cls} style={{ marginBottom: 20 }}>
+            <div>
+              <p className="eyebrow">Pression marche</p>
+              <strong>{label}</strong>
+            </div>
+            <p>
+              {liveOps.summary.openRequests} demandes ouvertes · {liveOps.summary.activeTrips} courses actives · ratio {ratio.toFixed(2)}
+              {isSurge ? ' — Conditions de surge actives. Considerez activer des incentives chauffeurs.' : ''}
+            </p>
+          </div>
+        );
+      })()}
+
       <div className="grid">
         <article className="card">
           <span>En attente pickup</span>

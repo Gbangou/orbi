@@ -795,8 +795,23 @@ export default function ProfilScreen() {
             <Text style={styles.statLabel}>Note</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{profile.profile.vehicles.length}</Text>
-            <Text style={styles.statLabel}>Véhicules</Text>
+            {profile.profile.dispatchSignal?.acceptanceRate != null ? (
+              <Text style={[
+                styles.statValue,
+                {
+                  color: profile.profile.dispatchSignal.acceptanceRate >= 0.75
+                    ? orbiTheme.colors.teal
+                    : profile.profile.dispatchSignal.acceptanceRate >= 0.55
+                      ? orbiTheme.colors.amber
+                      : orbiTheme.colors.danger,
+                },
+              ]}>
+                {Math.round(profile.profile.dispatchSignal.acceptanceRate * 100)}%
+              </Text>
+            ) : (
+              <Text style={styles.statValue}>—</Text>
+            )}
+            <Text style={styles.statLabel}>Taux acc.</Text>
           </View>
         </View>
 

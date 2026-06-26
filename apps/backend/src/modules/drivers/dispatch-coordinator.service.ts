@@ -997,6 +997,17 @@ export class DispatchCoordinator {
     });
   }
 
+  async getDriverAcceptanceSignal(driverProfileId: string) {
+    const userId = await this.resolveDriverUserId(driverProfileId);
+    const settings = await this.resolveDispatchLearningSettingsValues();
+    const signal = await this.loadDispatchBehaviorSignal(userId, settings);
+    return {
+      score: signal.score,
+      acceptanceRate: signal.acceptanceRate,
+      freshness: signal.signalFreshness,
+    };
+  }
+
   private async loadDispatchBehaviorSignal(
     userId: string | null,
     settings: DispatchLearningSettingsValues,

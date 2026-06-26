@@ -5,6 +5,7 @@ import {
   Alert,
   Linking,
   Pressable,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -832,6 +833,14 @@ export default function OffersScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => void loadDriverData()}
+            tintColor={orbiTheme.colors.amber}
+            colors={[orbiTheme.colors.amber]}
+          />
+        }
       >
         {/* ── Completion flash ── */}
         {completionFlash ? (
