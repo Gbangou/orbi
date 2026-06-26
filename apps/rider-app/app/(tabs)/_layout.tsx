@@ -1,7 +1,8 @@
 import { Tabs } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { orbiTheme } from '@orbi/ui';
 import { usePushRegistration } from '../../lib/use-push-registration';
+import { useRiderTabBadge } from '../../lib/use-rider-tab-badge';
 
 const TypedTabs = Tabs as any;
 const TypedTabsScreen = Tabs.Screen as any;
@@ -20,12 +21,17 @@ function HomeIcon({ color }: TabIconProps) {
   );
 }
 
-function ActivityIcon({ color }: TabIconProps) {
+function ActivityIcon({ color, badge }: TabIconProps & { badge?: number }) {
   return (
     <View style={icon.wrap}>
       <View style={[icon.dotA, { backgroundColor: color }]} />
       <View style={[icon.lineA, { backgroundColor: color }]} />
       <View style={[icon.dotB, { borderColor: color }]} />
+      {badge ? (
+        <View style={icon.badge}>
+          <Text style={icon.badgeText}>{badge > 9 ? '9+' : badge}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -51,6 +57,7 @@ function AccountIcon({ color }: TabIconProps) {
 
 export default function RiderTabsLayout() {
   usePushRegistration();
+  const { activityBadge } = useRiderTabBadge();
 
   return (
     <TypedTabs
@@ -74,7 +81,7 @@ export default function RiderTabsLayout() {
         name="activity"
         options={{
           title: 'Activité',
-          tabBarIcon: (p: TabIconProps) => <ActivityIcon {...p} />,
+          tabBarIcon: (p: TabIconProps) => <ActivityIcon {...p} badge={activityBadge} />,
         }}
       />
       <TypedTabsScreen
@@ -195,5 +202,24 @@ const icon = StyleSheet.create({
     borderWidth: 1.5,
     alignSelf: 'center',
     borderTopColor: 'transparent',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: orbiTheme.colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 });

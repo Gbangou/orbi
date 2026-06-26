@@ -353,6 +353,31 @@ export default function RevenusScreen() {
           </View>
         </View>
 
+        {/* Mini earnings chart — last 7 trips by payout */}
+        {earnings.recentTrips.length > 0 ? (
+          <View style={styles.chartCard}>
+            <Text style={styles.sectionTitle}>Dernières courses</Text>
+            <View style={styles.chartBars}>
+              {(() => {
+                const trips = earnings.recentTrips.slice(0, 7);
+                const maxPayout = Math.max(...trips.map(t => t.payout), 1);
+                return trips.map((trip, i) => {
+                  const barH = Math.max(6, Math.round((trip.payout / maxPayout) * 60));
+                  return (
+                    <View key={trip.id} style={styles.chartBarWrap}>
+                      <Text style={styles.chartBarValue}>
+                        {Math.round(trip.payout / 1000)}k
+                      </Text>
+                      <View style={[styles.chartBar, { height: barH }]} />
+                      <Text style={styles.chartBarLabel}>{i + 1}</Text>
+                    </View>
+                  );
+                });
+              })()}
+            </View>
+          </View>
+        ) : null}
+
         {/* Milestone */}
         <DriverMilestoneCard completedTrips={earnings.summary.completedTrips} />
 
@@ -654,6 +679,43 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.amber,
+  },
+
+  // Earnings chart
+  chartCard: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    padding: 16,
+    gap: 12,
+  },
+  chartBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 6,
+    height: 80,
+  },
+  chartBarWrap: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  chartBar: {
+    width: '100%',
+    borderRadius: 4,
+    backgroundColor: orbiTheme.colors.amber,
+  },
+  chartBarValue: {
+    fontSize: 9,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.textMuted,
+  },
+  chartBarLabel: {
+    fontSize: 9,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
   },
 
   // Refresh button

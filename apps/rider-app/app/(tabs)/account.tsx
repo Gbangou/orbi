@@ -563,11 +563,11 @@ export default function AccountScreen() {
           </View>
         </View>
 
-        {/* Active flow notice */}
+        {/* Active flow notice OR quick book CTA */}
         {flow.hasOpenFlow ? (
           <Pressable
             style={styles.flowBanner}
-            onPress={() => router.push('/book')}
+            onPress={() => router.push('/activity')}
           >
             <View style={styles.flowDot} />
             <Text style={styles.flowText} numberOfLines={1}>
@@ -576,7 +576,14 @@ export default function AccountScreen() {
             </Text>
             <Text style={styles.flowArrow}>›</Text>
           </Pressable>
-        ) : null}
+        ) : (
+          <Pressable
+            style={styles.newTripBtn}
+            onPress={() => router.push('/book')}
+          >
+            <Text style={styles.newTripBtnText}>+ Réserver une course</Text>
+          </Pressable>
+        )}
 
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -1020,6 +1027,19 @@ const styles = StyleSheet.create({
   flowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: orbiTheme.colors.teal },
   flowText: { flex: 1, fontSize: 13, fontWeight: '500', fontFamily: 'Inter_500Medium', color: orbiTheme.colors.text },
   flowArrow: { fontSize: 20, color: orbiTheme.colors.teal },
+  newTripBtn: {
+    backgroundColor: orbiTheme.colors.text,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    ...orbiTheme.shadows.button,
+  },
+  newTripBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
+  },
 
   // Cards (cardHeader/Title/Meta use the existing card style below)
   cardHeader: {
