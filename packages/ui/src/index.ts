@@ -110,6 +110,92 @@ export const orbiTheme = {
   },
 } as const;
 
+// ── Dark theme palette ────────────────────────────────────────────────────────
+// Mirrors orbiTheme structure but with dark backgrounds (Bolt/Uber dark style)
+
+export const orbiThemeDark = {
+  colors: {
+    background: "#0E0E10",
+    backgroundAlt: "#1A1A1E",
+    backgroundDim: "#242428",
+
+    panel: "#141416",
+    surface: "#141416",
+    panelSoft: "#1A1A1E",
+    surfaceSoft: "#1A1A1E",
+    surfaceStrong: "#242428",
+
+    text: "#F5F5F7",
+    textMuted: "#6E6E73",
+    textSoft: "#AEAEB2",
+    muted: "#6E6E73",
+
+    teal: "#00C9A7",
+    accentDark: "#00A389",
+    accentLight: "rgba(0, 201, 167, 0.14)",
+
+    amber: "#FF9F0A",
+    sky: "#0A84FF",
+    rose: "#FF453A",
+    success: "#30D158",
+    danger: "#FF453A",
+    warning: "#FF9F0A",
+
+    border: "#2C2C2E",
+    borderSoft: "rgba(255, 255, 255, 0.06)",
+
+    overlay: "rgba(0, 0, 0, 0.72)",
+    overlayLight: "rgba(255, 255, 255, 0.08)",
+
+    textInverse: "#000000",
+  },
+  gradients: orbiTheme.gradients,
+  radius: orbiTheme.radius,
+  spacing: orbiTheme.spacing,
+  typography: orbiTheme.typography,
+  shadows: {
+    card: {
+      shadowColor: "#000000",
+      shadowOpacity: 0.28,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 6,
+    },
+    sheet: {
+      shadowColor: "#000000",
+      shadowOpacity: 0.48,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: -6 },
+      elevation: 16,
+    },
+    button: {
+      shadowColor: "#000000",
+      shadowOpacity: 0.36,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+    },
+    float: {
+      shadowColor: "#000000",
+      shadowOpacity: 0.36,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 8,
+    },
+  },
+} as const;
+
+// Structural type — allows different literal color values across light/dark themes
+export type OrbiThemeColors = Record<string, string>;
+export type OrbiTheme = {
+  colors: OrbiThemeColors;
+  gradients: Record<string, readonly string[]>;
+  radius: Record<string, number>;
+  spacing: Record<string, number>;
+  typography: Record<string, number | Record<string, string>>;
+  shadows: Record<string, object>;
+};
+
 export const orbiCopy = {
   riderHeadline: "Bougez vite, payez clair, restez suivi.",
   driverHeadline: "Recevez les bonnes courses, gardez le controle.",
@@ -345,4 +431,19 @@ export function shouldAllowLocalMapWebViewRequest(url: string) {
   } catch {
     return false;
   }
+}
+
+// ── Dark mode helpers ─────────────────────────────────────────────────────────
+// Apps call resolveTheme(colorScheme) from their _layout.tsx to get the right
+// palette, then pass it via Context or store it in state.
+//
+// Usage in _layout.tsx:
+//   import { useColorScheme } from 'react-native';
+//   import { resolveTheme } from '@orbi/ui';
+//   const theme = resolveTheme(useColorScheme());
+
+export function resolveTheme(
+  colorScheme: 'light' | 'dark' | null | undefined,
+): OrbiTheme {
+  return colorScheme === 'dark' ? orbiThemeDark : orbiTheme;
 }

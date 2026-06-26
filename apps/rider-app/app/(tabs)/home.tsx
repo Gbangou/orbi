@@ -46,6 +46,23 @@ const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
 const SHEET_PEEK = 230;
 const SHEET_ACTIVE_TRIP = 200;
 
+// ── Smart ETA label based on trip lifecycle status ────────────────────────────
+
+function buildTripEtaLabel(status: string | undefined): string | null {
+  switch (status) {
+    case 'MATCHED':
+      return 'Chauffeur confirmé · en route';
+    case 'DRIVER_APPROACHING':
+      return 'Votre chauffeur approche';
+    case 'DRIVER_AT_PICKUP':
+      return 'Votre chauffeur est arrivé';
+    case 'IN_PROGRESS':
+      return 'Trajet en cours';
+    default:
+      return null;
+  }
+}
+
 // ── Dot indicator for real-time status ───────────────────────────────────────
 
 const StatusDot = memo(function StatusDot({ active }: { active: boolean }) {
@@ -409,10 +426,18 @@ export default function RiderHomeScreen() {
                     ? `${activeTrip.pickupAddress} → ${activeTrip.destinationAddress}`
                     : `${activeRequest?.pickupAddress} → ${activeRequest?.destinationAddress}`}
                 </Text>
-                {primaryStatusLabel ? (
-                  <Text style={styles.tripCardStatus}>{primaryStatusLabel}</Text>
-                ) : null}
-                {activeTrip?.pickupCode ? (
+                {/* Smart ETA label */}
+                {activeTrip ? (() => {
+                  const eta = buildTripEtaLabel(activeTrip.status);
+                  if (!eta) return null;
+                  const isArrived = activeTrip.status === 'DRIVER_AT_PICKUP';
+                  return (
+                    <Text style={[styles.tripCardStatus, isArrived && styles.tripCardStatusArrived]}>
+                      {eta}
+                    </Text>
+                  );
+                })() : null}
+                {activeTrip?.pickupCode && activeTrip.status === 'DRIVER_AT_PICKUP' ? (
                   <Text style={styles.tripCardCode}>
                     Code : <Text style={styles.tripCardCodeValue}>{activeTrip.pickupCode}</Text>
                   </Text>
@@ -716,6 +741,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: orbiTheme.colors.teal,
     fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+  },
+  tripCardStatusArrived: {
+    color: orbiTheme.colors.amber,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
   },
   tripCardCode: {
     fontSize: 13,

@@ -1,5 +1,5 @@
-import { memo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { memo, useEffect, useRef } from "react";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { formatXof, orbiTheme } from "@orbi/ui";
 import type { DriverOffer } from "@orbi/api";
 import {
@@ -139,6 +139,7 @@ export interface OfferCardProps {
   reservationNow: number;
   isSubmitting: boolean;
   hasActiveTrip: boolean;
+  index?: number;
   onAccept: (offerId: string) => void;
   onDecline: (offerId: string) => void;
 }
@@ -149,6 +150,7 @@ export const OfferCard = memo(function OfferCard({
   reservationNow,
   isSubmitting,
   hasActiveTrip,
+  index = 0,
   onAccept,
   onDecline,
 }: OfferCardProps) {
@@ -157,8 +159,38 @@ export const OfferCard = memo(function OfferCard({
   const detailLines = buildDriverOfferDetailLines(offer);
   const isDisabled = isSubmitting || hasActiveTrip;
 
+  // Spring slide-in animation — staggered by index
+  const slideY = useRef(new Animated.Value(32)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const delay = index * 60; // 60ms stagger between cards
+    const timer = setTimeout(() => {
+      Animated.parallel([
+        Animated.spring(slideY, {
+          toValue: 0,
+          tension: 60,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
-    <View style={[styles.wrap, isFresh && styles.wrapFresh]}>
+    <Animated.View
+      style={[
+        styles.wrap,
+        isFresh && styles.wrapFresh,
+        { opacity, transform: [{ translateY: slideY }] },
+      ]}
+    >
       {/* Fresh badge */}
       {isFresh ? (
         <View style={styles.freshBadge}>
@@ -267,7 +299,7 @@ export const OfferCard = memo(function OfferCard({
           <Text style={styles.declineLabel}>Refuser cette offre</Text>
         </Pressable>
       </View>
-    </View>
+    </Animated.View>
   );
 });
 

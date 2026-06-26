@@ -1083,10 +1083,11 @@ export default function OffersScreen() {
         ) : null}
 
         {/* ── Offer cards ── */}
-        {visibleOffers.map((offer) => (
+        {visibleOffers.map((offer, idx) => (
           <OfferCard
             key={offer.id}
             offer={offer}
+            index={idx}
             isFresh={freshOfferIds.includes(offer.id)}
             reservationNow={reservationNow}
             isSubmitting={isSubmitting}

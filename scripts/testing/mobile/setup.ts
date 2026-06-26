@@ -33,6 +33,10 @@ jest.mock(
         loop: jest.fn(() => animation),
         sequence: jest.fn(() => animation),
         timing: jest.fn(() => animation),
+        spring: jest.fn(() => animation),
+        parallel: jest.fn(() => animation),
+        decay: jest.fn(() => animation),
+        delay: jest.fn(() => animation),
       },
       Easing: {
         inOut: jest.fn((value) => value),

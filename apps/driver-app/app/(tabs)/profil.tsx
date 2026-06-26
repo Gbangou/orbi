@@ -780,6 +780,26 @@ export default function ProfilScreen() {
           </View>
         </View>
 
+        {/* Driver performance stats */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{profile.profile.completedTripsCount}</Text>
+            <Text style={styles.statLabel}>Courses</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={[styles.statValue, { color: orbiTheme.colors.amber }]}>
+              {profile.profile.averageRating != null
+                ? `${profile.profile.averageRating.toFixed(1)} ★`
+                : '— ★'}
+            </Text>
+            <Text style={styles.statLabel}>Note</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{profile.profile.vehicles.length}</Text>
+            <Text style={styles.statLabel}>Véhicules</Text>
+          </View>
+        </View>
+
         {/* Active mission */}
         {flow.activeTrip && flow.primaryRouteLabel ? (
           <View style={styles.missionBanner}>
@@ -1391,6 +1411,30 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.border,
     alignSelf: 'stretch',
   },
+  // Driver performance stats
+  statsRow: { flexDirection: 'row', gap: 10 },
+  statCard: {
+    flex: 1,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    paddingVertical: 12,
+    alignItems: 'center',
+    gap: 3,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
+
   missionBanner: {
     flexDirection: 'row',
     alignItems: 'center',
