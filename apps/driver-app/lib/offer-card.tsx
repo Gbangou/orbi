@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { formatXof, orbiTheme } from "@orbi/ui";
 import type { DriverOffer } from "@orbi/api";
@@ -142,7 +143,7 @@ export interface OfferCardProps {
   onDecline: (offerId: string) => void;
 }
 
-export function OfferCard({
+export const OfferCard = memo(function OfferCard({
   offer,
   isFresh,
   reservationNow,
@@ -268,7 +269,7 @@ export function OfferCard({
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrap: {

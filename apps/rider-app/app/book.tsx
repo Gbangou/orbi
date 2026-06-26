@@ -24,7 +24,6 @@ import {
   fetchRideOptionsPreview,
   roundDistanceKm,
   resolveBurkinaPricingPresetForPlace,
-  resolveVoiceLocationIntentWithApi,
   toApiPaymentMethod,
   toApiServiceTier,
   toApiVehicleType,
@@ -35,7 +34,6 @@ import {
   type Place,
   type RiderProfileResponse,
   type RideOption,
-  type VoiceLocationIntentResponse,
 } from '@orbi/api';
 import {
   describeRealtimeConnection,
@@ -426,10 +424,6 @@ export default function BookingScreen() {
   const [destinationPlace, setDestinationPlace] = useState<Place>(
     cityPresets[0].destination,
   );
-  const [voiceTranscript, setVoiceTranscript] = useState('Je vais a Ouaga 2000');
-  const [voiceResult, setVoiceResult] =
-    useState<VoiceLocationIntentResponse | null>(null);
-  const [isResolvingVoice, setIsResolvingVoice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [promoCodeInput, setPromoCodeInput] = useState('');
@@ -498,21 +492,6 @@ export default function BookingScreen() {
     () => profile.profile.savedPlaces.map(toPlaceFromSavedPlace),
     [profile],
   );
-  const voiceResolvedPlaces = useMemo(
-    () =>
-      (voiceResult?.suggestions ?? []).map((item) => ({
-        id: item.id,
-        label: item.name,
-        address: item.address,
-        district: item.district,
-        coordinates: {
-          latitude: item.latitude,
-          longitude: item.longitude,
-        },
-      })),
-    [voiceResult],
-  );
-
   useEffect(() => {
     void loadBookingContext();
   }, [pickupPlace, destinationPlace, selectedCityId, selectedPaymentMethod]);
@@ -635,46 +614,6 @@ export default function BookingScreen() {
       },
     },
   );
-
-  async function handleResolveVoiceIntent() {
-    const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
-      version: orbiRuntimeConfig.apiVersion,
-    });
-
-    setIsResolvingVoice(true);
-    setStatus('Interpretation du lieu dicte...');
-
-    if (!voiceTranscript.trim()) {
-      setStatus('Dictez ou saisissez un lieu avant de lancer l analyse vocale.');
-      setIsResolvingVoice(false);
-      return;
-    }
-
-    try {
-      const response = await resolveVoiceLocationIntentWithApi(client, {
-        transcript: voiceTranscript.trim(),
-      });
-      setVoiceResult(response);
-      setStatus(
-        response.needsClarification
-          ? 'Commande vocale comprise partiellement. Choisissez une suggestion.'
-          : `Commande vocale interpretee pour ${response.intentType}.`,
-      );
-    } catch (error) {
-      const feedback = await resolveRiderAppError(error, {
-        surface: 'booking',
-        fallback: 'La suggestion vocale du lieu est indisponible.',
-      });
-
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
-      }
-
-      setStatus(feedback.message);
-    } finally {
-      setIsResolvingVoice(false);
-    }
-  }
 
   function applyPlace(target: 'pickup' | 'destination', place: Place) {
     const inferredCity = findCityPresetForPlace(place);
@@ -944,9 +883,6 @@ export default function BookingScreen() {
       setIsSubmitting(false);
     }
   }
-
-  // suppress unused voice vars (feature available in advanced mode)
-  void voiceResolvedPlaces;
 
   return (
     <SafeAreaView style={styles.safe}>

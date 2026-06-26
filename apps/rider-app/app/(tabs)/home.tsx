@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -45,7 +45,7 @@ const SHEET_ACTIVE_TRIP = 200;
 
 // ── Dot indicator for real-time status ───────────────────────────────────────
 
-function StatusDot({ active }: { active: boolean }) {
+const StatusDot = memo(function StatusDot({ active }: { active: boolean }) {
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -69,11 +69,11 @@ function StatusDot({ active }: { active: boolean }) {
       ]}
     />
   );
-}
+});
 
 // ── Skeleton row (shimmer loading placeholder) ────────────────────────────────
 
-function SkeletonServiceRow() {
+const SkeletonServiceRow = memo(function SkeletonServiceRow() {
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -99,7 +99,7 @@ function SkeletonServiceRow() {
       <View style={skeletonStyles.fareBar} />
     </Animated.View>
   );
-}
+});
 
 const skeletonStyles = StyleSheet.create({
   row: {
@@ -119,7 +119,7 @@ const skeletonStyles = StyleSheet.create({
 
 // ── Vehicle mini icon ─────────────────────────────────────────────────────────
 
-function ServiceVehicleIcon({ isMoto }: { isMoto: boolean }) {
+const ServiceVehicleIcon = memo(function ServiceVehicleIcon({ isMoto }: { isMoto: boolean }) {
   const color = isMoto ? orbiTheme.colors.teal : orbiTheme.colors.amber;
   if (isMoto) {
     return (
@@ -138,11 +138,11 @@ function ServiceVehicleIcon({ isMoto }: { isMoto: boolean }) {
       <View style={{ width: 24, height: 9, borderRadius: 3, backgroundColor: color, opacity: 0.9 }} />
     </View>
   );
-}
+});
 
 // ── Service option row ────────────────────────────────────────────────────────
 
-function ServiceRow({ option, onPress }: { option: RideOption; onPress: () => void }) {
+const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideOption; onPress: () => void }) {
   const isMoto = option.category === 'motorcycle';
   return (
     <Pressable
@@ -161,7 +161,7 @@ function ServiceRow({ option, onPress }: { option: RideOption; onPress: () => vo
       <Text style={styles.serviceFare}>{formatXof(option.fare)}</Text>
     </Pressable>
   );
-}
+});
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
@@ -177,6 +177,14 @@ export default function RiderHomeScreen() {
   const previousFlowStateRef = useRef<string | null>(null);
 
   const riderPosition = useRiderPosition({ enabled: true });
+
+  // Stable handler reference — prevents ServiceRow remounts
+  const navigateToBook = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/book');
+  }, [router]);
+
+  const navigateToActivity = useCallback(() => router.push('/activity'), [router]);
 
   const loadHomeContext = useCallback(async (silent = false) => {
     const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
@@ -369,7 +377,7 @@ export default function RiderHomeScreen() {
                   <ServiceRow
                     key={opt.id}
                     option={opt}
-                    onPress={() => router.push('/book')}
+                    onPress={navigateToBook}
                   />
                 ))}
               </View>

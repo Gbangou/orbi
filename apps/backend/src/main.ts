@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import compression from 'compression';
 import {
   json,
   urlencoded,
@@ -68,6 +69,9 @@ async function bootstrap() {
       },
     }),
   );
+  // Gzip compression for all JSON/text responses (-60-80% payload size)
+  app.use(compression({ threshold: 1024 }));
+
   app.use((request: Request, response: Response, next: NextFunction) => {
     if (
       request.path !== '/api/v1/health' &&

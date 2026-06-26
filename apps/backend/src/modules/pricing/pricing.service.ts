@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ServiceTier, VehicleType } from '@prisma/client';
+import { TtlCache } from '../../core/cache/ttl-cache';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { EstimatePricingQueryDto } from './dto/estimate-pricing-query.dto';
 
@@ -60,21 +61,23 @@ type RateCard = {
 
 @Injectable()
 export class PricingService {
+  // Cache pricing rules for 60s — they change rarely (admin updates only)
+  private readonly rulesCache = new TtlCache<string, Awaited<ReturnType<typeof this.fetchRulesFromDb>>>(60_000);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async listRules() {
+    return this.rulesCache.getOrSet('active', () => this.fetchRulesFromDb());
+  }
+
+  invalidatePricingCache(): void {
+    this.rulesCache.invalidateAll();
+  }
+
+  private fetchRulesFromDb() {
     return this.prisma.pricingRule.findMany({
-      where: {
-        isActive: true,
-      },
-      orderBy: [
-        {
-          vehicleType: 'asc',
-        },
-        {
-          priority: 'asc',
-        },
-      ],
+      where: { isActive: true },
+      orderBy: [{ vehicleType: 'asc' }, { priority: 'asc' }],
     });
   }
 
@@ -906,16 +909,11 @@ export class PricingService {
     vehicleType: 'MOTORCYCLE' | 'CAR',
     serviceTier: ServiceTier,
   ) {
-    const rule = await this.prisma.pricingRule.findFirst({
-      where: {
-        isActive: true,
-        vehicleType: vehicleType as VehicleType,
-        serviceTier,
-      },
-      orderBy: {
-        priority: 'asc',
-      },
-    });
+    // Use the cached rules list instead of a separate DB query
+    const allRules = await this.listRules();
+    const rule = allRules.find(
+      (r) => r.vehicleType === (vehicleType as VehicleType) && r.serviceTier === serviceTier,
+    ) ?? null;
 
     if (!rule) {
       return null;
