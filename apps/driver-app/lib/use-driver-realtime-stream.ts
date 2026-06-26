@@ -1,12 +1,6 @@
-import { buildRealtimeStreamUrl, createOrbiApiClient } from '@orbi/api';
-import {
-  orbiRuntimeConfig,
-  resolveOrbiApiBaseUrlForRuntime,
-} from '@orbi/config';
-import {
-  useRealtimeEventStream,
-  type RealtimeStatusCallbacks,
-} from '@orbi/ui/src/use-realtime-event-stream';
+import { resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
+import { type RealtimeStatusCallbacks } from '@orbi/ui/src/use-realtime-event-stream';
+import { useWebSocketRealtimeStream } from '@orbi/ui/src/use-websocket-realtime-stream';
 
 const DRIVER_REALTIME_EVENTS = [
   'trip.created',
@@ -21,25 +15,28 @@ const DRIVER_REALTIME_EVENTS = [
   'ride-request.reservation-expired',
 ] as const;
 
+function buildWsUrl(baseUrl: string, sessionToken: string): string {
+  const wsBase = baseUrl.replace(/^https?/, (s) => (s === 'https' ? 'wss' : 'ws'));
+  return `${wsBase}/api/v1/realtime/ws?token=${encodeURIComponent(sessionToken)}`;
+}
+
 export function useDriverRealtimeStream(
   sessionToken: string | null,
   onRealtimeUpdate: (eventType: string) => void,
   callbacks?: RealtimeStatusCallbacks,
 ) {
-  useRealtimeEventStream(sessionToken, {
-    eventTypes: DRIVER_REALTIME_EVENTS,
-    onRealtimeUpdate,
-    callbacks,
-    coalesceWindowMs: 350,
-    buildStreamUrl: (token) => {
-      const client = createOrbiApiClient(
-        resolveOrbiApiBaseUrlForRuntime(),
-        {
-          version: orbiRuntimeConfig.apiVersion,
-        },
-      );
+  const baseUrl = resolveOrbiApiBaseUrlForRuntime();
+  const wsUrl = sessionToken ? buildWsUrl(baseUrl, sessionToken) : null;
 
-      return buildRealtimeStreamUrl(client, token);
+  useWebSocketRealtimeStream(
+    wsUrl,
+    sessionToken,
+    { role: 'driver' },
+    {
+      eventTypes: DRIVER_REALTIME_EVENTS,
+      onRealtimeUpdate,
+      callbacks,
+      coalesceWindowMs: 350,
     },
-  });
+  );
 }

@@ -108,6 +108,22 @@ export class PricingService {
   }
 
   async estimateRideOptions(query: EstimatePricingQueryDto) {
+    // Calculer la demande en temps réel si le client ne la fournit pas
+    let resolvedDemandLevel = query.demandLevel as 'NORMAL' | 'HIGH' | 'PEAK' | undefined;
+    let resolvedActiveDriverCount = query.activeDriverCount;
+    let resolvedOpenRequestCount = query.openRequestCount;
+    let resolvedIsPeakHour = query.isPeakHour === 'true';
+
+    if (!resolvedDemandLevel) {
+      const realTimeDemand = await this.calculateRealTimeDemandLevel(query.city);
+      resolvedDemandLevel = realTimeDemand.demandLevel;
+      resolvedActiveDriverCount = resolvedActiveDriverCount ?? realTimeDemand.activeDriverCount;
+      resolvedOpenRequestCount = resolvedOpenRequestCount ?? realTimeDemand.openRequestCount;
+      resolvedIsPeakHour = realTimeDemand.isPeakHour;
+    }
+
+    // ── Catalogue de services Orbi Burkina Faso ─────────────────────────────
+    // Ordonné par prix croissant pour guider vers le choix optimal
     const vehicleConfigurations: Array<{
       vehicleType: 'MOTORCYCLE' | 'CAR';
       serviceTier: ServiceTier;
@@ -123,34 +139,45 @@ export class PricingService {
         vehicleType: 'MOTORCYCLE',
         serviceTier: ServiceTier.MOTO_STANDARD,
         title: 'Moto Express',
-        badge: 'Le plus rapide',
-        capacity: '1 place',
-        accent: '#2dd4bf',
+        badge: 'Le moins cher',
+        capacity: '1 passager',
+        accent: '#00C9A7',
         etaMinutes: 3,
         paymentMethods: ['mobile-money', 'cash', 'wallet'],
         vehicleExamples: ['Yamaha Crypton', 'TVS HLX', 'Bajaj Boxer'],
       },
       {
+        vehicleType: 'MOTORCYCLE',
+        serviceTier: ServiceTier.MOTO_PLUS,
+        title: 'Moto Plus',
+        badge: 'Casque fourni',
+        capacity: '1 passager',
+        accent: '#007AFF',
+        etaMinutes: 4,
+        paymentMethods: ['mobile-money', 'cash', 'wallet'],
+        vehicleExamples: ['Honda CB125', 'Yamaha FZ125', 'Bajaj Pulsar'],
+      },
+      {
         vehicleType: 'CAR',
         serviceTier: ServiceTier.CAR_STANDARD,
         title: 'Voiture Ville',
-        badge: 'Le plus populaire',
+        badge: 'Climatisée',
         capacity: '4 places',
-        accent: '#f59e0b',
+        accent: '#FF9500',
         etaMinutes: 6,
         paymentMethods: ['mobile-money', 'cash', 'wallet'],
-        vehicleExamples: ['Toyota Corolla', 'Hyundai Accent', 'Suzuki Dzire'],
+        vehicleExamples: ['Toyota Yaris', 'Hyundai Accent', 'Suzuki Dzire'],
       },
       {
         vehicleType: 'CAR',
         serviceTier: ServiceTier.CAR_COMFORT,
-        title: 'Confort',
-        badge: 'Premium',
+        title: 'Confort Premium',
+        badge: 'Haut de gamme',
         capacity: '4 places',
-        accent: '#38bdf8',
+        accent: '#8E44AD',
         etaMinutes: 8,
         paymentMethods: ['mobile-money', 'wallet'],
-        vehicleExamples: ['Toyota Yaris', 'Hyundai Elantra', 'Kia Rio'],
+        vehicleExamples: ['Toyota Corolla', 'Hyundai Elantra', 'Kia Cerato'],
       },
     ];
 
@@ -174,17 +201,26 @@ export class PricingService {
             'CLEAR') as PricingQuoteInput['weatherCondition'],
           roadCondition: (query.roadCondition ??
             'OPEN') as PricingQuoteInput['roadCondition'],
-          isPeakHour: query.isPeakHour === 'true',
-          activeDriverCount: query.activeDriverCount,
-          openRequestCount: query.openRequestCount,
+          // Utilise la demande temps réel calculée en amont
+          demandLevel: resolvedDemandLevel,
+          isPeakHour: resolvedIsPeakHour,
+          activeDriverCount: resolvedActiveDriverCount,
+          openRequestCount: resolvedOpenRequestCount,
           driverOnboardingDays: query.driverOnboardingDays,
         });
 
+        const demandMultiplier = estimate.fareBreakdown.demandMultiplier;
+        const surgeActive = demandMultiplier > 1.005; // tolérance float
+        const surgeLabel = surgeActive
+          ? demandMultiplier >= 1.3 ? `${demandMultiplier.toFixed(1)}x ⚡`
+          : `${demandMultiplier.toFixed(1)}x`
+          : null;
+
         return {
-          id: `${configuration.serviceTier.toLowerCase().replace('_', '-')}`,
+          id: `${configuration.serviceTier.toLowerCase().replace(/_/g, '-')}`,
           category:
             configuration.vehicleType === 'MOTORCYCLE' ? 'motorcycle' : 'car',
-          tier: configuration.serviceTier.toLowerCase().replace('_', '-') as
+          tier: configuration.serviceTier.toLowerCase().replace(/_/g, '-') as
             | 'moto-standard'
             | 'moto-plus'
             | 'car-standard'
@@ -195,22 +231,19 @@ export class PricingService {
           fare: estimate.estimatedFare,
           capacity: configuration.capacity,
           accent: configuration.accent,
-          badge: configuration.badge,
+          badge: surgeActive ? `${configuration.badge} · Forte demande` : configuration.badge,
           paymentMethods: configuration.paymentMethods,
           safetyNote: 'Code de prise en charge et partage de trajet inclus.',
           marketplace: this.buildRideOptionMarketplace(
             configuration.vehicleType,
             configuration.etaMinutes,
-            query.activeDriverCount,
+            resolvedActiveDriverCount,
             estimate.operatingContext.availabilityScore,
             configuration.vehicleExamples,
           ),
           driverPayout: estimate.driverEconomics.driverPayout,
-          surgeActive: estimate.fareBreakdown.demandMultiplier > 1.0,
-          surgeLabel:
-            estimate.fareBreakdown.demandMultiplier > 1.0
-              ? `${estimate.fareBreakdown.demandMultiplier.toFixed(1)}x`
-              : null,
+          surgeActive,
+          surgeLabel,
           fareBreakdown: {
             baseFare: estimate.fareBreakdown.baseFare,
             bookingFee: estimate.fareBreakdown.bookingFee,
@@ -531,12 +564,68 @@ export class PricingService {
     };
   }
 
+  /**
+   * Commission tiers calibrés pour le marché Burkina Faso.
+   * Structure dégressive pour maximiser la rétention des chauffeurs.
+   *
+   * Rentabilité cible: 15-20 000 XOF/jour plateforme dès 80 courses/jour
+   * (80 × 1 200 XOF moyen × 18% = 17 280 XOF/jour)
+   */
   private resolveCommissionRate(driverOnboardingDays?: number) {
-    if (driverOnboardingDays !== undefined && driverOnboardingDays <= 30) {
-      return 0.1;
+    if (driverOnboardingDays === undefined) return 0.18;
+    if (driverOnboardingDays <= 30) return 0.10;  // Onboarding bonus — attirer rapidement
+    if (driverOnboardingDays <= 90) return 0.15;  // Phase de croissance
+    return 0.18;                                    // Taux steady-state standard
+  }
+
+  /**
+   * Calcul de demande en temps réel basé sur:
+   * - Rapport requêtes ouvertes / chauffeurs en ligne
+   * - Heure de pointe Ouagadougou (7h-9h, 12h-14h, 17h-20h)
+   */
+  async calculateRealTimeDemandLevel(cityHint?: string): Promise<{
+    demandLevel: 'NORMAL' | 'HIGH' | 'PEAK';
+    activeDriverCount: number;
+    openRequestCount: number;
+    isPeakHour: boolean;
+  }> {
+    const now = new Date();
+    const hour = now.getHours();
+    const dayOfWeek = now.getDay(); // 0=Sunday
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    // Heures de pointe Ouagadougou
+    const isPeakHour =
+      !isWeekend && (
+        (hour >= 7 && hour < 9) ||   // Matin
+        (hour >= 12 && hour < 14) ||  // Déjeuner
+        (hour >= 17 && hour < 20)     // Soir
+      );
+
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60_000);
+
+    const [activeDriverCount, openRequestCount] = await Promise.all([
+      this.prisma.driverProfile.count({
+        where: { status: 'ONLINE' },
+      }),
+      this.prisma.rideRequest.count({
+        where: {
+          status: { in: ['OPEN', 'SEARCHING'] },
+          createdAt: { gte: tenMinutesAgo },
+        },
+      }),
+    ]);
+
+    const ratio = openRequestCount / Math.max(activeDriverCount, 1);
+
+    let demandLevel: 'NORMAL' | 'HIGH' | 'PEAK' = 'NORMAL';
+    if (ratio >= 1.5 || (isPeakHour && ratio >= 0.8)) {
+      demandLevel = 'PEAK';
+    } else if (ratio >= 0.8 || isPeakHour) {
+      demandLevel = 'HIGH';
     }
 
-    return 0.18;
+    return { demandLevel, activeDriverCount, openRequestCount, isPeakHour };
   }
 
   private resolveSupplyDemandRatio(
@@ -940,68 +1029,71 @@ export class PricingService {
   ): RateCard {
     const zone = input.zone ?? 'URBAN_CORE';
 
+    // ── Tarifs Burkina Faso calibrés — compétitifs ET rentables ─────────────
+    //
+    // Objectif: 1 200-1 500 XOF pour un trajet moyen 5.8km/16min Ouagadougou
+    // Comparable à: Bolt/Yango moto ~800-1500 XOF, Zémidjan premium ~500-1000 XOF
+    // Commission 18% → ~215-270 XOF/trajet → rentable dès 80 courses/jour
+    //
+    // Formule: baseFare + (distanceKm × perKmRate) + (durationMin × perMinuteRate) + bookingFee
+    // Test: 5.8km / 16min URBAN_CORE moto → 300 + 522 + 288 + 100 = 1 210 XOF ✅
+
     if (input.vehicleType === 'MOTORCYCLE') {
+      if (input.serviceTier === ServiceTier.MOTO_PLUS) {
+        // Moto Plus — casque fourni, chauffeur premium, traçabilité renforcée
+        if (zone === 'SEMI_URBAN') {
+          return { serviceTier: ServiceTier.MOTO_PLUS, baseFare: 400, perKmRate: 100, perMinuteRate: 20, bookingFee: 100, minimumFare: 750 };
+        }
+        if (zone === 'URBAN_EDGE') {
+          return { serviceTier: ServiceTier.MOTO_PLUS, baseFare: 500, perKmRate: 120, perMinuteRate: 25, bookingFee: 150, minimumFare: 1000 };
+        }
+        // Urban Core
+        return { serviceTier: ServiceTier.MOTO_PLUS, baseFare: 600, perKmRate: 140, perMinuteRate: 30, bookingFee: 200, minimumFare: 1200 };
+      }
+
+      // Moto Standard — tarif d'entrée, accessible quotidiennement
       if (zone === 'SEMI_URBAN') {
-        return {
-          serviceTier: input.serviceTier ?? ServiceTier.MOTO_STANDARD,
-          baseFare: 400,
-          perKmRate: 110,
-          perMinuteRate: 25,
-          bookingFee: 100,
-          minimumFare: 700,
-        };
+        return { serviceTier: ServiceTier.MOTO_STANDARD, baseFare: 200, perKmRate: 75, perMinuteRate: 15, bookingFee: 75, minimumFare: 550 };
       }
-
       if (zone === 'URBAN_EDGE') {
-        return {
-          serviceTier: input.serviceTier ?? ServiceTier.MOTO_STANDARD,
-          baseFare: 500,
-          perKmRate: 118,
-          perMinuteRate: 28,
-          bookingFee: 130,
-          minimumFare: 850,
-        };
+        return { serviceTier: ServiceTier.MOTO_STANDARD, baseFare: 250, perKmRate: 85, perMinuteRate: 17, bookingFee: 85, minimumFare: 650 };
       }
-
-      return {
-        serviceTier: input.serviceTier ?? ServiceTier.MOTO_STANDARD,
-        baseFare: 600,
-        perKmRate: 125,
-        perMinuteRate: 30,
-        bookingFee: 150,
-        minimumFare: 1000,
-      };
+      // Urban Core — cœur de marché Ouagadougou
+      return { serviceTier: ServiceTier.MOTO_STANDARD, baseFare: 300, perKmRate: 90, perMinuteRate: 18, bookingFee: 100, minimumFare: 750 };
     }
 
+    // ── Voitures ──────────────────────────────────────────────────────────────
+
+    if (input.serviceTier === ServiceTier.CAR_COMFORT) {
+      // Car Comfort — climatisée, cuir, segment premium
+      if (zone === 'SEMI_URBAN') {
+        return { serviceTier: ServiceTier.CAR_COMFORT, baseFare: 900, perKmRate: 165, perMinuteRate: 38, bookingFee: 275, minimumFare: 1600 };
+      }
+      if (zone === 'URBAN_EDGE') {
+        return { serviceTier: ServiceTier.CAR_COMFORT, baseFare: 1100, perKmRate: 195, perMinuteRate: 45, bookingFee: 325, minimumFare: 2000 };
+      }
+      return { serviceTier: ServiceTier.CAR_COMFORT, baseFare: 1200, perKmRate: 210, perMinuteRate: 50, bookingFee: 350, minimumFare: 2300 };
+    }
+
+    if (input.serviceTier === ServiceTier.CAR_XL) {
+      // Car XL — minivan, famille, groupe jusqu'à 6 places
+      if (zone === 'SEMI_URBAN') {
+        return { serviceTier: ServiceTier.CAR_XL, baseFare: 1000, perKmRate: 175, perMinuteRate: 40, bookingFee: 300, minimumFare: 1800 };
+      }
+      if (zone === 'URBAN_EDGE') {
+        return { serviceTier: ServiceTier.CAR_XL, baseFare: 1200, perKmRate: 200, perMinuteRate: 48, bookingFee: 350, minimumFare: 2200 };
+      }
+      return { serviceTier: ServiceTier.CAR_XL, baseFare: 1400, perKmRate: 220, perMinuteRate: 55, bookingFee: 400, minimumFare: 2600 };
+    }
+
+    // Car Standard — berline climatisée, segment principal
     if (zone === 'SEMI_URBAN') {
-      return {
-        serviceTier: input.serviceTier ?? ServiceTier.CAR_STANDARD,
-        baseFare: 850,
-        perKmRate: 150,
-        perMinuteRate: 35,
-        bookingFee: 200,
-        minimumFare: 1300,
-      };
+      return { serviceTier: ServiceTier.CAR_STANDARD, baseFare: 600, perKmRate: 120, perMinuteRate: 25, bookingFee: 175, minimumFare: 1100 };
     }
-
     if (zone === 'URBAN_EDGE') {
-      return {
-        serviceTier: input.serviceTier ?? ServiceTier.CAR_STANDARD,
-        baseFare: 1000,
-        perKmRate: 165,
-        perMinuteRate: 40,
-        bookingFee: 220,
-        minimumFare: 1550,
-      };
+      return { serviceTier: ServiceTier.CAR_STANDARD, baseFare: 750, perKmRate: 140, perMinuteRate: 30, bookingFee: 200, minimumFare: 1350 };
     }
-
-    return {
-      serviceTier: input.serviceTier ?? ServiceTier.CAR_STANDARD,
-      baseFare: 1200,
-      perKmRate: 180,
-      perMinuteRate: 45,
-      bookingFee: 250,
-      minimumFare: 1800,
-    };
+    // Urban Core
+    return { serviceTier: ServiceTier.CAR_STANDARD, baseFare: 900, perKmRate: 160, perMinuteRate: 35, bookingFee: 225, minimumFare: 1600 };
   }
 }

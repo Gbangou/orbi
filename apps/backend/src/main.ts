@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { WsAdapter } from '@nestjs/platform-ws';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import {
@@ -30,6 +31,8 @@ process.on('unhandledRejection', (reason) => {
 async function bootstrap() {
   process.stderr.write('[orbi] bootstrap() called\n');
   const app = await NestFactory.create(AppModule);
+  // WebSocket adapter — nécessaire pour les @WebSocketGateway
+  app.useWebSocketAdapter(new WsAdapter(app));
   process.stderr.write('[orbi] NestFactory.create() completed\n');
   const configService = app.get(ConfigService);
   const prismaService = app.get(PrismaService);
