@@ -1546,14 +1546,30 @@ export class TripsService {
           data: { type: 'driver_arriving', tripId },
         });
       } else if (nextStatus === 'COMPLETED') {
+        // Notification passager — reçu immédiat avec montant
+        const fareDisplay = updatedTrip.actualFare
+          ? `${Number(updatedTrip.actualFare).toLocaleString('fr-BF')} XOF`
+          : '';
         void this.notificationsService.enqueue({
           userId: updatedTrip.riderUserId,
-          title: 'Course terminée',
-          body: "Merci d'avoir utilisé Orbi. Notez votre chauffeur !",
+          title: `Course terminée${fareDisplay ? ` — ${fareDisplay}` : ''}`,
+          body: `Votre trajet s'est bien passé. Évaluez votre chauffeur pour aider la communauté Orbi !`,
           channel: NotificationChannel.PUSH,
           dedupeKey: `trip_completed:${tripId}`,
           data: { type: 'trip_completed', tripId },
         });
+
+        // Notification chauffeur — confirmation du gain net
+        if (updatedTrip.driverUserId) {
+          void this.notificationsService.enqueue({
+            userId: updatedTrip.driverUserId,
+            title: 'Trajet terminé — bon travail !',
+            body: `Votre course a été validée. Consultez vos revenus pour le détail du payout.`,
+            channel: NotificationChannel.PUSH,
+            dedupeKey: `trip_completed_driver:${tripId}`,
+            data: { type: 'trip_completed', tripId },
+          });
+        }
       }
     }
 

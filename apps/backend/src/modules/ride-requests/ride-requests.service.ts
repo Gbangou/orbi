@@ -28,6 +28,7 @@ import {
   resolveRideRequestRouteMetrics,
 } from './ride-request-creation.policy';
 import { RideRequestProjector } from './ride-request.projector';
+import { FraudDetectionService } from '../../common/security/fraud-detection.service';
 
 @Injectable()
 export class RideRequestsService {
@@ -40,10 +41,21 @@ export class RideRequestsService {
     private readonly rideRequestProjector: RideRequestProjector,
     private readonly notificationsService: NotificationsService,
     private readonly dispatchCoordinator: DispatchCoordinator,
+    private readonly fraudDetectionService: FraudDetectionService,
   ) {}
 
   async create(payload: CreateRideRequestDto) {
     assertRideRequestPayloadConsistency(payload);
+
+    // Velocity check — bloque les abus répétés (>5 demandes en 10 min)
+    const isVelocityAbuse = await this.fraudDetectionService.isRideRequestVelocityExceeded(
+      payload.riderId,
+    );
+    if (isVelocityAbuse) {
+      throw new BadRequestException(
+        'Trop de demandes en peu de temps. Veuillez patienter quelques minutes avant de réessayer.',
+      );
+    }
     const routeMetrics = resolveRideRequestRouteMetrics(payload);
     const pricingGeography = resolveRideRequestPricingGeography(payload);
     const operatingContext = this.pricingService.deriveOperatingContext({

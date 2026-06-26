@@ -5,10 +5,11 @@ import { DriversModule } from '../drivers/drivers.module';
 import { RideRequestsController } from './ride-requests.controller';
 import { RideRequestProjector } from './ride-request.projector';
 import { RideRequestsService } from './ride-requests.service';
+import { FraudDetectionService } from '../../common/security/fraud-detection.service';
 
 @Module({
   imports: [PricingModule, NotificationsModule, DriversModule],
   controllers: [RideRequestsController],
-  providers: [RideRequestsService, RideRequestProjector],
+  providers: [RideRequestsService, RideRequestProjector, FraudDetectionService],
 })
 export class RideRequestsModule {}
