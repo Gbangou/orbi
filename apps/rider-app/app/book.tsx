@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -828,6 +829,7 @@ export default function BookingScreen() {
     if (bookingMutationInFlightRef.current) {
       return;
     }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
     const bookingValidation = validateBookingSelection({
       destinationPlace,

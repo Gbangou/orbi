@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
@@ -228,6 +229,7 @@ export default function DriverHomeScreen() {
   }, [activeTripTransitionLabel]);
 
   async function handleToggleAvailability() {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsTogglingAvailability(true);
     const nextStatus = flow.availabilityStatus === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
     setStatusNote(

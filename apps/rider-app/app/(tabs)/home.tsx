@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -69,6 +70,52 @@ function StatusDot({ active }: { active: boolean }) {
     />
   );
 }
+
+// ── Skeleton row (shimmer loading placeholder) ────────────────────────────────
+
+function SkeletonServiceRow() {
+  const shimmer = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(shimmer, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [shimmer]);
+
+  const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.7] });
+
+  return (
+    <Animated.View style={[skeletonStyles.row, { opacity }]}>
+      <View style={skeletonStyles.icon} />
+      <View style={skeletonStyles.info}>
+        <View style={skeletonStyles.titleBar} />
+        <View style={skeletonStyles.metaBar} />
+      </View>
+      <View style={skeletonStyles.fareBar} />
+    </Animated.View>
+  );
+}
+
+const skeletonStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: orbiTheme.colors.border,
+  },
+  icon: { width: 44, height: 44, borderRadius: 12, backgroundColor: orbiTheme.colors.backgroundDim },
+  info: { flex: 1, gap: 6 },
+  titleBar: { height: 13, width: '60%', borderRadius: 6, backgroundColor: orbiTheme.colors.backgroundDim },
+  metaBar: { height: 10, width: '40%', borderRadius: 5, backgroundColor: orbiTheme.colors.backgroundDim },
+  fareBar: { height: 13, width: 52, borderRadius: 6, backgroundColor: orbiTheme.colors.backgroundDim },
+});
 
 // ── Vehicle mini icon ─────────────────────────────────────────────────────────
 
@@ -303,7 +350,10 @@ export default function RiderHomeScreen() {
             {/* Search prompt */}
             <Pressable
               style={styles.searchBar}
-              onPress={() => router.push('/book')}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push('/book');
+              }}
             >
               <View style={styles.searchDot} />
               <Text style={styles.searchPlaceholder}>Où allez-vous ?</Text>
@@ -324,10 +374,10 @@ export default function RiderHomeScreen() {
                 ))}
               </View>
             ) : (
-              <View style={styles.servicesPlaceholder}>
-                <Text style={styles.servicesPlaceholderText}>
-                  Chargement des services disponibles…
-                </Text>
+              <View style={styles.services}>
+                <SkeletonServiceRow />
+                <SkeletonServiceRow />
+                <SkeletonServiceRow />
               </View>
             )}
           </>

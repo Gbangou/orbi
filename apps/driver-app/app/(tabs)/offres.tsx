@@ -1,4 +1,5 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import * as Haptics from "expo-haptics";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -427,6 +428,7 @@ export default function OffersScreen() {
   }
 
   async function handleAcceptOffer(rideRequestId: string) {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const validation = validateOfferAction({
       activeTripId: activeTrip?.id,
       offer: visibleOffers.find((offer) => offer.id === rideRequestId),
@@ -666,6 +668,7 @@ export default function OffersScreen() {
   }
 
   async function handleTriggerSos(tripId: string) {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     await runExclusiveDriverAction(async () => {
       setStatus("SOS chauffeur en cours: notification operations...");
 

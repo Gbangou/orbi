@@ -301,6 +301,7 @@ const styles = StyleSheet.create({
   heroFare: {
     fontSize: 48,
     fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
     color: orbiTheme.colors.text,
     letterSpacing: -1,
   },
@@ -345,6 +346,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
   },
   secondaryBtn: {
     backgroundColor: orbiTheme.colors.background,

@@ -323,6 +323,7 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.text,
     fontSize: 34,
     fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
     lineHeight: 36,
   },
   subtitle: {
@@ -362,6 +363,7 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.text,
     fontSize: 18,
     fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
   },
   summaryMeta: {
     color: orbiTheme.colors.muted,
@@ -382,6 +384,7 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.text,
     fontSize: 17,
     fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     textAlign: 'center',
   },
   starsRow: {
@@ -482,6 +485,7 @@ const styles = StyleSheet.create({
   submitButtonLabel: {
     color: '#FFFFFF',
     fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     fontSize: 16,
   },
   skipButton: {

@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -584,6 +585,7 @@ export default function ActivityScreen() {
     if (submissionLockRef.current) {
       return;
     }
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
     submissionLockRef.current = true;
     setIsSubmitting(true);

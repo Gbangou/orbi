@@ -109,6 +109,18 @@ jest.mock(
 );
 
 jest.mock(
+  "expo-haptics",
+  () => ({
+    impactAsync: jest.fn(async () => undefined),
+    notificationAsync: jest.fn(async () => undefined),
+    selectionAsync: jest.fn(async () => undefined),
+    ImpactFeedbackStyle: { Light: "Light", Medium: "Medium", Heavy: "Heavy" },
+    NotificationFeedbackType: { Success: "Success", Warning: "Warning", Error: "Error" },
+  }),
+  { virtual: true },
+);
+
+jest.mock(
   "expo-screen-capture",
   () => ({
     preventScreenCaptureAsync: jest.fn(async () => undefined),
