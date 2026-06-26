@@ -447,3 +447,21 @@ export function resolveTheme(
 ): OrbiTheme {
   return colorScheme === 'dark' ? orbiThemeDark : orbiTheme;
 }
+
+// ── Leaflet map builder — partagé entre toutes les vues carte ─────────────────
+export {
+  LEAFLET_VERSION,
+  LEAFLET_CDN_BASE,
+  LEAFLET_CSS,
+  LEAFLET_JS,
+  CARTO_TILE_URL,
+  OUAGA_CENTER,
+  DEFAULT_ZOOM,
+  CLOSE_ZOOM,
+  BASE_MAP_CSS,
+  PULSE_ANIMATION,
+  VEHICLE_SVG_DEFS,
+  buildLeafletMapHtml,
+  buildLeafletInitScript,
+  type MapHtmlOptions,
+} from './leaflet-map';

@@ -194,15 +194,14 @@ export class PricingService {
           city: (query.city ?? 'OUAGADOUGOU') as PricingQuoteInput['city'],
           districtProfile: (query.districtProfile ??
             'RESIDENTIAL_STANDARD') as PricingQuoteInput['districtProfile'],
-          demandLevel: query.demandLevel,
+          // Demande en temps réel — calculée en amont de la boucle
+          demandLevel: resolvedDemandLevel,
           trafficLevel: (query.trafficLevel ??
             'MODERATE') as PricingQuoteInput['trafficLevel'],
           weatherCondition: (query.weatherCondition ??
             'CLEAR') as PricingQuoteInput['weatherCondition'],
           roadCondition: (query.roadCondition ??
             'OPEN') as PricingQuoteInput['roadCondition'],
-          // Utilise la demande temps réel calculée en amont
-          demandLevel: resolvedDemandLevel,
           isPeakHour: resolvedIsPeakHour,
           activeDriverCount: resolvedActiveDriverCount,
           openRequestCount: resolvedOpenRequestCount,
@@ -610,7 +609,7 @@ export class PricingService {
       }),
       this.prisma.rideRequest.count({
         where: {
-          status: { in: ['OPEN', 'SEARCHING'] },
+          status: 'REQUESTED',
           createdAt: { gte: tenMinutesAgo },
         },
       }),
