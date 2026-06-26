@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -407,6 +407,18 @@ const promoStyles = StyleSheet.create({
 
 export default function BookingScreen() {
   const router = useRouter();
+  // Accept voice suggestion params from /voice screen
+  const {
+    suggestionName,
+    suggestionAddress,
+    suggestionLat,
+    suggestionLng,
+  } = useLocalSearchParams<{
+    suggestionName?: string;
+    suggestionAddress?: string;
+    suggestionLat?: string;
+    suggestionLng?: string;
+  }>();
   const [options, setOptions] = useState<RideOption[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [profile, setProfile] =
@@ -492,6 +504,29 @@ export default function BookingScreen() {
     () => profile.profile.savedPlaces.map(toPlaceFromSavedPlace),
     [profile],
   );
+  // Pre-fill destination from voice suggestion params
+  useEffect(() => {
+    if (
+      suggestionName &&
+      suggestionAddress &&
+      suggestionLat &&
+      suggestionLng
+    ) {
+      const lat = parseFloat(suggestionLat);
+      const lng = parseFloat(suggestionLng);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        setDestinationPlace({
+          id: `voice-${Date.now()}`,
+          label: suggestionName,
+          address: suggestionAddress,
+          coordinates: { latitude: lat, longitude: lng },
+        });
+      }
+    }
+  // Only run once on mount (params don't change after navigation)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     void loadBookingContext();
   }, [pickupPlace, destinationPlace, selectedCityId, selectedPaymentMethod]);
@@ -952,7 +987,16 @@ export default function BookingScreen() {
             />
           </View>
           <View style={styles.searchField}>
-            <Text style={styles.searchFieldLabel}>Destination</Text>
+            <View style={styles.searchFieldHeaderRow}>
+              <Text style={styles.searchFieldLabel}>Destination</Text>
+              <Pressable
+                onPress={() => router.push('/voice')}
+                style={styles.voiceBtn}
+                hitSlop={8}
+              >
+                <Text style={styles.voiceBtnText}>🎤 Voix</Text>
+              </Pressable>
+            </View>
             <PlaceSearch
               placeholder="Où allez-vous ?"
               tone="amber"
@@ -1419,6 +1463,12 @@ const styles = StyleSheet.create({
   // Search section
   searchSection: { gap: 10 },
   searchField: { gap: 4 },
+  searchFieldHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+  },
   searchFieldLabel: {
     fontSize: 11,
     fontWeight: '700',
@@ -1426,7 +1476,18 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    paddingHorizontal: 2,
+  },
+  voiceBtn: {
+    backgroundColor: 'rgba(0,201,167,0.10)',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  voiceBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.teal,
   },
 
   // City chips

@@ -2,8 +2,10 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Dimensions,
+  Linking,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -15,6 +17,7 @@ import {
   createOrbiApiClient,
   fetchMyTrips,
   fetchRideOptionsPreview,
+  triggerTripSafetySosWithApi,
   type MyTripsResponse,
   type RideOption,
 } from '@orbi/api';
@@ -174,6 +177,8 @@ export default function RiderHomeScreen() {
   const [realNearbyCount, setRealNearbyCount] = useState(0);
   const [userName, setUserName] = useState('');
   const [flowTransitionLabel, setFlowTransitionLabel] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
+  const [isSosBusy, setIsSosBusy] = useState(false);
   const previousFlowStateRef = useRef<string | null>(null);
 
   const riderPosition = useRiderPosition({ enabled: true });
@@ -185,6 +190,40 @@ export default function RiderHomeScreen() {
   }, [router]);
 
   const navigateToActivity = useCallback(() => router.push('/activity'), [router]);
+
+  const handleSos = useCallback((tripId: string) => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    Alert.alert(
+      'Alerte SOS',
+      'Déclencher une alerte d\'urgence ? L\'équipe Orbi et les secours locaux seront notifiés.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Déclencher le SOS',
+          style: 'destructive',
+          onPress: async () => {
+            if (isSosBusy) return;
+            setIsSosBusy(true);
+            try {
+              const { authClient } = await restoreRiderSession();
+              const response = await triggerTripSafetySosWithApi(authClient, tripId, {
+                details: 'SOS déclenché depuis l\'écran d\'accueil passager.',
+              });
+              const emergencyNumber = response.sos.localEmergencyNumber;
+              if (emergencyNumber) {
+                void Linking.openURL(`tel:${emergencyNumber}`);
+              }
+            } catch {
+              // SOS silently fails — user is redirected to activity for full handling
+              router.push('/activity');
+            } finally {
+              setIsSosBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [isSosBusy, router]);
 
   const loadHomeContext = useCallback(async (silent = false) => {
     const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
@@ -212,6 +251,7 @@ export default function RiderHomeScreen() {
 
       setOptions(response.options);
       setHistory(historyResponse);
+      setIsOffline(false);
 
       if (!silent) {
         const flow = resolveRiderActiveFlow(historyResponse);
@@ -222,12 +262,21 @@ export default function RiderHomeScreen() {
         });
       }
     } catch (error) {
+      const isNetworkError =
+        error instanceof TypeError &&
+        (error.message.includes('Network request failed') ||
+          error.message.includes('fetch failed') ||
+          error.message.includes('Failed to fetch'));
+      setIsOffline(isNetworkError);
+
       const feedback = await resolveRiderAppError(error, {
         network: 'Connexion instable. Réessai automatique en cours.',
       });
       if (feedback.shouldClearSessionToken) setSessionToken(null);
-      setOptions([]);
-      setHistory(null);
+      if (!isNetworkError) {
+        setOptions([]);
+        setHistory(null);
+      }
     } finally {
       if (silent) setIsRealtimeSyncing(false);
     }
@@ -278,6 +327,31 @@ export default function RiderHomeScreen() {
         style={styles.map}
         onDriversUpdate={setRealNearbyCount}
       />
+
+      {/* ── Offline banner ── */}
+      {isOffline ? (
+        <SafeAreaView style={styles.offlineSafe} pointerEvents="none">
+          <View style={styles.offlineBanner}>
+            <View style={styles.offlineDot} />
+            <Text style={styles.offlineText}>
+              Hors ligne — affichage du dernier état connu
+            </Text>
+          </View>
+        </SafeAreaView>
+      ) : null}
+
+      {/* ── SOS Button (floats above sheet, active trip only) ── */}
+      {activeTrip ? (
+        <Pressable
+          onPress={() => handleSos(activeTrip.id)}
+          disabled={isSosBusy}
+          style={[styles.sosBtn, { bottom: sheetH + 16 }]}
+          accessibilityLabel="Bouton SOS urgence"
+          accessibilityRole="button"
+        >
+          <Text style={styles.sosBtnText}>SOS</Text>
+        </Pressable>
+      ) : null}
 
       {/* ── Floating top bar ── */}
       <SafeAreaView style={styles.topBarSafe} pointerEvents="box-none">
@@ -355,7 +429,7 @@ export default function RiderHomeScreen() {
         ) : (
           /* ── Default: search bar + services ── */
           <>
-            {/* Search prompt */}
+            {/* Search prompt with fare estimator */}
             <Pressable
               style={styles.searchBar}
               onPress={() => {
@@ -364,7 +438,14 @@ export default function RiderHomeScreen() {
               }}
             >
               <View style={styles.searchDot} />
-              <Text style={styles.searchPlaceholder}>Où allez-vous ?</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.searchPlaceholder}>Où allez-vous ?</Text>
+                {options.length > 0 ? (
+                  <Text style={styles.fareHint}>
+                    À partir de {formatXof(options[0].fare)} · {options[0].etaMinutes} min
+                  </Text>
+                ) : null}
+              </View>
               <View style={styles.searchIconWrap}>
                 <Text style={styles.searchIconText}>›</Text>
               </View>
@@ -666,5 +747,70 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     marginTop: -2,
+  },
+
+  // ── Fare estimator hint ────────────────────────────────────────────────────
+  fareHint: {
+    fontSize: 11,
+    color: orbiTheme.colors.teal,
+    fontFamily: 'Inter_600SemiBold',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+
+  // ── Offline banner ─────────────────────────────────────────────────────────
+  offlineSafe: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 99,
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(17,17,17,0.88)',
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  offlineDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#FF9500',
+  },
+  offlineText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: '#FFFFFF',
+  },
+
+  // ── SOS floating button ────────────────────────────────────────────────────
+  sosBtn: {
+    position: 'absolute',
+    right: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: orbiTheme.colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: orbiTheme.colors.danger,
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
+  },
+  sosBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
 });
