@@ -61,6 +61,100 @@ const DRIVER_MILESTONES = [
   { trips: 200, badge: 'Expert', emoji: '🏆' },
 ] as const;
 
+// ── Incentives card — objectifs quotidiens Bolt-style ─────────────────────────
+
+type DailyQuest = {
+  questId: string;
+  title: string;
+  description: string;
+  targetTrips: number;
+  completedTrips: number;
+  bonusXof: number;
+  progressPercent: number;
+  isCompleted: boolean;
+};
+
+function DriverIncentivesCard({
+  quests,
+  streakDays,
+  streakBonusXof,
+}: {
+  quests: DailyQuest[];
+  streakDays: number;
+  streakBonusXof: number;
+}) {
+  return (
+    <View style={incentStyles.card}>
+      <View style={incentStyles.header}>
+        <Text style={incentStyles.title}>⚡ Objectifs du jour</Text>
+        {streakDays > 0 ? (
+          <View style={incentStyles.streakBadge}>
+            <Text style={incentStyles.streakText}>🔥 {streakDays}j</Text>
+          </View>
+        ) : null}
+      </View>
+      {quests.map((quest) => (
+        <View key={quest.questId} style={incentStyles.quest}>
+          <View style={incentStyles.questHeader}>
+            <Text style={[incentStyles.questTitle, quest.isCompleted && incentStyles.questTitleDone]}>
+              {quest.isCompleted ? '✓ ' : ''}{quest.title}
+            </Text>
+            <Text style={[incentStyles.questBonus, quest.isCompleted && { color: orbiTheme.colors.teal }]}>
+              +{quest.bonusXof.toLocaleString('fr-BF')} XOF
+            </Text>
+          </View>
+          <View style={incentStyles.progressTrack}>
+            <View style={[
+              incentStyles.progressFill,
+              {
+                width: `${quest.progressPercent}%` as `${number}%`,
+                backgroundColor: quest.isCompleted ? orbiTheme.colors.teal : orbiTheme.colors.amber,
+              },
+            ]} />
+          </View>
+          <Text style={incentStyles.progressMeta}>
+            {quest.completedTrips}/{quest.targetTrips} courses
+          </Text>
+        </View>
+      ))}
+      {streakBonusXof > 0 ? (
+        <View style={incentStyles.streakBonus}>
+          <Text style={incentStyles.streakBonusText}>
+            Bonus régularité {streakDays} jours : +{streakBonusXof.toLocaleString('fr-BF')} XOF
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+const incentStyles = StyleSheet.create({
+  card: {
+    backgroundColor: 'rgba(255,149,0,0.06)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,149,0,0.22)',
+    padding: 16,
+    gap: 12,
+  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  title: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text },
+  streakBadge: { backgroundColor: 'rgba(255,149,0,0.14)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
+  streakText: { fontSize: 12, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.amber },
+  quest: { gap: 6 },
+  questHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  questTitle: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.text, flex: 1 },
+  questTitleDone: { color: orbiTheme.colors.teal },
+  questBonus: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.amber },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.07)', overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3 },
+  progressMeta: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular' },
+  streakBonus: { backgroundColor: 'rgba(0,201,167,0.08)', borderRadius: 10, padding: 10 },
+  streakBonusText: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.teal },
+});
+
+// ── Driver milestone (existing) ───────────────────────────────────────────────
+
 function DriverMilestoneCard({ completedTrips }: { completedTrips: number }) {
   const earned = DRIVER_MILESTONES.filter((m) => completedTrips >= m.trips);
   const next = DRIVER_MILESTONES.find((m) => completedTrips < m.trips);
@@ -154,6 +248,11 @@ export default function RevenusScreen() {
   const [earningsTransitionLabel, setEarningsTransitionLabel] = useState<string | null>(null);
   const [freshTripIds, setFreshTripIds] = useState<string[]>([]);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [incentives, setIncentives] = useState<{
+    dailyQuests: DailyQuest[];
+    streakDays: number;
+    streakBonusXof: number;
+  } | null>(null);
   const previousSummaryRef = useRef<DriverEarningsResponse['summary'] | null>(null);
   const previousTripIdsRef = useRef<string[] | null>(null);
 
@@ -170,6 +269,18 @@ export default function RevenusScreen() {
         fetchMyTrips(authClient),
         fetchDriverProfile(authClient),
       ]);
+      // Charger les incentives (best-effort, jamais bloquant)
+      void (async () => {
+        try {
+          if (typeof (authClient as { request?: unknown }).request === 'function') {
+            const data = await (authClient as { request: <T>(path: string) => Promise<T> })
+              .request<{ dailyQuests: DailyQuest[]; streakDays: number; streakBonusXof: number }>(
+              '/drivers/me/incentives',
+            );
+            setIncentives(data);
+          }
+        } catch { /* non bloquant — incentives sont optionnels */ }
+      })();
       setEarnings(earningsResponse);
       setHistory(historyResponse);
       setDriverProfileStatus(profileResponse.profile.status);
@@ -379,6 +490,16 @@ export default function RevenusScreen() {
         ) : null}
 
         {/* Milestone */}
+        {/* Incentives — objectifs quotidiens */}
+        {incentives && incentives.dailyQuests.length > 0 ? (
+          <DriverIncentivesCard
+            quests={incentives.dailyQuests}
+            streakDays={incentives.streakDays}
+            streakBonusXof={incentives.streakBonusXof}
+          />
+        ) : null}
+
+        {/* Milestone card */}
         <DriverMilestoneCard completedTrips={earnings.summary.completedTrips} />
 
         {/* Settlement */}

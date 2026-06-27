@@ -7,6 +7,7 @@ import { DispatchCoordinator } from './dispatch-coordinator.service';
 import { DriverOfferProjector } from './driver-offer-projector';
 import { DriversController } from './drivers.controller';
 import { DriversService } from './drivers.service';
+import { DriverIncentivesService } from './driver-incentives.service';
 
 @Module({
   imports: [DocumentLinksModule, JobQueueModule, PricingModule],
@@ -16,11 +17,13 @@ import { DriversService } from './drivers.service';
     DispatchCoordinator,
     DriverOfferProjector,
     DriverReservationExpiryService,
+    DriverIncentivesService,
   ],
   exports: [
     DriverReservationExpiryService,
     DispatchCoordinator,
     DriversService,
+    DriverIncentivesService,
   ],
 })
 export class DriversModule {}

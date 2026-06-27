@@ -11,6 +11,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { DocumentObjectStorageService } from '../document-links/document-object-storage.service';
 import { DriverReservationExpiryService } from '../../modules/drivers/driver-reservation-expiry.service';
 import { PaymentsService } from '../../modules/payments/payments.service';
+import { ScheduledRidesService } from '../../modules/scheduled-rides/scheduled-rides.service';
 import {
   JobQueueEntry,
   JobQueueKind,
@@ -167,6 +168,11 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
 
     if (job.kind === 'DRIVER_RESERVATION_EXPIRY') {
       await this.handleDriverReservationExpiryJob();
+      return;
+    }
+
+    if (job.kind === 'SCHEDULED_RIDE_DISPATCH') {
+      await this.handleScheduledRideDispatchJob(job);
       return;
     }
 
@@ -366,6 +372,24 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
     );
 
     await reservationExpiryService.runSweep();
+  }
+
+  /**
+   * Déclenche la recherche de chauffeur 15 min avant l'heure prévue.
+   * Ce job est enfilé par ScheduledRidesService lors de la création d'une course programmée.
+   */
+  private async handleScheduledRideDispatchJob(job: JobQueueEntry) {
+    const payload = this.payloadRecord(job.payload);
+    const scheduledRideId = this.requiredString(
+      payload.scheduledRideId,
+      'scheduledRideId',
+    );
+
+    const scheduledRidesService = this.moduleRef.get(ScheduledRidesService, {
+      strict: false,
+    });
+
+    await scheduledRidesService.triggerDispatch(scheduledRideId);
   }
 
   private payloadRecord(value: unknown): Record<string, unknown> {

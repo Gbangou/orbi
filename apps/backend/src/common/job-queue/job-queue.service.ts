@@ -8,7 +8,8 @@ export type JobQueueKind =
   | 'PAYMENT_REFUND_VERIFICATION'
   | 'DRIVER_DOCUMENT'
   | 'NOTIFICATION'
-  | 'DRIVER_RESERVATION_EXPIRY';
+  | 'DRIVER_RESERVATION_EXPIRY'
+  | 'SCHEDULED_RIDE_DISPATCH'; // Déclenche la recherche de chauffeur 15 min avant l'heure prévue
 export type JobQueueStatus =
   | 'PENDING'
   | 'RUNNING'

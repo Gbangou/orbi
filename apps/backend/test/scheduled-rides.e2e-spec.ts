@@ -10,6 +10,13 @@
 import { ScheduledRidesService } from '../src/modules/scheduled-rides/scheduled-rides.service';
 import type { RequestAuthContext } from '../src/modules/auth/auth.types';
 
+const mockJobQueue = {
+  enqueue: jest.fn().mockResolvedValue({ id: 'job-1' }),
+  claimDueJobs: jest.fn().mockResolvedValue([]),
+  complete: jest.fn().mockResolvedValue(undefined),
+  fail: jest.fn().mockResolvedValue(undefined),
+};
+
 function createService(prismaOverrides: Record<string, unknown> = {}) {
   const prisma = {
     riderProfile: {
@@ -58,7 +65,7 @@ function createService(prismaOverrides: Record<string, unknown> = {}) {
     user: { id: 'user-1', role: 'RIDER', email: 'test@example.com', fullName: 'Test User', isActive: true },
   } as RequestAuthContext;
 
-  return { prisma, service: new ScheduledRidesService(prisma as never), auth };
+  return { prisma, service: new ScheduledRidesService(prisma as never, mockJobQueue as never), auth };
 }
 
 function futureDate(minutesFromNow: number): string {

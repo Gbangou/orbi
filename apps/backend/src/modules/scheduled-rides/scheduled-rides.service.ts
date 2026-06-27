@@ -19,6 +19,7 @@ import {
 } from '@nestjs/common';
 import { ScheduledRideStatus } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { JobQueueService } from '../../common/job-queue/job-queue.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 
 const MIN_ADVANCE_MINUTES = 30;
@@ -40,9 +41,15 @@ export type CreateScheduledRideDto = {
   promoCode?: string;
 };
 
+/** Fenêtre de dispatch: 15 min avant l'heure prévue */
+const DISPATCH_LEAD_MINUTES = 15;
+
 @Injectable()
 export class ScheduledRidesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jobQueueService: JobQueueService,
+  ) {}
 
   async createScheduledRide(auth: RequestAuthContext, dto: CreateScheduledRideDto) {
     const riderProfile = await this.prisma.riderProfile.findUnique({
@@ -123,7 +130,63 @@ export class ScheduledRidesService {
       },
     });
 
+    // Enfile le job de dispatch 15 min avant l'heure prévue
+    const dispatchAt = new Date(scheduledFor.getTime() - DISPATCH_LEAD_MINUTES * 60_000);
+    if (dispatchAt > new Date()) {
+      await this.jobQueueService.enqueue({
+        kind: 'SCHEDULED_RIDE_DISPATCH',
+        dedupeKey: `scheduled-ride-dispatch:${ride.id}`,
+        entityType: 'SCHEDULED_RIDE',
+        entityId: ride.id,
+        nextRunAt: dispatchAt,
+        payload: { scheduledRideId: ride.id },
+      });
+    }
+
     return this.serializeRide(ride);
+  }
+
+  /**
+   * Déclenché par le job queue worker 15 min avant l'heure prévue.
+   * Passe la course en DISPATCHING pour que le dispatch engine prenne le relais.
+   */
+  async triggerDispatch(scheduledRideId: string): Promise<void> {
+    const ride = await this.prisma.scheduledRide.findUnique({
+      where: { id: scheduledRideId },
+      select: { id: true, status: true, scheduledFor: true, riderId: true },
+    });
+
+    if (!ride || ride.status !== 'PENDING') {
+      return; // Déjà traitée ou annulée
+    }
+
+    // Vérifier que c'est bien l'heure de dispatcher
+    const now = new Date();
+    const minutesUntil = (ride.scheduledFor.getTime() - now.getTime()) / 60_000;
+
+    if (minutesUntil > DISPATCH_LEAD_MINUTES + 2) {
+      throw new Error(`Too early to dispatch — ${minutesUntil.toFixed(1)} min remaining`);
+    }
+
+    await this.prisma.scheduledRide.update({
+      where: { id: scheduledRideId },
+      data: {
+        status: ScheduledRideStatus.DISPATCHING,
+        dispatchStartedAt: now,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'SCHEDULED_RIDE_DISPATCH_STARTED',
+        entityType: 'SCHEDULED_RIDE',
+        entityId: scheduledRideId,
+        metadata: {
+          scheduledFor: ride.scheduledFor.toISOString(),
+          dispatchedAt: now.toISOString(),
+        },
+      },
+    });
   }
 
   async listMyScheduledRides(auth: RequestAuthContext) {

@@ -46,6 +46,7 @@ jest.mock(
       SafeAreaView: "SafeAreaView",
       KeyboardAvoidingView: "KeyboardAvoidingView",
       ActivityIndicator: "ActivityIndicator",
+      RefreshControl: "RefreshControl",
       View: "View",
       Text: "Text",
       Image: "Image",

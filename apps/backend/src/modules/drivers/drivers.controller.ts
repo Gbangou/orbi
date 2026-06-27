@@ -26,6 +26,7 @@ import { UpdateDriverAvailabilityDto } from './dto/update-driver-availability.dt
 import { UpdateDriverPresenceDto } from './dto/update-driver-presence.dto';
 import { UpsertDriverOnboardingDto } from './dto/upsert-driver-onboarding.dto';
 import { DriversService } from './drivers.service';
+import { DriverIncentivesService } from './driver-incentives.service';
 
 function clampParam(value: number, min: number, max: number, fallback: number) {
   return Number.isFinite(value)
@@ -35,7 +36,10 @@ function clampParam(value: number, min: number, max: number, fallback: number) {
 
 @Controller('drivers')
 export class DriversController {
-  constructor(private readonly driversService: DriversService) {}
+  constructor(
+    private readonly driversService: DriversService,
+    private readonly incentivesService: DriverIncentivesService,
+  ) {}
 
   @Get('nearby')
   @Version('1')
@@ -176,5 +180,23 @@ export class DriversController {
     @Body() payload: RequestDriverDocumentUploadLinksDto,
   ) {
     return this.driversService.createDocumentUploadLinks(auth, payload);
+  }
+
+  /**
+   * Objectifs journaliers et zones bonus — système d'incentives Bolt-style
+   * GET /api/v1/drivers/me/incentives
+   */
+  @Get('me/incentives')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard)
+  @Roles(UserRole.DRIVER)
+  @RequireProfile('driver')
+  async getIncentives(@CurrentAuth() auth: RequestAuthContext) {
+    const driverProfile = auth.user.driverProfile;
+    if (!driverProfile?.id) {
+      return { dailyQuests: [], activeBonusZones: [], streakDays: 0, streakBonusXof: 0, estimatedBonusToday: 0 };
+    }
+    return this.incentivesService.getIncentivesSummary(driverProfile.id);
   }
 }

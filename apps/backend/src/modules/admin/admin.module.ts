@@ -10,6 +10,9 @@ import { AdminService } from './admin.service';
 import { AdminPromoCodesService } from './admin-promo-codes.service';
 import { AdminSupportService } from './admin-support.service';
 import { AdminUsersService } from './admin-users.service';
+import { AdminPaymentWebhooksService } from './admin-payment-webhooks.service';
+import { AdminDriverPayoutsService } from './admin-driver-payouts.service';
+import { AdminDriverOnboardingService } from './admin-driver-onboarding.service';
 
 /**
  * AdminModule — Orchestrateur des sous-services ops.
@@ -39,11 +42,17 @@ import { AdminUsersService } from './admin-users.service';
     AdminPromoCodesService,
     AdminSupportService,
     AdminUsersService,
+    AdminPaymentWebhooksService,
+    AdminDriverPayoutsService,
+    AdminDriverOnboardingService,
   ],
   exports: [
     AdminPromoCodesService,
     AdminSupportService,
     AdminUsersService,
+    AdminPaymentWebhooksService,
+    AdminDriverPayoutsService,
+    AdminDriverOnboardingService,
   ],
 })
 export class AdminModule {}
