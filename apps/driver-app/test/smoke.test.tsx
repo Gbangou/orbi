@@ -508,14 +508,14 @@ describe('driver smoke flows', () => {
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
 
     const renderer = await renderScreen(<RevenusScreen />);
-    await pressByText(renderer, 'Actualiser les revenus');
+    await pressByText(renderer, 'Actualiser le direct');
 
     expectText(renderer, 'Revenus synchronises. Mission Chauffeur assigné en cours.');
     expectText(renderer, 'Universite Joseph Ki-Zerbo vers Ouaga 2000');
-    expectText(renderer, 'Controle payout');
+    expectText(renderer, 'Contrôle payout');
     expectText(renderer, '82% chauffeur');
     expectText(renderer, 'Plateforme estimee');
-    expectText(renderer, 'Controle payout');
+    expectText(renderer, 'Contrôle payout');
   });
 
   it('accepts an offer from the offres screen', async () => {

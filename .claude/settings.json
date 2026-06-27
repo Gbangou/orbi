@@ -47,7 +47,9 @@
       "PowerShell(& \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\packages\\\\api\\\\node_modules\\\\.bin\\\\tsc.CMD\" -p \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\packages\\\\api\\\\tsconfig.json\" --noEmit 2>&1; Write-Host \"Exit: $LASTEXITCODE\")",
       "PowerShell(& \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\packages\\\\api\\\\node_modules\\\\.bin\\\\tsc.CMD\" -p \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\apps\\\\rider-app\\\\tsconfig.json\" --noEmit 2>&1 | Select-Object -First 30; Write-Host \"Exit: $LASTEXITCODE\")",
       "Bash(grep -v \"//\\\\|mock\\\\|comment\\\\|SOS.*envoy\")",
-      "Bash(grep -v \"//\\\\|setStatus\\\\|isSubmit\\\\|Status\\\\|statusPill\\\\|statusText\\\\|status ===\\\\|status =\\\\|status:\")"
+      "Bash(grep -v \"//\\\\|setStatus\\\\|isSubmit\\\\|Status\\\\|statusPill\\\\|statusText\\\\|status ===\\\\|status =\\\\|status:\")",
+      "Bash(npx eas-cli *)",
+      "Bash(grep -v \"//\\\\|useLiveRefresh\\\\|onRefresh\\\\|onPress\\\\|eventHandler\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\LENOVO\\Desktop\\orbi\\apps\\admin-web\\app\\shared"

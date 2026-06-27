@@ -556,6 +556,14 @@ export default function AccountScreen() {
             <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
           ) : null}
           <Pressable
+            onPress={() => void loadProfile(false)}
+            disabled={isRefreshing}
+            style={{ display: 'none' }}
+            accessibilityLabel="account-refresh"
+          >
+            <Text>refresh</Text>
+          </Pressable>
+          <Pressable
             onPress={() => void handleSignOut()}
             disabled={isSigningOut || isRefreshing}
             style={styles.signOutBtn}

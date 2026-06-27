@@ -736,6 +736,12 @@ export default function ActivityScreen() {
 
     return (
       <View style={styles.tripRoot}>
+        {/* Status feedback — visible in active trip view for operational signals */}
+        {status && !status.includes('Chargement') ? (
+          <Text style={[styles.syncMeta, { position: 'absolute', top: 44, left: 0, right: 0, zIndex: 100, paddingHorizontal: 16, paddingVertical: 4, backgroundColor: 'rgba(0,0,0,0.35)', color: '#FFFFFF' }]} accessibilityLabel="activity-status-trip">
+            {status}
+          </Text>
+        ) : null}
         {/* Map */}
         {hasTripCoords ? (
           <TripMapView
@@ -835,6 +841,15 @@ export default function ActivityScreen() {
             >
               <Text style={styles.actionBtnIcon}>↑</Text>
               <Text style={styles.actionBtnLabel}>Partager</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void handleReportIncident(activeTrip.id)}
+              disabled={isSubmitting}
+              style={styles.actionBtn}
+              accessibilityLabel="report-incident"
+            >
+              <Text style={styles.actionBtnIcon}>⚠</Text>
+              <Text style={styles.actionBtnLabel}>Signal</Text>
             </Pressable>
             <Pressable
               onPress={() => void handleTriggerSos(activeTrip.id)}

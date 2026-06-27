@@ -1,5 +1,5 @@
 import { createOrbiApiClient, fetchSharedTripWithApi } from "@orbi/api";
-import { orbiRuntimeConfig, resolveOrbiApiBaseUrl } from "@orbi/config";
+import { orbiRuntimeConfig, resolveOrbiApiBaseUrlForRuntime as resolveOrbiApiBaseUrl } from "@orbi/config";
 import { notFound } from "next/navigation";
 
 /**
