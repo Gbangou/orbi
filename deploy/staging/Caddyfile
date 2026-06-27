@@ -1,10 +1,72 @@
+# ── Orbi Staging — Caddy Reverse Proxy ───────────────────────────────────────
+# Automatic HTTPS via Let's Encrypt.
+# Variables are injected by Docker Compose via environment.
+
+# ── API backend ──────────────────────────────────────────────────────────────
 {$ORBI_API_DOMAIN} {
+	# Mobile error reports are collected silently — never forward to backend.
+	# The backend URL is registered as a webhook destination in the config,
+	# but Caddy intercepts it here so field devices don't saturate the API.
 	@mobile_error_sink path /_internal/mobile-error-collector
 	respond @mobile_error_sink 204
 
-	reverse_proxy backend:3000
+	# PawaPay webhook — no auth middleware, HMAC verified by the backend
+	@pawapay_webhook path /api/v1/payments/webhooks/pawapay
+	reverse_proxy @pawapay_webhook backend:3000 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# All other API traffic
+	reverse_proxy backend:3000 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+
+		# Health check on the upstream
+		health_uri /health
+		health_interval 15s
+		health_timeout 5s
+	}
+
+	# Security headers
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output stdout
+		format json
+		level INFO
+	}
 }
 
+# ── Admin web ────────────────────────────────────────────────────────────────
 {$ORBI_ADMIN_DOMAIN} {
-	reverse_proxy admin-web:3001
+	reverse_proxy admin-web:3001 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# Security headers for the admin dashboard
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://{$ORBI_API_DOMAIN}; font-src 'self' data:;"
+		-Server
+	}
+
+	log {
+		output stdout
+		format json
+		level INFO
+	}
 }
