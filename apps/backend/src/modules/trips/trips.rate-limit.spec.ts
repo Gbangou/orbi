@@ -15,6 +15,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { TripsController } from './trips.controller';
 import { TripsService } from './trips.service';
+import { TripQueryService } from './trip-query.service';
 
 /**
  * OWASP API4 (Unrestricted Resource Consumption) — rate limiting on trip
@@ -90,6 +91,7 @@ describe('TripsController — Rate Limiting (integration)', () => {
       controllers: [TripsController],
       providers: [
         { provide: TripsService, useValue: tripsService },
+        { provide: TripQueryService, useValue: tripsService },
         {
           provide: RealtimeService,
           useValue: { stream: jest.fn().mockReturnValue(of()) },

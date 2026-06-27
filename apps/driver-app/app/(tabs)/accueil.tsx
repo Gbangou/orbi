@@ -186,7 +186,7 @@ export default function DriverHomeScreen() {
   const flow = resolveDriverActiveFlow({ history, offers, reservationNow, driverProfileStatus });
   const { activeTrip, activeFlowState, visibleOffers } = flow;
 
-  void buildDriverShiftReadiness({ flow, fatigue: driverFatigue, earningsToday: earnings?.summary.today });
+  const shiftReadiness = buildDriverShiftReadiness({ flow, fatigue: driverFatigue, earningsToday: earnings?.summary.today });
 
   const { latestPosition: driverPosition } = useDriverPresence(
     flow.availabilityStatus === 'ONLINE' || Boolean(activeTrip),
@@ -420,6 +420,33 @@ export default function DriverHomeScreen() {
           </View>
         )}
 
+        {/* Fatigue warning banner */}
+        {driverFatigue.state !== 'clear' ? (
+          <View
+            style={[
+              styles.fatigueBanner,
+              driverFatigue.state === 'blocked' && styles.fatigueBannerBlocked,
+            ]}
+          >
+            <Text style={[
+              styles.fatigueText,
+              driverFatigue.state === 'blocked' && styles.fatigueTextBlocked,
+            ]}>
+              {driverFatigue.state === 'blocked' ? '🔴 ' : '🟡 '}
+              {shiftReadiness.note}
+            </Text>
+            {driverFatigue.state === 'blocked' && driverFatigue.restUntil ? (
+              <Text style={styles.fatigueSubtext}>
+                Reprise recommandée après{' '}
+                {new Date(driverFatigue.restUntil).toLocaleTimeString('fr-BF', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* Status note (operational feedback) */}
         {statusNote ? (
           <Text style={styles.statusNoteText}>{statusNote}</Text>
@@ -520,6 +547,33 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.teal,
   },
   acceptanceLabelLow: { color: '#FF9500' },
+
+  // Fatigue warning
+  fatigueBanner: {
+    backgroundColor: 'rgba(255,149,0,0.10)',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,149,0,0.30)',
+    gap: 4,
+  },
+  fatigueBannerBlocked: {
+    backgroundColor: 'rgba(255,59,48,0.10)',
+    borderColor: 'rgba(255,59,48,0.30)',
+  },
+  fatigueText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: '#FF9500',
+    lineHeight: 16,
+  },
+  fatigueTextBlocked: { color: '#FF3B30' },
+  fatigueSubtext: {
+    fontSize: 11,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
 
   // Navigation button
   navBtn: {

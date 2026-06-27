@@ -29,12 +29,14 @@ import { RecordRoutePositionDto } from './dto/record-route-position.dto';
 import { VerifyPickupCodeDto } from './dto/verify-pickup-code.dto';
 import { UpdateTripStatusDto } from './dto/update-trip-status.dto';
 import { TripsService } from './trips.service';
+import { TripQueryService } from './trip-query.service';
 
 @Controller('trips')
 export class TripsController {
   constructor(
     private readonly tripsService: TripsService,
     private readonly realtimeService: RealtimeService,
+    private readonly tripQueryService: TripQueryService,
   ) {}
 
   @Get('dashboard')
@@ -43,7 +45,7 @@ export class TripsController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   dashboard() {
-    return this.tripsService.dashboard();
+    return this.tripQueryService.dashboard();
   }
 
   @Get('mine')
@@ -52,7 +54,7 @@ export class TripsController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.RIDER, UserRole.DRIVER)
   mine(@CurrentAuth() auth: RequestAuthContext) {
-    return this.tripsService.findMine(auth);
+    return this.tripQueryService.findMine(auth);
   }
 
   @Sse('stream')
@@ -81,7 +83,7 @@ export class TripsController {
   sharedTrip(
     @Param('shareToken', new OpaqueIdPipe('shareToken')) shareToken: string,
   ) {
-    return this.tripsService.getSharedTrip(shareToken);
+    return this.tripQueryService.getSharedTrip(shareToken);
   }
 
   @Get(':tripId')
@@ -99,7 +101,7 @@ export class TripsController {
     @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.tripsService.getTripDetail(auth, tripId);
+    return this.tripQueryService.getTripDetail(auth, tripId);
   }
 
   @Post('accept/:rideRequestId')
