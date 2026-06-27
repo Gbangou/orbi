@@ -29,6 +29,7 @@ import {
   OfflineBanner,
 } from '@orbi/ui';
 import { restoreRiderSession } from '../../lib/auth';
+import { useTranslation } from '../../lib/i18n';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { useRiderRealtimeStream } from '../../lib/use-rider-realtime-stream';
 import { orbiRuntimeConfig, resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
@@ -193,6 +194,7 @@ const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideO
 
 export default function RiderHomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [options, setOptions] = useState<RideOption[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
@@ -413,7 +415,7 @@ export default function RiderHomeScreen() {
               <Text style={styles.nearbyText}>
                 {realNearbyCount > 0
                   ? `${realNearbyCount} chauffeur${realNearbyCount > 1 ? 's' : ''}`
-                  : 'Carte live'}
+                  : t('home.liveMap', { defaultValue: 'Carte live' })}
               </Text>
             </Pressable>
           </View>
@@ -480,7 +482,7 @@ export default function RiderHomeScreen() {
             >
               <View style={styles.searchDot} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.searchPlaceholder}>Où allez-vous ?</Text>
+                <Text style={styles.searchPlaceholder}>{t('home.whereToGo')}</Text>
                 {options.length > 0 ? (
                   <Text style={styles.fareHint}>
                     À partir de {formatXof(options[0].fare)} · {options[0].etaMinutes} min

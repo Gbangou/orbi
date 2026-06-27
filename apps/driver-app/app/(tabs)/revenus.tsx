@@ -55,6 +55,137 @@ const fallbackEarnings: DriverEarningsResponse = {
 
 const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
 
+// ── Graphique hebdomadaire — gains par jour ───────────────────────────────────
+
+const DAY_LABELS_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+function WeeklyEarningsChart({
+  recentTrips,
+}: {
+  recentTrips: DriverEarningsResponse['recentTrips'];
+}) {
+  // Group trips by day of week for the last 7 days
+  const today = new Date();
+  const dayBuckets: { label: string; total: number; dayIndex: number }[] = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    dayBuckets.push({
+      label: i === 0 ? 'Auj.' : DAY_LABELS_FR[d.getDay()],
+      total: 0,
+      dayIndex: d.getDay(),
+    });
+  }
+
+  for (const trip of recentTrips) {
+    const completedAt = trip.completedAt ? new Date(trip.completedAt) : null;
+    if (!completedAt) continue;
+    const diffDays = Math.floor(
+      (today.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    if (diffDays >= 0 && diffDays <= 6) {
+      const bucketIndex = 6 - diffDays;
+      if (dayBuckets[bucketIndex]) {
+        dayBuckets[bucketIndex].total += trip.payout ?? 0;
+      }
+    }
+  }
+
+  const maxTotal = Math.max(...dayBuckets.map((b) => b.total), 1);
+  const hasData = dayBuckets.some((b) => b.total > 0);
+  const todayIndex = 6;
+
+  if (!hasData) return null;
+
+  return (
+    <View style={weeklyStyles.card}>
+      <Text style={weeklyStyles.title}>Gains — 7 derniers jours</Text>
+      <View style={weeklyStyles.bars}>
+        {dayBuckets.map((bucket, i) => {
+          const barH = Math.max(4, Math.round((bucket.total / maxTotal) * 72));
+          const isToday = i === todayIndex;
+          return (
+            <View key={i} style={weeklyStyles.barWrap}>
+              {bucket.total > 0 ? (
+                <Text style={weeklyStyles.barValue}>
+                  {bucket.total >= 1000
+                    ? `${Math.round(bucket.total / 1000)}k`
+                    : String(Math.round(bucket.total))}
+                </Text>
+              ) : null}
+              <View
+                style={[
+                  weeklyStyles.bar,
+                  { height: barH },
+                  isToday && weeklyStyles.barToday,
+                  bucket.total === 0 && weeklyStyles.barEmpty,
+                ]}
+              />
+              <Text style={[weeklyStyles.dayLabel, isToday && weeklyStyles.dayLabelToday]}>
+                {bucket.label}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const weeklyStyles = StyleSheet.create({
+  card: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    padding: 16,
+    gap: 12,
+  },
+  title: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  bars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 96,
+    gap: 4,
+  },
+  barWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+  },
+  bar: {
+    width: '80%',
+    borderRadius: 4,
+    backgroundColor: orbiTheme.colors.amber,
+    opacity: 0.55,
+  },
+  barToday: { opacity: 1 },
+  barEmpty: { backgroundColor: orbiTheme.colors.backgroundDim, opacity: 1 },
+  barValue: {
+    fontSize: 9,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.amber,
+  },
+  dayLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.textMuted,
+  },
+  dayLabelToday: { color: orbiTheme.colors.text, fontWeight: '800' },
+});
+
 const DRIVER_MILESTONES = [
   { trips: 10, badge: 'Debutant', emoji: '🌱' },
   { trips: 50, badge: 'Confirme', emoji: '⭐' },
@@ -463,6 +594,9 @@ export default function RevenusScreen() {
             <Text style={styles.metricMeta}>par course</Text>
           </View>
         </View>
+
+        {/* Graphique hebdomadaire — gains par jour (7 derniers jours) */}
+        <WeeklyEarningsChart recentTrips={earnings.recentTrips} />
 
         {/* Mini earnings chart — last 7 trips by payout */}
         {earnings.recentTrips.length > 0 ? (

@@ -38,6 +38,7 @@ import {
   orbiTheme,
 } from "@orbi/ui";
 import { restoreRiderSession } from "../../lib/auth";
+import { useTranslation } from "../../lib/i18n";
 import {
   buildRiderFlowTransitionLabel,
   buildRiderDriverTrustSnapshot,
@@ -187,6 +188,7 @@ const loyaltyStyles = StyleSheet.create({
 
 export default function ActivityScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
   const [activeTripDetail, setActiveTripDetail] =
     useState<TripDetailResponse | null>(null);
@@ -909,7 +911,7 @@ export default function ActivityScreen() {
         {/* Pending requests */}
         {history.pendingRequests.length > 0 ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Demandes en cours</Text>
+            <Text style={styles.sectionTitle}>{t('activity.pendingRequests')}</Text>
             {history.pendingRequests.map((req) => (
               <View key={req.id} style={styles.requestCard}>
                 <View style={styles.requestDot} />
@@ -936,7 +938,7 @@ export default function ActivityScreen() {
         {/* Recent trips */}
         {history.recentTrips.length > 0 ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Courses récentes</Text>
+            <Text style={styles.sectionTitle}>{t('activity.recentTrips')}</Text>
             {history.recentTrips.slice(0, 10).map((trip) => {
               const dateStr = trip.completedAt ?? trip.createdAt;
               const date = dateStr
@@ -962,9 +964,9 @@ export default function ActivityScreen() {
                       ]}
                     >
                       {isDone
-                        ? 'Terminé'
+                        ? t('activity.completed')
                         : trip.status === 'CANCELLED'
-                          ? 'Annulé'
+                          ? t('activity.cancelled')
                           : trip.status}
                     </Text>
                   </View>
