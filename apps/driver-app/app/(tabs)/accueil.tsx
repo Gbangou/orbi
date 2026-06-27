@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import {
   fetchDriverEarnings,
   fetchDriverOffers,
@@ -18,6 +18,7 @@ import {
   describeRealtimeConnection,
   orbiCopy,
   orbiTheme,
+  OfflineBanner,
 } from '@orbi/ui';
 import { MetricTile } from '../../lib/realtime-widgets';
 import { restoreDriverSession } from '../../lib/auth';
@@ -104,6 +105,7 @@ export default function DriverHomeScreen() {
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [earnings, setEarnings] = useState<DriverEarningsResponse | null>(null);
+  const [acceptanceRate, setAcceptanceRate] = useState<number | null>(null);
   const [statusNote, setStatusNote] = useState('Connexion du compte chauffeur...');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
@@ -136,6 +138,7 @@ export default function DriverHomeScreen() {
       setDriverProfileStatus(profileResponse.profile.status);
       setDriverFatigue(profileResponse.profile.fatigue);
       setVehicleCount(profileResponse.profile.vehicles.length);
+      setAcceptanceRate(profileResponse.profile.dispatchSignal?.acceptanceRate ?? null);
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: offersResponse,
@@ -259,6 +262,14 @@ export default function DriverHomeScreen() {
     }
   }
 
+  function handleNavigateToPickup() {
+    const trip = flow.activeTrip;
+    if (!trip?.pickupAddress) return;
+    const encoded = encodeURIComponent(trip.pickupAddress);
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving`;
+    void Linking.openURL(googleMapsUrl);
+  }
+
   // suppress unused state warnings for vars managed by callbacks
   void isRealtimeSyncing; void recentlyExpiredCount;
 
@@ -275,6 +286,9 @@ export default function DriverHomeScreen() {
         style={styles.map}
       />
 
+      {/* Offline banner */}
+      <OfflineBanner />
+
       {/* Floating top bar */}
       <SafeAreaView style={styles.topBarSafe} pointerEvents="box-none">
         <View style={styles.topBar}>
@@ -286,6 +300,24 @@ export default function DriverHomeScreen() {
                 : '— XOF'}
             </Text>
           </View>
+
+          {/* Acceptance rate badge — Bolt-style */}
+          {acceptanceRate !== null ? (
+            <View
+              style={[
+                styles.acceptanceBadge,
+                acceptanceRate < 0.7 && styles.acceptanceBadgeLow,
+              ]}
+            >
+              <Text style={[
+                styles.acceptanceLabel,
+                acceptanceRate < 0.7 && styles.acceptanceLabelLow,
+              ]}>
+                {Math.round(acceptanceRate * 100)}% acceptées
+              </Text>
+            </View>
+          ) : null}
+
           <View style={styles.statusPill}>
             <View style={[styles.statusDot, { backgroundColor: isOnline ? orbiTheme.colors.teal : '#BBBBBB' }]} />
             <Text style={[styles.statusPillText, { color: isOnline ? orbiTheme.colors.teal : orbiTheme.colors.textMuted }]}>
@@ -322,22 +354,33 @@ export default function DriverHomeScreen() {
         <View style={styles.handle} />
 
         {activeTrip ? (
-          <Pressable style={styles.tripCard} onPress={() => router.push('/offres')}>
-            <View style={styles.tripStatusDot} />
-            <View style={styles.tripInfo}>
-              <Text style={styles.tripTitle}>Course active</Text>
-              <Text style={styles.tripRoute} numberOfLines={1}>
-                {flow.primaryRouteLabel ?? 'Trajet en cours'}
-              </Text>
-              <Text style={styles.tripStatus}>{flow.primaryStatusLabel}</Text>
-              {activeTripTransitionLabel ? (
-                <Text style={styles.tripTransition}>{activeTripTransitionLabel}</Text>
-              ) : null}
-            </View>
-            <View style={styles.tripArrow}>
-              <Text style={styles.tripArrowText}>›</Text>
-            </View>
-          </Pressable>
+          <View style={{ gap: 8 }}>
+            <Pressable style={styles.tripCard} onPress={() => router.push('/offres')}>
+              <View style={styles.tripStatusDot} />
+              <View style={styles.tripInfo}>
+                <Text style={styles.tripTitle}>Course active</Text>
+                <Text style={styles.tripRoute} numberOfLines={1}>
+                  {flow.primaryRouteLabel ?? 'Trajet en cours'}
+                </Text>
+                <Text style={styles.tripStatus}>{flow.primaryStatusLabel}</Text>
+                {activeTripTransitionLabel ? (
+                  <Text style={styles.tripTransition}>{activeTripTransitionLabel}</Text>
+                ) : null}
+              </View>
+              <View style={styles.tripArrow}>
+                <Text style={styles.tripArrowText}>›</Text>
+              </View>
+            </Pressable>
+            {activeTrip.pickupAddress ? (
+              <Pressable
+                onPress={handleNavigateToPickup}
+                style={({ pressed }) => [styles.navBtn, pressed && styles.navBtnPressed]}
+                accessibilityLabel="Ouvrir la navigation vers le point de prise en charge"
+              >
+                <Text style={styles.navBtnLabel}>🗺 Naviguer vers la prise en charge</Text>
+              </Pressable>
+            ) : null}
+          </View>
         ) : isOnline ? (
           <View style={styles.onlineSheet}>
             <View style={styles.onlineRow}>
@@ -460,6 +503,38 @@ const styles = StyleSheet.create({
   statusPillText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+
+  // Acceptance rate badge
+  acceptanceBadge: {
+    backgroundColor: 'rgba(0,201,167,0.12)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  acceptanceBadgeLow: { backgroundColor: 'rgba(255,149,0,0.12)' },
+  acceptanceLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.teal,
+  },
+  acceptanceLabelLow: { color: '#FF9500' },
+
+  // Navigation button
+  navBtn: {
+    backgroundColor: orbiTheme.colors.text,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navBtnPressed: { opacity: 0.85 },
+  navBtnLabel: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
   },
 
   // Toggle

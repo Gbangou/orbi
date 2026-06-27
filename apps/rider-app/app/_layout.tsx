@@ -20,7 +20,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
-import { orbiTheme, resolveTheme } from '@orbi/ui';
+import { orbiTheme, resolveTheme, ErrorBoundary } from '@orbi/ui';
 import { hasPersistedRiderSession } from '../lib/auth';
 
 const TypedStack = Stack as any;
@@ -106,27 +106,29 @@ export default function RootLayout() {
   const showSplash = !isResolved || !fontsLoaded;
 
   return (
-    <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      <TypedStack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: theme.colors.background as string },
-        }}
-      />
-      {showSplash ? (
-        <View style={styles.splash}>
-          <View style={styles.splashLogo}>
-            <Text style={styles.splashWordmark}>orbi</Text>
+    <ErrorBoundary fallbackLabel="Orbi a rencontré un problème inattendu">
+      <>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <TypedStack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.colors.background as string },
+          }}
+        />
+        {showSplash ? (
+          <View style={styles.splash}>
+            <View style={styles.splashLogo}>
+              <Text style={styles.splashWordmark}>orbi</Text>
+            </View>
+            <ActivityIndicator
+              size="small"
+              color={orbiTheme.colors.teal}
+              style={styles.splashSpinner}
+            />
           </View>
-          <ActivityIndicator
-            size="small"
-            color={orbiTheme.colors.teal}
-            style={styles.splashSpinner}
-          />
-        </View>
-      ) : null}
-    </>
+        ) : null}
+      </>
+    </ErrorBoundary>
   );
 }
 

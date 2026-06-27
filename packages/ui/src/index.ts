@@ -465,3 +465,6 @@ export {
   buildLeafletInitScript,
   type MapHtmlOptions,
 } from './leaflet-map';
+export { useNetworkStatus, type NetworkStatus } from './use-network-status';
+export { OfflineBanner } from './offline-banner';
+export { ErrorBoundary } from './error-boundary';

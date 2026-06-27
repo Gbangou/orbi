@@ -16,7 +16,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
-import { orbiTheme, resolveTheme } from '@orbi/ui';
+import { orbiTheme, resolveTheme, ErrorBoundary } from '@orbi/ui';
 import { hasPersistedDriverSession } from '../lib/auth';
 
 const TypedStack = Stack as any;
@@ -116,21 +116,23 @@ export default function RootLayout() {
   }, [isNavigationMounted, pathname, rootNavigationState?.key, router]);
 
   return (
-    <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      <TypedStack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: theme.colors.background as string },
-        }}
-      />
-      {!isResolved ? (
-        <View style={[styles.loadingScreen, { backgroundColor: theme.colors.background as string }]}>
-          <Text style={[styles.loadingWordmark, { color: theme.colors.text as string }]}>orbi</Text>
-          <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
-        </View>
-      ) : null}
-    </>
+    <ErrorBoundary fallbackLabel="Orbi chauffeur a rencontré un problème inattendu">
+      <>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <TypedStack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.colors.background as string },
+          }}
+        />
+        {!isResolved ? (
+          <View style={[styles.loadingScreen, { backgroundColor: theme.colors.background as string }]}>
+            <Text style={[styles.loadingWordmark, { color: theme.colors.text as string }]}>orbi</Text>
+            <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
+          </View>
+        ) : null}
+      </>
+    </ErrorBoundary>
   );
 }
 

@@ -669,6 +669,11 @@ export function roundDistanceKm(value: number) {
   return Math.max(0.8, Math.round(value * 10) / 10);
 }
 
+// Road distance factor for African urban grids — actual road distance is
+// typically 25-35% longer than Haversine straight-line in Ouagadougou due
+// to grid streets, roundabouts, and non-straight routes.
+const ROAD_DETOUR_FACTOR = 1.3;
+
 export function estimateDurationMinutes(
   distanceKm: number,
   zone?: 'URBAN_CORE' | 'URBAN_EDGE' | 'SEMI_URBAN',
@@ -680,7 +685,9 @@ export function estimateDurationMinutes(
   } as const;
   const resolvedZone = zone ?? 'URBAN_CORE';
   const averageSpeedKmh = averageSpeedByZone[resolvedZone];
-  const rollingMinutes = (distanceKm / averageSpeedKmh) * 60;
+  // Apply road detour factor: straight-line → estimated road distance
+  const roadDistanceKm = distanceKm * ROAD_DETOUR_FACTOR;
+  const rollingMinutes = (roadDistanceKm / averageSpeedKmh) * 60;
   const boardingBufferMinutes = resolvedZone === 'URBAN_CORE' ? 4 : 3;
 
   return Math.max(4, Math.round(rollingMinutes + boardingBufferMinutes));
