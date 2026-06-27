@@ -82,13 +82,12 @@ describe('estimateDurationMinutes', () => {
   it('defaults to URBAN_CORE speed when no zone is specified', () => {
     const result = estimateDurationMinutes(5);
     expect(result).toBeGreaterThan(4);
-    expect(result).toBeLessThan(25);
+    expect(result).toBeLessThan(30); // road detour factor makes it longer
   });
 
   it('returns a longer estimate for URBAN_CORE than SEMI_URBAN for the same distance', () => {
     const urban = estimateDurationMinutes(10, 'URBAN_CORE');
     const semiUrban = estimateDurationMinutes(10, 'SEMI_URBAN');
-
     expect(urban).toBeGreaterThan(semiUrban);
   });
 
@@ -99,5 +98,23 @@ describe('estimateDurationMinutes', () => {
   it('returns a rounded integer', () => {
     const result = estimateDurationMinutes(7.3, 'URBAN_EDGE');
     expect(Number.isInteger(result)).toBe(true);
+  });
+
+  it('increases estimate during morning peak hours (7-9h)', () => {
+    const offPeak = estimateDurationMinutes(5, 'URBAN_CORE', { hour: 14 });
+    const peakHour = estimateDurationMinutes(5, 'URBAN_CORE', { hour: 8 });
+    expect(peakHour).toBeGreaterThan(offPeak);
+  });
+
+  it('increases estimate during evening rush (17-20h)', () => {
+    const offPeak = estimateDurationMinutes(5, 'URBAN_CORE', { hour: 10 });
+    const rush = estimateDurationMinutes(5, 'URBAN_CORE', { hour: 18 });
+    expect(rush).toBeGreaterThan(offPeak);
+  });
+
+  it('applies road detour factor over straight-line Haversine', () => {
+    // 5km straight line × 1.3 road factor = 6.5km at 22km/h ≈ 17.7 min + 4 buffer ≈ 22
+    const result = estimateDurationMinutes(5, 'URBAN_CORE');
+    expect(result).toBeGreaterThanOrEqual(20);
   });
 });

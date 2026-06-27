@@ -85,6 +85,7 @@ export function resolveRideRequestRouteMetrics(
       durationMinutes: estimateDurationMinutes(
         distanceKm,
         payload.pickupAreaType,
+        { hour: new Date().getHours() },
       ),
       source: 'SERVER_COORDINATES',
     };

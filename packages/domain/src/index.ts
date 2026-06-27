@@ -674,9 +674,20 @@ export function roundDistanceKm(value: number) {
 // to grid streets, roundabouts, and non-straight routes.
 const ROAD_DETOUR_FACTOR = 1.3;
 
+// Ouagadougou peak-hour traffic multipliers (local field research):
+// Morning rush 7-9h and evening rush 17-20h reduce effective speed by ~30%
+// Lunchtime 12-14h reduces by ~15%
+function resolveTrafficMultiplier(hour?: number): number {
+  if (hour === undefined) return 1;
+  if ((hour >= 7 && hour < 9) || (hour >= 17 && hour < 20)) return 1.3;
+  if (hour >= 12 && hour < 14) return 1.15;
+  return 1;
+}
+
 export function estimateDurationMinutes(
   distanceKm: number,
   zone?: 'URBAN_CORE' | 'URBAN_EDGE' | 'SEMI_URBAN',
+  options?: { hour?: number },
 ) {
   const averageSpeedByZone = {
     URBAN_CORE: 22,
@@ -684,10 +695,13 @@ export function estimateDurationMinutes(
     SEMI_URBAN: 30,
   } as const;
   const resolvedZone = zone ?? 'URBAN_CORE';
-  const averageSpeedKmh = averageSpeedByZone[resolvedZone];
+  const baseSpeedKmh = averageSpeedByZone[resolvedZone];
   // Apply road detour factor: straight-line → estimated road distance
   const roadDistanceKm = distanceKm * ROAD_DETOUR_FACTOR;
-  const rollingMinutes = (roadDistanceKm / averageSpeedKmh) * 60;
+  // Apply peak-hour traffic congestion factor
+  const trafficMultiplier = resolveTrafficMultiplier(options?.hour);
+  const effectiveSpeedKmh = baseSpeedKmh / trafficMultiplier;
+  const rollingMinutes = (roadDistanceKm / effectiveSpeedKmh) * 60;
   const boardingBufferMinutes = resolvedZone === 'URBAN_CORE' ? 4 : 3;
 
   return Math.max(4, Math.round(rollingMinutes + boardingBufferMinutes));

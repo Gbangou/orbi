@@ -199,13 +199,13 @@ describe('RideRequestsService', () => {
     expect(pricingService.quote).toHaveBeenCalledWith(
       expect.objectContaining({
         distanceKm: 5.1,
-        durationMinutes: 18,
+        durationMinutes: expect.any(Number), // road detour factor makes this time-dependent
       }),
     );
     expect(prisma.rideRequest.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         estimatedDistanceKm: 5.1,
-        estimatedDurationMinutes: 18,
+        estimatedDurationMinutes: expect.any(Number), // time-dependent with peak-hour ETA
       }),
     });
   });

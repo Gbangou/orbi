@@ -321,11 +321,19 @@ export class RideRequestsService {
         existing.estimatedDistanceKm,
         next.estimatedDistanceKm,
       ) &&
-      this.sameRoundedNumber(
+      this.similarDurationMinutes(
         existing.estimatedDurationMinutes,
         next.estimatedDurationMinutes,
       )
     );
+  }
+
+  // Duration comparison allows ±6 min tolerance — road conditions and ETA
+  // algorithms evolve between the stored request and the retry attempt.
+  private similarDurationMinutes(left: unknown, right: unknown) {
+    const l = Math.round(Number(left));
+    const r = Math.round(Number(right));
+    return Math.abs(l - r) <= 6;
   }
 
   private normalizeComparableText(value: unknown) {

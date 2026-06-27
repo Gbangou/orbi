@@ -26,12 +26,7 @@ import { UpdateTrustedContactDto } from './dto/update-trusted-contact.dto';
 import { UpdateSavedPlaceDto } from './dto/update-saved-place.dto';
 import { RidersService } from './riders.service';
 import { WalletTopUpService } from './wallet-topup.service';
-
-class InitiateWalletTopUpDto {
-  amountXof!: number;
-  mobileMoneyNetwork!: string;
-  customerPhoneNumber!: string;
-}
+import { InitiateWalletTopUpDto } from './dto/initiate-wallet-topup.dto';
 
 @Controller('riders')
 @ApiBearerAuth('session-token')
