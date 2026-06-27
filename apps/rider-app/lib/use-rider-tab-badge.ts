@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import * as Notifications from 'expo-notifications';
 import { fetchMyTrips, createOrbiApiClient } from '@orbi/api';
 import { orbiRuntimeConfig, resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
 import { resolveRiderActiveFlow } from './rider-active-flow';
@@ -19,7 +20,10 @@ export function useRiderTabBadge() {
       const { authClient } = await restoreRiderSession();
       const history = await fetchMyTrips(authClient);
       const flow = resolveRiderActiveFlow(history);
-      setActivityBadge(flow.hasOpenFlow ? 1 : 0);
+      const badgeCount = flow.hasOpenFlow ? 1 : 0;
+      setActivityBadge(badgeCount);
+      // Sync app icon badge count (iOS only; Android uses notification channels)
+      void Notifications.setBadgeCountAsync(badgeCount).catch(() => undefined);
     } catch {
       // Badge check is best-effort — never block the UI
     }

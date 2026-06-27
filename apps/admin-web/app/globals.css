@@ -3213,3 +3213,118 @@ body {
   display: flex;
   gap: 10px;
 }
+
+/* ── Responsive mobile strict (< 640px) — admin ops sur terrain ───────────── */
+@media (max-width: 640px) {
+  .shell {
+    padding: 16px 12px 56px;
+  }
+
+  .admin-session-panel {
+    grid-template-columns: 1fr;
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .metric-strip,
+  .kpi-strip {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .metric-tile {
+    padding: 12px;
+  }
+
+  .metric-tile-value {
+    font-size: 20px;
+  }
+
+  .panel {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .table-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .table-cell-narrow {
+    width: 100%;
+  }
+
+  .btn-group {
+    flex-wrap: wrap;
+  }
+
+  .fleet-card,
+  .driver-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .trip-card-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tab-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .webhook-event-row,
+  .payout-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .page-header h1 {
+    font-size: 20px;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filter-bar input,
+  .filter-bar select {
+    width: 100%;
+  }
+
+  .promo-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .export-filter-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .data-table {
+    font-size: 12px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px 10px;
+  }
+
+  .launch-readiness-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .onboarding-doc-list {
+    grid-template-columns: 1fr;
+  }
+}
