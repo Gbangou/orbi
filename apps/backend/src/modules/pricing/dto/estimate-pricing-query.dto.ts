@@ -90,4 +90,25 @@ export class EstimatePricingQueryDto {
   @IsNumber()
   @Min(0)
   driverOnboardingDays?: number;
+
+  // Optional coordinates — enables OSRM road routing for accurate ETA/distance
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  pickupLatitude?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  pickupLongitude?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  destinationLatitude?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  destinationLongitude?: number;
 }

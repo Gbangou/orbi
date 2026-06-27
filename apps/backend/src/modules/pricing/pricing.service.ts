@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ServiceTier, VehicleType } from '@prisma/client';
 import { RedisCacheService } from '../../core/cache/redis-cache.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { RoutingService } from '../../core/routing/routing.service';
 import { EstimatePricingQueryDto } from './dto/estimate-pricing-query.dto';
 
 type PricingQuoteInput = {
@@ -64,6 +65,7 @@ export class PricingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: RedisCacheService,
+    @Optional() private readonly routingService?: RoutingService,
   ) {}
 
   async listRules() {
@@ -185,13 +187,32 @@ export class PricingService {
       },
     ];
 
+    // Enhance route metrics with OSRM when pickup/destination coordinates are available
+    let resolvedDistanceKm = query.distanceKm;
+    let resolvedDurationMinutes = query.durationMinutes;
+
+    if (
+      this.routingService &&
+      query.pickupLatitude !== undefined && query.pickupLongitude !== undefined &&
+      query.destinationLatitude !== undefined && query.destinationLongitude !== undefined
+    ) {
+      const route = await this.routingService.getRoute(
+        { latitude: Number(query.pickupLatitude), longitude: Number(query.pickupLongitude) },
+        { latitude: Number(query.destinationLatitude), longitude: Number(query.destinationLongitude) },
+      ).catch(() => null);
+      if (route) {
+        resolvedDistanceKm = route.distanceKm;
+        resolvedDurationMinutes = route.durationMinutes;
+      }
+    }
+
     const options = await Promise.all(
       vehicleConfigurations.map(async (configuration) => {
         const estimate = await this.quote({
           vehicleType: configuration.vehicleType,
           serviceTier: configuration.serviceTier,
-          distanceKm: query.distanceKm,
-          durationMinutes: query.durationMinutes,
+          distanceKm: resolvedDistanceKm,
+          durationMinutes: resolvedDurationMinutes,
           paymentMethod: (query.paymentMethod ??
             'MOBILE_MONEY') as PricingQuoteInput['paymentMethod'],
           zone: (query.zone ?? 'URBAN_CORE') as PricingQuoteInput['zone'],

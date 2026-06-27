@@ -4,6 +4,7 @@ import configuration from './config/configuration';
 import { validateEnvironment } from './config/environment.validation';
 import { PrismaModule } from './core/prisma/prisma.module';
 import { RealtimeModule } from './core/realtime/realtime.module';
+import { RoutingModule } from './core/routing/routing.module';
 import { RuntimeModule } from './core/runtime/runtime.module';
 import { CacheModule } from './core/cache/cache.module';
 import { RateLimitModule } from './common/rate-limit/rate-limit.module';
@@ -41,6 +42,7 @@ import { PushTokenModule } from './modules/notifications/push-token.module';
     JobQueueModule,
     PrismaModule,
     RealtimeModule,
+    RoutingModule,
     HealthModule,
     AuthModule,
     UsersModule,
