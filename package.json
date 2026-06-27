@@ -76,7 +76,6 @@
       "path-to-regexp": ">=8.4.0",
       "tinyglobby": "0.2.16",
       "fast-xml-parser": "5.8.0",
-      "minipass": "4.2.3",
       "minipass-pipeline": "2.0.0",
       "brace-expansion@>=4.0.0 <5.0.5": "5.0.6",
       "defu": "6.1.7",
