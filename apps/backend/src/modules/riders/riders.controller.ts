@@ -25,12 +25,22 @@ import { CreateSavedPlaceDto } from './dto/create-saved-place.dto';
 import { UpdateTrustedContactDto } from './dto/update-trusted-contact.dto';
 import { UpdateSavedPlaceDto } from './dto/update-saved-place.dto';
 import { RidersService } from './riders.service';
+import { WalletTopUpService } from './wallet-topup.service';
+
+class InitiateWalletTopUpDto {
+  amountXof!: number;
+  mobileMoneyNetwork!: string;
+  customerPhoneNumber!: string;
+}
 
 @Controller('riders')
 @ApiBearerAuth('session-token')
 @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard)
 export class RidersController {
-  constructor(private readonly ridersService: RidersService) {}
+  constructor(
+    private readonly ridersService: RidersService,
+    private readonly walletTopUpService: WalletTopUpService,
+  ) {}
 
   @Get('me')
   @Version('1')
@@ -100,5 +110,40 @@ export class RidersController {
   @Roles(UserRole.RIDER, UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   overview() {
     return this.ridersService.overview();
+  }
+
+  // ── Wallet top-up — rechargement via PawaPay Mobile Money ────────────────────
+
+  @Get('me/wallet')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 30, windowMs: 60_000, scope: 'user' })
+  @Roles(UserRole.RIDER)
+  @RequireProfile('rider')
+  walletBalance(@CurrentAuth() auth: RequestAuthContext) {
+    return this.walletTopUpService.getWalletBalance(auth);
+  }
+
+  @Get('me/wallet/topup-history')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 20, windowMs: 60_000, scope: 'user' })
+  @Roles(UserRole.RIDER)
+  @RequireProfile('rider')
+  walletTopUpHistory(@CurrentAuth() auth: RequestAuthContext) {
+    return this.walletTopUpService.getTopUpHistory(auth);
+  }
+
+  @Post('me/wallet/topup')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 5, windowMs: 60_000, scope: 'user' })
+  @Roles(UserRole.RIDER)
+  @RequireProfile('rider')
+  initiateWalletTopUp(
+    @CurrentAuth() auth: RequestAuthContext,
+    @Body() payload: InitiateWalletTopUpDto,
+  ) {
+    return this.walletTopUpService.initiateTopUp(auth, payload);
   }
 }

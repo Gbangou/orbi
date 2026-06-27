@@ -205,6 +205,7 @@ model User {
   sessions         UserSession[]
   notifications    Notification[]
   wallets          Wallet[]
+  walletTopUps     WalletTopUp[]
   paymentAttempts  PaymentAttempt[]
   paymentWebhookEvents PaymentWebhookEvent[]
   supportTickets   SupportTicket[]
@@ -520,6 +521,7 @@ model Wallet {
   user         User                @relation(fields: [userId], references: [id])
   transactions WalletTransaction[]
   driverPayouts DriverPayout[]
+  topUps       WalletTopUp[]
 
   @@unique([userId, currency])
   @@map("wallets")
@@ -539,6 +541,36 @@ model WalletTransaction {
   @@index([walletId, createdAt])
   @@unique([walletId, reference])
   @@map("wallet_transactions")
+}
+
+enum WalletTopUpStatus {
+  INITIATED
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model WalletTopUp {
+  id                  String            @id @default(cuid())
+  walletId            String            @map("wallet_id")
+  userId              String            @map("user_id")
+  amount              Decimal           @db.Decimal(12, 2)
+  currency            String            @default("XOF")
+  status              WalletTopUpStatus @default(INITIATED)
+  depositId           String?           @unique @map("deposit_id")
+  mobileMoneyNetwork  String?           @map("mobile_money_network")
+  customerPhoneNumber String?           @map("customer_phone_number")
+  failureReason       String?           @map("failure_reason")
+  providerMetadata    Json?             @map("provider_metadata")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  wallet              Wallet            @relation(fields: [walletId], references: [id])
+  user                User              @relation(fields: [userId], references: [id])
+
+  @@index([walletId, status, createdAt])
+  @@index([userId, status, createdAt])
+  @@map("wallet_top_ups")
 }
 
 model DriverPayout {

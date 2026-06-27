@@ -127,3 +127,56 @@ export async function deleteSavedPlaceWithApi(
     },
   );
 }
+
+// ── Wallet top-up ─────────────────────────────────────────────────────────────
+
+export type WalletBalanceResponse = {
+  balance: number;
+  currency: string;
+  isLocked: boolean;
+  lastUpdatedAt: string | null;
+};
+
+export type WalletTopUpResponse = {
+  topUpId: string;
+  depositId: string;
+  amount: number;
+  currency: string;
+  status: "PENDING" | "FAILED";
+  awaitingPhoneConfirmation: boolean;
+  message: string;
+};
+
+export type WalletTopUpHistoryItem = {
+  id: string;
+  amount: number;
+  currency: string;
+  status: "INITIATED" | "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED";
+  network: string | null;
+  createdAt: string;
+  failureReason: string | null;
+};
+
+export async function fetchWalletBalanceWithApi(client: OrbiApiClient) {
+  return client.request<WalletBalanceResponse>("/riders/me/wallet");
+}
+
+export async function initiateWalletTopUpWithApi(
+  client: OrbiApiClient,
+  payload: {
+    amountXof: number;
+    mobileMoneyNetwork: string;
+    customerPhoneNumber: string;
+  },
+) {
+  return client.request<WalletTopUpResponse>("/riders/me/wallet/topup", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function fetchWalletTopUpHistoryWithApi(client: OrbiApiClient) {
+  return client.request<WalletTopUpHistoryItem[]>(
+    "/riders/me/wallet/topup-history",
+  );
+}

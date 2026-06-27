@@ -11,12 +11,15 @@ import {
   deleteSavedPlaceWithApi,
   fetchMyTrips,
   fetchRiderProfile,
+  fetchWalletBalanceWithApi,
+  initiateWalletTopUpWithApi,
   getMySupportTicketsWithApi,
   updateTrustedContactWithApi,
   updateSavedPlaceWithApi,
   type MyTripsResponse,
   type RiderProfileResponse,
   type SupportTicket,
+  type WalletBalanceResponse,
 } from '@orbi/api';
 import { orbiTheme } from '@orbi/ui';
 import { router } from 'expo-router';
@@ -62,6 +65,13 @@ const fallbackProfile: RiderProfileResponse = {
 export default function AccountScreen() {
   const [profile, setProfile] = useState<RiderProfileResponse>(fallbackProfile);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
+  const [walletBalance, setWalletBalance] = useState<WalletBalanceResponse | null>(null);
+  const [showTopUp, setShowTopUp] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState('');
+  const [topUpPhone, setTopUpPhone] = useState('');
+  const [topUpNetwork, setTopUpNetwork] = useState<'ORANGE_BFA' | 'MOOV_BFA'>('ORANGE_BFA');
+  const [isTopUpSubmitting, setIsTopUpSubmitting] = useState(false);
+  const [topUpError, setTopUpError] = useState('');
   const [status, setStatus] = useState('Chargement du profil passager...');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -204,11 +214,13 @@ export default function AccountScreen() {
 
     try {
       const { authClient } = await restoreRiderSession();
-      const [profileResponse, historyResponse, ticketsResponse] = await Promise.all([
+      const [profileResponse, historyResponse, ticketsResponse, walletResp] = await Promise.all([
         fetchRiderProfile(authClient),
         fetchMyTrips(authClient),
         getMySupportTicketsWithApi(authClient),
+        fetchWalletBalanceWithApi(authClient).catch(() => null),
       ]);
+      setWalletBalance(walletResp);
       setProfile(profileResponse);
       setTickets(ticketsResponse.tickets);
       setTrustedContactForm({
@@ -243,6 +255,39 @@ export default function AccountScreen() {
       if (!silent) {
         setIsRefreshing(false);
       }
+    }
+  }
+
+  async function handleTopUp() {
+    const amount = parseInt(topUpAmount, 10);
+    if (!amount || amount < 500) {
+      setTopUpError('Montant minimum : 500 XOF');
+      return;
+    }
+    if (!topUpPhone.replace(/\D/g, '') || topUpPhone.replace(/\D/g, '').length < 8) {
+      setTopUpError('Numéro de téléphone invalide');
+      return;
+    }
+    setTopUpError('');
+    setIsTopUpSubmitting(true);
+    try {
+      const { authClient } = await restoreRiderSession();
+      await initiateWalletTopUpWithApi(authClient, {
+        amountXof: amount,
+        mobileMoneyNetwork: topUpNetwork,
+        customerPhoneNumber: topUpPhone.replace(/\D/g, ''),
+      });
+      setShowTopUp(false);
+      setTopUpAmount('');
+      setTopUpPhone('');
+      // Refresh wallet balance
+      const wallet = await fetchWalletBalanceWithApi(authClient).catch(() => null);
+      setWalletBalance(wallet);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Rechargement échoué';
+      setTopUpError(msg);
+    } finally {
+      setIsTopUpSubmitting(false);
     }
   }
 
@@ -585,6 +630,98 @@ export default function AccountScreen() {
             <Text style={styles.newTripBtnText}>+ Réserver une course</Text>
           </Pressable>
         )}
+
+        {/* ── Wallet Orbi ── */}
+        <View style={walletStyles.card}>
+          <View style={walletStyles.row}>
+            <View>
+              <Text style={walletStyles.label}>Wallet Orbi</Text>
+              <Text style={walletStyles.balance}>
+                {walletBalance !== null
+                  ? `${walletBalance.balance.toLocaleString('fr-BF')} XOF`
+                  : '— XOF'}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => { setShowTopUp(true); setTopUpError(''); }}
+              style={({ pressed }) => [walletStyles.rechargeBtn, pressed && walletStyles.rechargeBtnPressed]}
+            >
+              <Text style={walletStyles.rechargeBtnLabel}>+ Recharger</Text>
+            </Pressable>
+          </View>
+          {walletBalance?.isLocked ? (
+            <Text style={walletStyles.lockedText}>⚠ Wallet temporairement verrouillé</Text>
+          ) : null}
+        </View>
+
+        {/* ── Top-up modal/sheet ── */}
+        {showTopUp ? (
+          <View style={walletStyles.topUpSheet}>
+            <Text style={walletStyles.topUpTitle}>Recharger le Wallet</Text>
+
+            {/* Network selector */}
+            <View style={walletStyles.networkRow}>
+              {(['ORANGE_BFA', 'MOOV_BFA'] as const).map((net) => (
+                <Pressable
+                  key={net}
+                  onPress={() => setTopUpNetwork(net)}
+                  style={[walletStyles.networkChip, topUpNetwork === net && walletStyles.networkChipActive]}
+                >
+                  <Text style={[walletStyles.networkLabel, topUpNetwork === net && walletStyles.networkLabelActive]}>
+                    {net === 'ORANGE_BFA' ? 'Orange Money' : 'Moov Money'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Amount */}
+            <TextInput
+              style={walletStyles.input}
+              value={topUpAmount}
+              onChangeText={setTopUpAmount}
+              placeholder="Montant en XOF (min. 500)"
+              keyboardType="numeric"
+              placeholderTextColor={orbiTheme.colors.textMuted}
+            />
+
+            {/* Phone */}
+            <View style={walletStyles.phoneRow}>
+              <Text style={walletStyles.phonePrefix}>+226</Text>
+              <TextInput
+                style={walletStyles.phoneInput}
+                value={topUpPhone}
+                onChangeText={setTopUpPhone}
+                placeholder="Numéro Mobile Money"
+                keyboardType="phone-pad"
+                maxLength={13}
+                placeholderTextColor={orbiTheme.colors.textMuted}
+              />
+            </View>
+
+            {topUpError ? (
+              <Text style={walletStyles.errorText}>{topUpError}</Text>
+            ) : null}
+
+            <View style={walletStyles.topUpActions}>
+              <Pressable onPress={() => setShowTopUp(false)} style={walletStyles.cancelBtn}>
+                <Text style={walletStyles.cancelBtnLabel}>Annuler</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void handleTopUp()}
+                disabled={isTopUpSubmitting}
+                style={({ pressed }) => [
+                  walletStyles.confirmBtn,
+                  (isTopUpSubmitting) && walletStyles.confirmBtnDisabled,
+                  pressed && walletStyles.confirmBtnPressed,
+                ]}
+              >
+                <Text style={walletStyles.confirmBtnLabel}>
+                  {isTopUpSubmitting ? 'Envoi…' : 'Confirmer'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
 
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -1426,5 +1563,162 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: orbiTheme.colors.text,
     lineHeight: 18,
+  },
+});
+
+const walletStyles = StyleSheet.create({
+  card: {
+    backgroundColor: 'rgba(0,201,167,0.05)',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,201,167,0.20)',
+    padding: 16,
+    gap: 8,
+    marginHorizontal: 16,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.teal,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  balance: {
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  rechargeBtn: {
+    backgroundColor: orbiTheme.colors.teal,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  rechargeBtnPressed: { opacity: 0.85 },
+  rechargeBtnLabel: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+  },
+  lockedText: {
+    fontSize: 12,
+    color: '#FF9500',
+    fontFamily: 'Inter_500Medium',
+  },
+
+  // Top-up form
+  topUpSheet: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    padding: 16,
+    marginHorizontal: 16,
+    gap: 12,
+  },
+  topUpTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  networkRow: { flexDirection: 'row', gap: 8 },
+  networkChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: orbiTheme.colors.border,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  networkChipActive: {
+    borderColor: orbiTheme.colors.teal,
+    backgroundColor: 'rgba(0,201,167,0.06)',
+  },
+  networkLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: orbiTheme.colors.textSoft,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  networkLabelActive: { color: orbiTheme.colors.teal },
+  input: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: orbiTheme.colors.text,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  phonePrefix: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: orbiTheme.colors.textSoft,
+    borderRightWidth: 1,
+    borderRightColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundDim,
+  },
+  phoneInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: orbiTheme.colors.text,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#FF3B30',
+    fontFamily: 'Inter_400Regular',
+  },
+  topUpActions: { flexDirection: 'row', gap: 10 },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    alignItems: 'center',
+  },
+  cancelBtnLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: orbiTheme.colors.textSoft,
+  },
+  confirmBtn: {
+    flex: 2,
+    backgroundColor: orbiTheme.colors.teal,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  confirmBtnDisabled: { opacity: 0.45 },
+  confirmBtnPressed: { opacity: 0.85 },
+  confirmBtnLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
   },
 });

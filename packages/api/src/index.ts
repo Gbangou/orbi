@@ -264,6 +264,9 @@ export type {
   SavedPlaceMutationResponse,
   TrustedContactMutationResponse,
   SavedPlaceDeleteResponse,
+  WalletBalanceResponse,
+  WalletTopUpResponse,
+  WalletTopUpHistoryItem,
 } from "./riders.js";
 export {
   fetchRiderProfile,
@@ -271,6 +274,9 @@ export {
   updateTrustedContactWithApi,
   updateSavedPlaceWithApi,
   deleteSavedPlaceWithApi,
+  fetchWalletBalanceWithApi,
+  initiateWalletTopUpWithApi,
+  fetchWalletTopUpHistoryWithApi,
 } from "./riders.js";
 
 export type {
