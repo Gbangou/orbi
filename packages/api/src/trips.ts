@@ -16,8 +16,8 @@ import type {
   VehicleCategory,
 } from "@orbi/domain";
 
-import type { OrbiApiClient } from "./client.js";
-import { apiRoutes } from "./routes.js";
+import type { OrbiApiClient } from "./client";
+import { apiRoutes } from "./routes";
 
 // ── Shared payload/response types ─────────────────────────────────────────────
 

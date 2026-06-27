@@ -1,7 +1,7 @@
 // ── Payment types and API functions ───────────────────────────────────────────
 
-import type { OrbiApiClient } from "./client.js";
-import { apiRoutes } from "./routes.js";
+import type { OrbiApiClient } from "./client";
+import { apiRoutes } from "./routes";
 
 // ── Payment types ─────────────────────────────────────────────────────────────
 

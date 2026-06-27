@@ -98,7 +98,7 @@
       "@jest/transform": "29.7.0",
       "@jest/types": "29.6.3",
       "jest-util": "29.7.0",
-      "lru-cache": "10.4.3",
+      "lru-cache@>=10": "10.4.3",
       "@nestjs/common": "11.1.19",
       "@nestjs/core": "11.1.19",
       "@nestjs/platform-express": "11.1.19",

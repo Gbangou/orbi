@@ -2,9 +2,9 @@
 
 import type { ApiServiceTier, DriverOffer } from "@orbi/domain";
 
-import type { OrbiApiClient } from "./client.js";
-import { apiRoutes } from "./routes.js";
-import type { DriverDocumentUploadLinksResponse } from "./admin.js";
+import type { OrbiApiClient } from "./client";
+import { apiRoutes } from "./routes";
+import type { DriverDocumentUploadLinksResponse } from "./admin";
 
 // ── Driver response types ─────────────────────────────────────────────────────
 

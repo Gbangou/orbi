@@ -5,7 +5,7 @@ import {
   extractApiErrorMessage,
   isLikelyOrbiNetworkError,
   normalizeOrbiErrorMessage,
-} from "./client.js";
+} from "./client";
 
 export type OrbiClientErrorSurface =
   | "auth"

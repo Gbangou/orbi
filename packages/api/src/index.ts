@@ -80,7 +80,7 @@ export type {
   ApiClientOptions,
   RequestOptions,
   NetworkRetryOptions,
-} from "./client.js";
+} from "./client";
 export {
   OrbiApiError,
   isOrbiApiError,
@@ -88,7 +88,7 @@ export {
   withNetworkRetry,
   OrbiApiClient,
   createOrbiApiClient,
-} from "./client.js";
+} from "./client";
 
 export type {
   OrbiClientErrorSurface,
@@ -97,13 +97,13 @@ export type {
   OrbiClientErrorReport,
   SubmitMobileErrorReportsPayload,
   SubmitMobileErrorReportsResponse,
-} from "./error-reporting.js";
+} from "./error-reporting";
 export {
   normalizeOrbiClientErrorReportQueue,
   classifyOrbiClientError,
   createOrbiClientErrorReport,
   createOrbiClientErrorReportFromClassification,
-} from "./error-reporting.js";
+} from "./error-reporting";
 
 export {
   apiConfig,
@@ -113,7 +113,7 @@ export {
   driverOffers,
   adminMetrics,
   voiceSuggestions,
-} from "./routes.js";
+} from "./routes";
 
 export type {
   SignUpPayload,
@@ -131,7 +131,7 @@ export type {
   CreateSupportTicketResponse,
   MySupportTicketsResponse,
   PromoValidationResponse,
-} from "./auth.js";
+} from "./auth";
 export {
   signInWithApi,
   signUpWithApi,
@@ -146,7 +146,7 @@ export {
   createSupportTicketWithApi,
   getMySupportTicketsWithApi,
   validatePromoCodeWithApi,
-} from "./auth.js";
+} from "./auth";
 
 export type {
   AdminJobQueueKind,
@@ -185,7 +185,7 @@ export type {
   PromoCodeItem,
   ListAdminPromoCodesResponse,
   CreateAdminPromoCodePayload,
-} from "./admin.js";
+} from "./admin";
 export {
   fetchAdminPreview,
   fetchAdminOverview,
@@ -232,7 +232,7 @@ export {
   listAdminPromoCodes,
   createAdminPromoCode,
   deactivateAdminPromoCode,
-} from "./admin.js";
+} from "./admin";
 
 export type {
   DriverFatigueStatus,
@@ -244,7 +244,7 @@ export type {
   DriverOfferDeclineResponse,
   NearbyDriverMarker,
   NearbyDriversResponse,
-} from "./drivers.js";
+} from "./drivers";
 export {
   fetchNearbyDrivers,
   fetchDriverPreviewOffers,
@@ -257,7 +257,7 @@ export {
   declineDriverOfferWithApi,
   updateDriverAvailabilityWithApi,
   updateDriverPresenceWithApi,
-} from "./drivers.js";
+} from "./drivers";
 
 export type {
   RiderProfileResponse,
@@ -267,7 +267,7 @@ export type {
   WalletBalanceResponse,
   WalletTopUpResponse,
   WalletTopUpHistoryItem,
-} from "./riders.js";
+} from "./riders";
 export {
   fetchRiderProfile,
   createSavedPlaceWithApi,
@@ -277,7 +277,7 @@ export {
   fetchWalletBalanceWithApi,
   initiateWalletTopUpWithApi,
   fetchWalletTopUpHistoryWithApi,
-} from "./riders.js";
+} from "./riders";
 
 export type {
   MyTripsResponse,
@@ -298,7 +298,7 @@ export type {
   ScheduledRideStatus,
   ScheduledRide,
   CreateScheduledRidePayload,
-} from "./trips.js";
+} from "./trips";
 export {
   toApiVehicleType,
   toApiServiceTier,
@@ -322,13 +322,13 @@ export {
   createScheduledRideWithApi,
   fetchMyScheduledRidesWithApi,
   cancelScheduledRideWithApi,
-} from "./trips.js";
+} from "./trips";
 
 export type {
   CheckoutIntentPayload,
   CheckoutIntentResponse,
-} from "./payments.js";
-export { createCheckoutIntentWithApi } from "./payments.js";
+} from "./payments";
+export { createCheckoutIntentWithApi } from "./payments";
 
 // ── Error reporting API function (uses both error-reporting + client) ─────────
-export { submitMobileErrorReportsWithApi } from "./error-reporting-api.js";
+export { submitMobileErrorReportsWithApi } from "./error-reporting-api";

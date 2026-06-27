@@ -117,7 +117,7 @@ export const apiRoutes = {
 
 // ── Realtime ──────────────────────────────────────────────────────────────────
 
-import type { OrbiApiClient } from "./client.js";
+import type { OrbiApiClient } from "./client";
 
 export function buildRealtimeStreamUrl(
   client: OrbiApiClient,
