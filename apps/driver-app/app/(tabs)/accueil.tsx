@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from '../../lib/i18n';
 import {
   fetchDriverEarnings,
   fetchDriverOffers,
@@ -102,6 +103,8 @@ const chip = StyleSheet.create({
 
 export default function DriverHomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const td = (key: string, opts?: Record<string, unknown>) => t(`driver.${key}`, opts);
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [earnings, setEarnings] = useState<DriverEarningsResponse | null>(null);
@@ -343,7 +346,7 @@ export default function DriverHomeScreen() {
             ]}
           >
             <Text style={[styles.toggleLabel, { color: isOnline ? orbiTheme.colors.textSoft : '#FFFFFF' }]}>
-              {isTogglingAvailability ? '...' : isOnline ? 'Passer hors ligne' : 'Passer en ligne'}
+              {isTogglingAvailability ? '...' : isOnline ? td('goOffline') : td('goOnline')}
             </Text>
           </Pressable>
         </View>
@@ -377,7 +380,7 @@ export default function DriverHomeScreen() {
                 style={({ pressed }) => [styles.navBtn, pressed && styles.navBtnPressed]}
                 accessibilityLabel="Ouvrir la navigation vers le point de prise en charge"
               >
-                <Text style={styles.navBtnLabel}>🗺 Naviguer vers la prise en charge</Text>
+                <Text style={styles.navBtnLabel}>{td('navigateToPickup')}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -387,8 +390,8 @@ export default function DriverHomeScreen() {
               <View>
                 <Text style={styles.onlineTitle}>
                   {visibleOffers.length > 0
-                    ? `${visibleOffers.length} offre${visibleOffers.length > 1 ? 's' : ''} — Ouagadougou`
-                    : 'En attente — Ouagadougou'}
+                    ? td(visibleOffers.length > 1 ? 'offersAvailable_plural' : 'offersAvailable', { count: visibleOffers.length })
+                    : td('waitingForOffers')}
                 </Text>
               </View>
               {visibleOffers.length > 0 ? (
@@ -460,7 +463,7 @@ export default function DriverHomeScreen() {
           accessibilityLabel="Actualiser le direct"
         >
           <Text style={styles.refreshDirectBtnLabel}>
-            {isRefreshing ? 'Actualisation...' : 'Actualiser le direct'}
+            {isRefreshing ? td('refreshing') : td('refresh')}
           </Text>
         </Pressable>
       </View>

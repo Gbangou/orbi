@@ -1,5 +1,6 @@
 ﻿import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "../../lib/i18n";
 import {
   ActivityIndicator,
   Alert,
@@ -114,6 +115,8 @@ function buildInitials(name: string) {
 }
 
 export default function OffersScreen() {
+  const { t } = useTranslation();
+  const td = (key: string) => t(`driver.${key}`);
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
   const [activeTripDetail, setActiveTripDetail] =
@@ -801,7 +804,7 @@ export default function OffersScreen() {
     <SafeAreaView style={styles.safe}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Missions</Text>
+        <Text style={styles.headerTitle}>{td('missions')}</Text>
         <View style={styles.headerRight}>
           {isRealtimeSyncing ? (
             <ActivityIndicator size="small" color={orbiTheme.colors.amber} />

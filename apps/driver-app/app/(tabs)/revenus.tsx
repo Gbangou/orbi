@@ -27,6 +27,7 @@ import {
   formatDriverTripCompletedAt,
 } from '../../lib/driver-earnings-signal';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
+import { useTranslation } from '../../lib/i18n';
 
 const fallbackEarnings: DriverEarningsResponse = {
   summary: {
@@ -100,7 +101,7 @@ function WeeklyEarningsChart({
 
   return (
     <View style={weeklyStyles.card}>
-      <Text style={weeklyStyles.title}>Gains — 7 derniers jours</Text>
+      <Text style={weeklyStyles.title}>Gains — 7 j</Text>
       <View style={weeklyStyles.bars}>
         {dayBuckets.map((bucket, i) => {
           const barH = Math.max(4, Math.round((bucket.total / maxTotal) * 72));
@@ -371,6 +372,8 @@ const milestoneStyles = StyleSheet.create({
 });
 
 export default function RevenusScreen() {
+  const { t } = useTranslation();
+  const td = (key: string, opts?: Record<string, unknown>) => t(`driver.${key}`, opts as never);
   const [earnings, setEarnings] = useState<DriverEarningsResponse>(fallbackEarnings);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [driverProfileStatus, setDriverProfileStatus] = useState('OFFLINE');
@@ -523,7 +526,7 @@ export default function RevenusScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Revenus</Text>
+        <Text style={styles.headerTitle}>{td("earnings")}</Text>
         {isRefreshing ? (
           <ActivityIndicator size="small" color={orbiTheme.colors.amber} />
         ) : null}
@@ -571,7 +574,7 @@ export default function RevenusScreen() {
         {/* Metrics row */}
         <View style={styles.metricsRow}>
           <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Semaine</Text>
+            <Text style={styles.metricLabel}>{td('earningsWeek')}</Text>
             <Text style={styles.metricValue}>
               {formatDriverEarningsAmount(earnings.summary.week)}
             </Text>
@@ -580,14 +583,14 @@ export default function RevenusScreen() {
             </Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Mois</Text>
+            <Text style={styles.metricLabel}>{td('earningsMonth')}</Text>
             <Text style={styles.metricValue}>
               {formatDriverEarningsAmount(earnings.summary.month)}
             </Text>
             <Text style={styles.metricMeta}>vision long terme</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Moyenne</Text>
+            <Text style={styles.metricLabel}>{td('earningsAverage')}</Text>
             <Text style={styles.metricValue}>
               {formatDriverEarningsAmount(earnings.summary.averagePayout)}
             </Text>
@@ -601,7 +604,7 @@ export default function RevenusScreen() {
         {/* Mini earnings chart — last 7 trips by payout */}
         {earnings.recentTrips.length > 0 ? (
           <View style={styles.chartCard}>
-            <Text style={styles.sectionTitle}>Dernières courses</Text>
+            <Text style={styles.sectionTitle}>{td("weeklyChart")}</Text>
             <View style={styles.chartBars}>
               {(() => {
                 const trips = earnings.recentTrips.slice(0, 7);
@@ -638,7 +641,7 @@ export default function RevenusScreen() {
 
         {/* Settlement */}
         <View style={styles.settlementCard}>
-          <Text style={styles.sectionTitle}>Controle payout</Text>
+          <Text style={styles.sectionTitle}>{td("payoutControl")}</Text>
           <View style={styles.settlementRow}>
             <Text style={styles.settlementKey}>Statut</Text>
             <Text style={styles.settlementVal}>{earningsTrustSummary.settlementStateLabel}</Text>
@@ -667,13 +670,13 @@ export default function RevenusScreen() {
           style={[styles.refreshBtn, isRefreshing && styles.refreshBtnDisabled]}
         >
           <Text style={styles.refreshBtnLabel}>
-            {isRefreshing ? 'Actualisation...' : 'Actualiser les revenus'}
+            {isRefreshing ? td('refreshing') : td('refresh')}
           </Text>
         </Pressable>
 
         {/* Recent trips */}
         <View style={styles.tripsSection}>
-          <Text style={styles.sectionTitle}>Courses récentes</Text>
+          <Text style={styles.sectionTitle}>{td('recentTrips')}</Text>
           {earnings.recentTrips.length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>Aucune course comptabilisée</Text>

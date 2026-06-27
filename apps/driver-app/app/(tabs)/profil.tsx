@@ -23,6 +23,7 @@ import {
 } from '@orbi/api';
 import { router } from 'expo-router';
 import { formatOperationalStatus, orbiCopy, orbiTheme } from '@orbi/ui';
+import { useTranslation } from '../../lib/i18n';
 import {
   restoreDriverSession,
   signOutDriverAccount,
@@ -232,6 +233,8 @@ function toDisplayTier(tier: ServiceTierOption) {
 }
 
 export default function ProfilScreen() {
+  const { t } = useTranslation();
+  const td = (key: string, opts?: Record<string, unknown>) => t(`driver.${key}`, opts as never);
   const [profile, setProfile] = useState<DriverProfileResponse>(fallbackProfile);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [form, setForm] = useState<OnboardingFormState>(
@@ -719,7 +722,7 @@ export default function ProfilScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profil</Text>
+        <Text style={styles.headerTitle}>{td('profile')}</Text>
         <View style={styles.headerRight}>
           {isRefreshing ? (
             <ActivityIndicator size="small" color={orbiTheme.colors.amber} />
@@ -932,7 +935,7 @@ export default function ProfilScreen() {
           style={styles.input}
         />
 
-        <Text style={styles.sectionTitle}>Vehicule principal</Text>
+        <Text style={styles.sectionTitle}>{td('vehicle')}</Text>
         <View style={styles.optionRow}>
           {vehicleTypeOptions.map((type) => (
             <Pressable
@@ -1040,7 +1043,7 @@ export default function ProfilScreen() {
           ))}
         </View>
 
-        <Text style={styles.sectionTitle}>Justificatifs requis</Text>
+        <Text style={styles.sectionTitle}>{td('documents')}</Text>
         {documentDescriptors.map((document) => (
           <View key={document.type} style={styles.documentField}>
             <Text style={styles.fieldLabel}>{document.label}</Text>
