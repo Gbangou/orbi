@@ -10,22 +10,56 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, SupportTicketStatus } from '@prisma/client';
 import {
   PageQueryDto,
   resolvePageQuery,
 } from '../../common/dto/page-query.dto';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { RealtimeService } from '../../core/realtime/realtime.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { PaymentsService } from '../payments/payments.service';
 import { PaymentAttemptRefundDto } from './dto/payment-attempt-refund.dto';
 import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query.dto';
+
+const sensitivePayloadKeys = new Set([
+  'authorization', 'card', 'cel_phone_num', 'cpm_phone_prefixe',
+  'customerPhoneNumber', 'email', 'msisdn', 'phone', 'phoneNumber',
+  'secret', 'signature', 'token', 'x-token',
+]);
+
+function redactPaymentPayload(value: Prisma.JsonValue): Prisma.JsonValue {
+  if (!value || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map((item) => redactPaymentPayload(item));
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [
+      key,
+      sensitivePayloadKeys.has(key) ? '[redacted]' : redactPaymentPayload(entry as Prisma.JsonValue),
+    ]),
+  );
+}
+
+function summarizePaymentPayload(value: Prisma.JsonValue) {
+  const redacted = redactPaymentPayload(value);
+  if (!redacted || typeof redacted !== 'object' || Array.isArray(redacted)) return {};
+  const record = redacted as Record<string, Prisma.JsonValue>;
+  const fields = [
+    'event', 'status', 'transactionRef', 'providerReference',
+    'cpm_trans_id', 'cpm_amount', 'cpm_currency', 'payment_method', 'cpm_error_message',
+  ];
+  return Object.fromEntries(
+    fields
+      .filter((field) => record[field] !== undefined && record[field] !== null)
+      .map((field) => [field, record[field]]),
+  );
+}
 
 @Injectable()
 export class AdminPaymentWebhooksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly paymentsService: PaymentsService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async paymentWebhookEvents(

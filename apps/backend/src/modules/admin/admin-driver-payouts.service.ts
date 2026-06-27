@@ -14,6 +14,7 @@ import {
   type DriverPayout,
   DriverPayoutStatus,
   Prisma,
+  UserRole,
   WalletTransactionType,
 } from '@prisma/client';
 import {
@@ -21,14 +22,64 @@ import {
   resolvePageQuery,
 } from '../../common/dto/page-query.dto';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { RealtimeService } from '../../core/realtime/realtime.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { DriverPayoutApprovalDto } from './dto/driver-payout-approval.dto';
 import { DriverWalletRecoveryAdjustmentDto } from './dto/driver-wallet-recovery-adjustment.dto';
 import { DriverPayoutSettlementQueryDto } from './dto/driver-payout-settlement-query.dto';
+import { csvCell } from './admin-onboarding.helpers';
+
+function normalizePayoutNote(payload?: DriverPayoutApprovalDto) {
+  const note = payload?.notes?.trim();
+  return note ? note : null;
+}
+
+function normalizeRequiredOpsNote(note: string | undefined) {
+  const normalized = note?.trim();
+  if (!normalized) {
+    throw new BadRequestException('An operations note is required.');
+  }
+  return normalized;
+}
+
+function normalizeIdempotencyKey(key: string | undefined) {
+  const normalized = key?.trim();
+  if (!normalized) {
+    throw new BadRequestException('An idempotency key is required.');
+  }
+  if (
+    normalized.length < 8 ||
+    normalized.length > 128 ||
+    !/^[a-z0-9._-]+$/i.test(normalized)
+  ) {
+    throw new BadRequestException(
+      'Idempotency key must be 8 to 128 URL-safe characters.',
+    );
+  }
+  return normalized;
+}
+
+function isPrismaUniqueConstraintError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  );
+}
+
+function buildSimplePdf(lines: string[]) {
+  const body = lines.join('\n');
+  return Buffer.from(
+    `%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]\n/Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> >>\nendobj\n4 0 obj\n<< /Length ${body.length} >>\nstream\n${body}\nendstream\nendobj\nxref\ntrailer\n<< /Root 1 0 R >>\n%%EOF`,
+    'utf-8',
+  );
+}
 
 @Injectable()
 export class AdminDriverPayoutsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtimeService: RealtimeService,
+  ) {}
 
   async driverWallets(query: PageQueryDto = new PageQueryDto()) {
     const { page, pageSize, skip, take } = resolvePageQuery(query);

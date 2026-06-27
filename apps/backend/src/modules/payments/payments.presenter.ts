@@ -1,4 +1,8 @@
-import { CINETPAY_NETWORKS, FLUTTERWAVE_NETWORKS } from './payments.constants';
+import {
+  CINETPAY_NETWORKS,
+  FLUTTERWAVE_NETWORKS,
+  PAWAPAY_NETWORKS,
+} from './payments.constants';
 import type { PaymentChannel, PaymentProviderCode } from './payments.types';
 
 export function serializeCheckoutIntent(params: {
@@ -11,6 +15,7 @@ export function serializeCheckoutIntent(params: {
   notifyUrl?: string | null;
   publicKeyPresent?: boolean;
   siteIdPresent?: boolean;
+  awaitingPhoneConfirmation?: boolean;
 }) {
   if (params.provider === 'FLUTTERWAVE') {
     return {
@@ -24,6 +29,27 @@ export function serializeCheckoutIntent(params: {
       providerMetadata: {
         publicKeyPresent: params.publicKeyPresent ?? false,
         callbackUrl: params.callbackUrl ?? null,
+      },
+      trustNotes: {
+        providerAbstractionEnabled: true,
+        webhookVerificationRequired: true,
+        settlementModel: 'aggregator' as const,
+      },
+    };
+  }
+
+  if (params.provider === 'PAWAPAY') {
+    return {
+      provider: 'PAWAPAY' as const,
+      transactionRef: params.transactionRef,
+      checkoutMode: 'PUSH_USSD' as const,
+      amount: params.amount,
+      currency: params.currency,
+      channel: params.channel,
+      awaitingPhoneConfirmation: params.awaitingPhoneConfirmation ?? true,
+      supportedMobileMoneyNetworks: [...PAWAPAY_NETWORKS],
+      providerMetadata: {
+        notifyUrl: params.notifyUrl ?? null,
       },
       trustNotes: {
         providerAbstractionEnabled: true,

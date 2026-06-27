@@ -934,7 +934,6 @@ export class DriversService {
         averageRating: true,
         completedTripsCount: true,
         licenseNumber: true,
-        city: true,
         user: {
           select: {
             id: true,

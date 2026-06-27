@@ -148,7 +148,7 @@ export class RealtimeGateway
     const subscription = stream$.subscribe({
       next: (event) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({ type: 'event', ...event.data }));
+          client.send(JSON.stringify({ type: 'event', ...(event.data as object) }));
         } else {
           subscription.unsubscribe();
         }

@@ -68,6 +68,7 @@ describe('RideRequestsService — Sécurité', () => {
         rideRequestProjector as never,
         notificationsService as never,
         dispatchCoordinator as never,
+        { isRideRequestVelocityExceeded: jest.fn().mockResolvedValue(false) } as never,
       ),
     };
   }

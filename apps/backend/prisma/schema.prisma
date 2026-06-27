@@ -110,6 +110,7 @@ enum DriverPayoutStatus {
 enum PaymentProvider {
   FLUTTERWAVE
   CINETPAY
+  PAWAPAY
 }
 
 enum PaymentChannel {

@@ -1,22 +1,30 @@
-/**
- * TripSafetyService — Sécurité en cours de trajet
- *
- * Responsabilité unique: signalement d'incidents, SOS urgence, partage
- * sécurisé du lien de suivi de trajet.
- * Extrait de TripsService pour respecter le Single Responsibility Principle.
- */
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { TripStatus, Prisma } from '@prisma/client';
+import { UserRole, NotificationChannel, Prisma } from '@prisma/client';
+import { randomBytes, createHash } from 'crypto';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationChannel } from '@prisma/client';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { ACTIVE_TRIP_STATUSES } from './trips.constants';
+
+const tripShareLinkTtlMinutes = 120;
+
+function hashShareToken(token: string) {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+type TripWithParticipants = {
+  id: string;
+  riderId: string;
+  driverId: string | null;
+  rider: { userId: string };
+  driver: { userId: string } | null;
+};
 
 @Injectable()
 export class TripSafetyService {
@@ -37,6 +45,88 @@ export class TripSafetyService {
       evidenceType?: 'AUDIO' | 'PHOTO' | 'VIDEO' | 'TEXT_NOTE';
       evidenceRetentionHours?: number;
     },
+  ) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      include: { rider: true, driver: true },
+    });
+
+    if (!trip) throw new NotFoundException('Trip not found.');
+    this.assertTripAccess(auth, trip);
+
+    const incidentPriority = payload.priority ?? 2;
+    const reportedAt = new Date();
+
+    await this.prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        events: {
+          create: {
+            eventType: 'INCIDENT_REPORTED',
+            payload: {
+              incidentType: payload.incidentType,
+              details: payload.details ?? null,
+              priority: incidentPriority,
+              evidenceConsent: payload.evidenceConsent ?? false,
+              evidenceType: payload.evidenceType ?? null,
+              evidenceRetentionHours: payload.evidenceRetentionHours ?? 24,
+              reportedByRole: auth.user.role,
+              reportedByUserId: auth.user.id,
+              reportedAt: reportedAt.toISOString(),
+            } satisfies Prisma.InputJsonObject,
+          },
+        },
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'TRIP_INCIDENT_REPORTED',
+        entityType: 'TRIP',
+        entityId: tripId,
+        metadata: {
+          incidentType: payload.incidentType,
+          priority: incidentPriority,
+          role: auth.user.role,
+        } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    this.realtimeService.publish({
+      channel: 'trip',
+      type: 'trip.incident-reported',
+      entityId: tripId,
+      riderId: trip.riderId,
+      driverId: trip.driverId,
+      actorRole: auth.user.role,
+      payload: {
+        incidentType: payload.incidentType,
+        priority: incidentPriority,
+        reportedAt: reportedAt.toISOString(),
+      },
+    });
+
+    // Notify ops when high priority
+    if (incidentPriority >= 3) {
+      void this.notificationsService.enqueue({
+        userId: auth.user.id,
+        title: 'Incident signalé',
+        body: `Incident ${payload.incidentType} sur le trajet ${tripId.slice(-6).toUpperCase()} — priorité ${incidentPriority}`,
+        channel: NotificationChannel.PUSH,
+        dedupeKey: `incident:${tripId}:${payload.incidentType}:${Date.now()}`,
+        data: { type: 'trip_incident', tripId, incidentType: payload.incidentType },
+      });
+    }
+
+    return {
+      reported: true,
+      tripId,
+      incidentType: payload.incidentType,
+      priority: incidentPriority,
+      reportedAt: reportedAt.toISOString(),
+    };
+  }
 
   async triggerSafetySos(
     auth: RequestAuthContext,
@@ -47,6 +137,94 @@ export class TripSafetyService {
       longitude?: number;
       accuracyMeters?: number;
     },
+  ) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      include: { rider: true, driver: true },
+    });
+
+    if (!trip) throw new NotFoundException('Trip not found.');
+    this.assertTripAccess(auth, trip);
+
+    if (!ACTIVE_TRIP_STATUSES.includes(trip.status)) {
+      throw new BadRequestException(
+        'SOS can only be triggered during an active trip.',
+      );
+    }
+
+    const triggeredAt = new Date();
+
+    await this.prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        events: {
+          create: {
+            eventType: 'SOS_TRIGGERED',
+            payload: {
+              details: payload.details ?? null,
+              latitude: payload.latitude ?? null,
+              longitude: payload.longitude ?? null,
+              accuracyMeters: payload.accuracyMeters ?? null,
+              triggeredByRole: auth.user.role,
+              triggeredByUserId: auth.user.id,
+              triggeredAt: triggeredAt.toISOString(),
+            } satisfies Prisma.InputJsonObject,
+          },
+        },
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'TRIP_SOS_TRIGGERED',
+        entityType: 'TRIP',
+        entityId: tripId,
+        metadata: {
+          role: auth.user.role,
+          latitude: payload.latitude ?? null,
+          longitude: payload.longitude ?? null,
+        } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    this.realtimeService.publish({
+      channel: 'trip',
+      type: 'trip.sos-triggered',
+      entityId: tripId,
+      riderId: trip.riderId,
+      driverId: trip.driverId,
+      actorRole: auth.user.role,
+      payload: {
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        triggeredAt: triggeredAt.toISOString(),
+      },
+    });
+
+    // Urgency notification to both participants
+    const notifyUserId =
+      auth.user.role === UserRole.RIDER
+        ? trip.driver?.userId
+        : trip.rider.userId;
+
+    if (notifyUserId) {
+      void this.notificationsService.enqueue({
+        userId: notifyUserId,
+        title: 'Alerte SOS',
+        body: 'Un SOS a été déclenché sur votre trajet. Vérifiez immédiatement.',
+        channel: NotificationChannel.PUSH,
+        dedupeKey: `sos:${tripId}:${triggeredAt.getTime()}`,
+        data: { type: 'trip_sos', tripId },
+      });
+    }
+
+    return {
+      triggered: true,
+      tripId,
+      triggeredAt: triggeredAt.toISOString(),
+    };
+  }
 
   async createShareLink(auth: RequestAuthContext, tripId: string) {
     if (auth.user.role !== UserRole.RIDER) {
@@ -62,32 +240,22 @@ export class TripSafetyService {
     );
 
     const trip = await this.prisma.$transaction(async (tx) => {
-      const trip = await tx.trip.findUnique({
-        where: {
-          id: tripId,
-        },
-        include: {
-          rider: true,
-          driver: true,
-        },
+      const found = await tx.trip.findUnique({
+        where: { id: tripId },
+        include: { rider: true, driver: true },
       });
 
-      if (!trip) {
-        throw new NotFoundException('Trip not found.');
-      }
+      if (!found) throw new NotFoundException('Trip not found.');
+      this.assertTripAccess(auth, found);
 
-      this.assertTripAccess(auth, trip);
-
-      if (!ACTIVE_TRIP_STATUSES.includes(trip.status)) {
+      if (!ACTIVE_TRIP_STATUSES.includes(found.status)) {
         throw new BadRequestException(
           'Trip sharing is only available for active trips.',
         );
       }
 
       await tx.trip.update({
-        where: {
-          id: tripId,
-        },
+        where: { id: tripId },
         data: {
           events: {
             create: {
@@ -98,7 +266,7 @@ export class TripSafetyService {
                 createdByRole: auth.user.role,
                 createdByUserId: auth.user.id,
                 ttlMinutes: tripShareLinkTtlMinutes,
-              },
+              } satisfies Prisma.InputJsonObject,
             },
           },
         },
@@ -109,16 +277,16 @@ export class TripSafetyService {
           userId: auth.user.id,
           action: 'TRIP_SHARE_LINK_CREATED',
           entityType: 'TRIP',
-          entityId: trip.id,
+          entityId: found.id,
           metadata: {
             role: auth.user.role,
             expiresAt: expiresAt.toISOString(),
             ttlMinutes: tripShareLinkTtlMinutes,
-          },
+          } satisfies Prisma.InputJsonObject,
         },
       });
 
-      return trip;
+      return found;
     });
 
     this.realtimeService.publish({
@@ -143,5 +311,21 @@ export class TripSafetyService {
         ttlMinutes: tripShareLinkTtlMinutes,
       },
     };
+  }
+
+  private assertTripAccess(
+    auth: RequestAuthContext,
+    trip: TripWithParticipants,
+  ) {
+    if (auth.user.role === UserRole.RIDER && trip.rider.userId !== auth.user.id) {
+      throw new ForbiddenException('Access denied to this trip.');
+    }
+
+    if (
+      auth.user.role === UserRole.DRIVER &&
+      trip.driver?.userId !== auth.user.id
+    ) {
+      throw new ForbiddenException('Access denied to this trip.');
+    }
   }
 }

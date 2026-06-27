@@ -16,6 +16,7 @@ import {
   DriverOnboardingReviewStatus,
   DriverStatus,
   Prisma,
+  SupportTicketStatus,
   VerificationStatus,
 } from '@prisma/client';
 import {
@@ -35,6 +36,28 @@ import { NotificationChannel } from '@prisma/client';
 import { DriverOnboardingExportQueryDto } from './dto/driver-onboarding-export-query.dto';
 import { UpdateDriverOnboardingReviewDto } from './dto/update-driver-onboarding-review.dto';
 import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-document-object-verification.dto';
+import {
+  csvCell,
+  isJsonRecord,
+  maskEmailAddress,
+  maskPhoneNumber,
+  maskRequesterName,
+  normalizeOnboardingExportGuidanceFilter,
+  nullableNonNegativeInteger,
+  nullablePositiveInteger,
+  nullableString,
+  requiredOnboardingDocumentTypes,
+  resolveDriverDocumentIntegrity,
+  resolveDriverOnboardingDecisionGuidance,
+  resolveDriverOnboardingDecisionSnapshot,
+  resolveEffectiveDocumentStatus,
+  resolveStoredDecisionGuidance,
+  resolveStoredDocumentSummary,
+  shouldMinimizeDriverOnboardingIdentity,
+  toVerificationStatus,
+  type DriverDocumentIntegritySignal,
+  type DriverOnboardingDecisionGuidance,
+} from './admin-onboarding.helpers';
 
 const reviewDecisionRoles = new Set(['ADMIN', 'OPS']);
 
@@ -712,6 +735,47 @@ export class AdminDriverOnboardingService {
   async suspendDriver(
     driverId: string,
     payload: { reason: string },
+    auth: RequestAuthContext,
+  ) {
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: { id: driverId },
+      select: { id: true, userId: true, status: true },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Driver profile not found.');
+    }
+
+    if (profile.status === DriverStatus.SUSPENDED) {
+      throw new BadRequestException('Driver is already suspended.');
+    }
+
+    await this.prisma.driverProfile.update({
+      where: { id: driverId },
+      data: { status: DriverStatus.SUSPENDED },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_SUSPENDED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: driverId,
+        metadata: { reason: payload.reason } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    void this.notificationsService.enqueue({
+      userId: profile.userId,
+      title: 'Compte suspendu',
+      body: 'Votre compte chauffeur a été suspendu. Contactez le support Orbi pour plus d\'informations.',
+      channel: NotificationChannel.PUSH,
+      dedupeKey: `driver-suspended:${driverId}:${Date.now()}`,
+      data: { type: 'driver_account_suspended' },
+    });
+
+    return { driverId, status: 'SUSPENDED' };
+  }
 
   async reactivateDriver(driverId: string, auth: RequestAuthContext) {
     const profile = await this.prisma.driverProfile.findUnique({
@@ -778,6 +842,38 @@ export class AdminDriverOnboardingService {
         metadata?: Prisma.JsonValue | null;
       }>;
     },
+    _payload: UpdateDriverOnboardingReviewDto,
+  ) {
+    const blockers: string[] = [];
+
+    if (!profile.user.isPhoneVerified) {
+      blockers.push('Phone number not verified.');
+    }
+
+    if (!profile.licenseNumber?.trim()) {
+      blockers.push('No driver license number on file.');
+    }
+
+    if (!profile.vehicles.length) {
+      blockers.push('No active vehicle on record.');
+    }
+
+    const requiredDocumentTypes = ['NATIONAL_ID', 'DRIVER_LICENSE'];
+    for (const docType of requiredDocumentTypes) {
+      const doc = profile.onboardingDocuments.find(
+        (d) => d.type === docType && d.status === DriverDocumentStatus.APPROVED,
+      );
+      if (!doc) {
+        blockers.push(`Document ${docType} is missing or not approved.`);
+      }
+    }
+
+    if (blockers.length > 0) {
+      throw new BadRequestException(
+        `Driver profile is not ready for approval: ${blockers.join(' ')}`,
+      );
+    }
+  }
 
   private async persistDriverDocumentObjectVerification(
     document: {
@@ -786,13 +882,82 @@ export class AdminDriverOnboardingService {
       fileName?: string | null;
       storageKey: string;
     },
+    driverId: string,
+    previousMetadata: Record<string, unknown>,
+    objectVerification: Record<string, unknown>,
+    auth: RequestAuthContext,
+  ) {
+    const safetyScan = this.resolveDriverDocumentSafetyScan(document);
 
-  private resolveDriverDocumentSafetyScan(
-    document: {
-      type: string;
-      fileName?: string | null;
-      storageKey: string;
-    },
+    const updatedMetadata = {
+      ...previousMetadata,
+      objectVerification,
+      safetyScan: safetyScan ?? previousMetadata.safetyScan ?? null,
+    };
+
+    const updated = await this.prisma.driverDocument.update({
+      where: { id: document.id },
+      data: {
+        metadata: updatedMetadata as Prisma.InputJsonObject,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_DOCUMENT_OBJECT_VERIFICATION_UPDATED',
+        entityType: 'DRIVER_DOCUMENT',
+        entityId: document.id,
+        metadata: {
+          driverId,
+          documentType: document.type,
+          verificationState:
+            typeof objectVerification.state === 'string'
+              ? objectVerification.state
+              : 'unknown',
+        } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    return {
+      documentId: updated.id,
+      driverId,
+      type: document.type,
+      objectVerificationState:
+        typeof objectVerification.state === 'string'
+          ? objectVerification.state
+          : 'unknown',
+    };
+  }
+
+  private resolveDriverDocumentSafetyScan(document: {
+    type: string;
+    fileName?: string | null;
+    storageKey: string;
+  }) {
+    const extension = this.resolveDocumentExtension(
+      document.fileName ?? document.storageKey,
+    );
+
+    if (!extension) return null;
+
+    const imageMimeMap: Record<string, string> = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+      heic: 'image/heic',
+    };
+
+    const mimeType = imageMimeMap[extension] ?? `application/${extension}`;
+
+    return {
+      documentType: document.type,
+      extension,
+      mimeType,
+      scanEligible: extension in imageMimeMap || extension === 'pdf',
+    };
+  }
 
   private resolveDocumentExtension(value: string) {
     const leafName = value.trim().split(/[\\/]/).pop()?.trim() ?? '';

@@ -4,6 +4,7 @@ import type {
   CINETPAY_NETWORKS,
   FLUTTERWAVE_NETWORKS,
   MOBILE_MONEY_NETWORKS,
+  PAWAPAY_NETWORKS,
   PAYMENT_CHANNELS,
 } from './payments.constants';
 
@@ -11,8 +12,9 @@ export type PaymentChannel = (typeof PAYMENT_CHANNELS)[number];
 export type MobileMoneyNetwork = (typeof MOBILE_MONEY_NETWORKS)[number];
 export type SupportedFlutterwaveNetwork = (typeof FLUTTERWAVE_NETWORKS)[number];
 export type SupportedCinetPayNetwork = (typeof CINETPAY_NETWORKS)[number];
-export type PaymentProviderKey = 'flutterwave' | 'cinetpay';
-export type PaymentProviderCode = 'FLUTTERWAVE' | 'CINETPAY';
+export type SupportedPawaPayNetwork = (typeof PAWAPAY_NETWORKS)[number];
+export type PaymentProviderKey = 'flutterwave' | 'cinetpay' | 'pawapay';
+export type PaymentProviderCode = 'FLUTTERWAVE' | 'CINETPAY' | 'PAWAPAY';
 export type PaymentAttemptStatus =
   | 'INITIATED'
   | 'PENDING'
@@ -55,6 +57,7 @@ export type PaymentWebhookSignatureContext = {
   flutterwaveSignature?: string;
   flutterwaveVerificationHash?: string;
   cinetpayToken?: string;
+  pawaPaySignatureVerified?: boolean;
 };
 
 export type PaymentRequestContext = Pick<RequestAuthContext, 'user'>;

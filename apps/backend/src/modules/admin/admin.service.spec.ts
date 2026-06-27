@@ -28,6 +28,7 @@ describe('AdminService', () => {
         lastLoginAt: now,
         createdAt: now,
         updatedAt: now,
+        pushToken: null,
         failedLoginCount: 0,
         lockedUntil: null,
         riderProfile: null,

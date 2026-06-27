@@ -1408,6 +1408,11 @@ export class TripsService {
               userId: true,
             },
           },
+          driver: {
+            select: {
+              userId: true,
+            },
+          },
         },
       });
 
@@ -1520,6 +1525,7 @@ export class TripsService {
         riderId: trip.riderId,
         driverId: trip.driverId,
         riderUserId: trip.rider?.userId ?? null,
+        driverUserId: trip.driver?.userId ?? null,
       };
     });
 
@@ -1560,9 +1566,10 @@ export class TripsService {
         });
 
         // Notification chauffeur — confirmation du gain net
-        if (updatedTrip.driverUserId) {
+        const driverUserId = updatedTrip.driverUserId;
+        if (driverUserId) {
           void this.notificationsService.enqueue({
-            userId: updatedTrip.driverUserId,
+            userId: driverUserId,
             title: 'Trajet terminé — bon travail !',
             body: `Votre course a été validée. Consultez vos revenus pour le détail du payout.`,
             channel: NotificationChannel.PUSH,

@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
+import { randomUUID } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
@@ -14,10 +15,14 @@ import { JobQueueService } from '../../common/job-queue/job-queue.service';
 import {
   DEFAULT_PAYMENT_CURRENCY,
   DEFAULT_PAYMENT_PROVIDER,
+  PAWAPAY_NETWORK_TO_CORRESPONDENT,
 } from './payments.constants';
+import type { PawaPayCorrespondent } from './pawapay.service';
+import { PawaPayService } from './pawapay.service';
 import { serializeCheckoutIntent } from './payments.presenter';
 import type {
   CreateCheckoutIntentInput,
+  MobileMoneyNetwork,
   PaymentAttemptCreateData,
   PaymentAttemptStatus,
   PaymentProviderCode,
@@ -56,6 +61,8 @@ export class PaymentsService {
     private readonly featureFlagsService: FeatureFlagsService,
     @Optional()
     private readonly jobQueueService?: JobQueueService,
+    @Optional()
+    private readonly pawaPayService?: PawaPayService,
   ) {}
 
   async createCheckoutIntent(
@@ -118,6 +125,7 @@ export class PaymentsService {
 
     const transactionRef = this.buildTransactionReference(
       payload.rideRequestId,
+      providerKey,
     );
     const checkoutIntent = this.buildCheckoutIntent(
       provider,
@@ -163,6 +171,19 @@ export class PaymentsService {
       }
 
       return this.serializeExistingCheckoutIntent(concurrentAttempt);
+    }
+
+    // PawaPay is a server-push provider: we initiate the deposit directly after
+    // persisting the attempt. Flutterwave/CinetPay work via redirect, so they
+    // do not require an outbound API call at this stage.
+    if (providerKey === 'pawapay') {
+      await this.dispatchPawaPayDeposit(
+        transactionRef,
+        amount,
+        rideRequest.currency || currency,
+        payload,
+        payload.rideRequestId,
+      );
     }
 
     return checkoutIntent;
@@ -256,7 +277,9 @@ export class PaymentsService {
     const providerPayload =
       providerKey === 'flutterwave'
         ? await this.fetchFlutterwaveVerification(attempt.transactionRef)
-        : await this.fetchCinetPayVerification(attempt.transactionRef);
+        : providerKey === 'pawapay'
+          ? await this.fetchPawaPayVerification(attempt.transactionRef)
+          : await this.fetchCinetPayVerification(attempt.transactionRef);
 
     this.assertProviderVerificationMatchesAttempt(providerPayload, attempt);
 
@@ -708,7 +731,15 @@ export class PaymentsService {
     }
   }
 
-  private buildTransactionReference(rideRequestId: string) {
+  private buildTransactionReference(
+    rideRequestId: string,
+    providerKey: PaymentProviderKey = 'flutterwave',
+  ) {
+    // PawaPay requires a UUID v4 as depositId — it serves as both
+    // the Orbi transaction reference and the PawaPay deposit identifier.
+    if (providerKey === 'pawapay') {
+      return randomUUID();
+    }
     return `orbi_${Date.now()}_${rideRequestId}`;
   }
 
@@ -737,6 +768,21 @@ export class PaymentsService {
       });
     }
 
+    if (provider === 'PAWAPAY') {
+      return serializeCheckoutIntent({
+        provider,
+        transactionRef,
+        amount,
+        currency,
+        channel: payload.channel,
+        awaitingPhoneConfirmation: true,
+        notifyUrl:
+          this.configService.get<string>('payments.pawapay.webhookUrl') ??
+          this.configService.get<string>('payments.defaultWebhookUrl') ??
+          null,
+      });
+    }
+
     return serializeCheckoutIntent({
       provider,
       transactionRef,
@@ -749,6 +795,70 @@ export class PaymentsService {
         this.configService.get<string>('payments.cinetpay.siteId'),
       ),
     });
+  }
+
+  private resolvePawaPayCorrespondent(
+    mobileMoneyNetwork?: MobileMoneyNetwork | string,
+  ): PawaPayCorrespondent {
+    const mapped =
+      mobileMoneyNetwork &&
+      PAWAPAY_NETWORK_TO_CORRESPONDENT[mobileMoneyNetwork.toUpperCase()];
+    if (!mapped) {
+      throw new BadRequestException(
+        `Mobile money network '${mobileMoneyNetwork ?? ''}' is not supported via PawaPay in Burkina Faso. Use ORANGE_BFA or MOOV_BFA.`,
+      );
+    }
+    return mapped;
+  }
+
+  private async dispatchPawaPayDeposit(
+    transactionRef: string,
+    amount: number,
+    currency: string,
+    payload: CreateCheckoutIntentInput,
+    rideRequestId: string,
+  ): Promise<void> {
+    if (!this.pawaPayService) {
+      this.logger.warn(
+        'PawaPayService is not injected — skipping live deposit initiation (sandbox or test mode).',
+      );
+      return;
+    }
+
+    const correspondent = this.resolvePawaPayCorrespondent(
+      payload.mobileMoneyNetwork,
+    );
+    const phoneNumber = payload.customerPhoneNumber?.replace(/\D/g, '');
+
+    if (!phoneNumber || phoneNumber.length < 8) {
+      throw new BadRequestException(
+        'A valid customer phone number is required for Mobile Money payment.',
+      );
+    }
+
+    const response = await this.pawaPayService.initiateDeposit({
+      depositId: transactionRef,
+      amount: String(Math.round(amount)),
+      currency: 'XOF',
+      correspondent,
+      payer: { type: 'MSISDN', address: { value: phoneNumber } },
+      customerTimestamp: new Date().toISOString(),
+      statementDescription: `Orbi Course #${rideRequestId.slice(-8)}`,
+      metadata: [
+        { fieldName: 'rideRequestId', fieldValue: rideRequestId },
+        { fieldName: 'orbiTransactionRef', fieldValue: transactionRef },
+      ],
+    });
+
+    if (
+      response.status !== 'ACCEPTED' &&
+      response.status !== 'DUPLICATE_IGNORED'
+    ) {
+      const failCode = response.failureReason?.failureCode ?? 'UNKNOWN';
+      throw new BadRequestException(
+        `PawaPay deposit was rejected: ${failCode}. Please verify your phone number and try again.`,
+      );
+    }
   }
 
   private buildPaymentAttemptCreateData(
@@ -863,6 +973,10 @@ export class PaymentsService {
       return 'CINETPAY' as const;
     }
 
+    if (providerKey === 'pawapay') {
+      return 'PAWAPAY' as const;
+    }
+
     const unsupportedProvider: string = providerKey;
     throw new BadRequestException(
       `Unsupported payment provider: ${unsupportedProvider}`,
@@ -872,10 +986,9 @@ export class PaymentsService {
   private resolveProviderKey(
     provider: PaymentProviderCode,
   ): PaymentProviderKey {
-    if (provider === 'FLUTTERWAVE') {
-      return 'flutterwave';
-    }
-
+    if (provider === 'FLUTTERWAVE') return 'flutterwave';
+    if (provider === 'CINETPAY') return 'cinetpay';
+    if (provider === 'PAWAPAY') return 'pawapay';
     return 'cinetpay';
   }
 
@@ -1342,6 +1455,73 @@ export class PaymentsService {
     );
   }
 
+  private async fetchPawaPayVerification(
+    depositId: string,
+  ): Promise<ProviderVerificationPayload> {
+    if (!this.pawaPayService) {
+      throw new BadRequestException(
+        'PawaPayService is not configured. Check PAWAPAY_API_TOKEN environment variable.',
+      );
+    }
+
+    const deposit = await this.pawaPayService.getDepositStatus(depositId);
+    const isCompleted = deposit.status === 'COMPLETED';
+    const isFailed = deposit.status === 'FAILED';
+
+    return {
+      event: isCompleted
+        ? 'deposit.completed'
+        : isFailed
+          ? 'deposit.failed'
+          : 'deposit.pending',
+      transactionRef: depositId,
+      data: {
+        providerReference:
+          deposit.payer?.address?.value ?? depositId,
+        status: deposit.status,
+        amount: deposit.amount ? Number(deposit.amount) : undefined,
+        currency: deposit.currency,
+        raw: deposit as unknown as Record<string, unknown>,
+      },
+    };
+  }
+
+  private async initiatePawaPayRefund(
+    attempt: {
+      id: string;
+      providerReference: string | null;
+      transactionRef: string;
+      amount: Prisma.Decimal;
+      currency: string;
+    },
+    providerRefundReference: string,
+  ): Promise<PaymentRefundProviderResult> {
+    if (!this.pawaPayService) {
+      return {
+        providerRefundReference,
+        status: 'pending',
+        providerMode: 'manual_or_provider_console',
+        raw: { mode: 'manual', reason: 'PawaPayService not configured' },
+      };
+    }
+
+    const response = await this.pawaPayService.initiateRefund({
+      refundId: providerRefundReference,
+      depositId: attempt.transactionRef,
+      amount: String(Math.round(Number(attempt.amount))),
+    });
+
+    const isCompleted = response.status === 'COMPLETED';
+
+    return {
+      providerRefundReference:
+        response.refundId ?? providerRefundReference,
+      status: isCompleted ? 'processed' : 'pending',
+      providerMode: 'provider_api',
+      raw: response as unknown as Record<string, unknown>,
+    };
+  }
+
   private async initiateRefundWithProvider(
     attempt: {
       id: string;
@@ -1376,6 +1556,10 @@ export class PaymentsService {
         input,
         providerRefundReference,
       );
+    }
+
+    if (providerKey === 'pawapay') {
+      return this.initiatePawaPayRefund(attempt, providerRefundReference);
     }
 
     return this.initiateCinetPayRefund();
@@ -1593,13 +1777,22 @@ export class PaymentsService {
         'payment.completed',
         'charge.completed',
         'transaction.successful',
+        // PawaPay deposit status field maps to a synthetic event name
+        'deposit.completed',
+        'COMPLETED',
       ].includes(event)
     ) {
       return 'SUCCEEDED' as const;
     }
 
     if (
-      ['payment.failed', 'charge.failed', 'transaction.failed'].includes(event)
+      [
+        'payment.failed',
+        'charge.failed',
+        'transaction.failed',
+        'deposit.failed',
+        'FAILED',
+      ].includes(event)
     ) {
       return 'FAILED' as const;
     }
@@ -1691,6 +1884,18 @@ export class PaymentsService {
       return payload.signature;
     }
 
+    // PawaPay: correspondentIds contains provider-side references
+    if (
+      payload.correspondentIds &&
+      typeof payload.correspondentIds === 'object'
+    ) {
+      const ids = payload.correspondentIds as Record<string, unknown>;
+      const firstId = Object.values(ids).find(
+        (v) => typeof v === 'string',
+      );
+      if (firstId) return firstId as string;
+    }
+
     if (typeof payload.cpm_trans_id === 'string') {
       return payload.cpm_trans_id;
     }
@@ -1701,6 +1906,11 @@ export class PaymentsService {
   private extractWebhookTransactionReference(payload: PaymentWebhookPayload) {
     if (typeof payload.transactionRef === 'string') {
       return payload.transactionRef;
+    }
+
+    // PawaPay: depositId is both the Orbi transactionRef and the provider deposit ID
+    if (typeof payload.depositId === 'string') {
+      return payload.depositId;
     }
 
     if (typeof payload.cpm_trans_id === 'string') {
@@ -2175,7 +2385,8 @@ export class PaymentsService {
     return Boolean(
       signatureContext.flutterwaveSignature ||
       signatureContext.flutterwaveVerificationHash ||
-      signatureContext.cinetpayToken,
+      signatureContext.cinetpayToken ||
+      signatureContext.pawaPaySignatureVerified,
     );
   }
 
@@ -2193,6 +2404,31 @@ export class PaymentsService {
     if (providerKey === 'cinetpay') {
       this.assertCinetPaySignature(payload, signatureContext);
     }
+    // PAWAPAY: signature is verified upstream in handlePawaPayWebhook()
+    // before this method is ever called, so no extra assertion needed here.
+  }
+
+  async handlePawaPayWebhook(
+    rawBody: string,
+    signature: string | undefined,
+    payload: PaymentWebhookPayload,
+  ) {
+    const signatureVerified =
+      this.pawaPayService?.verifyWebhookSignature(rawBody, signature) ?? false;
+
+    if (!signatureVerified) {
+      this.logger.warn('PawaPay webhook received with invalid signature.');
+    }
+
+    const signatureContext: PaymentWebhookSignatureContext = {
+      rawBody,
+      pawaPaySignatureVerified: signatureVerified,
+    };
+
+    return this.reconcileWebhookPayload(payload, signatureContext, {
+      provider: 'PAWAPAY',
+      providerKey: 'pawapay',
+    });
   }
 
   private assertFlutterwaveSignature(

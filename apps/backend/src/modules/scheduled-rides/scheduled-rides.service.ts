@@ -176,8 +176,14 @@ export class ScheduledRidesService {
       },
     });
 
+    const riderProfile = await this.prisma.riderProfile.findUnique({
+      where: { id: ride.riderId },
+      select: { userId: true },
+    });
+
     await this.prisma.auditLog.create({
       data: {
+        userId: riderProfile?.userId ?? ride.riderId,
         action: 'SCHEDULED_RIDE_DISPATCH_STARTED',
         entityType: 'SCHEDULED_RIDE',
         entityId: scheduledRideId,

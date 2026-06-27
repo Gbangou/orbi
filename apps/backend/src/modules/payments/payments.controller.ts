@@ -47,8 +47,6 @@ export class PaymentsController {
   @Version('1')
   @UseGuards(RateLimitGuard)
   @RateLimit({ limit: 120, windowMs: 60_000 })
-  // Les callbacks des agrégateurs sont authentifiés via un header secret partagé
-  // et non via une session utilisateur, car ils proviennent d'un trafic serveur-à-serveur.
   handleWebhook(
     @Headers('x-orbi-webhook-secret') secret: string | undefined,
     @Headers('flutterwave-signature') flutterwaveSignature: string | undefined,
@@ -63,5 +61,31 @@ export class PaymentsController {
       flutterwaveVerificationHash,
       cinetpayToken,
     });
+  }
+
+  /**
+   * Dedicated PawaPay webhook endpoint.
+   *
+   * PawaPay signs callbacks with HMAC-SHA256 on the raw request body
+   * using the secret configured in PAWAPAY_WEBHOOK_SECRET.
+   * This endpoint accepts traffic from PawaPay servers only — no session
+   * auth required, but the signature is verified before any reconciliation.
+   *
+   * POST /api/v1/payments/webhooks/pawapay
+   */
+  @Post('webhooks/pawapay')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 300, windowMs: 60_000 })
+  handlePawaPayWebhook(
+    @Headers('x-pawapay-signature') signature: string | undefined,
+    @Req() request: Request & { rawBody?: string },
+    @Body() payload: PaymentWebhookDto,
+  ) {
+    return this.paymentsService.handlePawaPayWebhook(
+      request.rawBody ?? JSON.stringify(payload),
+      signature,
+      payload,
+    );
   }
 }
