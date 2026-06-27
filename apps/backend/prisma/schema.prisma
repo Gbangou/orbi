@@ -240,11 +240,12 @@ model RiderProfile {
   preferredTier  ServiceTier?  @map("preferred_tier")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
-  user           User          @relation(fields: [userId], references: [id])
-  savedPlaces    SavedPlace[]
-  rideRequests   RideRequest[]
-  trips          Trip[]
-  ratingsGiven   Rating[]      @relation("ratingsGivenByRider")
+  user             User            @relation(fields: [userId], references: [id])
+  savedPlaces      SavedPlace[]
+  rideRequests     RideRequest[]
+  trips            Trip[]
+  ratingsGiven     Rating[]        @relation("ratingsGivenByRider")
+  scheduledRides   ScheduledRide[]
 
   @@map("rider_profiles")
 }
@@ -680,4 +681,49 @@ model PromoCode {
 
   @@index([active, validTo])
   @@map("promo_codes")
+}
+
+// ── Courses programmées (Scheduled Rides) — Feature Uber/Bolt ─────────────────
+// Permet aux passagers de réserver une course jusqu'à 7 jours à l'avance.
+// Le dispatcher active la recherche de chauffeur 15 min avant l'heure prévue.
+
+enum ScheduledRideStatus {
+  PENDING    // En attente — recherche non démarrée
+  DISPATCHING // Dispatch en cours (15 min avant)
+  MATCHED    // Chauffeur trouvé
+  CANCELLED  // Annulé par le passager ou le système
+  COMPLETED  // Course réalisée (via Trip référencé)
+  EXPIRED    // Aucun chauffeur trouvé dans la fenêtre
+}
+
+model ScheduledRide {
+  id                   String               @id @default(cuid())
+  riderId              String               @map("rider_id")
+  pickupAddress        String               @map("pickup_address")
+  pickupLatitude       Decimal?             @map("pickup_latitude")
+  pickupLongitude      Decimal?             @map("pickup_longitude")
+  destinationAddress   String               @map("destination_address")
+  destinationLatitude  Decimal?             @map("destination_latitude")
+  destinationLongitude Decimal?             @map("destination_longitude")
+  scheduledFor         DateTime             @map("scheduled_for")
+  vehicleType          String               @default("MOTORCYCLE") @map("vehicle_type")
+  paymentMethod        String               @default("MOBILE_MONEY") @map("payment_method")
+  city                 String               @default("OUAGADOUGOU")
+  status               ScheduledRideStatus  @default(PENDING)
+  notes                String?
+  promoCode            String?              @map("promo_code")
+  estimatedFare        Int?                 @map("estimated_fare")
+  tripId               String?              @unique @map("trip_id")
+  dispatchStartedAt    DateTime?            @map("dispatch_started_at")
+  cancelledAt          DateTime?            @map("cancelled_at")
+  cancellationReason   String?              @map("cancellation_reason")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  rider                RiderProfile         @relation(fields: [riderId], references: [id])
+
+  @@index([riderId, status])
+  @@index([scheduledFor, status])
+  @@index([status, scheduledFor])
+  @@map("scheduled_rides")
 }

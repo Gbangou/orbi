@@ -189,6 +189,10 @@ export const apiRoutes = {
   users: {
     pushToken: "/users/me/push-token",
   },
+  scheduledRides: {
+    root: "/scheduled-rides",
+    mine: "/scheduled-rides/mine",
+  },
 } as const;
 
 export type ApiClientOptions = {
@@ -4312,4 +4316,73 @@ function resolveApiErrorMessage(payload: unknown) {
   }
 
   return null;
+}
+
+// ── Scheduled Rides ───────────────────────────────────────────────────────────
+
+export type ScheduledRideStatus =
+  | 'PENDING'
+  | 'DISPATCHING'
+  | 'MATCHED'
+  | 'CANCELLED'
+  | 'COMPLETED'
+  | 'EXPIRED';
+
+export type ScheduledRide = {
+  id: string;
+  pickupAddress: string;
+  destinationAddress: string;
+  scheduledFor: string;
+  vehicleType: string;
+  paymentMethod: string;
+  city: string;
+  status: ScheduledRideStatus;
+  estimatedFare: number | null;
+  notes: string | null;
+  promoCode: string | null;
+  cancelledAt: string | null;
+  cancellationReason: string | null;
+  createdAt: string;
+  canCancel: boolean;
+  minutesUntilPickup: number;
+};
+
+export type CreateScheduledRidePayload = {
+  pickupAddress: string;
+  pickupLatitude?: number;
+  pickupLongitude?: number;
+  destinationAddress: string;
+  destinationLatitude?: number;
+  destinationLongitude?: number;
+  scheduledFor: string;
+  vehicleType?: 'MOTORCYCLE' | 'CAR';
+  paymentMethod?: 'MOBILE_MONEY' | 'CASH' | 'WALLET';
+  city?: string;
+  notes?: string;
+  promoCode?: string;
+};
+
+export async function createScheduledRideWithApi(
+  client: OrbiApiClient,
+  payload: CreateScheduledRidePayload,
+) {
+  return client.request<{ id: string } & ScheduledRide>(
+    apiRoutes.scheduledRides.root,
+    { method: "POST", body: payload },
+  );
+}
+
+export async function fetchMyScheduledRidesWithApi(client: OrbiApiClient) {
+  return client.request<{ rides: ScheduledRide[] }>(apiRoutes.scheduledRides.mine);
+}
+
+export async function cancelScheduledRideWithApi(
+  client: OrbiApiClient,
+  scheduledRideId: string,
+  reason?: string,
+) {
+  return client.request<ScheduledRide>(
+    `${apiRoutes.scheduledRides.root}/${scheduledRideId}`,
+    { method: "DELETE", body: reason ? { reason } : undefined },
+  );
 }

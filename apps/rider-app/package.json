@@ -26,6 +26,7 @@
     "@orbi/ui": "workspace:*",
     "expo": "^52.0.23",
     "expo-asset": "~11.0.5",
+    "expo-av": "^16.0.8",
     "expo-constants": "~17.0.8",
     "expo-device": "^7.0.3",
     "expo-font": "~13.0.4",

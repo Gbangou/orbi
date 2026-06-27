@@ -5,6 +5,7 @@ import { validateEnvironment } from './config/environment.validation';
 import { PrismaModule } from './core/prisma/prisma.module';
 import { RealtimeModule } from './core/realtime/realtime.module';
 import { RuntimeModule } from './core/runtime/runtime.module';
+import { CacheModule } from './core/cache/cache.module';
 import { RateLimitModule } from './common/rate-limit/rate-limit.module';
 import { DocumentLinksModule } from './common/document-links/document-links.module';
 import { JobQueueModule } from './common/job-queue/job-queue.module';
@@ -20,6 +21,7 @@ import { TripsModule } from './modules/trips/trips.module';
 import { UsersModule } from './modules/users/users.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { VoiceModule } from './modules/voice/voice.module';
+import { ScheduledRidesModule } from './modules/scheduled-rides/scheduled-rides.module';
 import { MobileObservabilityModule } from './modules/mobile-observability/mobile-observability.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PushTokenModule } from './modules/notifications/push-token.module';
@@ -33,6 +35,7 @@ import { PushTokenModule } from './modules/notifications/push-token.module';
       envFilePath: ['.env', 'prisma/.env'],
     }),
     RuntimeModule,
+    CacheModule,
     RateLimitModule,
     DocumentLinksModule,
     JobQueueModule,
@@ -50,6 +53,7 @@ import { PushTokenModule } from './modules/notifications/push-token.module';
     PaymentsModule,
     AdminModule,
     VoiceModule,
+    ScheduledRidesModule,
     MobileObservabilityModule,
     NotificationsModule,
     PushTokenModule,

@@ -1,6 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { VehicleSelector } from '../lib/booking/vehicle-selector';
+import { ScheduledRidePicker, type ScheduledRideMode } from '../lib/booking/scheduled-ride-picker';
 import {
   ActivityIndicator,
   Animated,
@@ -439,6 +441,10 @@ export default function BookingScreen() {
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // Courses programmées
+  const [scheduleMode, setScheduleMode] = useState<ScheduledRideMode>('now');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
   const [promoCodeInput, setPromoCodeInput] = useState('');
   const [promoValidation, setPromoValidation] =
     useState<PromoValidationResponse | null>(null);
@@ -1112,8 +1118,27 @@ export default function BookingScreen() {
           </Pressable>
         ) : null}
 
-        {/* ── Vehicle selector ── */}
-        {options.length > 0 ? (
+        {/* ── Scheduled ride picker ── */}
+        <ScheduledRidePicker
+          mode={scheduleMode}
+          scheduledDate={scheduledDate}
+          scheduledTime={scheduledTime}
+          onModeChange={setScheduleMode}
+          onDateChange={setScheduledDate}
+          onTimeChange={setScheduledTime}
+        />
+
+        {/* ── Vehicle selector (extracted component) ── */}
+        <VehicleSelector
+          options={options}
+          selectedOptionId={selectedOptionId}
+          promoValidation={promoValidation}
+          isRefreshing={isRefreshing}
+          onSelect={setSelectedOptionId}
+        />
+
+        {/* ── Vehicle selector legacy (hidden — keeps old styles used by vIcon etc.) ── */}
+        {false && options.length > 0 ? (
           <View style={styles.vehicleSection}>
             <Text style={styles.sectionTitle}>Choisir un service</Text>
             <ScrollView
@@ -1179,11 +1204,6 @@ export default function BookingScreen() {
                 );
               })}
             </ScrollView>
-          </View>
-        ) : isRefreshing ? (
-          <View style={styles.vehicleLoading}>
-            <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
-            <Text style={styles.vehicleLoadingText}>Calcul des options…</Text>
           </View>
         ) : null}
 

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ServiceTier, VehicleType } from '@prisma/client';
-import { TtlCache } from '../../core/cache/ttl-cache';
+import { RedisCacheService } from '../../core/cache/redis-cache.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { EstimatePricingQueryDto } from './dto/estimate-pricing-query.dto';
 
@@ -61,17 +61,21 @@ type RateCard = {
 
 @Injectable()
 export class PricingService {
-  // Cache pricing rules for 60s — they change rarely (admin updates only)
-  private readonly rulesCache = new TtlCache<string, Awaited<ReturnType<typeof this.fetchRulesFromDb>>>(60_000);
-
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: RedisCacheService,
+  ) {}
 
   async listRules() {
-    return this.rulesCache.getOrSet('active', () => this.fetchRulesFromDb());
+    return this.cache.getOrSet(
+      'pricing:rules:active',
+      () => this.fetchRulesFromDb(),
+      60, // TTL 60 secondes — règles rarement modifiées
+    );
   }
 
-  invalidatePricingCache(): void {
-    this.rulesCache.invalidateAll();
+  async invalidatePricingCache(): Promise<void> {
+    await this.cache.invalidatePattern('pricing:*');
   }
 
   private fetchRulesFromDb() {

@@ -24,7 +24,17 @@ function createService() {
     },
   };
 
-  return { prisma, service: new PricingService(prisma as never) };
+  // Mock Redis cache: bypass vers factory directement (tests unitaires purs)
+  const cache = {
+    getOrSet: jest.fn().mockImplementation(
+      async (_key: string, factory: () => Promise<unknown>) => factory(),
+    ),
+    invalidate: jest.fn().mockResolvedValue(undefined),
+    invalidatePattern: jest.fn().mockResolvedValue(undefined),
+    isRedisConnected: false,
+  };
+
+  return { prisma, cache, service: new PricingService(prisma as never, cache as never) };
 }
 
 /**

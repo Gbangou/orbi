@@ -113,6 +113,27 @@ jest.mock(
 );
 
 jest.mock(
+  "expo-av",
+  () => ({
+    Audio: {
+      requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
+      setAudioModeAsync: jest.fn(async () => undefined),
+      Recording: {
+        createAsync: jest.fn(async () => ({
+          recording: {
+            stopAndUnloadAsync: jest.fn(async () => undefined),
+            getStatusAsync: jest.fn(async () => ({ durationMillis: 2000 })),
+          },
+        })),
+        OptionsPresets: { HIGH_QUALITY: {} },
+      },
+      RecordingOptionsPresets: { HIGH_QUALITY: {} },
+    },
+  }),
+  { virtual: true },
+);
+
+jest.mock(
   "expo-haptics",
   () => ({
     impactAsync: jest.fn(async () => undefined),
