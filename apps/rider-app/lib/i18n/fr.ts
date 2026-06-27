@@ -20,6 +20,7 @@ export const fr = {
   auth: {
     signIn: 'Se connecter',
     signUp: 'Créer un compte',
+    createAccount: 'Créer mon compte',
     signOut: 'Se déconnecter',
     email: 'Adresse email',
     password: 'Mot de passe',

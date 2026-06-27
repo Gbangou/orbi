@@ -16,8 +16,11 @@ import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
 import { orbiTheme } from '@orbi/ui';
 import { signInRiderAccount, signUpRiderAccount } from '../lib/auth';
 import { OrbiLogo } from '../lib/orbi-logo';
+import { useTranslation } from '../lib/i18n';
 
 export default function RiderAuthScreen() {
+  const { t } = useTranslation();
+  const ta = (key: string) => t(`auth.${key}`);
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -102,7 +105,7 @@ export default function RiderAuthScreen() {
               style={[styles.toggleBtn, mode === 'sign-in' && styles.toggleBtnActive]}
             >
               <Text style={[styles.toggleLabel, mode === 'sign-in' && styles.toggleLabelActive]}>
-                Connexion
+                {ta('signIn')}
               </Text>
             </Pressable>
             <Pressable
@@ -110,7 +113,7 @@ export default function RiderAuthScreen() {
               style={[styles.toggleBtn, mode === 'sign-up' && styles.toggleBtnActive]}
             >
               <Text style={[styles.toggleLabel, mode === 'sign-up' && styles.toggleLabelActive]}>
-                Créer un compte
+                {ta('signUp')}
               </Text>
             </Pressable>
           </View>
@@ -119,11 +122,11 @@ export default function RiderAuthScreen() {
           <View style={styles.form}>
             {mode === 'sign-up' ? (
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Nom complet</Text>
+                <Text style={styles.fieldLabel}>{ta('fullName')}</Text>
                 <TextInput
                   value={fullName}
                   onChangeText={setFullName}
-                  placeholder="Ex : Aminata Traoré"
+                  placeholder={ta('namePlaceholder')}
                   placeholderTextColor={orbiTheme.colors.textMuted}
                   style={styles.input}
                   autoCapitalize="words"
@@ -132,25 +135,25 @@ export default function RiderAuthScreen() {
             ) : null}
 
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Adresse email</Text>
+              <Text style={styles.fieldLabel}>{ta('email')}</Text>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
-                placeholder="exemple@gmail.com"
+                placeholder={ta('emailPlaceholder')}
                 placeholderTextColor={orbiTheme.colors.textMuted}
                 style={styles.input}
               />
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Mot de passe</Text>
+              <Text style={styles.fieldLabel}>{ta('password')}</Text>
               <TextInput
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
-                placeholder={mode === 'sign-up' ? 'Min. 8 car. · Maj · Chiffre · Symbole' : '••••••••'}
+                placeholder={mode === 'sign-up' ? ta('passwordHint') : ta('passwordPlaceholder')}
                 placeholderTextColor={orbiTheme.colors.textMuted}
                 style={styles.input}
               />
@@ -172,7 +175,11 @@ export default function RiderAuthScreen() {
               ]}
             >
               <Text style={styles.primaryBtnLabel}>
-                {isSubmitting ? 'Chargement…' : mode === 'sign-in' ? 'Se connecter' : 'Créer mon compte'}
+                {isSubmitting
+                  ? t('common.loading')
+                  : mode === 'sign-in'
+                    ? ta('signIn')
+                    : ta('createAccount')}
               </Text>
             </Pressable>
           </View>

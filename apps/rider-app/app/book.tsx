@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from '../lib/i18n';
 import { VehicleSelector } from '../lib/booking/vehicle-selector';
 import { ScheduledRidePicker, type ScheduledRideMode } from '../lib/booking/scheduled-ride-picker';
 import { PaymentMethodsManager } from '../lib/booking/payment-methods-manager';
@@ -254,6 +255,8 @@ const promoStyles = StyleSheet.create({
 
 export default function BookingScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const tb = (key: string) => t(`booking.${key}`);
   // Accept voice suggestion params from /voice screen
   const {
     suggestionName,
@@ -1025,7 +1028,7 @@ export default function BookingScreen() {
               >
                 <Text style={promoStyles.label}>Code promo</Text>
                 <Text style={styles.promoToggleLink}>
-                  {showPromo ? 'Annuler' : 'Ajouter'}
+                  {showPromo ? t('common.cancel') : tb('addPromo')}
                 </Text>
               </Pressable>
               {showPromo ? (
@@ -1063,7 +1066,7 @@ export default function BookingScreen() {
         {/* ── Saved places ── */}
         {savedPlaces.length > 0 ? (
           <View style={styles.savedSection}>
-            <Text style={styles.sectionTitle}>Lieux enregistrés</Text>
+            <Text style={styles.sectionTitle}>{tb('savedPlaces')}</Text>
             {savedPlaces.slice(0, 4).map((place) => (
               <Pressable
                 key={place.id}
@@ -1136,12 +1139,12 @@ export default function BookingScreen() {
         >
           <Text style={styles.ctaBtnLabel}>
             {isSubmitting
-              ? 'Confirmation en cours…'
+              ? tb('confirmLoading')
               : hasOpenFlow
-                ? "Voir l'activité en cours"
+                ? tb('activeFlow')
                 : selectedOption && destinationPlace.coordinates
-                  ? `Confirmer · ${formatXof(selectedOption.fare)}`
-                  : 'Sélectionner un service'}
+                  ? tb('confirm').replace('{{fare}}', formatXof(selectedOption.fare))
+                  : tb('noServiceSelected')}
           </Text>
         </Pressable>
       </View>

@@ -20,6 +20,7 @@ export const en = {
   auth: {
     signIn: 'Sign in',
     signUp: 'Create account',
+    createAccount: 'Create my account',
     signOut: 'Sign out',
     email: 'Email address',
     password: 'Password',
