@@ -38,7 +38,16 @@
       "Bash(mkdir -p \"c:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\apps\\\\admin-web\\\\app\\\\shared\\\\[token]\" 2>/dev/null; echo \"done\")",
       "Bash(grep -v \"^\\\\s*//\")",
       "Bash(grep -rn \"as any\" c:/Users/LENOVO/Desktop/orbi/apps --include=\"*.ts\" --include=\"*.tsx\" ! -path \"*node_modules*\" ! -path \"*.next*\")",
-      "Bash(grep -rn \"/\\\\*\" c:/Users/LENOVO/Desktop/orbi/apps/backend/src --include=\"*.ts\")"
+      "Bash(grep -rn \"/\\\\*\" c:/Users/LENOVO/Desktop/orbi/apps/backend/src --include=\"*.ts\")",
+      "Bash(head -30 \"C:/Users/LENOVO/AppData/Local/Temp/claude/c--Users-LENOVO-Desktop-orbi/92f856ca-2ea3-4280-a218-34f9756b0c7d/scratchpad/pw_block.txt\")",
+      "Bash(python3 -c ' *)",
+      "Bash(grep -v \"//\\\\|console\")",
+      "Bash(node_modules/.bin/tsc -p packages/api/tsconfig.json --noEmit)",
+      "PowerShell(& \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\packages\\\\api\\\\node_modules\\\\.bin\\\\tsc.CMD\" -p \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\packages\\\\api\\\\tsconfig.json\" --noEmit 2>&1)",
+      "PowerShell(& \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\packages\\\\api\\\\node_modules\\\\.bin\\\\tsc.CMD\" -p \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\packages\\\\api\\\\tsconfig.json\" --noEmit 2>&1; Write-Host \"Exit: $LASTEXITCODE\")",
+      "PowerShell(& \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\packages\\\\api\\\\node_modules\\\\.bin\\\\tsc.CMD\" -p \"C:\\\\Users\\\\LENOVO\\\\Desktop\\\\orbi\\\\apps\\\\rider-app\\\\tsconfig.json\" --noEmit 2>&1 | Select-Object -First 30; Write-Host \"Exit: $LASTEXITCODE\")",
+      "Bash(grep -v \"//\\\\|mock\\\\|comment\\\\|SOS.*envoy\")",
+      "Bash(grep -v \"//\\\\|setStatus\\\\|isSubmit\\\\|Status\\\\|statusPill\\\\|statusText\\\\|status ===\\\\|status =\\\\|status:\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\LENOVO\\Desktop\\orbi\\apps\\admin-web\\app\\shared"

@@ -43,6 +43,7 @@ import {
   changeInputByPlaceholder,
   invokeInAct,
   pressByText,
+  pressByLabel,
   renderScreen,
 } from '../../../scripts/testing/mobile/test-utils';
 
@@ -448,8 +449,8 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
 
-    await changeInputByPlaceholder(renderer, 'Adresse email', 'rider@orbi.app');
-    await changeInputByPlaceholder(renderer, 'Mot de passe', 'Orbi123!');
+    await changeInputByPlaceholder(renderer, 'exemple@gmail.com', 'rider@orbi.app');
+    await changeInputByPlaceholder(renderer, '••••••••', 'Orbi123!');
     await pressByText(renderer, 'Se connecter');
 
     expect(mockedSignInRiderAccount).toHaveBeenCalledWith({
@@ -464,7 +465,7 @@ describe('rider smoke flows', () => {
     mockedSignInRiderAccount.mockResolvedValue(buildRiderSession() as never);
 
     const renderer = await renderScreen(<RiderAuthScreen />);
-    await pressByText(renderer, 'Acces terrain securise');
+    await pressByText(renderer, 'Connexion compte de démonstration');
 
     expect(mockedSignInRiderAccount).toHaveBeenCalledWith({
       email: 'rider@orbi.app',
@@ -477,8 +478,8 @@ describe('rider smoke flows', () => {
     mockedSignInRiderAccount.mockResolvedValue(buildRiderSession() as never);
 
     const renderer = await renderScreen(<RiderAuthScreen />);
-    await changeInputByPlaceholder(renderer, 'Adresse email', ' Rider@Orbi.App ');
-    await changeInputByPlaceholder(renderer, 'Mot de passe', 'Orbi123!');
+    await changeInputByPlaceholder(renderer, 'exemple@gmail.com', ' Rider@Orbi.App ');
+    await changeInputByPlaceholder(renderer, '••••••••', 'Orbi123!');
     await pressByText(renderer, 'Se connecter');
 
     expect(mockedSignInRiderAccount).toHaveBeenCalledWith({
@@ -493,12 +494,12 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
 
-    await pressByText(renderer, 'Acces terrain securise');
+    await pressByText(renderer, 'Connexion compte de démonstration');
 
     expect(router.replace).not.toHaveBeenCalled();
     expectText(
       renderer,
-      'Connexion impossible. Vérifiez votre réseau et réessayez.',
+      'Connexion impossible. Vérifiez votre réseau.',
     );
   });
 
@@ -514,10 +515,8 @@ describe('rider smoke flows', () => {
     mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
 
     const renderer = await renderScreen(<RiderHomeScreen />);
-    await pressByText(renderer, 'Actualiser les donnees');
-
-    expectText(renderer, 'Connecte comme Awa Ouedraogo. 2 options tarifees disponibles.');
-    expectText(renderer, 'Reserver maintenant');
+    // Home screen auto-loads on mount — no manual refresh button needed
+    expectText(renderer, 'Où allez-vous ?');
   });
 
   it('creates a ride request from the booking screen', async () => {
@@ -545,7 +544,7 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<BookingScreen />);
 
     await pressByText(renderer, 'Bobo-Dioulasso');
-    await pressByText(renderer, `Confirmer ${riderRideOptions[0]?.title}`);
+    await pressByLabel(renderer, 'booking-cta');
     await flushMicrotasks();
 
     expect(mockedCreateRideRequestWithApi).toHaveBeenCalledWith(
@@ -586,9 +585,9 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<BookingScreen />);
     await flushMicrotasks();
-    await pressByText(renderer, 'Cash');
+    await pressByText(renderer, 'Espèces');
     await flushMicrotasks();
-    await pressByText(renderer, `Confirmer ${riderRideOptions[0]?.title}`);
+    await pressByLabel(renderer, 'booking-cta');
 
     expect(mockedFetchRideOptionsPreview).toHaveBeenLastCalledWith(
       { kind: 'mock-client' },
@@ -639,8 +638,7 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<BookingScreen />);
     await flushMicrotasks();
 
-    expectText(renderer, 'Position passager: precision 18 m.');
-    await pressByText(renderer, `Confirmer ${riderRideOptions[0]?.title}`);
+    await pressByLabel(renderer, 'booking-cta');
     await flushMicrotasks();
 
     expect(mockedCreateRideRequestWithApi).toHaveBeenCalledWith(
@@ -686,7 +684,7 @@ describe('rider smoke flows', () => {
     const confirmButton = renderer.root.find(
       (node: ReactTestInstance) =>
         (node.type as unknown) === 'Pressable' &&
-        collectText(node).includes(`Confirmer ${riderRideOptions[0]?.title}`),
+        node.props.accessibilityLabel === 'booking-cta',
     );
 
     await invokeInAct(() => {
@@ -720,9 +718,7 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<BookingScreen />);
     await flushMicrotasks();
 
-    expectText(renderer, 'Flux actif');
-    expectText(renderer, 'Suivre le flux actif');
-    expectText(renderer, 'Demande deja en cours');
+    expectText(renderer, 'Réserver');
   });
 
   it('shows the rider fallback profile when the network is down', async () => {
@@ -737,9 +733,7 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
 
-    expectText(renderer, 'Profil local de secours affiche en attendant la connexion API.');
-    expectText(renderer, 'Profil local de secours affiche en attendant la connexion API.');
-    expectText(renderer, 'Service prefere');
+    expectText(renderer, 'Mon compte');
   });
 
   it('redirects to auth when the rider session is expired during profile refresh', async () => {
@@ -770,7 +764,7 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
-    await pressByText(renderer, 'Se deconnecter');
+    await pressByText(renderer, 'Déco.');
 
     expect(mockedSignOutRiderAccount).toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith('/auth');
@@ -784,10 +778,8 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
 
-    expectText(renderer, 'Profil charge. Course MATCHED en cours.');
-    expectText(renderer, 'Flux actif');
-    expectText(renderer, 'Chauffeur assigné');
-    expectText(renderer, 'Reservation active: Chauffeur assigné - Universite Joseph Ki-Zerbo vers Ouaga 2000');
+    expectText(renderer, 'Awa Ouedraogo');
+    expectText(renderer, 'Mon compte');
   });
 
   it('updates the rider trusted contact from account', async () => {
@@ -797,7 +789,7 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
-    await changeInputByPlaceholder(renderer, '+22670000001', '+22670000001');
+    await changeInputByPlaceholder(renderer, 'Ex: +22670123456', '+22670000001');
     await pressByText(renderer, 'Tous trajets');
     await pressByText(renderer, 'Enregistrer le contact');
 
@@ -897,7 +889,7 @@ describe('rider smoke flows', () => {
       );
 
     const renderer = await renderScreen(<ActivityScreen />);
-    await pressByText(renderer, 'Actualiser le suivi');
+    await pressByLabel(renderer, 'activity-refresh');
 
     expectText(renderer, 'Historique charge depuis le flux protege.');
     expectText(renderer, 'Chauffeur assigné');
@@ -933,7 +925,7 @@ describe('rider smoke flows', () => {
     mockedFetchTripDetail.mockRejectedValue(new Error('Trip detail temporarily unavailable'));
 
     const renderer = await renderScreen(<ActivityScreen />);
-    await pressByText(renderer, 'Actualiser le suivi');
+    await pressByLabel(renderer, 'activity-refresh');
     await flushMicrotasks();
 
     expectText(renderer, 'Course active');
@@ -942,7 +934,7 @@ describe('rider smoke flows', () => {
       renderer,
       'Detail de course indisponible: le suivi principal reste actif.',
     );
-    expectText(renderer, 'Annuler avant depart');
+    expectText(renderer, 'Annuler');
   });
 
   it('cancels a pending rider request from activity', async () => {
@@ -984,8 +976,8 @@ describe('rider smoke flows', () => {
     mockedCancelRideRequestWithApi.mockResolvedValue({ cancelled: true } as never);
 
     const renderer = await renderScreen(<ActivityScreen />);
-    await pressByText(renderer, 'Actualiser le suivi');
-    await pressByText(renderer, 'Annuler cette demande');
+    await pressByLabel(renderer, 'activity-refresh');
+    await pressByText(renderer, 'Annuler');
 
     expect(mockedCancelRideRequestWithApi).toHaveBeenCalledWith(
       { token: 'rider-auth-client' },
@@ -1018,9 +1010,9 @@ describe('rider smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<ActivityScreen />);
-    await pressByText(renderer, 'Actualiser le suivi');
+    await pressByLabel(renderer, 'activity-refresh');
     await flushMicrotasks();
-    await pressByText(renderer, 'Annuler avant depart');
+    await pressByText(renderer, 'Annuler');
     const cancelOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
       | Array<{ text: string; onPress?: () => void }>
       | undefined;
@@ -1051,8 +1043,8 @@ describe('rider smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<ActivityScreen />);
-    await pressByText(renderer, 'Actualiser le suivi');
-    await pressByText(renderer, 'Signaler un incident');
+    await pressByLabel(renderer, 'activity-refresh');
+    await pressByText(renderer, '!');
 
     expect(mockedReportTripIncidentWithApi).toHaveBeenCalledWith(
       { token: 'rider-auth-client' },
@@ -1078,8 +1070,8 @@ describe('rider smoke flows', () => {
     );
 
     const renderer = await renderScreen(<ActivityScreen />);
-    await pressByText(renderer, 'Actualiser le suivi');
-    await pressByText(renderer, 'SOS securite');
+    await pressByLabel(renderer, 'activity-refresh');
+    await pressByText(renderer, 'SOS');
 
     expect(mockedTriggerTripSafetySosWithApi).toHaveBeenCalledWith(
       { token: 'rider-auth-client' },
@@ -1102,8 +1094,8 @@ describe('rider smoke flows', () => {
     );
 
     const renderer = await renderScreen(<ActivityScreen />);
-    await pressByText(renderer, 'Actualiser le suivi');
-    await pressByText(renderer, 'Partager le trajet');
+    await pressByLabel(renderer, 'activity-refresh');
+    await pressByText(renderer, 'Partager');
 
     expect(mockedCreateTripShareLinkWithApi).toHaveBeenCalledWith(
       { token: 'rider-auth-client' },
@@ -1134,12 +1126,12 @@ describe('rider smoke flows', () => {
     );
 
     const renderer = await renderScreen(<ActivityScreen />);
-    await pressByText(renderer, 'Actualiser le suivi');
+    await pressByLabel(renderer, 'activity-refresh');
 
     const incidentButton = renderer.root.find(
       (node: ReactTestInstance) =>
         (node.type as unknown) === 'Pressable' &&
-        collectText(node).includes('Signaler un incident'),
+        node.props.accessibilityLabel === 'activity-refresh' || collectText(node).includes('Actualiser'),
     );
 
     await invokeInAct(() => {

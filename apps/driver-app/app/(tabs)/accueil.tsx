@@ -104,7 +104,7 @@ const chip = StyleSheet.create({
 export default function DriverHomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const td = (key: string, opts?: Record<string, unknown>) => t(`driver.${key}`, opts);
+  const td = (key: string, opts?: Record<string, unknown>): string => String(t(`driver.${key}`, opts as never));
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [earnings, setEarnings] = useState<DriverEarningsResponse | null>(null);

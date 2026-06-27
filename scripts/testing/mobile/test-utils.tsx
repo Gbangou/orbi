@@ -55,6 +55,28 @@ function nodeContainsText(node: ReactTestInstance, expectedText: string) {
   return collectText(node).includes(expectedText);
 }
 
+export async function pressByLabel(
+  renderer: TestRenderer.ReactTestRenderer,
+  accessibilityLabel: string,
+) {
+  const pressable = renderer.root.findAll(
+    (node) =>
+      isHostType(node, 'Pressable') &&
+      node.props.accessibilityLabel === accessibilityLabel,
+  )[0];
+
+  if (!pressable) {
+    throw new Error(`No Pressable found with accessibilityLabel: ${accessibilityLabel}`);
+  }
+
+  await act(async () => {
+    await pressable.props.onPress?.();
+    for (let iteration = 0; iteration < 5; iteration += 1) {
+      await Promise.resolve();
+    }
+  });
+}
+
 export async function pressByText(
   renderer: TestRenderer.ReactTestRenderer,
   expectedText: string,

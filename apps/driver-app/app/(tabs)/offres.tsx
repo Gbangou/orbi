@@ -116,7 +116,7 @@ function buildInitials(name: string) {
 
 export default function OffersScreen() {
   const { t } = useTranslation();
-  const td = (key: string) => t(`driver.${key}`);
+  const td = (key: string): string => String(t(`driver.${key}` as never));
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
   const [activeTripDetail, setActiveTripDetail] =

@@ -373,7 +373,7 @@ const milestoneStyles = StyleSheet.create({
 
 export default function RevenusScreen() {
   const { t } = useTranslation();
-  const td = (key: string, opts?: Record<string, unknown>) => t(`driver.${key}`, opts as never);
+  const td = (key: string, opts?: Record<string, unknown>): string => String(t(`driver.${key}`, opts as never));
   const [earnings, setEarnings] = useState<DriverEarningsResponse>(fallbackEarnings);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [driverProfileStatus, setDriverProfileStatus] = useState('OFFLINE');

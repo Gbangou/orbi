@@ -865,11 +865,29 @@ export default function ActivityScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Activité</Text>
-        {isRealtimeSyncing ? (
-          <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
-        ) : null}
+        <Text style={styles.headerTitle}>{t('activity.title', { defaultValue: 'Activité' })}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          {isRealtimeSyncing ? (
+            <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
+          ) : null}
+          <Pressable
+            onPress={() => void loadHistory()}
+            style={styles.refreshButton}
+            disabled={isRefreshing}
+            accessibilityLabel="activity-refresh"
+          >
+            <Text style={styles.refreshButtonLabel}>
+              {isRefreshing ? '...' : 'Actualiser le suivi'}
+            </Text>
+          </Pressable>
+        </View>
       </View>
+      {/* Status feedback */}
+      {status && !status.includes('Chargement') ? (
+        <Text style={styles.syncMeta} accessibilityLabel="activity-status">
+          {status}
+        </Text>
+      ) : null}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

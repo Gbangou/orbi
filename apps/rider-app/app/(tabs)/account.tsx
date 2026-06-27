@@ -217,12 +217,12 @@ export default function AccountScreen() {
       const [profileResponse, historyResponse, ticketsResponse, walletResp] = await Promise.all([
         fetchRiderProfile(authClient),
         fetchMyTrips(authClient),
-        getMySupportTicketsWithApi(authClient),
+        getMySupportTicketsWithApi(authClient).catch(() => ({ tickets: [] as SupportTicket[] })),
         fetchWalletBalanceWithApi(authClient).catch(() => null),
       ]);
       setWalletBalance(walletResp);
       setProfile(profileResponse);
-      setTickets(ticketsResponse.tickets);
+      setTickets(ticketsResponse?.tickets ?? []);
       setTrustedContactForm({
         phoneNumber: profileResponse.profile.trustedContact.phoneNumber ?? '',
         shareMode:
@@ -566,6 +566,17 @@ export default function AccountScreen() {
           </Pressable>
         </View>
       </View>
+
+      {/* Status feedback — shown for errors and transitions */}
+      {status && !status.includes('Chargement') ? (
+        <Text
+          style={{ fontSize: 12, color: orbiTheme.colors.textMuted, paddingHorizontal: 16, paddingTop: 4 }}
+          numberOfLines={2}
+          accessibilityLabel="account-status"
+        >
+          {status}
+        </Text>
+      ) : null}
 
       <ScrollView
         contentContainerStyle={styles.content}

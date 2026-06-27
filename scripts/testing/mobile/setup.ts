@@ -1,6 +1,93 @@
 import React from "react";
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
 
 import { cleanupRenderers } from "./test-utils";
+
+// Initialise i18n in French for smoke tests so t('auth.signIn') → 'Se connecter'
+if (!i18n.isInitialized) {
+  void i18n.use(initReactI18next).init({
+    lng: 'fr',
+    fallbackLng: 'fr',
+    resources: {
+      fr: {
+        translation: {
+          auth: {
+            signIn: 'Se connecter',
+            signUp: 'Créer un compte',
+            createAccount: 'Créer mon compte',
+            tabSignIn: 'Connexion',
+            tabSignUp: 'Inscription',
+            signOut: 'Se déconnecter',
+            email: 'Adresse email',
+            password: 'Mot de passe',
+            fullName: 'Nom complet',
+            emailPlaceholder: 'exemple@gmail.com',
+            passwordPlaceholder: '••••••••',
+            namePlaceholder: 'Ex : Aminata Traoré',
+            passwordHint: 'Min. 8 car. · Maj · Chiffre · Symbole',
+            demoAccess: 'Accès démo',
+            demoSignIn: 'Connexion compte de démonstration',
+            riderTagline: 'Votre course en quelques secondes',
+            driverTagline: 'Rejoignez la flotte Orbi',
+            tagline: 'Votre course en quelques secondes',
+            invalidCredentials: 'Identifiants incorrects. Réessayez.',
+          },
+          common: {
+            loading: 'Chargement…',
+            cancel: 'Annuler',
+            confirm: 'Confirmer',
+          },
+          booking: {
+            title: 'Réserver',
+            confirm: 'Confirmer · {{fare}}',
+            confirmLoading: 'Confirmation en cours…',
+            noServiceSelected: 'Sélectionner un service',
+            activeFlow: "Voir l'activité en cours",
+            addPromo: 'Ajouter',
+            savedPlaces: 'Lieux enregistrés',
+          },
+          home: {
+            whereToGo: 'Où allez-vous ?',
+            liveMap: 'Carte live',
+          },
+          activity: {
+            pendingRequests: 'Demandes en cours',
+            recentTrips: 'Courses récentes',
+            completed: 'Terminé',
+            cancelled: 'Annulé',
+          },
+          account: {
+            title: 'Mon compte',
+            signOut: 'Se déconnecter',
+            wallet: 'Wallet Orbi',
+            walletTopUp: '+ Recharger',
+          },
+          driver: {
+            goOnline: 'Passer en ligne',
+            goOffline: 'Passer hors ligne',
+            refreshing: 'Actualisation...',
+            refresh: 'Actualiser le direct',
+            waitingForOffers: 'En attente — Ouagadougou',
+            earningsWeek: 'Semaine',
+            earningsMonth: 'Mois',
+            earningsAverage: 'Moyenne',
+            recentTrips: 'Courses récentes',
+            payoutControl: 'Contrôle payout',
+            weeklyChart: 'Gains — 7 j',
+            profile: 'Profil',
+            vehicle: 'Véhicule principal',
+            documents: 'Justificatifs requis',
+            missions: 'Missions',
+            navigateToPickup: '🗺 Naviguer vers la prise en charge',
+          },
+        },
+      },
+    },
+    interpolation: { escapeValue: false },
+    compatibilityJSON: 'v4',
+  });
+}
 
 let pathname = "/";
 
@@ -14,11 +101,16 @@ jest.mock(
   "react-native",
   () => {
     class AnimatedValue {
-      constructor(private readonly value: number) {}
+      private _value: number;
+      constructor(value: number) { this._value = value; }
 
-      interpolate() {
-        return this.value;
-      }
+      interpolate() { return this._value; }
+      setValue(v: number) { this._value = v; }
+      addListener() { return { remove: jest.fn() }; }
+      removeListener() {}
+      removeAllListeners() {}
+      stopAnimation() {}
+      resetAnimation() {}
     }
 
     const animation = {
@@ -97,6 +189,10 @@ jest.mock(
       router,
       useRouter: () => router,
       usePathname: () => pathname,
+      useLocalSearchParams: () => ({}),
+      useGlobalSearchParams: () => ({}),
+      useSegments: () => [],
+      useRootNavigationState: () => ({ key: 'root', index: 0, routes: [] }),
       __setPathname: (nextPathname: string) => {
         pathname = nextPathname;
       },

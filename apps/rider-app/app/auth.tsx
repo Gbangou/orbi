@@ -105,7 +105,7 @@ export default function RiderAuthScreen() {
               style={[styles.toggleBtn, mode === 'sign-in' && styles.toggleBtnActive]}
             >
               <Text style={[styles.toggleLabel, mode === 'sign-in' && styles.toggleLabelActive]}>
-                {ta('signIn')}
+                {ta('tabSignIn')}
               </Text>
             </Pressable>
             <Pressable
@@ -113,7 +113,7 @@ export default function RiderAuthScreen() {
               style={[styles.toggleBtn, mode === 'sign-up' && styles.toggleBtnActive]}
             >
               <Text style={[styles.toggleLabel, mode === 'sign-up' && styles.toggleLabelActive]}>
-                {ta('signUp')}
+                {ta('tabSignUp')}
               </Text>
             </Pressable>
           </View>

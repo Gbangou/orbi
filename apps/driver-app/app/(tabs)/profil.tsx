@@ -234,7 +234,7 @@ function toDisplayTier(tier: ServiceTierOption) {
 
 export default function ProfilScreen() {
   const { t } = useTranslation();
-  const td = (key: string, opts?: Record<string, unknown>) => t(`driver.${key}`, opts as never);
+  const td = (key: string, opts?: Record<string, unknown>): string => String(t(`driver.${key}`, opts as never));
   const [profile, setProfile] = useState<DriverProfileResponse>(fallbackProfile);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [form, setForm] = useState<OnboardingFormState>(

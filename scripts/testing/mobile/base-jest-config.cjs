@@ -23,6 +23,8 @@ function createMobileJestConfig(rootDir) {
     ],
     moduleNameMapper: {
       '\\.(png|jpg|jpeg|gif|webp)$': path.resolve(__dirname, 'file-mock.cjs'),
+      // Resolve .js imports to .ts files — needed since packages/api uses ESM-style imports
+      '^(\\.{1,2}/.*)\\.js$': '$1',
     },
   };
 }

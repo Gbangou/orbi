@@ -1119,6 +1119,7 @@ export default function BookingScreen() {
       {/* ── CTA fixe en bas ── */}
       <View style={styles.ctaWrap}>
         <Pressable
+          accessibilityLabel="booking-cta"
           onPress={
             hasOpenFlow
               ? () => router.push('/activity')

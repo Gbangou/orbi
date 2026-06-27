@@ -58,7 +58,7 @@ export function useNetworkStatus(): NetworkStatus {
     // Poll every 15s when app is active
     const appStateSubscription = AppState.addEventListener(
       'change',
-      (state) => {
+      (state: string) => {
         if (state === 'active') {
           void checkConnectivity().then(broadcastStatus);
         }

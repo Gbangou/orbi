@@ -50,7 +50,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
           </Text>
           <Pressable
             onPress={this.handleRetry}
-            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+            style={({ pressed }: { pressed: boolean }) => [styles.btn, pressed && styles.btnPressed]}
           >
             <Text style={styles.btnLabel}>Réessayer</Text>
           </Pressable>
