@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, TextInput, View, Text, StyleSheet } from 'react-native';
+import { changeLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage, useTranslation } from '../../lib/i18n';
 import {
   preventScreenCaptureAsync,
   allowScreenCaptureAsync,
@@ -901,11 +902,65 @@ export default function AccountScreen() {
         )}
       </View>
 
+      {/* ── Langue ── */}
+      <LanguageSelector />
+
       <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+// ── Language selector component ───────────────────────────────────────────────
+
+function LanguageSelector() {
+  const [current, setCurrent] = useState<SupportedLanguage>('fr');
+
+  function handleSelect(lang: SupportedLanguage) {
+    setCurrent(lang);
+    void changeLanguage(lang);
+  }
+
+  return (
+    <View style={langStyles.card}>
+      <View style={langStyles.header}>
+        <Text style={langStyles.title}>🌍 Langue</Text>
+      </View>
+      <View style={langStyles.chips}>
+        {SUPPORTED_LANGUAGES.map((lang) => (
+          <Pressable
+            key={lang.code}
+            onPress={() => handleSelect(lang.code)}
+            style={[langStyles.chip, current === lang.code && langStyles.chipActive]}
+          >
+            <Text style={[langStyles.chipText, current === lang.code && langStyles.chipTextActive]}>
+              {lang.nativeLabel}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const langStyles = StyleSheet.create({
+  card: {
+    backgroundColor: orbiTheme.colors.background,
+    borderRadius: 16, borderWidth: 1, borderColor: orbiTheme.colors.border,
+    padding: 16, gap: 12, marginHorizontal: 16,
+  },
+  header: { flexDirection: 'row', alignItems: 'center' },
+  title: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text },
+  chips: { flexDirection: 'row', gap: 8 },
+  chip: {
+    flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center',
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderWidth: 1, borderColor: orbiTheme.colors.border,
+  },
+  chipActive: { backgroundColor: orbiTheme.colors.text, borderColor: orbiTheme.colors.text },
+  chipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.textSoft },
+  chipTextActive: { color: '#FFFFFF' },
+});
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
