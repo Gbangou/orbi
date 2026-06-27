@@ -15,6 +15,12 @@ import { RolesGuard } from '../auth/roles.guard';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
+import { AdminPaymentWebhooksService } from './admin-payment-webhooks.service';
+import { AdminDriverPayoutsService } from './admin-driver-payouts.service';
+import { AdminDriverOnboardingService } from './admin-driver-onboarding.service';
+import { AdminPromoCodesService } from './admin-promo-codes.service';
+import { AdminSupportService } from './admin-support.service';
+import { AdminUsersService } from './admin-users.service';
 
 class SessionAuthGuardStub implements CanActivate {
   canActivate(context: ExecutionContext) {
@@ -131,6 +137,14 @@ describe('AdminController (integration)', () => {
           provide: RealtimeService,
           useValue: realtimeService,
         },
+        // Sub-services share the same adminService mock so integration tests
+        // can control return values and assert calls via adminService.xxx
+        { provide: AdminPaymentWebhooksService, useValue: adminService },
+        { provide: AdminDriverPayoutsService, useValue: adminService },
+        { provide: AdminDriverOnboardingService, useValue: adminService },
+        { provide: AdminPromoCodesService, useValue: adminService },
+        { provide: AdminSupportService, useValue: adminService },
+        { provide: AdminUsersService, useValue: adminService },
       ],
     })
       .overrideGuard(SessionAuthGuard)

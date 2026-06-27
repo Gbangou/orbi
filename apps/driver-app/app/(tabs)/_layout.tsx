@@ -3,8 +3,6 @@ import { StyleSheet, View } from 'react-native';
 import { orbiTheme } from '@orbi/ui';
 import { usePushRegistration } from '../../lib/use-push-registration';
 
-const TypedTabs = Tabs as any;
-const TypedTabsScreen = Tabs.Screen as any;
 type TabIconProps = { color: string; focused: boolean };
 
 function CockpitIcon({ color, focused }: { color: string; focused: boolean }) {
@@ -79,7 +77,7 @@ export default function DriverTabsLayout() {
   usePushRegistration();
 
   return (
-    <TypedTabs
+    <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
@@ -89,7 +87,7 @@ export default function DriverTabsLayout() {
         tabBarItemStyle: styles.tabItem,
       }}
     >
-      <TypedTabsScreen
+      <Tabs.Screen
         name="accueil"
         options={{
           title: 'Cockpit',
@@ -98,7 +96,7 @@ export default function DriverTabsLayout() {
           ),
         }}
       />
-      <TypedTabsScreen
+      <Tabs.Screen
         name="offres"
         options={{
           title: 'Missions',
@@ -107,7 +105,7 @@ export default function DriverTabsLayout() {
           ),
         }}
       />
-      <TypedTabsScreen
+      <Tabs.Screen
         name="revenus"
         options={{
           title: 'Revenus',
@@ -116,7 +114,7 @@ export default function DriverTabsLayout() {
           ),
         }}
       />
-      <TypedTabsScreen
+      <Tabs.Screen
         name="profil"
         options={{
           title: 'Profil',
@@ -125,7 +123,7 @@ export default function DriverTabsLayout() {
           ),
         }}
       />
-    </TypedTabs>
+    </Tabs>
   );
 }
 

@@ -4,8 +4,6 @@ import { orbiTheme } from '@orbi/ui';
 import { usePushRegistration } from '../../lib/use-push-registration';
 import { useRiderTabBadge } from '../../lib/use-rider-tab-badge';
 
-const TypedTabs = Tabs as any;
-const TypedTabsScreen = Tabs.Screen as any;
 type TabIconProps = { color: string; focused: boolean };
 
 // Simple clean SVG-style icons using pure View shapes
@@ -60,7 +58,7 @@ export default function RiderTabsLayout() {
   const { activityBadge } = useRiderTabBadge();
 
   return (
-    <TypedTabs
+    <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
@@ -70,35 +68,35 @@ export default function RiderTabsLayout() {
         tabBarItemStyle: styles.item,
       }}
     >
-      <TypedTabsScreen
+      <Tabs.Screen
         name="home"
         options={{
           title: 'Accueil',
           tabBarIcon: (p: TabIconProps) => <HomeIcon {...p} />,
         }}
       />
-      <TypedTabsScreen
+      <Tabs.Screen
         name="activity"
         options={{
           title: 'Activité',
           tabBarIcon: (p: TabIconProps) => <ActivityIcon {...p} badge={activityBadge} />,
         }}
       />
-      <TypedTabsScreen
+      <Tabs.Screen
         name="trips"
         options={{
           title: 'Trajets',
           tabBarIcon: (p: TabIconProps) => <TripsIcon {...p} />,
         }}
       />
-      <TypedTabsScreen
+      <Tabs.Screen
         name="account"
         options={{
           title: 'Compte',
           tabBarIcon: (p: TabIconProps) => <AccountIcon {...p} />,
         }}
       />
-    </TypedTabs>
+    </Tabs>
   );
 }
 

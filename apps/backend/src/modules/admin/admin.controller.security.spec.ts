@@ -15,6 +15,12 @@ import { RolesGuard } from '../auth/roles.guard';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
+import { AdminPaymentWebhooksService } from './admin-payment-webhooks.service';
+import { AdminDriverPayoutsService } from './admin-driver-payouts.service';
+import { AdminDriverOnboardingService } from './admin-driver-onboarding.service';
+import { AdminPromoCodesService } from './admin-promo-codes.service';
+import { AdminSupportService } from './admin-support.service';
+import { AdminUsersService } from './admin-users.service';
 
 /**
  * OWASP API5 (Autorisation au niveau des fonctions brisée) — invariants de contrôle
@@ -120,11 +126,49 @@ async function buildApp(role: string | null): Promise<INestApplication<App>> {
     stream: jest.fn().mockReturnValue(of()),
   };
 
+  const subServiceStub = {
+    paymentWebhookEvents: jest.fn().mockResolvedValue([]),
+    paymentWebhookEventDetail: jest.fn().mockResolvedValue({}),
+    startPaymentWebhookInvestigation: jest.fn().mockResolvedValue({}),
+    replayPaymentWebhookEvent: jest.fn().mockResolvedValue({}),
+    verifyPaymentAttemptWithProvider: jest.fn().mockResolvedValue({}),
+    refundPaymentAttempt: jest.fn().mockResolvedValue({}),
+    driverWallets: jest.fn().mockResolvedValue([]),
+    prepareDriverWalletPayout: jest.fn().mockResolvedValue({}),
+    recordDriverWalletRecoveryAdjustment: jest.fn().mockResolvedValue({}),
+    markDriverPayoutPaid: jest.fn().mockResolvedValue({}),
+    driverPayoutSettlementCsv: jest.fn().mockResolvedValue(''),
+    driverPayoutSettlementPdf: jest.fn().mockResolvedValue(Buffer.from('')),
+    driverOnboardingQueue: jest.fn().mockResolvedValue([]),
+    driverOnboardingExportCsv: jest.fn().mockResolvedValue(''),
+    driverOnboardingExportHistory: jest.fn().mockResolvedValue([]),
+    updateDriverOnboardingReview: jest.fn().mockResolvedValue({}),
+    getDriverDocumentViewLink: jest.fn().mockResolvedValue({}),
+    updateDriverDocumentObjectVerification: jest.fn().mockResolvedValue({}),
+    verifyDriverDocumentObjectFromProvider: jest.fn().mockResolvedValue({}),
+    suspendDriver: jest.fn().mockResolvedValue({}),
+    reactivateDriver: jest.fn().mockResolvedValue({}),
+    supportTickets: jest.fn().mockResolvedValue([]),
+    updateSupportTicket: jest.fn().mockResolvedValue({}),
+    listDrivers: jest.fn().mockResolvedValue([]),
+    listRiders: jest.fn().mockResolvedValue([]),
+    setRiderStatus: jest.fn().mockResolvedValue({}),
+    listPromoCodes: jest.fn().mockResolvedValue([]),
+    createPromoCode: jest.fn().mockResolvedValue({}),
+    deactivatePromoCode: jest.fn().mockResolvedValue({}),
+  };
+
   const module = await Test.createTestingModule({
     controllers: [AdminController],
     providers: [
       { provide: AdminService, useValue: adminService },
       { provide: RealtimeService, useValue: realtimeService },
+      { provide: AdminPaymentWebhooksService, useValue: subServiceStub },
+      { provide: AdminDriverPayoutsService, useValue: subServiceStub },
+      { provide: AdminDriverOnboardingService, useValue: subServiceStub },
+      { provide: AdminPromoCodesService, useValue: subServiceStub },
+      { provide: AdminSupportService, useValue: subServiceStub },
+      { provide: AdminUsersService, useValue: subServiceStub },
       Reflector,
     ],
   })

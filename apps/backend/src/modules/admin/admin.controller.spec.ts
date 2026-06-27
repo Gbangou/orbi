@@ -15,57 +15,79 @@ describe('AdminController', () => {
       liveOps: jest.fn(),
       launchReadiness: jest.fn(),
       acknowledgeLaunchReadinessAction: jest.fn(),
-      supportTickets: jest.fn(),
-      listDrivers: jest.fn(),
-      listRiders: jest.fn(),
-      setRiderStatus: jest.fn(),
-      driverOnboardingQueue: jest.fn(),
-      driverOnboardingExportHistory: jest.fn(),
-      driverOnboardingExportCsv: jest.fn(),
       tripsExportCsv: jest.fn(),
-      driverWallets: jest.fn(),
-      prepareDriverWalletPayout: jest.fn(),
-      recordDriverWalletRecoveryAdjustment: jest.fn(),
-      markDriverPayoutPaid: jest.fn(),
-      driverPayoutSettlementCsv: jest.fn(),
-      driverPayoutSettlementPdf: jest.fn(),
       featureFlags: jest.fn(),
       dispatchSettings: jest.fn(),
       pricingCalibration: jest.fn(),
+      updateDispatchSettings: jest.fn(),
+      acknowledgeHealthIncident: jest.fn(),
+      muteHealthIncident: jest.fn(),
+      tripsAudit: jest.fn(),
+      jobQueue: jest.fn(),
+      requeueJob: jest.fn(),
+      healthIncidents: jest.fn(),
+    };
+    const realtimeService = { stream: jest.fn() };
+    const adminPaymentWebhooksService = {
       paymentWebhookEvents: jest.fn(),
       paymentWebhookEventDetail: jest.fn(),
       startPaymentWebhookInvestigation: jest.fn(),
       replayPaymentWebhookEvent: jest.fn(),
       verifyPaymentAttemptWithProvider: jest.fn(),
       refundPaymentAttempt: jest.fn(),
-      updateDispatchSettings: jest.fn(),
-      updateSupportTicket: jest.fn(),
+    };
+    const adminDriverPayoutsService = {
+      driverWallets: jest.fn(),
+      prepareDriverWalletPayout: jest.fn(),
+      recordDriverWalletRecoveryAdjustment: jest.fn(),
+      markDriverPayoutPaid: jest.fn(),
+      driverPayoutSettlementCsv: jest.fn(),
+      driverPayoutSettlementPdf: jest.fn(),
+    };
+    const adminDriverOnboardingService = {
+      driverOnboardingQueue: jest.fn(),
+      driverOnboardingExportCsv: jest.fn(),
+      driverOnboardingExportHistory: jest.fn(),
       updateDriverOnboardingReview: jest.fn(),
-      acknowledgeHealthIncident: jest.fn(),
-      muteHealthIncident: jest.fn(),
       getDriverDocumentViewLink: jest.fn(),
       updateDriverDocumentObjectVerification: jest.fn(),
       verifyDriverDocumentObjectFromProvider: jest.fn(),
-      tripsAudit: jest.fn(),
-      jobQueue: jest.fn(),
-      requeueJob: jest.fn(),
-      healthIncidents: jest.fn(),
       suspendDriver: jest.fn(),
       reactivateDriver: jest.fn(),
+    };
+    const adminPromoCodesService = {
       listPromoCodes: jest.fn(),
       createPromoCode: jest.fn(),
       deactivatePromoCode: jest.fn(),
     };
-    const realtimeService = {
-      stream: jest.fn(),
+    const adminSupportService = {
+      supportTickets: jest.fn(),
+      updateSupportTicket: jest.fn(),
+    };
+    const adminUsersService = {
+      listDrivers: jest.fn(),
+      listRiders: jest.fn(),
+      setRiderStatus: jest.fn(),
     };
 
     return {
       adminService,
       realtimeService,
+      adminPaymentWebhooksService,
+      adminDriverPayoutsService,
+      adminDriverOnboardingService,
+      adminPromoCodesService,
+      adminSupportService,
+      adminUsersService,
       controller: new AdminController(
         adminService as never,
         realtimeService as never,
+        adminPaymentWebhooksService as never,
+        adminDriverPayoutsService as never,
+        adminDriverOnboardingService as never,
+        adminPromoCodesService as never,
+        adminSupportService as never,
+        adminUsersService as never,
       ),
     };
   }
@@ -113,7 +135,7 @@ describe('AdminController', () => {
   });
 
   it('delegates support ticket updates with the current auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const auth = {
       user: { id: 'admin-1', role: 'ADMIN' },
     };
@@ -128,7 +150,7 @@ describe('AdminController', () => {
       auth as never,
     );
 
-    expect(adminService.updateSupportTicket).toHaveBeenCalledWith(
+    expect(adminSupportService.updateSupportTicket).toHaveBeenCalledWith(
       'ticket-1',
       payload,
       auth,
@@ -136,7 +158,7 @@ describe('AdminController', () => {
   });
 
   it('delegates driver onboarding queue reads with auth for role-aware privacy', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const query = {
       page: 1,
       pageSize: 10,
@@ -147,14 +169,14 @@ describe('AdminController', () => {
 
     await controller.driverOnboardingQueue(query as never, auth as never);
 
-    expect(adminService.driverOnboardingQueue).toHaveBeenCalledWith(
+    expect(adminDriverOnboardingService.driverOnboardingQueue).toHaveBeenCalledWith(
       query,
       auth,
     );
   });
 
   it('delegates driver wallet reads to the admin service', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const query = {
       page: 1,
       pageSize: 10,
@@ -162,11 +184,11 @@ describe('AdminController', () => {
 
     await controller.driverWallets(query as never);
 
-    expect(adminService.driverWallets).toHaveBeenCalledWith(query);
+    expect(adminDriverPayoutsService.driverWallets).toHaveBeenCalledWith(query);
   });
 
   it('delegates rider account reads to the admin service', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const query = {
       page: 1,
       pageSize: 30,
@@ -175,11 +197,11 @@ describe('AdminController', () => {
 
     await controller.riders(query as never);
 
-    expect(adminService.listRiders).toHaveBeenCalledWith(query);
+    expect(adminUsersService.listRiders).toHaveBeenCalledWith(query);
   });
 
   it('delegates rider status changes with the current auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const payload = {
       isActive: false,
       reason: 'Signal support confirme.',
@@ -190,7 +212,7 @@ describe('AdminController', () => {
 
     await controller.setRiderStatus('rider-user-1', payload, auth as never);
 
-    expect(adminService.setRiderStatus).toHaveBeenCalledWith(
+    expect(adminUsersService.setRiderStatus).toHaveBeenCalledWith(
       'rider-user-1',
       payload,
       auth,
@@ -198,7 +220,7 @@ describe('AdminController', () => {
   });
 
   it('delegates driver payout preparation with notes and auth', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const payload = { notes: 'Paiement terrain valide.' };
     const auth = {
       user: { id: 'ops-1', role: 'OPS' },
@@ -210,7 +232,7 @@ describe('AdminController', () => {
       auth as never,
     );
 
-    expect(adminService.prepareDriverWalletPayout).toHaveBeenCalledWith(
+    expect(adminDriverPayoutsService.prepareDriverWalletPayout).toHaveBeenCalledWith(
       'wallet-1',
       payload,
       auth,
@@ -289,7 +311,7 @@ describe('AdminController', () => {
   });
 
   it('delegates recovery adjustments with required auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const payload = {
       amount: 1000,
       notes: 'Recouvrement mobile money confirme.',
@@ -306,12 +328,12 @@ describe('AdminController', () => {
     );
 
     expect(
-      adminService.recordDriverWalletRecoveryAdjustment,
+      adminDriverPayoutsService.recordDriverWalletRecoveryAdjustment,
     ).toHaveBeenCalledWith('wallet-1', payload, auth);
   });
 
   it('delegates driver payout CSV settlement exports with auth', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const query = { status: 'PREPARED' };
     const auth = {
       user: { id: 'ops-1', role: 'OPS' },
@@ -319,14 +341,14 @@ describe('AdminController', () => {
 
     await controller.driverPayoutSettlementCsv(query as never, auth as never);
 
-    expect(adminService.driverPayoutSettlementCsv).toHaveBeenCalledWith(
+    expect(adminDriverPayoutsService.driverPayoutSettlementCsv).toHaveBeenCalledWith(
       query,
       auth,
     );
   });
 
   it('delegates driver onboarding CSV exports with auth', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const query = {
       guidanceFilter: 'review',
       searchQuery: 'permis',
@@ -338,14 +360,14 @@ describe('AdminController', () => {
 
     await controller.driverOnboardingExportCsv(query as never, auth as never);
 
-    expect(adminService.driverOnboardingExportCsv).toHaveBeenCalledWith(
+    expect(adminDriverOnboardingService.driverOnboardingExportCsv).toHaveBeenCalledWith(
       query,
       auth,
     );
   });
 
   it('delegates driver onboarding export history reads', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const query = {
       page: 1,
       pageSize: 8,
@@ -353,13 +375,13 @@ describe('AdminController', () => {
 
     await controller.driverOnboardingExportHistory(query as never);
 
-    expect(adminService.driverOnboardingExportHistory).toHaveBeenCalledWith(
+    expect(adminDriverOnboardingService.driverOnboardingExportHistory).toHaveBeenCalledWith(
       query,
     );
   });
 
   it('delegates driver document object verification updates with auth', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const payload = {
       state: 'confirmed',
       provider: 'orbi-object-store',
@@ -379,12 +401,12 @@ describe('AdminController', () => {
     );
 
     expect(
-      adminService.updateDriverDocumentObjectVerification,
+      adminDriverOnboardingService.updateDriverDocumentObjectVerification,
     ).toHaveBeenCalledWith('driver-1', 'doc-1', payload, auth);
   });
 
   it('delegates provider driver document object verification with auth', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const auth = {
       user: { id: 'ops-1', role: 'OPS' },
     };
@@ -396,12 +418,12 @@ describe('AdminController', () => {
     );
 
     expect(
-      adminService.verifyDriverDocumentObjectFromProvider,
+      adminDriverOnboardingService.verifyDriverDocumentObjectFromProvider,
     ).toHaveBeenCalledWith('driver-1', 'doc-1', auth);
   });
 
   it('delegates dispatch settings updates with the current auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const auth = {
       user: { id: 'admin-1', role: 'ADMIN', fullName: 'Admin Orbi' },
     };
@@ -419,7 +441,7 @@ describe('AdminController', () => {
   });
 
   it('delegates pricing calibration reads to the admin service', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
 
     await controller.pricingCalibration();
 
@@ -427,7 +449,7 @@ describe('AdminController', () => {
   });
 
   it('delegates launch readiness reads to the admin service', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
 
     await controller.launchReadiness();
 
@@ -435,7 +457,7 @@ describe('AdminController', () => {
   });
 
   it('delegates launch readiness action acknowledgements with auth', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const payload = {
       owner: 'engineering',
       notes: 'Redis backplane owner assigned.',
@@ -458,7 +480,7 @@ describe('AdminController', () => {
   });
 
   it('delegates payment webhook event journal reads to the admin service', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const query = {
       page: 1,
       pageSize: 10,
@@ -467,21 +489,21 @@ describe('AdminController', () => {
 
     await controller.paymentWebhookEvents(query as never);
 
-    expect(adminService.paymentWebhookEvents).toHaveBeenCalledWith(query);
+    expect(adminPaymentWebhooksService.paymentWebhookEvents).toHaveBeenCalledWith(query);
   });
 
   it('delegates payment webhook event detail reads to the admin service', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
 
     await controller.paymentWebhookEventDetail('webhook-event-1');
 
-    expect(adminService.paymentWebhookEventDetail).toHaveBeenCalledWith(
+    expect(adminPaymentWebhooksService.paymentWebhookEventDetail).toHaveBeenCalledWith(
       'webhook-event-1',
     );
   });
 
   it('delegates payment webhook investigation starts with the current auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const auth = {
       user: { id: 'ops-1', role: 'OPS' },
     };
@@ -491,14 +513,14 @@ describe('AdminController', () => {
       auth as never,
     );
 
-    expect(adminService.startPaymentWebhookInvestigation).toHaveBeenCalledWith(
+    expect(adminPaymentWebhooksService.startPaymentWebhookInvestigation).toHaveBeenCalledWith(
       'webhook-event-1',
       auth,
     );
   });
 
   it('delegates provider payment verification with the current auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const auth = {
       user: { id: 'ops-1', role: 'OPS' },
     };
@@ -508,14 +530,14 @@ describe('AdminController', () => {
       auth as never,
     );
 
-    expect(adminService.verifyPaymentAttemptWithProvider).toHaveBeenCalledWith(
+    expect(adminPaymentWebhooksService.verifyPaymentAttemptWithProvider).toHaveBeenCalledWith(
       'payment-1',
       auth,
     );
   });
 
   it('delegates payment refunds with payload and auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const payload = {
       reason: 'Course annulee apres debit.',
     };
@@ -525,7 +547,7 @@ describe('AdminController', () => {
 
     await controller.refundPaymentAttempt('payment-1', payload, auth as never);
 
-    expect(adminService.refundPaymentAttempt).toHaveBeenCalledWith(
+    expect(adminPaymentWebhooksService.refundPaymentAttempt).toHaveBeenCalledWith(
       'payment-1',
       payload,
       auth,
@@ -533,7 +555,7 @@ describe('AdminController', () => {
   });
 
   it('delegates payment webhook replays with the current auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const auth = {
       user: { id: 'ops-1', role: 'OPS' },
     };
@@ -543,14 +565,14 @@ describe('AdminController', () => {
       auth as never,
     );
 
-    expect(adminService.replayPaymentWebhookEvent).toHaveBeenCalledWith(
+    expect(adminPaymentWebhooksService.replayPaymentWebhookEvent).toHaveBeenCalledWith(
       'webhook-event-1',
       auth,
     );
   });
 
   it('delegates health incident acknowledgement with the current auth context', () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const auth = {
       user: { id: 'ops-1', role: 'OPS' },
     };
@@ -564,7 +586,7 @@ describe('AdminController', () => {
   });
 
   it('delegates health incident mute with the current auth context', () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const auth = {
       user: { id: 'ops-1', role: 'OPS' },
     };
@@ -578,7 +600,7 @@ describe('AdminController', () => {
   });
 
   it('delegates trips CSV export with auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const query = { status: 'COMPLETED', limit: 100 };
     const auth = { user: { id: 'admin-1', role: 'ADMIN' } };
 
@@ -611,7 +633,7 @@ describe('AdminController', () => {
   });
 
   it('delegates driver account list reads to the admin service', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const query = {
       page: 1,
       pageSize: 30,
@@ -621,7 +643,7 @@ describe('AdminController', () => {
 
     await controller.listDrivers(query as never);
 
-    expect(adminService.listDrivers).toHaveBeenCalledWith(query);
+    expect(adminUsersService.listDrivers).toHaveBeenCalledWith(query);
   });
 
   it('allows ADMIN, OPS and SUPPORT to list drivers', () => {
@@ -648,7 +670,7 @@ describe('AdminController', () => {
   });
 
   it('delegates trips audit reads to the admin service', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const query = { lookbackHours: 48 };
 
     await controller.tripsAudit(query as never);
@@ -669,7 +691,7 @@ describe('AdminController', () => {
   });
 
   it('delegates job queue reads to the admin service', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const query = { page: 1, pageSize: 20 };
 
     await controller.jobQueue(query as never);
@@ -678,7 +700,7 @@ describe('AdminController', () => {
   });
 
   it('delegates dead-letter job requeue with auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const auth = { user: { id: 'ops-1', role: 'OPS' } };
 
     await controller.requeueJob('job-dead-1', auth as never);
@@ -699,13 +721,13 @@ describe('AdminController', () => {
   });
 
   it('delegates driver suspension with payload and auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const payload = { reason: 'Comportement inapproprie signale.' };
     const auth = { user: { id: 'ops-1', role: 'OPS' } };
 
     await controller.suspendDriver('driver-1', payload as never, auth as never);
 
-    expect(adminService.suspendDriver).toHaveBeenCalledWith(
+    expect(adminDriverOnboardingService.suspendDriver).toHaveBeenCalledWith(
       'driver-1',
       payload,
       auth,
@@ -725,12 +747,12 @@ describe('AdminController', () => {
   });
 
   it('delegates driver reactivation with auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const auth = { user: { id: 'admin-1', role: 'ADMIN' } };
 
     await controller.reactivateDriver('driver-1', auth as never);
 
-    expect(adminService.reactivateDriver).toHaveBeenCalledWith(
+    expect(adminDriverOnboardingService.reactivateDriver).toHaveBeenCalledWith(
       'driver-1',
       auth,
     );
@@ -749,11 +771,11 @@ describe('AdminController', () => {
   });
 
   it('delegates promo code list reads to the admin service', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
 
     await controller.listPromoCodes();
 
-    expect(adminService.listPromoCodes).toHaveBeenCalled();
+    expect(adminPromoCodesService.listPromoCodes).toHaveBeenCalled();
   });
 
   it('restricts promo code listing to ADMIN and OPS — SUPPORT is excluded', () => {
@@ -769,13 +791,13 @@ describe('AdminController', () => {
   });
 
   it('delegates promo code creation with payload and auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const payload = { code: 'PILOTE10', discountBps: 1000, maxUses: 100 };
     const auth = { user: { id: 'admin-1', role: 'ADMIN' } };
 
     await controller.createPromoCode(payload as never, auth as never);
 
-    expect(adminService.createPromoCode).toHaveBeenCalledWith(payload, auth);
+    expect(adminPromoCodesService.createPromoCode).toHaveBeenCalledWith(payload, auth);
   });
 
   it('restricts promo code creation to ADMIN only — OPS and SUPPORT are excluded', () => {
@@ -791,12 +813,12 @@ describe('AdminController', () => {
   });
 
   it('delegates promo code deactivation with auth context', async () => {
-    const { adminService, controller } = createController();
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
     const auth = { user: { id: 'admin-1', role: 'ADMIN' } };
 
     await controller.deactivatePromoCode('promo-1', auth as never);
 
-    expect(adminService.deactivatePromoCode).toHaveBeenCalledWith(
+    expect(adminPromoCodesService.deactivatePromoCode).toHaveBeenCalledWith(
       'promo-1',
       auth,
     );

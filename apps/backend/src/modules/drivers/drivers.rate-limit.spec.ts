@@ -14,6 +14,7 @@ import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { ProfileAccessGuard } from '../auth/profile-access.guard';
 import { DriversController } from './drivers.controller';
 import { DriversService } from './drivers.service';
+import { DriverIncentivesService } from './driver-incentives.service';
 
 /**
  * OWASP API4 (Unrestricted Resource Consumption) — rate limiting on driver
@@ -92,6 +93,7 @@ describe('DriversController — Rate Limiting (integration)', () => {
       controllers: [DriversController],
       providers: [
         { provide: DriversService, useValue: driversService },
+        { provide: DriverIncentivesService, useValue: { getIncentivesSummary: jest.fn().mockResolvedValue({}) } },
         { provide: RateLimitService, useValue: rateLimitService },
         Reflector,
       ],

@@ -45,12 +45,24 @@ import { RidersQueryDto } from './dto/riders-query.dto';
 import { SetRiderStatusDto } from './dto/set-rider-status.dto';
 import { DriversQueryDto } from './dto/drivers-query.dto';
 import { AdminService } from './admin.service';
+import { AdminPaymentWebhooksService } from './admin-payment-webhooks.service';
+import { AdminDriverPayoutsService } from './admin-driver-payouts.service';
+import { AdminDriverOnboardingService } from './admin-driver-onboarding.service';
+import { AdminPromoCodesService } from './admin-promo-codes.service';
+import { AdminSupportService } from './admin-support.service';
+import { AdminUsersService } from './admin-users.service';
 
 @Controller('admin')
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly realtimeService: RealtimeService,
+    private readonly adminPaymentWebhooksService: AdminPaymentWebhooksService,
+    private readonly adminDriverPayoutsService: AdminDriverPayoutsService,
+    private readonly adminDriverOnboardingService: AdminDriverOnboardingService,
+    private readonly adminPromoCodesService: AdminPromoCodesService,
+    private readonly adminSupportService: AdminSupportService,
+    private readonly adminUsersService: AdminUsersService,
   ) {}
 
   @Get('preview')
@@ -154,7 +166,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   supportTickets(@Query() query: PageQueryDto) {
-    return this.adminService.supportTickets(query);
+    return this.adminSupportService.supportTickets(query);
   }
 
   @Get('drivers')
@@ -163,7 +175,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   listDrivers(@Query() query: DriversQueryDto) {
-    return this.adminService.listDrivers(query);
+    return this.adminUsersService.listDrivers(query);
   }
 
   @Get('riders')
@@ -172,7 +184,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   riders(@Query() query: RidersQueryDto) {
-    return this.adminService.listRiders(query);
+    return this.adminUsersService.listRiders(query);
   }
 
   @Patch('riders/:userId/status')
@@ -185,7 +197,7 @@ export class AdminController {
     @Body() payload: SetRiderStatusDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.setRiderStatus(userId, payload, auth);
+    return this.adminUsersService.setRiderStatus(userId, payload, auth);
   }
 
   @Get('driver-onboarding-queue')
@@ -197,7 +209,7 @@ export class AdminController {
     @Query() query: PageQueryDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.driverOnboardingQueue(query, auth);
+    return this.adminDriverOnboardingService.driverOnboardingQueue(query, auth);
   }
 
   @Get('driver-onboarding/export-history')
@@ -206,7 +218,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   driverOnboardingExportHistory(@Query() query: PageQueryDto) {
-    return this.adminService.driverOnboardingExportHistory(query);
+    return this.adminDriverOnboardingService.driverOnboardingExportHistory(query);
   }
 
   @Get('driver-onboarding/export.csv')
@@ -223,7 +235,7 @@ export class AdminController {
     @Query() query: DriverOnboardingExportQueryDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.driverOnboardingExportCsv(query, auth);
+    return this.adminDriverOnboardingService.driverOnboardingExportCsv(query, auth);
   }
 
   @Get('trips/export.csv')
@@ -246,7 +258,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   driverWallets(@Query() query: PageQueryDto) {
-    return this.adminService.driverWallets(query);
+    return this.adminDriverPayoutsService.driverWallets(query);
   }
 
   @Post('driver-wallets/:walletId/payouts/prepare')
@@ -259,7 +271,7 @@ export class AdminController {
     @Body() payload: DriverPayoutApprovalDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.prepareDriverWalletPayout(walletId, payload, auth);
+    return this.adminDriverPayoutsService.prepareDriverWalletPayout(walletId, payload, auth);
   }
 
   @Post('driver-wallets/:walletId/recovery-adjustments')
@@ -272,7 +284,7 @@ export class AdminController {
     @Body() payload: DriverWalletRecoveryAdjustmentDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.recordDriverWalletRecoveryAdjustment(
+    return this.adminDriverPayoutsService.recordDriverWalletRecoveryAdjustment(
       walletId,
       payload,
       auth,
@@ -289,7 +301,7 @@ export class AdminController {
     @Body() payload: DriverPayoutApprovalDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.markDriverPayoutPaid(payoutId, payload, auth);
+    return this.adminDriverPayoutsService.markDriverPayoutPaid(payoutId, payload, auth);
   }
 
   @Get('driver-payouts/settlement.csv')
@@ -306,7 +318,7 @@ export class AdminController {
     @Query() query: DriverPayoutSettlementQueryDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.driverPayoutSettlementCsv(query, auth);
+    return this.adminDriverPayoutsService.driverPayoutSettlementCsv(query, auth);
   }
 
   @Get('driver-payouts/settlement.pdf')
@@ -323,7 +335,7 @@ export class AdminController {
     @Query() query: DriverPayoutSettlementQueryDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    const pdf = await this.adminService.driverPayoutSettlementPdf(query, auth);
+    const pdf = await this.adminDriverPayoutsService.driverPayoutSettlementPdf(query, auth);
 
     return new StreamableFile(pdf);
   }
@@ -361,7 +373,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   paymentWebhookEvents(@Query() query: PaymentWebhookEventsQueryDto) {
-    return this.adminService.paymentWebhookEvents(query);
+    return this.adminPaymentWebhooksService.paymentWebhookEvents(query);
   }
 
   @Get('payment-webhook-events/:eventId')
@@ -372,7 +384,7 @@ export class AdminController {
   paymentWebhookEventDetail(
     @Param('eventId', new OpaqueIdPipe('eventId')) eventId: string,
   ) {
-    return this.adminService.paymentWebhookEventDetail(eventId);
+    return this.adminPaymentWebhooksService.paymentWebhookEventDetail(eventId);
   }
 
   @Post('payment-webhook-events/:eventId/investigation')
@@ -384,7 +396,7 @@ export class AdminController {
     @Param('eventId', new OpaqueIdPipe('eventId')) eventId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.startPaymentWebhookInvestigation(eventId, auth);
+    return this.adminPaymentWebhooksService.startPaymentWebhookInvestigation(eventId, auth);
   }
 
   @Post('payment-webhook-events/:eventId/replay')
@@ -396,7 +408,7 @@ export class AdminController {
     @Param('eventId', new OpaqueIdPipe('eventId')) eventId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.replayPaymentWebhookEvent(eventId, auth);
+    return this.adminPaymentWebhooksService.replayPaymentWebhookEvent(eventId, auth);
   }
 
   @Post('payment-attempts/:paymentAttemptId/verify-provider')
@@ -409,7 +421,7 @@ export class AdminController {
     paymentAttemptId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.verifyPaymentAttemptWithProvider(
+    return this.adminPaymentWebhooksService.verifyPaymentAttemptWithProvider(
       paymentAttemptId,
       auth,
     );
@@ -426,7 +438,7 @@ export class AdminController {
     @Body() payload: PaymentAttemptRefundDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.refundPaymentAttempt(
+    return this.adminPaymentWebhooksService.refundPaymentAttempt(
       paymentAttemptId,
       payload,
       auth,
@@ -455,7 +467,7 @@ export class AdminController {
     @Body() payload: UpdateSupportTicketDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.updateSupportTicket(ticketId, payload, auth);
+    return this.adminSupportService.updateSupportTicket(ticketId, payload, auth);
   }
 
   @Patch('driver-onboarding/:driverId/review')
@@ -468,7 +480,7 @@ export class AdminController {
     @Body() payload: UpdateDriverOnboardingReviewDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.updateDriverOnboardingReview(
+    return this.adminDriverOnboardingService.updateDriverOnboardingReview(
       driverId,
       payload,
       auth,
@@ -509,7 +521,7 @@ export class AdminController {
     @Param('documentId', new OpaqueIdPipe('documentId')) documentId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.getDriverDocumentViewLink(
+    return this.adminDriverOnboardingService.getDriverDocumentViewLink(
       driverId,
       documentId,
       auth,
@@ -529,7 +541,7 @@ export class AdminController {
     @Body() payload: UpdateDriverDocumentObjectVerificationDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.updateDriverDocumentObjectVerification(
+    return this.adminDriverOnboardingService.updateDriverDocumentObjectVerification(
       driverId,
       documentId,
       payload,
@@ -549,7 +561,7 @@ export class AdminController {
     @Param('documentId', new OpaqueIdPipe('documentId')) documentId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.verifyDriverDocumentObjectFromProvider(
+    return this.adminDriverOnboardingService.verifyDriverDocumentObjectFromProvider(
       driverId,
       documentId,
       auth,
@@ -566,7 +578,7 @@ export class AdminController {
     @Body() body: DriverSuspensionDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.suspendDriver(driverId, body, auth);
+    return this.adminDriverOnboardingService.suspendDriver(driverId, body, auth);
   }
 
   @Post('drivers/:driverId/reactivate')
@@ -578,7 +590,7 @@ export class AdminController {
     @Param('driverId', new OpaqueIdPipe('driverId')) driverId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.reactivateDriver(driverId, auth);
+    return this.adminDriverOnboardingService.reactivateDriver(driverId, auth);
   }
 
   @Get('promo-codes')
@@ -587,7 +599,7 @@ export class AdminController {
   @UseGuards(SessionAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OPS)
   listPromoCodes() {
-    return this.adminService.listPromoCodes();
+    return this.adminPromoCodesService.listPromoCodes();
   }
 
   @Post('promo-codes')
@@ -599,7 +611,7 @@ export class AdminController {
     @Body() body: CreatePromoCodeDto,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.createPromoCode(body, auth);
+    return this.adminPromoCodesService.createPromoCode(body, auth);
   }
 
   @Delete('promo-codes/:promoCodeId')
@@ -611,6 +623,6 @@ export class AdminController {
     @Param('promoCodeId', new OpaqueIdPipe('promoCodeId')) promoCodeId: string,
     @CurrentAuth() auth: RequestAuthContext,
   ) {
-    return this.adminService.deactivatePromoCode(promoCodeId, auth);
+    return this.adminPromoCodesService.deactivatePromoCode(promoCodeId, auth);
   }
 }
