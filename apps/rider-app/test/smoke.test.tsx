@@ -10,6 +10,7 @@ import {
   createSavedPlaceWithApi,
   createTripShareLinkWithApi,
   deleteSavedPlaceWithApi,
+  fetchNearbyDrivers,
   fetchMyTrips,
   fetchRideOptionsPreview,
   fetchRiderProfile,
@@ -113,6 +114,7 @@ jest.mock('@orbi/api', () => {
     ...actual,
     createOrbiApiClient: jest.fn(() => ({ kind: 'mock-client' })),
     cancelRideRequestWithApi: jest.fn(),
+    fetchNearbyDrivers: jest.fn(),
     fetchRideOptionsPreview: jest.fn(),
     fetchMyTrips: jest.fn(),
     fetchRiderProfile: jest.fn(),
@@ -141,6 +143,7 @@ const mockedSignInRiderAccount = jest.mocked(signInRiderAccount);
 const mockedRestoreRiderSession = jest.mocked(restoreRiderSession);
 const mockedSignOutRiderAccount = jest.mocked(signOutRiderAccount);
 const mockedCancelRideRequestWithApi = jest.mocked(cancelRideRequestWithApi);
+const mockedFetchNearbyDrivers = jest.mocked(fetchNearbyDrivers);
 const mockedFetchRideOptionsPreview = jest.mocked(fetchRideOptionsPreview);
 const mockedFetchMyTrips = jest.mocked(fetchMyTrips);
 const mockedFetchRiderProfile = jest.mocked(fetchRiderProfile);
@@ -338,6 +341,7 @@ beforeEach(() => {
   mockedRestoreRiderSession.mockReset();
   mockedSignOutRiderAccount.mockReset();
   mockedCancelRideRequestWithApi.mockReset();
+  mockedFetchNearbyDrivers.mockReset();
   mockedFetchRideOptionsPreview.mockReset();
   mockedFetchMyTrips.mockReset();
   mockedFetchRiderProfile.mockReset();
@@ -390,6 +394,18 @@ beforeEach(() => {
   jest.mocked(Linking.openURL).mockResolvedValue(undefined);
   jest.mocked(Share.share).mockResolvedValue({ action: 'sharedAction' });
   mockedGetMySupportTicketsWithApi.mockResolvedValue({ tickets: [] } as never);
+  mockedFetchNearbyDrivers.mockResolvedValue({
+    drivers: [
+      {
+        id: 'driver-1',
+        latitude: 12.365,
+        longitude: -1.533,
+        vehicleType: 'MOTORCYCLE',
+        status: 'ONLINE',
+      },
+    ],
+    total: 1,
+  } as never);
   mockedTriggerTripSafetySosWithApi.mockResolvedValue({
     sos: {
       tripId: 'trip-1',
@@ -609,6 +625,31 @@ describe('rider smoke flows', () => {
       }),
     );
     expect(mockedCreateCheckoutIntentWithApi).not.toHaveBeenCalled();
+  });
+
+  it('blocks an immediate booking when no compatible driver is online nearby', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchNearbyDrivers.mockResolvedValue({
+      drivers: [],
+      total: 0,
+    } as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Aucun chauffeur proche');
+    await pressByLabel(renderer, 'booking-cta');
+
+    expect(mockedCreateRideRequestWithApi).not.toHaveBeenCalled();
   });
 
   it('uses rider GPS as the pickup coordinates when available', async () => {

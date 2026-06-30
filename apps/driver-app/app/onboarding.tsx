@@ -151,12 +151,13 @@ export default function DriverOnboardingScreen() {
   }, [currentStep, plateNumber, selectedMake, selectedModel, phoneNumber, licenseNumber]);
 
   function animateStep(direction: 1 | -1) {
+    slideAnim.stopAnimation();
     slideAnim.setValue(direction * 40);
     Animated.spring(slideAnim, {
       toValue: 0,
       tension: 65,
       friction: 9,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }
 

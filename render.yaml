@@ -1,0 +1,90 @@
+services:
+  - type: web
+    name: orbi-field-api
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: corepack enable && corepack prepare pnpm@10.30.0 --activate && pnpm install --frozen-lockfile && pnpm --filter @orbi/domain build && pnpm --filter @orbi/api build && pnpm --filter @orbi/config build && pnpm --filter @orbi/ui build && pnpm --filter backend prisma:generate && pnpm --filter backend build
+    preDeployCommand: pnpm --filter backend exec prisma migrate deploy
+    startCommand: pnpm --filter backend start:prod
+    initialDeployHook: pnpm --filter backend prisma:seed
+    healthCheckPath: /api/v1/health/ready
+    autoDeploy: false
+    disk:
+      name: orbi-field-documents
+      mountPath: /var/data/orbi-documents
+      sizeGB: 10
+    envVars:
+      - key: NODE_VERSION
+        value: 22.13.1
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY
+        value: "true"
+      - key: ENABLE_SWAGGER
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orbi-field-db
+          property: connectionString
+      - key: RATE_LIMIT_ADAPTER
+        value: postgres
+      - key: RATE_LIMIT_STRICT
+        value: "true"
+      - key: REALTIME_ADAPTER
+        value: postgres
+      - key: REALTIME_STRICT
+        value: "true"
+      - key: JOB_QUEUE_WORKER_ENABLED
+        value: "true"
+      - key: FRONTEND_ALLOWED_ORIGINS
+        value: https://orbi-field-api.onrender.com
+      - key: PAYMENTS_PROVIDER
+        value: flutterwave
+      - key: PAYMENTS_CURRENCY
+        value: XOF
+      - key: PAYMENTS_DEFAULT_REDIRECT_URL
+        value: https://orbi-field-api.onrender.com/payments/return
+      - key: PAYMENTS_DEFAULT_WEBHOOK_URL
+        value: https://orbi-field-api.onrender.com/api/v1/payments/webhooks
+      - key: PAYMENTS_WEBHOOK_SECRET
+        generateValue: true
+      - key: DOCUMENT_SIGNING_SECRET
+        generateValue: true
+      - key: DOCUMENT_SAFETY_SCANNER_PROVIDER
+        value: local-policy
+      - key: DOCUMENT_OBJECT_PROVIDER
+        value: local-provider
+      - key: DOCUMENT_LOCAL_PROVIDER_ROOT
+        value: /var/data/orbi-documents
+      - key: DOCUMENT_UPLOAD_BASE_URL
+        value: https://orbi-field-api.onrender.com/api/v1/driver-documents/upload
+      - key: DOCUMENT_VIEW_BASE_URL
+        value: https://orbi-field-api.onrender.com/api/v1/driver-documents/view
+      - key: MOBILE_ERROR_COLLECTOR_PROVIDER
+        value: webhook
+      - key: MOBILE_ERROR_COLLECTOR_WEBHOOK_URL
+        value: https://orbi-field-api.onrender.com/api/v1/mobile-errors/webhook
+      - key: NOTIFICATIONS_PROVIDER
+        value: local
+      - key: PAYMENTS_REFUND_MODE
+        value: manual
+      - key: FEATURE_FLAG_PAYMENTS
+        value: "on"
+      - key: FEATURE_FLAG_PRICING
+        value: "on"
+      - key: FEATURE_FLAG_REALTIME
+        value: "on"
+      - key: FEATURE_FLAG_DRIVER_ONBOARDING
+        value: "on"
+      - key: FEATURE_FLAG_VOICE
+        value: "on"
+
+databases:
+  - name: orbi-field-db
+    databaseName: orbi
+    user: orbi
+    plan: starter
+    region: frankfurt

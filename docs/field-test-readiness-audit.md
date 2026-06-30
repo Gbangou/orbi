@@ -1,12 +1,25 @@
 # Orbi Field Test Readiness Audit
 
-Date: 2026-06-01
+Date: 2026-06-30
 
 ## Scope
 
 This audit covers the rider app, driver app, backend trip lifecycle, shared API
-contract, field build configuration and operational test posture. APK builds
-were intentionally not launched during this pass.
+contract, field build configuration and operational test posture.
+
+## Current APK Artifacts
+
+Fresh local Android MVP APKs were generated on 2026-06-30:
+
+| App | Artifact | Size | Generated |
+| --- | --- | ---: | --- |
+| Rider | `dist/orbi-rider-mvp.apk` | 69,641,502 bytes | 2026-06-30 17:22 |
+| Driver | `dist/orbi-driver-mvp.apk` | 69,632,938 bytes | 2026-06-30 17:05 |
+
+The rider APK build blocker was removed by eliminating the native `expo-av`
+dependency from the rider voice screen. The voice destination path remains
+usable for field testing through deterministic intent capture and backend
+location-intent resolution; real speech-to-text remains a production gap.
 
 ## Current Field Guarantees
 
@@ -54,14 +67,14 @@ were intentionally not launched during this pass.
 - Keep admin live ops open during the test to show trip lifecycle, pickup-code
   issued/verified state, incidents and payout visibility.
 
-## Remaining Risks Before APK Build
+## Remaining Risks Before Field Test
 
 - Run the full workspace verification after any additional code change:
   `pnpm typecheck`, backend focused tests, Prisma validation and
   `pnpm test:mobile:smoke`.
-- Confirm the field backend health immediately before building APKs:
+- Confirm the field backend health immediately before installing or regenerating APKs:
   `pnpm field:api:check` and `pnpm mobile:check`.
-- The current local Node is `v24.16.0`; the repo targets `>=22 <24`. Commands
-  pass with warnings, but APK/release work should use Node 22.
-- Do not run `pnpm mobile:apk`, `pnpm mobile:field` or EAS builds until the
-  audit gates are green and the user explicitly asks for APK generation.
+- The current local Node used for this pass is `v22.23.1`, aligned with the
+  repo engine requirement.
+- Install the APKs on real devices with USB, verify login, booking, driver
+  acceptance, pickup code, active trip, rating, support and admin live ops.

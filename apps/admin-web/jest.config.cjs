@@ -6,6 +6,10 @@ module.exports = {
   clearMocks: true,
   moduleDirectories: ['node_modules', path.resolve(__dirname, 'node_modules')],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+  moduleNameMapper: {
+    '^@orbi/ui$': '<rootDir>/test/orbi-ui.mock.ts',
+    '^react-native$': '<rootDir>/test/react-native.mock.js',
+  },
   testMatch: ['<rootDir>/test/**/*.test.ts?(x)'],
   transform: {
     '^.+\\.(t|j)sx?$': [

@@ -25,6 +25,7 @@ ce flux doit changer dans le meme travail.
 | Directive production | `production-readiness-directive.md` |
 | Programme de tests securite et fiabilite | `security-test-program.md` |
 | Roadmap world-class | `world-class-readiness-roadmap.md` |
+| Audit professionnel app/APK du 30 juin 2026 | `professional-app-audit-2026-06-30.md` |
 
 ## Organisation
 
@@ -48,6 +49,7 @@ Documents d'execution locale, terrain et production:
 Documents qui cadrent les choix marche et operationnels:
 
 - `competitive-benchmark.md`
+- `professional-app-audit-2026-06-30.md`
 - `payment-strategy.md`
 - `pricing-burkina-strategy.md`
 - `production-readiness-directive.md`

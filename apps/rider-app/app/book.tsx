@@ -24,6 +24,7 @@ import {
   createOrbiApiClient,
   createSavedPlaceWithApi,
   estimateDurationMinutes,
+  fetchNearbyDrivers,
   fetchMyTrips,
   fetchRiderProfile,
   fetchRideOptionsPreview,
@@ -70,6 +71,11 @@ import { TripMapView } from '../lib/trip-map-view';
 import { PlaceSearch } from '../lib/place-search';
 
 const cityPresets = burkinaPricingCityPresets;
+const fieldDispatchRadiusKm = 8;
+
+type NearbyDriverMarker = Awaited<
+  ReturnType<typeof fetchNearbyDrivers>
+>['drivers'][number];
 
 const fallbackRiderProfile: RiderProfileResponse = {
   profile: {
@@ -159,6 +165,16 @@ function buildCurrentPositionPlace(position: {
 
 function findCityPresetForPlace(place: Place) {
   return resolveBurkinaPricingPresetForPlace(place);
+}
+
+function countCompatibleNearbyDrivers(
+  drivers: NearbyDriverMarker[],
+  requestedVehicleType: string,
+) {
+  return drivers.filter(
+    (driver) =>
+      driver.status === 'ONLINE' && driver.vehicleType === requestedVehicleType,
+  ).length;
 }
 
 
@@ -311,6 +327,8 @@ export default function BookingScreen() {
     supportedNetworks: string[];
     channel: string;
   } | null>(null);
+  const [nearbyCompatibleDriverCount, setNearbyCompatibleDriverCount] =
+    useState<number | null>(null);
   const [autoAppliedRiderPosition, setAutoAppliedRiderPosition] =
     useState(false);
   const [showPromo, setShowPromo] = useState(false);
@@ -418,22 +436,44 @@ export default function BookingScreen() {
     try {
       const { authClient, me, session } = await restoreRiderSession();
       setSessionToken(session.sessionToken);
-      const [response, historyResponse, profileResponse] = await Promise.all([
-        fetchRideOptionsPreview(client, {
-          distanceKm: tripEstimate.distanceKm,
-          durationMinutes: tripEstimate.durationMinutes,
-          vehicleType: 'MOTORCYCLE',
-          paymentMethod: toApiPaymentMethod(selectedPaymentMethod),
-          zone: selectedCity.zone,
-          city: selectedCity.id,
-          districtProfile: selectedCity.districtProfile,
-          isPeakHour: true,
-          activeDriverCount: 8,
-          openRequestCount: 11,
-        }),
-        fetchMyTrips(authClient),
-        fetchRiderProfile(authClient),
-      ]);
+
+      const pickupCoordinates =
+        pickupPlace.coordinates ?? riderPosition.latestPosition ?? null;
+      const nearbyDriversPromise = pickupCoordinates
+        ? fetchNearbyDrivers(client, {
+            lat: pickupCoordinates.latitude,
+            lng: pickupCoordinates.longitude,
+            radiusKm: fieldDispatchRadiusKm,
+          }).catch(() => null)
+        : Promise.resolve(null);
+
+      const [nearbyDriversResponse, historyResponse, profileResponse] =
+        await Promise.all([
+          nearbyDriversPromise,
+          fetchMyTrips(authClient),
+          fetchRiderProfile(authClient),
+        ]);
+
+      const compatibleDriverCount = nearbyDriversResponse
+        ? countCompatibleNearbyDrivers(
+            nearbyDriversResponse.drivers,
+            'MOTORCYCLE',
+          )
+        : null;
+      setNearbyCompatibleDriverCount(compatibleDriverCount);
+
+      const response = await fetchRideOptionsPreview(client, {
+        distanceKm: tripEstimate.distanceKm,
+        durationMinutes: tripEstimate.durationMinutes,
+        vehicleType: 'MOTORCYCLE',
+        paymentMethod: toApiPaymentMethod(selectedPaymentMethod),
+        zone: selectedCity.zone,
+        city: selectedCity.id,
+        districtProfile: selectedCity.districtProfile,
+        isPeakHour: true,
+        activeDriverCount: compatibleDriverCount ?? 0,
+        openRequestCount: historyResponse.pendingRequests.length,
+      });
 
       setOptions(response.options);
       setHistory(historyResponse);
@@ -461,7 +501,11 @@ export default function BookingScreen() {
       setStatus(
         flow.hasOpenFlow
           ? `${me.user.fullName} a deja une demande ou une course active.`
-          : `Pret a reserver pour ${me.user.fullName} a ${selectedCity.label}.`,
+          : compatibleDriverCount === null
+            ? `Disponibilite chauffeur non verifiee autour du depart. Reessayez avant de lancer une demande immediate.`
+            : compatibleDriverCount > 0
+              ? `Pret a reserver pour ${me.user.fullName} a ${selectedCity.label}. ${compatibleDriverCount} chauffeur${compatibleDriverCount > 1 ? 's' : ''} compatible${compatibleDriverCount > 1 ? 's' : ''} en ligne dans ${fieldDispatchRadiusKm} km.`
+              : `Aucun chauffeur compatible en ligne dans ${fieldDispatchRadiusKm} km autour du depart. Passez un chauffeur en ligne avant de tester une demande immediate.`,
       );
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
@@ -479,6 +523,7 @@ export default function BookingScreen() {
       setHistory(null);
       setPaymentPreview(null);
       setProfile(fallbackRiderProfile);
+      setNearbyCompatibleDriverCount(null);
     } finally {
       setIsRealtimeSyncing(false);
       setIsRefreshing(false);
@@ -613,6 +658,22 @@ export default function BookingScreen() {
     hasOpenFlow,
     primaryStatusLabel,
   } = flow;
+  const immediateBookingSupplyUnknown =
+    !hasOpenFlow &&
+    scheduleMode === 'now' &&
+    nearbyCompatibleDriverCount === null;
+  const immediateBookingUnavailable =
+    !hasOpenFlow &&
+    scheduleMode === 'now' &&
+    nearbyCompatibleDriverCount !== null &&
+    nearbyCompatibleDriverCount <= 0;
+  const isBookingCtaDisabled =
+    isSubmitting ||
+    (!hasOpenFlow &&
+      (!selectedOption ||
+        !destinationPlace.coordinates ||
+        immediateBookingSupplyUnknown ||
+        immediateBookingUnavailable));
 
   useEffect(() => {
     const previousFlowState = previousFlowStateRef.current;
@@ -674,6 +735,24 @@ export default function BookingScreen() {
       return;
     }
     const selectedValidatedOption = bookingValidation.option;
+
+    if (scheduleMode === 'now' && nearbyCompatibleDriverCount === null) {
+      setStatus(
+        'Disponibilite chauffeur pas encore verifiee. Attendez la synchronisation ou reessayez.',
+      );
+      return;
+    }
+
+    if (
+      scheduleMode === 'now' &&
+      nearbyCompatibleDriverCount !== null &&
+      nearbyCompatibleDriverCount <= 0
+    ) {
+      setStatus(
+        `Aucun chauffeur compatible en ligne dans ${fieldDispatchRadiusKm} km. Ouvrez l'app chauffeur, connectez le compte driver, passez en ligne, puis relancez la demande.`,
+      );
+      return;
+    }
 
     bookingMutationInFlightRef.current = true;
     setIsSubmitting(true);
@@ -757,15 +836,15 @@ export default function BookingScreen() {
         );
       }
 
-      // Confirmation animation — green checkmark Uber-style
+      // Feedback de creation de demande, avant acceptation chauffeur.
       setBookingConfirmed(true);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Animated.sequence([
-        Animated.spring(checkScale, { toValue: 1, tension: 50, friction: 5, useNativeDriver: true }),
-        Animated.timing(checkOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+        Animated.spring(checkScale, { toValue: 1, tension: 50, friction: 5, useNativeDriver: false }),
+        Animated.timing(checkOpacity, { toValue: 1, duration: 150, useNativeDriver: false }),
       ]).start();
       setTimeout(() => {
-        Animated.timing(checkOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start();
+        Animated.timing(checkOpacity, { toValue: 0, duration: 400, useNativeDriver: false }).start();
         setTimeout(() => {
           setBookingConfirmed(false);
           checkScale.setValue(0);
@@ -813,7 +892,7 @@ export default function BookingScreen() {
           <Animated.View style={[styles.confirmCircle, { transform: [{ scale: checkScale }] }]}>
             <Text style={styles.confirmCheck}>✓</Text>
           </Animated.View>
-          <Text style={styles.confirmLabel}>Course confirmée !</Text>
+          <Text style={styles.confirmLabel}>Demande envoyée</Text>
         </Animated.View>
       ) : null}
 
@@ -963,6 +1042,50 @@ export default function BookingScreen() {
             </View>
             <Text style={styles.activeFlowArrow}>›</Text>
           </Pressable>
+        ) : immediateBookingUnavailable || immediateBookingSupplyUnknown ? (
+          <View
+            style={[
+              styles.supplyBanner,
+              immediateBookingUnavailable && styles.supplyBannerWarning,
+            ]}
+          >
+            <View
+              style={[
+                styles.supplyDot,
+                {
+                  backgroundColor: immediateBookingUnavailable
+                    ? orbiTheme.colors.amber
+                    : orbiTheme.colors.textMuted,
+                },
+              ]}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.supplyTitle}>
+                {immediateBookingUnavailable
+                  ? 'Aucun chauffeur proche'
+                  : 'Verification chauffeur en cours'}
+              </Text>
+              <Text style={styles.supplySub}>
+                {immediateBookingUnavailable
+                  ? `Demande immediate bloquee tant qu'aucun chauffeur moto n'est en ligne dans ${fieldDispatchRadiusKm} km.`
+                  : 'Le backend doit confirmer la presence chauffeur avant de lancer la recherche.'}
+              </Text>
+            </View>
+          </View>
+        ) : nearbyCompatibleDriverCount !== null ? (
+          <View style={styles.supplyBanner}>
+            <View style={styles.supplyDot} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.supplyTitle}>
+                {nearbyCompatibleDriverCount} chauffeur
+                {nearbyCompatibleDriverCount > 1 ? 's' : ''} en ligne
+              </Text>
+              <Text style={styles.supplySub}>
+                Disponibilite reelle verifiee dans {fieldDispatchRadiusKm} km
+                autour du depart.
+              </Text>
+            </View>
+          </View>
         ) : null}
 
         {/* ── Scheduled ride picker ── */}
@@ -1125,16 +1248,10 @@ export default function BookingScreen() {
               ? () => router.push('/activity')
               : () => void handleCreateRideRequest()
           }
-          disabled={
-            isSubmitting ||
-            (!hasOpenFlow && (!selectedOption || !destinationPlace.coordinates))
-          }
+          disabled={isBookingCtaDisabled}
           style={({ pressed }) => [
             styles.ctaBtn,
-            (isSubmitting ||
-              (!hasOpenFlow &&
-                (!selectedOption || !destinationPlace.coordinates))) &&
-              styles.ctaBtnDisabled,
+            isBookingCtaDisabled && styles.ctaBtnDisabled,
             pressed && styles.ctaBtnPressed,
           ]}
         >
@@ -1143,6 +1260,10 @@ export default function BookingScreen() {
               ? tb('confirmLoading')
               : hasOpenFlow
                 ? tb('activeFlow')
+                : immediateBookingUnavailable
+                  ? 'Aucun chauffeur proche'
+                  : immediateBookingSupplyUnknown
+                    ? 'Verification chauffeur...'
                 : selectedOption && destinationPlace.coordinates
                   ? tb('confirm').replace('{{fare}}', formatXof(selectedOption.fare))
                   : tb('noServiceSelected')}
@@ -1366,6 +1487,39 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   activeFlowArrow: { fontSize: 22, color: orbiTheme.colors.amber },
+  supplyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(0,201,167,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,201,167,0.24)',
+    borderRadius: 14,
+    padding: 14,
+  },
+  supplyBannerWarning: {
+    backgroundColor: 'rgba(255,149,0,0.08)',
+    borderColor: 'rgba(255,149,0,0.28)',
+  },
+  supplyDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: orbiTheme.colors.teal,
+    flexShrink: 0,
+  },
+  supplyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  supplySub: {
+    fontSize: 12,
+    color: orbiTheme.colors.textSoft,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
+  },
 
   // Vehicle section
   vehicleSection: { gap: 10 },

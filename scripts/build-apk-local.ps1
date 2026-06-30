@@ -10,12 +10,20 @@
 #   JAVA_HOME     →  C:\Android\jdk17\jdk-17.0.19+10 (par defaut)
 
 param(
-    [ValidateSet('rider','driver','all')]
-    [string]$App = 'all'
+    [ValidateSet('rider', 'driver', 'all')]
+    [string]$App = 'all',
+    [string]$ApiBaseUrl = $(if ($env:ORBI_FIELD_API_BASE_URL) { $env:ORBI_FIELD_API_BASE_URL } else { "https://backend-production-d5d1.up.railway.app" })
 )
 
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path $PSScriptRoot -Parent
+
+$env:CI = "true"
+$env:EXPO_NO_TELEMETRY = "1"
+$env:NODE_ENV = "production"
+if (-not $env:GRADLE_OPTS) {
+    $env:GRADLE_OPTS = "-Dfile.encoding=UTF-8"
+}
 
 # Valeurs par defaut Android SDK + JDK Temurin 17 portables
 if (-not $env:ANDROID_HOME) {
@@ -53,6 +61,20 @@ function Build-App {
     Set-Content -Path "$AppDir\android\local.properties" -Value $localProps -Encoding UTF8
     Write-Host "  android/local.properties → $env:ANDROID_HOME" -ForegroundColor DarkGray
 
+    # Expo regenere android/ a chaque build propre. Reappliquer une marge memoire
+    # suffisante evite les builds release fragiles sur Windows.
+    $GradlePropsPath = "$AppDir\android\gradle.properties"
+    $GradleProps = Get-Content $GradlePropsPath -Raw
+    $GradleJvmArgs = "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8"
+    if ($GradleProps -match "(?m)^org\.gradle\.jvmargs=.*$") {
+        $GradleProps = $GradleProps -replace "(?m)^org\.gradle\.jvmargs=.*$", $GradleJvmArgs
+    }
+    else {
+        $GradleProps = "$GradleProps`n$GradleJvmArgs`n"
+    }
+    Set-Content -Path $GradlePropsPath -Value $GradleProps -Encoding UTF8
+    Write-Host "  android/gradle.properties → release JVM tuned" -ForegroundColor DarkGray
+
     # Restaurer le keystore stable pour que la signature reste identique entre les builds.
     # Sans ca, expo prebuild --clean genere un nouveau keystore a chaque fois et Android
     # refuse d'installer l'APK par-dessus une version precedente (signature conflict).
@@ -61,7 +83,8 @@ function Build-App {
     if (Test-Path $StableKeystore) {
         Copy-Item $StableKeystore $AndroidKeystore -Force
         Write-Host "  android/app/debug.keystore ← signing/debug.keystore (signature stable)" -ForegroundColor DarkGray
-    } else {
+    }
+    else {
         Write-Host "  WARNING: signing/debug.keystore absent — Gradle va generer un nouveau keystore (signature instable)" -ForegroundColor Yellow
     }
 
@@ -71,16 +94,36 @@ function Build-App {
     $EnvLines = $EnvVars.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }
     $EnvFileContent = $EnvLines -join "`n"
     Set-Content -Path "$AppDir\.env" -Value $EnvFileContent -Encoding UTF8
-    Write-Host "  $AppDir\.env ecrit ($($EnvVars.Count) vars EXPO_PUBLIC_*)" -ForegroundColor DarkGray
+    Write-Host "  $AppDir\.env written ($($EnvVars.Count) vars)" -ForegroundColor DarkGray
 
     # Gradle assembleRelease → .apk
     Write-Host "  gradlew assembleRelease ..." -ForegroundColor Yellow
     Set-Location "$AppDir\android"
     .\gradlew.bat assembleRelease
-    if ($LASTEXITCODE -ne 0) { throw "Gradle build failed for $AppName" }
+
+    $ApkSrc = "$AppDir\android\app\build\outputs\apk\release\app-release.apk"
+    if ($LASTEXITCODE -ne 0) {
+        if (-not (Test-Path $ApkSrc)) {
+            throw "Gradle build failed for $AppName"
+        }
+
+        $BuildToolsDir = Get-ChildItem "$env:ANDROID_HOME\build-tools" -Directory |
+        Sort-Object Name -Descending |
+        Select-Object -First 1
+        $ApkSigner = "$($BuildToolsDir.FullName)\apksigner.bat"
+        if (-not (Test-Path $ApkSigner)) {
+            throw "Gradle build failed for $AppName and apksigner was not found."
+        }
+
+        & $ApkSigner verify --verbose $ApkSrc
+        if ($LASTEXITCODE -ne 0) {
+            throw "Gradle build failed for $AppName and generated APK signature verification failed."
+        }
+
+        Write-Host "  WARNING: Gradle exited non-zero after producing a signed APK; copying verified APK." -ForegroundColor Yellow
+    }
 
     # Copier l'APK dans dist/
-    $ApkSrc = "$AppDir\android\app\build\outputs\apk\release\app-release.apk"
     $DistDir = "$Root\dist"
     New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
     $ApkDst = "$DistDir\orbi-$AppName-mvp.apk"
@@ -99,33 +142,30 @@ Set-Location $Root
 pnpm install --frozen-lockfile
 if ($LASTEXITCODE -ne 0) { throw "pnpm install failed" }
 
-# NODE_ENV=production requis par expo-constants:createExpoConfig (sinon warning + mode-specific .env ignore)
-$env:NODE_ENV = "production"
-
 # Variables d'environnement communes aux deux apps
 $CommonEnv = @{
-    EXPO_PUBLIC_API_BASE_URL    = "https://backend-production-d5d1.up.railway.app"
-    EXPO_PUBLIC_API_VERSION     = "v1"
+    EXPO_PUBLIC_API_BASE_URL         = $ApiBaseUrl
+    EXPO_PUBLIC_API_VERSION          = "v1"
     EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS = "true"
 }
 
 if ($App -eq 'rider' -or $App -eq 'all') {
     Build-App -AppName 'rider' -AppDir "$Root\apps\rider-app" -EnvVars ($CommonEnv + @{
-        EXPO_PUBLIC_ORBI_DEMO_RIDER_EMAIL    = "testpassager@orbi.test"
-        EXPO_PUBLIC_ORBI_DEMO_RIDER_PASSWORD = "TestOrbi2026!"
-    })
+            EXPO_PUBLIC_ORBI_DEMO_RIDER_EMAIL    = "testpassager@orbi.test"
+            EXPO_PUBLIC_ORBI_DEMO_RIDER_PASSWORD = "TestOrbi2026!"
+        })
 }
 if ($App -eq 'driver' -or $App -eq 'all') {
     Build-App -AppName 'driver' -AppDir "$Root\apps\driver-app" -EnvVars ($CommonEnv + @{
-        EXPO_PUBLIC_ORBI_DEMO_DRIVER_EMAIL    = "testchauffeur@orbi.test"
-        EXPO_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD = "TestOrbi2026!"
-    })
+            EXPO_PUBLIC_ORBI_DEMO_DRIVER_EMAIL    = "testchauffeur@orbi.test"
+            EXPO_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD = "TestOrbi2026!"
+        })
 }
 
 Write-Host ""
 Write-Host "======================================" -ForegroundColor Green
-Write-Host " DONE — APKs in dist\" -ForegroundColor Green
-Write-Host " Installer via USB:" -ForegroundColor Green
+Write-Host " DONE - APKs in dist/" -ForegroundColor Green
+Write-Host " Install via USB:" -ForegroundColor Green
 if ($App -eq 'rider' -or $App -eq 'all') {
     Write-Host "   adb install dist\orbi-rider-mvp.apk" -ForegroundColor White
 }

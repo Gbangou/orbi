@@ -1,12 +1,12 @@
 /**
  * Voice Screen — Recherche vocale en français
  *
- * Capture la voix de l'utilisateur, envoie le transcript au NLP
+ * Capture l'intention vocale de l'utilisateur, envoie le transcript au NLP
  * backend Orbi et propose des lieux correspondant à Ouagadougou.
  *
  * Flow:
- *   1. Appui bouton → Permission micro → Enregistrement
- *   2. Release → Transcription STT locale (Web Speech API / expo-av)
+ *   1. Appui bouton → Capture d'intention terrain
+ *   2. Release → Transcript simulé jusqu'au branchement STT serveur
  *   3. Transcript envoyé à POST /voice/location-intent
  *   4. Suggestions retournées → naviguer vers /book avec pré-remplissage
  */
@@ -22,7 +22,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Audio } from 'expo-av';
 import { createOrbiApiClient, resolveVoiceLocationIntentWithApi, type VoiceLocationIntentResponse } from '@orbi/api';
 import { orbiTheme } from '@orbi/ui';
 import { orbiRuntimeConfig, resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
@@ -123,63 +122,30 @@ export default function VoiceScreen() {
   const [transcript, setTranscript] = useState('');
   const [result, setResult] = useState<VoiceLocationIntentResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
-  const recordingRef = useRef<Audio.Recording | null>(null);
-
-  // Check permission on mount
-  useEffect(() => {
-    Audio.requestPermissionsAsync().then(({ granted }) => {
-      setPermissionGranted(granted);
-    });
-  }, []);
+  const recordingStartedAtRef = useRef<number | null>(null);
 
   const startRecording = useCallback(async () => {
-    try {
-      if (!permissionGranted) {
-        const { granted } = await Audio.requestPermissionsAsync();
-        if (!granted) {
-          setErrorMsg('Permission microphone refusée. Activez-la dans les réglages.');
-          return;
-        }
-        setPermissionGranted(true);
-      }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
-      recordingRef.current = recording;
-      setIsRecording(true);
-      setTranscript('');
-      setResult(null);
-      setErrorMsg(null);
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch (err) {
-      setErrorMsg('Impossible de démarrer l\'enregistrement. Réessayez.');
-    }
-  }, [permissionGranted]);
+    recordingStartedAtRef.current = Date.now();
+    setIsRecording(true);
+    setTranscript('');
+    setResult(null);
+    setErrorMsg(null);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }, []);
 
   const stopRecording = useCallback(async () => {
-    const recording = recordingRef.current;
-    if (!recording) return;
+    const startedAt = recordingStartedAtRef.current;
+    if (!startedAt) return;
 
+    recordingStartedAtRef.current = null;
     setIsRecording(false);
     setIsAnalyzing(true);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
-      await recording.stopAndUnloadAsync();
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-      recordingRef.current = null;
-
-      // En production: envoyer l'audio à un service STT (Whisper/Google STT)
-      // Pour le MVP: utiliser une phrase simulée basée sur la durée
-      // La vraie intégration STT est documentée dans ARCHITECTURE.md
-      const durationMs = recording.getStatusAsync ? (await recording.getStatusAsync()).durationMillis ?? 0 : 0;
+      // En production: envoyer l'audio à un service STT dédié.
+      // Pour le terrain MVP: conserver un parcours stable sans module natif audio.
+      const durationMs = Date.now() - startedAt;
       const simulatedTranscript = durationMs > 1500
         ? 'Je vais à Ouaga 2000'
         : 'Université de Ouaga';
@@ -188,7 +154,7 @@ export default function VoiceScreen() {
       await analyseTranscript(simulatedTranscript);
     } catch {
       setIsAnalyzing(false);
-      setErrorMsg('Enregistrement échoué. Utilisez les suggestions ci-dessous.');
+      setErrorMsg('Analyse vocale indisponible. Utilisez les suggestions ci-dessous.');
     }
   }, []);
 

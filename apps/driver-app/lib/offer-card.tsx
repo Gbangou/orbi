@@ -165,22 +165,34 @@ export const OfferCard = memo(function OfferCard({
 
   useEffect(() => {
     const delay = index * 60; // 60ms stagger between cards
+    let animation: Animated.CompositeAnimation | null = null;
     const timer = setTimeout(() => {
-      Animated.parallel([
+      slideY.stopAnimation();
+      opacity.stopAnimation();
+      slideY.setValue(32);
+      opacity.setValue(0);
+
+      animation = Animated.parallel([
         Animated.spring(slideY, {
           toValue: 0,
           tension: 60,
           friction: 8,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(opacity, {
           toValue: 1,
           duration: 220,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
-      ]).start();
+      ]);
+      animation.start();
     }, delay);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      animation?.stop();
+      slideY.stopAnimation();
+      opacity.stopAnimation();
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
