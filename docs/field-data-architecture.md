@@ -8,9 +8,12 @@ Postgres database plus the configured server-side document object store.
 
 - Database: managed PostgreSQL through Prisma.
 - Schema: `apps/backend/prisma/schema.prisma`.
-- Deployment: Render Blueprint `render.yaml` provisions `orbi-field-db`.
+- Deployment: Render Blueprint `render.yaml` runs the API and receives a Neon
+  Postgres `DATABASE_URL` secret.
 - Migrations: `pnpm --filter backend exec prisma migrate deploy`.
 - Initial field data: `pnpm --filter backend prisma:seed`.
+- Free field-test mode: Neon Postgres remains the operational source of truth,
+  but driver document objects are stored on ephemeral service storage.
 
 ## Core tables
 
@@ -40,13 +43,14 @@ Postgres database plus the configured server-side document object store.
 ## Document storage
 
 Driver document metadata is stored in `driver_documents`. The object itself is
-stored under `DOCUMENT_LOCAL_PROVIDER_ROOT` on the server. On Render, this path
-is backed by the persistent disk `orbi-field-documents` mounted at
-`/var/data/orbi-documents`.
+stored under `DOCUMENT_LOCAL_PROVIDER_ROOT` on the server.
 
-For a larger production launch, replace the local provider with a dedicated
-object storage provider, then keep the same metadata and verification contract in
-Postgres.
+The no-card Render and Neon field-test Blueprint uses `/tmp/orbi-documents`,
+which is ephemeral and exists only to test the upload, metadata and verification
+flow. For a paid pilot or production launch, use a persistent Render disk mounted
+at `/var/data/orbi-documents` or replace the local provider with a dedicated
+object storage provider, then keep the same metadata and verification contract
+in Postgres.
 
 ## Operational checks
 

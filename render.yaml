@@ -2,7 +2,7 @@ services:
   - type: web
     name: orbi-field-api
     runtime: node
-    plan: starter
+    plan: free
     region: frankfurt
     buildCommand: corepack enable && corepack prepare pnpm@10.30.0 --activate && pnpm install --frozen-lockfile && pnpm --filter @orbi/domain build && pnpm --filter @orbi/api build && pnpm --filter @orbi/config build && pnpm --filter @orbi/ui build && pnpm --filter backend prisma:generate && pnpm --filter backend build
     preDeployCommand: pnpm --filter backend exec prisma migrate deploy
@@ -10,10 +10,6 @@ services:
     initialDeployHook: pnpm --filter backend prisma:seed
     healthCheckPath: /api/v1/health/ready
     autoDeploy: false
-    disk:
-      name: orbi-field-documents
-      mountPath: /var/data/orbi-documents
-      sizeGB: 10
     envVars:
       - key: NODE_VERSION
         value: 22.13.1
@@ -26,9 +22,7 @@ services:
       - key: ENABLE_SWAGGER
         value: "false"
       - key: DATABASE_URL
-        fromDatabase:
-          name: orbi-field-db
-          property: connectionString
+        sync: false
       - key: RATE_LIMIT_ADAPTER
         value: postgres
       - key: RATE_LIMIT_STRICT
@@ -58,7 +52,7 @@ services:
       - key: DOCUMENT_OBJECT_PROVIDER
         value: local-provider
       - key: DOCUMENT_LOCAL_PROVIDER_ROOT
-        value: /var/data/orbi-documents
+        value: /tmp/orbi-documents
       - key: DOCUMENT_UPLOAD_BASE_URL
         value: https://orbi-field-api.onrender.com/api/v1/driver-documents/upload
       - key: DOCUMENT_VIEW_BASE_URL
@@ -81,10 +75,3 @@ services:
         value: "on"
       - key: FEATURE_FLAG_VOICE
         value: "on"
-
-databases:
-  - name: orbi-field-db
-    databaseName: orbi
-    user: orbi
-    plan: starter
-    region: frankfurt
