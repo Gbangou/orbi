@@ -730,6 +730,8 @@ export default function ActivityScreen() {
       activeTripDetail?.trip.routeMonitoring.latestPosition?.latitude ?? null;
     const driverLng =
       activeTripDetail?.trip.routeMonitoring.latestPosition?.longitude ?? null;
+    const driverVehicleType =
+      activeTripDetail?.trip.driverVerification.vehicle.type ?? null;
     const canCancel =
       activeTrip.status === 'MATCHED' ||
       activeTrip.status === 'DRIVER_APPROACHING';
@@ -751,6 +753,7 @@ export default function ActivityScreen() {
             destLng={activeTripDetail!.trip.destinationLongitude!}
             driverLat={driverLat}
             driverLng={driverLng}
+            driverVehicleType={driverVehicleType}
             style={StyleSheet.absoluteFill}
           />
         ) : (

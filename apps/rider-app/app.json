@@ -26,7 +26,7 @@
         "expo-notifications",
         {
           "icon": "./icon.png",
-          "color": "#0A66C2",
+          "color": "#00B894",
           "defaultChannel": "default",
           "sounds": [],
           "enableBackgroundRemoteNotifications": false
@@ -55,7 +55,7 @@
       "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./adaptive-icon.png",
-        "backgroundColor": "#0A66C2"
+        "backgroundColor": "#071311"
       }
     },
     "web": {
@@ -65,7 +65,7 @@
     "splash": {
       "image": "./splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#07111d"
+      "backgroundColor": "#06100E"
     },
     "extra": {
       "eas": {

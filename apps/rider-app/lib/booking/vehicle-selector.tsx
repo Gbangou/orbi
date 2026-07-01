@@ -6,52 +6,26 @@
  * surge badge, prix et ETA.
  */
 import { memo } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  type ImageSourcePropType,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { formatXof, orbiTheme } from '@orbi/ui';
 import type { RideOption, PromoValidationResponse } from '@orbi/api';
 
-// ── 3D Vehicle icons (kept co-located with selector) ─────────────────────────
-
-function CarTopView({ accent, isPremium }: { accent: string; isPremium: boolean }) {
-  const a18 = accent + '2e';
-  const a40 = accent + '66';
-  const a60 = accent + '99';
-  return (
-    <View style={styles.vIcon}>
-      <View style={[styles.vWheelFL, styles.vWheel]} />
-      <View style={[styles.vWheelFR, styles.vWheel]} />
-      <View style={[styles.vWheelRL, styles.vWheel]} />
-      <View style={[styles.vWheelRR, styles.vWheel]} />
-      <View style={[styles.vCarBody, { backgroundColor: a18, borderColor: accent }]} />
-      <View style={styles.vWindshield} />
-      <View style={styles.vRearWindow} />
-      <View style={[styles.vRoof, { backgroundColor: a40 }]} />
-      <View style={[styles.vMirrorL, { backgroundColor: a60, borderColor: accent }]} />
-      <View style={[styles.vMirrorR, { backgroundColor: a60, borderColor: accent }]} />
-      <View style={styles.vHeadL} />
-      <View style={styles.vHeadR} />
-      <View style={styles.vTailL} />
-      <View style={styles.vTailR} />
-      {isPremium ? <View style={[styles.vPremiumBadge, { backgroundColor: accent }]} /> : null}
-    </View>
-  );
-}
-
-function MotoTopView({ accent }: { accent: string }) {
-  const a18 = accent + '2e';
-  const a50 = accent + '80';
-  const a30 = accent + '4d';
-  return (
-    <View style={styles.vIcon}>
-      <View style={[styles.vMotoWheelF, { borderColor: accent, backgroundColor: a18 }]} />
-      <View style={[styles.vMotoWheelR, { borderColor: accent, backgroundColor: a18 }]} />
-      <View style={[styles.vMotoBody, { borderColor: accent, backgroundColor: a30 }]} />
-      <View style={[styles.vMotoHandlebar, { backgroundColor: a50, borderColor: accent }]} />
-      <View style={[styles.vMotoSeat, { backgroundColor: accent + 'aa' }]} />
-      <View style={[styles.vMotoEngine, { borderColor: accent }]} />
-    </View>
-  );
-}
+const vehicleAssets: Record<RideOption['tier'], ImageSourcePropType> = {
+  'moto-standard': require('../../assets/vehicles/moto-standard.png'),
+  'moto-plus': require('../../assets/vehicles/moto-plus.png'),
+  'car-standard': require('../../assets/vehicles/car-standard.png'),
+  'car-comfort': require('../../assets/vehicles/car-comfort.png'),
+  'car-xl': require('../../assets/vehicles/car-xl.png'),
+};
 
 function VehicleAvatar({
   category, isSelected, tone, tier,
@@ -63,10 +37,20 @@ function VehicleAvatar({
 }) {
   const isMoto = category === 'motorcycle';
   const accent = tone === 'teal' ? orbiTheme.colors.teal : tone === 'sky' ? orbiTheme.colors.sky : orbiTheme.colors.amber;
-  const isPremium = tier === 'moto-plus' || tier === 'car-comfort' || tier === 'car-xl';
+  const image = vehicleAssets[tier] ?? vehicleAssets[isMoto ? 'moto-standard' : 'car-standard'];
   return (
-    <View style={[styles.vehicleAvatar, isSelected && { backgroundColor: accent + '18', borderColor: accent, borderWidth: 1.5 }, !isSelected && { borderColor: orbiTheme.colors.border }]}>
-      {isMoto ? <MotoTopView accent={accent} /> : <CarTopView accent={accent} isPremium={isPremium} />}
+    <View style={[styles.vehicleAvatar, isSelected && { backgroundColor: accent + '12', borderColor: accent, borderWidth: 1.5 }, !isSelected && { borderColor: orbiTheme.colors.border }]}>
+      <View style={[styles.vehicleAura, { backgroundColor: accent + '20' }]} />
+      <View style={styles.vehicleGround} />
+      <Image
+        source={image}
+        resizeMode="contain"
+        style={[
+          styles.vehicleImage,
+          isMoto ? styles.vehicleImageMoto : styles.vehicleImageCar,
+          tier === 'car-xl' && styles.vehicleImageXl,
+        ]}
+      />
     </View>
   );
 }
@@ -151,37 +135,22 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text, paddingHorizontal: 2 },
   scroll: { gap: 10, paddingHorizontal: 2 },
   card: {
-    width: 112, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1.5,
-    borderColor: orbiTheme.colors.border, padding: 12, alignItems: 'center', gap: 6,
-    shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6,
+    width: 132, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1.5,
+    borderColor: orbiTheme.colors.border, padding: 12, alignItems: 'center', gap: 7,
+    shadowColor: '#0B1220', shadowOpacity: 0.09, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 7,
   },
   surgeBadge: { alignSelf: 'center', backgroundColor: 'rgba(255,149,0,0.90)', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 },
   surgeText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
-  vehicleAvatar: { width: 64, height: 64, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: orbiTheme.colors.border, backgroundColor: orbiTheme.colors.backgroundAlt },
-  name: { fontSize: 12, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, textAlign: 'center' },
+  vehicleAvatar: { width: 104, height: 82, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: orbiTheme.colors.border, backgroundColor: '#F8FAFC', overflow: 'hidden' },
+  name: { fontSize: 12, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, textAlign: 'center', minHeight: 30 },
   eta: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   fare: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, textAlign: 'center' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
   loadingText: { fontSize: 14, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular' },
-  // Vehicle 3D styles
-  vIcon: { width: 56, height: 56, position: 'relative' },
-  vWheel: { position: 'absolute', width: 7, height: 12, borderRadius: 2, backgroundColor: '#333' },
-  vWheelFL: { top: 4, left: 2 }, vWheelFR: { top: 4, right: 2 }, vWheelRL: { bottom: 4, left: 2 }, vWheelRR: { bottom: 4, right: 2 },
-  vCarBody: { position: 'absolute', top: 6, bottom: 6, left: 8, right: 8, borderRadius: 8, borderWidth: 1.5 },
-  vWindshield: { position: 'absolute', top: 10, left: 14, right: 14, height: 8, backgroundColor: 'rgba(255,255,255,0.4)', borderRadius: 4 },
-  vRearWindow: { position: 'absolute', bottom: 10, left: 14, right: 14, height: 6, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 3 },
-  vRoof: { position: 'absolute', top: 18, left: 16, right: 16, height: 20, borderRadius: 5 },
-  vMirrorL: { position: 'absolute', top: 20, left: 5, width: 4, height: 6, borderRadius: 2, borderWidth: 1 },
-  vMirrorR: { position: 'absolute', top: 20, right: 5, width: 4, height: 6, borderRadius: 2, borderWidth: 1 },
-  vHeadL: { position: 'absolute', top: 6, left: 10, width: 5, height: 3, backgroundColor: '#fffde7', borderRadius: 2 },
-  vHeadR: { position: 'absolute', top: 6, right: 10, width: 5, height: 3, backgroundColor: '#fffde7', borderRadius: 2 },
-  vTailL: { position: 'absolute', bottom: 6, left: 10, width: 5, height: 3, backgroundColor: '#ff3b30', borderRadius: 2 },
-  vTailR: { position: 'absolute', bottom: 6, right: 10, width: 5, height: 3, backgroundColor: '#ff3b30', borderRadius: 2 },
-  vPremiumBadge: { position: 'absolute', top: 4, right: 4, width: 6, height: 6, borderRadius: 3 },
-  vMotoWheelF: { position: 'absolute', top: 2, left: 10, right: 10, height: 12, borderRadius: 6, borderWidth: 1.5 },
-  vMotoWheelR: { position: 'absolute', bottom: 2, left: 10, right: 10, height: 12, borderRadius: 6, borderWidth: 1.5 },
-  vMotoBody: { position: 'absolute', top: 12, bottom: 12, left: 16, right: 16, borderRadius: 8, borderWidth: 1.5 },
-  vMotoHandlebar: { position: 'absolute', top: 14, left: 6, right: 6, height: 5, borderRadius: 3, borderWidth: 1 },
-  vMotoSeat: { position: 'absolute', top: 22, left: 18, right: 18, height: 12, borderRadius: 4 },
-  vMotoEngine: { position: 'absolute', top: 28, left: 20, right: 20, height: 8, borderRadius: 3, borderWidth: 1 },
+  vehicleAura: { position: 'absolute', width: 84, height: 52, borderRadius: 28, top: 9 },
+  vehicleGround: { position: 'absolute', width: 74, height: 10, borderRadius: 999, bottom: 9, backgroundColor: 'rgba(7,19,17,0.16)', transform: [{ scaleX: 1.12 }] },
+  vehicleImage: { position: 'absolute', width: 116, height: 88 },
+  vehicleImageMoto: { width: 112, height: 86, transform: [{ translateY: -2 }] },
+  vehicleImageCar: { width: 124, height: 92, transform: [{ translateY: -1 }] },
+  vehicleImageXl: { width: 130, height: 94, transform: [{ translateY: -1 }] },
 });

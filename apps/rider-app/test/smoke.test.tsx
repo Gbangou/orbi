@@ -1130,8 +1130,8 @@ describe('rider smoke flows', () => {
     );
     expect(Share.share).toHaveBeenCalledWith({
       message:
-        'Suivi securise de ma course Orbi: https://backend-production-d5d1.up.railway.app/trips/shared/share-token',
-      url: 'https://backend-production-d5d1.up.railway.app/trips/shared/share-token',
+        'Suivi securise de ma course Orbi: https://orbi-field-api.onrender.com/trips/shared/share-token',
+      url: 'https://orbi-field-api.onrender.com/trips/shared/share-token',
     });
   });
 

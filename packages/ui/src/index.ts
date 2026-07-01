@@ -2,38 +2,38 @@ export const orbiTheme = {
   colors: {
     // Backgrounds
     background: "#FFFFFF",
-    backgroundAlt: "#F7F7F7",
-    backgroundDim: "#EFEFEF",
+    backgroundAlt: "#F6F8F7",
+    backgroundDim: "#E9EFED",
 
     // Surfaces
     panel: "#FFFFFF",
     surface: "#FFFFFF",
-    panelSoft: "#F7F7F7",
-    surfaceSoft: "#F7F7F7",
-    surfaceStrong: "#EFEFEF",
+    panelSoft: "#F6F8F7",
+    surfaceSoft: "#F6F8F7",
+    surfaceStrong: "#E9EFED",
 
     // Text hierarchy
-    text: "#111111",
-    textMuted: "#9E9E9E",
-    textSoft: "#545454",
-    muted: "#9E9E9E",
+    text: "#071311",
+    textMuted: "#7B8582",
+    textSoft: "#42504C",
+    muted: "#7B8582",
 
-    // Orbi brand — teal
-    teal: "#00C9A7",
-    accentDark: "#00A389",
-    accentLight: "rgba(0, 201, 167, 0.10)",
+    // Orbi brand: Obsidian mobility, emerald trust, sun gold energy.
+    teal: "#00B894",
+    accentDark: "#007A63",
+    accentLight: "rgba(0, 184, 148, 0.11)",
 
     // Semantic
-    amber: "#FF9500",
-    sky: "#007AFF",
-    rose: "#FF3B30",
-    success: "#00C9A7",
-    danger: "#FF3B30",
-    warning: "#FF9500",
+    amber: "#F2A900",
+    sky: "#246BFE",
+    rose: "#E5484D",
+    success: "#00B894",
+    danger: "#E5484D",
+    warning: "#F2A900",
 
     // Borders
-    border: "#E8E8E8",
-    borderSoft: "rgba(0, 0, 0, 0.06)",
+    border: "#DDE6E3",
+    borderSoft: "rgba(7, 19, 17, 0.07)",
 
     // Overlay
     overlay: "rgba(0, 0, 0, 0.48)",
@@ -43,9 +43,9 @@ export const orbiTheme = {
     textInverse: "#FFFFFF",
   },
   gradients: {
-    hero: ["#F7F7F7", "#FFFFFF"],
-    accent: ["#00C9A7", "#00E5C5"],
-    warm: ["#FF9500", "#FF6B00"],
+    hero: ["#F6F8F7", "#FFFFFF"],
+    accent: ["#007A63", "#00D8B5"],
+    warm: ["#F2A900", "#FF7A1A"],
   },
   radius: {
     card: 16,
@@ -80,31 +80,31 @@ export const orbiTheme = {
   },
   shadows: {
     card: {
-      shadowColor: "#000000",
-      shadowOpacity: 0.07,
-      shadowRadius: 16,
-      shadowOffset: { width: 0, height: 4 },
+      shadowColor: "#071311",
+      shadowOpacity: 0.08,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 6 },
       elevation: 6,
     },
     sheet: {
-      shadowColor: "#000000",
+      shadowColor: "#071311",
       shadowOpacity: 0.14,
       shadowRadius: 28,
       shadowOffset: { width: 0, height: -6 },
       elevation: 16,
     },
     button: {
-      shadowColor: "#000000",
+      shadowColor: "#071311",
       shadowOpacity: 0.18,
       shadowRadius: 10,
       shadowOffset: { width: 0, height: 4 },
       elevation: 4,
     },
     float: {
-      shadowColor: "#000000",
-      shadowOpacity: 0.1,
-      shadowRadius: 14,
-      shadowOffset: { width: 0, height: 3 },
+      shadowColor: "#071311",
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 5 },
       elevation: 8,
     },
   },
@@ -115,34 +115,34 @@ export const orbiTheme = {
 
 export const orbiThemeDark = {
   colors: {
-    background: "#0E0E10",
-    backgroundAlt: "#1A1A1E",
-    backgroundDim: "#242428",
+    background: "#06100E",
+    backgroundAlt: "#0B1B18",
+    backgroundDim: "#102622",
 
-    panel: "#141416",
-    surface: "#141416",
-    panelSoft: "#1A1A1E",
-    surfaceSoft: "#1A1A1E",
-    surfaceStrong: "#242428",
+    panel: "#0B1715",
+    surface: "#0B1715",
+    panelSoft: "#102622",
+    surfaceSoft: "#102622",
+    surfaceStrong: "#17352F",
 
-    text: "#F5F5F7",
-    textMuted: "#6E6E73",
-    textSoft: "#AEAEB2",
-    muted: "#6E6E73",
+    text: "#F5FFFC",
+    textMuted: "#7F918D",
+    textSoft: "#B6C6C1",
+    muted: "#7F918D",
 
-    teal: "#00C9A7",
-    accentDark: "#00A389",
-    accentLight: "rgba(0, 201, 167, 0.14)",
+    teal: "#00D8B5",
+    accentDark: "#00B894",
+    accentLight: "rgba(0, 216, 181, 0.15)",
 
-    amber: "#FF9F0A",
-    sky: "#0A84FF",
-    rose: "#FF453A",
-    success: "#30D158",
-    danger: "#FF453A",
-    warning: "#FF9F0A",
+    amber: "#F7B731",
+    sky: "#4C8DFF",
+    rose: "#FF5A5F",
+    success: "#00D8B5",
+    danger: "#FF5A5F",
+    warning: "#F7B731",
 
-    border: "#2C2C2E",
-    borderSoft: "rgba(255, 255, 255, 0.06)",
+    border: "#1D3A34",
+    borderSoft: "rgba(245, 255, 252, 0.07)",
 
     overlay: "rgba(0, 0, 0, 0.72)",
     overlayLight: "rgba(255, 255, 255, 0.08)",

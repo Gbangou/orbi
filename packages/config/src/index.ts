@@ -10,18 +10,18 @@ const runtimeEnvironment = globalThis as typeof globalThis & {
 export const workspaceApps = ['backend', 'rider-app', 'driver-app', 'admin-web'] as const;
 
 export const brandTokens = {
-  primary: '#0f766e',
-  secondary: '#f59e0b',
-  accent: '#38bdf8',
-  ink: '#07111d',
-  surface: '#f8fafc',
+  primary: '#00B894',
+  secondary: '#F2A900',
+  accent: '#246BFE',
+  ink: '#071311',
+  surface: '#F6F8F7',
 } as const;
 
 export const orbiRuntimeConfig = {
   apiBaseUrl:
     runtimeEnvironment.process?.env?.EXPO_PUBLIC_API_BASE_URL ??
     runtimeEnvironment.process?.env?.NEXT_PUBLIC_API_BASE_URL ??
-    'https://backend-production-d5d1.up.railway.app',
+    'https://orbi-field-api.onrender.com',
   apiVersion:
     runtimeEnvironment.process?.env?.EXPO_PUBLIC_API_VERSION ??
     runtimeEnvironment.process?.env?.NEXT_PUBLIC_API_VERSION ??
@@ -29,7 +29,7 @@ export const orbiRuntimeConfig = {
   paymentRedirectUrl:
     runtimeEnvironment.process?.env?.EXPO_PUBLIC_PAYMENT_REDIRECT_URL ??
     runtimeEnvironment.process?.env?.NEXT_PUBLIC_PAYMENT_REDIRECT_URL ??
-    'http://localhost:8081/book',
+    'orbi-passager://payment-return',
   launchLocale: 'fr-BF',
   launchMarket: 'Burkina Faso',
 } as const;
