@@ -977,6 +977,7 @@ export default function OffersScreen() {
                   destLng={activeTripDetail.trip.destinationLongitude}
                   driverLat={activeTripDetail.trip.routeMonitoring.latestPosition?.latitude ?? null}
                   driverLng={activeTripDetail.trip.routeMonitoring.latestPosition?.longitude ?? null}
+                  vehicleTier={activeTripDetail.trip.driverVerification.vehicle.tier as string | null | undefined}
                   style={styles.missionMap}
                 />
               )
