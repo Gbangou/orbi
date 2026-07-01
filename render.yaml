@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: corepack enable && corepack prepare pnpm@10.30.0 --activate && pnpm install --frozen-lockfile && pnpm --filter @orbi/domain build && pnpm --filter @orbi/api build && pnpm --filter @orbi/config build && pnpm --filter @orbi/ui build && pnpm --filter backend prisma:generate && pnpm --filter backend build && pnpm --filter backend exec prisma migrate deploy && pnpm --filter backend prisma:seed
+    buildCommand: npm install -g pnpm@10.30.0 && pnpm install --frozen-lockfile && pnpm --filter @orbi/domain build && pnpm --filter @orbi/api build && pnpm --filter @orbi/config build && pnpm --filter @orbi/ui build && pnpm --filter backend prisma:generate && pnpm --filter backend build && pnpm --filter backend exec prisma migrate deploy && pnpm --filter backend prisma:seed
     startCommand: pnpm --filter backend start:prod
     healthCheckPath: /api/v1/health/ready
     autoDeploy: false
