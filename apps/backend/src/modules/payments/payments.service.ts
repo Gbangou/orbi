@@ -2416,8 +2416,8 @@ export class PaymentsService {
     const signatureVerified =
       this.pawaPayService?.verifyWebhookSignature(rawBody, signature) ?? false;
 
-    if (!signatureVerified) {
-      this.logger.warn('PawaPay webhook received with invalid signature.');
+    if (this.pawaPayService && !signatureVerified) {
+      throw new UnauthorizedException('PawaPay webhook signature is invalid.');
     }
 
     const signatureContext: PaymentWebhookSignatureContext = {
