@@ -140,8 +140,8 @@ export function ApproachMapView({
 
   useEffect(() => {
     if (driverLat && driverLng && webRef.current) {
-      webRef.current.injectJavaScript(
-        `updateDriver(${driverLat},${driverLng});true;`,
+      webRef.current.postMessage(
+        JSON.stringify({ type: 'UPDATE_DRIVER', lat: driverLat, lng: driverLng }),
       );
     }
   }, [driverLat, driverLng]);

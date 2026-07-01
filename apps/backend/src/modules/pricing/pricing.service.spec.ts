@@ -39,7 +39,7 @@ function createService() {
 
 /**
  * Référence: trajet standard Ouagadougou 5.8 km / 16 min
- * Moto Standard Urban Core fallback:
+ * Moto Urban Core fallback:
  *   base=300, 90×5.8=522, 18×16=288, fee=100, min=750
  *   Sous-total: 300+522+288+100 = 1 210 XOF
  */
@@ -104,8 +104,8 @@ describe('PricingService — commission tiers chauffeur', () => {
 // ── Tarifs fallback calibrés Burkina Faso ─────────────────────────────────────
 
 describe('PricingService — tarifs fallback Burkina Faso', () => {
-  // Moto Standard Urban Core : 300 + 90/km + 18/min + 100 booking = 1 210 XOF
-  it('retourne le tarif Moto Standard Urban Core attendu (1 210 XOF)', async () => {
+  // Moto Urban Core : 300 + 90/km + 18/min + 100 booking = 1 210 XOF
+  it('retourne le tarif Moto Urban Core attendu (1 210 XOF)', async () => {
     const { service } = createService();
     const quote = await service.quote({
       vehicleType: 'MOTORCYCLE',
@@ -142,7 +142,7 @@ describe('PricingService — tarifs fallback Burkina Faso', () => {
     expect(edge.fareBreakdown.baseFare).toBeLessThan(urban.fareBreakdown.baseFare);
   });
 
-  it('retourne un tarif Car Standard supérieur à Moto Standard', async () => {
+  it('retourne un tarif Car Standard supérieur à Moto', async () => {
     const { service } = createService();
     const moto = await service.quote({ ...REFERENCE_MOTO_QUOTE, vehicleType: 'MOTORCYCLE' });
     const car = await service.quote({ ...REFERENCE_MOTO_QUOTE, vehicleType: 'CAR' });
@@ -436,7 +436,7 @@ describe('PricingService — trust & policy Orbi Burkina', () => {
 // ── estimateRideOptions ───────────────────────────────────────────────────────
 
 describe('PricingService — estimateRideOptions catalogue Burkina', () => {
-  it('retourne au moins Moto Standard et Car Standard', async () => {
+  it('retourne au moins Moto et Car Standard', async () => {
     const { service } = createService();
     const preview = await service.estimateRideOptions({
       distanceKm: 5.8,
@@ -447,7 +447,25 @@ describe('PricingService — estimateRideOptions catalogue Burkina', () => {
     expect(tiers).toContain('car-standard');
   });
 
-  it('Moto Standard est moins cher que Car Standard', async () => {
+  it('expose une seule option moto publique nommee Moto', async () => {
+    const { service } = createService();
+    const preview = await service.estimateRideOptions({
+      distanceKm: 5.8,
+      durationMinutes: 16,
+    } as never);
+    const motorcycleOptions = preview.options.filter(
+      (option) => option.category === 'motorcycle',
+    );
+
+    expect(motorcycleOptions).toHaveLength(1);
+    expect(motorcycleOptions[0]).toMatchObject({
+      tier: 'moto-standard',
+      title: 'Moto',
+    });
+    expect(preview.options.some((option) => option.tier === 'moto-plus')).toBe(false);
+  });
+
+  it('Moto est moins cher que Car Standard', async () => {
     const { service } = createService();
     const preview = await service.estimateRideOptions({
       distanceKm: 5.8,

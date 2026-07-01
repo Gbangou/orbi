@@ -19,9 +19,8 @@ import {
 import { formatXof, orbiTheme } from '@orbi/ui';
 import type { RideOption, PromoValidationResponse } from '@orbi/api';
 
-const vehicleAssets: Record<RideOption['tier'], ImageSourcePropType> = {
+const vehicleAssets: Partial<Record<RideOption['tier'], ImageSourcePropType>> = {
   'moto-standard': require('../../assets/vehicles/moto-standard.png'),
-  'moto-plus': require('../../assets/vehicles/moto-plus.png'),
   'car-standard': require('../../assets/vehicles/car-standard.png'),
   'car-comfort': require('../../assets/vehicles/car-comfort.png'),
   'car-xl': require('../../assets/vehicles/car-xl.png'),
@@ -37,7 +36,9 @@ function VehicleAvatar({
 }) {
   const isMoto = category === 'motorcycle';
   const accent = tone === 'teal' ? orbiTheme.colors.teal : tone === 'sky' ? orbiTheme.colors.sky : orbiTheme.colors.amber;
-  const image = vehicleAssets[tier] ?? vehicleAssets[isMoto ? 'moto-standard' : 'car-standard'];
+  const image =
+    vehicleAssets[tier] ??
+    vehicleAssets[isMoto ? 'moto-standard' : 'car-standard']!;
   return (
     <View style={[styles.vehicleAvatar, isSelected && { backgroundColor: accent + '12', borderColor: accent, borderWidth: 1.5 }, !isSelected && { borderColor: orbiTheme.colors.border }]}>
       <View style={[styles.vehicleAura, { backgroundColor: accent + '20' }]} />
@@ -96,9 +97,13 @@ export const VehicleSelector = memo(function VehicleSelector({
           const { tone } = buildRideOptionVisual(option);
           const isSelected = option.id === (selectedOptionId || options[0]?.id);
           const accentColor = tone === 'teal' ? orbiTheme.colors.teal : tone === 'sky' ? orbiTheme.colors.sky : orbiTheme.colors.amber;
+          const discountRate = promoValidation
+            ? Math.min(Math.max(promoValidation.discountBps, 0), 10000) / 10000
+            : 0;
           const discountedFare = promoValidation
-            ? Math.round(option.fare * (1 - promoValidation.discountBps / 10000))
+            ? Math.max(1, Math.round(option.fare * (1 - discountRate)))
             : option.fare;
+          const title = option.category === 'motorcycle' ? 'Moto' : option.title;
 
           return (
             <Pressable
@@ -117,7 +122,7 @@ export const VehicleSelector = memo(function VehicleSelector({
                 tone={tone}
                 tier={option.tier}
               />
-              <Text style={[styles.name, isSelected && { color: orbiTheme.colors.text }]}>{option.title}</Text>
+              <Text style={[styles.name, isSelected && { color: orbiTheme.colors.text }]}>{title}</Text>
               <Text style={styles.eta}>{option.etaMinutes} min</Text>
               <Text style={[styles.fare, isSelected && { color: accentColor }]}>
                 {formatXof(discountedFare)}

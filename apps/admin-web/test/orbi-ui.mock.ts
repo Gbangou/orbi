@@ -43,7 +43,7 @@ const frenchStatus: Record<string, string> = {
   MOTORCYCLE: 'Moto',
   MOTO: 'Moto',
   CAR: 'Voiture',
-  MOTO_STANDARD: 'Moto Express',
+  MOTO_STANDARD: 'Moto',
   CLEAR: 'Normal',
   WARNING: 'Attention',
   CRITICAL: 'Critique',

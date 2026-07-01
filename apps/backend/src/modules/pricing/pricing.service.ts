@@ -144,24 +144,13 @@ export class PricingService {
       {
         vehicleType: 'MOTORCYCLE',
         serviceTier: ServiceTier.MOTO_STANDARD,
-        title: 'Moto Express',
+        title: 'Moto',
         badge: 'Le moins cher',
         capacity: '1 passager',
         accent: '#00C9A7',
         etaMinutes: 3,
         paymentMethods: ['mobile-money', 'cash', 'wallet'],
-        vehicleExamples: ['Yamaha Crypton', 'TVS HLX', 'Bajaj Boxer'],
-      },
-      {
-        vehicleType: 'MOTORCYCLE',
-        serviceTier: ServiceTier.MOTO_PLUS,
-        title: 'Moto Plus',
-        badge: 'Casque fourni',
-        capacity: '1 passager',
-        accent: '#007AFF',
-        etaMinutes: 4,
-        paymentMethods: ['mobile-money', 'cash', 'wallet'],
-        vehicleExamples: ['Honda CB125', 'Yamaha FZ125', 'Bajaj Pulsar'],
+        vehicleExamples: ['Moto underbone urbaine', 'TVS HLX', 'Bajaj Boxer'],
       },
       {
         vehicleType: 'CAR',
@@ -1064,7 +1053,8 @@ export class PricingService {
 
     if (input.vehicleType === 'MOTORCYCLE') {
       if (input.serviceTier === ServiceTier.MOTO_PLUS) {
-        // Moto Plus — casque fourni, chauffeur premium, traçabilité renforcée
+        // Legacy compatibility: anciennes demandes MOTO_PLUS restent calculables,
+        // mais le catalogue public expose désormais uniquement le produit Moto.
         if (zone === 'SEMI_URBAN') {
           return { serviceTier: ServiceTier.MOTO_PLUS, baseFare: 400, perKmRate: 100, perMinuteRate: 20, bookingFee: 100, minimumFare: 750 };
         }
@@ -1075,7 +1065,7 @@ export class PricingService {
         return { serviceTier: ServiceTier.MOTO_PLUS, baseFare: 600, perKmRate: 140, perMinuteRate: 30, bookingFee: 200, minimumFare: 1200 };
       }
 
-      // Moto Standard — tarif d'entrée, accessible quotidiennement
+      // Moto — tarif d'entrée, accessible quotidiennement
       if (zone === 'SEMI_URBAN') {
         return { serviceTier: ServiceTier.MOTO_STANDARD, baseFare: 200, perKmRate: 75, perMinuteRate: 15, bookingFee: 75, minimumFare: 550 };
       }

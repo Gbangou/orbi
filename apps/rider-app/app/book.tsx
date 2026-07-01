@@ -73,10 +73,6 @@ import { PlaceSearch } from '../lib/place-search';
 const cityPresets = burkinaPricingCityPresets;
 const fieldDispatchRadiusKm = 8;
 
-type NearbyDriverMarker = Awaited<
-  ReturnType<typeof fetchNearbyDrivers>
->['drivers'][number];
-
 const fallbackRiderProfile: RiderProfileResponse = {
   profile: {
     id: 'loading',
@@ -166,17 +162,6 @@ function buildCurrentPositionPlace(position: {
 function findCityPresetForPlace(place: Place) {
   return resolveBurkinaPricingPresetForPlace(place);
 }
-
-function countCompatibleNearbyDrivers(
-  drivers: NearbyDriverMarker[],
-  requestedVehicleType: string,
-) {
-  return drivers.filter(
-    (driver) =>
-      driver.status === 'ONLINE' && driver.vehicleType === requestedVehicleType,
-  ).length;
-}
-
 
 const promoStyles = StyleSheet.create({
   container: {
@@ -379,6 +364,19 @@ export default function BookingScreen() {
     () => profile.profile.savedPlaces.map(toPlaceFromSavedPlace),
     [profile],
   );
+  const destinationSuggestions = useMemo(() => {
+    const presetPlaces = cityPresets.map((city) => city.destination);
+    const uniquePlaces = new Map<string, Place>();
+
+    [...savedPlaces, selectedCity.destination, ...presetPlaces].forEach((place) => {
+      const key = place.coordinates
+        ? `${place.coordinates.latitude.toFixed(4)}:${place.coordinates.longitude.toFixed(4)}`
+        : place.id;
+      uniquePlaces.set(key, place);
+    });
+
+    return Array.from(uniquePlaces.values()).slice(0, 8);
+  }, [savedPlaces, selectedCity.destination]);
   // Pre-fill destination from voice suggestion params
   useEffect(() => {
     if (
@@ -455,10 +453,9 @@ export default function BookingScreen() {
         ]);
 
       const compatibleDriverCount = nearbyDriversResponse
-        ? countCompatibleNearbyDrivers(
-            nearbyDriversResponse.drivers,
-            'MOTORCYCLE',
-          )
+        ? nearbyDriversResponse.drivers.filter(
+            (driver) => driver.status === 'ONLINE',
+          ).length
         : null;
       setNearbyCompatibleDriverCount(compatibleDriverCount);
 
@@ -583,6 +580,19 @@ export default function BookingScreen() {
     setPickupPlace(buildCurrentPositionPlace(riderPosition.latestPosition));
     setAutoAppliedRiderPosition(true);
     setStatus('Depart mis a jour avec votre position GPS actuelle.');
+  }
+
+  function handleSelectDestinationOnMap(coordinates: {
+    latitude: number;
+    longitude: number;
+  }) {
+    setDestinationPlace({
+      id: `map-${coordinates.latitude.toFixed(5)}-${coordinates.longitude.toFixed(5)}`,
+      label: 'Point choisi sur la carte',
+      address: `${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}`,
+      coordinates,
+    });
+    setStatus('Destination mise a jour depuis la carte.');
   }
 
   async function handleSaveCurrentPlace(target: 'pickup' | 'destination') {
@@ -962,6 +972,8 @@ export default function BookingScreen() {
             <PlaceSearch
               placeholder="Où allez-vous ?"
               tone="amber"
+              suggestions={destinationSuggestions}
+              suggestionLabel="Destinations rapides"
               onSelectPlace={(place) => applyPlace('destination', place)}
             />
           </View>
@@ -995,31 +1007,38 @@ export default function BookingScreen() {
         </ScrollView>
 
         {/* ── Map preview ── */}
-        {(pickupPlace.coordinates || riderPosition.latestPosition) &&
-        destinationPlace.coordinates ? (
-          <View style={styles.mapPreviewWrap}>
-            <TripMapView
-              pickupLat={
-                pickupPlace.coordinates?.latitude ??
-                riderPosition.latestPosition?.latitude
-              }
-              pickupLng={
-                pickupPlace.coordinates?.longitude ??
-                riderPosition.latestPosition?.longitude
-              }
-              destLat={destinationPlace.coordinates.latitude}
-              destLng={destinationPlace.coordinates.longitude}
-              driverLat={null}
-              driverLng={null}
-              style={styles.mapPreview}
-            />
-            <View style={styles.mapBadge}>
-              <Text style={styles.mapBadgeText}>
-                {tripEstimate.distanceKm} km · {tripEstimate.durationMinutes} min
-              </Text>
-            </View>
+        <View style={styles.mapPreviewWrap}>
+          <TripMapView
+            pickupLat={
+              pickupPlace.coordinates?.latitude ??
+              riderPosition.latestPosition?.latitude ??
+              selectedCity.pickup.coordinates.latitude
+            }
+            pickupLng={
+              pickupPlace.coordinates?.longitude ??
+              riderPosition.latestPosition?.longitude ??
+              selectedCity.pickup.coordinates.longitude
+            }
+            destLat={
+              destinationPlace.coordinates?.latitude ??
+              selectedCity.destination.coordinates.latitude
+            }
+            destLng={
+              destinationPlace.coordinates?.longitude ??
+              selectedCity.destination.coordinates.longitude
+            }
+            driverLat={null}
+            driverLng={null}
+            selectable
+            onSelectCoordinate={handleSelectDestinationOnMap}
+            style={styles.mapPreview}
+          />
+          <View style={styles.mapBadge}>
+            <Text style={styles.mapBadgeText}>
+              {tripEstimate.distanceKm} km · {tripEstimate.durationMinutes} min
+            </Text>
           </View>
-        ) : null}
+        </View>
 
         {/* ── Active flow notice ── */}
         {hasOpenFlow ? (
@@ -1067,7 +1086,7 @@ export default function BookingScreen() {
               </Text>
               <Text style={styles.supplySub}>
                 {immediateBookingUnavailable
-                  ? `Demande immediate bloquee tant qu'aucun chauffeur moto n'est en ligne dans ${fieldDispatchRadiusKm} km.`
+                  ? `Demande immediate bloquee tant qu'aucun chauffeur n'est en ligne dans ${fieldDispatchRadiusKm} km.`
                   : 'Le backend doit confirmer la presence chauffeur avant de lancer la recherche.'}
               </Text>
             </View>
@@ -1455,7 +1474,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: '#FFFFFF',
   },
-
   // Active flow banner
   activeFlowBanner: {
     flexDirection: 'row',

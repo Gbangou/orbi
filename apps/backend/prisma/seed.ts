@@ -209,7 +209,7 @@ async function main() {
     where: {
       vehicleType: VehicleType.MOTORCYCLE,
       serviceTier: ServiceTier.MOTO_STANDARD,
-      name: 'Moto Standard',
+      name: 'Moto',
     },
   });
 
@@ -230,7 +230,7 @@ async function main() {
   } else {
     await prisma.pricingRule.create({
       data: {
-        name: 'Moto Standard',
+        name: 'Moto',
         vehicleType: VehicleType.MOTORCYCLE,
         serviceTier: ServiceTier.MOTO_STANDARD,
         baseFare: 500,

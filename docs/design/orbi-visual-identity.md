@@ -22,8 +22,8 @@ competitor's brand.
 
 Rider service cards use generated premium bitmap assets per service tier:
 
-- `moto-standard`: commuter motorcycle with emerald accents.
-- `moto-plus`: comfort scooter with top case and sun-gold accents.
+- `moto-standard`: miniature Burkina-style urban underbone motorcycle with
+  emerald accents, exposed to riders simply as **Moto**.
 - `car-standard`: clean white compact sedan.
 - `car-comfort`: black executive sedan.
 - `car-xl`: white high-capacity SUV/minivan.

@@ -11,7 +11,7 @@ export function OfflineBanner() {
     Animated.timing(translateY, {
       toValue: visible ? 0 : -56,
       duration: 260,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, [visible, translateY]);
 

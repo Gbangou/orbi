@@ -60,14 +60,15 @@ export default function DriverAuthScreen() {
     try {
       if (mode === 'sign-in') {
         await signInDriverAccount({ email: normalizedEmail, password });
+        router.replace('/accueil');
       } else {
         await signUpDriverAccount({
           fullName: fullName.trim(),
           email: normalizedEmail,
           password,
         });
+        router.replace('/onboarding');
       }
-      router.replace('/accueil');
     } catch (error) {
       setErrorMessage(describeAuthError(error));
     } finally {

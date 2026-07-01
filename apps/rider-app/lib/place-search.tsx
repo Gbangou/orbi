@@ -47,12 +47,16 @@ export interface PlaceSearchProps {
   placeholder: string;
   onSelectPlace: (place: Place) => void;
   tone?: 'teal' | 'sky' | 'amber';
+  suggestions?: Place[];
+  suggestionLabel?: string;
 }
 
 export function PlaceSearch({
   placeholder,
   onSelectPlace,
   tone = 'teal',
+  suggestions = [],
+  suggestionLabel = 'Suggestions',
 }: PlaceSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Place[]>([]);
@@ -153,6 +157,29 @@ export function PlaceSearch({
         <Text style={styles.error}>{error}</Text>
       ) : null}
 
+      {results.length === 0 && suggestions.length > 0 ? (
+        <View style={styles.suggestions}>
+          <Text style={styles.suggestionsLabel}>{suggestionLabel}</Text>
+          <View style={styles.suggestionsGrid}>
+            {suggestions.slice(0, 6).map((place) => (
+              <Pressable
+                key={place.id}
+                onPress={() => handleSelect(place)}
+                style={({ pressed }) => [
+                  styles.suggestionChip,
+                  { borderColor: accentColor + '55' },
+                  pressed ? styles.suggestionChipPressed : null,
+                ]}
+              >
+                <Text style={styles.suggestionChipLabel} numberOfLines={1}>
+                  {place.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
       {results.length > 0 ? (
         <View style={styles.resultsList}>
           {results.map((place) => (
@@ -216,6 +243,36 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.rose ?? '#f87171',
     fontSize: 12,
     paddingHorizontal: 4,
+  },
+  suggestions: {
+    gap: 7,
+  },
+  suggestionsLabel: {
+    color: orbiTheme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  suggestionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  suggestionChip: {
+    maxWidth: '48%',
+    borderRadius: 999,
+    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  suggestionChipPressed: {
+    backgroundColor: 'rgba(0,199,199,0.08)',
+  },
+  suggestionChipLabel: {
+    color: orbiTheme.colors.text,
+    fontSize: 12,
+    fontWeight: '700',
   },
   resultsList: {
     backgroundColor: orbiTheme.colors.backgroundAlt,

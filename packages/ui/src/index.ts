@@ -363,7 +363,7 @@ const FRENCH_STATUS: Record<string, string> = {
   MOTORCYCLE: "Moto",
   MOTO: "Moto",
   CAR: "Voiture",
-  MOTO_STANDARD: "Moto Express",
+  MOTO_STANDARD: "Moto",
   CLEAR: "Normal",
   WARNING: "Attention",
   CRITICAL: "Critique",
@@ -397,8 +397,8 @@ export function serializeHtmlScriptJson(value: unknown) {
     .replaceAll("<", "\\u003c")
     .replaceAll(">", "\\u003e")
     .replaceAll("&", "\\u0026")
-    .replaceAll("", "\\u2028")
-    .replaceAll("", "\\u2029");
+    .replaceAll("\u2028", "\\u2028")
+    .replaceAll("\u2029", "\\u2029");
 }
 
 const allowedMapWebViewHosts = new Set([

@@ -17,6 +17,8 @@ export interface TripMapViewProps {
   driverLng: number | null | undefined;
   driverVehicleType?: string | null | undefined;
   driverVehicleTier?: string | null | undefined;
+  selectable?: boolean;
+  onSelectCoordinate?: (coordinates: { latitude: number; longitude: number }) => void;
   style?: object;
 }
 
@@ -29,6 +31,7 @@ function buildMapHtml(cfg: {
   driverLng: number | null;
   driverVehicleType: string | null;
   driverVehicleTier: string | null;
+  selectable: boolean;
 }): string {
   const config = serializeHtmlScriptJson(cfg);
   return `<!DOCTYPE html>
@@ -66,7 +69,7 @@ var driverMarker=null,pickupMarker=null,destMarker=null,routeLine=null;
 var VEHICLE_ICONS={'moto-standard':'<svg class="vehicle-svg" xmlns="http://www.w3.org/2000/svg" width="26" height="58" viewBox="0 0 26 58"><defs><linearGradient id="msB" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0f172a"/><stop offset="52%" stop-color="#00B894"/><stop offset="100%" stop-color="#111827"/></linearGradient><radialGradient id="msW" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#56606d"/><stop offset="100%" stop-color="#05070a"/></radialGradient></defs><ellipse cx="13" cy="54" rx="10" ry="3.5" fill="#000" opacity=".24"/><ellipse cx="13" cy="8" rx="7.5" ry="6.5" fill="url(#msW)"/><ellipse cx="13" cy="49" rx="7.5" ry="6.5" fill="url(#msW)"/><path d="M9 15q-2 4-2 10l1 8q1 4 3 5h4q3-1 3-5l1-8q0-6-2-10z" fill="url(#msB)"/><ellipse cx="13" cy="21" rx="5" ry="6.5" fill="#172033"/><path d="M11 37q2 2.5 4 0v8q-2 2-4 0z" fill="#070b12"/><rect x="5" y="16" width="16" height="4" rx="2" fill="#00B894"/><ellipse cx="13" cy="12" rx="3.5" ry="2" fill="#fff7c2"/><rect x="10" y="51" width="6" height="2" rx="1" fill="#ff3b30"/></svg>','moto-plus':'<svg class="vehicle-svg" xmlns="http://www.w3.org/2000/svg" width="28" height="58" viewBox="0 0 28 58"><defs><linearGradient id="mpB" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0f172a"/><stop offset="52%" stop-color="#1e293b"/><stop offset="100%" stop-color="#020617"/></linearGradient><radialGradient id="mpW" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#64748b"/><stop offset="100%" stop-color="#05070a"/></radialGradient></defs><ellipse cx="14" cy="54" rx="11" ry="3.5" fill="#000" opacity=".28"/><ellipse cx="14" cy="8" rx="8.5" ry="7" fill="url(#mpW)"/><ellipse cx="14" cy="49" rx="8.5" ry="7" fill="url(#mpW)"/><path d="M9 15q-2.5 4-2 11l1 9q1 4 4 5h4q3-1 4-5l1-9q.5-7-2-11z" fill="url(#mpB)"/><ellipse cx="14" cy="22" rx="6" ry="7" fill="#172033"/><path d="M11 37q3 3 6 0v9q-3 2.5-6 0z" fill="#070b12"/><rect x="4" y="17" width="20" height="4" rx="2" fill="#F2A900"/><rect x="4" y="18.5" width="20" height="1.5" fill="#FDE68A" opacity=".6"/><ellipse cx="14" cy="12.5" rx="4" ry="2.5" fill="#fff7c2"/><rect x="11" y="50.5" width="6" height="2.5" rx="1.2" fill="#ff3b30"/></svg>','car-standard':'<svg class="vehicle-svg" xmlns="http://www.w3.org/2000/svg" width="42" height="74" viewBox="0 0 42 74"><defs><linearGradient id="csB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FDE68A"/><stop offset="45%" stop-color="#F59E0B"/><stop offset="100%" stop-color="#D97706"/></linearGradient><linearGradient id="csG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#405a74"/><stop offset="100%" stop-color="#0b1622"/></linearGradient><radialGradient id="csW" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#6c7480"/><stop offset="100%" stop-color="#07090d"/></radialGradient></defs><ellipse cx="21" cy="68" rx="18" ry="5" fill="#000" opacity=".26"/><rect x="1" y="7" width="8" height="14" rx="4" fill="url(#csW)"/><rect x="33" y="7" width="8" height="14" rx="4" fill="url(#csW)"/><rect x="1" y="52" width="8" height="14" rx="4" fill="url(#csW)"/><rect x="33" y="52" width="8" height="14" rx="4" fill="url(#csW)"/><path d="M8 7Q21 2 34 7v55Q21 70 8 62z" fill="url(#csB)"/><path d="M10 7Q21 3 32 7v12Q21 9 10 11z" fill="#FEF3C7" opacity=".8"/><rect x="11" y="14" width="20" height="13" rx="4" fill="url(#csG)"/><rect x="9" y="29" width="5" height="14" rx="2.5" fill="#92400E" opacity=".8"/><rect x="28" y="29" width="5" height="14" rx="2.5" fill="#92400E" opacity=".8"/><rect x="13" y="28" width="16" height="18" rx="4" fill="#D97706"/><rect x="11" y="46" width="20" height="12" rx="4" fill="url(#csG)"/><rect x="10" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="25" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="10" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/><rect x="25" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/></svg>','car-comfort':'<svg class="vehicle-svg" xmlns="http://www.w3.org/2000/svg" width="42" height="74" viewBox="0 0 42 74"><defs><linearGradient id="ccB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#BAE6FD"/><stop offset="45%" stop-color="#0EA5E9"/><stop offset="100%" stop-color="#0369A1"/></linearGradient><linearGradient id="ccG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#405a74"/><stop offset="100%" stop-color="#0b1622"/></linearGradient><radialGradient id="ccW" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#6c7480"/><stop offset="100%" stop-color="#07090d"/></radialGradient></defs><ellipse cx="21" cy="68" rx="18" ry="5" fill="#000" opacity=".26"/><rect x="1" y="7" width="8" height="14" rx="4" fill="url(#ccW)"/><rect x="33" y="7" width="8" height="14" rx="4" fill="url(#ccW)"/><rect x="1" y="52" width="8" height="14" rx="4" fill="url(#ccW)"/><rect x="33" y="52" width="8" height="14" rx="4" fill="url(#ccW)"/><path d="M8 7Q21 2 34 7v55Q21 70 8 62z" fill="url(#ccB)"/><path d="M10 7Q21 3 32 7v12Q21 9 10 11z" fill="#E0F2FE" opacity=".8"/><rect x="11" y="14" width="20" height="13" rx="4" fill="url(#ccG)"/><rect x="9" y="29" width="5" height="14" rx="2.5" fill="#0C4A6E" opacity=".85"/><rect x="28" y="29" width="5" height="14" rx="2.5" fill="#0C4A6E" opacity=".85"/><rect x="13" y="28" width="16" height="18" rx="4" fill="#0284C7"/><rect x="11" y="46" width="20" height="12" rx="4" fill="url(#ccG)"/><rect x="10" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="25" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="10" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/><rect x="25" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/></svg>','car-xl':'<svg class="vehicle-svg" xmlns="http://www.w3.org/2000/svg" width="46" height="74" viewBox="0 0 46 74"><defs><linearGradient id="xlB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#264A7A"/><stop offset="45%" stop-color="#1E3A5F"/><stop offset="100%" stop-color="#0F2236"/></linearGradient><linearGradient id="xlG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#405a74"/><stop offset="100%" stop-color="#0b1622"/></linearGradient><radialGradient id="xlW" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#6c7480"/><stop offset="100%" stop-color="#07090d"/></radialGradient></defs><ellipse cx="23" cy="68" rx="20" ry="5" fill="#000" opacity=".28"/><rect x="0" y="7" width="8" height="14" rx="4" fill="url(#xlW)"/><rect x="38" y="7" width="8" height="14" rx="4" fill="url(#xlW)"/><rect x="0" y="52" width="8" height="14" rx="4" fill="url(#xlW)"/><rect x="38" y="52" width="8" height="14" rx="4" fill="url(#xlW)"/><path d="M8 7Q23 2 38 7v55Q23 70 8 62z" fill="url(#xlB)"/><path d="M10 7Q23 3 36 7v12Q23 9 10 11z" fill="#3B78C4" opacity=".6"/><rect x="11" y="14" width="24" height="13" rx="4" fill="url(#xlG)"/><rect x="9" y="29" width="5" height="14" rx="2.5" fill="#0F2236" opacity=".85"/><rect x="32" y="29" width="5" height="14" rx="2.5" fill="#0F2236" opacity=".85"/><rect x="13" y="28" width="20" height="18" rx="4" fill="#1E3A5F"/><rect x="11" y="46" width="24" height="12" rx="4" fill="url(#xlG)"/><rect x="8" y="16" width="2" height="38" rx="1" fill="#94A3B8" opacity=".7"/><rect x="36" y="16" width="2" height="38" rx="1" fill="#94A3B8" opacity=".7"/><rect x="11" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="28" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="11" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/><rect x="28" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/></svg>'};
 var VEHICLE_SIZES={'moto-standard':[78,88],'moto-plus':[84,88],'car-standard':[86,92],'car-comfort':[86,92],'car-xl':[92,88]};
 var VEHICLE_ANCHORS={'moto-standard':[39,38],'moto-plus':[42,38],'car-standard':[43,42],'car-comfort':[43,42],'car-xl':[46,38]};
-function getTier(){var t=(CFG.driverVehicleTier||'').toUpperCase().replace(/-/g,'_');if(t==='MOTO_PLUS')return 'moto-plus';if(t.indexOf('MOTO')>=0)return 'moto-standard';if(t==='CAR_XL')return 'car-xl';if(t==='CAR_COMFORT')return 'car-comfort';if(t==='CAR_STANDARD')return 'car-standard';var v=(CFG.driverVehicleType||'').toUpperCase();return v.indexOf('MOTO')>=0?'moto-standard':'car-standard'}
+function getTier(){var t=(CFG.driverVehicleTier||'').toUpperCase().replace(/-/g,'_');if(t.indexOf('MOTO')>=0)return 'moto-standard';if(t==='CAR_XL')return 'car-xl';if(t==='CAR_COMFORT')return 'car-comfort';if(t==='CAR_STANDARD')return 'car-standard';var v=(CFG.driverVehicleType||'').toUpperCase();return v.indexOf('MOTO')>=0?'moto-standard':'car-standard'}
 function driverIcon(){var tier=getTier();return L.divIcon({html:'<div class="vehicle-wrap"><span class="vehicle-halo"></span>'+VEHICLE_ICONS[tier]+'<span class="driver-label">Chauffeur</span></div>',iconSize:VEHICLE_SIZES[tier],iconAnchor:VEHICLE_ANCHORS[tier],className:''})}
 function pickupIcon(){return L.divIcon({html:'<div class="pickup-pin"><div class="pickup-pin-dot"></div><div class="pickup-pin-label">Depart</div></div>',iconSize:[72,18],iconAnchor:[5,9],className:''})}
 function destIcon(){return L.divIcon({html:'<div class="dest-pin"><div class="dest-pin-dot"></div><div class="dest-pin-label">Arrivee</div></div>',iconSize:[72,18],iconAnchor:[5,9],className:''})}
@@ -111,6 +114,16 @@ function onMsg(e){try{var m=JSON.parse(e.data);if(m.type==='UPDATE_DRIVER'&&m.la
 document.addEventListener('message',onMsg);
 window.addEventListener('message',onMsg);
 
+if(CFG.selectable&&window.ReactNativeWebView){
+  map.on('click',function(e){
+    window.ReactNativeWebView.postMessage(JSON.stringify({
+      type:'MAP_COORDINATE_SELECTED',
+      lat:e.latlng.lat,
+      lng:e.latlng.lng
+    }));
+  });
+}
+
 initMap(CFG);
 </script>
 </body>
@@ -126,6 +139,8 @@ export function TripMapView({
   driverLng,
   driverVehicleType,
   driverVehicleTier,
+  selectable = false,
+  onSelectCoordinate,
   style,
 }: TripMapViewProps) {
   const webRef = useRef<WebView>(null);
@@ -139,16 +154,38 @@ export function TripMapView({
       driverLng: driverLng ?? null,
       driverVehicleType: driverVehicleType ?? null,
       driverVehicleTier: driverVehicleTier ?? null,
+      selectable,
     }),
   );
 
   useEffect(() => {
     if (driverLat && driverLng && webRef.current) {
-      webRef.current.injectJavaScript(
-        `updateDriver(${driverLat},${driverLng});true;`,
+      webRef.current.postMessage(
+        JSON.stringify({ type: 'UPDATE_DRIVER', lat: driverLat, lng: driverLng }),
       );
     }
   }, [driverLat, driverLng]);
+
+  function reportMapError(error: unknown, context: Record<string, unknown>) {
+    void import('./mobile-error-reporting')
+      .then(({ enqueueRiderMobileErrorReport }) =>
+        enqueueRiderMobileErrorReport(error, {
+          classification: {
+            code: 'MOB-REALTIME-DEGRADED',
+            surface: 'network',
+            severity: 'medium',
+            owner: 'engineering',
+            retryPolicy: 'manual-refresh',
+            userMessage: 'La carte ne s est pas chargee correctement.',
+            shouldClearSessionToken: false,
+            shouldNavigateToAuth: false,
+            reportable: true,
+          },
+          context,
+        }),
+      )
+      .catch(() => undefined);
+  }
 
   return (
     <View style={[styles.container, style]}>
@@ -162,8 +199,45 @@ export function TripMapView({
         onShouldStartLoadWithRequest={(request: { url: string }) =>
           shouldAllowLocalMapWebViewRequest(request.url)
         }
-        onError={() => {}}
-        onHttpError={() => {}}
+        onMessage={(event: { nativeEvent?: { data?: string } }) => {
+          if (!onSelectCoordinate || !event.nativeEvent?.data) {
+            return;
+          }
+
+          try {
+            const message = JSON.parse(event.nativeEvent.data) as {
+              type?: string;
+              lat?: number;
+              lng?: number;
+            };
+
+            if (
+              message.type === 'MAP_COORDINATE_SELECTED' &&
+              Number.isFinite(message.lat) &&
+              Number.isFinite(message.lng)
+            ) {
+              onSelectCoordinate({
+                latitude: Number(message.lat),
+                longitude: Number(message.lng),
+              });
+            }
+          } catch {
+            // Ignore malformed messages from the embedded map.
+          }
+        }}
+        onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
+          reportMapError(new Error(event.nativeEvent?.description ?? 'Trip map WebView error'), {
+            surface: 'trip-map',
+            code: event.nativeEvent?.code ?? null,
+          });
+        }}
+        onHttpError={(event: { nativeEvent?: { statusCode?: number; description?: string; url?: string } }) => {
+          reportMapError(new Error(event.nativeEvent?.description ?? 'Trip map HTTP error'), {
+            surface: 'trip-map',
+            statusCode: event.nativeEvent?.statusCode ?? null,
+            url: event.nativeEvent?.url ?? null,
+          });
+        }}
         allowsInlineMediaPlayback
       />
     </View>

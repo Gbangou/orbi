@@ -139,7 +139,7 @@ export const riderRideOptions: RideOption[] = [
     id: "moto-standard",
     category: "motorcycle",
     tier: "moto-standard",
-    title: "Moto Express",
+    title: "Moto",
     etaMinutes: 3,
     fare: 1200,
     capacity: "1 place",
