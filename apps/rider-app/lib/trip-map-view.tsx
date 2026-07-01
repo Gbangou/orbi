@@ -5,6 +5,7 @@ import {
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
+import { enqueueRiderMapError } from './map-error-reporting';
 
 const TypedWebView = WebView as any;
 
@@ -166,27 +167,6 @@ export function TripMapView({
     }
   }, [driverLat, driverLng]);
 
-  function reportMapError(error: unknown, context: Record<string, unknown>) {
-    void import('./mobile-error-reporting')
-      .then(({ enqueueRiderMobileErrorReport }) =>
-        enqueueRiderMobileErrorReport(error, {
-          classification: {
-            code: 'MOB-REALTIME-DEGRADED',
-            surface: 'network',
-            severity: 'medium',
-            owner: 'engineering',
-            retryPolicy: 'manual-refresh',
-            userMessage: 'La carte ne s est pas chargee correctement.',
-            shouldClearSessionToken: false,
-            shouldNavigateToAuth: false,
-            reportable: true,
-          },
-          context,
-        }),
-      )
-      .catch(() => undefined);
-  }
-
   return (
     <View style={[styles.container, style]}>
       <TypedWebView
@@ -226,17 +206,23 @@ export function TripMapView({
           }
         }}
         onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
-          reportMapError(new Error(event.nativeEvent?.description ?? 'Trip map WebView error'), {
-            surface: 'trip-map',
-            code: event.nativeEvent?.code ?? null,
-          });
+          enqueueRiderMapError(
+            new Error(event.nativeEvent?.description ?? 'Trip map WebView error'),
+            {
+              surface: 'trip-map',
+              code: event.nativeEvent?.code ?? null,
+            },
+          );
         }}
         onHttpError={(event: { nativeEvent?: { statusCode?: number; description?: string; url?: string } }) => {
-          reportMapError(new Error(event.nativeEvent?.description ?? 'Trip map HTTP error'), {
-            surface: 'trip-map',
-            statusCode: event.nativeEvent?.statusCode ?? null,
-            url: event.nativeEvent?.url ?? null,
-          });
+          enqueueRiderMapError(
+            new Error(event.nativeEvent?.description ?? 'Trip map HTTP error'),
+            {
+              surface: 'trip-map',
+              statusCode: event.nativeEvent?.statusCode ?? null,
+              url: event.nativeEvent?.url ?? null,
+            },
+          );
         }}
         allowsInlineMediaPlayback
       />

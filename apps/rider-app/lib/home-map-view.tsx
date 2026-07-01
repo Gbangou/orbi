@@ -7,6 +7,7 @@ import {
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
+import { enqueueRiderMapError } from './map-error-reporting';
 
 const TypedWebView = WebView as any;
 
@@ -151,12 +152,12 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
       setDrivers(list);
       onDriversUpdate?.(list.length);
       if (webRef.current) {
-        webRef.current.injectJavaScript(
-          `updateDrivers(${serializeHtmlScriptJson(list)});true;`,
+        webRef.current.postMessage(
+          JSON.stringify({ type: 'UPDATE_DRIVERS', drivers: list }),
         );
       }
-    } catch {
-      // keep current state
+    } catch (error) {
+      enqueueRiderMapError(error, { surface: 'home-map', action: 'refresh-drivers' });
     }
   }, [riderLat, riderLng, onDriversUpdate]);
 
@@ -168,8 +169,8 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
 
   useEffect(() => {
     if (riderLat && riderLng && webRef.current) {
-      webRef.current.injectJavaScript(
-        `updateRider(${riderLat},${riderLng});true;`,
+      webRef.current.postMessage(
+        JSON.stringify({ type: 'UPDATE_RIDER', lat: riderLat, lng: riderLng }),
       );
     }
   }, [riderLat, riderLng]);
@@ -188,8 +189,27 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
         onShouldStartLoadWithRequest={(request: { url: string }) =>
           shouldAllowLocalMapWebViewRequest(request.url)
         }
-        onError={() => {}}
-        onHttpError={() => {}}
+        onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
+          enqueueRiderMapError(
+            new Error(event.nativeEvent?.description ?? 'Home map WebView error'),
+            {
+              surface: 'home-map',
+              code: event.nativeEvent?.code ?? null,
+            },
+          );
+        }}
+        onHttpError={(event: {
+          nativeEvent?: { statusCode?: number; description?: string; url?: string };
+        }) => {
+          enqueueRiderMapError(
+            new Error(event.nativeEvent?.description ?? 'Home map HTTP error'),
+            {
+              surface: 'home-map',
+              statusCode: event.nativeEvent?.statusCode ?? null,
+              url: event.nativeEvent?.url ?? null,
+            },
+          );
+        }}
         allowsInlineMediaPlayback
       />
     </View>

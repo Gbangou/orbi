@@ -12,7 +12,7 @@
 param(
     [ValidateSet('rider', 'driver', 'all')]
     [string]$App = 'all',
-    [string]$ApiBaseUrl = $(if ($env:ORBI_FIELD_API_BASE_URL) { $env:ORBI_FIELD_API_BASE_URL } else { "https://backend-production-d5d1.up.railway.app" })
+    [string]$ApiBaseUrl = $(if ($env:ORBI_FIELD_API_BASE_URL) { $env:ORBI_FIELD_API_BASE_URL } else { "https://orbi-field-api.onrender.com" })
 )
 
 $ErrorActionPreference = 'Stop'

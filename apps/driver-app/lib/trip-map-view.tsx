@@ -5,6 +5,7 @@ import {
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
+import { enqueueDriverMapError } from './map-error-reporting';
 
 const TypedWebView = WebView as any;
 
@@ -158,8 +159,27 @@ export function TripMapView({
         onShouldStartLoadWithRequest={(request: { url: string }) =>
           shouldAllowLocalMapWebViewRequest(request.url)
         }
-        onError={() => {}}
-        onHttpError={() => {}}
+        onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
+          enqueueDriverMapError(
+            new Error(event.nativeEvent?.description ?? 'Driver trip map WebView error'),
+            {
+              surface: 'driver-trip-map',
+              code: event.nativeEvent?.code ?? null,
+            },
+          );
+        }}
+        onHttpError={(event: {
+          nativeEvent?: { statusCode?: number; description?: string; url?: string };
+        }) => {
+          enqueueDriverMapError(
+            new Error(event.nativeEvent?.description ?? 'Driver trip map HTTP error'),
+            {
+              surface: 'driver-trip-map',
+              statusCode: event.nativeEvent?.statusCode ?? null,
+              url: event.nativeEvent?.url ?? null,
+            },
+          );
+        }}
         allowsInlineMediaPlayback
       />
     </View>

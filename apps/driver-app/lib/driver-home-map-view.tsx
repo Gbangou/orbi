@@ -6,6 +6,7 @@ import {
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
+import { enqueueDriverMapError } from './map-error-reporting';
 
 const TypedWebView = WebView as any;
 
@@ -152,8 +153,27 @@ export function DriverHomeMapView({
         onShouldStartLoadWithRequest={(request: { url: string }) =>
           shouldAllowLocalMapWebViewRequest(request.url)
         }
-        onError={() => {}}
-        onHttpError={() => {}}
+        onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
+          enqueueDriverMapError(
+            new Error(event.nativeEvent?.description ?? 'Driver home map WebView error'),
+            {
+              surface: 'driver-home-map',
+              code: event.nativeEvent?.code ?? null,
+            },
+          );
+        }}
+        onHttpError={(event: {
+          nativeEvent?: { statusCode?: number; description?: string; url?: string };
+        }) => {
+          enqueueDriverMapError(
+            new Error(event.nativeEvent?.description ?? 'Driver home map HTTP error'),
+            {
+              surface: 'driver-home-map',
+              statusCode: event.nativeEvent?.statusCode ?? null,
+              url: event.nativeEvent?.url ?? null,
+            },
+          );
+        }}
         allowsInlineMediaPlayback
       />
     </View>
