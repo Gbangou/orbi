@@ -96,14 +96,21 @@ export class PawaPayService {
     // initial field testing without modifying NODE_ENV (which controls
     // the backend's own validation and behaviour).
     // Values: 'sandbox' | 'production'. Defaults to NODE_ENV === 'production'.
-    const pawaPayEnv = this.configService.get<string>('PAWAPAY_ENVIRONMENT');
+    const pawaPayEnv =
+      this.configService.get<string>('payments.pawapay.environment') ??
+      this.configService.get<string>('PAWAPAY_ENVIRONMENT');
     const useSandbox =
       pawaPayEnv === 'sandbox' ||
       (pawaPayEnv !== 'production' && nodeEnv !== 'production');
     this.baseUrl = useSandbox ? PAWAPAY_SANDBOX_BASE_URL : PAWAPAY_PROD_BASE_URL;
-    this.apiToken = this.configService.get<string>('PAWAPAY_API_TOKEN') ?? '';
+    this.apiToken =
+      this.configService.get<string>('payments.pawapay.apiToken') ??
+      this.configService.get<string>('PAWAPAY_API_TOKEN') ??
+      '';
     this.webhookSecret =
-      this.configService.get<string>('PAWAPAY_WEBHOOK_SECRET') ?? '';
+      this.configService.get<string>('payments.pawapay.webhookSecret') ??
+      this.configService.get<string>('PAWAPAY_WEBHOOK_SECRET') ??
+      '';
   }
 
   async initiateDeposit(

@@ -1,6 +1,7 @@
 // ── Admin types and API functions ─────────────────────────────────────────────
 
 import type { OrbiApiClient } from "./client";
+import type { PaymentProviderCode, PaymentProviderKey } from "./payments";
 import { apiRoutes } from "./routes";
 
 // ── Shared sub-types referenced across admin responses ────────────────────────
@@ -611,7 +612,7 @@ export type AdminDriverWalletRecoveryAdjustmentResponse = {
 export type AdminPaymentWebhookEventsResponse = {
   events: Array<{
     id: string;
-    provider: "FLUTTERWAVE" | "CINETPAY";
+    provider: PaymentProviderCode;
     eventType: string;
     transactionRef: string | null;
     providerReference: string | null;
@@ -686,7 +687,7 @@ export type AdminPaymentWebhookReplayResponse = {
       received: true;
       event: string;
       transactionRef: string | null;
-      provider: "flutterwave" | "cinetpay";
+      provider: PaymentProviderKey;
       providerReference?: string;
       reconciledAttemptCount: number;
       nextAction: string;
@@ -698,13 +699,13 @@ export type AdminPaymentAttemptProviderVerificationResponse = {
   verification: {
     verified: true;
     paymentAttemptId: string;
-    provider: "flutterwave" | "cinetpay";
+    provider: PaymentProviderKey;
     transactionRef: string;
     result: {
       received: true;
       event: string;
       transactionRef: string | null;
-      provider: "flutterwave" | "cinetpay";
+      provider: PaymentProviderKey;
       providerReference?: string;
       reconciledAttemptCount: number;
       nextAction: string;
@@ -718,7 +719,7 @@ export type AdminPaymentAttemptRefundResponse = {
     providerRefundReference: string;
     paymentAttempt: {
       id: string;
-      provider: "FLUTTERWAVE" | "CINETPAY";
+      provider: PaymentProviderCode;
       status: "REFUND_PENDING" | "REFUNDED";
       amount: number;
       currency: string;
@@ -1450,7 +1451,7 @@ export async function fetchAdminPaymentWebhookEvents(
   query?: {
     page?: number;
     pageSize?: number;
-    provider?: "FLUTTERWAVE" | "CINETPAY";
+    provider?: PaymentProviderCode;
     action?: string;
     kind?: "payment" | "refund" | "ignored";
     transactionRef?: string;

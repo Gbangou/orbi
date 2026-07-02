@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PageQueryDto } from '../../../common/dto/page-query.dto';
 
-const paymentWebhookProviders = ['FLUTTERWAVE', 'CINETPAY'] as const;
+const paymentWebhookProviders = ['FLUTTERWAVE', 'CINETPAY', 'PAWAPAY'] as const;
 const paymentWebhookActions = [
   'persisted_and_reconciled',
   'persisted_idempotent_replay',

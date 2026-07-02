@@ -5,6 +5,9 @@ import { apiRoutes } from "./routes";
 
 // ── Payment types ─────────────────────────────────────────────────────────────
 
+export type PaymentProviderCode = "FLUTTERWAVE" | "CINETPAY" | "PAWAPAY";
+export type PaymentProviderKey = "flutterwave" | "cinetpay" | "pawapay";
+
 export type CheckoutIntentPayload = {
   rideRequestId: string;
   channel: "MOBILE_MONEY" | "CARD" | "WALLET";
@@ -20,7 +23,7 @@ export type CheckoutIntentPayload = {
 };
 
 export type CheckoutIntentResponse = {
-  provider: "FLUTTERWAVE" | "CINETPAY";
+  provider: PaymentProviderCode;
   transactionRef: string;
   checkoutMode: "REDIRECT_OR_INLINE" | "REDIRECT_OR_WIDGET";
   amount: number;

@@ -137,7 +137,7 @@ export default () => ({
     driverAutoOnboard: process.env.FEATURE_FLAG_DRIVER_AUTO_ONBOARD ?? 'off',
   },
   payments: {
-    provider: process.env.PAYMENTS_PROVIDER ?? 'flutterwave',
+    provider: process.env.PAYMENTS_PROVIDER ?? 'pawapay',
     currency: process.env.PAYMENTS_CURRENCY ?? 'XOF',
     webhookSecret: process.env.PAYMENTS_WEBHOOK_SECRET,
     defaultRedirectUrl: process.env.PAYMENTS_DEFAULT_REDIRECT_URL,
@@ -155,6 +155,11 @@ export default () => ({
       apiKey: process.env.CINETPAY_API_KEY,
       secretKey:
         process.env.CINETPAY_SECRET_KEY ?? process.env.CINETPAY_API_KEY,
+    },
+    pawapay: {
+      apiToken: process.env.PAWAPAY_API_TOKEN,
+      webhookSecret: process.env.PAWAPAY_WEBHOOK_SECRET,
+      environment: process.env.PAWAPAY_ENVIRONMENT ?? 'sandbox',
     },
   },
   notifications: {

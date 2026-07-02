@@ -69,13 +69,13 @@ pnpm start:dev
 
 Le backend expose maintenant une fondation paiements orientee agregateur:
 
-- provider configurable par `PAYMENTS_PROVIDER` (`flutterwave` par defaut, `cinetpay` supporte)
+- provider configurable par `PAYMENTS_PROVIDER` (`pawapay` par defaut pour le terrain Burkina Faso; `flutterwave` et `cinetpay` restent supportes comme alternatives)
 - endpoint `checkout-intents` pour preparer un paiement ride-side sans coupler le produit a un seul fournisseur
 - endpoint `webhooks` pour verification signature, reconciliation idempotente et journalisation
 - endpoint admin `payment-webhook-events` pour auditer les notifications fournisseur recentes
 - endpoint detail webhook avec payload redige pour investigation sans exposer les secrets, signatures ou numeros
 - action admin `payment-webhook-events/:eventId/replay` pour rejouer un webhook deja journalise sans accepter de nouveau payload manuel
-- action admin `payment-attempts/:paymentAttemptId/verify-provider` pour verifier une tentative directement chez Flutterwave/CinetPay, puis reconcilier via le meme chemin idempotent que les webhooks
+- action admin `payment-attempts/:paymentAttemptId/verify-provider` pour verifier une tentative directement chez PawaPay, Flutterwave ou CinetPay, puis reconcilier via le meme chemin idempotent que les webhooks
 - action admin `investigation` pour journaliser une enquete et creer un ticket support quand l evenement est rattache a un utilisateur
 - ledger chauffeur idempotent apres paiement `SUCCEEDED`: credit du wallet chauffeur avec payout net et commission Orbi en metadata
 - endpoints admin `driver-wallets/:walletId/payouts/prepare` et `driver-payouts/:payoutId/paid` pour preparer puis marquer paye un payout chauffeur avec audit log, signal realtime et transaction ledger `PAYOUT`
@@ -88,6 +88,9 @@ Variables utiles:
 - `PAYMENTS_WEBHOOK_SECRET`
 - `PAYMENTS_DEFAULT_REDIRECT_URL`
 - `PAYMENTS_DEFAULT_WEBHOOK_URL`
+- `PAWAPAY_API_TOKEN`
+- `PAWAPAY_WEBHOOK_SECRET`
+- `PAWAPAY_ENVIRONMENT`
 - `FLUTTERWAVE_PUBLIC_KEY`
 - `FLUTTERWAVE_SECRET_KEY`
 - `FLUTTERWAVE_WEBHOOK_SECRET_HASH`

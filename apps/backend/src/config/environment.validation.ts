@@ -52,6 +52,9 @@ type EnvironmentVariables = {
   CINETPAY_SITE_ID?: string;
   CINETPAY_API_KEY?: string;
   CINETPAY_SECRET_KEY?: string;
+  PAWAPAY_API_TOKEN?: string;
+  PAWAPAY_WEBHOOK_SECRET?: string;
+  PAWAPAY_ENVIRONMENT?: string;
   NOTIFICATIONS_PROVIDER?: string;
   NOTIFICATIONS_PROVIDER_TIMEOUT_MS?: string;
   MOBILE_ERROR_COLLECTOR_PROVIDER?: string;
@@ -137,7 +140,7 @@ export function validateEnvironment(config: EnvironmentVariables) {
       config.FEATURE_FLAG_DRIVER_ONBOARDING_ALLOWLIST ?? '',
     FEATURE_FLAG_VOICE: config.FEATURE_FLAG_VOICE ?? 'on',
     FEATURE_FLAG_VOICE_ALLOWLIST: config.FEATURE_FLAG_VOICE_ALLOWLIST ?? '',
-    PAYMENTS_PROVIDER: config.PAYMENTS_PROVIDER ?? 'flutterwave',
+    PAYMENTS_PROVIDER: config.PAYMENTS_PROVIDER ?? 'pawapay',
     PAYMENTS_CURRENCY: config.PAYMENTS_CURRENCY ?? 'XOF',
     PAYMENTS_WEBHOOK_SECRET:
       config.PAYMENTS_WEBHOOK_SECRET ?? 'orbi_dev_webhook_secret',
@@ -154,6 +157,9 @@ export function validateEnvironment(config: EnvironmentVariables) {
     CINETPAY_SITE_ID: config.CINETPAY_SITE_ID ?? '',
     CINETPAY_API_KEY: config.CINETPAY_API_KEY ?? '',
     CINETPAY_SECRET_KEY: config.CINETPAY_SECRET_KEY ?? '',
+    PAWAPAY_API_TOKEN: config.PAWAPAY_API_TOKEN ?? '',
+    PAWAPAY_WEBHOOK_SECRET: config.PAWAPAY_WEBHOOK_SECRET ?? '',
+    PAWAPAY_ENVIRONMENT: config.PAWAPAY_ENVIRONMENT ?? 'sandbox',
     NOTIFICATIONS_PROVIDER: config.NOTIFICATIONS_PROVIDER ?? 'local',
     NOTIFICATIONS_PROVIDER_TIMEOUT_MS:
       config.NOTIFICATIONS_PROVIDER_TIMEOUT_MS ?? '5000',
