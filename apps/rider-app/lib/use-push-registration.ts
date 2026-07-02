@@ -6,16 +6,6 @@ import { Platform } from 'react-native';
 import { registerPushTokenWithApi } from '@orbi/api';
 import { restoreRiderSession } from './auth';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
-
 function isGranted(result: unknown): boolean {
   if (result && typeof result === 'object') {
     const r = result as Record<string, unknown>;
