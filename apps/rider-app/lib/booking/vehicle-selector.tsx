@@ -8,8 +8,6 @@
 import { memo } from 'react';
 import {
   ActivityIndicator,
-  Image,
-  type ImageSourcePropType,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,40 +16,27 @@ import {
 } from 'react-native';
 import { formatXof, orbiTheme } from '@orbi/ui';
 import type { RideOption, PromoValidationResponse } from '@orbi/api';
-
-const vehicleAssets: Partial<Record<RideOption['tier'], ImageSourcePropType>> = {
-  'moto-standard': require('../../assets/vehicles/moto-standard.png'),
-  'car-standard': require('../../assets/vehicles/car-standard.png'),
-  'car-comfort': require('../../assets/vehicles/car-comfort.png'),
-  'car-xl': require('../../assets/vehicles/car-xl.png'),
-};
+import { VehicleIllustration } from './vehicle-illustrations';
 
 function VehicleAvatar({
-  category, isSelected, tone, tier,
+  isSelected, tone, tier,
 }: {
   category: RideOption['category'];
   isSelected: boolean;
   tone: 'teal' | 'sky' | 'amber';
   tier: RideOption['tier'];
 }) {
-  const isMoto = category === 'motorcycle';
   const accent = tone === 'teal' ? orbiTheme.colors.teal : tone === 'sky' ? orbiTheme.colors.sky : orbiTheme.colors.amber;
-  const image =
-    vehicleAssets[tier] ??
-    vehicleAssets[isMoto ? 'moto-standard' : 'car-standard']!;
   return (
-    <View style={[styles.vehicleAvatar, isSelected && { backgroundColor: accent + '12', borderColor: accent, borderWidth: 1.5 }, !isSelected && { borderColor: orbiTheme.colors.border }]}>
-      <View style={[styles.vehicleAura, { backgroundColor: accent + '20' }]} />
-      <View style={styles.vehicleGround} />
-      <Image
-        source={image}
-        resizeMode="contain"
-        style={[
-          styles.vehicleImage,
-          isMoto ? styles.vehicleImageMoto : styles.vehicleImageCar,
-          tier === 'car-xl' && styles.vehicleImageXl,
-        ]}
-      />
+    <View style={[
+      styles.vehicleAvatar,
+      isSelected && { backgroundColor: accent + '0F', borderColor: accent, borderWidth: 1.5 },
+      !isSelected && { borderColor: orbiTheme.colors.border },
+    ]}>
+      <View style={[styles.vehicleAura, { backgroundColor: accent + '18' }]} />
+      <View style={styles.svgWrap}>
+        <VehicleIllustration tier={tier} />
+      </View>
     </View>
   );
 }
@@ -146,16 +131,15 @@ const styles = StyleSheet.create({
   },
   surgeBadge: { alignSelf: 'center', backgroundColor: 'rgba(255,149,0,0.90)', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 },
   surgeText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
-  vehicleAvatar: { width: 104, height: 82, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: orbiTheme.colors.border, backgroundColor: '#F8FAFC', overflow: 'hidden' },
+  vehicleAvatar: {
+    width: 108, height: 84, borderRadius: 15, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: orbiTheme.colors.border, backgroundColor: '#F6F8FB', overflow: 'hidden',
+  },
   name: { fontSize: 12, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, textAlign: 'center', minHeight: 30 },
   eta: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   fare: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, textAlign: 'center' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
   loadingText: { fontSize: 14, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular' },
-  vehicleAura: { position: 'absolute', width: 84, height: 52, borderRadius: 28, top: 9 },
-  vehicleGround: { position: 'absolute', width: 74, height: 10, borderRadius: 999, bottom: 9, backgroundColor: 'rgba(7,19,17,0.16)', transform: [{ scaleX: 1.12 }] },
-  vehicleImage: { position: 'absolute', width: 116, height: 88 },
-  vehicleImageMoto: { width: 112, height: 86, transform: [{ translateY: -2 }] },
-  vehicleImageCar: { width: 124, height: 92, transform: [{ translateY: -1 }] },
-  vehicleImageXl: { width: 130, height: 94, transform: [{ translateY: -1 }] },
+  vehicleAura: { position: 'absolute', width: 88, height: 56, borderRadius: 28, top: 8 },
+  svgWrap: { width: 108, height: 82, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 });
