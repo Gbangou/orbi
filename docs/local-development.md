@@ -32,6 +32,29 @@ pnpm setup:local
 
 Cela prepare les fichiers `.env` locaux a partir des exemples.
 
+## Pourquoi installer depuis la racine
+
+Orbi est un workspace pnpm. Meme si vous voulez executer uniquement le backend,
+il faut installer les dependances depuis la racine du repo:
+
+```powershell
+pnpm install
+```
+
+Le backend dans `apps/backend` utilise ses propres dependances NestJS/Prisma,
+mais il importe aussi les packages internes `packages/domain` et parfois les
+contrats partages. Ces packages sont relies par pnpm avec `workspace:*`. Si vous
+copiez seulement `apps/backend` ailleurs sans installer le workspace ou sans
+publier les packages internes, les imports partages ne seront plus resolus.
+
+La separation maintenable est donc:
+
+- `apps/backend`: serveur API, Prisma, jobs, auth, dispatch, paiements, audits.
+- `apps/admin-web`: interface operations/admin.
+- `apps/rider-app`: application passager.
+- `apps/driver-app`: application chauffeur.
+- `packages/*`: types, contrats, domaine, config et UI partages.
+
 ## Demarrer la base PostgreSQL locale
 
 1. Ouvrir Docker Desktop

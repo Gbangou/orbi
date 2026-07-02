@@ -1,6 +1,6 @@
 # Orbi Repository Map
 
-Date de reference: 8 mai 2026
+Date de reference: 2 juillet 2026
 
 Cette carte decrit la structure cible actuelle du monorepo et les limites de
 responsabilite entre applications, packages partages et documentation.
@@ -27,6 +27,12 @@ orbi/
     testing/          Smokes locaux et terrain
 ```
 
+Orbi est volontairement organise en monorepo applicatif: les applications
+deployables vivent dans `apps/*`, les briques partagees vivent dans
+`packages/*`, et les scripts/runbooks restent au niveau racine. Cette
+separation permet de faire evoluer le backend, l'admin web, le rider et le
+driver sans dupliquer les types metier, les contrats API ou les tokens UI.
+
 ## Regles de dependance
 
 | Depuis | Peut dependre de | Ne doit pas dependre de |
@@ -37,6 +43,54 @@ orbi/
 | `apps/driver-app` | `packages/api`, `packages/domain`, `packages/ui`, `apps/mobile-shared` | Admin web, Prisma |
 | `packages/api` | Types stables et primitives transport | React, NestJS runtime, Prisma client |
 | `packages/domain` | Aucune app | Transport HTTP, UI |
+
+## Politique de packages
+
+- `apps/backend` est le serveur. Il possede Prisma, les migrations, les
+  services metier, les guards, les audits, les jobs et les integrations.
+- `apps/admin-web`, `apps/rider-app` et `apps/driver-app` sont des clients. Ils
+  ne lisent jamais directement la base de donnees et passent par les contrats
+  HTTP/realtime.
+- `packages/domain` contient le vocabulaire metier canonique: enums, statuts,
+  categories vehicules, pricing Burkina et invariants purs.
+- `packages/api` contient les DTO/clients partages et ne doit pas importer de
+  runtime frontend ou backend lourd.
+- `packages/config` centralise la lecture de configuration partagee.
+- `packages/ui` expose les tokens et composants reutilisables sans tirer de
+  dependance serveur.
+- `apps/mobile-shared` contient uniquement les utilitaires communs rider/driver
+  qui sont specifiques a Expo/mobile.
+
+La racine `package.json` sert d'orchestrateur: elle installe les dependances du
+workspace, lance les tests globaux et garde les overrides de securite. Les
+dependances propres a chaque app restent dans son `package.json`.
+
+## Backend execute seul
+
+Le backend peut etre lance seul, mais il n'est pas autonome au sens "copier le
+dossier et executer": il depend des packages workspace, de Prisma et de la base
+PostgreSQL. Depuis la racine:
+
+```powershell
+pnpm install
+pnpm db:start
+pnpm prisma:generate
+pnpm prisma:migrate
+pnpm prisma:seed
+pnpm dev:backend
+```
+
+Pour production ou staging:
+
+```powershell
+pnpm --filter @orbi/domain build
+pnpm --filter backend build
+pnpm --filter backend start:prod
+```
+
+Les variables `.env` du backend doivent pointer vers une base PostgreSQL
+accessible. En terrain Render/Neon, `DATABASE_URL` est fournie par Neon et les
+migrations sont appliquees avant le demarrage.
 
 ## Frontieres applicatives
 

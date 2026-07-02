@@ -954,7 +954,8 @@ export default async function AdminHomePage({
   );
 
   return (
-    <main className="shell">
+    <div className="shell">
+      <div id="overview" className="section-anchor" />
       <section className="admin-session-panel">
         <div className="admin-session-copy">
           <p className="eyebrow">Session admin</p>
@@ -1092,50 +1093,6 @@ export default async function AdminHomePage({
         </div>
       </section>
 
-      <section className="hero hero-grid">
-        <div className="hero-copy">
-          <p className="eyebrow">Orbi Operations Burkina Faso</p>
-          <h1>{orbiCopy.adminHeadline}</h1>
-          <p className="lede">
-            Centre de pilotage premium pour les reservations, la tarification,
-            les incidents, la voix et la qualite de service.
-          </p>
-        </div>
-
-        <div className="hero-panel">
-          <div className="hero-panel-topline">
-            <span className="priority-badge priority-1">control tower</span>
-            <span className="phase-status phase-status-completed">
-              realtime ready
-            </span>
-          </div>
-          <h2>Vue strategique immediate</h2>
-          <p>
-            L admin regroupe maintenant les signaux produits, operations et
-            confiance dans une interface plus nette pour agir plus vite.
-          </p>
-          <div className="signal-grid">
-            {preview.operations.map((item) => (
-              <article className="signal-card" key={item.title}>
-                <span>{item.title}</span>
-                <strong>{item.value}</strong>
-                <p>{item.note}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="grid">
-        {preview.metrics.map((metric) => (
-          <article className="card" key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-            <p>{metric.trend}</p>
-          </article>
-        ))}
-      </section>
-
       <section className="panel test-access-panel">
         <div>
           <p className="eyebrow">Acces test local</p>
@@ -1216,12 +1173,16 @@ export default async function AdminHomePage({
         </div>
       </section>
 
+      <div id="live-ops" className="section-anchor" />
       <LiveOpsBoard initialLiveOps={liveOps} />
 
+      <div id="trips-audit" className="section-anchor" />
       <TripsAuditBoard initialAudit={tripsAudit} />
 
+      <div id="system-health" className="section-anchor" />
       <SystemHealthBoard initialHealth={health} />
 
+      <div id="launch-readiness" className="section-anchor" />
       <LaunchReadinessBoard
         liveOps={liveOps}
         support={support}
@@ -1234,30 +1195,41 @@ export default async function AdminHomePage({
         pricingScenarioCount={pricingScenarios.length}
       />
 
+      <div id="feature-flags" className="section-anchor" />
       <FeatureFlagsBoard featureFlags={featureFlags} />
 
+      <div id="dispatch" className="section-anchor" />
       <DispatchControlBoard initialSettings={dispatchSettings} />
 
+      <div id="pricing" className="section-anchor" />
       <PricingCalibrationBoard calibration={pricingCalibration} />
 
+      <div id="payments" className="section-anchor" />
       <PaymentWebhookJournalBoard journal={paymentWebhookJournal} />
 
+      <div id="wallets" className="section-anchor" />
       <DriverWalletsBoard wallets={driverWallets} />
 
+      <div id="drivers" className="section-anchor" />
       <DriversBoard initialDrivers={drivers} />
 
+      <div id="riders" className="section-anchor" />
       <RidersBoard initialRiders={riders} />
 
       {pricingScenarios.length ? (
         <PricingStrategyBoard scenarios={pricingScenarios} />
       ) : null}
 
+      <div id="onboarding" className="section-anchor" />
       <DriverOnboardingReviewBoard initialQueue={onboardingQueue.drivers} />
 
+      <div id="support" className="section-anchor" />
       <SupportQueue initialTickets={support.tickets} />
 
+      <div id="promo" className="section-anchor" />
       <PromoCodesBoard initialCodes={promoCodes.promoCodes} />
 
+      <div id="roadmap" className="section-anchor" />
       <section className="panel roadmap">
         <div className="roadmap-heading">
           <div>
@@ -1282,6 +1254,6 @@ export default async function AdminHomePage({
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 }
