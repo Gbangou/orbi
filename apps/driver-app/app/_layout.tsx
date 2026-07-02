@@ -16,7 +16,8 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
-import { orbiTheme, resolveTheme, ErrorBoundary } from '@orbi/ui';
+import { orbiTheme, resolveTheme } from '@orbi/ui';
+import { ErrorBoundary } from '@orbi/ui/src/native';
 import { initDriverI18n } from '../lib/i18n';
 import { hasPersistedDriverSession } from '../lib/auth';
 

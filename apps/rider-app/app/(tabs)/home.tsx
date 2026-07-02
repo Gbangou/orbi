@@ -26,8 +26,8 @@ import {
   describeRealtimeConnection,
   formatXof,
   orbiTheme,
-  OfflineBanner,
 } from '@orbi/ui';
+import { OfflineBanner } from '@orbi/ui/src/native';
 import { restoreRiderSession } from '../../lib/auth';
 import { useTranslation } from '../../lib/i18n';
 import { useLiveRefresh } from '../../lib/use-live-refresh';

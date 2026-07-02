@@ -3,8 +3,9 @@
 Ce guide explique comment tester Orbi avec de vrais telephones Android, en
 donnees mobiles 4G/5G, pour un pilote serieux.
 
-**Aucun PC n'est requis pendant le test.** Le backend Orbi tourne en permanence
-sur Railway. Il n'y a pas de tunnel, pas de Docker, pas de PC a garder allume.
+**Aucun PC n'est requis pendant le test.** Le backend Orbi tourne sur Render
+avec une base PostgreSQL distante. Il n'y a pas de tunnel, pas de Docker, pas
+de PC a garder allume pendant le test.
 
 ## Architecture du pilote terrain
 
@@ -13,12 +14,13 @@ Telephone Android (Passager)
        |
        | HTTPS — 4G/5G
        |
-       +---> https://backend-production-d5d1.up.railway.app  (Railway, permanent)
+       +---> https://orbi-field-api.onrender.com  (Render field API)
        |
 Telephone Android (Chauffeur)
 ```
 
-Le backend est disponible 24h/24, independamment de tout PC local.
+Le backend est disponible independamment de tout PC local. Sur plan gratuit
+Render, un cold start reste possible apres inactivite.
 
 ## Comptes de demonstration
 
@@ -30,16 +32,16 @@ Un bouton "Acces terrain securise" apparait sur l'ecran de connexion de chaque a
 | Passager  | testpassager@orbi.test      | TestOrbi2026!   |
 | Chauffeur | testchauffeur@orbi.test     | TestOrbi2026!   |
 
-Les testeurs peuvent aussi creer leurs propres comptes. Tout nouveau compte
-chauffeur est automatiquement approuve et reçoit un vehicule MOTORCYCLE grace au
-flag `DRIVER_AUTO_ONBOARD` actif sur Railway.
+Les testeurs peuvent aussi creer leurs propres comptes. Les comptes chauffeurs
+doivent etre valides dans l'admin, sauf si un flag de pilote ferme active
+explicitement l'auto-onboarding.
 
 ## 1. Verifier que le backend est operationnel
 
 Avant tout test, verifier depuis un navigateur ou PowerShell:
 
 ```
-https://backend-production-d5d1.up.railway.app/api/v1/health/ready
+https://orbi-field-api.onrender.com/api/v1/health/ready
 ```
 
 La reponse doit etre:
@@ -51,29 +53,30 @@ La reponse doit etre:
 Depuis PowerShell si necessaire:
 
 ```powershell
-Invoke-WebRequest -Uri "https://backend-production-d5d1.up.railway.app/api/v1/health/ready" -UseBasicParsing
+Invoke-WebRequest -Uri "https://orbi-field-api.onrender.com/api/v1/health/ready" -UseBasicParsing
 ```
 
-Code attendu: `200`. Si le backend ne repond pas, verifier le tableau de bord
-Railway: https://railway.app — le service redemarrera automatiquement.
+Code attendu: `200`. Si le backend ne repond pas, verifier Render →
+`orbi-field-api` → Logs et Environment.
 
-## 2. Construire les APK (a faire le 1er juin 2026 ou apres)
+## 2. Construire les APK
 
-Le quota EAS Free se reinitialise le 1er juin 2026. Lancer les deux builds
-depuis la racine du projet:
+Build local recommande depuis la racine du projet:
 
 ```powershell
-pnpm mobile:field --ApiUrl https://backend-production-d5d1.up.railway.app --App rider --Profile mvp
+pnpm mobile:apk
+```
+
+Les APKs sont produits dans `dist/` et pointent vers Render par defaut.
+
+Option EAS si le poste local n'est pas disponible:
+
+```powershell
+pnpm mobile:field --ApiUrl https://orbi-field-api.onrender.com --App rider --Profile mvp
 ```
 
 ```powershell
-pnpm mobile:field --ApiUrl https://backend-production-d5d1.up.railway.app --App driver --Profile mvp
-```
-
-Ou les deux en meme temps:
-
-```powershell
-pnpm mobile:field --ApiUrl https://backend-production-d5d1.up.railway.app --App all --Profile mvp
+pnpm mobile:field --ApiUrl https://orbi-field-api.onrender.com --App driver --Profile mvp
 ```
 
 EAS Cloud compile le build. Suivre la progression:
@@ -296,12 +299,12 @@ Remplir une ligne par test.
 Verifier depuis un navigateur:
 
 ```
-https://backend-production-d5d1.up.railway.app/api/v1/health/ready
+https://orbi-field-api.onrender.com/api/v1/health/ready
 ```
 
-Si la page ne charge pas, attendre 30 secondes et reessayer. Railway redemarre
-automatiquement les services. Si le probleme persiste plus de 5 minutes, verifier
-le tableau de bord Railway.
+Si la page ne charge pas, attendre 60 secondes et reessayer. Sur Render gratuit,
+un cold start peut arriver apres inactivite. Si le probleme persiste plus de
+5 minutes, verifier le dashboard Render `orbi-field-api`.
 
 ### L'app affiche "erreur reseau"
 
@@ -332,16 +335,17 @@ sur Activite.
 
 ### Le chauffeur n'a pas de vehicule apres inscription
 
-Le flag d'auto-onboarding est actif sur Railway. Si le vehicule n'apparait pas:
-1. Deconnecter et reconnecter le compte.
-2. Si le probleme persiste, aller dans `Mon profil` → `Vehicule` et ajouter un
-   vehicule manuellement.
+Le pilote serieux doit passer par la validation chauffeur admin. Si le vehicule
+n'apparait pas:
+1. Verifier dans l'admin que le profil chauffeur est valide.
+2. Verifier que le vehicule a ete cree ou rattache au chauffeur.
+3. Deconnecter et reconnecter le compte chauffeur.
 
 ## 11. Checklist avant de donner les APK aux testeurs
 
 - [ ] Backend repond `200` sur `/api/v1/health/ready`.
-- [ ] APK Passager build `mvp` telecharge depuis EAS.
-- [ ] APK Chauffeur build `mvp` telecharge depuis EAS.
+- [ ] APK Passager `dist/orbi-rider-mvp.apk` genere ou build EAS telecharge.
+- [ ] APK Chauffeur `dist/orbi-driver-mvp.apk` genere ou build EAS telecharge.
 - [ ] Test de connexion demo OK sur les deux telephones.
 - [ ] Un test de course complete realise avant de distribuer.
 - [ ] Wi-Fi coupe sur tous les telephones de test.
@@ -382,20 +386,26 @@ Ajouter le lien EAS du build correspondant au role du testeur.
 Depuis la racine du projet `C:\Users\LENOVO\Desktop\orbi`:
 
 ```powershell
-# Les deux apps en meme temps
-pnpm mobile:field --ApiUrl https://backend-production-d5d1.up.railway.app --App all --Profile mvp
+# Build local des deux apps en meme temps
+pnpm mobile:apk
 
-# App passager uniquement
-pnpm mobile:field --ApiUrl https://backend-production-d5d1.up.railway.app --App rider --Profile mvp
+# Build local passager uniquement
+pnpm mobile:apk:rider
 
-# App chauffeur uniquement
-pnpm mobile:field --ApiUrl https://backend-production-d5d1.up.railway.app --App driver --Profile mvp
+# Build local chauffeur uniquement
+pnpm mobile:apk:driver
+
+# Option EAS passager
+pnpm mobile:field --ApiUrl https://orbi-field-api.onrender.com --App rider --Profile mvp
+
+# Option EAS chauffeur
+pnpm mobile:field --ApiUrl https://orbi-field-api.onrender.com --App driver --Profile mvp
 ```
 
-Prerequis:
+Prerequis EAS seulement:
 - `npm install -g eas-cli` (une seule fois)
 - `eas login` avec le compte Expo (une seule fois)
-- Quota EAS Free: 30 builds Android/mois — se reinitialise le 1er de chaque mois
+- Verifier le quota Expo/EAS disponible avant de lancer un build cloud
 
 Suivi des builds:
 

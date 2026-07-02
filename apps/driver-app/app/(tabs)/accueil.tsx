@@ -19,8 +19,8 @@ import {
   describeRealtimeConnection,
   orbiCopy,
   orbiTheme,
-  OfflineBanner,
 } from '@orbi/ui';
+import { OfflineBanner } from '@orbi/ui/src/native';
 import { MetricTile } from '../../lib/realtime-widgets';
 import { restoreDriverSession } from '../../lib/auth';
 import { formatDriverEarningsAmount } from '../../lib/driver-earnings-signal';

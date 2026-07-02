@@ -5,18 +5,17 @@ services:
     plan: free
     region: frankfurt
     buildCommand: >
-      corepack enable &&
-      corepack prepare pnpm@10.30.0 --activate &&
+      npm install -g pnpm@10.30.0 &&
       pnpm install --frozen-lockfile &&
       pnpm --filter @orbi/domain build &&
       pnpm --filter @orbi/api build &&
       pnpm --filter @orbi/config build &&
       pnpm --filter @orbi/ui build &&
       pnpm --filter backend prisma:generate &&
-      pnpm --filter backend build
-    preDeployCommand: pnpm --filter backend exec prisma migrate deploy
+      pnpm --filter backend build &&
+      pnpm --filter backend exec prisma migrate deploy &&
+      pnpm --filter backend prisma:seed
     startCommand: pnpm --filter backend start:prod
-    initialDeployHook: pnpm --filter backend prisma:seed
     healthCheckPath: /api/v1/health/ready
     autoDeploy: true
     envVars:
@@ -31,9 +30,9 @@ services:
       - key: ENABLE_SWAGGER
         value: "false"
 
-      # DATABASE_URL → Renseigner manuellement dans le dashboard Render
-      # Format Supabase (recommandé, mode Transaction port 6543) :
-      #   postgresql://postgres.[ref]:[password]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
+      # DATABASE_URL → Renseigner manuellement dans le dashboard Render.
+      # Format Neon recommandé :
+      #   postgresql://neondb_owner:[password]@[host]/neondb?sslmode=require
       - key: DATABASE_URL
         sync: false
 

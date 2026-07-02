@@ -21,8 +21,8 @@ The repository includes `render.yaml` as a Render Blueprint:
 - `orbi-field-api`: NestJS backend.
 - `DATABASE_URL`: external Neon Postgres connection string entered as a Render
   secret.
-- `preDeployCommand`: runs `prisma migrate deploy`.
-- `initialDeployHook`: seeds demo accounts once after first deploy.
+- `buildCommand`: installs pnpm, builds packages, runs `prisma migrate deploy`
+  and runs the idempotent seed.
 - `/api/v1/health/ready`: health check used by Render.
 
 The default Blueprint is configured for a no-card field test:

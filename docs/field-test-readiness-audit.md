@@ -23,8 +23,8 @@ location-intent resolution; real speech-to-text remains a production gap.
 
 ## Current Field Guarantees
 
-- Rider and driver apps use the deployed field API for the `mvp` EAS profile:
-  `https://backend-production-d5d1.up.railway.app`.
+- Rider and driver apps use the deployed field API for the `mvp` and
+  `field-test` EAS profiles: `https://orbi-field-api.onrender.com`.
 - Mobile apps no longer replace live booking or dispatch data with local fake
   ride options or fake driver offers when the API is unavailable.
 - A trip starts only after the driver enters the 4-digit pickup code supplied

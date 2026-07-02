@@ -1,0 +1,11 @@
+name = "orbi-utils"
+main = "index.js"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Cron : ping le backend toutes les 10 minutes pour limiter les cold starts Render.
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+BACKEND_HEALTH_URL = "https://orbi-field-api.onrender.com/api/v1/health/ready"

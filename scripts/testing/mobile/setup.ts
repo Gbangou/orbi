@@ -282,6 +282,34 @@ jest.mock(
   { virtual: true },
 );
 
+jest.mock(
+  "react-native-svg",
+  () => {
+    const createSvgComponent =
+      (name: string) =>
+      ({ children, ...props }: { children?: React.ReactNode }) =>
+        React.createElement(name, props, children);
+
+    return {
+      __esModule: true,
+      default: createSvgComponent("Svg"),
+      Svg: createSvgComponent("Svg"),
+      Defs: createSvgComponent("Defs"),
+      LinearGradient: createSvgComponent("LinearGradient"),
+      RadialGradient: createSvgComponent("RadialGradient"),
+      Stop: createSvgComponent("Stop"),
+      Path: createSvgComponent("Path"),
+      Circle: createSvgComponent("Circle"),
+      Ellipse: createSvgComponent("Ellipse"),
+      G: createSvgComponent("G"),
+      Rect: createSvgComponent("Rect"),
+      Line: createSvgComponent("Line"),
+      Polygon: createSvgComponent("Polygon"),
+    };
+  },
+  { virtual: true },
+);
+
 beforeEach(() => {
   pathname = "/";
   router.replace.mockReset();

@@ -76,8 +76,8 @@ Le resultat admin doit etre un statut non-erreur.
 Depuis le PC de dev, depuis la racine du repo :
 
 ```powershell
-# Verifier que le backend Railway repond (optionnel, il est toujours actif)
-pnpm field:api:check -ApiUrl https://backend-production-d5d1.up.railway.app
+# Verifier que le backend terrain Render repond
+pnpm field:api:check
 
 # Generer les deux APK en local (expo prebuild + Gradle)
 pnpm mobile:apk
@@ -94,8 +94,8 @@ adb install dist\orbi-rider-mvp.apk
 adb install dist\orbi-driver-mvp.apk
 ```
 
-L'URL backend embarquee dans les APK est celle de Railway Production
-(`https://backend-production-d5d1.up.railway.app`).
+L'URL backend embarquee par defaut dans les APK est celle de Render
+(`https://orbi-field-api.onrender.com`).
 Pour pointer vers ce staging VPS, modifier `EXPO_PUBLIC_API_BASE_URL` dans
 `scripts/build-apk-local.ps1` avant de relancer `pnpm mobile:apk`.
 
