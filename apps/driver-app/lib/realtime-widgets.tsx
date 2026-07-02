@@ -1,16 +1,1124 @@
-export {
-  DashboardMetricCard,
-  FlowActionButton,
-  InsightBadge,
-  LiveHeroCard,
-  LiveRouteProgressCard,
-  LiveStatusBanner,
-  LiveStatusPill,
-  LiveTimeline,
-  MetricTile,
-  QuickActionCard,
-  RouteSignalCard,
-  SectionCard,
-  SectionHeading,
-  TransitionNoticeCard,
-} from '../../rider-app/lib/realtime-widgets';
+import type { ReactNode } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type PressableProps,
+  type PressableStateCallbackType,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+import { orbiTheme } from '@orbi/ui';
+
+type Tone = 'teal' | 'amber' | 'sky' | 'rose';
+
+const toneTokens = {
+  teal: {
+    bg: 'rgba(0, 201, 167, 0.10)',
+    border: 'rgba(0, 201, 167, 0.28)',
+    text: '#00A389',
+    dot: '#00C9A7',
+    solidBg: '#111111',
+    solidText: '#FFFFFF',
+  },
+  amber: {
+    bg: 'rgba(255, 149, 0, 0.10)',
+    border: 'rgba(255, 149, 0, 0.28)',
+    text: '#C47700',
+    dot: '#FF9500',
+    solidBg: '#111111',
+    solidText: '#FFFFFF',
+  },
+  sky: {
+    bg: 'rgba(0, 122, 255, 0.10)',
+    border: 'rgba(0, 122, 255, 0.24)',
+    text: '#0062CC',
+    dot: '#007AFF',
+    solidBg: '#111111',
+    solidText: '#FFFFFF',
+  },
+  rose: {
+    bg: 'rgba(255, 59, 48, 0.10)',
+    border: 'rgba(255, 59, 48, 0.24)',
+    text: '#CC2200',
+    dot: '#FF3B30',
+    solidBg: '#111111',
+    solidText: '#FFFFFF',
+  },
+} as const;
+
+function resolvePressableStyle(
+  style: PressableProps['style'],
+  state: PressableStateCallbackType,
+): StyleProp<ViewStyle> | undefined {
+  return typeof style === 'function' ? style(state) : style;
+}
+
+// ── Status pill ───────────────────────────────────────────────────────────────
+
+export function LiveStatusPill({
+  label,
+  tone = 'teal',
+}: {
+  label: string;
+  tone?: Tone;
+}) {
+  const t = toneTokens[tone];
+  return (
+    <View style={[pill.wrap, { backgroundColor: t.bg, borderColor: t.border }]}>
+      <View style={[pill.dot, { backgroundColor: t.dot }]} />
+      <Text style={[pill.label, { color: t.text }]}>{label}</Text>
+    </View>
+  );
+}
+
+const pill = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+});
+
+// ── Live status banner ────────────────────────────────────────────────────────
+
+export function LiveStatusBanner({
+  label,
+  message,
+  secondaryMessage,
+  tone = 'teal',
+}: {
+  label: string;
+  message: string;
+  secondaryMessage?: string | null;
+  tone?: Tone;
+}) {
+  return (
+    <View style={banner.wrap}>
+      <LiveStatusPill label={label} tone={tone} />
+      <Text style={banner.message}>{message}</Text>
+      {secondaryMessage ? (
+        <Text style={banner.secondary}>{secondaryMessage}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+const banner = StyleSheet.create({
+  wrap: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: orbiTheme.radius.card,
+    padding: 14,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  message: {
+    color: orbiTheme.colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  secondary: {
+    color: orbiTheme.colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+});
+
+// ── Live hero card ────────────────────────────────────────────────────────────
+
+export function LiveHeroCard({
+  eyebrow,
+  liveLabel,
+  title,
+  message,
+  liveTone = 'teal',
+  isHighlighted = false,
+  syncMessage,
+  transitionMessage,
+  children,
+}: {
+  eyebrow: string;
+  liveLabel: string;
+  title: string;
+  message: string;
+  liveTone?: Tone;
+  isHighlighted?: boolean;
+  syncMessage?: string | null;
+  transitionMessage?: string | null;
+  children?: ReactNode;
+}) {
+  return (
+    <View style={[hero.wrap, isHighlighted && hero.wrapHighlight]}>
+      <View style={hero.topRow}>
+        <Text style={hero.eyebrow}>{eyebrow}</Text>
+        <LiveStatusPill label={liveLabel} tone={liveTone} />
+      </View>
+      <Text style={hero.title}>{title}</Text>
+      <Text style={hero.message}>{message}</Text>
+      {syncMessage ? <Text style={hero.sync}>{syncMessage}</Text> : null}
+      {transitionMessage ? <Text style={hero.transition}>{transitionMessage}</Text> : null}
+      {children}
+    </View>
+  );
+}
+
+const hero = StyleSheet.create({
+  wrap: {
+    backgroundColor: orbiTheme.colors.surface,
+    borderRadius: orbiTheme.radius.card,
+    padding: 18,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    ...orbiTheme.shadows.card,
+  },
+  wrapHighlight: {
+    borderColor: orbiTheme.colors.teal,
+    borderWidth: 1.5,
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: orbiTheme.colors.text,
+    lineHeight: 24,
+  },
+  message: {
+    fontSize: 14,
+    color: orbiTheme.colors.textSoft,
+    lineHeight: 20,
+  },
+  sync: {
+    fontSize: 12,
+    color: orbiTheme.colors.sky,
+    fontWeight: '600',
+  },
+  transition: {
+    fontSize: 12,
+    color: orbiTheme.colors.teal,
+    fontWeight: '600',
+  },
+});
+
+// ── Metric tile ───────────────────────────────────────────────────────────────
+
+export function MetricTile({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string;
+  helper?: string | null;
+}) {
+  return (
+    <View style={metric.wrap}>
+      <Text style={metric.label}>{label}</Text>
+      <Text style={metric.value}>{value}</Text>
+      {helper ? <Text style={metric.helper}>{helper}</Text> : null}
+    </View>
+  );
+}
+
+const metric = StyleSheet.create({
+  wrap: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 2,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  value: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: orbiTheme.colors.text,
+  },
+  helper: {
+    fontSize: 11,
+    color: orbiTheme.colors.textMuted,
+  },
+});
+
+// ── Dashboard metric card ─────────────────────────────────────────────────────
+
+export function DashboardMetricCard({
+  label,
+  value,
+  helper,
+  tone = 'sky',
+}: {
+  label: string;
+  value: string;
+  helper?: string | null;
+  tone?: Tone;
+}) {
+  const t = toneTokens[tone];
+  return (
+    <View style={[dmc.wrap, { backgroundColor: t.bg, borderColor: t.border }]}>
+      <Text style={[dmc.label, { color: t.text }]}>{label}</Text>
+      <Text style={dmc.value}>{value}</Text>
+      {helper ? <Text style={dmc.helper}>{helper}</Text> : null}
+    </View>
+  );
+}
+
+const dmc = StyleSheet.create({
+  wrap: {
+    flex: 1,
+    borderRadius: 14,
+    padding: 14,
+    gap: 4,
+    borderWidth: 1,
+    minWidth: 90,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  value: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: orbiTheme.colors.text,
+  },
+  helper: {
+    fontSize: 11,
+    color: orbiTheme.colors.textMuted,
+    lineHeight: 14,
+  },
+});
+
+// ── Quick action card ─────────────────────────────────────────────────────────
+
+type QuickActionCardProps = PressableProps & {
+  eyebrow?: string;
+  title: string;
+  description?: string | null;
+  tone?: Tone;
+  emphasis?: 'primary' | 'secondary' | 'ghost';
+};
+
+export function QuickActionCard({
+  eyebrow,
+  title,
+  description,
+  emphasis = 'secondary',
+  style,
+  accessibilityLabel,
+  accessibilityRole,
+  hitSlop,
+  ...rest
+}: QuickActionCardProps) {
+  const isPrimary = emphasis === 'primary';
+
+  return (
+    <Pressable
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityRole={accessibilityRole ?? 'button'}
+      hitSlop={hitSlop ?? 8}
+      {...rest}
+      style={(state) => [
+        qac.wrap,
+        isPrimary ? qac.primary : qac.secondary,
+        state.pressed && qac.pressed,
+        resolvePressableStyle(style, state),
+      ]}
+    >
+      {eyebrow ? (
+        <Text style={[qac.eyebrow, isPrimary ? qac.eyebrowPrimary : null]}>
+          {eyebrow}
+        </Text>
+      ) : null}
+      <Text style={[qac.title, isPrimary ? qac.titlePrimary : null]}>
+        {title}
+      </Text>
+      {description ? (
+        <Text style={[qac.desc, isPrimary ? qac.descPrimary : null]}>
+          {description}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
+const qac = StyleSheet.create({
+  wrap: {
+    borderRadius: orbiTheme.radius.card,
+    padding: 16,
+    gap: 4,
+  },
+  primary: {
+    backgroundColor: orbiTheme.colors.text,
+    borderWidth: 0,
+  },
+  secondary: {
+    backgroundColor: orbiTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    ...orbiTheme.shadows.card,
+  },
+  pressed: {
+    opacity: 0.85,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  eyebrowPrimary: {
+    color: 'rgba(255,255,255,0.55)',
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: orbiTheme.colors.text,
+  },
+  titlePrimary: {
+    color: '#FFFFFF',
+  },
+  desc: {
+    fontSize: 13,
+    color: orbiTheme.colors.textSoft,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  descPrimary: {
+    color: 'rgba(255,255,255,0.65)',
+  },
+});
+
+// ── Route / service signal card ───────────────────────────────────────────────
+
+export function RouteSignalCard({
+  eyebrow,
+  badgeLabel,
+  badgeTone = 'sky',
+  title,
+  titleAside,
+  titleAsideColor,
+  description,
+  insights,
+  detailLines,
+  note,
+  noteTone = 'teal',
+  isHighlighted = false,
+  children,
+}: {
+  eyebrow: string;
+  badgeLabel?: string | null;
+  badgeTone?: Tone;
+  title: string;
+  titleAside?: string | null;
+  titleAsideColor?: string;
+  description: string;
+  insights?: Array<{ label: string; value: string; tone?: Tone }>;
+  detailLines?: string[];
+  note?: string | null;
+  noteTone?: Tone;
+  isHighlighted?: boolean;
+  children?: ReactNode;
+}) {
+  const nt = toneTokens[noteTone];
+
+  return (
+    <View style={[rsc.wrap, isHighlighted && rsc.wrapHighlight]}>
+      <View style={rsc.topRow}>
+        <Text style={rsc.eyebrow}>{eyebrow}</Text>
+        {badgeLabel ? <LiveStatusPill label={badgeLabel} tone={badgeTone} /> : null}
+      </View>
+
+      <View style={rsc.titleRow}>
+        <Text style={rsc.title} numberOfLines={2}>{title}</Text>
+        {titleAside ? (
+          <Text style={[rsc.titleAside, titleAsideColor ? { color: titleAsideColor } : null]}>
+            {titleAside}
+          </Text>
+        ) : null}
+      </View>
+
+      <Text style={rsc.description}>{description}</Text>
+
+      {insights?.length ? (
+        <View style={rsc.chips}>
+          {insights.map((ins) => {
+            const t = toneTokens[ins.tone ?? 'sky'];
+            return (
+              <View
+                key={`${ins.label}:${ins.value}`}
+                style={[rsc.chip, { backgroundColor: t.bg, borderColor: t.border }]}
+              >
+                <Text style={rsc.chipLabel}>{ins.label}</Text>
+                <Text style={[rsc.chipValue, { color: t.text }]}>{ins.value}</Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+
+      {detailLines?.map((line) => (
+        <Text key={line} style={rsc.detail}>{line}</Text>
+      ))}
+
+      {note ? (
+        <View style={[rsc.note, { backgroundColor: nt.bg, borderColor: nt.border }]}>
+          <Text style={[rsc.noteText, { color: nt.text }]}>{note}</Text>
+        </View>
+      ) : null}
+
+      {children}
+    </View>
+  );
+}
+
+const rsc = StyleSheet.create({
+  wrap: {
+    backgroundColor: orbiTheme.colors.surface,
+    borderRadius: orbiTheme.radius.card,
+    padding: 16,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    ...orbiTheme.shadows.card,
+  },
+  wrapHighlight: {
+    borderColor: orbiTheme.colors.teal,
+    borderWidth: 1.5,
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  title: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '700',
+    color: orbiTheme.colors.text,
+    lineHeight: 22,
+  },
+  titleAside: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: orbiTheme.colors.text,
+  },
+  description: {
+    fontSize: 13,
+    color: orbiTheme.colors.textSoft,
+    lineHeight: 18,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  chip: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 1,
+  },
+  chipLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  chipValue: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  detail: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    lineHeight: 16,
+  },
+  note: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 10,
+  },
+  noteText: {
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
+});
+
+// ── Section card ──────────────────────────────────────────────────────────────
+
+export function SectionCard({
+  children,
+  style,
+  tone,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  tone?: Tone;
+}) {
+  const t = tone ? toneTokens[tone] : null;
+  return (
+    <View style={[
+      sc.wrap,
+      t ? { backgroundColor: t.bg, borderColor: t.border } : null,
+      style,
+    ]}>
+      {children}
+    </View>
+  );
+}
+
+const sc = StyleSheet.create({
+  wrap: {
+    backgroundColor: orbiTheme.colors.surface,
+    borderRadius: orbiTheme.radius.card,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    ...orbiTheme.shadows.card,
+  },
+});
+
+// ── Section heading ───────────────────────────────────────────────────────────
+
+export function SectionHeading({
+  title,
+  subtitle,
+  description,
+  action,
+  onAction,
+}: {
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  eyebrow?: string | null;
+  action?: string | null;
+  onAction?: () => void;
+}) {
+  const sub = subtitle ?? description ?? null;
+  return (
+    <View style={sh.wrap}>
+      <View style={sh.text}>
+        <Text style={sh.title}>{title}</Text>
+        {sub ? <Text style={sh.subtitle}>{sub}</Text> : null}
+      </View>
+      {action ? (
+        <Pressable onPress={onAction} hitSlop={8}>
+          <Text style={sh.action}>{action}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+const sh = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  text: {
+    flex: 1,
+    gap: 2,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: orbiTheme.colors.text,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: orbiTheme.colors.textMuted,
+  },
+  action: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: orbiTheme.colors.teal,
+  },
+});
+
+// ── Flow action button ────────────────────────────────────────────────────────
+
+export function FlowActionButton({
+  label,
+  sublabel,
+  tone = 'teal',
+  emphasis = 'primary',
+  disabled,
+  onPress,
+  style,
+}: {
+  label: string;
+  sublabel?: string | null;
+  tone?: Tone;
+  emphasis?: 'primary' | 'secondary' | 'ghost';
+  disabled?: boolean;
+  onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const isDark = emphasis === 'primary';
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        fab.wrap,
+        isDark ? fab.dark : fab.light,
+        pressed && fab.pressed,
+        disabled && fab.disabled,
+        style,
+      ]}
+      accessibilityRole="button"
+    >
+      <Text style={[fab.label, isDark ? fab.labelDark : fab.labelLight]}>
+        {label}
+      </Text>
+      {sublabel ? (
+        <Text style={[fab.sub, isDark ? fab.subDark : fab.subLight]}>
+          {sublabel}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
+const fab = StyleSheet.create({
+  wrap: {
+    borderRadius: orbiTheme.radius.button,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 3,
+  },
+  dark: {
+    backgroundColor: orbiTheme.colors.text,
+    ...orbiTheme.shadows.button,
+  },
+  light: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  pressed: {
+    opacity: 0.82,
+  },
+  disabled: {
+    opacity: 0.4,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  labelDark: {
+    color: '#FFFFFF',
+  },
+  labelLight: {
+    color: orbiTheme.colors.text,
+  },
+  sub: {
+    fontSize: 12,
+  },
+  subDark: {
+    color: 'rgba(255,255,255,0.6)',
+  },
+  subLight: {
+    color: orbiTheme.colors.textMuted,
+  },
+});
+
+// ── Insight badge ─────────────────────────────────────────────────────────────
+
+export function InsightBadge({
+  label,
+  value,
+  tone = 'teal',
+}: {
+  label: string;
+  value?: string;
+  tone?: Tone;
+}) {
+  const t = toneTokens[tone];
+  return (
+    <View style={[ib.wrap, { backgroundColor: t.bg, borderColor: t.border }]}>
+      {value ? (
+        <>
+          <Text style={[ib.sublabel, { color: t.text }]}>{label}</Text>
+          <Text style={[ib.value, { color: t.text }]}>{value}</Text>
+        </>
+      ) : (
+        <Text style={[ib.label, { color: t.text }]}>{label}</Text>
+      )}
+    </View>
+  );
+}
+
+const ib = StyleSheet.create({
+  wrap: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+    gap: 1,
+  },
+  sublabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    opacity: 0.7,
+  },
+  value: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+});
+
+// ── Live route progress card ──────────────────────────────────────────────────
+
+export function LiveRouteProgressCard({
+  title,
+  stateLabel,
+  distanceLabel,
+  progressPercent,
+  freshnessLabel,
+  coordinateLabel,
+  etaLabel,
+}: {
+  title: string;
+  stateLabel: string;
+  distanceLabel: string;
+  progressPercent: number;
+  freshnessLabel: string;
+  coordinateLabel: string;
+  etaLabel?: string;
+  accuracyLabel?: string;
+  speedLabel?: string;
+}) {
+  const pct = Math.min(100, Math.max(0, progressPercent));
+  return (
+    <View style={lrp.wrap}>
+      <View style={lrp.topRow}>
+        <Text style={lrp.title}>{title}</Text>
+        <View style={lrp.statePill}>
+          <Text style={lrp.stateText}>{stateLabel}</Text>
+        </View>
+      </View>
+
+      <View style={lrp.track}>
+        <View style={[lrp.fill, { width: `${pct}%` as any }]} />
+      </View>
+
+      <View style={lrp.metrics}>
+        <View style={lrp.metric}>
+          <Text style={lrp.metricLabel}>Distance</Text>
+          <Text style={lrp.metricValue}>{distanceLabel}</Text>
+        </View>
+        {etaLabel ? (
+          <View style={lrp.metric}>
+            <Text style={lrp.metricLabel}>ETA</Text>
+            <Text style={lrp.metricValue}>{etaLabel}</Text>
+          </View>
+        ) : null}
+        <View style={lrp.metric}>
+          <Text style={lrp.metricLabel}>Signal</Text>
+          <Text style={lrp.metricValue}>{freshnessLabel}</Text>
+        </View>
+      </View>
+
+      <Text style={lrp.coord}>{coordinateLabel}</Text>
+    </View>
+  );
+}
+
+const lrp = StyleSheet.create({
+  wrap: {
+    backgroundColor: orbiTheme.colors.surface,
+    borderRadius: orbiTheme.radius.card,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    ...orbiTheme.shadows.card,
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  title: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: orbiTheme.colors.text,
+  },
+  statePill: {
+    backgroundColor: toneTokens.teal.bg,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: toneTokens.teal.border,
+  },
+  stateText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: toneTokens.teal.text,
+  },
+  track: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: orbiTheme.colors.backgroundDim,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  metrics: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  metric: {
+    flex: 1,
+    gap: 2,
+  },
+  metricLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  metricValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: orbiTheme.colors.text,
+  },
+  coord: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+  },
+});
+
+// ── Live timeline ─────────────────────────────────────────────────────────────
+
+export function LiveTimeline({
+  events,
+  freshEventIds,
+}: {
+  events: Array<{ id: string; label: string; createdAt: string }>;
+  freshEventIds?: Set<string> | string[];
+}) {
+  if (!events.length) return null;
+
+  return (
+    <View style={lt.wrap}>
+      <Text style={lt.heading}>Historique</Text>
+      {events.map((event, idx) => {
+        const isFresh = Array.isArray(freshEventIds)
+          ? freshEventIds.includes(event.id)
+          : freshEventIds?.has(event.id);
+        const isLast = idx === events.length - 1;
+        return (
+          <View key={event.id} style={lt.row}>
+            <View style={lt.dotCol}>
+              <View style={[lt.dot, isFresh && lt.dotFresh]} />
+              {!isLast ? <View style={lt.line} /> : null}
+            </View>
+            <View style={[lt.content, isLast && lt.contentLast]}>
+              <Text style={[lt.label, isFresh && lt.labelFresh]}>
+                {event.label}
+              </Text>
+              <Text style={lt.time}>
+                {new Date(event.createdAt).toLocaleTimeString('fr-BF', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Text>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const lt = StyleSheet.create({
+  wrap: {
+    backgroundColor: orbiTheme.colors.surface,
+    borderRadius: orbiTheme.radius.card,
+    padding: 16,
+    gap: 0,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    ...orbiTheme.shadows.card,
+  },
+  heading: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: orbiTheme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 12,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 36,
+  },
+  dotCol: {
+    width: 20,
+    alignItems: 'center',
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: orbiTheme.colors.backgroundDim,
+    borderWidth: 2,
+    borderColor: orbiTheme.colors.border,
+    marginTop: 3,
+  },
+  dotFresh: {
+    backgroundColor: orbiTheme.colors.teal,
+    borderColor: orbiTheme.colors.teal,
+  },
+  line: {
+    flex: 1,
+    width: 2,
+    backgroundColor: orbiTheme.colors.border,
+    marginTop: 3,
+  },
+  content: {
+    flex: 1,
+    paddingBottom: 12,
+    gap: 2,
+  },
+  contentLast: {
+    paddingBottom: 0,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: orbiTheme.colors.textSoft,
+    lineHeight: 20,
+  },
+  labelFresh: {
+    color: orbiTheme.colors.text,
+    fontWeight: '700',
+  },
+  time: {
+    fontSize: 11,
+    color: orbiTheme.colors.textMuted,
+  },
+});
+
+// ── Transition notice card ────────────────────────────────────────────────────
+
+export function TransitionNoticeCard({
+  label,
+  message,
+  tone = 'teal',
+}: {
+  label?: string | null;
+  message: string;
+  tone?: Tone;
+}) {
+  const t = toneTokens[tone];
+  return (
+    <View style={[tnc.wrap, { backgroundColor: t.bg, borderColor: t.border }]}>
+      <View style={[tnc.dot, { backgroundColor: t.dot }]} />
+      <View style={{ flex: 1 }}>
+        {label ? <Text style={[tnc.text, { color: t.text, fontWeight: '700' }]}>{label}</Text> : null}
+        <Text style={[tnc.text, { color: t.text }]}>{message}</Text>
+      </View>
+    </View>
+  );
+}
+
+const tnc = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  text: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+});

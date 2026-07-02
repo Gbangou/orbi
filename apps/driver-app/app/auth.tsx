@@ -21,6 +21,7 @@ export default function DriverAuthScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -149,14 +150,24 @@ export default function DriverAuthScreen() {
             style={styles.input}
           />
 
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="Mot de passe"
-            placeholderTextColor={orbiTheme.colors.muted}
-            style={styles.input}
-          />
+          <View style={styles.passwordRow}>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              placeholder="Mot de passe"
+              placeholderTextColor={orbiTheme.colors.muted}
+              style={styles.passwordInput}
+            />
+            <Pressable
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={8}
+              style={styles.eyeBtn}
+              accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            >
+              <Text style={styles.eyeText}>{showPassword ? '◉' : '○'}</Text>
+            </Pressable>
+          </View>
 
           {mode === 'sign-up' && (
             <Text style={styles.passwordHint}>
@@ -256,6 +267,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
+  },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    overflow: 'hidden',
+  },
+  passwordInput: {
+    flex: 1,
+    color: orbiTheme.colors.text,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eyeText: {
+    fontSize: 16,
+    color: orbiTheme.colors.muted,
   },
   errorText: {
     color: '#f87171',

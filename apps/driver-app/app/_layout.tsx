@@ -45,7 +45,7 @@ export default function RootLayout() {
   const isDark = colorScheme === 'dark';
   const [isNavigationMounted, setIsNavigationMounted] = useState(false);
   const [isResolved, setIsResolved] = useState(false);
-  useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Raleway_800ExtraBold,
     Inter_400Regular,
     Inter_500Medium,
@@ -122,19 +122,30 @@ export default function RootLayout() {
     };
   }, [isNavigationMounted, pathname, rootNavigationState?.key, router]);
 
+  const canRenderApp = fontsLoaded || Boolean(fontError);
+
   return (
     <ErrorBoundary fallbackLabel="Orbi chauffeur a rencontré un problème inattendu">
       <>
         <StatusBar style={isDark ? 'light' : 'dark'} />
-        <TypedStack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: theme.colors.background as string },
-          }}
-        />
-        {!isResolved ? (
+        {canRenderApp ? (
+          <TypedStack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: theme.colors.background as string },
+            }}
+          />
+        ) : null}
+        {!isResolved || !canRenderApp ? (
           <View style={[styles.loadingScreen, { backgroundColor: theme.colors.background as string }]}>
-            <Text style={[styles.loadingWordmark, { color: theme.colors.text as string }]}>orbi</Text>
+            <Text
+              style={[
+                canRenderApp ? styles.loadingWordmark : styles.loadingWordmarkSystem,
+                { color: theme.colors.text as string },
+              ]}
+            >
+              orbi
+            </Text>
             <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
           </View>
         ) : null}
@@ -156,6 +167,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     color: orbiTheme.colors.text,
-    letterSpacing: -1,
+    letterSpacing: 0,
+  },
+  loadingWordmarkSystem: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: orbiTheme.colors.text,
+    letterSpacing: 0,
   },
 });

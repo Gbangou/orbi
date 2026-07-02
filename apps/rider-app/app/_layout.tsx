@@ -47,7 +47,7 @@ export default function RootLayout() {
   const [isNavigationMounted, setIsNavigationMounted] = useState(false);
   const [isResolved, setIsResolved] = useState(false);
 
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Raleway_700Bold,
     Raleway_800ExtraBold,
     Inter_400Regular,
@@ -106,22 +106,31 @@ export default function RootLayout() {
     return () => { isMounted = false; };
   }, [isNavigationMounted, pathname, rootNavigationState?.key, router]);
 
-  const showSplash = !isResolved || !fontsLoaded;
+  const canRenderApp = fontsLoaded || Boolean(fontError);
+  const showSplash = !isResolved || !canRenderApp;
 
   return (
     <ErrorBoundary fallbackLabel="Orbi a rencontré un problème inattendu">
       <>
         <StatusBar style={isDark ? 'light' : 'dark'} />
-        <TypedStack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: theme.colors.background as string },
-          }}
-        />
+        {canRenderApp ? (
+          <TypedStack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: theme.colors.background as string },
+            }}
+          />
+        ) : null}
         {showSplash ? (
           <View style={styles.splash}>
             <View style={styles.splashLogo}>
-              <Text style={styles.splashWordmark}>orbi</Text>
+              <Text
+                style={[
+                  canRenderApp ? styles.splashWordmark : styles.splashWordmarkSystem,
+                ]}
+              >
+                orbi
+              </Text>
             </View>
             <ActivityIndicator
               size="small"
@@ -152,7 +161,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     color: orbiTheme.colors.text,
-    letterSpacing: -1,
+    letterSpacing: 0,
+  },
+  splashWordmarkSystem: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: orbiTheme.colors.text,
+    letterSpacing: 0,
   },
   splashSpinner: {
     marginTop: 8,

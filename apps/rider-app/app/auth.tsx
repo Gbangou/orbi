@@ -25,6 +25,7 @@ export default function RiderAuthScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -149,14 +150,24 @@ export default function RiderAuthScreen() {
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>{ta('password')}</Text>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholder={mode === 'sign-up' ? ta('passwordHint') : ta('passwordPlaceholder')}
-                placeholderTextColor={orbiTheme.colors.textMuted}
-                style={styles.input}
-              />
+              <View style={styles.passwordRow}>
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholder={mode === 'sign-up' ? ta('passwordHint') : ta('passwordPlaceholder')}
+                  placeholderTextColor={orbiTheme.colors.textMuted}
+                  style={styles.passwordInput}
+                />
+                <Pressable
+                  onPress={() => setShowPassword((v) => !v)}
+                  hitSlop={8}
+                  style={styles.eyeBtn}
+                  accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                >
+                  <Text style={styles.eyeText}>{showPassword ? '◉' : '○'}</Text>
+                </Pressable>
+              </View>
             </View>
 
             {Boolean(errorMessage) ? (
@@ -291,6 +302,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter_400Regular',
     color: orbiTheme.colors.text,
+  },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    overflow: 'hidden',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    color: orbiTheme.colors.text,
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eyeText: {
+    fontSize: 16,
+    color: orbiTheme.colors.textMuted,
   },
 
   // Error
