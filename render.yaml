@@ -4,10 +4,21 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: npm install -g pnpm@10.30.0 && pnpm install --frozen-lockfile && pnpm --filter @orbi/domain build && pnpm --filter @orbi/api build && pnpm --filter @orbi/config build && pnpm --filter @orbi/ui build && pnpm --filter backend prisma:generate && pnpm --filter backend build && pnpm --filter backend exec prisma migrate deploy && pnpm --filter backend prisma:seed
+    buildCommand: >
+      corepack enable &&
+      corepack prepare pnpm@10.30.0 --activate &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @orbi/domain build &&
+      pnpm --filter @orbi/api build &&
+      pnpm --filter @orbi/config build &&
+      pnpm --filter @orbi/ui build &&
+      pnpm --filter backend prisma:generate &&
+      pnpm --filter backend build
+    preDeployCommand: pnpm --filter backend exec prisma migrate deploy
     startCommand: pnpm --filter backend start:prod
+    initialDeployHook: pnpm --filter backend prisma:seed
     healthCheckPath: /api/v1/health/ready
-    autoDeploy: false
+    autoDeploy: true
     envVars:
       - key: NODE_VERSION
         value: 22.13.1
@@ -19,8 +30,13 @@ services:
         value: "true"
       - key: ENABLE_SWAGGER
         value: "false"
+
+      # DATABASE_URL → Renseigner manuellement dans le dashboard Render
+      # Format Supabase (recommandé, mode Transaction port 6543) :
+      #   postgresql://postgres.[ref]:[password]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
       - key: DATABASE_URL
         sync: false
+
       - key: RATE_LIMIT_ADAPTER
         value: postgres
       - key: RATE_LIMIT_STRICT
@@ -31,38 +47,72 @@ services:
         value: "true"
       - key: JOB_QUEUE_WORKER_ENABLED
         value: "true"
+
+      # FRONTEND_ALLOWED_ORIGINS → URL Vercel de l'admin (à renseigner après déploiement Vercel)
       - key: FRONTEND_ALLOWED_ORIGINS
-        value: https://orbi-field-api.onrender.com
+        sync: false
+
+      # ── Paiements PawaPay ─────────────────────────────────────────────────────
       - key: PAYMENTS_PROVIDER
-        value: flutterwave
+        value: pawapay
       - key: PAYMENTS_CURRENCY
         value: XOF
+      # Deep link vers l'app rider après paiement — ne pas modifier
       - key: PAYMENTS_DEFAULT_REDIRECT_URL
-        value: https://orbi-field-api.onrender.com/payments/return
+        value: orbi-passager://payment-return
+      # URL que PawaPay utilisera pour les callbacks webhook (à configurer aussi dans le dashboard PawaPay)
       - key: PAYMENTS_DEFAULT_WEBHOOK_URL
-        value: https://orbi-field-api.onrender.com/api/v1/payments/webhooks
+        value: https://orbi-field-api.onrender.com/api/v1/payments/webhooks/pawapay
+      # Généré automatiquement par Render (utilisé pour le webhook générique non-PawaPay)
       - key: PAYMENTS_WEBHOOK_SECRET
         generateValue: true
+      - key: PAYMENTS_REFUND_MODE
+        value: manual
+
+      # PAWAPAY_API_TOKEN → Jeton Bearer récupéré dans le dashboard PawaPay
+      # Sandbox : dashboard.sandbox.pawapay.io → Developers → Token
+      # Production : dashboard.pawapay.io → Developers → Token
+      - key: PAWAPAY_API_TOKEN
+        sync: false
+
+      # PAWAPAY_WEBHOOK_SECRET → Clé HMAC-SHA256 configurée dans le dashboard PawaPay
+      # (même valeur que dans PawaPay Dashboard → Webhooks → Secret)
+      - key: PAWAPAY_WEBHOOK_SECRET
+        sync: false
+
+      # PAWAPAY_ENVIRONMENT → 'sandbox' pour les tests, 'production' pour le vrai argent
+      # Mettre 'sandbox' pour les tests initiaux, puis changer en 'production' pour le pilote réel
+      - key: PAWAPAY_ENVIRONMENT
+        value: sandbox
+
+      # ── Documents chauffeurs ──────────────────────────────────────────────────
       - key: DOCUMENT_SIGNING_SECRET
         generateValue: true
       - key: DOCUMENT_SAFETY_SCANNER_PROVIDER
         value: local-policy
       - key: DOCUMENT_OBJECT_PROVIDER
         value: local-provider
+      # /tmp est éphémère sur Render — les documents sont perdus au redémarrage.
+      # Acceptable pour pilote fermé avec chauffeurs pré-enregistrés.
       - key: DOCUMENT_LOCAL_PROVIDER_ROOT
         value: /tmp/orbi-documents
       - key: DOCUMENT_UPLOAD_BASE_URL
-        value: https://orbi-field-api.onrender.com/api/v1/driver-documents/upload
+        value: https://orbi-field-api.onrender.com/api/v1/admin/driver-onboarding/documents/upload
       - key: DOCUMENT_VIEW_BASE_URL
-        value: https://orbi-field-api.onrender.com/api/v1/driver-documents/view
+        value: https://orbi-field-api.onrender.com/api/v1/admin/driver-onboarding/documents/view
+
+      # ── Collecte d'erreurs mobiles ────────────────────────────────────────────
+      # URL du Cloudflare Worker (voir GUIDE.md Étape 3)
+      # Exemple : https://orbi-utils.TON-SOUS-DOMAINE.workers.dev/mobile-errors
       - key: MOBILE_ERROR_COLLECTOR_PROVIDER
         value: webhook
       - key: MOBILE_ERROR_COLLECTOR_WEBHOOK_URL
-        value: https://orbi-field-api.onrender.com/api/v1/mobile-errors/webhook
+        sync: false
+
       - key: NOTIFICATIONS_PROVIDER
         value: local
-      - key: PAYMENTS_REFUND_MODE
-        value: manual
+
+      # ── Feature flags ─────────────────────────────────────────────────────────
       - key: FEATURE_FLAG_PAYMENTS
         value: "on"
       - key: FEATURE_FLAG_PRICING
@@ -73,3 +123,5 @@ services:
         value: "on"
       - key: FEATURE_FLAG_VOICE
         value: "on"
+      - key: FEATURE_FLAG_DRIVER_AUTO_ONBOARD
+        value: "off"

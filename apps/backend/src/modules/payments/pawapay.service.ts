@@ -91,9 +91,16 @@ export class PawaPayService {
   private readonly webhookSecret: string;
 
   constructor(private readonly configService: ConfigService) {
-    const env = this.configService.get<string>('NODE_ENV');
-    this.baseUrl =
-      env === 'production' ? PAWAPAY_PROD_BASE_URL : PAWAPAY_SANDBOX_BASE_URL;
+    const nodeEnv = this.configService.get<string>('NODE_ENV');
+    // PAWAPAY_ENVIRONMENT allows forcing sandbox on the production server for
+    // initial field testing without modifying NODE_ENV (which controls
+    // the backend's own validation and behaviour).
+    // Values: 'sandbox' | 'production'. Defaults to NODE_ENV === 'production'.
+    const pawaPayEnv = this.configService.get<string>('PAWAPAY_ENVIRONMENT');
+    const useSandbox =
+      pawaPayEnv === 'sandbox' ||
+      (pawaPayEnv !== 'production' && nodeEnv !== 'production');
+    this.baseUrl = useSandbox ? PAWAPAY_SANDBOX_BASE_URL : PAWAPAY_PROD_BASE_URL;
     this.apiToken = this.configService.get<string>('PAWAPAY_API_TOKEN') ?? '';
     this.webhookSecret =
       this.configService.get<string>('PAWAPAY_WEBHOOK_SECRET') ?? '';

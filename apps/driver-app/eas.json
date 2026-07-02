@@ -44,6 +44,19 @@
         "EXPO_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD": "TestOrbi2026!"
       }
     },
+    "field-test": {
+      "distribution": "internal",
+      "channel": "field-test",
+      "node": "22.14.0",
+      "pnpm": "10.30.0",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://orbi-field-api.onrender.com",
+        "EXPO_PUBLIC_API_VERSION": "v1"
+      }
+    },
     "production": {
       "channel": "production",
       "node": "22.14.0",

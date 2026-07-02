@@ -44,6 +44,20 @@
         "EXPO_PUBLIC_ORBI_DEMO_RIDER_PASSWORD": "TestOrbi2026!"
       }
     },
+    "field-test": {
+      "distribution": "internal",
+      "channel": "field-test",
+      "node": "22.14.0",
+      "pnpm": "10.30.0",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://orbi-field-api.onrender.com",
+        "EXPO_PUBLIC_API_VERSION": "v1",
+        "EXPO_PUBLIC_PAYMENT_REDIRECT_URL": "orbi-passager://payment-return"
+      }
+    },
     "production": {
       "channel": "production",
       "node": "22.14.0",
