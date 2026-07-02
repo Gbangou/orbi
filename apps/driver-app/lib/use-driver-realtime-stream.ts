@@ -16,7 +16,14 @@ const DRIVER_REALTIME_EVENTS = [
 ] as const;
 
 function buildWsUrl(baseUrl: string, sessionToken: string): string {
-  const wsBase = baseUrl.replace(/^https?/, (s) => (s === 'https' ? 'wss' : 'ws'));
+  let wsBase: string;
+  if (baseUrl.startsWith('https://')) {
+    wsBase = 'wss://' + baseUrl.slice('https://'.length);
+  } else if (baseUrl.startsWith('http://')) {
+    wsBase = 'ws://' + baseUrl.slice('http://'.length);
+  } else {
+    wsBase = baseUrl;
+  }
   return `${wsBase}/api/v1/realtime/ws?token=${encodeURIComponent(sessionToken)}`;
 }
 

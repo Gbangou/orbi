@@ -28,7 +28,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
-    if (__DEV__) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
       console.warn('[ErrorBoundary]', error, info.componentStack);
     }
   }
@@ -77,13 +77,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111111',
     textAlign: 'center',
-    fontFamily: 'Inter_700Bold',
   },
   detail: {
     fontSize: 13,
     color: '#666666',
     textAlign: 'center',
-    fontFamily: 'Inter_400Regular',
     lineHeight: 18,
   },
   btn: {
@@ -98,6 +96,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
   },
 });

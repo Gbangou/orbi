@@ -21,9 +21,6 @@ import { ErrorBoundary } from '@orbi/ui/src/native';
 import { initDriverI18n } from '../lib/i18n';
 import { hasPersistedDriverSession } from '../lib/auth';
 
-// Initialise i18n once at app startup (French default — Burkina Faso market)
-initDriverI18n();
-
 const TypedStack = Stack as any;
 
 Notifications.setNotificationHandler({
@@ -52,6 +49,10 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  useEffect(() => {
+    initDriverI18n();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -88,30 +89,38 @@ export default function RootLayout() {
     let isMounted = true;
 
     async function resolveSession() {
-      const hasSession = await hasPersistedDriverSession();
+      try {
+        const hasSession = await hasPersistedDriverSession();
 
-      if (!isMounted) {
-        return;
-      }
+        if (!isMounted) return;
 
-      let targetPath: '/auth' | '/accueil' | null = null;
+        let targetPath: '/auth' | '/accueil' | null = null;
 
-      if (!hasSession && pathname !== '/auth') {
-        targetPath = '/auth';
-      }
+        if (!hasSession && pathname !== '/auth') {
+          targetPath = '/auth';
+        }
 
-      if (hasSession && pathname === '/auth') {
-        targetPath = '/accueil';
-      }
+        if (hasSession && pathname === '/auth') {
+          targetPath = '/accueil';
+        }
 
-      setIsResolved(true);
+        setIsResolved(true);
 
-      if (targetPath) {
-        setTimeout(() => {
-          if (isMounted) {
-            router.replace(targetPath);
+        if (targetPath) {
+          setTimeout(() => {
+            if (isMounted) {
+              router.replace(targetPath);
+            }
+          }, 0);
+        }
+      } catch {
+        // Échec de lecture de session — rediriger vers auth par défaut
+        if (isMounted) {
+          setIsResolved(true);
+          if (pathname !== '/auth') {
+            router.replace('/auth');
           }
-        }, 0);
+        }
       }
     }
 

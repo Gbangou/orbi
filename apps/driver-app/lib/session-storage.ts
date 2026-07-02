@@ -59,25 +59,28 @@ async function removeWebItem(key: string) {
 }
 
 export const driverSessionStorage: SessionStorageAdapter = {
-  getItem(key) {
-    if (Platform.OS === 'web') {
-      return getWebItem(key);
+  async getItem(key) {
+    if (Platform.OS === 'web') return getWebItem(key);
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch {
+      return null;
     }
-
-    return SecureStore.getItemAsync(key);
   },
-  setItem(key, value) {
-    if (Platform.OS === 'web') {
-      return setWebItem(key, value);
+  async setItem(key, value) {
+    if (Platform.OS === 'web') return setWebItem(key, value);
+    try {
+      await SecureStore.setItemAsync(key, value);
+    } catch {
+      // Session non persistée — l'utilisateur devra se reconnecter
     }
-
-    return SecureStore.setItemAsync(key, value);
   },
-  removeItem(key) {
-    if (Platform.OS === 'web') {
-      return removeWebItem(key);
+  async removeItem(key) {
+    if (Platform.OS === 'web') return removeWebItem(key);
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch {
+      // Ignore — la session sera expirée côté serveur de toute façon
     }
-
-    return SecureStore.deleteItemAsync(key);
   },
 };
