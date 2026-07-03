@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: '800',
     color: orbiTheme.colors.text,
-    letterSpacing: -1.5,
+    letterSpacing: 0,
   },
   tagline: {
     fontSize: 16,

@@ -29,7 +29,6 @@ const supportedCities = [
 const supportedVehicleTypes = ['MOTORCYCLE', 'CAR'] as const;
 const supportedServiceTiers = [
   'MOTO_STANDARD',
-  'MOTO_PLUS',
   'CAR_STANDARD',
   'CAR_COMFORT',
   'CAR_XL',

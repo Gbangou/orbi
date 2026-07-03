@@ -102,7 +102,7 @@ export default function RatingScreen() {
         toValue: 1,
         duration: 280,
         easing: Easing.out(Easing.back(2)),
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     },
     [starAnims],

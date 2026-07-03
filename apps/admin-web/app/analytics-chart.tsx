@@ -170,9 +170,11 @@ export function KpiCard({
 
   return (
     <div
+      className="kpi-card"
       style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(148,163,184,0.14)',
+        background: `linear-gradient(160deg, ${color}0e 0%, rgba(8,15,24,0.9) 100%)`,
+        border: `1px solid ${color}28`,
+        borderLeft: `3px solid ${color}`,
         borderRadius: 18,
         padding: '16px 18px',
         display: 'grid',

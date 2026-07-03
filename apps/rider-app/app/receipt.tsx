@@ -2,6 +2,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -14,16 +16,54 @@ import {
   preventScreenCaptureAsync,
   allowScreenCaptureAsync,
 } from 'expo-screen-capture';
-import { fetchTripDetail, type TripDetailResponse } from '@orbi/api';
+import { fetchTripDetail, reportTripIncidentWithApi, type TripDetailResponse } from '@orbi/api';
 import { formatXof, orbiTheme } from '@orbi/ui';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function buildInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('') || 'OR';
+}
+
+function formatPaymentMethod(method: string | null | undefined) {
+  if (!method) return 'Espèces';
+  if (method === 'MOBILE_MONEY') return 'Mobile Money';
+  if (method === 'WALLET') return 'Portefeuille Orbi';
+  return 'Espèces';
+}
+
+// ── Row component ─────────────────────────────────────────────────────────────
+
+function Row({
+  label,
+  value,
+  bold,
+  accent,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  accent?: string;
+}) {
   return (
     <View style={row.wrap}>
       <Text style={row.label}>{label}</Text>
-      <Text style={[row.value, bold && row.valueBold]}>{value}</Text>
+      <Text
+        style={[
+          row.value,
+          bold && row.valueBold,
+          accent ? { color: accent } : undefined,
+        ]}
+      >
+        {value}
+      </Text>
     </View>
   );
 }
@@ -33,9 +73,9 @@ const row = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingVertical: 11,
+    paddingVertical: 12,
     gap: 12,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: orbiTheme.colors.border,
   },
   label: {
@@ -51,10 +91,13 @@ const row = StyleSheet.create({
     flex: 1,
   },
   valueBold: {
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: 15,
     color: orbiTheme.colors.text,
   },
 });
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function ReceiptScreen() {
   const router = useRouter();
@@ -105,11 +148,12 @@ export default function ReceiptScreen() {
     try {
       await Share.share({
         message: [
-          'Mon trajet Orbi',
+          '🚗 Mon trajet Orbi',
           `De : ${trip.pickupAddress}`,
           `Vers : ${trip.destinationAddress}`,
           `Montant : ${formatXof(trip.actualFare)}`,
           `Chauffeur : ${trip.driverName}`,
+          `Réf : ${trip.id.slice(0, 12).toUpperCase()}`,
         ].join('\n'),
       });
     } catch { /* silent */ }
@@ -128,6 +172,61 @@ export default function ReceiptScreen() {
       },
     });
   }
+
+  async function handleReportProblem() {
+    if (!detail) return;
+    Alert.alert(
+      'Signaler un problème',
+      'Quel type de problème souhaitez-vous signaler ?',
+      [
+        {
+          text: 'Problème de sécurité',
+          onPress: async () => {
+            try {
+              const { authClient } = await restoreRiderSession();
+              await reportTripIncidentWithApi(authClient, detail.trip.id, {
+                incidentType: 'SAFETY_ALERT',
+                details: 'Problème signalé depuis le reçu de course.',
+                priority: 2,
+              });
+              Alert.alert('Signalement envoyé', "Notre équipe va examiner votre signalement dans les plus brefs délais.");
+            } catch { /* silent */ }
+          },
+        },
+        {
+          text: 'Problème de paiement',
+          onPress: async () => {
+            try {
+              const { authClient } = await restoreRiderSession();
+              await reportTripIncidentWithApi(authClient, detail.trip.id, {
+                incidentType: 'PAYMENT_ISSUE',
+                details: 'Problème de paiement signalé depuis le reçu.',
+                priority: 2,
+              });
+              Alert.alert('Signalement envoyé', "Notre équipe va vérifier votre paiement.");
+            } catch { /* silent */ }
+          },
+        },
+        {
+          text: 'Comportement du chauffeur',
+          onPress: async () => {
+            try {
+              const { authClient } = await restoreRiderSession();
+              await reportTripIncidentWithApi(authClient, detail.trip.id, {
+                incidentType: 'DRIVER_CONDUCT',
+                details: 'Comportement du chauffeur signalé depuis le reçu.',
+                priority: 2,
+              });
+              Alert.alert('Signalement envoyé', "Merci pour votre retour. Votre sécurité est notre priorité.");
+            } catch { /* silent */ }
+          },
+        },
+        { text: 'Annuler', style: 'cancel' as const },
+      ],
+    );
+  }
+
+  // ── Loading state ────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -154,7 +253,7 @@ export default function ReceiptScreen() {
 
   const completedAt = trip.completedAt
     ? new Date(trip.completedAt).toLocaleString('fr-BF', {
-        day: '2-digit', month: 'long', year: 'numeric',
+        weekday: 'long', day: '2-digit', month: 'long',
         hour: '2-digit', minute: '2-digit',
       })
     : null;
@@ -166,56 +265,152 @@ export default function ReceiptScreen() {
         )
       : null;
 
-  const driverRatingLabel =
+  const ratingLabel =
     typeof trip.driverVerification.averageRating === 'number'
-      ? `${trip.driverVerification.averageRating.toFixed(1)} / 5`
+      ? `★ ${trip.driverVerification.averageRating.toFixed(1)}`
       : null;
+
+  const promoSavingsXof = trip.promoCode
+    ? Math.round(trip.actualFare * (trip.promoCode.discountBps / (10000 - trip.promoCode.discountBps)))
+    : null;
+
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Sticky header */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => router.replace('/home')}
+          style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
+        >
+          <Text style={styles.headerBtnText}>✕</Text>
+        </Pressable>
+        <Text style={styles.headerTitle}>Reçu</Text>
+        <Pressable
+          onPress={() => void handleShare()}
+          style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
+        >
+          <Text style={styles.headerBtnText}>↑</Text>
+        </Pressable>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Fare hero */}
+        {/* Hero — fare + status */}
         <View style={styles.hero}>
-          <Text style={styles.heroLabel}>Course terminée</Text>
+          <View style={styles.heroCheck}>
+            <Text style={styles.heroCheckIcon}>✓</Text>
+          </View>
           <Text style={styles.heroFare}>{formatXof(trip.actualFare)}</Text>
+          <Text style={styles.heroLabel}>Course terminée</Text>
           {completedAt ? <Text style={styles.heroDate}>{completedAt}</Text> : null}
         </View>
 
-        {/* Route */}
+        {/* Route card */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Trajet</Text>
-          <Row label="Départ" value={trip.pickupAddress} />
-          <Row label="Arrivée" value={trip.destinationAddress} />
-          {durationMin ? <Row label="Durée" value={`${durationMin} min`} /> : null}
+          <Text style={styles.cardTitle}>Trajet</Text>
+          <View style={styles.routeVisual}>
+            {/* Left track */}
+            <View style={styles.routeTrack}>
+              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.teal }]} />
+              <View style={styles.routeTrackLine} />
+              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.text }]} />
+            </View>
+            {/* Addresses */}
+            <View style={styles.routeAddresses}>
+              <View style={styles.routeAddrBlock}>
+                <Text style={styles.routeAddrLabel}>Départ</Text>
+                <Text style={styles.routeAddrText}>{trip.pickupAddress}</Text>
+              </View>
+              {durationMin ? (
+                <View style={styles.routeDurationRow}>
+                  <Text style={styles.routeDurationText}>{durationMin} min de trajet</Text>
+                </View>
+              ) : null}
+              <View style={styles.routeAddrBlock}>
+                <Text style={styles.routeAddrLabel}>Arrivée</Text>
+                <Text style={styles.routeAddrText}>{trip.destinationAddress}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Fare breakdown */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Paiement</Text>
+          <Row label="Course" value={formatXof(trip.actualFare)} />
+          {trip.promoCode ? (
+            <Row
+              label={`Promo (${trip.promoCode.code})`}
+              value={promoSavingsXof ? `− ${formatXof(promoSavingsXof)}` : `− ${trip.promoCode.discountBps / 100}%`}
+              accent={orbiTheme.colors.teal}
+            />
+          ) : null}
+          <Row label="Mode de paiement" value={formatPaymentMethod(null)} />
+          <Row label="Total facturé" value={formatXof(trip.actualFare)} bold />
+          <View style={[row.wrap, { borderBottomWidth: 0 }]}>
+            <Text style={[row.label, { color: orbiTheme.colors.textMuted, fontSize: 12 }]}>
+              Référence
+            </Text>
+            <Text style={[row.value, { color: orbiTheme.colors.textMuted, fontSize: 12, fontFamily: 'Inter_400Regular' }]}>
+              {trip.id.slice(0, 16).toUpperCase()}
+            </Text>
+          </View>
         </View>
 
         {/* Driver */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Chauffeur</Text>
-          <Row label="Nom" value={trip.driverName} />
-          {driverRatingLabel ? <Row label="Note" value={driverRatingLabel} /> : null}
-          {trip.vehicleLabel ? <Row label="Véhicule" value={trip.vehicleLabel} /> : null}
-          <Row
-            label="Courses effectuées"
-            value={String(trip.driverVerification.completedTripsCount)}
-          />
+          <Text style={styles.cardTitle}>Votre chauffeur</Text>
+          <View style={styles.driverRow}>
+            <View style={styles.driverAvatar}>
+              <Text style={styles.driverInitials}>{buildInitials(trip.driverName)}</Text>
+            </View>
+            <View style={styles.driverInfo}>
+              <Text style={styles.driverName}>{trip.driverName}</Text>
+              <Text style={styles.driverMeta}>
+                {[
+                  ratingLabel,
+                  `${trip.driverVerification.completedTripsCount} courses`,
+                ].filter(Boolean).join(' · ')}
+              </Text>
+              {trip.vehicleLabel ? (
+                <Text style={styles.driverVehicle}>{trip.vehicleLabel}</Text>
+              ) : null}
+              {trip.driverVerification.vehicle.plateNumber ? (
+                <Text style={styles.driverPlate}>
+                  {trip.driverVerification.vehicle.color} · {trip.driverVerification.vehicle.plateNumber}
+                </Text>
+              ) : null}
+            </View>
+          </View>
         </View>
 
-        {/* Payment */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Paiement</Text>
-          <Row label="Montant" value={formatXof(trip.actualFare)} bold />
-          {trip.promoCode ? (
-            <Row
-              label="Code promo"
-              value={`${trip.promoCode.code} (−${trip.promoCode.discountBps / 100}%)`}
-            />
-          ) : null}
-          <Row label="Référence" value={trip.id.slice(0, 12).toUpperCase()} />
-        </View>
+        {/* Timeline */}
+        {trip.timeline.length > 0 ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Chronologie</Text>
+            {trip.timeline.map((event, idx) => (
+              <View key={event.id} style={[styles.timelineRow, idx === trip.timeline.length - 1 && { borderBottomWidth: 0 }]}>
+                <View style={styles.timelineLeft}>
+                  <View style={styles.timelineDot} />
+                  {idx < trip.timeline.length - 1 ? <View style={styles.timelineLine} /> : null}
+                </View>
+                <View style={styles.timelineContent}>
+                  <Text style={styles.timelineLabel}>{event.label}</Text>
+                  <Text style={styles.timelineTime}>
+                    {new Date(event.createdAt).toLocaleTimeString('fr-BF', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         {/* Actions */}
         <View style={styles.actions}>
@@ -223,14 +418,40 @@ export default function ReceiptScreen() {
             onPress={handleRate}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
           >
-            <Text style={styles.primaryBtnLabel}>Évaluer ce trajet</Text>
+            <Text style={styles.primaryBtnLabel}>Évaluer ce trajet ★</Text>
           </Pressable>
+
           <Pressable
-            onPress={() => void handleShare()}
+            onPress={() =>
+              router.replace({
+                pathname: '/book',
+                params: {
+                  prefillPickup: trip.pickupAddress,
+                  prefillDest: trip.destinationAddress,
+                },
+              })
+            }
             style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
           >
-            <Text style={styles.secondaryBtnLabel}>Partager le reçu</Text>
+            <Text style={styles.secondaryBtnLabel}>↺  Refaire ce trajet</Text>
           </Pressable>
+
+          {trip.driverPhoneNumber ? (
+            <Pressable
+              onPress={() => void Linking.openURL(`tel:${trip.driverPhoneNumber}`)}
+              style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
+            >
+              <Text style={styles.secondaryBtnLabel}>☎  Rappeler le chauffeur</Text>
+            </Pressable>
+          ) : null}
+
+          <Pressable
+            onPress={() => void handleReportProblem()}
+            style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
+          >
+            <Text style={styles.ghostBtnLabel}>Signaler un problème</Text>
+          </Pressable>
+
           <Pressable
             onPress={() => router.replace('/home')}
             style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
@@ -238,21 +459,57 @@ export default function ReceiptScreen() {
             <Text style={styles.ghostBtnLabel}>Retour à l'accueil</Text>
           </Pressable>
         </View>
+
+        <View style={{ height: 16 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: orbiTheme.colors.background,
   },
+
+  // Sticky header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: orbiTheme.colors.border,
+    backgroundColor: orbiTheme.colors.background,
+  },
+  headerBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: orbiTheme.colors.textSoft,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+
   scroll: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 48,
-    gap: 14,
+    gap: 12,
   },
 
   // Loading / error
@@ -288,59 +545,202 @@ const styles = StyleSheet.create({
   // Hero
   hero: {
     alignItems: 'center',
-    paddingVertical: 28,
+    paddingVertical: 24,
     gap: 6,
   },
-  heroLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: orbiTheme.colors.teal,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+  heroCheck: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: orbiTheme.colors.teal,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  heroCheckIcon: {
+    fontSize: 28,
+    color: '#FFFFFF',
+    fontWeight: '800',
   },
   heroFare: {
-    fontSize: 48,
+    fontSize: 44,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     color: orbiTheme.colors.text,
-    letterSpacing: -1,
+    letterSpacing: 0,
+  },
+  heroLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: orbiTheme.colors.textSoft,
   },
   heroDate: {
     fontSize: 13,
     color: orbiTheme.colors.textMuted,
+    textAlign: 'center',
   },
 
   // Cards
   card: {
     backgroundColor: orbiTheme.colors.surface,
-    borderRadius: orbiTheme.radius.card,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 2,
-    borderWidth: 1,
+    paddingBottom: 4,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: orbiTheme.colors.border,
-    ...orbiTheme.shadows.card,
   },
-  sectionTitle: {
+  cardTitle: {
     fontSize: 11,
     fontWeight: '700',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 4,
+    marginBottom: 8,
   },
 
-  // Buttons
-  actions: {
-    gap: 10,
-    marginTop: 8,
+  // Route visual
+  routeVisual: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingBottom: 14,
   },
+  routeTrack: {
+    alignItems: 'center',
+    paddingTop: 16,
+    width: 12,
+  },
+  routeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    flexShrink: 0,
+  },
+  routeTrackLine: {
+    flex: 1,
+    width: 2,
+    backgroundColor: orbiTheme.colors.border,
+    marginVertical: 4,
+    minHeight: 20,
+  },
+  routeAddresses: { flex: 1, gap: 0 },
+  routeAddrBlock: {
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: orbiTheme.colors.border,
+  },
+  routeAddrLabel: {
+    fontSize: 11,
+    color: orbiTheme.colors.textMuted,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 3,
+  },
+  routeAddrText: {
+    fontSize: 14,
+    color: orbiTheme.colors.text,
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  routeDurationRow: {
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: orbiTheme.colors.border,
+  },
+  routeDurationText: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    fontWeight: '500',
+  },
+
+  // Driver section
+  driverRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingBottom: 14,
+  },
+  driverAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: orbiTheme.colors.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  driverInitials: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  driverInfo: { flex: 1, gap: 3 },
+  driverName: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  driverMeta: {
+    fontSize: 13,
+    color: orbiTheme.colors.textSoft,
+  },
+  driverVehicle: {
+    fontSize: 13,
+    color: orbiTheme.colors.textMuted,
+  },
+  driverPlate: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: orbiTheme.colors.teal,
+    letterSpacing: 0.5,
+  },
+
+  // Timeline
+  timelineRow: {
+    flexDirection: 'row',
+    paddingBottom: 14,
+    gap: 12,
+  },
+  timelineLeft: {
+    alignItems: 'center',
+    width: 10,
+    paddingTop: 4,
+  },
+  timelineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: orbiTheme.colors.teal,
+    flexShrink: 0,
+  },
+  timelineLine: {
+    flex: 1,
+    width: 1,
+    backgroundColor: orbiTheme.colors.border,
+    marginTop: 4,
+    minHeight: 12,
+  },
+  timelineContent: { flex: 1, gap: 2 },
+  timelineLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: orbiTheme.colors.text,
+  },
+  timelineTime: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+  },
+
+  // Actions
+  actions: { gap: 10, marginTop: 4 },
   primaryBtn: {
     backgroundColor: orbiTheme.colors.text,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
-    ...orbiTheme.shadows.button,
   },
   primaryBtnLabel: {
     color: '#FFFFFF',
@@ -358,11 +758,11 @@ const styles = StyleSheet.create({
   },
   secondaryBtnLabel: {
     color: orbiTheme.colors.text,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   ghostBtn: {
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   ghostBtnLabel: {
@@ -370,7 +770,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  btnPressed: {
-    opacity: 0.75,
-  },
+  btnPressed: { opacity: 0.75 },
 });

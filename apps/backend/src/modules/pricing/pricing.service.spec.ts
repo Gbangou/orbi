@@ -462,7 +462,7 @@ describe('PricingService — estimateRideOptions catalogue Burkina', () => {
       tier: 'moto-standard',
       title: 'Moto',
     });
-    expect(preview.options.some((option) => option.tier === 'moto-plus')).toBe(false);
+    expect(preview.options.map((option) => option.tier)).not.toContain('moto-plus');
   });
 
   it('Moto est moins cher que Car Standard', async () => {

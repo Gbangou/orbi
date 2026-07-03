@@ -54,7 +54,7 @@ const cityOptions = [
 
 const vehicleTypeOptions = ['MOTORCYCLE', 'CAR'] as const;
 const serviceTierOptions = {
-  MOTORCYCLE: ['MOTO_STANDARD', 'MOTO_PLUS'],
+  MOTORCYCLE: ['MOTO_STANDARD'],
   CAR: ['CAR_STANDARD', 'CAR_COMFORT', 'CAR_XL'],
 } as const;
 

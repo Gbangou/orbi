@@ -642,6 +642,24 @@ export default function RevenusScreen() {
         {/* Settlement */}
         <View style={styles.settlementCard}>
           <Text style={styles.sectionTitle}>{td("payoutControl")}</Text>
+
+          {/* Payout date — Bolt-style */}
+          <View style={styles.payoutDateBanner}>
+            <View style={styles.payoutDateLeft}>
+              <Text style={styles.payoutDateLabel}>Prochain virement</Text>
+              <Text style={styles.payoutDateValue}>
+                {(() => {
+                  const next = new Date();
+                  next.setDate(next.getDate() + (7 - next.getDay()) % 7 || 7);
+                  return next.toLocaleDateString('fr-BF', { weekday: 'long', day: 'numeric', month: 'long' });
+                })()}
+              </Text>
+            </View>
+            <View style={styles.payoutDateBadge}>
+              <Text style={styles.payoutDateBadgeText}>Mobile Money</Text>
+            </View>
+          </View>
+
           <View style={styles.settlementRow}>
             <Text style={styles.settlementKey}>Statut</Text>
             <Text style={styles.settlementVal}>{earningsTrustSummary.settlementStateLabel}</Text>
@@ -766,7 +784,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     color: orbiTheme.colors.text,
-    letterSpacing: -1,
+    letterSpacing: 0,
   },
   heroMeta: {
     fontSize: 13,
@@ -830,6 +848,50 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: orbiTheme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
+  },
+
+  // Payout date banner — Bolt-style
+  payoutDateBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: orbiTheme.colors.accentLight,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.teal + '33',
+  },
+  payoutDateLeft: {
+    gap: 2,
+    flex: 1,
+  },
+  payoutDateLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.teal,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  payoutDateValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+    textTransform: 'capitalize',
+  },
+  payoutDateBadge: {
+    backgroundColor: orbiTheme.colors.teal,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  payoutDateBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
   },
 
   // Settlement

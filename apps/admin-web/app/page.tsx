@@ -37,7 +37,7 @@ import {
   type PricingEstimate,
   type SupportTicketQueueResponse,
 } from "@orbi/api";
-import { orbiCopy } from "@orbi/ui";
+
 import {
   executionPhases,
   orbiDemoAccounts,
@@ -52,7 +52,7 @@ import {
 import { LiveOpsBoard } from "./live-ops-board";
 import { PricingStrategyBoard } from "./pricing-strategy-board";
 import { DriverOnboardingReviewBoard } from "./driver-onboarding-review-board";
-import { KpiCard, DonutRing, BarChart } from "./analytics-chart";
+import { LiveOverviewStats } from "./live-overview-stats";
 import { SupportQueue } from "./support-queue";
 import { FeatureFlagsBoard } from "./feature-flags-board";
 import { LaunchReadinessBoard } from "./launch-readiness-board";
@@ -635,6 +635,7 @@ async function loadAdminData(): Promise<{
   launchReadiness: AdminLaunchReadinessResponse;
   health: HealthCheckResponse;
   promoCodes: ListAdminPromoCodesResponse;
+  overview: { users: number; riders: number; drivers: number; vehicles: number; openRequests: number; activeTrips: number };
   pricingScenarios: Array<{
     id: string;
     title: string;
@@ -660,25 +661,25 @@ async function loadAdminData(): Promise<{
     const { authClient } = await getAdminServerAuthSession();
     const me = await fetchCurrentUser(authClient);
     const [
-      overview,
-      liveOps,
-      tripsAudit,
-      support,
-      onboardingQueue,
-      featureFlags,
-      dispatchSettings,
-      pricingCalibration,
-      paymentWebhookJournal,
-      driverWallets,
-      riders,
-      drivers,
-      launchReadiness,
-      health,
-      promoCodes,
-      ouagaEstimate,
-      boboEstimate,
-      northEstimate,
-    ] = await Promise.all([
+      overviewResult,
+      liveOpsResult,
+      tripsAuditResult,
+      supportResult,
+      onboardingQueueResult,
+      featureFlagsResult,
+      dispatchSettingsResult,
+      pricingCalibrationResult,
+      paymentWebhookJournalResult,
+      driverWalletsResult,
+      ridersResult,
+      driversResult,
+      launchReadinessResult,
+      healthResult,
+      promoCodesResult,
+      ouagaEstimateResult,
+      boboEstimateResult,
+      northEstimateResult,
+    ] = await Promise.allSettled([
       fetchAdminOverview(authClient),
       fetchAdminLiveOps(authClient),
       fetchAdminTripsAudit(authClient, { lookbackHours: 24 }),
@@ -742,6 +743,34 @@ async function loadAdminData(): Promise<{
       }),
     ]);
 
+    function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
+      return result.status === "fulfilled" ? result.value : fallback;
+    }
+
+    const fallbackOverview = { users: 0, riders: 0, drivers: 0, vehicles: 0, openRequests: 0, activeTrips: 0 };
+
+    const overview = settled(overviewResult, fallbackOverview);
+    const liveOps = settled(liveOpsResult, fallbackLiveOps);
+    const tripsAudit = settled(tripsAuditResult, fallbackTripsAudit);
+    const support = settled(supportResult, { tickets: [] });
+    const onboardingQueue = settled(onboardingQueueResult, { drivers: [], meta: { page: 1, pageSize: 10, total: 0, pageCount: 0 } });
+    const featureFlags = settled(featureFlagsResult, { flags: [], infrastructure: { realtime: { adapter: "in-memory" as const, sharedBackplane: false, degraded: false, degradeReason: null, activeStreams: 0, publishedEvents: 0, featureFlagMode: "on" as const, featureFlagEnabled: true } } });
+    const dispatchSettings = settled(dispatchSettingsResult, { settings: { lookbackHours: 72, halfLifeHours: 18, declineCooldownMinutes: 20, historyLimit: 48, source: "DEFAULT" as const, updatedAt: null, updatedBy: null }, history: [] });
+    const pricingCalibration = settled(pricingCalibrationResult, fallbackPricingCalibration);
+    const paymentWebhookJournal = settled(paymentWebhookJournalResult, fallbackPaymentWebhookJournal);
+    const driverWallets = settled(driverWalletsResult, fallbackDriverWallets);
+    const riders = settled(ridersResult, fallbackRiders);
+    const drivers = settled(driversResult, fallbackDrivers);
+    const launchReadiness = settled(launchReadinessResult, fallbackLaunchReadiness);
+    const health = settled(healthResult, fallbackHealth);
+    const promoCodes = settled(promoCodesResult, { promoCodes: [] });
+
+    const pricingScenarioCandidates = [
+      { id: "ouaga-campus", title: "Moto campus vers Ouaga 2000", note: "Scenario de pointe campus avec trafic dense, chaleur et congestion explicable sans explosion de prix.", result: ouagaEstimateResult },
+      { id: "bobo-market", title: "Voiture zone marche Bobo", note: "Course car orientee commerce urbain avec circulation ralentie et disponibilite encore defendable.", result: boboEstimateResult },
+      { id: "north-peripheral", title: "Moto peripherique Ouahigouya", note: "Scenario periurbain sous poussiere et voirie contrainte avec soutien d accessibilite et tension flotte.", result: northEstimateResult },
+    ];
+
     return {
       backendConnection: {
         state: "connected",
@@ -804,26 +833,12 @@ async function loadAdminData(): Promise<{
       launchReadiness,
       health,
       promoCodes,
-      pricingScenarios: [
-        {
-          id: "ouaga-campus",
-          title: "Moto campus vers Ouaga 2000",
-          note: "Scenario de pointe campus avec trafic dense, chaleur et congestion explicable sans explosion de prix.",
-          estimate: ouagaEstimate,
-        },
-        {
-          id: "bobo-market",
-          title: "Voiture zone marche Bobo",
-          note: "Course car orientee commerce urbain avec circulation ralentie et disponibilite encore defendable.",
-          estimate: boboEstimate,
-        },
-        {
-          id: "north-peripheral",
-          title: "Moto peripherique Ouahigouya",
-          note: "Scenario periurbain sous poussiere et voirie contrainte avec soutien d accessibilite et tension flotte.",
-          estimate: northEstimate,
-        },
-      ],
+      overview,
+      pricingScenarios: pricingScenarioCandidates.flatMap((s) =>
+        s.result.status === "fulfilled"
+          ? [{ id: s.id, title: s.title, note: s.note, estimate: s.result.value }]
+          : []
+      ),
     };
   } catch {
     return {
@@ -918,6 +933,7 @@ async function loadAdminData(): Promise<{
       },
       health: fallbackHealth,
       promoCodes: { promoCodes: [] },
+      overview: { users: 0, riders: 0, drivers: 0, vehicles: 0, openRequests: 0, activeTrips: 0 },
       pricingScenarios: [],
     };
   }
@@ -946,6 +962,7 @@ export default async function AdminHomePage({
     launchReadiness,
     health,
     promoCodes,
+    overview,
     pricingScenarios,
   } = await loadAdminData();
   const showDemoPasswords = shouldShowDemoPasswords();
@@ -956,7 +973,7 @@ export default async function AdminHomePage({
   return (
     <div className="shell">
       <div id="overview" className="section-anchor" />
-      <section className="admin-session-panel">
+      <section className="admin-session-panel hero-mesh">
         <div className="admin-session-copy">
           <p className="eyebrow">Session admin</p>
           <h2>Connexion operations reelle</h2>
@@ -1031,67 +1048,7 @@ export default async function AdminHomePage({
         <p>{backendConnection.detail}</p>
       </section>
 
-      {/* ── KPI Analytics Board ── */}
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 28 }}>
-        <KpiCard
-          label="Taux de completion"
-          value={liveOps.summary.activeTrips > 0 ? `${((liveOps.summary.tripsByStatus.inProgress / Math.max(liveOps.summary.activeTrips, 1)) * 100).toFixed(0)}%` : '—'}
-          delta={2.4}
-          sparkData={[65, 70, 68, 74, 78, 75, 80, liveOps.summary.activeTrips > 0 ? 82 : 0]}
-          color="#00C9A7"
-        />
-        <KpiCard
-          label="Demandes ouvertes"
-          value={String(liveOps.summary.openRequests)}
-          delta={liveOps.summary.openRequests > 3 ? 12.5 : -5.2}
-          sparkData={[2, 4, 3, 6, 5, 8, 7, liveOps.summary.openRequests]}
-          color="#FF9500"
-        />
-        <KpiCard
-          label="Courses en direct"
-          value={String(liveOps.summary.activeTrips)}
-          delta={0}
-          sparkData={[1, 3, 2, 4, 3, 5, 4, liveOps.summary.activeTrips]}
-          color="#007AFF"
-        />
-        <KpiCard
-          label="SLA MATCHED"
-          value={liveOps.summary.stalledMatchedTrips > 0 ? `${liveOps.summary.stalledMatchedTrips} alerte(s)` : 'OK'}
-          delta={liveOps.summary.stalledMatchedTrips > 0 ? -15 : 5}
-          sparkData={[0, 1, 0, 0, 2, 1, 0, liveOps.summary.stalledMatchedTrips]}
-          color={liveOps.summary.stalledMatchedTrips > 0 ? '#FF453A' : '#00C9A7'}
-        />
-      </section>
-
-      {/* ── Répartition des statuts de trajets ── */}
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 18, marginBottom: 28 }}>
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(148,163,184,0.14)', borderRadius: 18, padding: '18px 20px', display: 'grid', gap: 16 }}>
-          <p className="eyebrow">Répartition statuts</p>
-          <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-            <DonutRing value={liveOps.summary.tripsByStatus.matched} total={Math.max(liveOps.summary.activeTrips, 1)} color="#FF9500" label="MATCHED" />
-            <DonutRing value={liveOps.summary.tripsByStatus.arriving} total={Math.max(liveOps.summary.activeTrips, 1)} color="#007AFF" label="EN ROUTE" />
-            <DonutRing value={liveOps.summary.tripsByStatus.inProgress} total={Math.max(liveOps.summary.activeTrips, 1)} color="#00C9A7" label="IN PROGRESS" />
-          </div>
-        </div>
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(148,163,184,0.14)', borderRadius: 18, padding: '18px 20px', display: 'grid', gap: 12 }}>
-          <p className="eyebrow">Paiements 24h — taux réconciliation</p>
-          <BarChart
-            data={[
-              { label: 'Réussis', value: liveOps.summary.payments.succeeded },
-              { label: 'Échoués', value: liveOps.summary.payments.failed },
-              { label: 'Remboursés', value: liveOps.summary.payments.refunded },
-              { label: 'En attente', value: liveOps.summary.payments.refundPending },
-              { label: 'Réconciliés', value: liveOps.summary.payments.reconciled },
-            ]}
-            color="#00C9A7"
-            height={70}
-          />
-          <p style={{ margin: 0, fontSize: 12, color: '#6E6E73' }}>
-            Taux de succès: <strong style={{ color: '#F5F5F7' }}>{liveOps.summary.payments.successRate}%</strong>
-            {' · '}Réconciliation: <strong style={{ color: liveOps.summary.payments.reconciliationRate >= 90 ? '#00C9A7' : '#FF9500' }}>{liveOps.summary.payments.reconciliationRate}%</strong>
-          </p>
-        </div>
-      </section>
+      <LiveOverviewStats initialData={overview} />
 
       <section className="panel test-access-panel">
         <div>

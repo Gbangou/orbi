@@ -242,7 +242,6 @@ export type CreateRideRequestPayload = {
   requestedVehicleType: "MOTORCYCLE" | "CAR";
   requestedServiceTier?:
     | "MOTO_STANDARD"
-    | "MOTO_PLUS"
     | "CAR_STANDARD"
     | "CAR_COMFORT"
     | "CAR_XL";

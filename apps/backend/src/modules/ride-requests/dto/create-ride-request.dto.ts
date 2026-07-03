@@ -17,7 +17,6 @@ import {
 const requestedVehicleTypes = ['MOTORCYCLE', 'CAR'] as const;
 const requestedServiceTiers = [
   'MOTO_STANDARD',
-  'MOTO_PLUS',
   'CAR_STANDARD',
   'CAR_COMFORT',
   'CAR_XL',

@@ -3548,3 +3548,181 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Enhanced animations & visual polish — Orbi Admin v2
+   ══════════════════════════════════════════════════════════════ */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes meshFloat {
+  0%,  100% { transform: translate(0, 0)   scale(1);    }
+  33%        { transform: translate(2%, -1%) scale(1.02); }
+  66%        { transform: translate(-1%, 2%) scale(0.99); }
+}
+
+@keyframes borderGlow {
+  0%,  100% { box-shadow: 0 0  0 0 rgba(0, 201, 167, 0);    }
+  50%        { box-shadow: 0 0 14px 0 rgba(0, 201, 167, 0.2); }
+}
+
+@keyframes numPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.72; }
+}
+
+/* ── Utility animation classes ── */
+.anim-fade-up  { animation: fadeUp  0.42s ease both; }
+.anim-scale-in { animation: scaleIn 0.36s ease both; }
+
+.anim-delay-1 { animation-delay: 0.06s; }
+.anim-delay-2 { animation-delay: 0.12s; }
+.anim-delay-3 { animation-delay: 0.18s; }
+.anim-delay-4 { animation-delay: 0.24s; }
+.anim-delay-5 { animation-delay: 0.30s; }
+
+/* ── Active sidebar link ── */
+.sidebar-link-active {
+  background: rgba(0, 201, 167, 0.12) !important;
+  color: var(--accent) !important;
+}
+
+.sidebar-link-active::before {
+  background: var(--accent) !important;
+  opacity: 1 !important;
+  width: 7px !important;
+  height: 7px !important;
+}
+
+/* ── KPI live header ── */
+.kpi-live-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.kpi-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  background: rgba(0, 201, 167, 0.08);
+  border: 1px solid rgba(0, 201, 167, 0.22);
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.kpi-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: topbar-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* ── KPI card enhanced hover & animation ── */
+.kpi-card {
+  animation: fadeUp 0.42s ease both;
+  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease !important;
+  cursor: default;
+}
+
+.kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Shimmer accent bar ── */
+.shimmer-bar {
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 201, 167, 0.06) 25%,
+    rgba(0, 201, 167, 0.28) 50%,
+    rgba(0, 201, 167, 0.06) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.4s linear infinite;
+  margin: 12px 0 0;
+}
+
+/* ── Hero gradient mesh ── */
+.hero-mesh {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-mesh::before {
+  content: '';
+  position: absolute;
+  width: 380px;
+  height: 380px;
+  top: -110px;
+  right: -70px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 201, 167, 0.13), transparent 65%);
+  animation: meshFloat 11s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero-mesh::after {
+  content: '';
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  bottom: -60px;
+  left: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.09), transparent 65%);
+  animation: meshFloat 16s ease-in-out infinite reverse;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero-mesh > * { position: relative; z-index: 1; }
+
+/* ── Pulsing border glow for live sections ── */
+.glow-border-live {
+  animation: borderGlow 4s ease-in-out infinite;
+}
+
+/* ── Live number animation ── */
+.num-live {
+  animation: numPulse 3.5s ease-in-out infinite;
+}
+
+/* ── Section entrance animation (staggered panels) ── */
+.section-enter {
+  animation: fadeUp 0.4s ease both;
+}
+
+/* ── Topbar avatar hover ── */
+.topbar-avatar {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.topbar-avatar:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 3px rgba(0, 201, 167, 0.3);
+}

@@ -244,7 +244,6 @@ export async function upsertDriverOnboarding(
       type: "MOTORCYCLE" | "CAR";
       tier:
         | "MOTO_STANDARD"
-        | "MOTO_PLUS"
         | "CAR_STANDARD"
         | "CAR_COMFORT"
         | "CAR_XL";

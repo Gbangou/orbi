@@ -186,99 +186,6 @@ export const MotoStandardIllustration = memo(function MotoStandardIllustration()
   );
 });
 
-// ── Moto Plus — Signal Blue #246BFE ───────────────────────────────────────────
-export const MotoPlusIllustration = memo(function MotoPlusIllustration() {
-  return (
-    <Svg width={W} height={H} viewBox={V}>
-      <Defs>
-        <LinearGradient id="mp_body" x1="0" y1="0" x2="0.6" y2="1">
-          <Stop offset="0" stopColor="#60A0FF" />
-          <Stop offset="0.5" stopColor="#246BFE" />
-          <Stop offset="1" stopColor="#0A28A0" />
-        </LinearGradient>
-        <LinearGradient id="mp_shade" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#1A50D8" />
-          <Stop offset="1" stopColor="#061880" />
-        </LinearGradient>
-        <RadialGradient id="mp_spec" cx="35%" cy="25%" rx="42%" ry="38%">
-          <Stop offset="0" stopColor="#AACCFF" stopOpacity={0.65} />
-          <Stop offset="1" stopColor="#246BFE" stopOpacity={0} />
-        </RadialGradient>
-        <LinearGradient id="mp_glass" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#D0E8FF" stopOpacity={0.92} />
-          <Stop offset="1" stopColor="#70A8E0" stopOpacity={0.72} />
-        </LinearGradient>
-      </Defs>
-
-      <Shadow cx={78} rx={62} />
-
-      <AlloyWheel cx={34} cy={92} r={22} />
-      <AlloyWheel cx={122} cy={92} r={22} />
-
-      {/* Upside-down fork (sport style) */}
-      <Path d="M 112,60 L 122,70 L 124,92 M 118,58 L 126,68 L 128,92"
-        stroke="#2A2E3A" strokeWidth={4} fill="none" strokeLinecap="round" />
-
-      {/* Sport swingarm */}
-      <Path d="M 34,80 C 48,70 64,60 82,58 L 98,58 L 112,64"
-        stroke="#0A0C12" strokeWidth={5} fill="none" strokeLinecap="round" />
-
-      {/* Engine */}
-      <Path d="M 50,74 L 58,52 L 100,50 L 112,66 L 94,80 L 56,82 Z"
-        fill="#0C0E16" />
-
-      {/* Tank — sportier, angular */}
-      <Path d="M 54,52 L 58,14 L 104,12 L 114,34 L 102,52 L 54,52 Z"
-        fill="url(#mp_body)" />
-      <Path d="M 54,52 L 58,14 L 104,12 L 114,34 L 102,52 L 54,52 Z"
-        fill="url(#mp_spec)" />
-      {/* Sport stripe */}
-      <Path d="M 58,14 L 80,14 L 76,52 L 54,52 Z"
-        fill="#1040C8" fillOpacity={0.4} />
-
-      {/* Full fairing — lower */}
-      <Path d="M 102,52 L 114,34 L 132,34 L 134,18 L 122,6 L 112,24 Z"
-        fill="#1A48D4" />
-      <Path d="M 102,52 L 114,34 L 132,34 L 134,18 L 122,6 L 112,24 Z"
-        fill="url(#mp_spec)" />
-
-      {/* Windscreen — sportier bubble */}
-      <Path d="M 104,10 L 118,4 L 126,8 L 112,16 Z"
-        fill="url(#mp_glass)" />
-      <Path d="M 106,9 L 116,4 L 118,6 L 108,11 Z"
-        fill="#FFFFFF" fillOpacity={0.4} />
-
-      {/* LED headlight — dual projector */}
-      <Path d="M 128,24 L 136,18 L 140,28 L 132,34 Z"
-        fill="#10121A" />
-      <Ellipse cx={134} cy={26} rx={4} ry={5} fill="#D0EAFF" />
-      {/* DRL */}
-      <Rect x={128} y={20} width={12} height={2} rx={1}
-        fill="#FFFFFF" fillOpacity={0.9} transform="rotate(-10,134,21)" />
-
-      {/* Seat */}
-      <Path d="M 54,52 L 58,14 L 70,16 L 68,48 L 60,54 Z"
-        fill="#141820" />
-
-      {/* Tail */}
-      <Path d="M 32,72 L 54,52 L 62,52 L 60,70 L 40,80 Z"
-        fill="#0E30A4" />
-      <Path d="M 30,72 L 34,62 L 42,64 L 40,74 Z"
-        fill="#FF2828" fillOpacity={0.95} />
-
-      {/* Exhaust — twin */}
-      <Path d="M 48,76 C 46,82 44,88 42,94"
-        stroke="#3A3E50" strokeWidth={5} fill="none" strokeLinecap="round" />
-      <Path d="M 52,78 C 50,84 48,90 46,96"
-        stroke="#3A3E50" strokeWidth={5} fill="none" strokeLinecap="round" />
-
-      {/* Handlebar — clip-on style */}
-      <Path d="M 112,30 L 126,18 L 130,20 L 118,34 Z"
-        fill="#1E2230" />
-    </Svg>
-  );
-});
-
 // ── Car Standard — Pearl White sedan ──────────────────────────────────────────
 export const CarStandardIllustration = memo(function CarStandardIllustration() {
   return (
@@ -687,16 +594,22 @@ export const CarXLIllustration = memo(function CarXLIllustration() {
 
 // ── Unified accessor ───────────────────────────────────────────────────────────
 
-type Tier = 'moto-standard' | 'moto-plus' | 'car-standard' | 'car-comfort' | 'car-xl';
+type Tier = 'moto-standard' | 'car-standard' | 'car-comfort' | 'car-xl';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ILLUSTRATIONS: Record<Tier, React.ComponentType<any>> = {
   'moto-standard': MotoStandardIllustration,
-  'moto-plus': MotoPlusIllustration,
   'car-standard': CarStandardIllustration,
   'car-comfort': CarComfortIllustration,
   'car-xl': CarXLIllustration,
 };
+
+function normalizeTier(tier: string): Tier {
+  if (tier.startsWith('moto-')) return 'moto-standard';
+  if (tier === 'car-comfort') return 'car-comfort';
+  if (tier === 'car-xl') return 'car-xl';
+  return 'car-standard';
+}
 
 export function VehicleIllustration({
   tier,
@@ -707,7 +620,7 @@ export function VehicleIllustration({
   width?: number;
   height?: number;
 }) {
-  const Comp = ILLUSTRATIONS[tier as Tier] ?? CarStandardIllustration;
+  const Comp = ILLUSTRATIONS[normalizeTier(tier)];
   const scale = Math.min(width / W, height / H);
   return (
     <View style={{ width, height, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>

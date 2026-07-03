@@ -9,7 +9,7 @@ import {
 import { CreateRideRequestDto } from './dto/create-ride-request.dto';
 
 const SERVICE_TIERS_BY_VEHICLE_TYPE = {
-  MOTORCYCLE: ['MOTO_STANDARD', 'MOTO_PLUS'],
+  MOTORCYCLE: ['MOTO_STANDARD'],
   CAR: ['CAR_STANDARD', 'CAR_COMFORT', 'CAR_XL'],
 } as const;
 

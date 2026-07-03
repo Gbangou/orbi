@@ -16,8 +16,8 @@ export default function IndexScreen() {
   useEffect(() => {
     // Animation d'entrée du logo
     Animated.parallel([
-      Animated.timing(fadeIn, { toValue: 1, duration: 350, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
+      Animated.timing(fadeIn, { toValue: 1, duration: 350, useNativeDriver: false }),
+      Animated.spring(scale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: false }),
     ]).start();
 
     let isMounted = true;

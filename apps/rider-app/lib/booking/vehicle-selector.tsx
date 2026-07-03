@@ -108,10 +108,22 @@ export const VehicleSelector = memo(function VehicleSelector({
                 tier={option.tier}
               />
               <Text style={[styles.name, isSelected && { color: orbiTheme.colors.text }]}>{title}</Text>
-              <Text style={styles.eta}>{option.etaMinutes} min</Text>
+              <View style={styles.etaRow}>
+                <Text style={styles.eta}>{option.etaMinutes} min</Text>
+                {option.marketplace?.nearbyDrivers != null && option.marketplace.nearbyDrivers > 0 ? (
+                  <View style={[styles.driverCountBadge, { borderColor: accentColor + '60' }]}>
+                    <Text style={[styles.driverCountText, { color: accentColor }]}>
+                      {option.marketplace.nearbyDrivers}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
               <Text style={[styles.fare, isSelected && { color: accentColor }]}>
                 {formatXof(discountedFare)}
               </Text>
+              {option.marketplace?.etaConfidence === 'LOW' ? (
+                <Text style={styles.lowConfidence}>Disponibilité limitée</Text>
+              ) : null}
             </Pressable>
           );
         })}
@@ -142,4 +154,22 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 14, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular' },
   vehicleAura: { position: 'absolute', width: 88, height: 56, borderRadius: 28, top: 8 },
   svgWrap: { width: 108, height: 82, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  etaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  driverCountBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  driverCountText: {
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  lowConfidence: {
+    fontSize: 9,
+    color: orbiTheme.colors.amber,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: -4,
+  },
 });

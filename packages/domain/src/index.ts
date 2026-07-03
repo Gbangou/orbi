@@ -13,7 +13,6 @@ export type ApiVehicleType = 'MOTORCYCLE' | 'CAR';
 
 export const serviceTiers = [
   'moto-standard',
-  'moto-plus',
   'car-standard',
   'car-comfort',
   'car-xl',
@@ -21,14 +20,12 @@ export const serviceTiers = [
 export type ServiceTier = (typeof serviceTiers)[number];
 export const apiServiceTiers = [
   'MOTO_STANDARD',
-  'MOTO_PLUS',
   'CAR_STANDARD',
   'CAR_COMFORT',
   'CAR_XL',
 ] as const;
 export type ApiServiceTier =
   | 'MOTO_STANDARD'
-  | 'MOTO_PLUS'
   | 'CAR_STANDARD'
   | 'CAR_COMFORT'
   | 'CAR_XL';

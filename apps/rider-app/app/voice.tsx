@@ -84,8 +84,8 @@ const MicButton = memo(function MicButton({
     if (isRecording) {
       const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulse, { toValue: 1.15, duration: 600, useNativeDriver: true }),
-          Animated.timing(pulse, { toValue: 1, duration: 600, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1.15, duration: 600, useNativeDriver: false }),
+          Animated.timing(pulse, { toValue: 1, duration: 600, useNativeDriver: false }),
         ]),
       );
       loop.start();

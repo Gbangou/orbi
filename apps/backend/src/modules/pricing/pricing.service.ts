@@ -148,7 +148,7 @@ export class PricingService {
         badge: 'Le moins cher',
         capacity: '1 passager',
         accent: '#00C9A7',
-        etaMinutes: 3,
+        etaMinutes: this.calcDynamicEta('MOTORCYCLE', resolvedActiveDriverCount, resolvedIsPeakHour, resolvedDemandLevel),
         paymentMethods: ['mobile-money', 'cash', 'wallet'],
         vehicleExamples: ['Moto underbone urbaine', 'TVS HLX', 'Bajaj Boxer'],
       },
@@ -159,7 +159,7 @@ export class PricingService {
         badge: 'Climatisée',
         capacity: '4 places',
         accent: '#FF9500',
-        etaMinutes: 6,
+        etaMinutes: this.calcDynamicEta('CAR_STANDARD', resolvedActiveDriverCount, resolvedIsPeakHour, resolvedDemandLevel),
         paymentMethods: ['mobile-money', 'cash', 'wallet'],
         vehicleExamples: ['Toyota Yaris', 'Hyundai Accent', 'Suzuki Dzire'],
       },
@@ -170,7 +170,7 @@ export class PricingService {
         badge: 'Haut de gamme',
         capacity: '4 places',
         accent: '#8E44AD',
-        etaMinutes: 8,
+        etaMinutes: this.calcDynamicEta('CAR_COMFORT', resolvedActiveDriverCount, resolvedIsPeakHour, resolvedDemandLevel),
         paymentMethods: ['mobile-money', 'wallet'],
         vehicleExamples: ['Toyota Corolla', 'Hyundai Elantra', 'Kia Cerato'],
       },
@@ -235,7 +235,6 @@ export class PricingService {
             configuration.vehicleType === 'MOTORCYCLE' ? 'motorcycle' : 'car',
           tier: configuration.serviceTier.toLowerCase().replace(/_/g, '-') as
             | 'moto-standard'
-            | 'moto-plus'
             | 'car-standard'
             | 'car-comfort'
             | 'car-xl',
@@ -639,6 +638,33 @@ export class PricingService {
     }
 
     return { demandLevel, activeDriverCount, openRequestCount, isPeakHour };
+  }
+
+  private calcDynamicEta(
+    vehicleClass: 'MOTORCYCLE' | 'CAR_STANDARD' | 'CAR_COMFORT',
+    activeDriverCount: number | undefined,
+    isPeakHour: boolean,
+    demandLevel: 'NORMAL' | 'HIGH' | 'PEAK' | undefined,
+  ): number {
+    const drivers = activeDriverCount ?? 5;
+    const demand = demandLevel ?? 'NORMAL';
+
+    // Base ETA by vehicle class (minutes, city conditions Ouagadougou)
+    let base = vehicleClass === 'MOTORCYCLE' ? 3 : vehicleClass === 'CAR_STANDARD' ? 6 : 9;
+
+    // Penalize for low driver supply
+    if (drivers === 0) base += vehicleClass === 'MOTORCYCLE' ? 4 : 6;
+    else if (drivers < 3) base += vehicleClass === 'MOTORCYCLE' ? 2 : 3;
+    else if (drivers < 8) base += 1;
+
+    // Peak hour adds congestion time
+    if (isPeakHour) base += vehicleClass === 'MOTORCYCLE' ? 2 : 4;
+
+    // High/peak demand means more competition for drivers
+    if (demand === 'PEAK') base += vehicleClass === 'MOTORCYCLE' ? 3 : 5;
+    else if (demand === 'HIGH') base += vehicleClass === 'MOTORCYCLE' ? 1 : 2;
+
+    return Math.max(base, vehicleClass === 'MOTORCYCLE' ? 2 : 5);
   }
 
   private resolveSupplyDemandRatio(
@@ -1052,19 +1078,6 @@ export class PricingService {
     // Test: 5.8km / 16min URBAN_CORE moto → 300 + 522 + 288 + 100 = 1 210 XOF ✅
 
     if (input.vehicleType === 'MOTORCYCLE') {
-      if (input.serviceTier === ServiceTier.MOTO_PLUS) {
-        // Legacy compatibility: anciennes demandes MOTO_PLUS restent calculables,
-        // mais le catalogue public expose désormais uniquement le produit Moto.
-        if (zone === 'SEMI_URBAN') {
-          return { serviceTier: ServiceTier.MOTO_PLUS, baseFare: 400, perKmRate: 100, perMinuteRate: 20, bookingFee: 100, minimumFare: 750 };
-        }
-        if (zone === 'URBAN_EDGE') {
-          return { serviceTier: ServiceTier.MOTO_PLUS, baseFare: 500, perKmRate: 120, perMinuteRate: 25, bookingFee: 150, minimumFare: 1000 };
-        }
-        // Urban Core
-        return { serviceTier: ServiceTier.MOTO_PLUS, baseFare: 600, perKmRate: 140, perMinuteRate: 30, bookingFee: 200, minimumFare: 1200 };
-      }
-
       // Moto — tarif d'entrée, accessible quotidiennement
       if (zone === 'SEMI_URBAN') {
         return { serviceTier: ServiceTier.MOTO_STANDARD, baseFare: 200, perKmRate: 75, perMinuteRate: 15, bookingFee: 75, minimumFare: 550 };

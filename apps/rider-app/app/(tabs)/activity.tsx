@@ -781,6 +781,29 @@ export default function ActivityScreen() {
             ) : null}
           </View>
 
+          {/* ETA banner — live distance & ETA when driver is approaching */}
+          {(activeTrip.status === 'MATCHED' || activeTrip.status === 'DRIVER_APPROACHING') ? (() => {
+            const distKm = activeTripDetail?.trip.routeMonitoring.latestPosition?.distanceToPickupKm ?? null;
+            const etaMins = distKm != null ? Math.max(1, Math.ceil(distKm * 3)) : null;
+            return (
+              <View style={styles.etaBanner}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.etaEyebrow}>
+                    {activeTrip.status === 'MATCHED' ? 'Chauffeur en route' : 'Chauffeur proche'}
+                  </Text>
+                  <Text style={styles.etaValue}>
+                    {etaMins != null ? `Dans ~${etaMins} min` : 'En route vers vous'}
+                  </Text>
+                </View>
+                {distKm != null ? (
+                  <View style={styles.etaDistBadge}>
+                    <Text style={styles.etaDistText}>{distKm.toFixed(1)} km</Text>
+                  </View>
+                ) : null}
+              </View>
+            );
+          })() : null}
+
           {/* Driver card */}
           <View style={styles.driverCard}>
             <View style={styles.driverAvatar}>
@@ -808,6 +831,15 @@ export default function ActivityScreen() {
                 <Text style={styles.driverPlate}>{driverTrustSnapshot.plateLabel}</Text>
               ) : null}
             </View>
+            {activeTripDetail?.trip.driverPhoneNumber ? (
+              <Pressable
+                onPress={() => void Linking.openURL(`tel:${activeTripDetail.trip.driverPhoneNumber}`)}
+                style={styles.callDriverBtn}
+                accessibilityLabel="call-driver"
+              >
+                <Text style={styles.callDriverIcon}>☎</Text>
+              </Pressable>
+            ) : null}
           </View>
 
           {/* Pickup code */}
@@ -1215,6 +1247,62 @@ const styles = StyleSheet.create({
   },
   actionBtnIconSos: { color: orbiTheme.colors.danger },
   actionBtnLabelSos: { color: orbiTheme.colors.danger },
+
+  // ETA banner
+  etaBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(0,122,255,0.06)',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,122,255,0.18)',
+  },
+  etaEyebrow: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: orbiTheme.colors.sky,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  etaValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  etaDistBadge: {
+    backgroundColor: 'rgba(0,122,255,0.12)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  etaDistText: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.sky,
+  },
+
+  // Call driver button (inside driver card)
+  callDriverBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(0,201,167,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,201,167,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  callDriverIcon: {
+    fontSize: 18,
+  },
 
   // ── History layout
   safe: { flex: 1, backgroundColor: orbiTheme.colors.background },

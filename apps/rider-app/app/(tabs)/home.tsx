@@ -74,8 +74,8 @@ const StatusDot = memo(function StatusDot({ active }: { active: boolean }) {
     if (!active) return;
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.5, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1.5, duration: 700, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: false }),
       ]),
     );
     loop.start();
@@ -101,8 +101,8 @@ const SkeletonServiceRow = memo(function SkeletonServiceRow() {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmer, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(shimmer, { toValue: 0, duration: 900, useNativeDriver: true }),
+        Animated.timing(shimmer, { toValue: 1, duration: 900, useNativeDriver: false }),
+        Animated.timing(shimmer, { toValue: 0, duration: 900, useNativeDriver: false }),
       ]),
     );
     loop.start();
@@ -204,6 +204,8 @@ export default function RiderHomeScreen() {
   const [flowTransitionLabel, setFlowTransitionLabel] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [isSosBusy, setIsSosBusy] = useState(false);
+  const [matchedAnim] = useState(() => new Animated.Value(0));
+  const [showMatchCard, setShowMatchCard] = useState(false);
   const previousFlowStateRef = useRef<string | null>(null);
 
   const riderPosition = useRiderPosition({ enabled: true });
@@ -331,8 +333,24 @@ export default function RiderHomeScreen() {
     setFlowTransitionLabel(
       buildRiderFlowTransitionLabel(prev, activeFlowState, 'home'),
     );
+
+    // Uber-style match animation: trigger when driver is first matched
+    if (prev !== 'MATCHED' && activeFlowState === 'MATCHED') {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowMatchCard(true);
+      matchedAnim.setValue(0);
+      Animated.spring(matchedAnim, {
+        toValue: 1,
+        tension: 60,
+        friction: 10,
+        useNativeDriver: false,
+      }).start();
+      const dismiss = setTimeout(() => setShowMatchCard(false), 6000);
+      return () => clearTimeout(dismiss);
+    }
+
     previousFlowStateRef.current = activeFlowState;
-  }, [activeFlowState]);
+  }, [activeFlowState, matchedAnim]);
 
   useEffect(() => {
     if (!flowTransitionLabel) return;
@@ -365,18 +383,18 @@ export default function RiderHomeScreen() {
         </SafeAreaView>
       ) : null}
 
-      {/* ── SOS Button (floats above sheet, active trip only) ── */}
-      {activeTrip ? (
+      {/* ── SOS Button — always visible, Uber-style top-right ── */}
+      <SafeAreaView style={styles.sosSafe} pointerEvents="box-none">
         <Pressable
-          onPress={() => handleSos(activeTrip.id)}
+          onPress={() => activeTrip ? handleSos(activeTrip.id) : router.push('/activity')}
           disabled={isSosBusy}
-          style={[styles.sosBtn, { bottom: sheetH + 16 }]}
+          style={styles.sosBtnFixed}
           accessibilityLabel="Bouton SOS urgence"
           accessibilityRole="button"
         >
           <Text style={styles.sosBtnText}>SOS</Text>
         </Pressable>
-      ) : null}
+      </SafeAreaView>
 
       {/* ── Floating top bar ── */}
       <SafeAreaView style={styles.topBarSafe} pointerEvents="box-none">
@@ -414,13 +432,44 @@ export default function RiderHomeScreen() {
               <StatusDot active={isRealtimeSyncing} />
               <Text style={styles.nearbyText}>
                 {realNearbyCount > 0
-                  ? `${realNearbyCount} chauffeur${realNearbyCount > 1 ? 's' : ''}`
-                  : t('home.liveMap', { defaultValue: 'Carte live' })}
+                  ? `${realNearbyCount} chauffeur${realNearbyCount > 1 ? 's' : ''} proche${realNearbyCount > 1 ? 's' : ''}`
+                  : 'Aucun chauffeur disponible'}
               </Text>
             </Pressable>
           </View>
         </View>
       </SafeAreaView>
+
+      {/* ── Match card — Uber-style slide-up when driver found ── */}
+      {showMatchCard && activeTrip ? (
+        <Animated.View
+          style={[
+            styles.matchCard,
+            {
+              transform: [
+                {
+                  translateY: matchedAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [120, 0],
+                  }),
+                },
+              ],
+              opacity: matchedAnim,
+            },
+          ]}
+        >
+          <View style={styles.matchCardDot} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.matchCardTitle}>Chauffeur confirmé !</Text>
+            <Text style={styles.matchCardSub} numberOfLines={1}>
+              {activeTrip.counterpartyName ?? 'Votre chauffeur'} · en route vers vous
+            </Text>
+          </View>
+          <View style={styles.matchCardCheck}>
+            <Text style={styles.matchCardCheckText}>✓</Text>
+          </View>
+        </Animated.View>
+      ) : null}
 
       {/* ── Bottom sheet ── */}
       <View style={[styles.sheet, { height: sheetH }]}>
@@ -859,27 +908,84 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  // ── SOS floating button ────────────────────────────────────────────────────
-  sosBtn: {
+  // ── Match card — slides up from bottom when driver matched ───────────────
+  matchCard: {
     position: 'absolute',
+    bottom: 260,
+    left: 16,
     right: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: orbiTheme.colors.danger,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 12,
+    zIndex: 60,
+  },
+  matchCardDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  matchCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  matchCardSub: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 1,
+  },
+  matchCardCheck: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: orbiTheme.colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: orbiTheme.colors.danger,
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
+  },
+  matchCardCheckText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+
+  // ── SOS floating button — always visible, Uber-style ─────────────────────
+  sosSafe: {
+    position: 'absolute',
+    top: 0,
+    right: 16,
+    zIndex: 50,
+  },
+  sosBtnFixed: {
+    marginTop: 60,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#E53935',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#E53935',
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 10,
   },
   sosBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     color: '#FFFFFF',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
 });

@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Linking, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from '../../lib/i18n';
 import {
   fetchDriverEarnings,
@@ -101,6 +101,175 @@ const chip = StyleSheet.create({
   fare: { fontSize: 13, fontWeight: '700', color: orbiTheme.colors.text },
 });
 
+// ── Trip Request Modal — Bolt-style countdown overlay ─────────────────────────
+function TripRequestModal({
+  offer,
+  onAccept,
+  onDecline,
+}: {
+  offer: DriverOffer;
+  onAccept: () => void;
+  onDecline: () => void;
+}) {
+  const TOTAL = (() => {
+    if (offer.reservationExpiresAt) {
+      const rem = Math.round(
+        (new Date(offer.reservationExpiresAt).getTime() - Date.now()) / 1000,
+      );
+      if (rem > 2 && rem <= 60) return rem;
+    }
+    return 30;
+  })();
+
+  const [secondsLeft, setSecondsLeft] = useState(TOTAL);
+  const [accepting, setAccepting] = useState(false);
+  const progressAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    Animated.timing(progressAnim, {
+      toValue: 0,
+      duration: TOTAL * 1000,
+      useNativeDriver: false,
+    }).start();
+
+    const iv = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          clearInterval(iv);
+          onDecline();
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(iv);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isMoto = offer.category === 'motorcycle';
+  const isUrgent = secondsLeft <= 7;
+  const isWarn = secondsLeft <= 14;
+  const accent = isUrgent ? '#FF3B30' : isWarn ? '#FF9500' : '#00C9A7';
+  const fareAmt = offer.driverPayout ?? offer.fare;
+
+  return (
+    <View style={modal.backdrop} pointerEvents="box-none">
+      <View style={[modal.card, { borderColor: accent + '66' }]}>
+          {/* Progress bar */}
+          <View style={modal.progressTrack}>
+            <Animated.View
+              style={[
+                modal.progressFill,
+                {
+                  backgroundColor: accent,
+                  width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+                },
+              ]}
+            />
+          </View>
+
+          {/* Header */}
+          <View style={modal.headerRow}>
+            <View style={[modal.categoryTag, { backgroundColor: accent + '20', borderColor: accent + '50' }]}>
+              <Text style={[modal.categoryTagText, { color: accent }]}>
+                {isMoto ? 'MOTO' : 'CONFORT AUTO'}
+              </Text>
+            </View>
+            <View style={[modal.countdownCircle, { borderColor: accent }]}>
+              <Text style={[modal.countdownNum, { color: accent }]}>{secondsLeft}</Text>
+              <Text style={[modal.countdownUnit, { color: accent + 'AA' }]}>s</Text>
+            </View>
+          </View>
+
+          {/* Rider */}
+          <View style={modal.riderRow}>
+            <View style={[modal.avatar, { backgroundColor: accent + '20' }]}>
+              <Text style={[modal.avatarText, { color: accent }]}>{buildInitials(offer.riderName)}</Text>
+            </View>
+            <View style={modal.riderMeta}>
+              <Text style={modal.riderName}>{offer.riderName}</Text>
+              <Text style={modal.riderSub}>Passager Orbi</Text>
+            </View>
+          </View>
+
+          {/* Route */}
+          <View style={modal.routeCard}>
+            <View style={modal.routeRow}>
+              <View style={[modal.routeDot, { backgroundColor: '#00C9A7' }]} />
+              <Text style={modal.routeLabel} numberOfLines={2}>{offer.pickup}</Text>
+            </View>
+            <View style={modal.routeStem} />
+            <View style={modal.routeRow}>
+              <View style={[modal.routeDot, { backgroundColor: '#FF3B30' }]} />
+              <Text style={modal.routeLabel} numberOfLines={2}>{offer.destination}</Text>
+            </View>
+          </View>
+
+          {/* Stats */}
+          <View style={modal.statsRow}>
+            <View style={modal.stat}>
+              <Text style={modal.statVal}>{offer.distanceKm.toFixed(1)} km</Text>
+              <Text style={modal.statKey}>Trajet</Text>
+            </View>
+            <View style={modal.statSep} />
+            <View style={modal.stat}>
+              <Text style={modal.statVal}>
+                {typeof offer.pickupDistanceKm === 'number'
+                  ? `${offer.pickupDistanceKm.toFixed(1)} km`
+                  : `${offer.etaToPickupMinutes} min`}
+              </Text>
+              <Text style={modal.statKey}>Jusqu'à vous</Text>
+            </View>
+            <View style={modal.statSep} />
+            <View style={modal.stat}>
+              <Text style={modal.statVal}>{offer.etaToPickupMinutes} min</Text>
+              <Text style={modal.statKey}>ETA pickup</Text>
+            </View>
+          </View>
+
+          {/* Fare */}
+          <View style={[modal.fareBlock, { backgroundColor: accent + '12', borderColor: accent + '40' }]}>
+            <Text style={modal.fareLabel}>VOTRE GAIN ESTIMÉ</Text>
+            <Text style={[modal.fareAmt, { color: accent }]}>
+              {fareAmt.toLocaleString('fr-BF')} XOF
+            </Text>
+          </View>
+
+          {/* CTA buttons */}
+          <View style={modal.btnRow}>
+            <Pressable
+              disabled={accepting}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onDecline();
+              }}
+              style={({ pressed }) => [modal.declineBtn, pressed && { opacity: 0.7 }]}
+            >
+              <Text style={modal.declineTxt}>REFUSER</Text>
+            </Pressable>
+            <Pressable
+              disabled={accepting}
+              onPress={() => {
+                setAccepting(true);
+                void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                onAccept();
+              }}
+              style={({ pressed }) => [
+                modal.acceptBtn,
+                { backgroundColor: accent },
+                (pressed || accepting) && { opacity: 0.8 },
+              ]}
+            >
+              <Text style={modal.acceptTxt}>{accepting ? '...' : 'ACCEPTER'}</Text>
+            </Pressable>
+          </View>
+      </View>
+    </View>
+  );
+}
+
 export default function DriverHomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -122,6 +291,8 @@ export default function DriverHomeScreen() {
   const [vehicleCount, setVehicleCount] = useState<number | null>(null);
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
+  const [modalOffer, setModalOffer] = useState<DriverOffer | null>(null);
+  const modalShowingRef = useRef(false);
 
   const loadDriverHome = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);
@@ -202,7 +373,16 @@ export default function DriverHomeScreen() {
     if (previousVisibleOfferIds && flow.canReceiveOffers) {
       const { freshOfferIds: next, expiredOfferIds } =
         resolveDriverReservationChangeSet(previousVisibleOfferIds, nextVisibleOfferIds);
-      if (next.length > 0) setFreshOfferIds(next);
+      if (next.length > 0) {
+        setFreshOfferIds(next);
+        if (!modalShowingRef.current) {
+          const firstFresh = visibleOffers.find((o) => next.includes(o.id));
+          if (firstFresh) {
+            modalShowingRef.current = true;
+            setModalOffer(firstFresh);
+          }
+        }
+      }
       if (expiredOfferIds.length > 0) setRecentlyExpiredCount(expiredOfferIds.length);
     }
     previousVisibleOfferIdsRef.current = nextVisibleOfferIds;
@@ -263,6 +443,17 @@ export default function DriverHomeScreen() {
     } finally {
       setIsTogglingAvailability(false);
     }
+  }
+
+  function handleOfferAccepted() {
+    setModalOffer(null);
+    modalShowingRef.current = false;
+    router.push('/offres');
+  }
+
+  function handleOfferDeclined() {
+    setModalOffer(null);
+    modalShowingRef.current = false;
   }
 
   function handleNavigateToPickup() {
@@ -467,6 +658,15 @@ export default function DriverHomeScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {/* Trip request overlay — Bolt-style countdown */}
+      {modalOffer !== null && flow.canReceiveOffers ? (
+        <TripRequestModal
+          offer={modalOffer}
+          onAccept={handleOfferAccepted}
+          onDecline={handleOfferDeclined}
+        />
+      ) : null}
     </View>
   );
 }
@@ -733,5 +933,214 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 8,
     paddingTop: 4,
+  },
+});
+
+// ── Modal styles ───────────────────────────────────────────────────────────────
+const modal = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(5,14,10,0.82)',
+    justifyContent: 'flex-end',
+    paddingBottom: 24,
+    paddingHorizontal: 12,
+  },
+  card: {
+    backgroundColor: '#0D1F18',
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  progressTrack: {
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  progressFill: {
+    height: 3,
+    borderRadius: 2,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 12,
+  },
+  categoryTag: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  categoryTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  countdownCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 2.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 1,
+  },
+  countdownNum: {
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 26,
+  },
+  countdownUnit: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  riderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 14,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  riderMeta: { flex: 1 },
+  riderName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#F0FFF8',
+    marginBottom: 2,
+  },
+  riderSub: {
+    fontSize: 12,
+    color: '#4E7B69',
+  },
+  routeCard: {
+    marginHorizontal: 18,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    marginBottom: 14,
+  },
+  routeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  routeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 3,
+    flexShrink: 0,
+  },
+  routeLabel: {
+    flex: 1,
+    fontSize: 13,
+    color: '#C9E0D4',
+    lineHeight: 19,
+  },
+  routeStem: {
+    width: 1,
+    height: 10,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    marginLeft: 4.5,
+    marginVertical: 3,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginHorizontal: 18,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 12,
+    marginBottom: 14,
+  },
+  stat: { flex: 1, alignItems: 'center', gap: 4 },
+  statVal: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F0FFF8',
+  },
+  statKey: {
+    fontSize: 10.5,
+    color: '#4E7B69',
+    textAlign: 'center',
+  },
+  statSep: {
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginVertical: 4,
+  },
+  fareBlock: {
+    marginHorizontal: 18,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  fareLabel: {
+    fontSize: 10,
+    color: '#4E7B69',
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  fareAmt: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 18,
+    paddingBottom: 22,
+  },
+  declineBtn: {
+    flex: 1,
+    backgroundColor: 'rgba(255,59,48,0.12)',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,48,0.30)',
+  },
+  declineTxt: {
+    color: '#FF3B30',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  acceptBtn: {
+    flex: 2,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  acceptTxt: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 });

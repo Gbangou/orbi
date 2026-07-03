@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { SidebarNav } from './sidebar-nav';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -13,25 +14,6 @@ export const metadata: Metadata = {
   description: 'Centre d\'opérations Orbi pour le lancement Burkina Faso.',
 };
 
-const NAV_SECTIONS = [
-  { id: 'overview',        label: 'Vue d\'ensemble' },
-  { id: 'live-ops',        label: 'Live Ops'        },
-  { id: 'trips-audit',     label: 'Trajets'         },
-  { id: 'system-health',   label: 'Santé système'   },
-  { id: 'launch-readiness',label: 'Prêt lancement'  },
-  { id: 'feature-flags',   label: 'Feature Flags'   },
-  { id: 'dispatch',        label: 'Dispatch'        },
-  { id: 'pricing',         label: 'Pricing'         },
-  { id: 'payments',        label: 'Paiements'       },
-  { id: 'wallets',         label: 'Portefeuilles'   },
-  { id: 'drivers',         label: 'Chauffeurs'      },
-  { id: 'riders',          label: 'Passagers'       },
-  { id: 'onboarding',      label: 'Onboarding'      },
-  { id: 'support',         label: 'Support'         },
-  { id: 'promo',           label: 'Promos'          },
-  { id: 'roadmap',         label: 'Roadmap'         },
-];
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={inter.variable}>
@@ -42,15 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="sidebar-wordmark">orbi</span>
               <span className="sidebar-badge">ops</span>
             </div>
-            <ul className="sidebar-nav" role="list">
-              {NAV_SECTIONS.map(({ id, label }) => (
-                <li key={id}>
-                  <a href={`#${id}`} className="sidebar-link">
-                    {label}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <SidebarNav />
             <div className="sidebar-footer">
               <span className="sidebar-env-pill">terrain · Burkina Faso</span>
             </div>
