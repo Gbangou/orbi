@@ -24,6 +24,7 @@
     "@orbi/api": "workspace:*",
     "@orbi/config": "workspace:*",
     "@orbi/ui": "workspace:*",
+    "@react-native-voice/voice": "^3.2.4",
     "expo": "^52.0.23",
     "expo-asset": "~11.0.5",
     "expo-constants": "~17.0.8",

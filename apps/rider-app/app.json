@@ -32,6 +32,13 @@
           "enableBackgroundRemoteNotifications": false
         }
       ],
+      [
+        "@react-native-voice/voice",
+        {
+          "microphonePermission": "Orbi Passager utilise le micro pour la recherche vocale de destination.",
+          "speechRecognitionPermission": "Orbi Passager utilise la reconnaissance vocale pour comprendre votre destination."
+        }
+      ],
       "../../plugins/with-expo-core-compat",
       "expo-asset",
       "expo-font"

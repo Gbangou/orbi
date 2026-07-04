@@ -254,6 +254,30 @@ jest.mock(
 );
 
 jest.mock(
+  "@react-native-voice/voice",
+  () => ({
+    __esModule: true,
+    default: {
+      start: jest.fn(async () => undefined),
+      stop: jest.fn(async () => undefined),
+      cancel: jest.fn(async () => undefined),
+      destroy: jest.fn(async () => undefined),
+      removeAllListeners: jest.fn(),
+      isAvailable: jest.fn(async () => 1),
+      isRecognizing: jest.fn(async () => 0),
+      onSpeechStart: undefined,
+      onSpeechEnd: undefined,
+      onSpeechError: undefined,
+      onSpeechResults: undefined,
+      onSpeechPartialResults: undefined,
+      onSpeechRecognized: undefined,
+      onSpeechVolumeChanged: undefined,
+    },
+  }),
+  { virtual: true },
+);
+
+jest.mock(
   "expo-haptics",
   () => ({
     impactAsync: jest.fn(async () => undefined),

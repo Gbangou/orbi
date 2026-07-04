@@ -1,12 +1,13 @@
 /**
  * Voice Screen — Recherche vocale en français
  *
- * Capture l'intention vocale de l'utilisateur, envoie le transcript au NLP
- * backend Orbi et propose des lieux correspondant à Ouagadougou.
+ * Capture l'intention vocale de l'utilisateur via le moteur de reconnaissance
+ * vocale natif du téléphone (gratuit, sur-appareil), envoie le transcript au
+ * NLP backend Orbi et propose des lieux correspondant à Ouagadougou.
  *
  * Flow:
- *   1. Appui bouton → Capture d'intention terrain
- *   2. Release → Transcript simulé jusqu'au branchement STT serveur
+ *   1. Appui bouton → Voice.start() (moteur STT natif Android/iOS)
+ *   2. Release → Voice.stop() → onSpeechResults livre le transcript final
  *   3. Transcript envoyé à POST /voice/location-intent
  *   4. Suggestions retournées → naviguer vers /book avec pré-remplissage
  */
@@ -22,9 +23,15 @@ import {
   Text,
   View,
 } from 'react-native';
+import Voice, {
+  type SpeechErrorEvent,
+  type SpeechResultsEvent,
+} from '@react-native-voice/voice';
 import { createOrbiApiClient, resolveVoiceLocationIntentWithApi, type VoiceLocationIntentResponse } from '@orbi/api';
 import { orbiTheme } from '@orbi/ui';
 import { orbiRuntimeConfig, resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
+
+const VOICE_LOCALE = 'fr-FR';
 
 // ── Exemples de phrases ───────────────────────────────────────────────────────
 
@@ -122,41 +129,7 @@ export default function VoiceScreen() {
   const [transcript, setTranscript] = useState('');
   const [result, setResult] = useState<VoiceLocationIntentResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const recordingStartedAtRef = useRef<number | null>(null);
-
-  const startRecording = useCallback(async () => {
-    recordingStartedAtRef.current = Date.now();
-    setIsRecording(true);
-    setTranscript('');
-    setResult(null);
-    setErrorMsg(null);
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  }, []);
-
-  const stopRecording = useCallback(async () => {
-    const startedAt = recordingStartedAtRef.current;
-    if (!startedAt) return;
-
-    recordingStartedAtRef.current = null;
-    setIsRecording(false);
-    setIsAnalyzing(true);
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    try {
-      // En production: envoyer l'audio à un service STT dédié.
-      // Pour le terrain MVP: conserver un parcours stable sans module natif audio.
-      const durationMs = Date.now() - startedAt;
-      const simulatedTranscript = durationMs > 1500
-        ? 'Je vais à Ouaga 2000'
-        : 'Université de Ouaga';
-
-      setTranscript(simulatedTranscript);
-      await analyseTranscript(simulatedTranscript);
-    } catch {
-      setIsAnalyzing(false);
-      setErrorMsg('Analyse vocale indisponible. Utilisez les suggestions ci-dessous.');
-    }
-  }, []);
+  const hasSpokenRef = useRef(false);
 
   const analyseTranscript = useCallback(async (text: string) => {
     if (!text.trim()) return;
@@ -174,6 +147,68 @@ export default function VoiceScreen() {
       setIsAnalyzing(false);
     }
   }, []);
+
+  useEffect(() => {
+    Voice.onSpeechResults = (e: SpeechResultsEvent) => {
+      const bestGuess = e.value?.[0];
+      if (bestGuess) {
+        hasSpokenRef.current = true;
+        setTranscript(bestGuess);
+        void analyseTranscript(bestGuess);
+      }
+    };
+
+    Voice.onSpeechError = (e: SpeechErrorEvent) => {
+      setIsRecording(false);
+      setIsAnalyzing(false);
+      setErrorMsg(
+        e.error?.message
+          ?? 'Reconnaissance vocale indisponible. Utilisez les suggestions ci-dessous.',
+      );
+    };
+
+    Voice.onSpeechEnd = () => {
+      setIsRecording(false);
+      if (!hasSpokenRef.current) {
+        setErrorMsg('Aucune parole détectée. Réessayez ou utilisez les suggestions.');
+      }
+    };
+
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners).catch(() => undefined);
+    };
+  }, [analyseTranscript]);
+
+  const startRecording = useCallback(async () => {
+    hasSpokenRef.current = false;
+    setTranscript('');
+    setResult(null);
+    setErrorMsg(null);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      await Voice.start(VOICE_LOCALE);
+      setIsRecording(true);
+    } catch {
+      setIsRecording(false);
+      setErrorMsg('Micro indisponible. Utilisez les suggestions ci-dessous.');
+    }
+  }, []);
+
+  const stopRecording = useCallback(async () => {
+    if (!isRecording) return;
+
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsAnalyzing(true);
+
+    try {
+      await Voice.stop();
+    } catch {
+      setIsRecording(false);
+      setIsAnalyzing(false);
+      setErrorMsg('Analyse vocale indisponible. Utilisez les suggestions ci-dessous.');
+    }
+  }, [isRecording]);
 
   function handleSelectSuggestion(s: VoiceLocationIntentResponse['suggestions'][number]) {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
