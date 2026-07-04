@@ -33,6 +33,7 @@ function createService() {
     {} as never,
     {} as never,
     notifications as never,
+    { getOrSet: (_k: string, factory: () => unknown) => factory() } as never,
   );
 
   const auth = {

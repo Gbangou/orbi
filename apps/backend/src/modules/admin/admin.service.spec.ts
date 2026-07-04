@@ -370,6 +370,11 @@ describe('AdminService', () => {
         paymentsService as never,
         jobQueueService as never,
         { enqueue: jest.fn() } as never,
+        {
+          getOrSet: jest.fn((_key: string, factory: () => unknown) => factory()),
+          invalidate: jest.fn(),
+          invalidatePattern: jest.fn(),
+        } as never,
       ),
     };
   }

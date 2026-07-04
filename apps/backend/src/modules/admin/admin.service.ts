@@ -22,6 +22,7 @@ import {
   resolvePageQuery,
 } from '../../common/dto/page-query.dto';
 import { RealtimeService } from '../../core/realtime/realtime.service';
+import { RedisCacheService } from '../../core/cache/redis-cache.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { DocumentLinksService } from '../../common/document-links/document-links.service';
@@ -1987,6 +1988,7 @@ export class AdminService {
     private readonly paymentsService: PaymentsService,
     private readonly jobQueueService: JobQueueService,
     private readonly notificationsService: NotificationsService,
+    private readonly cache: RedisCacheService,
   ) {}
 
   async previewOverview() {
@@ -2275,6 +2277,12 @@ export class AdminService {
   }
 
   async overview() {
+    // Tableau de bord ops interrogé toutes les 60s : une légère latence de
+    // fraîcheur (30s) est négligeable face au gain de charge DB.
+    return this.cache.getOrSet('admin:overview', () => this.fetchOverview(), 30);
+  }
+
+  private async fetchOverview() {
     const [users, riders, drivers, vehicles, openRequests, activeTrips] =
       await Promise.all([
         this.prisma.user.count(),
@@ -2304,6 +2312,12 @@ export class AdminService {
   }
 
   async liveOps() {
+    // Interrogé toutes les 30s + à chaque événement SSE (rafales possibles) :
+    // un TTL court absorbe les rafales sans nuire à la fraîcheur perçue.
+    return this.cache.getOrSet('admin:live-ops', () => this.fetchLiveOps(), 5);
+  }
+
+  private async fetchLiveOps() {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const cancellationLookbackMs = 2 * 60 * 60 * 1000;
     const recentCancellationSince = new Date(

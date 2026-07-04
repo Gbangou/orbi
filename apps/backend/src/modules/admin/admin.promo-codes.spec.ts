@@ -43,6 +43,7 @@ function createService() {
     {} as never,
     {} as never,
     { enqueue: jest.fn() } as never,
+    { getOrSet: (_k: string, factory: () => unknown) => factory() } as never,
   );
 
   const auth = {
