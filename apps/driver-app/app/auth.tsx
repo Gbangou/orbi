@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { extractApiErrorMessage } from '@orbi/api';
 import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
 import { orbiTheme } from '@orbi/ui';
@@ -131,33 +132,40 @@ export default function DriverAuthScreen() {
         {/* Form */}
         <View style={styles.form}>
           {mode === 'sign-up' && (
+            <View style={styles.inputRow}>
+              <Ionicons name="person-outline" size={18} color={orbiTheme.colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                value={fullName}
+                onChangeText={setFullName}
+                placeholder="Nom complet"
+                placeholderTextColor={orbiTheme.colors.muted}
+                style={styles.input}
+              />
+            </View>
+          )}
+
+          <View style={styles.inputRow}>
+            <Ionicons name="mail-outline" size={18} color={orbiTheme.colors.textMuted} style={styles.inputIcon} />
             <TextInput
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="Nom complet"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="Adresse email"
               placeholderTextColor={orbiTheme.colors.muted}
               style={styles.input}
             />
-          )}
+          </View>
 
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="Adresse email"
-            placeholderTextColor={orbiTheme.colors.muted}
-            style={styles.input}
-          />
-
-          <View style={styles.passwordRow}>
+          <View style={styles.inputRow}>
+            <Ionicons name="lock-closed-outline" size={18} color={orbiTheme.colors.textMuted} style={styles.inputIcon} />
             <TextInput
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
               placeholder="Mot de passe"
               placeholderTextColor={orbiTheme.colors.muted}
-              style={styles.passwordInput}
+              style={styles.input}
             />
             <Pressable
               onPress={() => setShowPassword((v) => !v)}
@@ -165,7 +173,11 @@ export default function DriverAuthScreen() {
               style={styles.eyeBtn}
               accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
             >
-              <Text style={styles.eyeText}>{showPassword ? '◉' : '○'}</Text>
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={19}
+                color={orbiTheme.colors.textMuted}
+              />
             </Pressable>
           </View>
 
@@ -176,15 +188,26 @@ export default function DriverAuthScreen() {
           )}
 
           {Boolean(errorMessage) && (
-            <Text style={styles.errorText}>{errorMessage}</Text>
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle-outline" size={16} color={orbiTheme.colors.danger} />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
           )}
 
           <Pressable
             disabled={isSubmitting || !canSubmit}
             onPress={() => void handleSubmit()}
-            style={[styles.primaryButton, (isSubmitting || !canSubmit) && styles.buttonDisabled]}
+            style={[
+              styles.primaryButton,
+              (isSubmitting || !canSubmit) && styles.primaryButtonDisabled,
+            ]}
           >
-            <Text style={styles.primaryButtonLabel}>
+            <Text
+              style={[
+                styles.primaryButtonLabel,
+                (isSubmitting || !canSubmit) && styles.primaryButtonLabelDisabled,
+              ]}
+            >
               {isSubmitting
                 ? '...'
                 : mode === 'sign-in'
@@ -197,9 +220,14 @@ export default function DriverAuthScreen() {
             <Pressable
               onPress={() => void handleDemoSignIn()}
               disabled={isSubmitting}
-              style={[styles.ghostButton, isSubmitting && styles.buttonDisabled]}
+              style={({ pressed }) => [
+                styles.ghostButton,
+                isSubmitting && styles.buttonDisabled,
+                pressed && styles.ghostButtonPressed,
+              ]}
             >
-              <Text style={styles.ghostButtonLabel}>Acces terrain securise</Text>
+              <Ionicons name="shield-checkmark-outline" size={16} color={orbiTheme.colors.textSoft} />
+              <Text style={styles.ghostButtonLabel}>Accès terrain sécurisé</Text>
             </Pressable>
           )}
         </View>
@@ -215,10 +243,10 @@ const styles = StyleSheet.create({
   },
   screen: {
     flexGrow: 1,
-    justifyContent: 'center',
     paddingHorizontal: 28,
-    paddingVertical: 60,
-    gap: 24,
+    paddingTop: 72,
+    paddingBottom: 32,
+    gap: 28,
   },
   logoArea: {
     alignItems: 'center',
@@ -258,47 +286,44 @@ const styles = StyleSheet.create({
   form: {
     gap: 12,
   },
-  input: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    color: orbiTheme.colors.text,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-  },
-  passwordRow: {
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
     backgroundColor: orbiTheme.colors.backgroundAlt,
-    overflow: 'hidden',
+    paddingHorizontal: 16,
   },
-  passwordInput: {
+  inputIcon: {
+    flexShrink: 0,
+  },
+  input: {
     flex: 1,
     color: orbiTheme.colors.text,
-    paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
   },
   eyeBtn: {
-    paddingHorizontal: 14,
     paddingVertical: 14,
+    paddingLeft: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  eyeText: {
-    fontSize: 16,
-    color: orbiTheme.colors.muted,
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(229,72,77,0.08)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   errorText: {
-    color: '#f87171',
+    flex: 1,
+    color: orbiTheme.colors.danger,
     fontSize: 13,
-    textAlign: 'center',
-    paddingHorizontal: 4,
   },
   primaryButton: {
     marginTop: 4,
@@ -306,20 +331,38 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
+    ...orbiTheme.shadows.button,
+  },
+  primaryButtonDisabled: {
+    backgroundColor: orbiTheme.colors.surfaceStrong,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   primaryButtonLabel: {
     color: '#3b2205',
     fontWeight: '800',
     fontSize: 16,
   },
+  primaryButtonLabelDisabled: {
+    color: orbiTheme.colors.textMuted,
+  },
   ghostButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
     paddingVertical: 12,
   },
+  ghostButtonPressed: {
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+  },
   ghostButtonLabel: {
-    color: orbiTheme.colors.muted,
+    color: orbiTheme.colors.textSoft,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   passwordHint: {
     color: orbiTheme.colors.muted,

@@ -433,7 +433,7 @@ describe('driver smoke flows', () => {
     mockedSignInDriverAccount.mockResolvedValue(buildDriverSession() as never);
 
     const renderer = await renderScreen(<DriverAuthScreen />);
-    await pressByText(renderer, 'Acces terrain securise');
+    await pressByText(renderer, 'Accès terrain sécurisé');
 
     expect(mockedSignInDriverAccount).toHaveBeenCalledWith({
       email: 'driver@orbi.app',

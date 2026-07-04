@@ -254,6 +254,22 @@ jest.mock(
 );
 
 jest.mock(
+  "@expo/vector-icons",
+  () => {
+    const iconStub = (props: Record<string, unknown>) =>
+      React.createElement("Icon", props);
+
+    return new Proxy(
+      {},
+      {
+        get: () => iconStub,
+      },
+    );
+  },
+  { virtual: true },
+);
+
+jest.mock(
   "@react-native-voice/voice",
   () => ({
     __esModule: true,
