@@ -9,3 +9,4 @@ crons = ["*/10 * * * *"]
 
 [vars]
 BACKEND_HEALTH_URL = "https://orbi-field-api.onrender.com/api/v1/health/ready"
+OSRM_HEALTH_URL = "https://orbi-osrm-routing.onrender.com/route/v1/driving/-1.5197,12.3686;-1.5,12.35"

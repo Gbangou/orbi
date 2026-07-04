@@ -12,6 +12,8 @@
 
 const DEFAULT_BACKEND_HEALTH_URL =
   "https://orbi-field-api.onrender.com/api/v1/health/ready";
+const DEFAULT_OSRM_HEALTH_URL =
+  "https://orbi-osrm-routing.onrender.com/route/v1/driving/-1.5197,12.3686;-1.5,12.35";
 
 function jsonResponse(body, init = {}) {
   return new Response(JSON.stringify(body), {
@@ -56,24 +58,31 @@ export default {
 
   /**
    * Cron déclenché toutes les 10 minutes pour garder Render éveillé.
-   * Cloudflare Cron → GET /api/v1/health/ready sur le backend.
+   * Cloudflare Cron → GET sur le backend et le service de routing OSRM.
    */
   async scheduled(event, env, ctx) {
-    const backendHealthUrl = env.BACKEND_HEALTH_URL ?? DEFAULT_BACKEND_HEALTH_URL;
+    const targets = [
+      ["backend", env.BACKEND_HEALTH_URL ?? DEFAULT_BACKEND_HEALTH_URL],
+      ["osrm", env.OSRM_HEALTH_URL ?? DEFAULT_OSRM_HEALTH_URL],
+    ];
 
-    try {
-      const response = await fetch(backendHealthUrl, {
-        method: "GET",
-        headers: { "User-Agent": "OrbiKeepAlive/1.0" },
-        // Timeout de 10 secondes — si Render met plus longtemps à démarrer,
-        // le prochain ping (10 min plus tard) lui donnera plus de temps.
-        signal: AbortSignal.timeout(10_000),
-      });
-      console.log(
-        `[keep-alive] Backend ping: ${response.status} ${response.statusText}`
-      );
-    } catch (err) {
-      console.error("[keep-alive] Ping failed:", err.message);
-    }
+    await Promise.all(
+      targets.map(async ([label, url]) => {
+        try {
+          const response = await fetch(url, {
+            method: "GET",
+            headers: { "User-Agent": "OrbiKeepAlive/1.0" },
+            // Timeout de 10 secondes — si Render met plus longtemps à démarrer,
+            // le prochain ping (10 min plus tard) lui donnera plus de temps.
+            signal: AbortSignal.timeout(10_000),
+          });
+          console.log(
+            `[keep-alive] ${label} ping: ${response.status} ${response.statusText}`
+          );
+        } catch (err) {
+          console.error(`[keep-alive] ${label} ping failed:`, err.message);
+        }
+      })
+    );
   },
 };

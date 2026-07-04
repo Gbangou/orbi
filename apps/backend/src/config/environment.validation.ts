@@ -67,6 +67,7 @@ type EnvironmentVariables = {
   DOCUMENT_OBJECT_PROVIDER?: string;
   DOCUMENT_LOCAL_PROVIDER_ROOT?: string;
   DOCUMENT_LINK_TTL_SECONDS?: string;
+  OSRM_BASE_URL?: string;
 };
 
 export function validateEnvironment(config: EnvironmentVariables) {
@@ -182,6 +183,7 @@ export function validateEnvironment(config: EnvironmentVariables) {
     DOCUMENT_LOCAL_PROVIDER_ROOT:
       config.DOCUMENT_LOCAL_PROVIDER_ROOT ?? '.orbi-document-store',
     DOCUMENT_LINK_TTL_SECONDS: config.DOCUMENT_LINK_TTL_SECONDS ?? '900',
+    OSRM_BASE_URL: config.OSRM_BASE_URL ?? '',
   };
 }
 

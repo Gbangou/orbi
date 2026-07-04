@@ -1,5 +1,15 @@
 services:
   - type: web
+    name: orbi-osrm-routing
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./deploy/free-tier/osrm/Dockerfile
+    dockerContext: .
+    healthCheckPath: /route/v1/driving/-1.5197,12.3686;-1.5,12.35
+    autoDeploy: true
+
+  - type: web
     name: orbi-field-api
     runtime: node
     plan: free
@@ -35,6 +45,12 @@ services:
       #   postgresql://neondb_owner:[password]@[host]/neondb?sslmode=require
       - key: DATABASE_URL
         sync: false
+
+      # URL du service orbi-osrm-routing défini plus haut dans ce fichier —
+      # si absent/injoignable, RoutingService bascule automatiquement sur
+      # l'estimation Haversine (dégradation silencieuse, pas de panne).
+      - key: OSRM_BASE_URL
+        value: https://orbi-osrm-routing.onrender.com
 
       - key: RATE_LIMIT_ADAPTER
         value: postgres

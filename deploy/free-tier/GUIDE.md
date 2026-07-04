@@ -126,6 +126,29 @@ les paiements fonctionnent quand même en mode **espèces** (option par défaut)
 
 **→ Guide complet avec chaque clic : [PAWAPAY_SETUP.md](PAWAPAY_SETUP.md)**
 
+### 2.6 Activer le routing réel (OSRM)
+
+Sans cette étape, les ETA/distances utilisent une estimation à vol d'oiseau
+(fonctionne, mais moins précis qu'un vrai calcul d'itinéraire routier).
+
+`render.yaml` définit un second service, `orbi-osrm-routing` — un moteur de routing
+OSRM open-source avec les données routières du Burkina Faso (extrait Geofabrik),
+gratuit et sans clé API.
+
+1. Dans le dashboard Render → le Blueprint existant (celui d'`orbi-field-api`) →
+   **Manual Sync** (ou re-appliquer le Blueprint) : Render détecte le nouveau service
+   `orbi-osrm-routing` dans `render.yaml` et propose de le créer.
+2. Cliquer **Apply** — premier build plus long que d'habitude (~10-20 min) : il télécharge
+   la carte OSM du Burkina Faso et prépare le graphe de routage au moment du build.
+3. Une fois déployé, vérifier que `OSRM_BASE_URL` (déjà dans `render.yaml`) pointe bien
+   vers `https://orbi-osrm-routing.onrender.com` — ajuster si Render a assigné un nom différent.
+4. Tester : `curl https://orbi-osrm-routing.onrender.com/route/v1/driving/-1.5197,12.3686;-1.5,12.35`
+   doit répondre `"code":"Ok"`.
+
+**Dégradation automatique :** si ce service est indisponible ou pas encore déployé,
+`RoutingService` bascule silencieusement sur l'estimation à vol d'oiseau — aucune panne,
+juste moins de précision. Rien d'urgent si cette étape est sautée pour un premier test terrain.
+
 ### 2.4 Premier déploiement
 
 1. Render commence le build automatiquement — compter **8–15 minutes** pour le premier build
