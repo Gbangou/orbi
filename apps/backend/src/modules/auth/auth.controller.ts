@@ -20,6 +20,8 @@ import { CurrentAuth } from './current-auth.decorator';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignOutDto } from './dto/sign-out.dto';
 import { SignUpDto } from './dto/sign-up.dto';
+import { SendPhoneOtpDto } from './dto/send-phone-otp.dto';
+import { VerifyPhoneOtpDto } from './dto/verify-phone-otp.dto';
 import { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
 import { SessionAuthGuard } from './session-auth.guard';
 import type { RequestAuthContext } from './auth.types';
@@ -45,6 +47,25 @@ export class AuthController {
   @RateLimit({ limit: 8, windowMs: 60_000 })
   signIn(@Body() payload: SignInDto, @Req() request: Request) {
     return this.authService.signIn(
+      payload,
+      extractAuthRequestMetadata(request),
+    );
+  }
+
+  @Post('send-phone-otp')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 3, windowMs: 60_000 })
+  sendPhoneOtp(@Body() payload: SendPhoneOtpDto) {
+    return this.authService.sendPhoneOtp(payload);
+  }
+
+  @Post('verify-phone-otp')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 8, windowMs: 60_000 })
+  verifyPhoneOtp(@Body() payload: VerifyPhoneOtpDto, @Req() request: Request) {
+    return this.authService.verifyPhoneOtp(
       payload,
       extractAuthRequestMetadata(request),
     );

@@ -1,6 +1,10 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
-import { hashPassword } from './auth-crypto';
+import { hashPassword, hashOtpCode } from './auth-crypto';
 import { SignUpRole } from './dto/sign-up.dto';
 import { AuthService } from './auth.service';
 
@@ -49,6 +53,11 @@ describe('AuthService', () => {
         findFirst: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn(),
+      },
+      phoneOtp: {
+        create: jest.fn().mockResolvedValue(undefined),
+        findFirst: jest.fn(),
+        update: jest.fn().mockResolvedValue(undefined),
       },
       auditLog: {
         create: jest.fn().mockResolvedValue(undefined),
@@ -471,5 +480,173 @@ describe('AuthService', () => {
         data: expect.objectContaining({ revokedAt: expect.any(Date) }),
       }),
     );
+  });
+
+  // ── Phone OTP ────────────────────────────────────────────────────────────────
+
+  describe('sendPhoneOtp', () => {
+    it('stores a hashed OTP with an expiry and never persists the raw code', async () => {
+      const { prisma, service } = createService();
+
+      await service.sendPhoneOtp({
+        phoneNumber: '+22670000000',
+        role: SignUpRole.RIDER,
+      });
+
+      expect(prisma.phoneOtp.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            phoneNumber: '+22670000000',
+            role: UserRole.RIDER,
+            codeHash: expect.any(String),
+            expiresAt: expect.any(Date),
+          }),
+        }),
+      );
+      const { codeHash } = prisma.phoneOtp.create.mock.calls[0][0].data;
+      expect(codeHash).not.toMatch(/^\d{6}$/);
+    });
+  });
+
+  describe('verifyPhoneOtp', () => {
+    function stubOtp(code: string, overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'otp-1',
+        phoneNumber: '+22670000000',
+        role: UserRole.RIDER,
+        codeHash: hashOtpCode(code),
+        attempts: 0,
+        expiresAt: new Date(Date.now() + 60_000),
+        consumedAt: null,
+        createdAt: new Date(),
+        ...overrides,
+      };
+    }
+
+    it('rejects when no active OTP exists for the phone number', async () => {
+      const { prisma, service } = createService();
+      prisma.phoneOtp.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.verifyPhoneOtp({
+          phoneNumber: '+22670000000',
+          code: '123456',
+          role: SignUpRole.RIDER,
+        }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('increments attempts and rejects on a wrong code', async () => {
+      const { prisma, service } = createService();
+      prisma.phoneOtp.findFirst.mockResolvedValue(stubOtp('111111'));
+
+      await expect(
+        service.verifyPhoneOtp({
+          phoneNumber: '+22670000000',
+          code: '999999',
+          role: SignUpRole.RIDER,
+        }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(prisma.phoneOtp.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'otp-1' },
+          data: { attempts: { increment: 1 } },
+        }),
+      );
+    });
+
+    it('rejects once max verify attempts have been reached', async () => {
+      const { prisma, service } = createService();
+      prisma.phoneOtp.findFirst.mockResolvedValue(
+        stubOtp('111111', { attempts: 5 }),
+      );
+
+      await expect(
+        service.verifyPhoneOtp({
+          phoneNumber: '+22670000000',
+          code: '111111',
+          role: SignUpRole.RIDER,
+        }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('requires fullName to create a new account on first verification', async () => {
+      const { prisma, service } = createService();
+      prisma.phoneOtp.findFirst.mockResolvedValue(stubOtp('111111'));
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.verifyPhoneOtp({
+          phoneNumber: '+22670000000',
+          code: '111111',
+          role: SignUpRole.RIDER,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('creates a new account with a placeholder email on first verification', async () => {
+      const { prisma, service } = createService();
+      prisma.phoneOtp.findFirst.mockResolvedValue(stubOtp('111111'));
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockImplementation(
+        ({ data }: { data: Record<string, unknown> }) => ({
+          id: 'user-new',
+          email: data.email,
+          fullName: data.fullName,
+          phoneNumber: data.phoneNumber,
+          role: data.role,
+          provider: 'PHONE',
+          isActive: true,
+          isPhoneVerified: true,
+          failedLoginCount: 0,
+          lockedUntil: null,
+          lastLoginAt: new Date(),
+          createdAt: new Date(),
+          riderProfile: { id: 'rider-2' },
+          driverProfile: null,
+          sessions: [SESSION_STUB],
+        }),
+      );
+
+      const result = await service.verifyPhoneOtp({
+        phoneNumber: '+22670000000',
+        code: '111111',
+        role: SignUpRole.RIDER,
+        fullName: 'Fatou Rider',
+      });
+
+      expect(result.user.phoneNumber).toBe('+22670000000');
+      expect(result.user.email).toContain('phone-22670000000@');
+      expect(result.sessionToken).toBeTruthy();
+      expect(prisma.phoneOtp.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'otp-1' },
+          data: { consumedAt: expect.any(Date) },
+        }),
+      );
+    });
+
+    it('signs in an existing verified phone user without requiring fullName', async () => {
+      const { prisma, service } = createService();
+      prisma.phoneOtp.findFirst.mockResolvedValue(stubOtp('111111'));
+      prisma.user.findUnique.mockResolvedValue(
+        makeUser({ role: UserRole.RIDER, phoneNumber: '+22670000000' }),
+      );
+      prisma.$transaction.mockResolvedValue([
+        { ...SESSION_STUB, id: 'session-otp' },
+        undefined,
+      ]);
+
+      const result = await service.verifyPhoneOtp({
+        phoneNumber: '+22670000000',
+        code: '111111',
+        role: SignUpRole.RIDER,
+      });
+
+      expect(result.user.isPhoneVerified).toBe(true);
+      expect(result.sessionToken).toBeTruthy();
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
   });
 });

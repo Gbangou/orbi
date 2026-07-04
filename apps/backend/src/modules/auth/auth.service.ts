@@ -2,22 +2,33 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { NotificationChannel, ServiceTier, TripStatus, UserRole, VehicleType, VerificationStatus } from '@prisma/client';
+import { AuthProvider, NotificationChannel, ServiceTier, TripStatus, UserRole, VehicleType, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { DEFAULT_WALLET_CURRENCY, SESSION_TTL_IN_DAYS } from './auth.constants';
+import {
+  DEFAULT_WALLET_CURRENCY,
+  PHONE_OTP_MAX_VERIFY_ATTEMPTS,
+  PHONE_OTP_TTL_IN_MINUTES,
+  SESSION_TTL_IN_DAYS,
+} from './auth.constants';
 import {
   hashPassword,
   verifyPassword,
   generateSessionToken,
   hashSessionToken,
+  generateOtpCode,
+  hashOtpCode,
+  verifyOtpCode,
 } from './auth-crypto';
 import type { AuthRequestMetadata } from './auth.metadata';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignOutDto } from './dto/sign-out.dto';
 import { SignUpDto } from './dto/sign-up.dto';
+import type { SendPhoneOtpDto } from './dto/send-phone-otp.dto';
+import type { VerifyPhoneOtpDto } from './dto/verify-phone-otp.dto';
 import type { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
 import { serializeAuthenticatedUser, serializeSession } from './auth.presenter';
 import type { RequestAuthContext } from './auth.types';
@@ -40,6 +51,8 @@ function computeLockoutDuration(failedCount: number): number {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -185,6 +198,162 @@ export class AuthService {
       user: serializeAuthenticatedUser({ ...user, lastLoginAt: now }),
       session: serializeSession(session, true),
       isNewDevice,
+    };
+  }
+
+  async sendPhoneOtp(payload: SendPhoneOtpDto) {
+    const phoneNumber = this.normalizePhoneNumber(payload.phoneNumber);
+    const code = generateOtpCode();
+
+    await this.prisma.phoneOtp.create({
+      data: {
+        phoneNumber,
+        role: payload.role as UserRole,
+        codeHash: hashOtpCode(code),
+        expiresAt: new Date(Date.now() + PHONE_OTP_TTL_IN_MINUTES * 60_000),
+      },
+    });
+
+    await this.deliverOtpSms(phoneNumber, code);
+
+    return {
+      message: 'A verification code has been sent by SMS.',
+      expiresInMinutes: PHONE_OTP_TTL_IN_MINUTES,
+    };
+  }
+
+  async verifyPhoneOtp(
+    payload: VerifyPhoneOtpDto,
+    metadata: AuthRequestMetadata = {},
+  ) {
+    const phoneNumber = this.normalizePhoneNumber(payload.phoneNumber);
+    const role = payload.role as UserRole;
+
+    const otp = await this.prisma.phoneOtp.findFirst({
+      where: {
+        phoneNumber,
+        role,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Même message que le code soit absent, expiré, ou épuisé (anti-énumération).
+    if (!otp || otp.attempts >= PHONE_OTP_MAX_VERIFY_ATTEMPTS) {
+      throw new UnauthorizedException('Invalid or expired code.');
+    }
+
+    if (!verifyOtpCode(payload.code, otp.codeHash)) {
+      await this.prisma.phoneOtp.update({
+        where: { id: otp.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new UnauthorizedException('Invalid or expired code.');
+    }
+
+    await this.prisma.phoneOtp.update({
+      where: { id: otp.id },
+      data: { consumedAt: new Date() },
+    });
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { phoneNumber },
+      include: { riderProfile: true, driverProfile: true },
+    });
+
+    const sessionSeed = this.createSessionSeed(metadata);
+
+    if (!existingUser) {
+      if (!payload.fullName?.trim()) {
+        throw new BadRequestException(
+          'fullName is required to create a new account.',
+        );
+      }
+
+      const user = await this.prisma.user.create({
+        data: {
+          email: this.buildPhonePlaceholderEmail(phoneNumber),
+          fullName: payload.fullName.trim(),
+          phoneNumber,
+          role,
+          provider: AuthProvider.PHONE,
+          isPhoneVerified: true,
+          lastLoginAt: new Date(),
+          wallets: {
+            create: { currency: DEFAULT_WALLET_CURRENCY },
+          },
+          riderProfile:
+            role === UserRole.RIDER ? { create: {} } : undefined,
+          driverProfile:
+            role === UserRole.DRIVER
+              ? { create: this.buildDriverProfileSeed() }
+              : undefined,
+          sessions: {
+            create: {
+              tokenHash: sessionSeed.tokenHash,
+              expiresAt: sessionSeed.expiresAt,
+              userAgent: sessionSeed.userAgent,
+              ipAddress: sessionSeed.ipAddress,
+            },
+          },
+        },
+        include: {
+          riderProfile: true,
+          driverProfile: true,
+          sessions: true,
+        },
+      });
+
+      await this.logAuthEvent(user.id, 'SIGN_UP', metadata);
+
+      return {
+        message: 'Account created successfully.',
+        sessionToken: sessionSeed.token,
+        user: serializeAuthenticatedUser(user),
+        session: serializeSession(user.sessions[0], true),
+      };
+    }
+
+    if (!existingUser.isActive) {
+      throw new UnauthorizedException('This account is currently inactive.');
+    }
+
+    const [session] = await this.prisma.$transaction([
+      this.prisma.userSession.create({
+        data: {
+          userId: existingUser.id,
+          tokenHash: sessionSeed.tokenHash,
+          expiresAt: sessionSeed.expiresAt,
+          userAgent: sessionSeed.userAgent,
+          ipAddress: sessionSeed.ipAddress,
+        },
+      }),
+      this.prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          lastLoginAt: new Date(),
+          isPhoneVerified: true,
+          failedLoginCount: 0,
+          lockedUntil: null,
+        },
+      }),
+    ]);
+
+    if (existingUser.role === UserRole.DRIVER) {
+      await this.revokeOtherActiveSessions(existingUser.id, session.id);
+    }
+
+    await this.logAuthEvent(existingUser.id, 'SIGN_IN_SUCCESS', metadata);
+
+    return {
+      message: 'Signed in successfully.',
+      sessionToken: sessionSeed.token,
+      user: serializeAuthenticatedUser({
+        ...existingUser,
+        isPhoneVerified: true,
+      }),
+      session: serializeSession(session, true),
     };
   }
 
@@ -773,6 +942,50 @@ export class AuthService {
 
   private normalizeEmail(email: string) {
     return email.trim().toLowerCase();
+  }
+
+  private normalizePhoneNumber(phoneNumber: string) {
+    return phoneNumber.trim();
+  }
+
+  // Le compte doit avoir un email unique en base même pour une inscription
+  // 100% téléphone : placeholder déterministe, jamais affiché à l'utilisateur.
+  private buildPhonePlaceholderEmail(phoneNumber: string) {
+    return `phone-${phoneNumber.replace(/\D/g, '')}@phone.orbi.internal`;
+  }
+
+  private async deliverOtpSms(phoneNumber: string, code: string) {
+    const apiUrl = process.env.SMS_PROVIDER_API_URL;
+    const apiKey = process.env.SMS_PROVIDER_API_KEY;
+    const message = `Orbi : votre code de vérification est ${code}. Il expire dans ${PHONE_OTP_TTL_IN_MINUTES} minutes.`;
+
+    if (!apiUrl || !apiKey) {
+      // Aucune passerelle SMS configurée (pilote) : le code est journalisé
+      // pour permettre une vérification manuelle en attendant l'intégration.
+      this.logger.warn(
+        `[OTP] No SMS gateway configured — code for ${phoneNumber}: ${code}`,
+      );
+      return;
+    }
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ to: phoneNumber, message }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`sms_gateway_http_error:${response.status}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `[OTP] Failed to deliver SMS to ${phoneNumber}: ${(error as Error).message}`,
+      );
+    }
   }
 
   private createSessionSeed(metadata: AuthRequestMetadata) {

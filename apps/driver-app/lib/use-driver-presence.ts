@@ -7,6 +7,11 @@ import {
 } from '@orbi/api';
 import { restoreDriverSession } from './auth';
 import {
+  setBackgroundActiveTripId,
+  startBackgroundLocationTracking,
+  stopBackgroundLocationTracking,
+} from './background-location-task';
+import {
   buildDriverPresenceSyncedNote,
   buildDriverRoutePositionPayload,
   resolveDriverPresenceTrackingOptions,
@@ -36,6 +41,25 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
   );
   const [latestPosition, setLatestPosition] =
     useState<DriverLivePosition | null>(null);
+
+  // Suivi arrière-plan : actif tant que le chauffeur est en ligne ou en course,
+  // pour que le dispatch reçoive la position même écran verrouillé.
+  useEffect(() => {
+    if (!enabled) {
+      void stopBackgroundLocationTracking();
+      return;
+    }
+
+    void startBackgroundLocationTracking();
+
+    return () => {
+      void stopBackgroundLocationTracking();
+    };
+  }, [enabled]);
+
+  useEffect(() => {
+    void setBackgroundActiveTripId(activeTripId ?? null);
+  }, [activeTripId]);
 
   useEffect(() => {
     if (!enabled) {

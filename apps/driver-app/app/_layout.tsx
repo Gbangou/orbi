@@ -1,4 +1,5 @@
 import '../lib/polyfills';
+import '../lib/background-location-task';
 import {
   Stack,
   usePathname,

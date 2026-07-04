@@ -44,3 +44,26 @@ export function generateSessionToken() {
 export function hashSessionToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
+
+// Code OTP à 6 chiffres généré via un CSPRNG (pas Math.random) pour éviter
+// tout biais prévisible sur un secret à faible entropie.
+export function generateOtpCode() {
+  return (randomBytes(4).readUInt32BE(0) % 1_000_000)
+    .toString()
+    .padStart(6, '0');
+}
+
+export function hashOtpCode(code: string) {
+  return createHash('sha256').update(code).digest('hex');
+}
+
+export function verifyOtpCode(code: string, storedHash: string) {
+  const candidateHash = Buffer.from(hashOtpCode(code));
+  const expectedHash = Buffer.from(storedHash);
+
+  if (candidateHash.length !== expectedHash.length) {
+    return false;
+  }
+
+  return timingSafeEqual(candidateHash, expectedHash);
+}

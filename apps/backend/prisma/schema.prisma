@@ -19,6 +19,7 @@ enum AuthProvider {
   EMAIL
   GOOGLE
   APPLE
+  PHONE
 }
 
 enum DriverStatus {
@@ -233,6 +234,20 @@ model UserSession {
 
   @@index([userId, revokedAt, expiresAt])
   @@map("user_sessions")
+}
+
+model PhoneOtp {
+  id          String    @id @default(cuid())
+  phoneNumber String    @map("phone_number")
+  role        UserRole
+  codeHash    String    @map("code_hash")
+  attempts    Int       @default(0)
+  expiresAt   DateTime  @map("expires_at")
+  consumedAt  DateTime? @map("consumed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([phoneNumber, role, consumedAt, expiresAt])
+  @@map("phone_otps")
 }
 
 model RiderProfile {

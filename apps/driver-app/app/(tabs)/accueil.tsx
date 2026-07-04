@@ -364,6 +364,7 @@ export default function DriverHomeScreen() {
 
   const { latestPosition: driverPosition } = useDriverPresence(
     flow.availabilityStatus === 'ONLINE' || Boolean(activeTrip),
+    activeTrip?.id ?? null,
   );
   useReservationExpiryRefresh(visibleOffers, () => loadDriverHome(true), flow.canReceiveOffers);
 
