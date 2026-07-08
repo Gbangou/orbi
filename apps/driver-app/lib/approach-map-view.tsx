@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
   escapeHtmlText,
+  orbiTheme,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
@@ -147,6 +148,28 @@ export function ApproachMapView({
     }
   }, [driverLat, driverLng]);
 
+  if (Platform.OS === 'web') {
+    const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
+    const hasDriver = Number.isFinite(driverLat) && Number.isFinite(driverLng);
+
+    return (
+      <View style={[styles.container, styles.webFallback, style]}>
+        <View style={styles.darkRoute} />
+        <View style={[styles.point, styles.driverPoint]} />
+        <View style={[styles.point, styles.pickupPoint]} />
+        <View style={styles.statusPanel}>
+          <Text style={styles.eyebrow}>Approche</Text>
+          <Text style={styles.title}>
+            {hasDriver && hasPickup ? 'Itineraire vers le rider' : 'Coordonnees en attente'}
+          </Text>
+          <Text style={styles.meta} numberOfLines={2}>
+            {pickupAddress || 'Prise en charge'} - carte detaillee disponible sur mobile natif.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, style]}>
       <TypedWebView
@@ -190,6 +213,66 @@ const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
     borderRadius: 14,
+  },
+  webFallback: {
+    minHeight: 180,
+    backgroundColor: '#0a0c0e',
+  },
+  darkRoute: {
+    position: 'absolute',
+    left: '24%',
+    right: '24%',
+    top: '46%',
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(129,140,248,0.72)',
+    transform: [{ rotate: '-18deg' }],
+  },
+  point: {
+    position: 'absolute',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+  },
+  driverPoint: {
+    left: '24%',
+    top: '56%',
+    backgroundColor: '#818cf8',
+  },
+  pickupPoint: {
+    right: '24%',
+    top: '34%',
+    backgroundColor: '#22c55e',
+  },
+  statusPanel: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    gap: 3,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+  },
+  eyebrow: {
+    color: '#6366f1',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
+  },
+  title: {
+    color: '#071311',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  meta: {
+    color: orbiTheme.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
   },
   webview: {
     flex: 1,

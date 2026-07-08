@@ -31,3 +31,7 @@ apps/**/.env.local
 
 # APKs generes localement
 dist/
+
+# Local QA/debug scratch (Metro cache dumps, Chrome automation profiles)
+.tmp/
+artifacts/

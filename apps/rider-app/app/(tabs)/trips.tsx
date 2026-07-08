@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { fetchMyTrips, type MyTripsResponse } from '@orbi/api';
 import { formatXof, orbiTheme } from '@orbi/ui';
+import { OrbiButton, OrbiMetricTile, OrbiSurface } from '@orbi/ui/native';
 import { restoreRiderSession } from '../../lib/auth';
 import { resolveRiderAppError } from '../../lib/session-feedback';
 import { OrbiLogo } from '../../lib/orbi-logo';
@@ -49,50 +50,59 @@ function TripCard({ trip, onPress }: { trip: TripItem; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed ? styles.cardPressed : null]}
+      style={({ pressed }) => [pressed ? styles.cardPressed : null]}
     >
-      <View style={styles.cardHeader}>
-        <View style={styles.cardRoute}>
-          <View style={styles.routePin}>
-            <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.teal }]} />
-            <View style={styles.routeVert} />
-            <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.amber }]} />
+      <OrbiSurface style={styles.card} elevated={trip.status === 'COMPLETED'}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardRoute}>
+            <View style={styles.routePin}>
+              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.teal }]} />
+              <View style={styles.routeVert} />
+              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.amber }]} />
+            </View>
+            <View style={styles.routeAddresses}>
+              <Text style={styles.addressText} numberOfLines={1}>
+                {trip.pickupAddress}
+              </Text>
+              <Text style={styles.addressText} numberOfLines={1}>
+                {trip.destinationAddress}
+              </Text>
+            </View>
           </View>
-          <View style={styles.routeAddresses}>
-            <Text style={styles.addressText} numberOfLines={1}>
-              {trip.pickupAddress}
-            </Text>
-            <Text style={styles.addressText} numberOfLines={1}>
-              {trip.destinationAddress}
-            </Text>
-          </View>
+          <StatusBadge status={trip.status} />
         </View>
-        <StatusBadge status={trip.status} />
-      </View>
 
-      <View style={styles.cardMeta}>
-        <Text style={styles.metaText}>{formatDate(trip.completedAt ?? trip.createdAt)}</Text>
-        {trip.vehicleLabel ? (
-          <Text style={styles.metaText}>{trip.vehicleLabel}</Text>
-        ) : null}
-        {trip.counterpartyName ? (
-          <Text style={styles.metaText}>{trip.counterpartyName}</Text>
-        ) : null}
-      </View>
-
-      {trip.amount > 0 ? (
-        <View style={styles.cardFare}>
-          <Text style={styles.fareAmount}>{formatXof(trip.amount)}</Text>
-          <Text style={styles.fareCurrency}>{trip.currency}</Text>
+        <View style={styles.cardMeta}>
+          <Text style={styles.metaText}>{formatDate(trip.completedAt ?? trip.createdAt)}</Text>
+          {trip.vehicleLabel ? (
+            <Text style={styles.metaText}>{trip.vehicleLabel}</Text>
+          ) : null}
+          {trip.counterpartyName ? (
+            <Text style={styles.metaText}>{trip.counterpartyName}</Text>
+          ) : null}
         </View>
-      ) : null}
+
+        <View style={styles.cardFooter}>
+          {trip.amount > 0 ? (
+            <View style={styles.cardFare}>
+              <Text style={styles.fareAmount}>{formatXof(trip.amount)}</Text>
+              <Text style={styles.fareCurrency}>{trip.currency}</Text>
+            </View>
+          ) : (
+            <Text style={styles.metaText}>Montant indisponible</Text>
+          )}
+          <Text style={styles.cardActionHint}>
+            {trip.status === 'COMPLETED' ? 'Voir recu' : 'Voir suivi'}
+          </Text>
+        </View>
+      </OrbiSurface>
     </Pressable>
   );
 }
 
 function RequestCard({ request }: { request: RequestItem }) {
   return (
-    <View style={[styles.card, styles.cardRequest]}>
+    <OrbiSurface tone="sky" style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.cardRoute}>
           <View style={styles.routePin}>
@@ -118,12 +128,15 @@ function RequestCard({ request }: { request: RequestItem }) {
         </Text>
       </View>
       {request.estimatedFare > 0 ? (
-        <View style={styles.cardFare}>
-          <Text style={styles.fareAmount}>{formatXof(request.estimatedFare)}</Text>
-          <Text style={styles.fareCurrency}>estimé</Text>
+        <View style={styles.cardFooter}>
+          <View style={styles.cardFare}>
+            <Text style={styles.fareAmount}>{formatXof(request.estimatedFare)}</Text>
+            <Text style={styles.fareCurrency}>estime</Text>
+          </View>
+          <Text style={styles.cardActionHint}>Suivi actif</Text>
         </View>
       ) : null}
-    </View>
+    </OrbiSurface>
   );
 }
 
@@ -178,30 +191,33 @@ export default function TripsScreen() {
       {/* Stats */}
       {data ? (
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: orbiTheme.colors.teal }]}>
-              {data.stats.completedTrips}
-            </Text>
-            <Text style={styles.statLabel}>Terminees</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: orbiTheme.colors.sky }]}>
-              {data.stats.activeTrips}
-            </Text>
-            <Text style={styles.statLabel}>Actives</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: orbiTheme.colors.amber }]}>
-              {data.stats.cancelledTrips}
-            </Text>
-            <Text style={styles.statLabel}>Annulees</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: orbiTheme.colors.text }]}>
-              {formatXof(data.stats.totalAmount)}
-            </Text>
-            <Text style={styles.statLabel}>Total depense</Text>
-          </View>
+          <OrbiMetricTile
+            label="Terminees"
+            value={String(data.stats.completedTrips)}
+            helper="Courses finalisees"
+            tone="teal"
+            style={styles.statCard}
+          />
+          <OrbiMetricTile
+            label="Actives"
+            value={String(data.stats.activeTrips)}
+            helper="A suivre maintenant"
+            tone="sky"
+            style={styles.statCard}
+          />
+          <OrbiMetricTile
+            label="Annulees"
+            value={String(data.stats.cancelledTrips)}
+            helper="Historique conserve"
+            tone="amber"
+            style={styles.statCard}
+          />
+          <OrbiMetricTile
+            label="Total depense"
+            value={formatXof(data.stats.totalAmount)}
+            helper="Recu disponible"
+            style={styles.statCard}
+          />
         </View>
       ) : null}
 
@@ -236,18 +252,18 @@ export default function TripsScreen() {
       ) : null}
 
       {!hasContent && !isRefreshing ? (
-        <View style={styles.empty}>
+        <OrbiSurface style={styles.empty} elevated>
           <Text style={styles.emptyTitle}>Aucune course pour l instant</Text>
           <Text style={styles.emptyBody}>
             Vos trajets apparaissent ici apres votre premiere reservation.
           </Text>
-          <Pressable
-            style={styles.emptyAction}
+          <OrbiButton
+            label="Reserver maintenant"
             onPress={() => router.push('/book')}
-          >
-            <Text style={styles.emptyActionLabel}>Reserver maintenant</Text>
-          </Pressable>
-        </View>
+            tone="teal"
+            style={styles.emptyAction}
+          />
+        </OrbiSurface>
       ) : null}
     </ScrollView>
   );
@@ -258,7 +274,7 @@ const styles = StyleSheet.create({
     paddingTop: 72,
     paddingHorizontal: 18,
     paddingBottom: 40,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.riderBackground,
     gap: 14,
   },
   title: {
@@ -277,24 +293,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    minWidth: 70,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 10,
-    alignItems: 'center',
-    gap: 2,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  statLabel: {
-    color: orbiTheme.colors.muted,
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
+    minWidth: 150,
   },
   sectionTitle: {
     color: orbiTheme.colors.text,
@@ -303,15 +302,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   card: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
     padding: 14,
     gap: 10,
-  },
-  cardRequest: {
-    borderColor: orbiTheme.colors.sky,
   },
   cardPressed: {
     opacity: 0.75,
@@ -379,6 +371,12 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: 4,
   },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   fareAmount: {
     color: orbiTheme.colors.amber,
     fontSize: 16,
@@ -388,9 +386,16 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.muted,
     fontSize: 11,
   },
+  cardActionHint: {
+    color: orbiTheme.colors.teal,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
   empty: {
     alignItems: 'center',
-    paddingVertical: 48,
+    paddingHorizontal: 20,
+    paddingVertical: 32,
     gap: 10,
   },
   emptyTitle: {
@@ -408,14 +413,6 @@ const styles = StyleSheet.create({
   },
   emptyAction: {
     marginTop: 8,
-    backgroundColor: orbiTheme.colors.teal,
-    borderRadius: 12,
-    paddingHorizontal: 22,
-    paddingVertical: 12,
-  },
-  emptyActionLabel: {
-    color: '#0a0c0e',
-    fontWeight: '800',
-    fontSize: 14,
+    alignSelf: 'stretch',
   },
 });

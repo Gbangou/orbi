@@ -12,12 +12,10 @@ import {
   Text,
   View,
 } from 'react-native';
-import {
-  preventScreenCaptureAsync,
-  allowScreenCaptureAsync,
-} from 'expo-screen-capture';
+import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
 import { fetchTripDetail, reportTripIncidentWithApi, type TripDetailResponse } from '@orbi/api';
 import { formatXof, orbiTheme } from '@orbi/ui';
+import { OrbiButton, OrbiStatusBanner, OrbiSurface } from '@orbi/ui/native';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 
@@ -37,6 +35,35 @@ function formatPaymentMethod(method: string | null | undefined) {
   if (method === 'MOBILE_MONEY') return 'Mobile Money';
   if (method === 'WALLET') return 'Portefeuille Orbi';
   return 'Espèces';
+}
+
+function CloseGlyph() {
+  return (
+    <View style={receiptIcon.closeWrap}>
+      <View style={[receiptIcon.closeLine, receiptIcon.closeLineA]} />
+      <View style={[receiptIcon.closeLine, receiptIcon.closeLineB]} />
+    </View>
+  );
+}
+
+function ShareGlyph() {
+  return (
+    <View style={receiptIcon.shareWrap}>
+      <View style={receiptIcon.shareStem} />
+      <View style={[receiptIcon.shareHead, receiptIcon.shareHeadLeft]} />
+      <View style={[receiptIcon.shareHead, receiptIcon.shareHeadRight]} />
+      <View style={receiptIcon.shareBase} />
+    </View>
+  );
+}
+
+function CheckGlyph() {
+  return (
+    <View style={receiptIcon.checkWrap}>
+      <View style={[receiptIcon.checkLine, receiptIcon.checkLineShort]} />
+      <View style={[receiptIcon.checkLine, receiptIcon.checkLineLong]} />
+    </View>
+  );
 }
 
 // ── Row component ─────────────────────────────────────────────────────────────
@@ -109,8 +136,8 @@ export default function ReceiptScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    void preventScreenCaptureAsync();
-    return () => { void allowScreenCaptureAsync(); };
+    preventSensitiveScreenCapture();
+    return () => { restoreSensitiveScreenCapture(); };
   }, []);
 
   useEffect(() => {
@@ -148,7 +175,7 @@ export default function ReceiptScreen() {
     try {
       await Share.share({
         message: [
-          '🚗 Mon trajet Orbi',
+          'Recu de trajet Orbi',
           `De : ${trip.pickupAddress}`,
           `Vers : ${trip.destinationAddress}`,
           `Montant : ${formatXof(trip.actualFare)}`,
@@ -242,9 +269,11 @@ export default function ReceiptScreen() {
       <SafeAreaView style={styles.errorScreen}>
         <Text style={styles.errorTitle}>Reçu indisponible</Text>
         <Text style={styles.errorMessage}>{errorMessage ?? 'Une erreur est survenue.'}</Text>
-        <Pressable onPress={() => router.replace('/home')} style={styles.primaryBtn}>
-          <Text style={styles.primaryBtnLabel}>Retour à l'accueil</Text>
-        </Pressable>
+        <OrbiButton
+          label="Retour à l'accueil"
+          onPress={() => router.replace('/home')}
+          tone="teal"
+        />
       </SafeAreaView>
     );
   }
@@ -284,14 +313,14 @@ export default function ReceiptScreen() {
           onPress={() => router.replace('/home')}
           style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
         >
-          <Text style={styles.headerBtnText}>✕</Text>
+          <CloseGlyph />
         </Pressable>
         <Text style={styles.headerTitle}>Reçu</Text>
         <Pressable
           onPress={() => void handleShare()}
           style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
         >
-          <Text style={styles.headerBtnText}>↑</Text>
+          <ShareGlyph />
         </Pressable>
       </View>
 
@@ -300,17 +329,23 @@ export default function ReceiptScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Hero — fare + status */}
-        <View style={styles.hero}>
+        <OrbiSurface tone="teal" style={styles.hero} elevated>
           <View style={styles.heroCheck}>
-            <Text style={styles.heroCheckIcon}>✓</Text>
+            <CheckGlyph />
           </View>
           <Text style={styles.heroFare}>{formatXof(trip.actualFare)}</Text>
           <Text style={styles.heroLabel}>Course terminée</Text>
           {completedAt ? <Text style={styles.heroDate}>{completedAt}</Text> : null}
-        </View>
+        </OrbiSurface>
+
+        <OrbiStatusBanner
+          title="Recu securise"
+          message="Capture protegee sur cet ecran. Reference et paiement disponibles pour support."
+          tone="sky"
+        />
 
         {/* Route card */}
-        <View style={styles.card}>
+        <OrbiSurface style={styles.card}>
           <Text style={styles.cardTitle}>Trajet</Text>
           <View style={styles.routeVisual}>
             {/* Left track */}
@@ -336,10 +371,10 @@ export default function ReceiptScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </OrbiSurface>
 
         {/* Fare breakdown */}
-        <View style={styles.card}>
+        <OrbiSurface style={styles.card}>
           <Text style={styles.cardTitle}>Paiement</Text>
           <Row label="Course" value={formatXof(trip.actualFare)} />
           {trip.promoCode ? (
@@ -359,10 +394,10 @@ export default function ReceiptScreen() {
               {trip.id.slice(0, 16).toUpperCase()}
             </Text>
           </View>
-        </View>
+        </OrbiSurface>
 
         {/* Driver */}
-        <View style={styles.card}>
+        <OrbiSurface style={styles.card}>
           <Text style={styles.cardTitle}>Votre chauffeur</Text>
           <View style={styles.driverRow}>
             <View style={styles.driverAvatar}>
@@ -386,11 +421,11 @@ export default function ReceiptScreen() {
               ) : null}
             </View>
           </View>
-        </View>
+        </OrbiSurface>
 
         {/* Timeline */}
         {trip.timeline.length > 0 ? (
-          <View style={styles.card}>
+          <OrbiSurface style={styles.card}>
             <Text style={styles.cardTitle}>Chronologie</Text>
             {trip.timeline.map((event, idx) => (
               <View key={event.id} style={[styles.timelineRow, idx === trip.timeline.length - 1 && { borderBottomWidth: 0 }]}>
@@ -409,19 +444,21 @@ export default function ReceiptScreen() {
                 </View>
               </View>
             ))}
-          </View>
+          </OrbiSurface>
         ) : null}
 
         {/* Actions */}
         <View style={styles.actions}>
-          <Pressable
+          <OrbiButton
+            label="Evaluer ce trajet"
+            helper="Aide a maintenir la qualite chauffeur"
             onPress={handleRate}
-            style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
-          >
-            <Text style={styles.primaryBtnLabel}>Évaluer ce trajet ★</Text>
-          </Pressable>
+            tone="teal"
+          />
 
-          <Pressable
+          <OrbiButton
+            label="Refaire ce trajet"
+            variant="secondary"
             onPress={() =>
               router.replace({
                 pathname: '/book',
@@ -431,33 +468,31 @@ export default function ReceiptScreen() {
                 },
               })
             }
-            style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
-          >
-            <Text style={styles.secondaryBtnLabel}>↺  Refaire ce trajet</Text>
-          </Pressable>
+            tone="sky"
+          />
 
           {trip.driverPhoneNumber ? (
-            <Pressable
+            <OrbiButton
+              label="Rappeler le chauffeur"
+              variant="secondary"
               onPress={() => void Linking.openURL(`tel:${trip.driverPhoneNumber}`)}
-              style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
-            >
-              <Text style={styles.secondaryBtnLabel}>☎  Rappeler le chauffeur</Text>
-            </Pressable>
+              tone="teal"
+            />
           ) : null}
 
-          <Pressable
+          <OrbiButton
+            label="Signaler un probleme"
+            variant="danger"
             onPress={() => void handleReportProblem()}
-            style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
-          >
-            <Text style={styles.ghostBtnLabel}>Signaler un problème</Text>
-          </Pressable>
+            tone="danger"
+          />
 
-          <Pressable
+          <OrbiButton
+            label="Retour à l'accueil"
+            variant="ghost"
             onPress={() => router.replace('/home')}
-            style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
-          >
-            <Text style={styles.ghostBtnLabel}>Retour à l'accueil</Text>
-          </Pressable>
+            tone="teal"
+          />
         </View>
 
         <View style={{ height: 16 }} />
@@ -471,7 +506,7 @@ export default function ReceiptScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.riderBackground,
   },
 
   // Sticky header
@@ -483,7 +518,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.riderBackground,
   },
   headerBtn: {
     width: 36,
@@ -492,11 +527,6 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.backgroundAlt,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: orbiTheme.colors.textSoft,
   },
   headerTitle: {
     fontSize: 16,
@@ -515,7 +545,7 @@ const styles = StyleSheet.create({
   // Loading / error
   centered: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.riderBackground,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
@@ -526,7 +556,7 @@ const styles = StyleSheet.create({
   },
   errorScreen: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.riderBackground,
     paddingHorizontal: 24,
     justifyContent: 'center',
     gap: 12,
@@ -556,11 +586,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-  },
-  heroCheckIcon: {
-    fontSize: 28,
-    color: '#FFFFFF',
-    fontWeight: '800',
   },
   heroFare: {
     fontSize: 44,
@@ -595,7 +620,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
     marginBottom: 8,
   },
 
@@ -634,7 +659,7 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.textMuted,
     fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0,
     marginBottom: 3,
   },
   routeAddrText: {
@@ -695,7 +720,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: orbiTheme.colors.teal,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
 
   // Timeline
@@ -749,7 +774,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
   },
   secondaryBtn: {
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.riderBackground,
     borderRadius: 14,
     paddingVertical: 15,
     alignItems: 'center',
@@ -771,4 +796,88 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   btnPressed: { opacity: 0.75 },
+});
+
+const receiptIcon = StyleSheet.create({
+  closeWrap: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeLine: {
+    position: 'absolute',
+    width: 16,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: orbiTheme.colors.textSoft,
+  },
+  closeLineA: {
+    transform: [{ rotate: '45deg' }],
+  },
+  closeLineB: {
+    transform: [{ rotate: '-45deg' }],
+  },
+  shareWrap: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+  },
+  shareStem: {
+    position: 'absolute',
+    top: 2,
+    width: 2,
+    height: 13,
+    borderRadius: 999,
+    backgroundColor: orbiTheme.colors.textSoft,
+  },
+  shareHead: {
+    position: 'absolute',
+    top: 2,
+    width: 8,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: orbiTheme.colors.textSoft,
+  },
+  shareHeadLeft: {
+    transform: [{ translateX: -3 }, { rotate: '-45deg' }],
+  },
+  shareHeadRight: {
+    transform: [{ translateX: 3 }, { rotate: '45deg' }],
+  },
+  shareBase: {
+    position: 'absolute',
+    left: 3,
+    right: 3,
+    bottom: 1,
+    height: 6,
+    borderLeftWidth: 2,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: orbiTheme.colors.textSoft,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+  },
+  checkWrap: {
+    width: 27,
+    height: 22,
+  },
+  checkLine: {
+    position: 'absolute',
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+  },
+  checkLineShort: {
+    width: 11,
+    left: 2,
+    top: 12,
+    transform: [{ rotate: '45deg' }],
+  },
+  checkLineLong: {
+    width: 22,
+    left: 9,
+    top: 9,
+    transform: [{ rotate: '-45deg' }],
+  },
 });

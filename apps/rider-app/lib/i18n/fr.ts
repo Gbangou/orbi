@@ -75,8 +75,8 @@ export const fr = {
     noServiceSelected: 'Sélectionner un service',
     activeFlow: 'Voir l\'activité en cours',
     now: 'Maintenant',
-    schedule: '⏰ Programmer',
-    voiceSearch: '🎤 Voix',
+    schedule: 'Programmer',
+    voiceSearch: 'Voix',
     bookingConfirmed: 'Course confirmée !',
   },
   activity: {

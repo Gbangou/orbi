@@ -50,7 +50,7 @@ export default function IndexScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.riderBackground,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -67,6 +67,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: orbiTheme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
 });

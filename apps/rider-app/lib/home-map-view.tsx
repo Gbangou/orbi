@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { createOrbiApiClient, fetchNearbyDrivers, type NearbyDriverMarker } from '@orbi/api';
 import { resolveOrbiApiBaseUrlForRuntime, orbiRuntimeConfig } from '@orbi/config';
 import {
+  orbiTheme,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
@@ -175,7 +176,46 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
     }
   }, [riderLat, riderLng]);
 
-  void drivers;
+  if (Platform.OS === 'web') {
+    const hasLocation = Number.isFinite(riderLat) && Number.isFinite(riderLng);
+
+    return (
+      <View style={[styles.container, styles.webFallback, style]}>
+        <View style={styles.mapGrid} />
+        <View style={styles.radar}>
+          <View style={[styles.radarRing, styles.radarRingLarge]} />
+          <View style={[styles.radarRing, styles.radarRingMedium]} />
+          <View style={styles.riderDot} />
+          {drivers.slice(0, 6).map((driver, index) => (
+            <View
+              key={driver.id}
+              style={[
+                styles.driverDot,
+                index % 2 === 0 ? styles.driverDotCar : styles.driverDotMoto,
+                {
+                  left: `${24 + ((index * 17) % 52)}%`,
+                  top: `${24 + ((index * 23) % 48)}%`,
+                },
+              ]}
+            />
+          ))}
+        </View>
+        <View style={styles.fallbackPanel}>
+          <Text style={styles.fallbackEyebrow}>Disponibilite</Text>
+          <Text style={styles.fallbackTitle}>
+            {drivers.length > 0
+              ? `${drivers.length} chauffeur${drivers.length > 1 ? 's' : ''} proche${drivers.length > 1 ? 's' : ''}`
+              : 'Recherche chauffeurs'}
+          </Text>
+          <Text style={styles.fallbackMeta} numberOfLines={2}>
+            {hasLocation
+              ? 'Position rider active. Carte dynamique disponible sur mobile natif.'
+              : 'Ouagadougou charge par defaut pendant la localisation.'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, style]}>
@@ -219,6 +259,90 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
+  },
+  webFallback: {
+    minHeight: 220,
+    backgroundColor: '#f4f7f3',
+    borderRadius: 18,
+  },
+  mapGrid: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#f4f7f3',
+  },
+  radar: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radarRing: {
+    position: 'absolute',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 184, 148, 0.22)',
+    backgroundColor: 'rgba(0, 184, 148, 0.05)',
+  },
+  radarRingLarge: {
+    width: '76%',
+    aspectRatio: 1,
+  },
+  radarRingMedium: {
+    width: '48%',
+    aspectRatio: 1,
+  },
+  riderDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#071311',
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    shadowColor: '#071311',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  driverDot: {
+    position: 'absolute',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  driverDotCar: {
+    backgroundColor: '#f59e0b',
+  },
+  driverDotMoto: {
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  fallbackPanel: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    bottom: 14,
+    gap: 3,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    borderWidth: 1,
+    borderColor: 'rgba(13, 42, 37, 0.08)',
+  },
+  fallbackEyebrow: {
+    color: orbiTheme.colors.teal,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
+  },
+  fallbackTitle: {
+    color: '#071311',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  fallbackMeta: {
+    color: orbiTheme.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
   },
   webview: {
     flex: 1,

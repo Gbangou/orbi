@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, TextInput, View, Text, StyleSheet } from 'react-native';
 import { changeLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage, useTranslation } from '../../lib/i18n';
-import {
-  preventScreenCaptureAsync,
-  allowScreenCaptureAsync,
-} from 'expo-screen-capture';
+import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../../lib/privacy/screen-capture';
 import {
   createSavedPlaceWithApi,
   createSupportTicketWithApi,
@@ -21,7 +18,17 @@ import {
   type SupportTicket,
   type WalletBalanceResponse,
 } from '@orbi/api';
+import {
+  maskEmailForDisplay,
+  maskPhoneForDisplay,
+} from '@orbi/domain';
 import { orbiTheme } from '@orbi/ui';
+import {
+  OrbiButton,
+  OrbiMetricTile,
+  OrbiStatusBanner,
+  OrbiSurface,
+} from '@orbi/ui/native';
 import { router } from 'expo-router';
 import { restoreRiderSession, signOutRiderAccount } from '../../lib/auth';
 import {
@@ -61,6 +68,15 @@ const fallbackProfile: RiderProfileResponse = {
     },
   },
 };
+
+function ForwardGlyph() {
+  return (
+    <View style={accountIcon.forwardWrap}>
+      <View style={[accountIcon.forwardLine, accountIcon.forwardLineTop]} />
+      <View style={[accountIcon.forwardLine, accountIcon.forwardLineBottom]} />
+    </View>
+  );
+}
 
 export default function AccountScreen() {
   const [profile, setProfile] = useState<RiderProfileResponse>(fallbackProfile);
@@ -104,9 +120,9 @@ export default function AccountScreen() {
   const previousFlowStateRef = useRef<string | null>(null);
 
   useEffect(() => {
-    void preventScreenCaptureAsync();
+    preventSensitiveScreenCapture();
     return () => {
-      void allowScreenCaptureAsync();
+      restoreSensitiveScreenCapture();
     };
   }, []);
 
@@ -545,6 +561,8 @@ export default function AccountScreen() {
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? '')
     .join('') || 'OR';
+  const maskedEmail = maskEmailForDisplay(profile.profile.email);
+  const maskedPhone = maskPhoneForDisplay(profile.profile.phoneNumber);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -577,13 +595,13 @@ export default function AccountScreen() {
 
       {/* Status feedback — shown for errors and transitions */}
       {status && !status.includes('Chargement') ? (
-        <Text
-          style={{ fontSize: 12, color: orbiTheme.colors.textMuted, paddingHorizontal: 16, paddingTop: 4 }}
-          numberOfLines={2}
+        <OrbiStatusBanner
+          tone="sky"
+          title="Compte synchronisé"
+          message={status}
+          style={styles.accountStatusBanner}
           accessibilityLabel="account-status"
-        >
-          {status}
-        </Text>
+        />
       ) : null}
 
       <ScrollView
@@ -591,41 +609,42 @@ export default function AccountScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* User card */}
-        <View style={styles.userCard}>
+        <OrbiSurface style={styles.userCard} elevated>
           <View style={styles.avatarCircle}>
             <Text style={styles.avatarInitials}>{initials}</Text>
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>
-              {profile.profile.fullName || 'Chargement…'}
+              {profile.profile.fullName || 'Compte Orbi'}
             </Text>
-            <Text style={styles.userEmail}>{profile.profile.email}</Text>
-            {profile.profile.phoneNumber ? (
-              <Text style={styles.userPhone}>{profile.profile.phoneNumber}</Text>
+            {maskedEmail ? (
+              <Text style={styles.userEmail}>{maskedEmail}</Text>
             ) : null}
+            {maskedPhone ? (
+              <Text style={styles.userPhone}>{maskedPhone}</Text>
+            ) : null}
+            <Text style={styles.privacyHint}>Identité masquée par défaut</Text>
           </View>
-        </View>
+        </OrbiSurface>
 
         {/* Stats row */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {profile.profile.stats.completedTrips}
-            </Text>
-            <Text style={styles.statLabel}>Courses</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {profile.profile.stats.totalRideRequests}
-            </Text>
-            <Text style={styles.statLabel}>Demandes</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {profile.profile.savedPlaces.length}
-            </Text>
-            <Text style={styles.statLabel}>Favoris</Text>
-          </View>
+          <OrbiMetricTile
+            label="Courses"
+            value={String(profile.profile.stats.completedTrips)}
+            style={styles.statCard}
+          />
+          <OrbiMetricTile
+            label="Demandes"
+            value={String(profile.profile.stats.totalRideRequests)}
+            style={styles.statCard}
+          />
+          <OrbiMetricTile
+            label="Favoris"
+            value={String(profile.profile.savedPlaces.length)}
+            tone={profile.profile.savedPlaces.length > 0 ? 'teal' : 'neutral'}
+            style={styles.statCard}
+          />
         </View>
 
         {/* Active flow notice OR quick book CTA */}
@@ -639,19 +658,20 @@ export default function AccountScreen() {
               {flow.primaryStatusLabel}
               {flow.primaryRouteLabel ? ` — ${flow.primaryRouteLabel}` : ''}
             </Text>
-            <Text style={styles.flowArrow}>›</Text>
+            <ForwardGlyph />
           </Pressable>
         ) : (
-          <Pressable
-            style={styles.newTripBtn}
+          <OrbiButton
             onPress={() => router.push('/book')}
-          >
-            <Text style={styles.newTripBtnText}>+ Réserver une course</Text>
-          </Pressable>
+            label="Réserver une course"
+            tone="teal"
+            style={styles.newTripBtn}
+            labelStyle={styles.newTripBtnText}
+          />
         )}
 
         {/* ── Wallet Orbi ── */}
-        <View style={walletStyles.card}>
+        <OrbiSurface tone="teal" style={walletStyles.card}>
           <View style={walletStyles.row}>
             <View>
               <Text style={walletStyles.label}>Wallet Orbi</Text>
@@ -661,17 +681,22 @@ export default function AccountScreen() {
                   : '— XOF'}
               </Text>
             </View>
-            <Pressable
+            <OrbiButton
               onPress={() => { setShowTopUp(true); setTopUpError(''); }}
-              style={({ pressed }) => [walletStyles.rechargeBtn, pressed && walletStyles.rechargeBtnPressed]}
-            >
-              <Text style={walletStyles.rechargeBtnLabel}>+ Recharger</Text>
-            </Pressable>
+              label="Recharger"
+              tone="teal"
+              style={walletStyles.rechargeBtn}
+              labelStyle={walletStyles.rechargeBtnLabel}
+            />
           </View>
           {walletBalance?.isLocked ? (
-            <Text style={walletStyles.lockedText}>⚠ Wallet temporairement verrouillé</Text>
+            <OrbiStatusBanner
+              tone="amber"
+              title="Wallet temporairement verrouillé"
+              message="Certaines opérations peuvent nécessiter une vérification support."
+            />
           ) : null}
-        </View>
+        </OrbiSurface>
 
         {/* ── Top-up modal/sheet ── */}
         {showTopUp ? (
@@ -722,22 +747,23 @@ export default function AccountScreen() {
             ) : null}
 
             <View style={walletStyles.topUpActions}>
-              <Pressable onPress={() => setShowTopUp(false)} style={walletStyles.cancelBtn}>
-                <Text style={walletStyles.cancelBtnLabel}>Annuler</Text>
-              </Pressable>
-              <Pressable
+              <OrbiButton
+                onPress={() => setShowTopUp(false)}
+                label="Annuler"
+                variant="secondary"
+                tone="teal"
+                style={walletStyles.cancelBtn}
+                labelStyle={walletStyles.cancelBtnLabel}
+              />
+              <OrbiButton
                 onPress={() => void handleTopUp()}
                 disabled={isTopUpSubmitting}
-                style={({ pressed }) => [
-                  walletStyles.confirmBtn,
-                  (isTopUpSubmitting) && walletStyles.confirmBtnDisabled,
-                  pressed && walletStyles.confirmBtnPressed,
-                ]}
-              >
-                <Text style={walletStyles.confirmBtnLabel}>
-                  {isTopUpSubmitting ? 'Envoi…' : 'Confirmer'}
-                </Text>
-              </Pressable>
+                loading={isTopUpSubmitting}
+                label="Confirmer"
+                tone="teal"
+                style={walletStyles.confirmBtn}
+                labelStyle={walletStyles.confirmBtnLabel}
+              />
             </View>
           </View>
         ) : null}
@@ -857,7 +883,7 @@ export default function AccountScreen() {
           ]}
         >
           <Text style={styles.geocodeButtonLabel}>
-            {isGeocodingPlace ? 'Localisation...' : placeForm.latitude ? 'Relocalisé ✓' : 'Localiser l\'adresse'}
+            {isGeocodingPlace ? 'Localisation...' : placeForm.latitude ? 'Adresse relocalisée' : 'Localiser l\'adresse'}
           </Text>
         </Pressable>
         {placeForm.latitude ? (
@@ -1030,31 +1056,35 @@ export default function AccountScreen() {
               ))}
             </View>
             <View style={styles.actionsRow}>
-              <Pressable
+              <OrbiButton
                 style={[styles.primaryAction, isSubmittingTicket && { opacity: 0.6 }]}
                 onPress={() => void handleCreateTicket()}
                 disabled={isSubmittingTicket}
-              >
-                <Text style={styles.primaryActionLabel}>
-                  {isSubmittingTicket ? 'Envoi...' : 'Envoyer la demande'}
-                </Text>
-              </Pressable>
-              <Pressable
+                loading={isSubmittingTicket}
+                label="Envoyer la demande"
+                tone="teal"
+                labelStyle={styles.primaryActionLabel}
+              />
+              <OrbiButton
                 style={styles.secondaryAction}
                 onPress={() => setIsTicketFormOpen(false)}
                 disabled={isSubmittingTicket}
-              >
-                <Text style={styles.secondaryActionLabel}>Annuler</Text>
-              </Pressable>
+                label="Annuler"
+                variant="secondary"
+                tone="teal"
+                labelStyle={styles.secondaryActionLabel}
+              />
             </View>
           </>
         ) : (
-          <Pressable
+          <OrbiButton
             style={styles.secondaryAction}
             onPress={() => setIsTicketFormOpen(true)}
-          >
-            <Text style={styles.secondaryActionLabel}>Contacter le support</Text>
-          </Pressable>
+            label="Contacter le support"
+            variant="secondary"
+            tone="teal"
+            labelStyle={styles.secondaryActionLabel}
+          />
         )}
       </View>
 
@@ -1080,7 +1110,7 @@ function LanguageSelector() {
   return (
     <View style={langStyles.card}>
       <View style={langStyles.header}>
-        <Text style={langStyles.title}>🌍 Langue</Text>
+        <Text style={langStyles.title}>Langue</Text>
       </View>
       <View style={langStyles.chips}>
         {SUPPORTED_LANGUAGES.map((lang) => (
@@ -1101,7 +1131,7 @@ function LanguageSelector() {
 
 const langStyles = StyleSheet.create({
   card: {
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.riderBackground,
     borderRadius: 16, borderWidth: 1, borderColor: orbiTheme.colors.border,
     padding: 16, gap: 12, marginHorizontal: 16,
   },
@@ -1119,16 +1149,16 @@ const langStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+  safe: { flex: 1, backgroundColor: orbiTheme.colors.riderBackground },
 
   // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: orbiTheme.colors.border,
   },
@@ -1154,24 +1184,28 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.danger,
   },
 
-  content: { paddingHorizontal: 16, paddingTop: 16, gap: 14 },
+  content: { paddingHorizontal: 16, paddingTop: 12, gap: 12 },
+  accountStatusBanner: {
+    marginHorizontal: 16,
+    marginTop: 8,
+  },
 
   // User card
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 16,
+    borderColor: 'rgba(0,201,167,0.18)',
+    padding: 14,
     ...orbiTheme.shadows.card,
   },
   avatarCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: orbiTheme.colors.text,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1184,7 +1218,7 @@ const styles = StyleSheet.create({
   },
   userInfo: { flex: 1, gap: 2 },
   userName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.text,
@@ -1199,29 +1233,20 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
   },
+  privacyHint: {
+    marginTop: 4,
+    fontSize: 10,
+    color: orbiTheme.colors.teal,
+    fontFamily: 'Inter_600SemiBold',
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
 
   // Stats
-  statsRow: { flexDirection: 'row', gap: 10 },
+  statsRow: { flexDirection: 'row', gap: 8 },
   statCard: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 12,
-    alignItems: 'center',
-    gap: 3,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: orbiTheme.colors.textMuted,
-    fontFamily: 'Inter_400Regular',
   },
 
   // Flow banner
@@ -1237,19 +1262,12 @@ const styles = StyleSheet.create({
   },
   flowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: orbiTheme.colors.teal },
   flowText: { flex: 1, fontSize: 13, fontWeight: '500', fontFamily: 'Inter_500Medium', color: orbiTheme.colors.text },
-  flowArrow: { fontSize: 20, color: orbiTheme.colors.teal },
   newTripBtn: {
-    backgroundColor: orbiTheme.colors.text,
     borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    ...orbiTheme.shadows.button,
+    minHeight: 50,
   },
   newTripBtnText: {
     fontSize: 16,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    color: '#FFFFFF',
   },
 
   // Cards (cardHeader/Title/Meta use the existing card style below)
@@ -1377,6 +1395,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   input: {
+    minWidth: 0,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
@@ -1407,10 +1426,13 @@ const styles = StyleSheet.create({
   },
   coordinateRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   coordinateInput: {
-    flex: 1,
+    flexBasis: 128,
+    flexGrow: 1,
+    minWidth: 0,
   },
   modeRow: {
     flexDirection: 'row',
@@ -1461,7 +1483,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 11,
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    letterSpacing: 0,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -1556,7 +1578,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 11,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
   },
   ticketDescInput: {
     minHeight: 90,
@@ -1574,7 +1596,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
     color: orbiTheme.colors.teal,
     marginBottom: 4,
   },
@@ -1606,7 +1628,7 @@ const walletStyles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.teal,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
     marginBottom: 2,
   },
   balance: {
@@ -1739,5 +1761,29 @@ const walletStyles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
+  },
+});
+
+const accountIcon = StyleSheet.create({
+  forwardWrap: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  forwardLine: {
+    position: 'absolute',
+    width: 10,
+    height: 2.5,
+    borderRadius: 999,
+    backgroundColor: orbiTheme.colors.teal,
+    right: 3,
+  },
+  forwardLineTop: {
+    transform: [{ rotate: '45deg' }, { translateY: -3 }],
+  },
+  forwardLineBottom: {
+    transform: [{ rotate: '-45deg' }, { translateY: 3 }],
   },
 });

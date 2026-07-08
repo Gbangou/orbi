@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -27,7 +26,7 @@ import {
   formatXof,
   orbiTheme,
 } from '@orbi/ui';
-import { OfflineBanner } from '@orbi/ui/src/native';
+import { OfflineBanner, OrbiSurface, safeHaptics } from '@orbi/ui/native';
 import { restoreRiderSession } from '../../lib/auth';
 import { useTranslation } from '../../lib/i18n';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
@@ -45,8 +44,17 @@ import { HomeMapView } from '../../lib/home-map-view';
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
 
 // Bottom sheet heights
-const SHEET_PEEK = 230;
-const SHEET_ACTIVE_TRIP = 200;
+const SHEET_PEEK = 300;
+const SHEET_ACTIVE_TRIP = 222;
+
+function ForwardGlyph({ color }: { color: string }) {
+  return (
+    <View style={homeIcon.forwardWrap}>
+      <View style={[homeIcon.forwardLine, homeIcon.forwardLineTop, { backgroundColor: color }]} />
+      <View style={[homeIcon.forwardLine, homeIcon.forwardLineBottom, { backgroundColor: color }]} />
+    </View>
+  );
+}
 
 // ── Smart ETA label based on trip lifecycle status ────────────────────────────
 
@@ -169,23 +177,33 @@ const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideO
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.serviceRow, pressed && styles.serviceRowPressed]}
+      style={({ pressed }) => [
+        styles.servicePressable,
+        pressed && styles.serviceRowPressed,
+      ]}
     >
-      <View style={[styles.serviceIcon, { backgroundColor: isMoto ? orbiTheme.colors.accentLight : 'rgba(255, 149, 0, 0.10)' }]}>
-        <ServiceVehicleIcon isMoto={isMoto} />
-      </View>
-      <View style={styles.serviceInfo}>
-        <Text style={styles.serviceTitle}>{option.title}</Text>
-        <Text style={styles.serviceMeta}>
-          {`${option.etaMinutes} min · ${option.capacity}`}
-        </Text>
-      </View>
-      <View style={{ alignItems: 'flex-end', gap: 2 }}>
-        <Text style={styles.serviceFare}>{formatXof(option.fare)}</Text>
-        {option.surgeActive ? (
-          <Text style={styles.serviceSurge}>{option.surgeLabel}</Text>
-        ) : null}
-      </View>
+      <OrbiSurface
+        style={[
+          styles.serviceRow,
+          isMoto ? styles.serviceRowPrimary : styles.serviceRowWarm,
+        ]}
+      >
+        <View style={[styles.serviceIcon, { backgroundColor: isMoto ? orbiTheme.colors.accentLight : 'rgba(255, 149, 0, 0.10)' }]}>
+          <ServiceVehicleIcon isMoto={isMoto} />
+        </View>
+        <View style={styles.serviceInfo}>
+          <Text style={styles.serviceTitle}>{option.title}</Text>
+          <Text style={styles.serviceMeta}>
+            {`${option.etaMinutes} min · ${option.capacity}`}
+          </Text>
+        </View>
+        <View style={{ alignItems: 'flex-end', gap: 2 }}>
+          <Text style={styles.serviceFare}>{formatXof(option.fare)}</Text>
+          {option.surgeActive ? (
+            <Text style={styles.serviceSurge}>{option.surgeLabel}</Text>
+          ) : null}
+        </View>
+      </OrbiSurface>
     </Pressable>
   );
 });
@@ -212,14 +230,14 @@ export default function RiderHomeScreen() {
 
   // Stable handler reference — prevents ServiceRow remounts
   const navigateToBook = useCallback(() => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    safeHaptics.impact('light');
     router.push('/book');
   }, [router]);
 
   const navigateToActivity = useCallback(() => router.push('/activity'), [router]);
 
   const handleSos = useCallback((tripId: string) => {
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    safeHaptics.notify('error');
     Alert.alert(
       'Alerte SOS',
       'Déclencher une alerte d\'urgence ? L\'équipe Orbi et les secours locaux seront notifiés.',
@@ -336,7 +354,7 @@ export default function RiderHomeScreen() {
 
     // Uber-style match animation: trigger when driver is first matched
     if (prev !== 'MATCHED' && activeFlowState === 'MATCHED') {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      safeHaptics.notify('success');
       setShowMatchCard(true);
       matchedAnim.setValue(0);
       Animated.spring(matchedAnim, {
@@ -421,7 +439,7 @@ export default function RiderHomeScreen() {
             {options.some(o => o.surgeActive) ? (
               <View style={styles.surgeBadge}>
                 <Text style={styles.surgeBadgeText}>
-                  ⚡ {options.find(o => o.surgeActive)?.surgeLabel}
+                  Forte demande: {options.find(o => o.surgeActive)?.surgeLabel}
                 </Text>
               </View>
             ) : null}
@@ -433,7 +451,7 @@ export default function RiderHomeScreen() {
               <Text style={styles.nearbyText}>
                 {realNearbyCount > 0
                   ? `${realNearbyCount} chauffeur${realNearbyCount > 1 ? 's' : ''} proche${realNearbyCount > 1 ? 's' : ''}`
-                  : 'Aucun chauffeur disponible'}
+                  : 'Recherche'}
               </Text>
             </Pressable>
           </View>
@@ -466,7 +484,7 @@ export default function RiderHomeScreen() {
             </Text>
           </View>
           <View style={styles.matchCardCheck}>
-            <Text style={styles.matchCardCheckText}>✓</Text>
+            <Text style={styles.matchCardCheckText}>OK</Text>
           </View>
         </Animated.View>
       ) : null}
@@ -515,7 +533,7 @@ export default function RiderHomeScreen() {
               </View>
             </View>
             <View style={styles.tripCardArrow}>
-              <Text style={styles.tripCardArrowText}>›</Text>
+              <ForwardGlyph color="#FFFFFF" />
             </View>
           </Pressable>
         ) : (
@@ -523,14 +541,20 @@ export default function RiderHomeScreen() {
           <>
             {/* Search prompt with fare estimator */}
             <Pressable
-              style={styles.searchBar}
+              style={({ pressed }) => [
+                styles.searchBar,
+                pressed && styles.searchBarPressed,
+              ]}
               onPress={() => {
-                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                safeHaptics.impact('light');
                 router.push('/book');
               }}
             >
-              <View style={styles.searchDot} />
+              <View style={styles.searchDot}>
+                <View style={styles.searchDotCore} />
+              </View>
               <View style={{ flex: 1 }}>
+                <Text style={styles.searchKicker}>Course maintenant</Text>
                 <Text style={styles.searchPlaceholder}>{t('home.whereToGo')}</Text>
                 {options.length > 0 ? (
                   <Text style={styles.fareHint}>
@@ -539,20 +563,26 @@ export default function RiderHomeScreen() {
                 ) : null}
               </View>
               <View style={styles.searchIconWrap}>
-                <Text style={styles.searchIconText}>›</Text>
+                <ForwardGlyph color="#FFFFFF" />
               </View>
             </Pressable>
 
             {/* Quick services */}
             {options.length > 0 ? (
-              <View style={styles.services}>
-                {options.slice(0, 3).map((opt) => (
+              <View style={styles.servicesBlock}>
+                <View style={styles.servicesHeader}>
+                  <Text style={styles.servicesTitle}>Choisir une option</Text>
+                  <Text style={styles.servicesHint}>{realNearbyCount > 0 ? `${realNearbyCount} proches` : 'Temps reel'}</Text>
+                </View>
+                <View style={styles.services}>
+                  {options.slice(0, 3).map((opt) => (
                   <ServiceRow
                     key={opt.id}
                     option={opt}
                     onPress={navigateToBook}
                   />
-                ))}
+                  ))}
+                </View>
               </View>
             ) : (
               <View style={styles.services}>
@@ -603,6 +633,8 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: '#FFFFFF',
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(7, 17, 31, 0.08)',
     paddingRight: 14,
     paddingLeft: 4,
     paddingVertical: 4,
@@ -634,8 +666,11 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#FFFFFF',
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(7, 17, 31, 0.08)',
     paddingHorizontal: 12,
     paddingVertical: 8,
+    maxWidth: SCREEN_W * 0.54,
     ...orbiTheme.shadows.float,
   },
   statusDot: {
@@ -648,6 +683,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.text,
+    flexShrink: 1,
   },
 
   // Bottom sheet
@@ -657,82 +693,134 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    paddingHorizontal: 16,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    borderWidth: 1,
+    borderColor: 'rgba(7, 17, 31, 0.07)',
+    paddingHorizontal: 18,
     paddingBottom: 32,
-    paddingTop: 10,
+    paddingTop: 12,
     ...orbiTheme.shadows.sheet,
   },
   handle: {
-    width: 38,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#E0E0E0',
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#D3DEE2',
     alignSelf: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
   },
 
   // Search bar
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 14,
+    backgroundColor: '#07111F',
+    borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    gap: 10,
+    gap: 12,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    marginBottom: 14,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    marginBottom: 12,
+    ...orbiTheme.shadows.card,
+  },
+  searchBarPressed: {
+    transform: [{ scale: 0.985 }],
+    opacity: 0.96,
   },
   searchDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: orbiTheme.colors.text,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 194, 168, 0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 194, 168, 0.34)',
+  },
+  searchDotCore: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  searchKicker: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.64)',
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    textTransform: 'uppercase',
+    marginBottom: 2,
   },
   searchPlaceholder: {
     flex: 1,
-    fontSize: 16,
-    color: orbiTheme.colors.textMuted,
-    fontWeight: '500',
-    fontFamily: 'Inter_500Medium',
+    fontSize: 17,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
   },
   searchIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: orbiTheme.colors.text,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: orbiTheme.colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  searchIconText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: -2,
-  },
-
   // Service rows
+  servicesBlock: {
+    gap: 8,
+  },
+  servicesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+  },
+  servicesTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  servicesHint: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.teal,
+  },
   services: {
     gap: 2,
+  },
+  servicePressable: {
+    marginBottom: 5,
   },
   serviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: orbiTheme.colors.border,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(247, 250, 252, 0.84)',
+    borderWidth: 1,
+    borderColor: 'rgba(7, 17, 31, 0.04)',
+  },
+  serviceRowPrimary: {
+    borderColor: 'rgba(0, 194, 168, 0.18)',
+  },
+  serviceRowWarm: {
+    borderColor: 'rgba(255, 149, 0, 0.16)',
   },
   serviceRowPressed: {
-    opacity: 0.7,
+    opacity: 0.82,
+    transform: [{ scale: 0.988 }],
   },
   serviceIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -823,7 +911,7 @@ const styles = StyleSheet.create({
   tripCardCodeValue: {
     color: orbiTheme.colors.text,
     fontWeight: '800',
-    letterSpacing: 2,
+    letterSpacing: 0,
   },
   tripTransition: {
     fontSize: 12,
@@ -840,17 +928,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  tripCardArrowText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: -2,
-  },
 
   // ── Surge badge ───────────────────────────────────────────────────────────
   surgeBadge: {
-    backgroundColor: 'rgba(255, 149, 0, 0.90)',
-    borderRadius: 999,
+    backgroundColor: 'rgba(242, 169, 0, 0.92)',
+    borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -947,17 +1029,18 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   matchCardCheck: {
-    width: 32,
+    width: 34,
     height: 32,
-    borderRadius: 16,
+    borderRadius: 10,
     backgroundColor: orbiTheme.colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
   matchCardCheckText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 11,
     fontWeight: '800',
+    letterSpacing: 0,
   },
 
   // ── SOS floating button — always visible, Uber-style ─────────────────────
@@ -969,9 +1052,9 @@ const styles = StyleSheet.create({
   },
   sosBtnFixed: {
     marginTop: 60,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 54,
+    height: 46,
+    borderRadius: 14,
     backgroundColor: '#E53935',
     alignItems: 'center',
     justifyContent: 'center',
@@ -986,6 +1069,28 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     color: '#FFFFFF',
-    letterSpacing: 1,
+    letterSpacing: 0,
+  },
+});
+
+const homeIcon = StyleSheet.create({
+  forwardWrap: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  forwardLine: {
+    position: 'absolute',
+    width: 10,
+    height: 2.5,
+    borderRadius: 999,
+    right: 3,
+  },
+  forwardLineTop: {
+    transform: [{ rotate: '45deg' }, { translateY: -3 }],
+  },
+  forwardLineBottom: {
+    transform: [{ rotate: '-45deg' }, { translateY: 3 }],
   },
 });

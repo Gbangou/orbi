@@ -1,3 +1,4 @@
+import { maskEmailForDisplay } from '@orbi/domain';
 import {
   formatDriverOnboardingProgress,
   formatDriverProfileBytes,
@@ -9,6 +10,11 @@ import {
 } from '../lib/driver-profile-signal';
 
 describe('driver profile signal helpers', () => {
+  it('masks driver identity values for default profile display', () => {
+    expect(maskEmailForDisplay('driver@orbi.app')).toBe('dr***@orbi.app');
+    expect(maskEmailForDisplay('dirty-value')).toBe('Adresse masquée');
+  });
+
   it('formats dirty profile dates without leaking Invalid Date', () => {
     expect(formatDriverProfileDateTime('not-a-date')).toBe('Date indisponible');
     expect(formatDriverProfileDateTime(null, 'En attente')).toBe('En attente');

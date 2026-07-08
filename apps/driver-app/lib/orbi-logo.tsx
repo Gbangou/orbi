@@ -87,7 +87,7 @@ export function OrbiLogo({
             color: textColor,
             fontSize: s.wordPx,
             fontFamily: ORBI_FONT_FAMILY,
-            letterSpacing: s.track,
+            letterSpacing: 0,
             includeFontPadding: false,
           }}
         >

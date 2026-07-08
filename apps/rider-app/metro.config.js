@@ -39,6 +39,11 @@ function resolveRealDir(modulePkgPath, searchPaths) {
 }
 
 const expoRouterDir = resolveRealDir('expo-router/package.json', [projectRoot, workspaceRoot]);
+const workspaceSourceModules = new Map([
+  ['@orbi/domain', path.resolve(workspaceRoot, 'packages/domain/src/index.ts')],
+  ['@orbi/ui', path.resolve(workspaceRoot, 'packages/ui/src/index.ts')],
+  ['@orbi/ui/native', path.resolve(workspaceRoot, 'packages/ui/src/native.ts')],
+]);
 
 config.watchFolders = Array.from(
   new Set([...(config.watchFolders ?? []), workspaceRoot]),
@@ -67,15 +72,23 @@ config.resolver.extraNodeModules = {
 };
 
 config.resolver.blockList =
-  /(packages[\\/]ui[\\/]node_modules[\\/](react|react-dom)|apps[\\/]admin-web[\\/]\.next|[\\/]\.chrome-(cdp|headless))([\\/].*)?$/;
+  /(packages[\\/]ui[\\/]node_modules[\\/](react|react-dom)|apps[\\/]admin-web[\\/]\.next|[\\/]artifacts|[\\/]\.tmp|[\\/]\.chrome-(cdp|headless))([\\/].*)?$/;
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const forcedReactPath = reactResolutions.get(moduleName);
+  const workspaceSourcePath = workspaceSourceModules.get(moduleName);
 
   if (forcedReactPath) {
     return {
       type: 'sourceFile',
       filePath: forcedReactPath,
+    };
+  }
+
+  if (workspaceSourcePath) {
+    return {
+      type: 'sourceFile',
+      filePath: workspaceSourcePath,
     };
   }
 

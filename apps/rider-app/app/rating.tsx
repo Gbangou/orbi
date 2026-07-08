@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { rateTripWithApi, type TripRatingResponse } from '@orbi/api';
 import { formatXof, orbiTheme } from '@orbi/ui';
+import { OrbiButton, OrbiStatusBanner, OrbiSurface } from '@orbi/ui/native';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import { OrbiLogo } from '../lib/orbi-logo';
@@ -20,7 +21,6 @@ import { OrbiLogo } from '../lib/orbi-logo';
 const MAX_COMMENT = 280;
 const STAR_LABELS = ['', 'Mauvais', 'Passable', 'Correct', 'Bien', 'Excellent'];
 
-// Libellé d'accessibilité pour le lecteur d'écran
 const STAR_A11Y = ['', '1 étoile', '2 étoiles', '3 étoiles', '4 étoiles', '5 étoiles'];
 
 function StarIcon({
@@ -34,7 +34,6 @@ function StarIcon({
   animated: Animated.Value;
   onPress: () => void;
 }) {
-  // Animation d'entrée : légère rotation + scale pour chaque étoile
   const scale = animated.interpolate({
     inputRange: [0, 0.45, 0.7, 1],
     outputRange: [1, 1.42, 1.18, 1],
@@ -55,7 +54,6 @@ function StarIcon({
       <Animated.View
         style={[styles.star, { transform: [{ scale }, { rotate }] }]}
       >
-        {/* Étoile à 5 branches rendue via caractère Unicode ★ */}
         <Text
           style={[
             styles.starGlyph,
@@ -163,7 +161,7 @@ export default function RatingScreen() {
   if (status === 'done') {
     return (
       <ScrollView contentContainerStyle={styles.screen}>
-        <View style={styles.doneCard}>
+        <OrbiSurface tone="teal" style={styles.doneCard} elevated>
           <View style={styles.doneIcon}>
             <View style={styles.checkOuter}>
               <View style={styles.checkInner} />
@@ -183,10 +181,13 @@ export default function RatingScreen() {
               Votre retour aide les operations a maintenir un haut niveau de service.
             </Text>
           )}
-          <Pressable onPress={handleDone} style={styles.doneButton}>
-            <Text style={styles.doneButtonLabel}>Retour a l accueil</Text>
-          </Pressable>
-        </View>
+          <OrbiButton
+            label="Retour a l'accueil"
+            onPress={handleDone}
+            tone="teal"
+            style={styles.doneButton}
+          />
+        </OrbiSurface>
       </ScrollView>
     );
   }
@@ -204,7 +205,7 @@ export default function RatingScreen() {
         ) : null}
       </View>
 
-      <View style={styles.summaryCard}>
+      <OrbiSurface style={styles.summaryCard} elevated>
         <View style={styles.summaryTop}>
           <View style={styles.avatarCircle}>
             <Text style={styles.avatarInitials}>
@@ -223,9 +224,9 @@ export default function RatingScreen() {
             ) : null}
           </View>
         </View>
-      </View>
+      </OrbiSurface>
 
-      <View style={styles.ratingBlock}>
+      <OrbiSurface tone={score >= 4 ? 'teal' : score > 0 ? 'amber' : 'neutral'} style={styles.ratingBlock}>
         <Text style={styles.ratingQuestion}>Comment s est passe votre trajet ?</Text>
         <View style={styles.starsRow}>
           {[1, 2, 3, 4, 5].map((starScore) => (
@@ -243,10 +244,10 @@ export default function RatingScreen() {
         ) : (
           <Text style={styles.ratingPlaceholder}>Appuyez sur une etoile</Text>
         )}
-      </View>
+      </OrbiSurface>
 
       {score > 0 ? (
-        <View style={styles.commentBlock}>
+        <OrbiSurface style={styles.commentBlock}>
           <Text style={styles.commentLabel}>
             Commentaire facultatif
           </Text>
@@ -267,42 +268,32 @@ export default function RatingScreen() {
           <Text style={styles.commentCounter}>
             {comment.length}/{MAX_COMMENT}
           </Text>
-        </View>
+        </OrbiSurface>
       ) : null}
 
       {statusMessage ? (
-        <View
-          style={[
-            styles.statusBanner,
-            status === 'error' ? styles.statusBannerError : styles.statusBannerInfo,
-          ]}
-        >
-          <Text style={styles.statusBannerText}>{statusMessage}</Text>
-        </View>
+        <OrbiStatusBanner
+          title={status === 'error' ? 'Evaluation non envoyee' : 'Evaluation'}
+          message={statusMessage}
+          tone={status === 'error' ? 'danger' : 'sky'}
+        />
       ) : null}
 
       <View style={styles.actions}>
-        <Pressable
+        <OrbiButton
+          label={status === 'submitting' ? 'Envoi en cours...' : 'Valider mon evaluation'}
           onPress={handleSubmit}
+          loading={status === 'submitting'}
           disabled={status === 'submitting' || score === 0}
-          style={[
-            styles.submitButton,
-            status === 'submitting' || score === 0
-              ? styles.submitButtonDisabled
-              : null,
-          ]}
-        >
-          <Text style={styles.submitButtonLabel}>
-            {status === 'submitting' ? 'Envoi en cours...' : 'Valider mon evaluation'}
-          </Text>
-        </Pressable>
-        <Pressable
+          tone={score >= 4 ? 'teal' : score > 0 ? 'amber' : 'teal'}
+        />
+        <OrbiButton
+          label="Passer pour l'instant"
           onPress={handleSkip}
           disabled={status === 'submitting'}
-          style={styles.skipButton}
-        >
-          <Text style={styles.skipButtonLabel}>Passer pour l instant</Text>
-        </Pressable>
+          variant="ghost"
+          tone="teal"
+        />
       </View>
     </ScrollView>
   );
@@ -313,7 +304,7 @@ const styles = StyleSheet.create({
     paddingTop: 72,
     paddingHorizontal: 24,
     paddingBottom: 48,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.riderBackground,
     gap: 20,
   },
   header: {
@@ -331,10 +322,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   summaryCard: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: orbiTheme.radius.card,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
     padding: 18,
   },
   summaryTop: {
@@ -378,7 +365,8 @@ const styles = StyleSheet.create({
   ratingBlock: {
     alignItems: 'center',
     gap: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 18,
   },
   ratingQuestion: {
     color: orbiTheme.colors.text,
@@ -416,7 +404,7 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.amber,
     fontWeight: '800',
     fontSize: 17,
-    letterSpacing: 0.4,
+    letterSpacing: 0,
   },
   ratingPlaceholder: {
     color: orbiTheme.colors.muted,
@@ -424,13 +412,14 @@ const styles = StyleSheet.create({
   },
   commentBlock: {
     gap: 8,
+    padding: 16,
   },
   commentLabel: {
     color: orbiTheme.colors.textSoft,
     fontWeight: '700',
     fontSize: 13,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
   },
   commentInput: {
     backgroundColor: orbiTheme.colors.panel,
@@ -449,63 +438,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'right',
   },
-  statusBanner: {
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-  },
-  statusBannerInfo: {
-    backgroundColor: 'rgba(0, 122, 255, 0.06)',
-    borderColor: 'rgba(0, 122, 255, 0.2)',
-  },
-  statusBannerError: {
-    backgroundColor: 'rgba(255, 59, 48, 0.06)',
-    borderColor: 'rgba(255, 59, 48, 0.2)',
-  },
-  statusBannerText: {
-    color: orbiTheme.colors.text,
-    fontWeight: '600',
-    lineHeight: 20,
-  },
   actions: {
     gap: 10,
     marginTop: 4,
-  },
-  submitButton: {
-    backgroundColor: orbiTheme.colors.text,
-    borderRadius: orbiTheme.radius.button,
-    paddingVertical: 16,
-    alignItems: 'center',
-    ...orbiTheme.shadows.button,
-  },
-  submitButtonDisabled: {
-    opacity: 0.35,
-  },
-  submitButtonLabel: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    fontSize: 16,
-  },
-  skipButton: {
-    borderRadius: orbiTheme.radius.button,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-  },
-  skipButtonLabel: {
-    color: orbiTheme.colors.muted,
-    fontWeight: '700',
-    fontSize: 14,
   },
   doneCard: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 18,
-    paddingHorizontal: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 32,
   },
   doneIcon: {
     marginBottom: 8,
@@ -548,15 +491,6 @@ const styles = StyleSheet.create({
   },
   doneButton: {
     marginTop: 8,
-    backgroundColor: orbiTheme.colors.text,
-    borderRadius: orbiTheme.radius.button,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    ...orbiTheme.shadows.button,
-  },
-  doneButtonLabel: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 16,
+    alignSelf: 'stretch',
   },
 });

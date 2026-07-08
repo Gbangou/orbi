@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import {
   escapeHtmlText,
@@ -101,6 +101,45 @@ export function SavedPlacesMap({
 
   const html = buildSavedPlacesMapHtml(validPlaces);
 
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[styles.container, styles.webFallback, { height }]}>
+        <View style={styles.webMapSurface}>
+          <View style={styles.webRoute} />
+          {validPlaces.slice(0, 4).map((place, index) => (
+            <Pressable
+              key={place.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Modifier le lieu ${place.label}`}
+              onPress={() => onPlaceSelect?.(place.id)}
+              style={[
+                styles.webPin,
+                {
+                  left: `${18 + ((index * 21) % 58)}%`,
+                  top: `${20 + ((index * 29) % 52)}%`,
+                },
+              ]}
+            >
+              <View style={styles.webPinDot} />
+              <Text style={styles.webPinLabel} numberOfLines={1}>
+                {place.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <View style={styles.webSummary}>
+          <Text style={styles.webEyebrow}>Lieux favoris</Text>
+          <Text style={styles.webTitle} numberOfLines={1}>
+            {validPlaces.length} point{validPlaces.length > 1 ? 's' : ''} verifie{validPlaces.length > 1 ? 's' : ''}
+          </Text>
+          <Text style={styles.webMeta} numberOfLines={2}>
+            Touchez un favori pour le modifier. Carte interactive complete sur mobile.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   function handleMessage(event: WebViewMessageEvent) {
     try {
       const data = JSON.parse(event.nativeEvent.data) as { placeId?: string };
@@ -140,5 +179,83 @@ const styles = StyleSheet.create({
   webView: {
     flex: 1,
     backgroundColor: '#0a0c0e',
+  },
+  webFallback: {
+    backgroundColor: '#0b1215',
+  },
+  webMapSurface: {
+    flex: 1,
+    backgroundColor: '#0b1215',
+  },
+  webRoute: {
+    position: 'absolute',
+    left: '16%',
+    right: '18%',
+    top: '49%',
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: 'rgba(129, 140, 248, 0.44)',
+    transform: [{ rotate: '-14deg' }],
+  },
+  webPin: {
+    position: 'absolute',
+    maxWidth: 116,
+    minWidth: 72,
+    alignItems: 'center',
+    gap: 4,
+  },
+  webPinDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#818cf8',
+    borderWidth: 3,
+    borderColor: '#c7d2fe',
+    shadowColor: '#818cf8',
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+  },
+  webPinLabel: {
+    maxWidth: 116,
+    borderRadius: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(10, 12, 20, 0.86)',
+    borderWidth: 1,
+    borderColor: 'rgba(129, 140, 248, 0.35)',
+    color: '#e2e8f0',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  webSummary: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    gap: 3,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.5)',
+  },
+  webEyebrow: {
+    color: '#6366f1',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
+  },
+  webTitle: {
+    color: '#071311',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  webMeta: {
+    color: orbiTheme.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });

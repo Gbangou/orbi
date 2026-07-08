@@ -75,8 +75,8 @@ export const en = {
     noServiceSelected: 'Select a service',
     activeFlow: 'View active trip',
     now: 'Now',
-    schedule: '⏰ Schedule',
-    voiceSearch: '🎤 Voice',
+    schedule: 'Schedule',
+    voiceSearch: 'Voice',
     bookingConfirmed: 'Ride confirmed!',
   },
   activity: {

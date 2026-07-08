@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     fontWeight: '600',
-    letterSpacing: 0.2,
+    letterSpacing: 0,
     marginTop: 3,
   },
   item: {

@@ -1,39 +1,43 @@
 export const orbiTheme = {
   colors: {
     // Backgrounds
-    background: "#FFFFFF",
-    backgroundAlt: "#F6F8F7",
-    backgroundDim: "#E9EFED",
+    background: "#F7FAFC",
+    backgroundAlt: "#EEF4F3",
+    backgroundDim: "#DDE8E6",
+    riderBackground: "#F5FBFF",
+    driverBackground: "#FFF9ED",
+    riderChrome: "#EAF6FF",
+    driverChrome: "#FFF0D6",
 
     // Surfaces
     panel: "#FFFFFF",
     surface: "#FFFFFF",
-    panelSoft: "#F6F8F7",
-    surfaceSoft: "#F6F8F7",
-    surfaceStrong: "#E9EFED",
+    panelSoft: "#F1F6F8",
+    surfaceSoft: "#F1F6F8",
+    surfaceStrong: "#DFEBEF",
 
     // Text hierarchy
-    text: "#071311",
-    textMuted: "#7B8582",
-    textSoft: "#42504C",
-    muted: "#7B8582",
+    text: "#07111F",
+    textMuted: "#75818B",
+    textSoft: "#394653",
+    muted: "#75818B",
 
-    // Orbi brand: Obsidian mobility, emerald trust, sun gold energy.
-    teal: "#00B894",
-    accentDark: "#007A63",
-    accentLight: "rgba(0, 184, 148, 0.11)",
+    // Orbi brand: graphite mobility, emerald trust, electric blue clarity, gold energy.
+    teal: "#00C2A8",
+    accentDark: "#007C69",
+    accentLight: "rgba(0, 194, 168, 0.12)",
 
     // Semantic
-    amber: "#F2A900",
-    sky: "#246BFE",
-    rose: "#E5484D",
-    success: "#00B894",
-    danger: "#E5484D",
-    warning: "#F2A900",
+    amber: "#FFB020",
+    sky: "#3D7BFF",
+    rose: "#F0445E",
+    success: "#00C2A8",
+    danger: "#F0445E",
+    warning: "#FFB020",
 
     // Borders
-    border: "#DDE6E3",
-    borderSoft: "rgba(7, 19, 17, 0.07)",
+    border: "#D8E4E8",
+    borderSoft: "rgba(7, 17, 31, 0.07)",
 
     // Overlay
     overlay: "rgba(0, 0, 0, 0.48)",
@@ -43,9 +47,9 @@ export const orbiTheme = {
     textInverse: "#FFFFFF",
   },
   gradients: {
-    hero: ["#F6F8F7", "#FFFFFF"],
-    accent: ["#007A63", "#00D8B5"],
-    warm: ["#F2A900", "#FF7A1A"],
+    hero: ["#F7FAFC", "#FFFFFF"],
+    accent: ["#007C69", "#00E0C2"],
+    warm: ["#FFB020", "#FF7A1A"],
   },
   radius: {
     card: 16,
@@ -80,32 +84,32 @@ export const orbiTheme = {
   },
   shadows: {
     card: {
-      shadowColor: "#071311",
-      shadowOpacity: 0.08,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 6 },
-      elevation: 6,
+      shadowColor: "#07111F",
+      shadowOpacity: 0.09,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 7,
     },
     sheet: {
-      shadowColor: "#071311",
-      shadowOpacity: 0.14,
-      shadowRadius: 28,
+      shadowColor: "#07111F",
+      shadowOpacity: 0.15,
+      shadowRadius: 30,
       shadowOffset: { width: 0, height: -6 },
       elevation: 16,
     },
     button: {
-      shadowColor: "#071311",
-      shadowOpacity: 0.18,
-      shadowRadius: 10,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 4,
+      shadowColor: "#07111F",
+      shadowOpacity: 0.20,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 5 },
+      elevation: 5,
     },
     float: {
-      shadowColor: "#071311",
-      shadowOpacity: 0.12,
-      shadowRadius: 16,
-      shadowOffset: { width: 0, height: 5 },
-      elevation: 8,
+      shadowColor: "#07111F",
+      shadowOpacity: 0.14,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 9,
     },
   },
 } as const;
@@ -118,6 +122,10 @@ export const orbiThemeDark = {
     background: "#06100E",
     backgroundAlt: "#0B1B18",
     backgroundDim: "#102622",
+    riderBackground: "#06131C",
+    driverBackground: "#161007",
+    riderChrome: "#0B2230",
+    driverChrome: "#231806",
 
     panel: "#0B1715",
     surface: "#0B1715",

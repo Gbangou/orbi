@@ -2,8 +2,23 @@ import {
   buildSavedPlacePayload,
   buildTrustedContactPayload,
 } from '../lib/account-safety';
+import {
+  maskEmailForDisplay,
+  maskPhoneForDisplay,
+} from '@orbi/domain';
 
 describe('rider account safety helpers', () => {
+  it('masks account identity values for default on-screen display', () => {
+    expect(maskEmailForDisplay('rider@orbi.app')).toBe('ri***@orbi.app');
+    expect(maskPhoneForDisplay('+22670000000')).toBe('*** 0000');
+  });
+
+  it('handles incomplete account identity values without leaking raw input', () => {
+    expect(maskEmailForDisplay('not-an-email')).toBe('Adresse masquée');
+    expect(maskPhoneForDisplay('12')).toBe('Téléphone masqué');
+    expect(maskPhoneForDisplay(null)).toBeNull();
+  });
+
   it('normalizes a valid Burkina trusted contact payload', () => {
     expect(
       buildTrustedContactPayload({

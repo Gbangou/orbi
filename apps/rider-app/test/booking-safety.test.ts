@@ -71,6 +71,26 @@ describe('rider booking safety helpers', () => {
     });
   });
 
+  it('accepts wallet only when the selected service exposes wallet support', () => {
+    const walletOption = {
+      ...option,
+      paymentMethods: ['mobile-money', 'wallet'],
+    } as const;
+
+    expect(
+      validateBookingSelection({
+        destinationPlace,
+        hasOpenFlow: false,
+        pickupPlace: basePlace,
+        selectedOption: walletOption,
+        selectedPaymentMethod: 'wallet',
+      }),
+    ).toEqual({
+      ok: true,
+      option: walletOption,
+    });
+  });
+
   it('rejects same pickup and destination (equivalent places)', () => {
     expect(
       validateBookingSelection({

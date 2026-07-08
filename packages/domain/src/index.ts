@@ -228,6 +228,30 @@ export type Money = {
   currency: 'XOF';
 };
 
+export function maskEmailForDisplay(email: string) {
+  const [localPart, domain] = email.split('@');
+
+  if (!localPart || !domain) {
+    return email ? 'Adresse masquée' : '';
+  }
+
+  const visiblePrefix = localPart.slice(0, Math.min(2, localPart.length));
+  return `${visiblePrefix}${localPart.length > 2 ? '***' : '*'}@${domain}`;
+}
+
+export function maskPhoneForDisplay(phoneNumber: string | null) {
+  if (!phoneNumber) {
+    return null;
+  }
+
+  const digits = phoneNumber.replace(/\D/g, '');
+  if (digits.length < 4) {
+    return 'Téléphone masqué';
+  }
+
+  return `*** ${digits.slice(-4)}`;
+}
+
 export type Coordinates = {
   latitude: number;
   longitude: number;

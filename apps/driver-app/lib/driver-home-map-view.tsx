@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type { DriverOffer } from '@orbi/api';
 import {
+  orbiTheme,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
@@ -141,6 +142,24 @@ export function DriverHomeMapView({
     }
   }, [driverLat, driverLng]);
 
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[styles.container, styles.webFallback, style]}>
+        <View style={styles.gridSurface} />
+        <View style={styles.radarRingLarge} />
+        <View style={styles.radarRingMedium} />
+        <View style={styles.driverDot} />
+        <View style={styles.statusPanel}>
+          <Text style={styles.eyebrow}>Zone chauffeur</Text>
+          <Text style={styles.title}>Pret a recevoir des courses</Text>
+          <Text style={styles.meta} numberOfLines={2}>
+            Position Ouagadougou active. La carte detaillee reste disponible sur mobile natif.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, style]}>
       <TypedWebView
@@ -183,6 +202,75 @@ export function DriverHomeMapView({
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
+  },
+  webFallback: {
+    minHeight: 320,
+    backgroundColor: '#eaf1ef',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridSurface: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#eaf1ef',
+  },
+  radarRingLarge: {
+    position: 'absolute',
+    width: '72%',
+    aspectRatio: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 184, 148, 0.18)',
+    backgroundColor: 'rgba(0, 184, 148, 0.04)',
+  },
+  radarRingMedium: {
+    position: 'absolute',
+    width: '44%',
+    aspectRatio: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 184, 148, 0.28)',
+    backgroundColor: 'rgba(0, 184, 148, 0.06)',
+  },
+  driverDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#071311',
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    shadowColor: '#071311',
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+  },
+  statusPanel: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
+    gap: 3,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderWidth: 1,
+    borderColor: 'rgba(13, 42, 37, 0.08)',
+  },
+  eyebrow: {
+    color: orbiTheme.colors.teal,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
+  },
+  title: {
+    color: '#071311',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  meta: {
+    color: orbiTheme.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
   },
   webview: {
     flex: 1,

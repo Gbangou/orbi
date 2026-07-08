@@ -173,16 +173,16 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
     <>
       {/* ── KPI Temps réel ─────────────────────────────────────── */}
       <div className="kpi-live-header">
-        <p className="eyebrow" style={{ margin: 0 }}>Tableau de bord opérationnel</p>
+        <p className="eyebrow">Tableau de bord opérationnel</p>
         <span className="kpi-live-badge">
           <span className="kpi-live-dot" aria-hidden="true" />
           Données live
         </span>
-        <span style={{ fontSize: 11, color: '#6E6E73', marginLeft: 'auto' }}>
+        <span className="kpi-live-status">
           Mise à jour automatique · {status.slice(0, 40)}
         </span>
       </div>
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 20 }}>
+      <section className="live-ops-analytics-grid">
         <KpiCard
           label="Taux de completion"
           value={liveOps.summary.activeTrips > 0 ? `${((liveOps.summary.tripsByStatus.inProgress / Math.max(liveOps.summary.activeTrips, 1)) * 100).toFixed(0)}%` : '—'}
@@ -214,16 +214,16 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
       </section>
 
       {/* ── Répartition statuts + Paiements ── */}
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 18, marginBottom: 28 }}>
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(148,163,184,0.14)', borderRadius: 18, padding: '18px 20px', display: 'grid', gap: 16 }}>
+      <section className="live-ops-analytics-split">
+        <div className="live-ops-analytics-panel">
           <p className="eyebrow">Répartition statuts</p>
-          <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+          <div className="live-ops-donut-row">
             <DonutRing value={liveOps.summary.tripsByStatus.matched} total={Math.max(liveOps.summary.activeTrips, 1)} color="#FF9500" label="MATCHED" />
             <DonutRing value={liveOps.summary.tripsByStatus.arriving} total={Math.max(liveOps.summary.activeTrips, 1)} color="#007AFF" label="EN ROUTE" />
             <DonutRing value={liveOps.summary.tripsByStatus.inProgress} total={Math.max(liveOps.summary.activeTrips, 1)} color="#00C9A7" label="IN PROGRESS" />
           </div>
         </div>
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(148,163,184,0.14)', borderRadius: 18, padding: '18px 20px', display: 'grid', gap: 12 }}>
+        <div className="live-ops-analytics-panel">
           <p className="eyebrow">Paiements 24h — taux réconciliation</p>
           <BarChart
             data={[
@@ -236,10 +236,10 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
             color="#00C9A7"
             height={70}
           />
-          <p style={{ margin: 0, fontSize: 12, color: '#6E6E73' }}>
-            Taux de succès: <strong style={{ color: '#F5F5F7' }}>{liveOps.summary.payments.successRate}%</strong>
+          <p className="live-ops-payment-note">
+            Taux de succès: <strong>{liveOps.summary.payments.successRate}%</strong>
             {' · '}Réconciliation:{' '}
-            <strong style={{ color: liveOps.summary.payments.reconciliationRate >= 90 ? '#00C9A7' : '#FF9500' }}>
+            <strong className={liveOps.summary.payments.reconciliationRate >= 90 ? 'ops-value-good' : 'ops-value-watch'}>
               {liveOps.summary.payments.reconciliationRate}%
             </strong>
           </p>
@@ -276,10 +276,12 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
         const ratio = liveOps.summary.openRequests / Math.max(1, liveOps.summary.activeTrips);
         const isSurge = ratio >= 1.5;
         const isBalanced = ratio >= 0.8 && ratio < 1.5;
-        const label = isSurge ? '⚡ Forte demande' : isBalanced ? '✓ Offre equilibree' : '↓ Faible demande';
-        const cls = isSurge ? 'backend-status backend-status-fallback' : 'backend-status backend-status-connected';
+        const label = isSurge ? 'Forte demande' : isBalanced ? 'Offre equilibree' : 'Faible demande';
+        const cls = isSurge
+          ? 'backend-status backend-status-fallback live-market-pressure'
+          : 'backend-status backend-status-connected live-market-pressure';
         return (
-          <div className={cls} style={{ marginBottom: 20 }}>
+          <div className={cls}>
             <div>
               <p className="eyebrow">Pression marche</p>
               <strong>{label}</strong>

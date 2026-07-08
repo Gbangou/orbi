@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { orbiTheme } from '@orbi/ui';
+import { OrbiStatusBanner, OrbiSurface } from '@orbi/ui/native';
 import type { PaymentMethod } from '@orbi/api';
 
 export type MobileMoneyNetwork = 'ORANGE_BFA' | 'MOOV_BFA';
@@ -55,6 +56,7 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
   const showMobileMoney =
     !availableMethods || availableMethods.includes('mobile-money');
   const showCash = !availableMethods || availableMethods.includes('cash');
+  const showWallet = !availableMethods || availableMethods.includes('wallet');
 
   function handleNetworkSelect(network: MobileMoneyNetwork) {
     setSelectedNetwork(network);
@@ -117,7 +119,7 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
           ]}
         >
           <View style={[styles.iconWrap, isMobileMoney && styles.iconWrapSelected]}>
-            <Text style={styles.icon}>📱</Text>
+            <Text style={[styles.icon, isMobileMoney && styles.iconSelected]}>MM</Text>
           </View>
 
           <View style={styles.info}>
@@ -138,7 +140,7 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
 
       {/* ── Mobile Money expanded panel ── */}
       {isMobileMoney && (
-        <View style={styles.mobileMoneyPanel}>
+        <OrbiSurface tone="teal" style={styles.mobileMoneyPanel}>
           {/* Network selector */}
           <Text style={styles.panelLabel}>Sélectionnez votre réseau</Text>
           <View style={styles.networkRow}>
@@ -204,12 +206,12 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
             <Text style={styles.errorText}>{phoneError}</Text>
           ) : null}
 
-          <View style={styles.ussdNote}>
-            <Text style={styles.ussdNoteText}>
-              Vous recevrez une notification USSD pour confirmer le paiement
-            </Text>
-          </View>
-        </View>
+          <OrbiStatusBanner
+            tone="teal"
+            title="Confirmation sécurisée"
+            message="Vous recevrez une notification USSD pour confirmer le paiement."
+          />
+        </OrbiSurface>
       )}
 
       {/* ── Cash ── */}
@@ -228,7 +230,7 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
               selectedMethod === 'cash' && styles.iconWrapSelected,
             ]}
           >
-            <Text style={styles.icon}>💵</Text>
+            <Text style={[styles.icon, selectedMethod === 'cash' && styles.iconSelected]}>XOF</Text>
           </View>
 
           <View style={styles.info}>
@@ -247,32 +249,68 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
         </Pressable>
       )}
 
-      {/* ── Wallet — coming soon ── */}
-      <Pressable style={[styles.card, styles.cardDisabled]} disabled>
-        <View style={styles.iconWrap}>
-          <Text style={styles.icon}>👛</Text>
-        </View>
-        <View style={styles.info}>
-          <View style={styles.labelRow}>
-            <Text style={[styles.label, styles.labelDisabled]}>
-              Wallet Orbi
+      {/* ── Wallet ── */}
+      {showWallet && (
+        <Pressable
+          onPress={() => handleSelectMethod('wallet')}
+          style={({ pressed }) => [
+            styles.card,
+            selectedMethod === 'wallet' && styles.cardSelected,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <View
+            style={[
+              styles.iconWrap,
+              selectedMethod === 'wallet' && styles.iconWrapSelected,
+            ]}
+          >
+            <Text
+              style={[
+                styles.icon,
+                selectedMethod === 'wallet' && styles.iconSelected,
+              ]}
+            >
+              OR
             </Text>
-            <View style={styles.soonBadge}>
-              <Text style={styles.soonBadgeText}>Bientôt</Text>
-            </View>
           </View>
-          <Text style={[styles.sublabel, styles.labelDisabled]}>
-            Crédits prépayés
-          </Text>
-        </View>
-        <View style={styles.radio} />
-      </Pressable>
+
+          <View style={styles.info}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Wallet Orbi</Text>
+              <View style={styles.walletBadge}>
+                <Text style={styles.walletBadgeText}>Prépayé</Text>
+              </View>
+            </View>
+            <Text style={styles.sublabel}>
+              Paiement instantané avec solde Orbi
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.radio,
+              selectedMethod === 'wallet' && styles.radioSelected,
+            ]}
+          >
+            {selectedMethod === 'wallet' && <View style={styles.radioDot} />}
+          </View>
+        </Pressable>
+      )}
+
+      {selectedMethod === 'wallet' && (
+        <OrbiStatusBanner
+          tone="teal"
+          title="Wallet sécurisé"
+          message="Le débit wallet reste lié à la demande de course et à son idempotency key."
+        />
+      )}
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  root: { gap: 10 },
+  root: { gap: 8 },
 
   sectionTitle: {
     fontSize: 13,
@@ -280,49 +318,55 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
     marginBottom: 2,
   },
 
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: orbiTheme.colors.border,
-    padding: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   cardSelected: {
     borderColor: orbiTheme.colors.teal,
     backgroundColor: 'rgba(0,201,167,0.04)',
   },
-  cardDisabled: { opacity: 0.45 },
   cardPressed: { opacity: 0.82 },
 
   iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: orbiTheme.colors.backgroundDim,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconWrapSelected: { backgroundColor: 'rgba(0,201,167,0.12)' },
-  icon: { fontSize: 22 },
+  icon: {
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.textMuted,
+    letterSpacing: 0,
+  },
+  iconSelected: { color: orbiTheme.colors.teal },
 
   info: { flex: 1, gap: 2 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   label: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.text,
   },
-  labelDisabled: { color: orbiTheme.colors.textMuted },
   sublabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: orbiTheme.colors.textSoft,
     fontFamily: 'Inter_400Regular',
   },
@@ -339,23 +383,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.teal,
   },
-  soonBadge: {
-    backgroundColor: orbiTheme.colors.backgroundDim,
+  walletBadge: {
+    backgroundColor: 'rgba(0,201,167,0.12)',
     borderRadius: 999,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  soonBadgeText: {
+  walletBadgeText: {
     fontSize: 10,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.textMuted,
+    color: orbiTheme.colors.teal,
   },
 
   radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: orbiTheme.colors.border,
     alignItems: 'center',
@@ -363,20 +407,17 @@ const styles = StyleSheet.create({
   },
   radioSelected: { borderColor: orbiTheme.colors.teal },
   radioDot: {
-    width: 10,
-    height: 10,
+    width: 9,
+    height: 9,
     borderRadius: 5,
     backgroundColor: orbiTheme.colors.teal,
   },
 
   // Mobile Money expanded panel
   mobileMoneyPanel: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: orbiTheme.colors.teal,
-    padding: 16,
-    gap: 8,
+    padding: 12,
+    gap: 7,
     marginTop: -4,
   },
   panelLabel: {
@@ -386,13 +427,13 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.textSoft,
   },
 
-  networkRow: { gap: 8 },
+  networkRow: { gap: 7 },
   networkChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: orbiTheme.colors.border,
@@ -415,14 +456,14 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.teal,
   },
   networkLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.text,
   },
   networkLabelActive: { color: orbiTheme.colors.teal },
   networkSublabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: orbiTheme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
   },
@@ -439,7 +480,7 @@ const styles = StyleSheet.create({
   phoneInputError: { borderColor: '#FF3B30' },
   phonePrefix: {
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 10,
     fontSize: 15,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
@@ -451,12 +492,12 @@ const styles = StyleSheet.create({
   phoneInput: {
     flex: 1,
     paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
+    paddingVertical: 10,
+    fontSize: 15,
     fontWeight: '500',
     fontFamily: 'Inter_500Medium',
     color: orbiTheme.colors.text,
-    letterSpacing: 1,
+    letterSpacing: 0,
   },
   errorText: {
     fontSize: 12,
@@ -465,17 +506,4 @@ const styles = StyleSheet.create({
     marginTop: -2,
   },
 
-  ussdNote: {
-    backgroundColor: 'rgba(0,201,167,0.07)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginTop: 4,
-  },
-  ussdNoteText: {
-    fontSize: 12,
-    color: orbiTheme.colors.teal,
-    fontFamily: 'Inter_400Regular',
-    lineHeight: 16,
-  },
 });

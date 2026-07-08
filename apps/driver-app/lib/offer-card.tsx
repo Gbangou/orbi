@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, Text, View } from "react-native";
 import { formatXof, orbiTheme } from "@orbi/ui";
+import { OrbiButton, OrbiSurface } from "@orbi/ui/native";
 import type { DriverOffer } from "@orbi/api";
 import {
   buildDriverOfferConfidenceExplainer,
@@ -228,7 +229,7 @@ export const OfferCard = memo(function OfferCard({
       </View>
 
       {/* Metrics: pickup distance · ETA · trip distance · net (if available) */}
-      <View style={styles.metrics}>
+      <OrbiSurface style={styles.metrics}>
         <View style={styles.metric}>
           <Text style={styles.metricVal}>{formatDistanceKm(offer.pickupDistanceKm)}</Text>
           <Text style={styles.metricLbl}>Pickup</Text>
@@ -254,7 +255,7 @@ export const OfferCard = memo(function OfferCard({
             </View>
           </>
         ) : null}
-      </View>
+      </OrbiSurface>
 
       {/* Reservation expiry */}
       {offer.reservationExpiresAt ? (
@@ -286,30 +287,22 @@ export const OfferCard = memo(function OfferCard({
 
       {/* Accept / decline */}
       <View style={styles.actions}>
-        <Pressable
+        <OrbiButton
+          label={hasActiveTrip ? "Course active" : "Accepter cette offre"}
           onPress={() => onAccept(offer.id)}
           disabled={isDisabled}
-          style={({ pressed }) => [
-            styles.acceptBtn,
-            isDisabled && styles.btnDisabled,
-            pressed && styles.btnPressed,
-          ]}
-        >
-          <Text style={styles.acceptLabel}>
-            {hasActiveTrip ? "Course active" : "Accepter cette offre"}
-          </Text>
-        </Pressable>
-        <Pressable
+          tone="teal"
+          style={styles.acceptBtn}
+        />
+        <OrbiButton
+          label="Refuser cette offre"
           onPress={() => onDecline(offer.id)}
           disabled={isDisabled}
-          style={({ pressed }) => [
-            styles.declineBtn,
-            isDisabled && styles.btnDisabled,
-            pressed && styles.btnPressed,
-          ]}
-        >
-          <Text style={styles.declineLabel}>Refuser cette offre</Text>
-        </Pressable>
+          variant="secondary"
+          tone="danger"
+          style={styles.declineBtn}
+          labelStyle={styles.declineLabel}
+        />
       </View>
     </Animated.View>
   );
@@ -318,11 +311,11 @@ export const OfferCard = memo(function OfferCard({
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
-    padding: 16,
-    gap: 12,
+    padding: 14,
+    gap: 10,
     ...orbiTheme.shadows.card,
   },
   wrapFresh: {
@@ -344,10 +337,10 @@ const styles = StyleSheet.create({
   },
   header: { flexDirection: "row", alignItems: "center", gap: 10 },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: orbiTheme.colors.amber,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: orbiTheme.colors.text,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -356,12 +349,10 @@ const styles = StyleSheet.create({
   riderName: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
   route: { fontSize: 12, color: orbiTheme.colors.textSoft, fontFamily: "Inter_400Regular" },
   fareCol: { alignItems: "flex-end", gap: 4 },
-  fare: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold", color: orbiTheme.colors.amber },
+  fare: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
   metrics: {
     flexDirection: "row",
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 12,
-    padding: 10,
+    padding: 8,
   },
   metric: { flex: 1, alignItems: "center", gap: 2 },
   metricVal: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
@@ -371,32 +362,20 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.textMuted,
     fontFamily: "Inter_400Regular",
     textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0,
   },
   sep: { width: 1, backgroundColor: orbiTheme.colors.border, alignSelf: "stretch" },
   expiry: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: orbiTheme.colors.amber },
   actions: { flexDirection: "row", gap: 10 },
   acceptBtn: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.text,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    ...orbiTheme.shadows.button,
   },
   declineBtn: {
-    width: 50,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    width: 136,
   },
-  acceptLabel: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: "#FFFFFF" },
-  declineLabel: { fontSize: 16, fontWeight: "700", color: orbiTheme.colors.textMuted },
-  btnDisabled: { opacity: 0.38 },
-  btnPressed: { opacity: 0.82 },
+  declineLabel: {
+    fontSize: 12,
+  },
   detailLines: { gap: 2, paddingTop: 2 },
   detailLine: {
     fontSize: 11,

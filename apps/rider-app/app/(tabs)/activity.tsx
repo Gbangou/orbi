@@ -1,8 +1,7 @@
-import * as Haptics from 'expo-haptics';
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from "../../lib/privacy/screen-capture";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   Easing,
@@ -37,6 +36,13 @@ import {
   formatXof,
   orbiTheme,
 } from "@orbi/ui";
+import {
+  OrbiButton,
+  OrbiMetricTile,
+  OrbiStatusBanner,
+  OrbiSurface,
+  safeHaptics,
+} from "@orbi/ui/native";
 import { restoreRiderSession } from "../../lib/auth";
 import { useTranslation } from "../../lib/i18n";
 import {
@@ -84,7 +90,7 @@ function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
     : 100;
 
   return (
-    <View style={loyaltyStyles.card}>
+    <OrbiSurface tone="teal" style={loyaltyStyles.card}>
       <View style={loyaltyStyles.header}>
         <Text style={loyaltyStyles.eyebrow}>Programme Fidélité</Text>
         {earned.length > 0 ? (
@@ -123,16 +129,12 @@ function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
           Statut maximum atteint — merci de votre fidélité.
         </Text>
       )}
-    </View>
+    </OrbiSurface>
   );
 }
 
 const loyaltyStyles = StyleSheet.create({
   card: {
-    backgroundColor: "rgba(61,215,192,0.06)",
-    borderWidth: 1,
-    borderColor: "rgba(61,215,192,0.18)",
-    borderRadius: 16,
     padding: 16,
     gap: 10,
   },
@@ -147,7 +149,7 @@ const loyaltyStyles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
-    letterSpacing: 1,
+    letterSpacing: 0,
     color: orbiTheme.colors.teal,
   },
   badgeRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
@@ -325,6 +327,13 @@ export default function ActivityScreen() {
   const driverTrustSnapshot = buildRiderDriverTrustSnapshot({
     tripDetail: activeTripDetail,
   });
+
+  useEffect(() => {
+    preventSensitiveScreenCapture();
+    return () => {
+      restoreSensitiveScreenCapture();
+    };
+  }, []);
 
   useEffect(() => {
     const previousPendingRequestIds = previousPendingRequestIdsRef.current;
@@ -588,7 +597,7 @@ export default function ActivityScreen() {
     if (submissionLockRef.current) {
       return;
     }
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    safeHaptics.notify('error');
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
@@ -742,9 +751,12 @@ export default function ActivityScreen() {
       <View style={styles.tripRoot}>
         {/* Status feedback — visible in active trip view for operational signals */}
         {status && !status.includes('Chargement') ? (
-          <Text style={[styles.syncMeta, { position: 'absolute', top: 44, left: 0, right: 0, zIndex: 100, paddingHorizontal: 16, paddingVertical: 4, backgroundColor: 'rgba(0,0,0,0.35)', color: '#FFFFFF' }]} accessibilityLabel="activity-status-trip">
-            {status}
-          </Text>
+          <OrbiStatusBanner
+            tone="sky"
+            title="Suivi synchronisé"
+            message={status}
+            style={styles.tripStatusOverlay}
+          />
         ) : null}
         {/* Map */}
         {hasTripCoords ? (
@@ -777,7 +789,7 @@ export default function ActivityScreen() {
               </Text>
             </View>
             {isRealtimeSyncing ? (
-              <ActivityIndicator size="small" color={orbiTheme.colors.teal} style={{ marginLeft: 8 }} />
+              <Text style={styles.realtimeDot}>live</Text>
             ) : null}
           </View>
 
@@ -786,7 +798,7 @@ export default function ActivityScreen() {
             const distKm = activeTripDetail?.trip.routeMonitoring.latestPosition?.distanceToPickupKm ?? null;
             const etaMins = distKm != null ? Math.max(1, Math.ceil(distKm * 3)) : null;
             return (
-              <View style={styles.etaBanner}>
+              <OrbiSurface tone="sky" style={styles.etaBanner}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.etaEyebrow}>
                     {activeTrip.status === 'MATCHED' ? 'Chauffeur en route' : 'Chauffeur proche'}
@@ -800,12 +812,12 @@ export default function ActivityScreen() {
                     <Text style={styles.etaDistText}>{distKm.toFixed(1)} km</Text>
                   </View>
                 ) : null}
-              </View>
+              </OrbiSurface>
             );
           })() : null}
 
           {/* Driver card */}
-          <View style={styles.driverCard}>
+          <OrbiSurface style={styles.driverCard}>
             <View style={styles.driverAvatar}>
               {driverTrustSnapshot?.profilePhotoUrl ? (
                 <Image
@@ -832,29 +844,31 @@ export default function ActivityScreen() {
               ) : null}
             </View>
             {activeTripDetail?.trip.driverPhoneNumber ? (
-              <Pressable
+              <OrbiButton
                 onPress={() => void Linking.openURL(`tel:${activeTripDetail.trip.driverPhoneNumber}`)}
                 style={styles.callDriverBtn}
                 accessibilityLabel="call-driver"
-              >
-                <Text style={styles.callDriverIcon}>☎</Text>
-              </Pressable>
+                label="Appeler"
+                variant="secondary"
+                tone="teal"
+                labelStyle={styles.callDriverLabel}
+              />
             ) : null}
-          </View>
+          </OrbiSurface>
 
           {/* Pickup code */}
           {activeTrip.pickupCode && canCancel ? (
-            <View style={styles.pickupCodeCard}>
+            <OrbiSurface tone="teal" style={styles.pickupCodeCard}>
               <Text style={styles.pickupCodeEyebrow}>Code de départ</Text>
               <Text style={styles.pickupCodeValue}>{activeTrip.pickupCode}</Text>
               <Text style={styles.pickupCodeHint}>
                 Communiquez ce code à votre chauffeur
               </Text>
-            </View>
+            </OrbiSurface>
           ) : null}
 
           {/* Route */}
-          <View style={styles.routeCard}>
+          <OrbiSurface style={styles.routeCard}>
             <View style={styles.routeRow}>
               <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.teal }]} />
               <Text style={styles.routeText} numberOfLines={1}>
@@ -868,44 +882,48 @@ export default function ActivityScreen() {
                 {activeTrip.destinationAddress}
               </Text>
             </View>
-          </View>
+          </OrbiSurface>
 
           {/* Actions */}
           <View style={styles.actionsRow}>
-            <Pressable
+            <OrbiButton
               onPress={() => void handleShareTrip(activeTrip.id)}
               disabled={isSubmitting}
               style={styles.actionBtn}
-            >
-              <Text style={styles.actionBtnIcon}>↑</Text>
-              <Text style={styles.actionBtnLabel}>Partager</Text>
-            </Pressable>
-            <Pressable
+              label="Partager"
+              variant="secondary"
+              tone="teal"
+              labelStyle={styles.actionBtnLabel}
+            />
+            <OrbiButton
               onPress={() => void handleReportIncident(activeTrip.id)}
               disabled={isSubmitting}
               style={styles.actionBtn}
               accessibilityLabel="report-incident"
-            >
-              <Text style={styles.actionBtnIcon}>⚠</Text>
-              <Text style={styles.actionBtnLabel}>Signal</Text>
-            </Pressable>
-            <Pressable
+              label="Signal"
+              variant="secondary"
+              tone="amber"
+              labelStyle={styles.actionBtnLabel}
+            />
+            <OrbiButton
               onPress={() => void handleTriggerSos(activeTrip.id)}
               disabled={isSubmitting}
-              style={[styles.actionBtn, styles.actionBtnSos]}
-            >
-              <Text style={[styles.actionBtnIcon, styles.actionBtnIconSos]}>!</Text>
-              <Text style={[styles.actionBtnLabel, styles.actionBtnLabelSos]}>SOS</Text>
-            </Pressable>
+              style={styles.actionBtn}
+              label="SOS"
+              variant="danger"
+              tone="danger"
+              labelStyle={styles.actionBtnLabel}
+            />
             {canCancel ? (
-              <Pressable
+              <OrbiButton
                 onPress={() => handleCancelActiveTrip(activeTrip.id)}
                 disabled={isSubmitting}
                 style={styles.actionBtn}
-              >
-                <Text style={styles.actionBtnIcon}>✕</Text>
-                <Text style={styles.actionBtnLabel}>Annuler</Text>
-              </Pressable>
+                label="Annuler"
+                variant="danger"
+                tone="danger"
+                labelStyle={styles.actionBtnLabel}
+              />
             ) : null}
           </View>
         </View>
@@ -920,26 +938,27 @@ export default function ActivityScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('activity.title', { defaultValue: 'Activité' })}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          {isRealtimeSyncing ? (
-            <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
-          ) : null}
-          <Pressable
+          {isRealtimeSyncing ? <Text style={styles.headerLiveText}>live</Text> : null}
+          <OrbiButton
             onPress={() => void loadHistory()}
             style={styles.refreshButton}
-            disabled={isRefreshing}
+            loading={isRefreshing}
             accessibilityLabel="activity-refresh"
-          >
-            <Text style={styles.refreshButtonLabel}>
-              {isRefreshing ? '...' : 'Actualiser le suivi'}
-            </Text>
-          </Pressable>
+            label="Actualiser le suivi"
+            variant="secondary"
+            tone="teal"
+            labelStyle={styles.refreshButtonLabel}
+          />
         </View>
       </View>
       {/* Status feedback */}
       {status && !status.includes('Chargement') ? (
-        <Text style={styles.syncMeta} accessibilityLabel="activity-status">
-          {status}
-        </Text>
+        <OrbiStatusBanner
+          tone="sky"
+          title="État du suivi"
+          message={status}
+          style={styles.historyStatusBanner}
+        />
       ) : null}
 
       <ScrollView
@@ -956,24 +975,22 @@ export default function ActivityScreen() {
       >
         {/* Stats */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {history.stats.completedTrips}
-            </Text>
-            <Text style={styles.statLabel}>Courses</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {formatXof(history.stats.totalAmount)}
-            </Text>
-            <Text style={styles.statLabel}>Dépensé</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {history.pendingRequests.length}
-            </Text>
-            <Text style={styles.statLabel}>En attente</Text>
-          </View>
+          <OrbiMetricTile
+            label="Courses"
+            value={String(history.stats.completedTrips)}
+            style={styles.statCard}
+          />
+          <OrbiMetricTile
+            label="Dépensé"
+            value={formatXof(history.stats.totalAmount)}
+            style={styles.statCard}
+          />
+          <OrbiMetricTile
+            label="En attente"
+            value={String(history.pendingRequests.length)}
+            tone={history.pendingRequests.length > 0 ? 'amber' : 'neutral'}
+            style={styles.statCard}
+          />
         </View>
 
         {/* Loyalty card */}
@@ -994,13 +1011,15 @@ export default function ActivityScreen() {
                     → {req.destinationAddress}
                   </Text>
                 </View>
-                <Pressable
+                <OrbiButton
                   onPress={() => void handleCancelPendingRequest(req.id)}
                   disabled={isSubmitting}
                   style={styles.cancelBtn}
-                >
-                  <Text style={styles.cancelBtnText}>Annuler</Text>
-                </Pressable>
+                  label="Annuler"
+                  variant="danger"
+                  tone="danger"
+                  labelStyle={styles.cancelBtnText}
+                />
               </View>
             ))}
           </View>
@@ -1052,10 +1071,24 @@ export default function ActivityScreen() {
           </View>
         ) : history.pendingRequests.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>Aucun trajet</Text>
-            <Text style={styles.emptyMeta}>
-              Vos courses apparaîtront ici après votre première réservation.
-            </Text>
+            <View style={styles.emptyOrbit}>
+              <View style={styles.emptyOrbitRing} />
+              <View style={styles.emptyOrbitDot} />
+            </View>
+            <View style={styles.emptyCopy}>
+              <Text style={styles.emptyEyebrow}>Historique prêt</Text>
+              <Text style={styles.emptyTitle}>Aucun trajet</Text>
+              <Text style={styles.emptyMeta}>
+                Vos courses apparaîtront ici après votre première réservation.
+              </Text>
+            </View>
+            <OrbiButton
+              onPress={() => router.push('/book')}
+              label="Réserver"
+              tone="teal"
+              style={styles.emptyAction}
+              labelStyle={styles.emptyActionLabel}
+            />
           </View>
         ) : null}
 
@@ -1068,6 +1101,14 @@ export default function ActivityScreen() {
 const styles = StyleSheet.create({
   // ── Active trip layout
   tripRoot: { flex: 1 },
+  tripStatusOverlay: {
+    position: 'absolute',
+    top: 44,
+    left: 12,
+    right: 12,
+    zIndex: 100,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+  },
   tripSheet: {
     position: 'absolute',
     bottom: 0,
@@ -1105,17 +1146,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
   },
+  realtimeDot: {
+    marginLeft: 8,
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.teal,
+    textTransform: 'uppercase',
+  },
 
   // Driver card
   driverCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 14,
     padding: 12,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
   },
   driverAvatar: {
     width: 48,
@@ -1150,14 +1196,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.teal,
-    letterSpacing: 1,
+    letterSpacing: 0,
   },
 
   // Pickup code
   pickupCodeCard: {
-    backgroundColor: 'rgba(0,201,167,0.06)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,201,167,0.28)',
     borderRadius: 14,
     padding: 14,
     alignItems: 'center',
@@ -1169,14 +1212,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.teal,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0,
   },
   pickupCodeValue: {
     fontSize: 36,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     color: orbiTheme.colors.text,
-    letterSpacing: 8,
+    letterSpacing: 0,
   },
   pickupCodeHint: {
     fontSize: 12,
@@ -1187,10 +1230,7 @@ const styles = StyleSheet.create({
   // Route card
   routeCard: {
     gap: 0,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
     paddingHorizontal: 14,
     paddingVertical: 4,
   },
@@ -1221,44 +1261,22 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 12,
+    minHeight: 48,
+    paddingHorizontal: 6,
     borderRadius: 12,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-  },
-  actionBtnIcon: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: orbiTheme.colors.text,
   },
   actionBtnLabel: {
     fontSize: 11,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.textSoft,
   },
-  actionBtnSos: {
-    backgroundColor: 'rgba(255,59,48,0.08)',
-    borderColor: 'rgba(255,59,48,0.28)',
-  },
-  actionBtnIconSos: { color: orbiTheme.colors.danger },
-  actionBtnLabelSos: { color: orbiTheme.colors.danger },
 
   // ETA banner
   etaBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: 'rgba(0,122,255,0.06)',
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0,122,255,0.18)',
   },
   etaEyebrow: {
     fontSize: 11,
@@ -1266,7 +1284,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.sky,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
     marginBottom: 2,
   },
   etaValue: {
@@ -1290,29 +1308,21 @@ const styles = StyleSheet.create({
 
   // Call driver button (inside driver card)
   callDriverBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(0,201,167,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,201,167,0.28)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 10,
     flexShrink: 0,
   },
-  callDriverIcon: {
-    fontSize: 18,
-  },
+  callDriverLabel: { fontSize: 12 },
 
   // ── History layout
-  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+  safe: { flex: 1, backgroundColor: orbiTheme.colors.riderBackground },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: orbiTheme.colors.border,
   },
@@ -1324,35 +1334,29 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 14,
+    paddingTop: 12,
+    gap: 12,
+  },
+  headerLiveText: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.teal,
+    textTransform: 'uppercase',
+  },
+  historyStatusBanner: {
+    marginHorizontal: 16,
+    marginTop: 8,
   },
 
   // Stats row
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   statCard: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 14,
-    padding: 14,
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: orbiTheme.colors.textMuted,
-    fontFamily: 'Inter_400Regular',
   },
 
   // Sections
@@ -1397,11 +1401,8 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     borderRadius: 8,
+    minHeight: 34,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: 'rgba(255,59,48,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,59,48,0.22)',
   },
   cancelBtnText: {
     fontSize: 12,
@@ -1453,22 +1454,75 @@ const styles = StyleSheet.create({
 
   // Empty state
   emptyState: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 48,
-    gap: 8,
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    ...orbiTheme.shadows.card,
+  },
+  emptyOrbit: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: 'rgba(0,201,167,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  emptyOrbitRing: {
+    position: 'absolute',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(0,201,167,0.28)',
+  },
+  emptyOrbitDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: orbiTheme.colors.teal,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+  emptyCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  emptyEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.teal,
+    textTransform: 'uppercase',
+    letterSpacing: 0,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.text,
   },
   emptyMeta: {
-    fontSize: 14,
+    fontSize: 12,
     color: orbiTheme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
-    textAlign: 'center',
-    maxWidth: 280,
+    lineHeight: 17,
+  },
+  emptyAction: {
+    minHeight: 42,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    flexShrink: 0,
+  },
+  emptyActionLabel: {
+    fontSize: 12,
   },
 
   // ── Legacy stubs
@@ -1476,15 +1530,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: orbiTheme.colors.text },
   syncMeta: { color: orbiTheme.colors.muted, fontSize: 12 },
   refreshButton: {
-    borderRadius: 999,
+    borderRadius: 10,
+    minHeight: 38,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
     alignSelf: 'flex-start',
   },
-  refreshButtonLabel: { color: orbiTheme.colors.text, fontWeight: '700', fontSize: 13 },
+  refreshButtonLabel: { fontSize: 13 },
   snapshotTitle: { fontSize: 13, fontWeight: '700', color: orbiTheme.colors.text },
   snapshotStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   trustCard: {

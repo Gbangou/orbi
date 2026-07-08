@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -9,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../../lib/privacy/screen-capture';
 import {
   createSupportTicketWithApi,
   fetchMyTrips,
@@ -21,8 +21,15 @@ import {
   type SupportTicket,
   upsertDriverOnboarding,
 } from '@orbi/api';
+import { maskEmailForDisplay } from '@orbi/domain';
 import { router } from 'expo-router';
 import { formatOperationalStatus, orbiCopy, orbiTheme } from '@orbi/ui';
+import {
+  OrbiButton,
+  OrbiMetricTile,
+  OrbiStatusBanner,
+  OrbiSurface,
+} from '@orbi/ui/native';
 import { useTranslation } from '../../lib/i18n';
 import {
   restoreDriverSession,
@@ -266,6 +273,13 @@ export default function ProfilScreen() {
 
   useEffect(() => {
     void loadProfile();
+  }, []);
+
+  useEffect(() => {
+    preventSensitiveScreenCapture();
+    return () => {
+      restoreSensitiveScreenCapture();
+    };
   }, []);
 
   useLiveRefresh(() => {
@@ -717,6 +731,7 @@ export default function ProfilScreen() {
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? '')
     .join('') || 'OR';
+  const maskedEmail = maskEmailForDisplay(profile.profile.email);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -725,17 +740,18 @@ export default function ProfilScreen() {
         <Text style={styles.headerTitle}>{td('profile')}</Text>
         <View style={styles.headerRight}>
           {isRefreshing ? (
-            <ActivityIndicator size="small" color={orbiTheme.colors.amber} />
+            <Text style={styles.headerLiveText}>sync</Text>
           ) : null}
-          <Pressable
+          <OrbiButton
             onPress={() => void handleSignOut()}
             disabled={isSigningOut || isRefreshing || isSubmitting}
+            loading={isSigningOut}
             style={styles.signOutBtn}
-          >
-            <Text style={styles.signOutBtnLabel}>
-              {isSigningOut ? '...' : 'Se deconnecter'}
-            </Text>
-          </Pressable>
+            label="Se deconnecter"
+            variant="danger"
+            tone="danger"
+            labelStyle={styles.signOutBtnLabel}
+          />
         </View>
       </View>
 
@@ -747,20 +763,23 @@ export default function ProfilScreen() {
         <Text style={styles.sectionEyebrow}>Identite</Text>
 
         {/* User card */}
-        <View style={styles.userCard}>
+        <OrbiSurface style={styles.userCard} elevated>
           <View style={styles.avatarCircle}>
             <Text style={styles.avatarInitials}>{initials}</Text>
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>
-              {profile.profile.fullName || 'Chargement…'}
+              {profile.profile.fullName || 'Chauffeur Orbi'}
             </Text>
-            <Text style={styles.userEmail}>{profile.profile.email}</Text>
+            {maskedEmail ? (
+              <Text style={styles.userEmail}>{maskedEmail}</Text>
+            ) : null}
+            <Text style={styles.privacyHint}>Identité masquée par défaut</Text>
           </View>
-        </View>
+        </OrbiSurface>
 
         {/* Status row */}
-        <View style={styles.statusRowCard}>
+        <OrbiSurface style={styles.statusRowCard}>
           <View style={styles.statusItem}>
             <Text style={styles.statusItemLabel}>Vérification</Text>
             <Text style={[styles.statusItemValue, { color: orbiTheme.colors.teal }]}>
@@ -781,68 +800,76 @@ export default function ProfilScreen() {
               {formatDriverProfilePercent(profile.profile.onboarding.readinessPercent)}
             </Text>
           </View>
-        </View>
+        </OrbiSurface>
 
         {/* Driver performance stats */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{profile.profile.completedTripsCount}</Text>
-            <Text style={styles.statLabel}>Courses</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: orbiTheme.colors.amber }]}>
-              {profile.profile.averageRating != null
-                ? `${profile.profile.averageRating.toFixed(1)} ★`
-                : '— ★'}
-            </Text>
-            <Text style={styles.statLabel}>Note</Text>
-          </View>
-          <View style={styles.statCard}>
-            {profile.profile.dispatchSignal?.acceptanceRate != null ? (
-              <Text style={[
-                styles.statValue,
-                {
-                  color: profile.profile.dispatchSignal.acceptanceRate >= 0.75
-                    ? orbiTheme.colors.teal
-                    : profile.profile.dispatchSignal.acceptanceRate >= 0.55
-                      ? orbiTheme.colors.amber
-                      : orbiTheme.colors.danger,
-                },
-              ]}>
-                {Math.round(profile.profile.dispatchSignal.acceptanceRate * 100)}%
-              </Text>
-            ) : (
-              <Text style={styles.statValue}>—</Text>
-            )}
-            <Text style={styles.statLabel}>Taux acc.</Text>
-          </View>
+          <OrbiMetricTile
+            label="Courses"
+            value={String(profile.profile.completedTripsCount)}
+            style={styles.statCard}
+          />
+          <OrbiMetricTile
+            label="Note"
+            value={
+              profile.profile.averageRating != null
+                ? `${profile.profile.averageRating.toFixed(1)}/5`
+                : '—'
+            }
+            tone="amber"
+            style={styles.statCard}
+          />
+          <OrbiMetricTile
+            label="Taux acc."
+            value={
+              profile.profile.dispatchSignal?.acceptanceRate != null
+                ? `${Math.round(profile.profile.dispatchSignal.acceptanceRate * 100)}%`
+                : '—'
+            }
+            tone={
+              profile.profile.dispatchSignal?.acceptanceRate == null
+                ? 'neutral'
+                : profile.profile.dispatchSignal.acceptanceRate >= 0.75
+                  ? 'teal'
+                  : profile.profile.dispatchSignal.acceptanceRate >= 0.55
+                    ? 'amber'
+                    : 'danger'
+            }
+            style={styles.statCard}
+          />
         </View>
 
         {/* Active mission */}
         {flow.activeTrip && flow.primaryRouteLabel ? (
-          <View style={styles.missionBanner}>
-            <View style={styles.missionDot} />
-            <Text style={styles.missionText} numberOfLines={1}>
-              Mission active — {flow.primaryRouteLabel}
-            </Text>
-          </View>
+          <OrbiStatusBanner
+            tone="teal"
+            title="Mission active"
+            message={flow.primaryRouteLabel}
+          />
         ) : null}
 
         {/* Suspension notice */}
         {flow.operationalStatus === 'SUSPENDED' ? (
-          <View style={styles.suspensionBanner}>
-            <Text style={styles.suspensionText}>
-              Compte suspendu — les opérations doivent lever le blocage avant reprise.
-            </Text>
-          </View>
+          <OrbiStatusBanner
+            tone="danger"
+            title="Compte suspendu"
+            message="Les opérations doivent lever le blocage avant reprise."
+          />
         ) : null}
 
         {/* Status notice (shown when non-idle) */}
         {status && status !== 'Chargement du profil chauffeur...' ? (
-          <Text style={styles.statusNotice}>{status}</Text>
+          <OrbiStatusBanner
+            tone="sky"
+            title="Profil synchronisé"
+            message={status}
+          />
         ) : null}
 
-      <View style={[styles.card, profileTransitionLabel ? styles.cardHighlight : null]}>
+      <OrbiSurface
+        tone={profileTransitionLabel ? 'sky' : 'neutral'}
+        style={styles.card}
+      >
         <Text style={styles.name}>Onboarding securise</Text>
         <Text style={styles.meta}>
           {formatDriverOnboardingProgress(profile.profile.onboarding)}
@@ -852,7 +879,11 @@ export default function ProfilScreen() {
         </Text>
         <Text style={styles.meta}>{profile.profile.onboarding.notes}</Text>
         {profileTransitionLabel ? (
-          <Text style={styles.transitionMeta}>{profileTransitionLabel}</Text>
+          <OrbiStatusBanner
+            tone="sky"
+            title="Dossier mis à jour"
+            message={profileTransitionLabel}
+          />
         ) : null}
         {profile.profile.onboarding.checklist.map((item) => (
           <View key={item.id} style={styles.checklistRow}>
@@ -869,9 +900,9 @@ export default function ProfilScreen() {
             </Text>
           </View>
         ))}
-      </View>
+      </OrbiSurface>
 
-      <View style={styles.card}>
+      <OrbiSurface style={styles.card}>
         <Text style={styles.name}>Soumettre ou mettre a jour le dossier</Text>
         <Text style={styles.meta}>
           Ce formulaire prepare les liens documentaires securises puis envoie le
@@ -1076,42 +1107,31 @@ export default function ProfilScreen() {
         ))}
 
         <View style={styles.actionStack}>
-          <Pressable
+          <OrbiButton
             accessibilityLabel="Preparer les liens documentaires securises"
-            accessibilityRole="button"
             hitSlop={touchHitSlop}
             onPress={() => void prepareDocuments()}
             disabled={isPreparingDocuments || isSubmitting}
-            style={[
-              styles.button,
-              styles.secondaryButton,
-              isPreparingDocuments || isSubmitting ? styles.buttonDisabled : null,
-            ]}
-          >
-            <Text style={styles.secondaryButtonLabel}>
-              {isPreparingDocuments
-                ? 'Preparation...'
-                : 'Preparer les liens documentaires'}
-            </Text>
-          </Pressable>
-          <Pressable
+            loading={isPreparingDocuments}
+            label="Preparer les liens documentaires"
+            variant="secondary"
+            tone="amber"
+            style={styles.button}
+            labelStyle={styles.secondaryButtonLabel}
+          />
+          <OrbiButton
             accessibilityLabel="Soumettre le dossier chauffeur aux operations"
-            accessibilityRole="button"
             hitSlop={touchHitSlop}
             onPress={() => void handleSubmitOnboarding()}
             disabled={isSubmitting || isPreparingDocuments}
-            style={[
-              styles.button,
-              styles.primaryButton,
-              isSubmitting || isPreparingDocuments ? styles.buttonDisabled : null,
-            ]}
-          >
-            <Text style={styles.primaryButtonLabel}>
-              {isSubmitting ? 'Soumission...' : 'Soumettre le dossier ops'}
-            </Text>
-          </Pressable>
+            loading={isSubmitting}
+            label="Soumettre le dossier ops"
+            tone="amber"
+            style={styles.button}
+            labelStyle={styles.primaryButtonLabel}
+          />
         </View>
-      </View>
+      </OrbiSurface>
 
       <View style={styles.metricsRow}>
         <View style={styles.metricCard}>
@@ -1130,7 +1150,7 @@ export default function ProfilScreen() {
         </View>
       </View>
 
-      <View style={styles.card}>
+      <OrbiSurface style={styles.card}>
         <Text style={styles.name}>Vehicules actifs</Text>
         {profile.profile.vehicles.length ? (
           profile.profile.vehicles.map((vehicle) => (
@@ -1149,9 +1169,9 @@ export default function ProfilScreen() {
             Aucun vehicule synchronise pour le moment.
           </Text>
         )}
-      </View>
+      </OrbiSurface>
 
-      <View style={styles.card}>
+      <OrbiSurface style={styles.card}>
         <Text style={styles.name}>Documents et revue</Text>
         {profile.profile.onboarding.documents.map((document) => (
           <View
@@ -1208,10 +1228,10 @@ export default function ProfilScreen() {
             ) : null}
           </View>
         ))}
-      </View>
+      </OrbiSurface>
 
       {/* ── Support chauffeur ── */}
-      <View style={styles.card}>
+      <OrbiSurface style={styles.card}>
         <Text style={styles.heading}>Support</Text>
         <Text style={styles.meta}>
           Probleme de paiement, course litigieuse, vehicule ou compte ? Notre equipe repond sous 24h.
@@ -1288,33 +1308,37 @@ export default function ProfilScreen() {
               ))}
             </View>
             <View style={styles.actionRow}>
-              <Pressable
-                style={[styles.primaryButton, isSubmittingTicket && styles.buttonDisabled]}
+              <OrbiButton
+                style={styles.primaryButton}
                 onPress={() => void handleCreateTicket()}
                 disabled={isSubmittingTicket}
-              >
-                <Text style={styles.primaryButtonLabel}>
-                  {isSubmittingTicket ? 'Envoi...' : 'Envoyer'}
-                </Text>
-              </Pressable>
-              <Pressable
+                loading={isSubmittingTicket}
+                label="Envoyer"
+                tone="amber"
+                labelStyle={styles.primaryButtonLabel}
+              />
+              <OrbiButton
                 style={styles.secondaryButton}
                 onPress={() => setIsTicketFormOpen(false)}
                 disabled={isSubmittingTicket}
-              >
-                <Text style={styles.secondaryButtonLabel}>Annuler</Text>
-              </Pressable>
+                label="Annuler"
+                variant="secondary"
+                tone="amber"
+                labelStyle={styles.secondaryButtonLabel}
+              />
             </View>
           </>
         ) : (
-          <Pressable
+          <OrbiButton
             style={styles.secondaryButton}
             onPress={() => setIsTicketFormOpen(true)}
-          >
-            <Text style={styles.secondaryButtonLabel}>Contacter le support</Text>
-          </Pressable>
+            label="Contacter le support"
+            variant="secondary"
+            tone="amber"
+            labelStyle={styles.secondaryButtonLabel}
+          />
         )}
-      </View>
+      </OrbiSurface>
 
       <View style={{ height: 24 }} />
       </ScrollView>
@@ -1324,14 +1348,14 @@ export default function ProfilScreen() {
 
 const styles = StyleSheet.create({
   // ── New consumer styles ────────────────────────────────────────────────────
-  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+  safe: { flex: 1, backgroundColor: orbiTheme.colors.driverBackground },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: orbiTheme.colors.border,
   },
@@ -1342,31 +1366,30 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.text,
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerLiveText: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.amber,
+    textTransform: 'uppercase',
+  },
   signOutBtn: {
-    borderRadius: 999,
+    borderRadius: 10,
+    minHeight: 36,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(255,59,48,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,59,48,0.22)',
   },
   signOutBtnLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.danger,
   },
-  content: { paddingHorizontal: 16, paddingTop: 16, gap: 14 },
+  content: { paddingHorizontal: 16, paddingTop: 12, gap: 12 },
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    gap: 12,
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 16,
-    ...orbiTheme.shadows.card,
+    borderColor: 'rgba(255,176,32,0.20)',
   },
   avatarCircle: {
     width: 52,
@@ -1384,7 +1407,7 @@ const styles = StyleSheet.create({
   },
   userInfo: { flex: 1, gap: 2 },
   userName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.text,
@@ -1393,6 +1416,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: orbiTheme.colors.textSoft,
     fontFamily: 'Inter_400Regular',
+  },
+  privacyHint: {
+    marginTop: 4,
+    fontSize: 10,
+    color: orbiTheme.colors.teal,
+    fontFamily: 'Inter_600SemiBold',
+    textTransform: 'uppercase',
+    letterSpacing: 0,
   },
   statusRowCard: {
     flexDirection: 'row',
@@ -1405,7 +1436,7 @@ const styles = StyleSheet.create({
   statusItem: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 8,
     gap: 3,
   },
@@ -1415,7 +1446,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   statusItemValue: {
     fontSize: 12,
@@ -1430,55 +1461,10 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   // Driver performance stats
-  statsRow: { flexDirection: 'row', gap: 10 },
+  statsRow: { flexDirection: 'row', gap: 8 },
   statCard: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    paddingVertical: 12,
-    alignItems: 'center',
-    gap: 3,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: orbiTheme.colors.textMuted,
-    fontFamily: 'Inter_400Regular',
-  },
-
-  missionBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(0,201,167,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,201,167,0.22)',
-    borderRadius: 12,
-    padding: 12,
-  },
-  missionDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: orbiTheme.colors.teal },
-  missionText: { flex: 1, fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.text },
-  suspensionBanner: {
-    backgroundColor: 'rgba(255,59,48,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,59,48,0.22)',
-    borderRadius: 12,
-    padding: 12,
-  },
-  suspensionText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.danger },
-  statusNotice: {
-    fontSize: 13,
-    color: orbiTheme.colors.textSoft,
-    fontFamily: 'Inter_400Regular',
-    paddingVertical: 4,
-    paddingHorizontal: 2,
   },
   sectionEyebrow: {
     fontSize: 11,
@@ -1486,7 +1472,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.teal,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0,
     paddingHorizontal: 2,
   },
 
@@ -1543,16 +1529,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   card: {
-    backgroundColor: orbiTheme.colors.panel,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    padding: 18,
-    gap: 8,
-  },
-  cardHighlight: {
-    borderColor: orbiTheme.colors.teal,
-    backgroundColor: orbiTheme.colors.accentLight,
+    borderRadius: 16,
+    padding: 14,
+    gap: 7,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -1573,7 +1552,7 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.muted,
     textTransform: 'uppercase',
     fontSize: 12,
-    letterSpacing: 1.5,
+    letterSpacing: 0,
   },
   metricValue: {
     color: orbiTheme.colors.text,
@@ -1582,7 +1561,7 @@ const styles = StyleSheet.create({
   },
   name: {
     color: orbiTheme.colors.text,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
   },
   sectionTitle: {
@@ -1606,6 +1585,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   input: {
+    minWidth: 0,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
@@ -1645,10 +1625,13 @@ const styles = StyleSheet.create({
   },
   inlineInputs: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   inlineInput: {
-    flex: 1,
+    flexBasis: 128,
+    flexGrow: 1,
+    minWidth: 0,
   },
   documentField: {
     gap: 4,
@@ -1663,29 +1646,22 @@ const styles = StyleSheet.create({
   },
   button: {
     borderRadius: 18,
-    paddingVertical: 14,
     paddingHorizontal: 16,
+    minHeight: 50,
   },
   primaryButton: {
-    backgroundColor: orbiTheme.colors.amber,
+    borderRadius: 12,
+    minHeight: 44,
   },
   secondaryButton: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
+    borderRadius: 12,
+    minHeight: 44,
   },
   primaryButtonLabel: {
-    color: '#3b2205',
-    fontWeight: '800',
-    textAlign: 'center',
+    fontSize: 13,
   },
   secondaryButtonLabel: {
-    color: orbiTheme.colors.text,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontSize: 13,
   },
   vehicleRow: {
     paddingTop: 10,
@@ -1724,6 +1700,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: orbiTheme.colors.border,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 12,
   },
@@ -1744,7 +1721,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 11,
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    letterSpacing: 0,
   },
   documentBadge: {
     alignSelf: 'flex-start',
@@ -1855,7 +1832,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 11,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
   },
   ticketDescInput: {
     minHeight: 90,
@@ -1873,7 +1850,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
     color: orbiTheme.colors.amber,
     marginBottom: 4,
   },

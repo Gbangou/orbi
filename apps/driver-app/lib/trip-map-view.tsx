@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
+  orbiTheme,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
@@ -147,6 +148,31 @@ export function TripMapView({
     }
   }, [driverLat, driverLng]);
 
+  if (Platform.OS === 'web') {
+    const hasRoute = Number.isFinite(pickupLat) && Number.isFinite(destLat);
+    const hasDriver = Number.isFinite(driverLat) && Number.isFinite(driverLng);
+
+    return (
+      <View style={[styles.container, styles.webFallback, style]}>
+        <View style={styles.routeLine} />
+        <View style={[styles.routeNode, styles.pickupNode]} />
+        <View style={[styles.routeNode, styles.destinationNode]} />
+        {hasDriver ? (
+          <View style={styles.driverMarker}>
+            <Text style={styles.driverMarkerText}>V</Text>
+          </View>
+        ) : null}
+        <View style={styles.statusPanel}>
+          <Text style={styles.eyebrow}>Course active</Text>
+          <Text style={styles.title}>{hasRoute ? 'Trajet client en cours' : 'Trajet en attente'}</Text>
+          <Text style={styles.meta} numberOfLines={2}>
+            Suivi precis et navigation complete disponibles sur mobile natif.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, style]}>
       <TypedWebView
@@ -190,6 +216,86 @@ const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
     borderRadius: 14,
+  },
+  webFallback: {
+    minHeight: 180,
+    backgroundColor: '#eaf2ef',
+  },
+  routeLine: {
+    position: 'absolute',
+    left: '22%',
+    right: '22%',
+    top: '44%',
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,184,148,0.74)',
+    transform: [{ rotate: '-18deg' }],
+  },
+  routeNode: {
+    position: 'absolute',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+  },
+  pickupNode: {
+    left: '23%',
+    top: '54%',
+    backgroundColor: '#22c55e',
+  },
+  destinationNode: {
+    right: '24%',
+    top: '32%',
+    backgroundColor: '#f59e0b',
+  },
+  driverMarker: {
+    position: 'absolute',
+    left: '44%',
+    top: '41%',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#071311',
+    borderWidth: 2,
+    borderColor: orbiTheme.colors.teal,
+  },
+  driverMarkerText: {
+    color: '#b8fff0',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  statusPanel: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    gap: 3,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderWidth: 1,
+    borderColor: 'rgba(13, 42, 37, 0.08)',
+  },
+  eyebrow: {
+    color: orbiTheme.colors.teal,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
+  },
+  title: {
+    color: '#071311',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  meta: {
+    color: orbiTheme.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
   },
   webview: {
     flex: 1,

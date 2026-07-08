@@ -18,7 +18,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
 import { orbiTheme, resolveTheme } from '@orbi/ui';
-import { ErrorBoundary } from '@orbi/ui/src/native';
+import { ErrorBoundary } from '@orbi/ui/native';
 import { initDriverI18n } from '../lib/i18n';
 import { hasPersistedDriverSession } from '../lib/auth';
 
@@ -41,6 +41,7 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const theme = resolveTheme(colorScheme);
   const isDark = colorScheme === 'dark';
+  const appBackground = theme.colors.driverBackground as string;
   const [isNavigationMounted, setIsNavigationMounted] = useState(false);
   const [isResolved, setIsResolved] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
@@ -142,12 +143,12 @@ export default function RootLayout() {
           <TypedStack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: theme.colors.background as string },
+              contentStyle: { backgroundColor: appBackground },
             }}
           />
         ) : null}
         {!isResolved || !canRenderApp ? (
-          <View style={[styles.loadingScreen, { backgroundColor: theme.colors.background as string }]}>
+          <View style={[styles.loadingScreen, { backgroundColor: appBackground }]}>
             <Text
               style={[
                 canRenderApp ? styles.loadingWordmark : styles.loadingWordmarkSystem,
@@ -167,7 +168,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   loadingScreen: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.driverBackground,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 32,

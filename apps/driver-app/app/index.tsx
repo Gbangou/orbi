@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 48,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.driverBackground,
     gap: 16,
   },
   title: {

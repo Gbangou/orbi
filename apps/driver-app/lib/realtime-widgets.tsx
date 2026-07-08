@@ -92,7 +92,7 @@ const pill = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
 });
 
@@ -204,7 +204,7 @@ const hero = StyleSheet.create({
     fontWeight: '700',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
   },
   title: {
     fontSize: 18,
@@ -264,7 +264,7 @@ const metric = StyleSheet.create({
     fontWeight: '600',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   value: {
     fontSize: 22,
@@ -313,7 +313,7 @@ const dmc = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   value: {
     fontSize: 24,
@@ -404,7 +404,7 @@ const qac = StyleSheet.create({
     fontWeight: '700',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
   },
   eyebrowPrimary: {
     color: 'rgba(255,255,255,0.55)',
@@ -535,7 +535,7 @@ const rsc = StyleSheet.create({
     fontWeight: '700',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
   },
   titleRow: {
     flexDirection: 'row',
@@ -577,7 +577,7 @@ const rsc = StyleSheet.create({
     fontWeight: '600',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0,
   },
   chipValue: {
     fontSize: 13,
@@ -822,7 +822,7 @@ const ib = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0,
     opacity: 0.7,
   },
   value: {
@@ -951,7 +951,7 @@ const lrp = StyleSheet.create({
     fontWeight: '600',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0,
   },
   metricValue: {
     fontSize: 13,
@@ -1022,7 +1022,7 @@ const lt = StyleSheet.create({
     fontWeight: '700',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
     marginBottom: 12,
   },
   row: {

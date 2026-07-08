@@ -57,7 +57,7 @@ const guidanceFilters: Array<{
     value: 'all',
   },
   {
-    label: 'Prets',
+    label: 'Prets decision',
     value: 'approve',
     level: 'approve',
   },
@@ -151,7 +151,7 @@ function formatExportFilterLabel(
 ) {
   const labels = {
     all: 'Tous',
-    approve: 'Prets',
+    approve: 'Prets decision',
     review: 'Revue',
     resubmit: 'Redemande',
   } as const;
@@ -658,7 +658,7 @@ export function DriverOnboardingReviewBoard({
         <div className="queue-meta">
           <p className="lede">
             File de revue unifiee pour les chauffeurs moto et voiture avec
-            documents, decision ops et liens signes de consultation.
+            documents, decisions ops et liens signes de consultation.
           </p>
           <div className="queue-actions">
             <button
@@ -805,7 +805,7 @@ export function DriverOnboardingReviewBoard({
       >
         <div className="review-history-heading">
           <div>
-            <strong>Trafic exports audite</strong>
+            <strong>Exports audites</strong>
             <p>
               Derniers CSV generes par admin ou ops avec filtre, recherche et
               volume.
@@ -857,7 +857,7 @@ export function DriverOnboardingReviewBoard({
             {freshDriverIds.includes(driver.id) ? (
               <span className="entity-transition-badge">Resync live</span>
             ) : null}
-            <div className="ticket-topline">
+            <div className="ticket-topline onboarding-card-topline">
               <span className="priority-badge priority-2">
                 {driver.reviewStatus}
               </span>
@@ -869,19 +869,23 @@ export function DriverOnboardingReviewBoard({
                 {driver.verificationStatus}
               </span>
             </div>
-            <h3>{driver.driverName}</h3>
-            <p>
-              {driver.email} - {driver.phoneNumber ?? 'Telephone non renseigne'}
-            </p>
-            <p>
-              {driver.activeVehicleCount} vehicule(s) actif(s) - rayon{' '}
-              {driver.serviceRadiusKm} km
-            </p>
-            <p>
-              Documents: {driver.documentSummary.approved}/
-              {driver.documentSummary.total} approuves,{' '}
-              {driver.documentSummary.pending} en attente
-            </p>
+            <div className="driver-review-identity">
+              <div>
+                <h3>{driver.driverName}</h3>
+                <p>
+                  {driver.email} -{' '}
+                  {driver.phoneNumber ?? 'Telephone non renseigne'}
+                </p>
+              </div>
+              <div className="driver-review-meta">
+                <span>{driver.activeVehicleCount} vehicule(s) actif(s)</span>
+                <span>Rayon {driver.serviceRadiusKm} km</span>
+                <span>
+                  {driver.documentSummary.approved}/{driver.documentSummary.total}{' '}
+                  docs approuves
+                </span>
+              </div>
+            </div>
             <div
               className={`decision-guidance ${getDecisionGuidanceClass(
                 driver.decisionGuidance.level,
@@ -915,7 +919,9 @@ export function DriverOnboardingReviewBoard({
               </div>
             </div>
             {driver.latestDecisionReason ? (
-              <p>Derniere decision: {driver.latestDecisionReason}</p>
+              <p className="latest-decision-note">
+                Derniere decision: {driver.latestDecisionReason}
+              </p>
             ) : null}
             {driver.reviewHistory.length ? (
               <div className="review-history">
@@ -965,16 +971,17 @@ export function DriverOnboardingReviewBoard({
                   }`}
                   key={document.id}
                 >
-                  <div>
-                    <strong>{document.type}</strong>
+                  <div className="document-body">
+                    <div className="document-heading">
+                      <strong>{document.type}</strong>
+                      <span>{document.status}</span>
+                    </div>
                     {freshDocumentIds.includes(document.id) ? (
                       <span className="entity-transition-badge entity-transition-badge-inline">
-                        Statut maj
+                        Statut actualise
                       </span>
                     ) : null}
-                    <p>
-                      {document.fileName} - {document.status}
-                    </p>
+                    <p>{document.fileName}</p>
                     <div className="document-integrity">
                       <span
                         className={`phase-status ${getIntegrityToneClass(
@@ -1063,7 +1070,7 @@ export function DriverOnboardingReviewBoard({
               ))}
             </div>
 
-            <div className="ticket-actions">
+            <div className="ticket-actions onboarding-decision-actions">
               {reviewActions.map((action) => (
                 <button
                   key={action.status}
@@ -1091,8 +1098,11 @@ export function DriverOnboardingReviewBoard({
               ))}
             </div>
 
-            {/* ── Driver suspension control ── */}
             <div className="driver-suspension-zone">
+              <div className="driver-suspension-heading">
+                <strong>Controle compte</strong>
+                <span>Action sensible auditee</span>
+              </div>
               <span
                 className={`driver-status-badge ${
                   driver.driverStatus === 'SUSPENDED'
@@ -1116,7 +1126,7 @@ export function DriverOnboardingReviewBoard({
                   onClick={() => void handleReactivateDriver(driver.id)}
                   type="button"
                 >
-                  {busyDriverId === driver.id ? 'Traitement...' : 'Reactivér'}
+                  {busyDriverId === driver.id ? 'Traitement...' : 'Reactiver'}
                 </button>
               ) : (
                 <div className="driver-suspend-row">

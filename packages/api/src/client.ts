@@ -152,7 +152,7 @@ export class OrbiApiClient {
   constructor(private readonly options: ApiClientOptions) {
     this.version = options.version ?? API_VERSION_PREFIX;
     this.headers = options.defaultHeaders ?? {};
-    this.fetcher = options.fetcher ?? fetch;
+    this.fetcher = options.fetcher ?? fetch.bind(globalThis);
     this.requestTimeoutMs = options.requestTimeoutMs ?? defaultRequestTimeoutMs;
   }
 

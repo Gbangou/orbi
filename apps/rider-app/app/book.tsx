@@ -1,15 +1,15 @@
-import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../lib/i18n';
 import { VehicleSelector } from '../lib/booking/vehicle-selector';
 import { ScheduledRidePicker, type ScheduledRideMode } from '../lib/booking/scheduled-ride-picker';
-import { PaymentMethodsManager } from '../lib/booking/payment-methods-manager';
 import {
-  ActivityIndicator,
+  PaymentMethodsManager,
+  type PaymentSelection,
+} from '../lib/booking/payment-methods-manager';
+import {
   Animated,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -47,6 +47,7 @@ import {
   orbiCopy,
   orbiTheme,
 } from '@orbi/ui';
+import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics } from '@orbi/ui/native';
 import {
   orbiRuntimeConfig,
   resolveOrbiApiBaseUrlForRuntime,
@@ -163,6 +164,49 @@ function findCityPresetForPlace(place: Place) {
   return resolveBurkinaPricingPresetForPlace(place);
 }
 
+function BackGlyph() {
+  return (
+    <View style={bookIconStyles.backWrap}>
+      <View style={[bookIconStyles.backLine, bookIconStyles.backLineTop]} />
+      <View style={[bookIconStyles.backLine, bookIconStyles.backLineBottom]} />
+    </View>
+  );
+}
+
+function TargetGlyph() {
+  return (
+    <View style={bookIconStyles.targetOuter}>
+      <View style={bookIconStyles.targetInner} />
+    </View>
+  );
+}
+
+function CheckGlyph() {
+  return (
+    <View style={bookIconStyles.checkWrap}>
+      <View style={[bookIconStyles.checkLine, bookIconStyles.checkLineShort]} />
+      <View style={[bookIconStyles.checkLine, bookIconStyles.checkLineLong]} />
+    </View>
+  );
+}
+
+function ForwardGlyph({ color }: { color: string }) {
+  return (
+    <View style={bookIconStyles.forwardWrap}>
+      <View style={[bookIconStyles.forwardLine, bookIconStyles.forwardLineTop, { backgroundColor: color }]} />
+      <View style={[bookIconStyles.forwardLine, bookIconStyles.forwardLineBottom, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+function SavedPlaceGlyph() {
+  return (
+    <View style={bookIconStyles.savedPin}>
+      <View style={bookIconStyles.savedPinDot} />
+    </View>
+  );
+}
+
 const promoStyles = StyleSheet.create({
   container: {
     backgroundColor: orbiTheme.colors.panel,
@@ -176,7 +220,7 @@ const promoStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0,
     color: orbiTheme.colors.muted,
   },
   row: {
@@ -194,34 +238,16 @@ const promoStyles = StyleSheet.create({
     paddingHorizontal: 12,
     color: orbiTheme.colors.text,
     fontWeight: '700',
-    letterSpacing: 1.5,
+    letterSpacing: 0,
     fontSize: 14,
   },
   applyButton: {
     borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: orbiTheme.colors.teal,
-  },
-  applyButtonDisabled: {
-    opacity: 0.4,
-  },
-  applyButtonLabel: {
-    color: orbiTheme.colors.background,
-    fontWeight: '800',
-    fontSize: 13,
+    minWidth: 64,
   },
   clearButton: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-  },
-  clearButtonLabel: {
-    color: orbiTheme.colors.muted,
-    fontWeight: '700',
-    fontSize: 13,
+    alignSelf: 'flex-start',
   },
   successBox: {
     backgroundColor: 'rgba(61,215,192,0.08)',
@@ -277,6 +303,8 @@ export default function BookingScreen() {
   const [selectedOptionId, setSelectedOptionId] = useState<string>('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod>('cash');
+  const [paymentSelection, setPaymentSelection] =
+    useState<PaymentSelection>({ method: 'cash' });
   const [selectedCityId, setSelectedCityId] = useState<
     (typeof cityPresets)[number]['id']
   >(cityPresets[0].id);
@@ -684,6 +712,17 @@ export default function BookingScreen() {
         !destinationPlace.coordinates ||
         immediateBookingSupplyUnknown ||
         immediateBookingUnavailable));
+  const bookingCtaLabel = isSubmitting
+    ? tb('confirmLoading')
+    : hasOpenFlow
+      ? tb('activeFlow')
+      : immediateBookingUnavailable
+        ? 'Aucun chauffeur proche'
+        : immediateBookingSupplyUnknown
+          ? 'Vérification chauffeur...'
+          : selectedOption && destinationPlace.coordinates
+            ? tb('confirm').replace('{{fare}}', formatXof(selectedOption.fare))
+            : tb('noServiceSelected');
 
   useEffect(() => {
     const previousFlowState = previousFlowStateRef.current;
@@ -710,6 +749,51 @@ export default function BookingScreen() {
     return () => clearTimeout(timeout);
   }, [bookingTransitionLabel]);
 
+  function handlePaymentMethodSelect(method: PaymentMethod) {
+    setSelectedPaymentMethod(method);
+
+    if (method === 'cash') {
+      setPaymentSelection({ method: 'cash' });
+      return;
+    }
+
+    if (method === 'wallet') {
+      setPaymentSelection({ method: 'wallet' });
+      return;
+    }
+
+    setPaymentSelection((current) =>
+      current.method === 'mobile-money'
+        ? current
+        : {
+            method: 'mobile-money',
+            network: 'ORANGE_BFA',
+            phoneNumber: '',
+          },
+    );
+  }
+
+  function resolveMobileMoneyNetwork(selection: PaymentSelection) {
+    if (selection.method !== 'mobile-money') {
+      return undefined;
+    }
+
+    return selection.network === 'MOOV_BFA' ? 'MOOV' : 'ORANGE_MONEY';
+  }
+
+  function resolveMobileMoneyPhoneNumber(
+    selection: PaymentSelection,
+    fallbackPhoneNumber: string | null,
+  ) {
+    const selectedDigits =
+      selection.method === 'mobile-money'
+        ? selection.phoneNumber.replace(/\D/g, '')
+        : '';
+    const fallbackDigits = fallbackPhoneNumber?.replace(/\D/g, '') ?? '';
+
+    return selectedDigits || fallbackDigits || undefined;
+  }
+
   async function handleValidatePromo() {
     const code = promoCodeInput.trim().toUpperCase();
     if (!code) return;
@@ -731,7 +815,7 @@ export default function BookingScreen() {
     if (bookingMutationInFlightRef.current) {
       return;
     }
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    safeHaptics.impact('heavy');
 
     const bookingValidation = validateBookingSelection({
       destinationPlace,
@@ -762,6 +846,20 @@ export default function BookingScreen() {
         `Aucun chauffeur compatible en ligne dans ${fieldDispatchRadiusKm} km. Ouvrez l'app chauffeur, connectez le compte driver, passez en ligne, puis relancez la demande.`,
       );
       return;
+    }
+
+    if (selectedPaymentMethod === 'mobile-money') {
+      const mobileMoneyPhone = resolveMobileMoneyPhoneNumber(
+        paymentSelection,
+        profile.profile.phoneNumber,
+      );
+
+      if (!mobileMoneyPhone || mobileMoneyPhone.length < 8) {
+        setStatus(
+          'Ajoutez un numéro Mobile Money valide avant de confirmer la course.',
+        );
+        return;
+      }
     }
 
     bookingMutationInFlightRef.current = true;
@@ -810,6 +908,10 @@ export default function BookingScreen() {
       );
 
       if (selectedPaymentMethod !== 'cash') {
+        const mobileMoneyPhone = resolveMobileMoneyPhoneNumber(
+          paymentSelection,
+          me.user.phoneNumber ?? profile.profile.phoneNumber,
+        );
         const paymentIntent = await createCheckoutIntentWithApi(
           authClient,
           {
@@ -817,9 +919,12 @@ export default function BookingScreen() {
             channel: resolveCheckoutChannel(selectedPaymentMethod),
             mobileMoneyNetwork:
               selectedPaymentMethod === 'mobile-money'
-                ? 'ORANGE_MONEY'
+                ? resolveMobileMoneyNetwork(paymentSelection)
                 : undefined,
-            customerPhoneNumber: me.user.phoneNumber ?? undefined,
+            customerPhoneNumber:
+              selectedPaymentMethod === 'mobile-money'
+                ? mobileMoneyPhone
+                : undefined,
             redirectUrl: orbiRuntimeConfig.paymentRedirectUrl,
           },
           {
@@ -848,7 +953,7 @@ export default function BookingScreen() {
 
       // Feedback de creation de demande, avant acceptation chauffeur.
       setBookingConfirmed(true);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      safeHaptics.notify('success');
       Animated.sequence([
         Animated.spring(checkScale, { toValue: 1, tension: 50, friction: 5, useNativeDriver: false }),
         Animated.timing(checkOpacity, { toValue: 1, duration: 150, useNativeDriver: false }),
@@ -882,7 +987,7 @@ export default function BookingScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <OrbiScreen audience="rider" style={styles.safe}>
       {/* ── Header ── */}
       <View style={styles.header}>
         <Pressable
@@ -890,7 +995,7 @@ export default function BookingScreen() {
           style={styles.backBtn}
           hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
         >
-          <Text style={styles.backArrow}>‹</Text>
+          <BackGlyph />
         </Pressable>
         <Text style={styles.headerTitle}>Réserver</Text>
         <View style={{ width: 40 }} />
@@ -900,7 +1005,7 @@ export default function BookingScreen() {
       {bookingConfirmed ? (
         <Animated.View style={[styles.confirmOverlay, { opacity: checkOpacity }]}>
           <Animated.View style={[styles.confirmCircle, { transform: [{ scale: checkScale }] }]}>
-            <Text style={styles.confirmCheck}>✓</Text>
+            <CheckGlyph />
           </Animated.View>
           <Text style={styles.confirmLabel}>Demande envoyée</Text>
         </Animated.View>
@@ -913,7 +1018,7 @@ export default function BookingScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Route summary card ── */}
-        <View style={styles.routeSummaryCard}>
+        <OrbiSurface style={styles.routeSummaryCard} elevated>
           <View style={styles.routeSummaryRow}>
             <View style={styles.routeDotGreen} />
             <View style={styles.routeSummaryField}>
@@ -927,7 +1032,7 @@ export default function BookingScreen() {
               style={styles.gpsBtn}
               hitSlop={8}
             >
-              <Text style={styles.gpsBtnText}>◎</Text>
+              <TargetGlyph />
             </Pressable>
           </View>
           <View style={styles.routeSummarySep} />
@@ -946,7 +1051,34 @@ export default function BookingScreen() {
               </Text>
             </View>
           </View>
-        </View>
+          <View style={styles.tripDecisionRow}>
+            <Text style={styles.tripDecisionValue} numberOfLines={1}>
+              {selectedOption ? formatXof(selectedOption.fare) : '--'} · {tripEstimate.distanceKm} km · {tripEstimate.durationMinutes} min
+            </Text>
+            <View style={styles.tripDecisionSignal}>
+              <View
+                style={[
+                  styles.tripDecisionDot,
+                  {
+                    backgroundColor:
+                      nearbyCompatibleDriverCount === null
+                        ? orbiTheme.colors.sky
+                        : nearbyCompatibleDriverCount > 0
+                          ? orbiTheme.colors.teal
+                          : orbiTheme.colors.amber,
+                  },
+                ]}
+              />
+              <Text style={styles.tripDecisionSignalText} numberOfLines={1}>
+                {nearbyCompatibleDriverCount === null
+                  ? 'Scan'
+                  : nearbyCompatibleDriverCount > 0
+                    ? `${nearbyCompatibleDriverCount} proche${nearbyCompatibleDriverCount > 1 ? 's' : ''}`
+                    : 'Aucun proche'}
+              </Text>
+            </View>
+          </View>
+        </OrbiSurface>
 
         {/* ── Search fields ── */}
         <View style={styles.searchSection}>
@@ -966,7 +1098,11 @@ export default function BookingScreen() {
                 style={styles.voiceBtn}
                 hitSlop={8}
               >
-                <Text style={styles.voiceBtnText}>🎤 Voix</Text>
+                <View style={styles.voiceIcon} accessibilityElementsHidden>
+                  <View style={styles.voiceIconHead} />
+                  <View style={styles.voiceIconStem} />
+                </View>
+                <Text style={styles.voiceBtnText}>Voix</Text>
               </Pressable>
             </View>
             <PlaceSearch
@@ -980,11 +1116,7 @@ export default function BookingScreen() {
         </View>
 
         {/* ── City chips ── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cityScrollContent}
-        >
+        <View style={styles.cityScrollContent}>
           {cityPresets.map((city) => (
             <Pressable
               key={city.id}
@@ -1004,7 +1136,7 @@ export default function BookingScreen() {
               </Text>
             </Pressable>
           ))}
-        </ScrollView>
+        </View>
 
         {/* ── Map preview ── */}
         <View style={styles.mapPreviewWrap}>
@@ -1042,12 +1174,9 @@ export default function BookingScreen() {
 
         {/* ── Active flow notice ── */}
         {hasOpenFlow ? (
-          <Pressable
-            style={styles.activeFlowBanner}
-            onPress={() => router.push('/activity')}
-          >
-            <View style={styles.activeFlowDot} />
-            <View style={{ flex: 1 }}>
+          <Pressable onPress={() => router.push('/activity')}>
+            <OrbiSurface tone="amber" style={styles.activeFlowBanner}>
+              <View style={{ flex: 1 }}>
               <Text style={styles.activeFlowTitle}>
                 Course ou demande en cours
               </Text>
@@ -1058,53 +1187,26 @@ export default function BookingScreen() {
                     ? `${activeRequest.pickupAddress} → ${activeRequest.destinationAddress}`
                     : "Voir l'activité"}
               </Text>
-            </View>
-            <Text style={styles.activeFlowArrow}>›</Text>
+              </View>
+              <ForwardGlyph color={orbiTheme.colors.amber} />
+            </OrbiSurface>
           </Pressable>
         ) : immediateBookingUnavailable || immediateBookingSupplyUnknown ? (
-          <View
-            style={[
-              styles.supplyBanner,
-              immediateBookingUnavailable && styles.supplyBannerWarning,
-            ]}
-          >
-            <View
-              style={[
-                styles.supplyDot,
-                {
-                  backgroundColor: immediateBookingUnavailable
-                    ? orbiTheme.colors.amber
-                    : orbiTheme.colors.textMuted,
-                },
-              ]}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.supplyTitle}>
-                {immediateBookingUnavailable
-                  ? 'Aucun chauffeur proche'
-                  : 'Verification chauffeur en cours'}
-              </Text>
-              <Text style={styles.supplySub}>
-                {immediateBookingUnavailable
-                  ? `Demande immediate bloquee tant qu'aucun chauffeur n'est en ligne dans ${fieldDispatchRadiusKm} km.`
-                  : 'Le backend doit confirmer la presence chauffeur avant de lancer la recherche.'}
-              </Text>
-            </View>
-          </View>
+          <OrbiStatusBanner
+            tone={immediateBookingUnavailable ? 'amber' : 'sky'}
+            title={immediateBookingUnavailable ? 'Aucun chauffeur proche' : 'Vérification chauffeur en cours'}
+            message={
+              immediateBookingUnavailable
+                ? `Demande immédiate bloquée tant qu'aucun chauffeur n'est en ligne dans ${fieldDispatchRadiusKm} km.`
+                : 'Le backend doit confirmer la présence chauffeur avant de lancer la recherche.'
+            }
+          />
         ) : nearbyCompatibleDriverCount !== null ? (
-          <View style={styles.supplyBanner}>
-            <View style={styles.supplyDot} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.supplyTitle}>
-                {nearbyCompatibleDriverCount} chauffeur
-                {nearbyCompatibleDriverCount > 1 ? 's' : ''} en ligne
-              </Text>
-              <Text style={styles.supplySub}>
-                Disponibilite reelle verifiee dans {fieldDispatchRadiusKm} km
-                autour du depart.
-              </Text>
-            </View>
-          </View>
+          <OrbiStatusBanner
+            tone="teal"
+            title={`${nearbyCompatibleDriverCount} chauffeur${nearbyCompatibleDriverCount > 1 ? 's' : ''} en ligne`}
+            message={`Disponibilité réelle vérifiée dans ${fieldDispatchRadiusKm} km autour du départ.`}
+          />
         ) : null}
 
         {/* ── Scheduled ride picker ── */}
@@ -1130,7 +1232,8 @@ export default function BookingScreen() {
         <PaymentMethodsManager
           selectedMethod={selectedPaymentMethod}
           availableMethods={selectedOption?.paymentMethods}
-          onSelect={setSelectedPaymentMethod}
+          onSelect={handlePaymentMethodSelect}
+          onSelectionChange={setPaymentSelection}
         />
 
         {/* ── Promo code ── */}
@@ -1146,17 +1249,16 @@ export default function BookingScreen() {
                   Réduction de {promoValidation.discountBps / 100}%
                 </Text>
               </View>
-              <Pressable
+              <OrbiButton
                 onPress={() => {
                   setPromoValidation(null);
                   setPromoCodeInput('');
                 }}
+                label="Retirer le code"
+                variant="secondary"
+                tone="danger"
                 style={promoStyles.clearButton}
-              >
-                <Text style={promoStyles.clearButtonLabel}>
-                  Retirer le code
-                </Text>
-              </Pressable>
+              />
             </>
           ) : (
             <>
@@ -1183,19 +1285,14 @@ export default function BookingScreen() {
                     placeholderTextColor={orbiTheme.colors.textMuted}
                     style={promoStyles.input}
                   />
-                  <Pressable
+                  <OrbiButton
                     onPress={() => void handleValidatePromo()}
                     disabled={isValidatingPromo || !promoCodeInput.trim()}
-                    style={[
-                      promoStyles.applyButton,
-                      (isValidatingPromo || !promoCodeInput.trim()) &&
-                        promoStyles.applyButtonDisabled,
-                    ]}
-                  >
-                    <Text style={promoStyles.applyButtonLabel}>
-                      {isValidatingPromo ? '…' : 'OK'}
-                    </Text>
-                  </Pressable>
+                    loading={isValidatingPromo}
+                    label="OK"
+                    tone="teal"
+                    style={promoStyles.applyButton}
+                  />
                 </View>
               ) : null}
               {promoError ? (
@@ -1209,14 +1306,14 @@ export default function BookingScreen() {
         {savedPlaces.length > 0 ? (
           <View style={styles.savedSection}>
             <Text style={styles.sectionTitle}>{tb('savedPlaces')}</Text>
-            {savedPlaces.slice(0, 4).map((place) => (
+            {savedPlaces.slice(0, 2).map((place) => (
               <Pressable
                 key={place.id}
                 style={styles.savedRow}
                 onPress={() => applyPlace('destination', place)}
               >
                 <View style={styles.savedIconWrap}>
-                  <Text style={styles.savedStar}>★</Text>
+                  <SavedPlaceGlyph />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.savedLabel}>{place.label}</Text>
@@ -1224,7 +1321,7 @@ export default function BookingScreen() {
                     {place.address}
                   </Text>
                 </View>
-                <Text style={styles.savedArrow}>›</Text>
+                <ForwardGlyph color={orbiTheme.colors.textMuted} />
               </Pressable>
             ))}
           </View>
@@ -1232,27 +1329,20 @@ export default function BookingScreen() {
 
         {/* ── Payment preview (after booking) ── */}
         {paymentPreview ? (
-          <View style={styles.paymentPreviewCard}>
-            <Text style={styles.paymentPreviewTitle}>Paiement initié</Text>
-            <Text style={styles.paymentPreviewProvider}>
-              {paymentPreview.provider} · {paymentPreview.channel}
-            </Text>
-            <Text style={styles.paymentPreviewRef}>
-              Réf : {paymentPreview.transactionRef}
-            </Text>
-          </View>
+          <OrbiStatusBanner
+            tone="teal"
+            title="Paiement initié"
+            message={`${paymentPreview.provider} · ${paymentPreview.channel} · Réf: ${paymentPreview.transactionRef}`}
+          />
         ) : null}
 
         {/* ── Realtime sync indicator ── */}
         {isRealtimeSyncing ? (
-          <View style={styles.syncNotice}>
-            <ActivityIndicator
-              size="small"
-              color={orbiTheme.colors.teal}
-              style={{ transform: [{ scale: 0.75 }] }}
-            />
-            <Text style={styles.syncNoticeText}>Mise à jour en cours…</Text>
-          </View>
+          <OrbiStatusBanner
+            tone="sky"
+            title="Mise à jour en cours"
+            message="Synchronisation du booking et du direct."
+          />
         ) : null}
 
         <View style={{ height: 110 }} />
@@ -1260,7 +1350,46 @@ export default function BookingScreen() {
 
       {/* ── CTA fixe en bas ── */}
       <View style={styles.ctaWrap}>
-        <Pressable
+        <View style={styles.ctaSignalRow}>
+          <View style={styles.ctaSignalCopy}>
+            <Text style={styles.ctaSignalTitle} numberOfLines={1}>
+              {hasOpenFlow
+                ? 'Course en cours'
+                : immediateBookingUnavailable
+                  ? 'Aucun chauffeur autour du départ'
+                  : immediateBookingSupplyUnknown
+                    ? 'Scan disponibilité'
+                    : selectedOption && destinationPlace.coordinates
+                      ? `${formatXof(selectedOption.fare)} · ${selectedOption.title}`
+                      : 'Choisissez votre course'}
+            </Text>
+            <Text style={styles.ctaSignalMeta} numberOfLines={1}>
+              {hasOpenFlow
+                ? 'Suivez le statut dans Activité'
+                : immediateBookingUnavailable
+                  ? `Essayez plus tard ou programmez la course`
+                  : immediateBookingSupplyUnknown
+                    ? `Vérification dans ${fieldDispatchRadiusKm} km`
+                    : selectedOption && destinationPlace.coordinates
+                      ? `${tripEstimate.distanceKm} km · ${tripEstimate.durationMinutes} min · ${selectedPaymentMethod === 'cash' ? 'Espèces' : selectedPaymentMethod}`
+                      : 'Départ, destination et disponibilité requis'}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.ctaAvailabilityDot,
+              {
+                backgroundColor:
+                  immediateBookingUnavailable
+                    ? orbiTheme.colors.amber
+                    : immediateBookingSupplyUnknown
+                      ? orbiTheme.colors.sky
+                      : orbiTheme.colors.teal,
+              },
+            ]}
+          />
+        </View>
+        <OrbiButton
           accessibilityLabel="booking-cta"
           onPress={
             hasOpenFlow
@@ -1268,39 +1397,24 @@ export default function BookingScreen() {
               : () => void handleCreateRideRequest()
           }
           disabled={isBookingCtaDisabled}
-          style={({ pressed }) => [
-            styles.ctaBtn,
-            isBookingCtaDisabled && styles.ctaBtnDisabled,
-            pressed && styles.ctaBtnPressed,
-          ]}
-        >
-          <Text style={styles.ctaBtnLabel}>
-            {isSubmitting
-              ? tb('confirmLoading')
-              : hasOpenFlow
-                ? tb('activeFlow')
-                : immediateBookingUnavailable
-                  ? 'Aucun chauffeur proche'
-                  : immediateBookingSupplyUnknown
-                    ? 'Verification chauffeur...'
-                : selectedOption && destinationPlace.coordinates
-                  ? tb('confirm').replace('{{fare}}', formatXof(selectedOption.fare))
-                  : tb('noServiceSelected')}
-          </Text>
-        </Pressable>
+          loading={isSubmitting}
+          label={bookingCtaLabel}
+          tone="teal"
+          style={styles.ctaBtn}
+        />
       </View>
-    </SafeAreaView>
+    </OrbiScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+  safe: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingBottom: 40,
-    gap: 16,
+    gap: 10,
   },
 
   // Header
@@ -1309,11 +1423,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 6,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.riderBackground,
   },
   backBtn: {
     width: 40,
@@ -1323,7 +1437,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backArrow: { fontSize: 28, color: orbiTheme.colors.text, marginTop: -2 },
   headerTitle: {
     fontSize: 17,
     fontWeight: '700',
@@ -1336,16 +1449,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    paddingHorizontal: 16,
+    borderColor: 'rgba(0,194,168,0.24)',
+    paddingHorizontal: 12,
     paddingVertical: 4,
     ...orbiTheme.shadows.card,
   },
   routeSummaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 13,
-    gap: 12,
+    paddingVertical: 8,
+    gap: 10,
   },
   routeDotGreen: {
     width: 10,
@@ -1368,11 +1481,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 0,
     marginBottom: 2,
   },
   routeSummaryValue: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.text,
@@ -1387,6 +1500,43 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.border,
     marginLeft: 22,
   },
+  tripDecisionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,194,168,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,194,168,0.18)',
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    marginTop: 6,
+  },
+  tripDecisionValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+    flex: 1,
+  },
+  tripDecisionSignal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flexShrink: 0,
+  },
+  tripDecisionDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  tripDecisionSignalText: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.textSoft,
+  },
   gpsBtn: {
     width: 32,
     height: 32,
@@ -1396,10 +1546,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  gpsBtnText: { fontSize: 16, color: orbiTheme.colors.teal },
 
   // Search section
-  searchSection: { gap: 10 },
+  searchSection: { gap: 7 },
   searchField: { gap: 4 },
   searchFieldHeaderRow: {
     flexDirection: 'row',
@@ -1413,13 +1562,36 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
   },
   voiceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: 'rgba(0,201,167,0.10)',
     borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0,201,167,0.22)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  voiceIcon: {
+    width: 10,
+    height: 14,
+    alignItems: 'center',
+  },
+  voiceIconHead: {
+    width: 8,
+    height: 10,
+    borderRadius: 4,
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  voiceIconStem: {
+    width: 2,
+    height: 4,
+    borderRadius: 1,
+    backgroundColor: orbiTheme.colors.teal,
+    marginTop: 1,
   },
   voiceBtnText: {
     fontSize: 11,
@@ -1429,11 +1601,16 @@ const styles = StyleSheet.create({
   },
 
   // City chips
-  cityScrollContent: { gap: 8, paddingHorizontal: 2 },
+  cityScrollContent: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
+    paddingHorizontal: 2,
+  },
   cityChip: {
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     backgroundColor: orbiTheme.colors.backgroundAlt,
     borderWidth: 1,
     borderColor: orbiTheme.colors.border,
@@ -1443,7 +1620,7 @@ const styles = StyleSheet.create({
     borderColor: orbiTheme.colors.text,
   },
   cityChipLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
     color: orbiTheme.colors.textSoft,
@@ -1452,10 +1629,12 @@ const styles = StyleSheet.create({
 
   // Map preview
   mapPreviewWrap: {
-    height: 180,
+    height: 150,
     borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 201, 167, 0.12)',
     ...orbiTheme.shadows.card,
   },
   mapPreview: { width: '100%', height: '100%' },
@@ -1479,18 +1658,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: 'rgba(255,149,0,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,149,0,0.28)',
-    borderRadius: 14,
     padding: 14,
-  },
-  activeFlowDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: orbiTheme.colors.amber,
-    flexShrink: 0,
   },
   activeFlowTitle: {
     fontSize: 14,
@@ -1504,41 +1672,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     marginTop: 2,
   },
-  activeFlowArrow: { fontSize: 22, color: orbiTheme.colors.amber },
-  supplyBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(0,201,167,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,201,167,0.24)',
-    borderRadius: 14,
-    padding: 14,
-  },
-  supplyBannerWarning: {
-    backgroundColor: 'rgba(255,149,0,0.08)',
-    borderColor: 'rgba(255,149,0,0.28)',
-  },
-  supplyDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: orbiTheme.colors.teal,
-    flexShrink: 0,
-  },
-  supplyTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
-  },
-  supplySub: {
-    fontSize: 12,
-    color: orbiTheme.colors.textSoft,
-    fontFamily: 'Inter_400Regular',
-    marginTop: 2,
-  },
-
   // Vehicle section
   vehicleSection: { gap: 10 },
   sectionTitle: {
@@ -1633,7 +1766,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  savedStar: { fontSize: 16, color: orbiTheme.colors.teal },
   savedLabel: {
     fontSize: 14,
     fontWeight: '600',
@@ -1645,48 +1777,6 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
   },
-  savedArrow: { fontSize: 20, color: orbiTheme.colors.textMuted },
-
-  // Payment preview
-  paymentPreviewCard: {
-    backgroundColor: 'rgba(0,201,167,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,201,167,0.22)',
-    borderRadius: 14,
-    padding: 14,
-    gap: 4,
-  },
-  paymentPreviewTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.teal,
-  },
-  paymentPreviewProvider: {
-    fontSize: 13,
-    color: orbiTheme.colors.textSoft,
-    fontFamily: 'Inter_500Medium',
-  },
-  paymentPreviewRef: {
-    fontSize: 12,
-    color: orbiTheme.colors.textMuted,
-    fontFamily: 'Inter_400Regular',
-  },
-
-  // Sync notice
-  syncNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  syncNoticeText: {
-    fontSize: 12,
-    color: orbiTheme.colors.textMuted,
-    fontFamily: 'Inter_400Regular',
-  },
-
   // ── Booking confirmation overlay ────────────────────────────────────────────
   confirmOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1709,11 +1799,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 14,
   },
-  confirmCheck: {
-    fontSize: 44,
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
   confirmLabel: {
     fontSize: 18,
     fontWeight: '700',
@@ -1724,8 +1809,8 @@ const styles = StyleSheet.create({
   // CTA
   ctaWrap: {
     paddingHorizontal: 16,
-    paddingBottom: 28,
-    paddingTop: 12,
+    paddingBottom: 22,
+    paddingTop: 10,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: orbiTheme.colors.border,
@@ -1736,19 +1821,35 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   ctaBtn: {
-    backgroundColor: orbiTheme.colors.text,
-    borderRadius: 14,
-    paddingVertical: 17,
-    alignItems: 'center',
-    ...orbiTheme.shadows.button,
+    minHeight: 50,
   },
-  ctaBtnDisabled: { opacity: 0.38 },
-  ctaBtnPressed: { opacity: 0.85 },
-  ctaBtnLabel: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+  ctaSignalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 8,
+  },
+  ctaSignalCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  ctaSignalTitle: {
+    fontSize: 13,
+    fontWeight: '800',
     fontFamily: 'Inter_700Bold',
+    color: orbiTheme.colors.text,
+  },
+  ctaSignalMeta: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: orbiTheme.colors.textMuted,
+    marginTop: 1,
+  },
+  ctaAvailabilityDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 
   // Compat stubs (used in internal handlers only)
@@ -1777,4 +1878,99 @@ const styles = StyleSheet.create({
   inlineActions: { gap: 8 },
   inlineActionCard: { width: '100%' },
 
+});
+
+const bookIconStyles = StyleSheet.create({
+  backWrap: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backLine: {
+    position: 'absolute',
+    width: 12,
+    height: 2.5,
+    borderRadius: 999,
+    backgroundColor: orbiTheme.colors.text,
+    left: 3,
+  },
+  backLineTop: {
+    transform: [{ rotate: '-45deg' }, { translateY: -4 }],
+  },
+  backLineBottom: {
+    transform: [{ rotate: '45deg' }, { translateY: 4 }],
+  },
+  targetOuter: {
+    width: 17,
+    height: 17,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: orbiTheme.colors.teal,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  targetInner: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  checkWrap: {
+    width: 42,
+    height: 34,
+  },
+  checkLine: {
+    position: 'absolute',
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+  },
+  checkLineShort: {
+    width: 16,
+    left: 5,
+    top: 18,
+    transform: [{ rotate: '45deg' }],
+  },
+  checkLineLong: {
+    width: 32,
+    left: 14,
+    top: 14,
+    transform: [{ rotate: '-45deg' }],
+  },
+  forwardWrap: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  forwardLine: {
+    position: 'absolute',
+    width: 10,
+    height: 2.5,
+    borderRadius: 999,
+    right: 3,
+  },
+  forwardLineTop: {
+    transform: [{ rotate: '45deg' }, { translateY: -3 }],
+  },
+  forwardLineBottom: {
+    transform: [{ rotate: '-45deg' }, { translateY: 3 }],
+  },
+  savedPin: {
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: orbiTheme.colors.teal,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savedPinDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: orbiTheme.colors.teal,
+  },
 });

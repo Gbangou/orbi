@@ -627,6 +627,98 @@ describe('rider smoke flows', () => {
     expect(mockedCreateCheckoutIntentWithApi).not.toHaveBeenCalled();
   });
 
+  it('uses the selected Mobile Money phone number when creating checkout', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+    mockedCreateRideRequestWithApi.mockResolvedValue({
+      id: 'ride-request-mobile-money',
+      routeMetricsSource: 'SERVER_COORDINATES',
+    } as never);
+    mockedCreateCheckoutIntentWithApi.mockResolvedValue({
+      provider: 'Orange Money',
+      transactionRef: 'txn-mm',
+      supportedMobileMoneyNetworks: ['ORANGE_MONEY'],
+      channel: 'MOBILE_MONEY',
+    } as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+    await pressByText(renderer, 'Mobile Money');
+    await changeInputByPlaceholder(renderer, '70 12 34 56', '76 54 32 10');
+    await pressByLabel(renderer, 'booking-cta');
+    await flushMicrotasks();
+
+    expect(mockedCreateCheckoutIntentWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      expect.objectContaining({
+        channel: 'MOBILE_MONEY',
+        mobileMoneyNetwork: 'ORANGE_MONEY',
+        customerPhoneNumber: '76543210',
+      }),
+      expect.objectContaining({
+        idempotencyKey: 'checkout-ride-request-mobile-money-mobile-money',
+      }),
+    );
+  });
+
+  it('creates a wallet checkout when Wallet Orbi is selected', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+    mockedCreateRideRequestWithApi.mockResolvedValue({
+      id: 'ride-request-wallet',
+      routeMetricsSource: 'SERVER_COORDINATES',
+    } as never);
+    mockedCreateCheckoutIntentWithApi.mockResolvedValue({
+      provider: 'PAWAPAY',
+      transactionRef: 'txn-wallet',
+      supportedMobileMoneyNetworks: [],
+      channel: 'WALLET',
+    } as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+    await pressByText(renderer, 'Wallet Orbi');
+    await pressByLabel(renderer, 'booking-cta');
+    await flushMicrotasks();
+
+    expect(mockedCreateRideRequestWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      expect.objectContaining({
+        paymentMethod: 'WALLET',
+      }),
+      expect.objectContaining({
+        idempotencyKey: expect.stringContaining('-wallet-'),
+      }),
+    );
+    expect(mockedCreateCheckoutIntentWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      expect.objectContaining({
+        channel: 'WALLET',
+        mobileMoneyNetwork: undefined,
+        customerPhoneNumber: undefined,
+      }),
+      expect.objectContaining({
+        idempotencyKey: 'checkout-ride-request-wallet-wallet',
+      }),
+    );
+  });
+
   it('blocks an immediate booking when no compatible driver is online nearby', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
     mockedFetchNearbyDrivers.mockResolvedValue({

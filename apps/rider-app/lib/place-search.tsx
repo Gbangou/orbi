@@ -43,6 +43,25 @@ function toPlace(result: NominatimResult): Place {
   };
 }
 
+function compactSuggestionLabel(label: string): string {
+  const normalized = label.trim();
+  const lower = normalized.toLowerCase();
+
+  if (lower.includes('universite norbert zongo')) return 'Univ. N. Zongo';
+  if (lower.includes('gare routiere de banfora')) return 'Gare Banfora';
+
+  return normalized.length > 18 ? `${normalized.slice(0, 17).trim()}…` : normalized;
+}
+
+function CloseGlyph({ color }: { color: string }) {
+  return (
+    <View style={iconStyles.closeWrap}>
+      <View style={[iconStyles.closeLine, iconStyles.closeLineA, { backgroundColor: color }]} />
+      <View style={[iconStyles.closeLine, iconStyles.closeLineB, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
 export interface PlaceSearchProps {
   placeholder: string;
   onSelectPlace: (place: Place) => void;
@@ -148,7 +167,7 @@ export function PlaceSearch({
             }}
             style={styles.clearButton}
           >
-            <Text style={[styles.clearLabel, { color: orbiTheme.colors.muted }]}>✕</Text>
+            <CloseGlyph color={orbiTheme.colors.muted} />
           </Pressable>
         ) : null}
       </View>
@@ -161,7 +180,7 @@ export function PlaceSearch({
         <View style={styles.suggestions}>
           <Text style={styles.suggestionsLabel}>{suggestionLabel}</Text>
           <View style={styles.suggestionsGrid}>
-            {suggestions.slice(0, 6).map((place) => (
+            {suggestions.slice(0, 4).map((place) => (
               <Pressable
                 key={place.id}
                 onPress={() => handleSelect(place)}
@@ -171,8 +190,8 @@ export function PlaceSearch({
                   pressed ? styles.suggestionChipPressed : null,
                 ]}
               >
-                <Text style={styles.suggestionChipLabel} numberOfLines={1}>
-                  {place.label}
+                <Text style={styles.suggestionChipLabel} numberOfLines={1} ellipsizeMode="tail">
+                  {compactSuggestionLabel(place.label)}
                 </Text>
               </Pressable>
             ))}
@@ -234,10 +253,10 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     marginLeft: 8,
-    padding: 4,
-  },
-  clearLabel: {
-    fontSize: 14,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   error: {
     color: orbiTheme.colors.rose ?? '#f87171',
@@ -259,12 +278,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   suggestionChip: {
-    maxWidth: '48%',
+    width: '46.5%',
     borderRadius: 999,
     borderWidth: 1,
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 8,
+    overflow: 'hidden',
   },
   suggestionChipPressed: {
     backgroundColor: 'rgba(0,199,199,0.08)',
@@ -273,6 +293,9 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.text,
     fontSize: 12,
     fontWeight: '700',
+    width: '100%',
+    flexShrink: 1,
+    overflow: 'hidden',
   },
   resultsList: {
     backgroundColor: orbiTheme.colors.backgroundAlt,
@@ -311,5 +334,26 @@ const styles = StyleSheet.create({
   resultAddress: {
     color: orbiTheme.colors.muted,
     fontSize: 11,
+  },
+});
+
+const iconStyles = StyleSheet.create({
+  closeWrap: {
+    width: 14,
+    height: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeLine: {
+    position: 'absolute',
+    width: 14,
+    height: 2,
+    borderRadius: 999,
+  },
+  closeLineA: {
+    transform: [{ rotate: '45deg' }],
+  },
+  closeLineB: {
+    transform: [{ rotate: '-45deg' }],
   },
 });

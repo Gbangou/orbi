@@ -24,6 +24,7 @@
     "@expo/vector-icons": "^14.0.4",
     "@orbi/api": "workspace:*",
     "@orbi/config": "workspace:*",
+    "@orbi/domain": "workspace:*",
     "@orbi/i18n": "workspace:*",
     "@orbi/ui": "workspace:*",
     "i18next": "^26.3.3",

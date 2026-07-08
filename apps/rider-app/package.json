@@ -23,6 +23,7 @@
     "@expo/metro-runtime": "~4.0.1",
     "@orbi/api": "workspace:*",
     "@orbi/config": "workspace:*",
+    "@orbi/domain": "workspace:*",
     "@orbi/ui": "workspace:*",
     "@react-native-voice/voice": "^3.2.4",
     "expo": "^52.0.23",

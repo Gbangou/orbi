@@ -1,5 +1,5 @@
-﻿import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from "../../lib/privacy/screen-capture";
 import { useTranslation } from "../../lib/i18n";
 import {
   ActivityIndicator,
@@ -7,7 +7,6 @@ import {
   Linking,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -43,6 +42,7 @@ import {
   LiveTimeline,
   TransitionNoticeCard,
 } from "../../lib/realtime-widgets";
+import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics } from "@orbi/ui/native";
 import { OfferCard } from "../../lib/offer-card";
 import { restoreDriverSession } from "../../lib/auth";
 import { resolveDriverAppError } from "../../lib/session-feedback";
@@ -111,6 +111,28 @@ function buildInitials(name: string) {
       .slice(0, 2)
       .map((part) => part.charAt(0).toUpperCase())
       .join("") || "OR"
+  );
+}
+
+function RefreshGlyph({ loading }: { loading: boolean }) {
+  if (loading) {
+    return <ActivityIndicator size="small" color={orbiTheme.colors.amber} />;
+  }
+
+  return (
+    <View style={iconStyles.refreshWrap}>
+      <View style={iconStyles.refreshArc} />
+      <View style={iconStyles.refreshTip} />
+    </View>
+  );
+}
+
+function CloseGlyph() {
+  return (
+    <View style={iconStyles.closeWrap}>
+      <View style={[iconStyles.closeLine, iconStyles.closeLineA]} />
+      <View style={[iconStyles.closeLine, iconStyles.closeLineB]} />
+    </View>
   );
 }
 
@@ -309,6 +331,13 @@ export default function OffersScreen() {
   );
 
   useEffect(() => {
+    preventSensitiveScreenCapture();
+    return () => {
+      restoreSensitiveScreenCapture();
+    };
+  }, []);
+
+  useEffect(() => {
     const previousVisibleOfferIds = previousVisibleOfferIdsRef.current;
     const nextVisibleOfferIds = visibleOffers.map((offer) => offer.id);
 
@@ -440,7 +469,7 @@ export default function OffersScreen() {
   }
 
   async function handleAcceptOffer(rideRequestId: string) {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    safeHaptics.impact('medium');
     const validation = validateOfferAction({
       activeTripId: activeTrip?.id,
       offer: visibleOffers.find((offer) => offer.id === rideRequestId),
@@ -680,7 +709,7 @@ export default function OffersScreen() {
   }
 
   async function handleTriggerSos(tripId: string) {
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    safeHaptics.notify('error');
     await runExclusiveDriverAction(async () => {
       setStatus("SOS chauffeur en cours: notification operations...");
 
@@ -801,7 +830,7 @@ export default function OffersScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <OrbiScreen audience="driver" style={styles.safe}>
       {/* ── Header ── */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{td('missions')}</Text>
@@ -826,9 +855,7 @@ export default function OffersScreen() {
             style={styles.headerRefreshBtn}
             hitSlop={12}
           >
-            <Text style={styles.headerRefreshLabel}>
-              {isRefreshing ? "…" : "↻"}
-            </Text>
+            <RefreshGlyph loading={isRefreshing} />
           </Pressable>
         </View>
       </View>
@@ -847,7 +874,7 @@ export default function OffersScreen() {
       >
         {/* ── Completion flash ── */}
         {completionFlash ? (
-          <View style={styles.completionCard}>
+          <OrbiSurface tone="teal" style={styles.completionCard} elevated>
             <View style={styles.completionCheckWrap}>
               <View style={styles.completionCheck} />
             </View>
@@ -857,9 +884,9 @@ export default function OffersScreen() {
               <Text style={styles.completionNet}>Votre gain : {completionFlash.netLabel}</Text>
             </View>
             <Pressable onPress={() => setCompletionFlash(null)} style={styles.completionClose} hitSlop={12}>
-              <Text style={styles.completionCloseText}>✕</Text>
+              <CloseGlyph />
             </Pressable>
-          </View>
+          </OrbiSurface>
         ) : null}
 
         {/* ── Status notice ── */}
@@ -869,12 +896,11 @@ export default function OffersScreen() {
 
         {/* ── Fatigue warning ── */}
         {driverFatigue.state !== "clear" ? (
-          <View style={[styles.warningBanner, driverFatigue.state === "blocked" && styles.warningBannerDanger]}>
-            <Text style={[styles.warningTitle, driverFatigue.state === "blocked" && styles.warningTitleDanger]}>
-              {driverFatigue.state === "blocked" ? "Pause obligatoire" : "Pause conseillée"}
-            </Text>
-            <Text style={styles.warningText}>{buildDriverFatigueMessage(driverFatigue)}</Text>
-          </View>
+          <OrbiStatusBanner
+            title={driverFatigue.state === "blocked" ? "Pause obligatoire" : "Pause conseillée"}
+            message={buildDriverFatigueMessage(driverFatigue)}
+            tone={driverFatigue.state === "blocked" ? "danger" : "amber"}
+          />
         ) : null}
 
         {/* Shift readiness signal — accessible for tests */}
@@ -903,7 +929,7 @@ export default function OffersScreen() {
 
         {/* ── Active mission ── */}
         {activeTrip ? (
-          <View style={styles.missionCard}>
+          <OrbiSurface tone="amber" style={styles.missionCard} elevated>
             {/* Section label — accessible for tests */}
             <Text style={styles.missionSectionLabel}>Course active</Text>
 
@@ -984,63 +1010,78 @@ export default function OffersScreen() {
             ) : null}
 
             {/* Mission details — operational signals accessible for tests */}
-            <Text style={styles.missionDetailLabel}>Mission en direct</Text>
-            <Text style={styles.missionDetailStatus}>
-              {`Statut: ${activeTrip.status}`}
-            </Text>
-            {driverRouteSafetyBrief.blocksCompletion ? (
-              <Text style={styles.missionBlockedLabel}>Finalisation bloquee</Text>
-            ) : null}
-            {driverRouteSafetyBrief.description ? (
-              <Text style={styles.missionDetailStatus}>{driverRouteSafetyBrief.description}</Text>
-            ) : null}
-            {driverRouteSafetyBrief.actionLabel ? (
-              <Text style={styles.missionDetailStatus}>{driverRouteSafetyBrief.actionLabel}</Text>
-            ) : null}
-            {driverNextActionHint ? (
-              <Text style={styles.missionDetailStatus}>{driverNextActionHint}</Text>
-            ) : null}
-            {driverRouteProgress ? (
-              <>
-                {driverRouteProgress.title ? (
-                  <Text style={styles.missionDetailStatus}>{driverRouteProgress.title}</Text>
+            <View style={styles.missionSignalsPanel}>
+              <Text style={styles.missionDetailLabel}>Mission en direct</Text>
+              <View style={styles.missionSignalGrid}>
+                <View style={styles.missionSignalTile}>
+                  <Text style={styles.missionSignalLabel}>Statut</Text>
+                  <Text style={styles.missionSignalValue}>{`Statut: ${activeTrip.status}`}</Text>
+                </View>
+                {driverRouteSafetyBrief.blocksCompletion ? (
+                  <View style={[styles.missionSignalTile, styles.missionSignalTileDanger]}>
+                    <Text style={styles.missionSignalLabel}>Blocage</Text>
+                    <Text style={styles.missionBlockedLabel}>Finalisation bloquee</Text>
+                  </View>
                 ) : null}
-                {driverRouteProgress.distanceLabel ? (
-                  <Text style={styles.missionDetailStatus}>{driverRouteProgress.distanceLabel}</Text>
+                {driverRouteProgress?.distanceLabel ? (
+                  <View style={styles.missionSignalTile}>
+                    <Text style={styles.missionSignalLabel}>Distance</Text>
+                    <Text style={styles.missionSignalValue}>{driverRouteProgress.distanceLabel}</Text>
+                  </View>
                 ) : null}
-                {driverRouteProgress.stateLabel ? (
-                  <Text style={styles.missionDetailStatus}>{driverRouteProgress.stateLabel}</Text>
+                {driverRouteProgress?.accuracyLabel ? (
+                  <View style={styles.missionSignalTile}>
+                    <Text style={styles.missionSignalLabel}>GPS</Text>
+                    <Text style={styles.missionSignalValue}>{driverRouteProgress.accuracyLabel}</Text>
+                  </View>
                 ) : null}
-                {driverRouteProgress.etaLabel ? (
-                  <Text style={styles.missionDetailStatus}>{driverRouteProgress.etaLabel}</Text>
+                {driverRouteProgress?.speedLabel ? (
+                  <View style={styles.missionSignalTile}>
+                    <Text style={styles.missionSignalLabel}>Vitesse</Text>
+                    <Text style={styles.missionSignalValue}>
+                      {activeTrip.status === "IN_PROGRESS"
+                        ? `Rider vers destination - ${driverRouteProgress.speedLabel}`
+                        : `Rider au pickup - ${driverRouteProgress.speedLabel}`}
+                    </Text>
+                  </View>
                 ) : null}
-                {driverRouteProgress.freshnessLabel ? (
-                  <Text style={styles.missionDetailStatus}>{driverRouteProgress.freshnessLabel}</Text>
-                ) : null}
-                {driverRouteProgress.coordinateLabel ? (
-                  <Text style={styles.missionDetailStatus}>{driverRouteProgress.coordinateLabel}</Text>
-                ) : null}
-                {driverRouteProgress.accuracyLabel ? (
-                  <Text style={styles.missionDetailStatus}>{driverRouteProgress.accuracyLabel}</Text>
-                ) : null}
-                {driverRouteProgress.speedLabel ? (
-                  <Text style={styles.missionDetailStatus}>
-                    {activeTrip.status === "IN_PROGRESS"
-                      ? `Rider vers destination - ${driverRouteProgress.speedLabel}`
-                      : `Rider au pickup - ${driverRouteProgress.speedLabel}`}
-                  </Text>
-                ) : null}
-              </>
-            ) : null}
-            {driverMissionSnapshot.map((item, i) => (
-              <View key={i}>
-                <Text style={styles.missionDetailStatus}>{item.label}</Text>
-                <Text style={styles.missionDetailStatus}>{item.value}</Text>
+                {driverMissionSnapshot.map((item, i) => (
+                  <View key={i} style={styles.missionSignalTile}>
+                    <Text style={styles.missionSignalLabel}>{item.label}</Text>
+                    <Text style={styles.missionSignalValue}>{item.value}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-            {routeMonitoringLines.map((line, i) => (
-              <Text key={i} style={styles.missionDetailStatus}>{line}</Text>
-            ))}
+              {driverRouteSafetyBrief.description ? (
+                <Text style={styles.missionDetailStatus}>{driverRouteSafetyBrief.description}</Text>
+              ) : null}
+              {driverRouteSafetyBrief.actionLabel ? (
+                <Text style={styles.missionDetailStatus}>{driverRouteSafetyBrief.actionLabel}</Text>
+              ) : null}
+              {driverNextActionHint ? (
+                <Text style={styles.missionDetailStatus}>{driverNextActionHint}</Text>
+              ) : null}
+              {driverRouteProgress?.title ? (
+                <Text style={styles.missionDetailStatus}>{driverRouteProgress.title}</Text>
+              ) : null}
+              {driverRouteProgress?.stateLabel ? (
+                <Text style={styles.missionDetailStatus}>{driverRouteProgress.stateLabel}</Text>
+              ) : null}
+              {driverRouteProgress?.etaLabel ? (
+                <Text style={styles.missionDetailStatus}>{driverRouteProgress.etaLabel}</Text>
+              ) : null}
+              {driverRouteProgress?.freshnessLabel ? (
+                <Text style={styles.missionDetailStatus}>{driverRouteProgress.freshnessLabel}</Text>
+              ) : null}
+              {driverRouteProgress?.coordinateLabel ? (
+                <Text style={styles.missionDetailStatus}>{driverRouteProgress.coordinateLabel}</Text>
+              ) : null}
+              <View style={styles.routeMonitoringCompact}>
+                {routeMonitoringLines.map((line, i) => (
+                  <Text key={i} style={styles.missionDetailStatus}>{line}</Text>
+                ))}
+              </View>
+            </View>
 
             {/* Action buttons */}
             <View style={styles.missionActions}>{renderActiveTripAction()}</View>
@@ -1048,28 +1089,31 @@ export default function OffersScreen() {
             {/* Secondary: call · SOS · incident */}
             <View style={styles.secondaryActions}>
               {activeTripDetail?.trip.riderPhoneNumber ? (
-                <Pressable
+                <OrbiButton
+                  label="Appeler"
+                  helper="Passager"
                   onPress={() => void Linking.openURL(`tel:${activeTripDetail.trip.riderPhoneNumber}`)}
                   style={styles.secondaryBtn}
-                >
-                  <Text style={styles.secondaryBtnIcon}>📞</Text>
-                  <Text style={styles.secondaryBtnLabel}>Appeler</Text>
-                </Pressable>
+                  variant="secondary"
+                  tone="teal"
+                />
               ) : null}
-              <Pressable
+              <OrbiButton
+                label="SOS securite"
                 onPress={() => handleTriggerSos(activeTrip.id)}
                 disabled={isSubmitting}
-                style={[styles.secondaryBtn, styles.secondaryBtnSos]}
-              >
-                <Text style={[styles.secondaryBtnLabel, styles.secondaryBtnLabelSos]}>SOS securite</Text>
-              </Pressable>
-              <Pressable
+                style={styles.secondaryBtn}
+                variant="danger"
+                tone="danger"
+              />
+              <OrbiButton
+                label="Signaler un incident"
                 onPress={() => handleReportIncident(activeTrip.id)}
                 disabled={isSubmitting}
                 style={styles.secondaryBtn}
-              >
-                <Text style={styles.secondaryBtnLabel}>Signaler un incident</Text>
-              </Pressable>
+                variant="secondary"
+                tone="amber"
+              />
             </View>
 
             {tripDetailStatus ? (
@@ -1079,19 +1123,20 @@ export default function OffersScreen() {
             {activeTripDetail ? (
               <LiveTimeline events={activeTripDetail.trip.timeline} freshEventIds={freshTimelineEventIds} />
             ) : null}
-          </View>
+          </OrbiSurface>
         ) : null}
 
         {/* ── Offline / suspended ── */}
         {!activeTrip && flow.operationalStatus === "SUSPENDED" ? (
-          <View style={styles.stateBanner}>
-            <Text style={styles.stateBannerTitle}>Compte suspendu</Text>
-            <Text style={styles.stateBannerMeta}>Les offres restent fermées jusqu à réactivation par les opérations.</Text>
-          </View>
+          <OrbiStatusBanner
+            title="Compte suspendu"
+            message="Les offres restent fermées jusqu à réactivation par les opérations."
+            tone="danger"
+          />
         ) : !activeTrip && flow.availabilityStatus !== "ONLINE" ? (
-          <View style={styles.stateBanner}>
-            <Text style={styles.stateBannerTitle}>Hors ligne</Text>
-            <Text style={styles.stateBannerMeta}>Activez votre disponibilité depuis le Cockpit pour recevoir des courses.</Text>
+          <View style={styles.compactOfflineNotice}>
+            <View style={styles.compactOfflineDot} />
+            <Text style={styles.compactOfflineText}>Hors ligne · activez le Cockpit pour recevoir des courses</Text>
           </View>
         ) : null}
 
@@ -1111,32 +1156,72 @@ export default function OffersScreen() {
         ))}
 
         {/* ── Empty state ── */}
-        {flow.canReceiveOffers && visibleOffers.length === 0 && !activeTrip ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>Aucune offre active</Text>
-            <Text style={styles.emptyMeta}>La prochaine offre compatible apparaîtra automatiquement.</Text>
-          </View>
+        {visibleOffers.length === 0 && !activeTrip ? (
+          <OrbiSurface style={styles.emptyState} elevated>
+            <View style={styles.emptyHeader}>
+              <View style={styles.emptyCopy}>
+                <View style={styles.emptySignal}>
+                  <View
+                    style={[
+                      styles.emptySignalDot,
+                      {
+                        backgroundColor: flow.canReceiveOffers
+                          ? orbiTheme.colors.teal
+                          : orbiTheme.colors.amber,
+                      },
+                    ]}
+                  />
+                  <Text style={styles.emptySignalText}>
+                    {flow.canReceiveOffers ? "Disponible" : "Hors ligne"}
+                  </Text>
+                </View>
+                <Text style={styles.emptyTitle}>Aucune offre active</Text>
+                <Text style={styles.emptyMeta} numberOfLines={2}>
+                  {flow.canReceiveOffers
+                    ? "Restez proche des zones de demande. Les offres compatibles arrivent ici."
+                    : "Passez en ligne depuis le Cockpit quand vous êtes prêt."}
+                </Text>
+              </View>
+              <View style={styles.emptyRadar}>
+                <View style={styles.emptyRadarRing} />
+                <View style={styles.emptyRadarDot} />
+              </View>
+            </View>
+            <View style={styles.emptyChecklist}>
+              <View style={styles.emptyCheckItem}>
+                <Text style={styles.emptyCheckTitle}>Position</Text>
+                <Text style={styles.emptyCheckMeta}>Live</Text>
+              </View>
+              <View style={styles.emptyCheckItem}>
+                <Text style={styles.emptyCheckTitle}>Compte</Text>
+                <Text style={styles.emptyCheckMeta}>OK</Text>
+              </View>
+              <View style={styles.emptyCheckItem}>
+                <Text style={styles.emptyCheckTitle}>Mission</Text>
+                <Text style={styles.emptyCheckMeta}>{flow.canReceiveOffers ? "Scan" : "Pause"}</Text>
+              </View>
+            </View>
+          </OrbiSurface>
         ) : null}
 
         {/* Refresh — accessible for tests + users */}
-        <Pressable
+        <OrbiButton
+          label={isRefreshing ? "Actualisation..." : "Actualiser le direct"}
           onPress={() => void loadDriverData()}
           disabled={isRefreshing}
           style={styles.refreshBtn}
-        >
-          <Text style={styles.refreshBtnLabel}>
-            {isRefreshing ? "Actualisation..." : "Actualiser le direct"}
-          </Text>
-        </Pressable>
+          variant="secondary"
+          tone="amber"
+        />
 
         <View style={{ height: 24 }} />
       </ScrollView>
-    </SafeAreaView>
+    </OrbiScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+  safe: { flex: 1 },
   header: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,
@@ -1146,12 +1231,10 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   onlineDot: { width: 9, height: 9, borderRadius: 5 },
   headerRefreshBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: orbiTheme.colors.backgroundAlt, alignItems: "center", justifyContent: "center" },
-  headerRefreshLabel: { fontSize: 16, fontWeight: "700", color: orbiTheme.colors.textSoft },
-  content: { paddingHorizontal: 16, paddingTop: 14, gap: 12 },
+  content: { paddingHorizontal: 16, paddingTop: 12, gap: 10 },
   completionCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: "rgba(0,201,167,0.08)", borderWidth: 1, borderColor: "rgba(0,201,167,0.28)",
-    borderRadius: 16, padding: 14,
+    padding: 14,
   },
   completionCheckWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: orbiTheme.colors.teal, alignItems: "center", justifyContent: "center" },
   completionCheck: { width: 12, height: 12, borderRadius: 6, backgroundColor: "#FFFFFF" },
@@ -1160,68 +1243,219 @@ const styles = StyleSheet.create({
   completionFare: { fontSize: 13, color: orbiTheme.colors.textSoft, fontFamily: "Inter_400Regular" },
   completionNet: { fontSize: 13, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: orbiTheme.colors.teal },
   completionClose: { width: 28, height: 28, borderRadius: 14, backgroundColor: orbiTheme.colors.backgroundDim, alignItems: "center", justifyContent: "center" },
-  completionCloseText: { fontSize: 13, color: orbiTheme.colors.textSoft },
   statusNotice: { fontSize: 13, color: orbiTheme.colors.textSoft, fontFamily: "Inter_400Regular", paddingHorizontal: 2 },
-  warningBanner: { backgroundColor: "rgba(255,149,0,0.08)", borderWidth: 1, borderColor: "rgba(255,149,0,0.28)", borderRadius: 12, padding: 12, gap: 4 },
-  warningBannerDanger: { backgroundColor: "rgba(255,59,48,0.08)", borderColor: "rgba(255,59,48,0.28)" },
-  warningTitle: { fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.amber },
-  warningTitleDanger: { color: orbiTheme.colors.danger },
-  warningText: { fontSize: 12, color: orbiTheme.colors.textSoft, fontFamily: "Inter_400Regular", lineHeight: 17 },
-  missionCard: { backgroundColor: "#FFFFFF", borderRadius: 18, borderWidth: 1, borderColor: "#FF950044", padding: 16, gap: 12, shadowColor: "#000000", shadowOpacity: 0.07, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  compactOfflineNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 999,
+    backgroundColor: "rgba(7,17,31,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(7,17,31,0.07)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  compactOfflineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: orbiTheme.colors.amber,
+  },
+  compactOfflineText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
+    color: orbiTheme.colors.textSoft,
+  },
+  missionCard: { padding: 14, gap: 10 },
   missionStatusRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   missionStatusDot: { width: 7, height: 7, borderRadius: 4 },
   missionStatusLabel: { fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold" },
   missionTransition: { fontSize: 12, color: orbiTheme.colors.sky, fontFamily: "Inter_400Regular" },
-  missionRoute: { backgroundColor: orbiTheme.colors.backgroundAlt, borderRadius: 12, borderWidth: 1, borderColor: orbiTheme.colors.border, paddingHorizontal: 12, paddingVertical: 4 },
-  missionRouteRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10 },
+  missionRoute: { backgroundColor: "rgba(255,255,255,0.78)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,176,32,0.26)", paddingHorizontal: 12, paddingVertical: 2 },
+  missionRouteRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 },
   missionRouteDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   missionRouteSep: { height: 1, backgroundColor: orbiTheme.colors.border, marginLeft: 18 },
   missionRouteText: { flex: 1, fontSize: 13, fontWeight: "500", fontFamily: "Inter_500Medium", color: orbiTheme.colors.text },
-  riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: orbiTheme.colors.backgroundAlt, borderRadius: 12, borderWidth: 1, borderColor: orbiTheme.colors.border, padding: 10 },
-  riderAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: orbiTheme.colors.text, alignItems: "center", justifyContent: "center" },
+  riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "rgba(255,255,255,0.82)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(7,17,31,0.08)", padding: 10 },
+  riderAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: orbiTheme.colors.text, alignItems: "center", justifyContent: "center" },
   riderInitials: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", color: "#FFFFFF" },
   riderInfo: { flex: 1, gap: 2 },
   riderName: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
   riderMeta: { fontSize: 12, color: orbiTheme.colors.textSoft, fontFamily: "Inter_400Regular" },
   riderFare: { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.amber },
-  missionMap: { height: 180, borderRadius: 14, overflow: "hidden" },
-  missionActions: { gap: 8 },
+  missionMap: { height: 132, borderRadius: 14, overflow: "hidden" },
+  missionActions: { gap: 7 },
   secondaryActions: { flexDirection: "row", gap: 8 },
-  secondaryBtn: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 10, borderRadius: 10, backgroundColor: orbiTheme.colors.backgroundAlt, borderWidth: 1, borderColor: orbiTheme.colors.border },
-  secondaryBtnSos: { backgroundColor: "rgba(255,59,48,0.08)", borderColor: "rgba(255,59,48,0.28)" },
-  secondaryBtnIcon: { fontSize: 16, color: orbiTheme.colors.text },
-  secondaryBtnIconSos: { color: orbiTheme.colors.danger },
-  secondaryBtnLabel: { fontSize: 11, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: orbiTheme.colors.textSoft },
-  secondaryBtnLabelSos: { color: orbiTheme.colors.danger },
+  secondaryBtn: { flex: 1 },
   tripDetailStatus: { fontSize: 12, color: orbiTheme.colors.textMuted, fontFamily: "Inter_400Regular" },
-  stateBanner: { backgroundColor: orbiTheme.colors.backgroundAlt, borderRadius: 14, borderWidth: 1, borderColor: orbiTheme.colors.border, padding: 16, gap: 4, alignItems: "center" },
-  stateBannerTitle: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
-  stateBannerMeta: { fontSize: 13, color: orbiTheme.colors.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", maxWidth: 300 },
-  emptyState: { alignItems: "center", paddingVertical: 32, gap: 8 },
-  emptyTitle: { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
-  emptyMeta: { fontSize: 13, color: orbiTheme.colors.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", maxWidth: 280 },
+  emptyState: {
+    padding: 13,
+    gap: 11,
+    borderWidth: 1,
+    borderColor: "rgba(7,17,31,0.08)",
+    backgroundColor: "rgba(255,255,255,0.94)",
+  },
+  emptyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyCopy: {
+    flex: 1,
+    gap: 7,
+  },
+  emptySignal: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    borderRadius: 999,
+    backgroundColor: "rgba(7,17,31,0.05)",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  emptySignalDot: { width: 8, height: 8, borderRadius: 4 },
+  emptySignalText: {
+    fontSize: 11,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: orbiTheme.colors.textSoft,
+    textTransform: "uppercase",
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: orbiTheme.colors.text,
+  },
+  emptyMeta: {
+    fontSize: 12,
+    color: orbiTheme.colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 17,
+  },
+  emptyRadar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(0,201,167,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  emptyRadarRing: {
+    position: "absolute",
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 1,
+    borderColor: "rgba(0,201,167,0.28)",
+  },
+  emptyRadarDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: orbiTheme.colors.teal,
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
+  },
+  emptyChecklist: { flexDirection: "row", gap: 7 },
+  emptyCheckItem: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(7,17,31,0.08)",
+    backgroundColor: "rgba(246,248,251,0.92)",
+    paddingHorizontal: 9,
+    paddingVertical: 8,
+    gap: 2,
+  },
+  emptyCheckTitle: {
+    fontSize: 10,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: orbiTheme.colors.textMuted,
+    textTransform: "uppercase",
+  },
+  emptyCheckMeta: {
+    fontSize: 12,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: orbiTheme.colors.text,
+  },
   disabled: { opacity: 0.38 },
   codeBlock: { gap: 10 },
   meta: { fontSize: 13, color: orbiTheme.colors.textSoft, fontFamily: "Inter_400Regular", lineHeight: 18 },
-  codeInput: { backgroundColor: orbiTheme.colors.backgroundAlt, borderRadius: 12, borderWidth: 1, borderColor: orbiTheme.colors.border, paddingHorizontal: 16, paddingVertical: 14, fontSize: 22, fontWeight: "800", letterSpacing: 8, color: orbiTheme.colors.text, textAlign: "center", fontFamily: "Raleway_800ExtraBold" },
+  codeInput: { backgroundColor: orbiTheme.colors.backgroundAlt, borderRadius: 12, borderWidth: 1, borderColor: orbiTheme.colors.border, paddingHorizontal: 16, paddingVertical: 14, fontSize: 22, fontWeight: "800", letterSpacing: 0, color: orbiTheme.colors.text, textAlign: "center", fontFamily: "Raleway_800ExtraBold" },
   routeSafetyBlockNote: { fontSize: 12, color: orbiTheme.colors.danger, fontFamily: "Inter_400Regular", lineHeight: 17 },
   // Mission labels
-  missionSectionLabel: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.amber, textTransform: "uppercase", letterSpacing: 1 },
-  missionDetailLabel: { fontSize: 12, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.textSoft },
-  missionDetailStatus: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: "Inter_400Regular" },
+  missionSectionLabel: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.amber, textTransform: "uppercase", letterSpacing: 0 },
+  missionSignalsPanel: { gap: 7 },
+  missionSignalGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
+  missionSignalTile: { width: "48%", minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: "rgba(7,17,31,0.07)", backgroundColor: "rgba(255,255,255,0.72)", paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
+  missionSignalTileDanger: { borderColor: "rgba(240,68,94,0.28)", backgroundColor: "rgba(240,68,94,0.08)" },
+  missionSignalLabel: { fontSize: 9, fontWeight: "800", fontFamily: "Inter_700Bold", color: orbiTheme.colors.textMuted, textTransform: "uppercase", letterSpacing: 0 },
+  missionSignalValue: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text, lineHeight: 15 },
+  routeMonitoringCompact: { gap: 2 },
+  missionDetailLabel: { fontSize: 12, fontWeight: "800", fontFamily: "Inter_700Bold", color: orbiTheme.colors.textSoft },
+  missionDetailStatus: { fontSize: 10, color: orbiTheme.colors.textMuted, fontFamily: "Inter_400Regular", lineHeight: 14 },
   missionBlockedLabel: { fontSize: 12, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.danger },
   shiftNote: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: "Inter_400Regular", paddingHorizontal: 2 },
   refreshBtn: {
     alignSelf: "center",
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
     marginTop: 4,
   },
-  refreshBtnLabel: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: orbiTheme.colors.textMuted },
 });
 
+const iconStyles = StyleSheet.create({
+  refreshWrap: {
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  refreshArc: {
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: orbiTheme.colors.textSoft,
+    borderLeftColor: "transparent",
+  },
+  refreshTip: {
+    position: "absolute",
+    right: 1,
+    top: 1,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 5,
+    borderTopWidth: 4,
+    borderBottomWidth: 4,
+    borderLeftColor: orbiTheme.colors.textSoft,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    transform: [{ rotate: "22deg" }],
+  },
+  closeWrap: {
+    width: 14,
+    height: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeLine: {
+    position: "absolute",
+    width: 14,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: orbiTheme.colors.textSoft,
+  },
+  closeLineA: {
+    transform: [{ rotate: "45deg" }],
+  },
+  closeLineB: {
+    transform: [{ rotate: "-45deg" }],
+  },
+});

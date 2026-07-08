@@ -1,12 +1,11 @@
-import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { memo, useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
 import {
   Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { upsertDriverOnboarding, extractApiErrorMessage } from '@orbi/api';
 import { orbiTheme } from '@orbi/ui';
+import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics } from '@orbi/ui/native';
 import { restoreDriverSession } from '../lib/auth';
 
 // ── Constantes marché Burkina Faso ────────────────────────────────────────────
@@ -76,6 +76,24 @@ const progress = StyleSheet.create({
   segment: { flex: 1, height: 4, borderRadius: 2 },
 });
 
+function BackGlyph() {
+  return (
+    <View style={onboardingIcon.backWrap}>
+      <View style={[onboardingIcon.backLine, onboardingIcon.backLineTop]} />
+      <View style={[onboardingIcon.backLine, onboardingIcon.backLineBottom]} />
+    </View>
+  );
+}
+
+function CheckGlyph() {
+  return (
+    <View style={onboardingIcon.checkWrap}>
+      <View style={[onboardingIcon.checkLine, onboardingIcon.checkLineShort]} />
+      <View style={[onboardingIcon.checkLine, onboardingIcon.checkLineLong]} />
+    </View>
+  );
+}
+
 // ── Step card container ────────────────────────────────────────────────────────
 
 function StepContainer({
@@ -88,16 +106,16 @@ function StepContainer({
   children: React.ReactNode;
 }) {
   return (
-    <View style={step.container}>
+    <OrbiSurface style={step.container} elevated>
       <Text style={step.title}>{title}</Text>
       {subtitle ? <Text style={step.subtitle}>{subtitle}</Text> : null}
       <View style={step.body}>{children}</View>
-    </View>
+    </OrbiSurface>
   );
 }
 
 const step = StyleSheet.create({
-  container: { gap: 4 },
+  container: { gap: 4, padding: 16 },
   title: { fontSize: 26, fontWeight: '800', fontFamily: 'Raleway_800ExtraBold', color: orbiTheme.colors.text },
   subtitle: { fontSize: 15, color: orbiTheme.colors.textSoft, fontFamily: 'Inter_400Regular', lineHeight: 22, marginTop: 4 },
   body: { gap: 16, marginTop: 20 },
@@ -135,6 +153,13 @@ export default function DriverOnboardingScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  useEffect(() => {
+    preventSensitiveScreenCapture();
+    return () => {
+      restoreSensitiveScreenCapture();
+    };
+  }, []);
+
   const makes = vehicleType === 'MOTORCYCLE' ? MOTO_MAKES : CAR_MAKES;
   const models = vehicleType === 'MOTORCYCLE'
     ? (MOTO_MODELS[selectedMake] ?? [])
@@ -163,13 +188,13 @@ export default function DriverOnboardingScreen() {
 
   function goNext() {
     if (!canGoNext()) return;
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    safeHaptics.impact('light');
     animateStep(1);
     setCurrentStep((s) => s + 1);
   }
 
   function goBack() {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    safeHaptics.impact('light');
     animateStep(-1);
     setCurrentStep((s) => s - 1);
   }
@@ -177,7 +202,7 @@ export default function DriverOnboardingScreen() {
   async function handleSubmit() {
     setErrorMessage('');
     setIsSubmitting(true);
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    safeHaptics.impact('medium');
 
     try {
       const { authClient } = await restoreDriverSession();
@@ -209,7 +234,7 @@ export default function DriverOnboardingScreen() {
         ],
       });
 
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      safeHaptics.notify('success');
       router.replace('/accueil');
     } catch (error) {
       setErrorMessage(
@@ -223,14 +248,14 @@ export default function DriverOnboardingScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <OrbiScreen audience="driver" style={styles.safe}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
         {/* Header */}
         <View style={styles.header}>
           {currentStep > 1 ? (
             <Pressable onPress={goBack} style={styles.backBtn} hitSlop={12}>
-              <Text style={styles.backArrow}>‹</Text>
+              <BackGlyph />
             </Pressable>
           ) : <View style={{ width: 40 }} />}
           <Text style={styles.stepLabel}>Étape {currentStep}/{TOTAL_STEPS}</Text>
@@ -254,26 +279,27 @@ export default function DriverOnboardingScreen() {
                 subtitle="Le service de courses connecté du Burkina Faso. Fixez vos horaires, gardez le contrôle de vos revenus."
               >
                 {[
-                  { icon: '💰', title: '82% du tarif pour vous', desc: 'Commission la plus basse du marché. Gagner plus à chaque course.' },
-                  { icon: '⏰', title: 'Votre emploi du temps', desc: 'En ligne quand vous voulez. Aucune obligation d\'horaire fixe.' },
-                  { icon: '📱', title: 'Paiement Mobile Money', desc: 'Orange Money, Moov Money. Paiements rapides et sécurisés.' },
-                  { icon: '🛡️', title: 'Protection chauffeur', desc: 'SOS urgence, suivi de trajet, support ops 7j/7.' },
+                  { code: '82%', title: '82% du tarif pour vous', desc: 'Commission claire. Revenu estimé avant acceptation.' },
+                  { code: 'Libre', title: 'Votre emploi du temps', desc: 'Passez en ligne quand vous voulez, sans horaire imposé.' },
+                  { code: 'MM', title: 'Paiement Mobile Money', desc: 'Orange Money et Moov Money avec suivi admin.' },
+                  { code: 'Safe', title: 'Protection chauffeur', desc: 'SOS, suivi de trajet et support ops 7j/7.' },
                 ].map((item) => (
-                  <View key={item.title} style={styles.benefitCard}>
-                    <Text style={styles.benefitIcon}>{item.icon}</Text>
+                  <OrbiSurface key={item.title} style={styles.benefitCard}>
+                    <View style={styles.benefitBadge}>
+                      <Text style={styles.benefitBadgeText}>{item.code}</Text>
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.benefitTitle}>{item.title}</Text>
                       <Text style={styles.benefitDesc}>{item.desc}</Text>
                     </View>
-                  </View>
+                  </OrbiSurface>
                 ))}
 
-                <View style={styles.requirementsBox}>
-                  <Text style={styles.requirementsTitle}>Documents requis</Text>
-                  {['Permis de conduire valide', 'Carte grise du véhicule', 'Assurance valide', "Pièce d'identité nationale"].map((doc) => (
-                    <Text key={doc} style={styles.requirementItem}>✓ {doc}</Text>
-                  ))}
-                </View>
+                <OrbiStatusBanner
+                  tone="amber"
+                  title="Documents requis"
+                  message="Permis, carte grise, assurance et pièce d'identité nationale seront vérifiés par les opérations."
+                />
               </StepContainer>
             )}
 
@@ -295,7 +321,7 @@ export default function DriverOnboardingScreen() {
                           onPress={() => { setVehicleType(type); setSelectedMake(''); setSelectedModel(''); }}
                           style={[styles.typeCard, isSelected && { borderColor: color, backgroundColor: color + '12' }]}
                         >
-                          <Text style={styles.typeEmoji}>{isMoto ? '🏍' : '🚗'}</Text>
+                          <Text style={styles.typeEmoji}>{isMoto ? 'Moto' : 'Auto'}</Text>
                           <Text style={[styles.typeLabel, isSelected && { color }]}>{isMoto ? 'Moto' : 'Voiture'}</Text>
                           <Text style={styles.typeDesc}>{isMoto ? '1 passager · Urbain' : '4 places · Climatisée'}</Text>
                         </Pressable>
@@ -432,7 +458,7 @@ export default function DriverOnboardingScreen() {
 
                 <View style={styles.infoBox}>
                   <Text style={styles.infoBoxText}>
-                    💡 Votre dossier sera examiné par l'équipe Orbi sous 24-48h. Vous recevrez une notification dès l'approbation.
+                    Votre dossier sera examiné par l'équipe Orbi sous 24-48h. Vous recevrez une notification dès l'approbation.
                   </Text>
                 </View>
               </StepContainer>
@@ -451,13 +477,13 @@ export default function DriverOnboardingScreen() {
                   <Pressable
                     key={doc.key}
                     onPress={() => {
-                      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      safeHaptics.impact('light');
                       setDocs((prev) => ({ ...prev, [doc.key]: !prev[doc.key] }));
                     }}
                     style={[styles.docCard, docs[doc.key] && styles.docCardChecked]}
                   >
                     <View style={[styles.docCheck, docs[doc.key] && styles.docCheckFilled]}>
-                      {docs[doc.key] ? <Text style={styles.docCheckMark}>✓</Text> : null}
+                      {docs[doc.key] ? <CheckGlyph /> : null}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.docLabel, docs[doc.key] && { color: orbiTheme.colors.teal }]}>
@@ -469,18 +495,20 @@ export default function DriverOnboardingScreen() {
                 ))}
 
                 {/* Summary card */}
-                <View style={styles.summaryCard}>
+                <OrbiSurface style={styles.summaryCard}>
                   <Text style={styles.summaryTitle}>Récapitulatif</Text>
                   <Text style={styles.summaryLine}>Véhicule : {selectedMake} {selectedModel} {vehicleYear}</Text>
                   <Text style={styles.summaryLine}>Plaque : {plateNumber || '—'}</Text>
                   <Text style={styles.summaryLine}>Ville : {CITIES.find(c => c.id === selectedCity)?.label}</Text>
                   <Text style={styles.summaryLine}>Téléphone : {phoneNumber || '—'}</Text>
-                </View>
+                </OrbiSurface>
 
                 {errorMessage ? (
-                  <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>{errorMessage}</Text>
-                  </View>
+                  <OrbiStatusBanner
+                    tone="danger"
+                    title="Dossier non soumis"
+                    message={errorMessage}
+                  />
                 ) : null}
               </StepContainer>
             )}
@@ -490,37 +518,43 @@ export default function DriverOnboardingScreen() {
         {/* CTA */}
         <View style={styles.cta}>
           {currentStep < TOTAL_STEPS ? (
-            <Pressable
+            <OrbiButton
               onPress={goNext}
               disabled={!canGoNext()}
-              style={({ pressed }) => [styles.ctaBtn, !canGoNext() && styles.ctaBtnDisabled, pressed && styles.ctaBtnPressed]}
-            >
-              <Text style={styles.ctaBtnLabel}>Continuer</Text>
-            </Pressable>
+              label="Continuer"
+              tone="amber"
+              style={styles.ctaBtn}
+              labelStyle={styles.ctaBtnLabel}
+            />
           ) : (
-            <Pressable
+            <OrbiButton
               onPress={() => void handleSubmit()}
               disabled={isSubmitting}
-              style={({ pressed }) => [styles.ctaBtn, isSubmitting && styles.ctaBtnDisabled, pressed && styles.ctaBtnPressed]}
-            >
-              <Text style={styles.ctaBtnLabel}>
-                {isSubmitting ? 'Envoi du dossier…' : 'Soumettre mon dossier'}
-              </Text>
-            </Pressable>
+              loading={isSubmitting}
+              label="Soumettre mon dossier"
+              tone="amber"
+              style={styles.ctaBtn}
+              labelStyle={styles.ctaBtnLabel}
+            />
           )}
           {currentStep === 1 ? (
-            <Pressable onPress={() => router.back()} style={styles.ghostBtn}>
-              <Text style={styles.ghostBtnLabel}>Plus tard</Text>
-            </Pressable>
+            <OrbiButton
+              onPress={() => router.back()}
+              label="Plus tard"
+              variant="ghost"
+              tone="amber"
+              style={styles.ghostBtn}
+              labelStyle={styles.ghostBtnLabel}
+            />
           ) : null}
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </OrbiScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: orbiTheme.colors.background },
+  safe: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -534,30 +568,35 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.backgroundAlt,
     alignItems: 'center', justifyContent: 'center',
   },
-  backArrow: { fontSize: 28, color: orbiTheme.colors.text, marginTop: -2 },
   stepLabel: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.textMuted },
   scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24, gap: 0 },
 
   // Benefits (step 1)
   benefitCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 14,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 14, borderWidth: 1, borderColor: orbiTheme.colors.border,
+    borderRadius: 14,
     padding: 14,
   },
-  benefitIcon: { fontSize: 24 },
+  benefitBadge: {
+    minWidth: 42,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: 'rgba(242,169,0,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  benefitBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: '#8A5900',
+  },
   benefitTitle: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text },
   benefitDesc: { fontSize: 12, color: orbiTheme.colors.textSoft, fontFamily: 'Inter_400Regular', marginTop: 2, lineHeight: 17 },
-  requirementsBox: {
-    backgroundColor: 'rgba(0,201,167,0.06)',
-    borderRadius: 14, borderWidth: 1, borderColor: 'rgba(0,201,167,0.22)',
-    padding: 14, gap: 6,
-  },
-  requirementsTitle: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.teal, marginBottom: 4 },
-  requirementItem: { fontSize: 13, color: orbiTheme.colors.textSoft, fontFamily: 'Inter_400Regular' },
 
   // Field
-  fieldLabel: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.6 },
+  fieldLabel: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0 },
   fieldHint: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 4 },
   input: {
     backgroundColor: orbiTheme.colors.backgroundAlt,
@@ -573,7 +612,7 @@ const styles = StyleSheet.create({
     backgroundColor: orbiTheme.colors.backgroundAlt,
     borderRadius: 16, borderWidth: 2, borderColor: orbiTheme.colors.border,
   },
-  typeEmoji: { fontSize: 28 },
+  typeEmoji: { fontSize: 13, fontWeight: '800', color: orbiTheme.colors.textMuted, textTransform: 'uppercase' },
   typeLabel: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text },
   typeDesc: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
 
@@ -615,43 +654,74 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   docCheckFilled: { backgroundColor: orbiTheme.colors.teal, borderColor: orbiTheme.colors.teal },
-  docCheckMark: { fontSize: 14, color: '#FFFFFF', fontWeight: '800' },
   docLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.text },
   docDesc: { fontSize: 12, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 2 },
 
   // Summary
   summaryCard: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 14, borderWidth: 1, borderColor: orbiTheme.colors.border,
+    borderRadius: 14,
     padding: 14, gap: 6,
   },
   summaryTitle: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text, marginBottom: 4 },
   summaryLine: { fontSize: 13, color: orbiTheme.colors.textSoft, fontFamily: 'Inter_400Regular' },
 
-  // Error
-  errorBox: {
-    backgroundColor: 'rgba(255,59,48,0.06)',
-    borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,59,48,0.22)',
-    padding: 12,
-  },
-  errorText: { fontSize: 13, color: orbiTheme.colors.danger, fontFamily: 'Inter_400Regular', lineHeight: 18 },
-
   // CTA
   cta: {
     paddingHorizontal: 20, paddingBottom: 28, paddingTop: 12,
     gap: 10,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.driverBackground,
     borderTopWidth: 1, borderTopColor: orbiTheme.colors.border,
   },
   ctaBtn: {
-    backgroundColor: orbiTheme.colors.amber,
-    borderRadius: 14, paddingVertical: 16, alignItems: 'center',
-    shadowColor: orbiTheme.colors.amber, shadowOpacity: 0.4, shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 }, elevation: 6,
+    borderRadius: 14,
+    minHeight: 54,
   },
-  ctaBtnDisabled: { opacity: 0.38 },
-  ctaBtnPressed: { opacity: 0.85 },
-  ctaBtnLabel: { fontSize: 17, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#FFFFFF' },
-  ghostBtn: { alignItems: 'center', paddingVertical: 8 },
-  ghostBtnLabel: { fontSize: 14, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular' },
+  ctaBtnLabel: { fontSize: 17 },
+  ghostBtn: { minHeight: 38 },
+  ghostBtnLabel: { fontSize: 14 },
+});
+
+const onboardingIcon = StyleSheet.create({
+  backWrap: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backLine: {
+    position: 'absolute',
+    width: 12,
+    height: 2.5,
+    borderRadius: 999,
+    backgroundColor: orbiTheme.colors.text,
+    left: 3,
+  },
+  backLineTop: {
+    transform: [{ rotate: '-45deg' }, { translateY: -4 }],
+  },
+  backLineBottom: {
+    transform: [{ rotate: '45deg' }, { translateY: 4 }],
+  },
+  checkWrap: {
+    width: 15,
+    height: 12,
+  },
+  checkLine: {
+    position: 'absolute',
+    height: 2.5,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+  },
+  checkLineShort: {
+    width: 6,
+    left: 1,
+    top: 7,
+    transform: [{ rotate: '45deg' }],
+  },
+  checkLineLong: {
+    width: 12,
+    left: 5,
+    top: 5,
+    transform: [{ rotate: '-45deg' }],
+  },
 });

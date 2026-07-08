@@ -1,6 +1,8 @@
 import { resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
-import { type RealtimeStatusCallbacks } from '@orbi/ui/src/use-realtime-event-stream';
-import { useWebSocketRealtimeStream } from '@orbi/ui/src/use-websocket-realtime-stream';
+import {
+  type RealtimeStatusCallbacks,
+  useWebSocketRealtimeStream,
+} from '@orbi/ui/native';
 
 const RIDER_REALTIME_EVENTS = [
   'trip.created',

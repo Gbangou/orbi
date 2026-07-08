@@ -21,7 +21,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
 import { orbiTheme, resolveTheme } from '@orbi/ui';
-import { ErrorBoundary } from '@orbi/ui/src/native';
+import { ErrorBoundary } from '@orbi/ui/native';
 import { hasPersistedRiderSession } from '../lib/auth';
 
 const TypedStack = Stack as any;
@@ -43,6 +43,7 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const theme = resolveTheme(colorScheme);
   const isDark = colorScheme === 'dark';
+  const appBackground = theme.colors.riderBackground as string;
 
   const [isNavigationMounted, setIsNavigationMounted] = useState(false);
   const [isResolved, setIsResolved] = useState(false);
@@ -117,7 +118,7 @@ export default function RootLayout() {
           <TypedStack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: theme.colors.background as string },
+              contentStyle: { backgroundColor: appBackground },
             }}
           />
         ) : null}
@@ -147,7 +148,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   splash: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: orbiTheme.colors.riderBackground,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 32,

@@ -133,27 +133,27 @@ export const VehicleSelector = memo(function VehicleSelector({
 });
 
 const styles = StyleSheet.create({
-  section: { gap: 10 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text, paddingHorizontal: 2 },
-  scroll: { gap: 10, paddingHorizontal: 2 },
+  section: { gap: 8 },
+  sectionTitle: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text, paddingHorizontal: 2 },
+  scroll: { gap: 6, paddingHorizontal: 2 },
   card: {
-    width: 132, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1.5,
-    borderColor: orbiTheme.colors.border, padding: 12, alignItems: 'center', gap: 7,
+    width: 104, backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1.5,
+    borderColor: orbiTheme.colors.border, padding: 7, alignItems: 'center', gap: 4,
     shadowColor: '#0B1220', shadowOpacity: 0.09, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 7,
   },
   surgeBadge: { alignSelf: 'center', backgroundColor: 'rgba(255,149,0,0.90)', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 },
   surgeText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
   vehicleAvatar: {
-    width: 108, height: 84, borderRadius: 15, alignItems: 'center', justifyContent: 'center',
+    width: 82, height: 56, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: orbiTheme.colors.border, backgroundColor: '#F6F8FB', overflow: 'hidden',
   },
-  name: { fontSize: 12, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, textAlign: 'center', minHeight: 30 },
+  name: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, textAlign: 'center', minHeight: 18 },
   eta: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
-  fare: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, textAlign: 'center' },
+  fare: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, textAlign: 'center' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
   loadingText: { fontSize: 14, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular' },
-  vehicleAura: { position: 'absolute', width: 88, height: 56, borderRadius: 28, top: 8 },
-  svgWrap: { width: 108, height: 82, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  vehicleAura: { position: 'absolute', width: 70, height: 40, borderRadius: 22, top: 7 },
+  svgWrap: { width: 84, height: 54, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   etaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   driverCountBadge: {
     borderRadius: 999,

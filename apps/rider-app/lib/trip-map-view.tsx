@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
+  orbiTheme,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
 } from '@orbi/ui';
@@ -167,6 +168,41 @@ export function TripMapView({
     }
   }, [driverLat, driverLng]);
 
+  if (Platform.OS === 'web') {
+    const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
+    const hasDestination = Number.isFinite(destLat) && Number.isFinite(destLng);
+    const hasDriver = Number.isFinite(driverLat) && Number.isFinite(driverLng);
+
+    return (
+      <View style={[styles.container, styles.webFallback, style]}>
+        <View style={styles.mapGrid} />
+        <View style={styles.routeLayer}>
+          <View style={[styles.routeNode, styles.pickupNode]} />
+          <View style={styles.routeLine} />
+          <View style={[styles.routeNode, styles.destinationNode]} />
+          {hasDriver ? (
+            <View style={styles.driverMarker}>
+              <Text style={styles.driverMarkerText}>D</Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.fallbackPanel}>
+          <Text style={styles.fallbackEyebrow}>Carte web</Text>
+          <Text style={styles.fallbackTitle}>
+            {hasPickup && hasDestination ? 'Trajet pret' : 'Position en attente'}
+          </Text>
+          <Text style={styles.fallbackMeta} numberOfLines={2}>
+            {hasDriver
+              ? 'Chauffeur localise. Suivi precis disponible sur mobile.'
+              : selectable
+                ? 'Touchez la carte native mobile pour ajuster le point.'
+                : 'Suivi carte complet disponible dans l app mobile.'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, style]}>
       <TypedWebView
@@ -234,6 +270,98 @@ const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
     borderRadius: 14,
+  },
+  webFallback: {
+    minHeight: 180,
+    backgroundColor: '#eaf2ef',
+    borderWidth: 1,
+    borderColor: 'rgba(13, 42, 37, 0.08)',
+  },
+  mapGrid: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#eaf2ef',
+    opacity: 0.94,
+  },
+  routeLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  routeNode: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    shadowColor: '#071311',
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+  },
+  pickupNode: {
+    left: '24%',
+    top: '58%',
+    backgroundColor: orbiTheme.colors.teal,
+  },
+  destinationNode: {
+    right: '24%',
+    top: '32%',
+    backgroundColor: '#f59e0b',
+  },
+  routeLine: {
+    width: '44%',
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0, 184, 148, 0.74)',
+    transform: [{ rotate: '-22deg' }],
+  },
+  driverMarker: {
+    position: 'absolute',
+    right: '38%',
+    top: '43%',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#071311',
+    borderWidth: 2,
+    borderColor: orbiTheme.colors.teal,
+  },
+  driverMarkerText: {
+    color: '#b8fff0',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  fallbackPanel: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    gap: 3,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    borderWidth: 1,
+    borderColor: 'rgba(13, 42, 37, 0.08)',
+  },
+  fallbackEyebrow: {
+    color: orbiTheme.colors.teal,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
+  },
+  fallbackTitle: {
+    color: '#071311',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  fallbackMeta: {
+    color: orbiTheme.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
   },
   webview: {
     flex: 1,
