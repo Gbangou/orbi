@@ -260,6 +260,8 @@ export default function ProfilScreen() {
     Partial<Record<DocumentType, DriverDocumentLink>>
   >({});
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [isOnboardingFormOpen, setIsOnboardingFormOpen] = useState(false);
+  const [hasSetOnboardingFormDefault, setHasSetOnboardingFormDefault] = useState(false);
   const [isTicketFormOpen, setIsTicketFormOpen] = useState(false);
   const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
   const [ticketForm, setTicketForm] = useState({
@@ -532,6 +534,12 @@ export default function ProfilScreen() {
       setForm(buildInitialForm(profileResponse));
       setPreparedDocumentLinks({});
       setHasLoadedProfile(true);
+      if (!hasSetOnboardingFormDefault) {
+        // First load: open the form automatically only if there's nothing to edit yet —
+        // returning drivers with a vehicle already on file get the compact summary instead.
+        setIsOnboardingFormOpen(profileResponse.profile.vehicles.length === 0);
+        setHasSetOnboardingFormDefault(true);
+      }
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: [],
@@ -903,7 +911,28 @@ export default function ProfilScreen() {
       </OrbiSurface>
 
       <OrbiSurface style={styles.card}>
-        <Text style={styles.name}>Soumettre ou mettre a jour le dossier</Text>
+        <View style={styles.formHeaderRow}>
+          <View style={styles.formHeaderText}>
+            <Text style={styles.name}>Dossier et véhicule</Text>
+            <Text style={styles.meta}>
+              {profile.profile.vehicles.length > 0
+                ? `${profile.profile.vehicles[0].type === 'MOTORCYCLE' ? 'Moto' : 'Voiture'} ${profile.profile.vehicles[0].make} ${profile.profile.vehicles[0].model} · ${profile.profile.vehicles[0].plateNumber}`
+                : 'Aucun véhicule enregistré pour le moment.'}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityLabel={isOnboardingFormOpen ? 'Réduire le formulaire du dossier' : 'Modifier le dossier et le véhicule'}
+            accessibilityRole="button"
+            hitSlop={touchHitSlop}
+            onPress={() => setIsOnboardingFormOpen((open) => !open)}
+            style={styles.editToggleBtn}
+          >
+            <Text style={styles.editToggleLabel}>{isOnboardingFormOpen ? 'Réduire' : 'Modifier'}</Text>
+          </Pressable>
+        </View>
+
+        {isOnboardingFormOpen ? (
+        <>
         <Text style={styles.meta}>
           Ce formulaire prepare les liens documentaires securises puis envoie le
           dossier complet a l equipe operations.
@@ -1131,6 +1160,8 @@ export default function ProfilScreen() {
             labelStyle={styles.primaryButtonLabel}
           />
         </View>
+        </>
+        ) : null}
       </OrbiSurface>
 
       <View style={styles.metricsRow}>
@@ -1563,6 +1594,28 @@ const styles = StyleSheet.create({
     color: orbiTheme.colors.text,
     fontSize: 17,
     fontWeight: '800',
+  },
+  formHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  formHeaderText: {
+    flex: 1,
+    gap: 2,
+  },
+  editToggleBtn: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: orbiTheme.colors.border,
+  },
+  editToggleLabel: {
+    color: orbiTheme.colors.amber,
+    fontSize: 13,
+    fontWeight: '700',
   },
   sectionTitle: {
     color: orbiTheme.colors.text,

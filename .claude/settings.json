@@ -124,7 +124,8 @@
       "Bash(grep -iE \"\\\\.log$\")",
       "Bash(rm -rf \"/c/Users/LENOVO/AppData/Local/Temp/claude/c--Users-LENOVO-Desktop-orbi/8ce128a5-b00e-4b42-91dd-0f5488a848ba/scratchpad/ui-audit/driver-bundle\"*.js 2>/dev/null; echo ok)",
       "Bash(taskkill //PID 37624 //F)",
-      "Bash(taskkill //PID 34332 //F)"
+      "Bash(taskkill //PID 34332 //F)",
+      "Bash(node rider-vehicle-flow3.js)"
     ],
     "additionalDirectories": [
       "c:\\Users\\LENOVO\\Desktop\\orbi\\apps\\admin-web\\app\\shared",
