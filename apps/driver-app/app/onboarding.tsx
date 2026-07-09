@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
 import {
   Animated,
@@ -13,8 +13,8 @@ import {
   View,
 } from 'react-native';
 import { upsertDriverOnboarding, extractApiErrorMessage } from '@orbi/api';
-import { orbiTheme } from '@orbi/ui';
-import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics } from '@orbi/ui/native';
+import type { OrbiTheme } from '@orbi/ui';
+import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme } from '@orbi/ui/native';
 import { restoreDriverSession } from '../lib/auth';
 
 // ── Constantes marché Burkina Faso ────────────────────────────────────────────
@@ -57,19 +57,22 @@ const CITIES = [
 
 // ── Progress bar ───────────────────────────────────────────────────────────────
 
-const ProgressBar = memo(({ step, total }: { step: number; total: number }) => (
-  <View style={progress.track}>
-    {Array.from({ length: total }).map((_, i) => (
-      <View
-        key={i}
-        style={[
-          progress.segment,
-          { backgroundColor: i < step ? orbiTheme.colors.amber : orbiTheme.colors.border },
-        ]}
-      />
-    ))}
-  </View>
-));
+const ProgressBar = memo(({ step, total }: { step: number; total: number }) => {
+  const theme = useOrbiTheme();
+  return (
+    <View style={progress.track}>
+      {Array.from({ length: total }).map((_, i) => (
+        <View
+          key={i}
+          style={[
+            progress.segment,
+            { backgroundColor: i < step ? theme.colors.amber : theme.colors.border },
+          ]}
+        />
+      ))}
+    </View>
+  );
+});
 
 const progress = StyleSheet.create({
   track: { flexDirection: 'row', gap: 4, marginBottom: 4 },
@@ -77,6 +80,8 @@ const progress = StyleSheet.create({
 });
 
 function BackGlyph() {
+  const theme = useOrbiTheme();
+  const onboardingIcon = useMemo(() => makeOnboardingIconStyles(theme), [theme]);
   return (
     <View style={onboardingIcon.backWrap}>
       <View style={[onboardingIcon.backLine, onboardingIcon.backLineTop]} />
@@ -86,6 +91,8 @@ function BackGlyph() {
 }
 
 function CheckGlyph() {
+  const theme = useOrbiTheme();
+  const onboardingIcon = useMemo(() => makeOnboardingIconStyles(theme), [theme]);
   return (
     <View style={onboardingIcon.checkWrap}>
       <View style={[onboardingIcon.checkLine, onboardingIcon.checkLineShort]} />
@@ -105,6 +112,8 @@ function StepContainer({
   subtitle?: string;
   children: React.ReactNode;
 }) {
+  const theme = useOrbiTheme();
+  const step = useMemo(() => makeStepStyles(theme), [theme]);
   return (
     <OrbiSurface style={step.container} elevated>
       <Text style={step.title}>{title}</Text>
@@ -114,10 +123,10 @@ function StepContainer({
   );
 }
 
-const step = StyleSheet.create({
+const makeStepStyles = (theme: OrbiTheme) => StyleSheet.create({
   container: { gap: 4, padding: 16 },
-  title: { fontSize: 26, fontWeight: '800', fontFamily: 'Raleway_800ExtraBold', color: orbiTheme.colors.text },
-  subtitle: { fontSize: 15, color: orbiTheme.colors.textSoft, fontFamily: 'Inter_400Regular', lineHeight: 22, marginTop: 4 },
+  title: { fontSize: 26, fontWeight: '800', fontFamily: 'Raleway_800ExtraBold', color: theme.colors.text },
+  subtitle: { fontSize: 15, color: theme.colors.textSoft, fontFamily: 'Inter_400Regular', lineHeight: 22, marginTop: 4 },
   body: { gap: 16, marginTop: 20 },
 });
 
@@ -126,6 +135,8 @@ const step = StyleSheet.create({
 const TOTAL_STEPS = 4;
 
 export default function DriverOnboardingScreen() {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [currentStep, setCurrentStep] = useState(1);
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -313,7 +324,7 @@ export default function DriverOnboardingScreen() {
                   <View style={styles.typeRow}>
                     {(['MOTORCYCLE', 'CAR'] as const).map((type) => {
                       const isMoto = type === 'MOTORCYCLE';
-                      const color = isMoto ? orbiTheme.colors.teal : orbiTheme.colors.amber;
+                      const color = isMoto ? theme.colors.teal : theme.colors.amber;
                       const isSelected = vehicleType === type;
                       return (
                         <Pressable
@@ -383,7 +394,7 @@ export default function DriverOnboardingScreen() {
                     value={plateNumber}
                     onChangeText={(v) => setPlateNumber(v.toUpperCase())}
                     placeholder="Ex : 11 AB 1234 BF"
-                    placeholderTextColor={orbiTheme.colors.textMuted}
+                    placeholderTextColor={theme.colors.textMuted}
                     style={styles.input}
                     autoCapitalize="characters"
                   />
@@ -420,7 +431,7 @@ export default function DriverOnboardingScreen() {
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
                     placeholder="+226 70 00 00 00"
-                    placeholderTextColor={orbiTheme.colors.textMuted}
+                    placeholderTextColor={theme.colors.textMuted}
                     keyboardType="phone-pad"
                     style={styles.input}
                   />
@@ -433,7 +444,7 @@ export default function DriverOnboardingScreen() {
                     value={licenseNumber}
                     onChangeText={(v) => setLicenseNumber(v.toUpperCase())}
                     placeholder="Ex : BF-A-12345"
-                    placeholderTextColor={orbiTheme.colors.textMuted}
+                    placeholderTextColor={theme.colors.textMuted}
                     style={styles.input}
                     autoCapitalize="characters"
                   />
@@ -486,7 +497,7 @@ export default function DriverOnboardingScreen() {
                       {docs[doc.key] ? <CheckGlyph /> : null}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.docLabel, docs[doc.key] && { color: orbiTheme.colors.teal }]}>
+                      <Text style={[styles.docLabel, docs[doc.key] && { color: theme.colors.teal }]}>
                         {doc.label}
                       </Text>
                       <Text style={styles.docDesc}>{doc.desc}</Text>
@@ -553,7 +564,7 @@ export default function DriverOnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',
@@ -565,10 +576,10 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     alignItems: 'center', justifyContent: 'center',
   },
-  stepLabel: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.textMuted },
+  stepLabel: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.textMuted },
   scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24, gap: 0 },
 
   // Benefits (step 1)
@@ -592,46 +603,46 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: '#8A5900',
   },
-  benefitTitle: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text },
-  benefitDesc: { fontSize: 12, color: orbiTheme.colors.textSoft, fontFamily: 'Inter_400Regular', marginTop: 2, lineHeight: 17 },
+  benefitTitle: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text },
+  benefitDesc: { fontSize: 12, color: theme.colors.textSoft, fontFamily: 'Inter_400Regular', marginTop: 2, lineHeight: 17 },
 
   // Field
-  fieldLabel: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0 },
-  fieldHint: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 4 },
+  fieldLabel: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.textSoft, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0 },
+  fieldHint: { fontSize: 11, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 4 },
   input: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 12, borderWidth: 1, borderColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border,
     paddingHorizontal: 14, paddingVertical: 13,
-    fontSize: 16, fontFamily: 'Inter_400Regular', color: orbiTheme.colors.text,
+    fontSize: 16, fontFamily: 'Inter_400Regular', color: theme.colors.text,
   },
 
   // Vehicle type
   typeRow: { flexDirection: 'row', gap: 12 },
   typeCard: {
     flex: 1, alignItems: 'center', gap: 6, padding: 16,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderRadius: 16, borderWidth: 2, borderColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 16, borderWidth: 2, borderColor: theme.colors.border,
   },
-  typeEmoji: { fontSize: 13, fontWeight: '800', color: orbiTheme.colors.textMuted, textTransform: 'uppercase' },
-  typeLabel: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text },
-  typeDesc: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  typeEmoji: { fontSize: 13, fontWeight: '800', color: theme.colors.textMuted, textTransform: 'uppercase' },
+  typeLabel: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text },
+  typeDesc: { fontSize: 11, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
 
   // Chips
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1, borderColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
+    borderWidth: 1, borderColor: theme.colors.border,
   },
-  chipActive: { backgroundColor: orbiTheme.colors.text, borderColor: orbiTheme.colors.text },
-  chipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.textSoft },
-  chipTextActive: { color: '#FFFFFF' },
+  chipActive: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
+  chipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.textSoft },
+  chipTextActive: { color: theme.colors.textInverse },
 
   // Color swatches
   colorRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   colorSwatch: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: 'transparent' },
-  colorSwatchSelected: { borderColor: orbiTheme.colors.text, borderWidth: 3 },
-  colorLabel: { fontSize: 12, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 6 },
+  colorSwatchSelected: { borderColor: theme.colors.text, borderWidth: 3 },
+  colorLabel: { fontSize: 12, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 6 },
 
   // Info box
   infoBox: {
@@ -639,38 +650,38 @@ const styles = StyleSheet.create({
     borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,122,255,0.18)',
     padding: 14,
   },
-  infoBoxText: { fontSize: 13, color: orbiTheme.colors.textSoft, fontFamily: 'Inter_400Regular', lineHeight: 19 },
+  infoBoxText: { fontSize: 13, color: theme.colors.textSoft, fontFamily: 'Inter_400Regular', lineHeight: 19 },
 
   // Documents
   docCard: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    borderRadius: 14, borderWidth: 1.5, borderColor: orbiTheme.colors.border,
-    padding: 14, backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderRadius: 14, borderWidth: 1.5, borderColor: theme.colors.border,
+    padding: 14, backgroundColor: theme.colors.backgroundAlt,
   },
-  docCardChecked: { borderColor: orbiTheme.colors.teal, backgroundColor: 'rgba(0,201,167,0.04)' },
+  docCardChecked: { borderColor: theme.colors.teal, backgroundColor: 'rgba(0,201,167,0.04)' },
   docCheck: {
     width: 26, height: 26, borderRadius: 13,
-    borderWidth: 2, borderColor: orbiTheme.colors.border,
+    borderWidth: 2, borderColor: theme.colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  docCheckFilled: { backgroundColor: orbiTheme.colors.teal, borderColor: orbiTheme.colors.teal },
-  docLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.text },
-  docDesc: { fontSize: 12, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  docCheckFilled: { backgroundColor: theme.colors.teal, borderColor: theme.colors.teal },
+  docLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.text },
+  docDesc: { fontSize: 12, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 2 },
 
   // Summary
   summaryCard: {
     borderRadius: 14,
     padding: 14, gap: 6,
   },
-  summaryTitle: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text, marginBottom: 4 },
-  summaryLine: { fontSize: 13, color: orbiTheme.colors.textSoft, fontFamily: 'Inter_400Regular' },
+  summaryTitle: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text, marginBottom: 4 },
+  summaryLine: { fontSize: 13, color: theme.colors.textSoft, fontFamily: 'Inter_400Regular' },
 
   // CTA
   cta: {
     paddingHorizontal: 20, paddingBottom: 28, paddingTop: 12,
     gap: 10,
-    backgroundColor: orbiTheme.colors.driverBackground,
-    borderTopWidth: 1, borderTopColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.driverBackground,
+    borderTopWidth: 1, borderTopColor: theme.colors.border,
   },
   ctaBtn: {
     borderRadius: 14,
@@ -681,7 +692,7 @@ const styles = StyleSheet.create({
   ghostBtnLabel: { fontSize: 14 },
 });
 
-const onboardingIcon = StyleSheet.create({
+const makeOnboardingIconStyles = (theme: OrbiTheme) => StyleSheet.create({
   backWrap: {
     width: 18,
     height: 18,
@@ -693,7 +704,7 @@ const onboardingIcon = StyleSheet.create({
     width: 12,
     height: 2.5,
     borderRadius: 999,
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.text,
     left: 3,
   },
   backLineTop: {

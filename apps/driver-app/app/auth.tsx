@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import { extractApiErrorMessage } from '@orbi/api';
 import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
-import { orbiTheme } from '@orbi/ui';
-import { OrbiAuthIcon, OrbiButton, OrbiStatusBanner, OrbiSurface } from '@orbi/ui/native';
+import type { OrbiTheme } from '@orbi/ui';
+import { OrbiAuthIcon, OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { signInDriverAccount, signUpDriverAccount } from '../lib/auth';
 import { OrbiLogo } from '../lib/orbi-logo';
 
 export default function DriverAuthScreen() {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -105,7 +107,7 @@ export default function DriverAuthScreen() {
       >
         {/* Logo */}
         <View style={styles.logoArea}>
-          <OrbiLogo size="lg" tint={orbiTheme.colors.amber} wordmarkColor={orbiTheme.colors.amber} />
+          <OrbiLogo size="lg" tint={theme.colors.amber} wordmarkColor={theme.colors.amber} />
           <Text style={styles.tagline}>Espace chauffeur Orbi</Text>
           <Text style={styles.trustLine}>Courses claires · Gains visibles · Terrain sécurisé</Text>
         </View>
@@ -134,38 +136,38 @@ export default function DriverAuthScreen() {
         <OrbiSurface style={styles.form} elevated>
           {mode === 'sign-up' && (
             <View style={styles.inputRow}>
-              <OrbiAuthIcon name="user" color={orbiTheme.colors.textMuted} />
+              <OrbiAuthIcon name="user" color={theme.colors.textMuted} />
               <TextInput
                 value={fullName}
                 onChangeText={setFullName}
                 placeholder="Nom complet"
-                placeholderTextColor={orbiTheme.colors.muted}
+                placeholderTextColor={theme.colors.muted}
                 style={styles.input}
               />
             </View>
           )}
 
           <View style={styles.inputRow}>
-            <OrbiAuthIcon name="mail" color={orbiTheme.colors.textMuted} />
+            <OrbiAuthIcon name="mail" color={theme.colors.textMuted} />
             <TextInput
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
               placeholder="Adresse email"
-              placeholderTextColor={orbiTheme.colors.muted}
+              placeholderTextColor={theme.colors.muted}
               style={styles.input}
             />
           </View>
 
           <View style={styles.inputRow}>
-            <OrbiAuthIcon name="lock" color={orbiTheme.colors.textMuted} />
+            <OrbiAuthIcon name="lock" color={theme.colors.textMuted} />
             <TextInput
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
               placeholder="Mot de passe"
-              placeholderTextColor={orbiTheme.colors.muted}
+              placeholderTextColor={theme.colors.muted}
               style={styles.input}
             />
             <Pressable
@@ -174,7 +176,7 @@ export default function DriverAuthScreen() {
               style={styles.eyeBtn}
               accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
             >
-              <OrbiAuthIcon name={showPassword ? 'eye-off' : 'eye'} color={orbiTheme.colors.textMuted} />
+              <OrbiAuthIcon name={showPassword ? 'eye-off' : 'eye'} color={theme.colors.textMuted} />
             </Pressable>
           </View>
 
@@ -225,10 +227,10 @@ export default function DriverAuthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.driverBackground,
+    backgroundColor: theme.colors.driverBackground,
   },
   screen: {
     flexGrow: 1,
@@ -243,7 +245,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   tagline: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 15,
     textAlign: 'center',
   },
@@ -261,17 +263,17 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 14,
     paddingVertical: 11,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     alignItems: 'center',
   },
   modeChipActive: {
-    backgroundColor: orbiTheme.colors.amber,
-    borderColor: orbiTheme.colors.amber,
+    backgroundColor: theme.colors.amber,
+    borderColor: theme.colors.amber,
   },
   modeChipLabel: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -288,13 +290,13 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
     paddingHorizontal: 14,
   },
   input: {
     flex: 1,
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     paddingVertical: 13,
     fontSize: 15,
   },
@@ -320,13 +322,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   passwordHint: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 11,
     lineHeight: 16,
     paddingHorizontal: 4,
   },
   legalFooter: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 11.5,
     lineHeight: 17,
     textAlign: 'center',

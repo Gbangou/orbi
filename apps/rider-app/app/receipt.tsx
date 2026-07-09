@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,14 +14,16 @@ import {
 } from 'react-native';
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
 import { fetchTripDetail, reportTripIncidentWithApi, type TripDetailResponse } from '@orbi/api';
-import { formatXof, orbiTheme } from '@orbi/ui';
-import { OrbiButton, OrbiStatusBanner, OrbiSurface } from '@orbi/ui/native';
+import { formatXof, type OrbiTheme } from '@orbi/ui';
+import { OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function ReceiptGlyph() {
+  const theme = useOrbiTheme();
+  const glyphStyles = useMemo(() => makeGlyphStyles(theme), [theme]);
   return (
     <View style={glyphStyles.badge}>
       <View style={glyphStyles.doc}>
@@ -33,12 +35,12 @@ function ReceiptGlyph() {
   );
 }
 
-const glyphStyles = StyleSheet.create({
+const makeGlyphStyles = (theme: OrbiTheme) => StyleSheet.create({
   badge: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(7, 17, 31, 0.06)',
+    backgroundColor: theme.colors.backgroundAlt,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -48,7 +50,7 @@ const glyphStyles = StyleSheet.create({
     height: 32,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: orbiTheme.colors.textMuted,
+    borderColor: theme.colors.textMuted,
     padding: 5,
     justifyContent: 'center',
     gap: 4,
@@ -56,7 +58,7 @@ const glyphStyles = StyleSheet.create({
   line: {
     height: 2,
     borderRadius: 1,
-    backgroundColor: orbiTheme.colors.textMuted,
+    backgroundColor: theme.colors.textMuted,
   },
   lineShort: {
     width: '65%',
@@ -80,6 +82,8 @@ function formatPaymentMethod(method: string | null | undefined) {
 }
 
 function CloseGlyph() {
+  const theme = useOrbiTheme();
+  const receiptIcon = useMemo(() => makeReceiptIconStyles(theme), [theme]);
   return (
     <View style={receiptIcon.closeWrap}>
       <View style={[receiptIcon.closeLine, receiptIcon.closeLineA]} />
@@ -89,6 +93,8 @@ function CloseGlyph() {
 }
 
 function ShareGlyph() {
+  const theme = useOrbiTheme();
+  const receiptIcon = useMemo(() => makeReceiptIconStyles(theme), [theme]);
   return (
     <View style={receiptIcon.shareWrap}>
       <View style={receiptIcon.shareStem} />
@@ -100,6 +106,8 @@ function ShareGlyph() {
 }
 
 function CheckGlyph() {
+  const theme = useOrbiTheme();
+  const receiptIcon = useMemo(() => makeReceiptIconStyles(theme), [theme]);
   return (
     <View style={receiptIcon.checkWrap}>
       <View style={[receiptIcon.checkLine, receiptIcon.checkLineShort]} />
@@ -121,6 +129,8 @@ function Row({
   bold?: boolean;
   accent?: string;
 }) {
+  const theme = useOrbiTheme();
+  const row = useMemo(() => makeRowStyles(theme), [theme]);
   return (
     <View style={row.wrap}>
       <Text style={row.label}>{label}</Text>
@@ -137,7 +147,7 @@ function Row({
   );
 }
 
-const row = StyleSheet.create({
+const makeRowStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -145,16 +155,16 @@ const row = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: orbiTheme.colors.border,
+    borderBottomColor: theme.colors.border,
   },
   label: {
     fontSize: 14,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     flex: 1,
   },
   value: {
     fontSize: 14,
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: '500',
     textAlign: 'right',
     flex: 1,
@@ -162,7 +172,7 @@ const row = StyleSheet.create({
   valueBold: {
     fontWeight: '800',
     fontSize: 15,
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
 });
 
@@ -170,6 +180,9 @@ const row = StyleSheet.create({
 
 export default function ReceiptScreen() {
   const router = useRouter();
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const row = useMemo(() => makeRowStyles(theme), [theme]);
   const params = useLocalSearchParams<{ tripId: string }>();
   const tripId = params.tripId ?? '';
 
@@ -300,7 +313,7 @@ export default function ReceiptScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color={orbiTheme.colors.teal} />
+        <ActivityIndicator size="large" color={theme.colors.teal} />
         <Text style={styles.loadingText}>Chargement du reçu…</Text>
       </SafeAreaView>
     );
@@ -394,9 +407,9 @@ export default function ReceiptScreen() {
           <View style={styles.routeVisual}>
             {/* Left track */}
             <View style={styles.routeTrack}>
-              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.teal }]} />
+              <View style={[styles.routeDot, { backgroundColor: theme.colors.teal }]} />
               <View style={styles.routeTrackLine} />
-              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.text }]} />
+              <View style={[styles.routeDot, { backgroundColor: theme.colors.text }]} />
             </View>
             {/* Addresses */}
             <View style={styles.routeAddresses}>
@@ -425,16 +438,16 @@ export default function ReceiptScreen() {
             <Row
               label={`Promo (${trip.promoCode.code})`}
               value={promoSavingsXof ? `− ${formatXof(promoSavingsXof)}` : `− ${trip.promoCode.discountBps / 100}%`}
-              accent={orbiTheme.colors.teal}
+              accent={theme.colors.teal}
             />
           ) : null}
           <Row label="Mode de paiement" value={formatPaymentMethod(null)} />
           <Row label="Total facturé" value={formatXof(trip.actualFare)} bold />
           <View style={[row.wrap, { borderBottomWidth: 0 }]}>
-            <Text style={[row.label, { color: orbiTheme.colors.textMuted, fontSize: 12 }]}>
+            <Text style={[row.label, { color: theme.colors.textMuted, fontSize: 12 }]}>
               Référence
             </Text>
-            <Text style={[row.value, { color: orbiTheme.colors.textMuted, fontSize: 12, fontFamily: 'Inter_400Regular' }]}>
+            <Text style={[row.value, { color: theme.colors.textMuted, fontSize: 12, fontFamily: 'Inter_400Regular' }]}>
               {trip.id.slice(0, 16).toUpperCase()}
             </Text>
           </View>
@@ -547,10 +560,10 @@ export default function ReceiptScreen() {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.riderBackground,
+    backgroundColor: theme.colors.riderBackground,
   },
 
   // Sticky header
@@ -561,14 +574,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.riderBackground,
+    borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.riderBackground,
   },
   headerBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -576,7 +589,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
 
   scroll: {
@@ -589,18 +602,18 @@ const styles = StyleSheet.create({
   // Loading / error
   centered: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.riderBackground,
+    backgroundColor: theme.colors.riderBackground,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
   },
   loadingText: {
     fontSize: 15,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
   },
   errorScreen: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.riderBackground,
+    backgroundColor: theme.colors.riderBackground,
     paddingHorizontal: 32,
     alignItems: 'center',
     justifyContent: 'center',
@@ -609,12 +622,12 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     textAlign: 'center',
   },
   errorMessage: {
     fontSize: 14,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     lineHeight: 20,
     textAlign: 'center',
   },
@@ -633,7 +646,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -642,34 +655,34 @@ const styles = StyleSheet.create({
     fontSize: 44,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     letterSpacing: 0,
   },
   heroLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
   },
   heroDate: {
     fontSize: 13,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textAlign: 'center',
   },
 
   // Cards
   card: {
-    backgroundColor: orbiTheme.colors.surface,
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 4,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   cardTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginBottom: 8,
@@ -695,7 +708,7 @@ const styles = StyleSheet.create({
   routeTrackLine: {
     flex: 1,
     width: 2,
-    backgroundColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.border,
     marginVertical: 4,
     minHeight: 20,
   },
@@ -703,11 +716,11 @@ const styles = StyleSheet.create({
   routeAddrBlock: {
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: orbiTheme.colors.border,
+    borderBottomColor: theme.colors.border,
   },
   routeAddrLabel: {
     fontSize: 11,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0,
@@ -715,7 +728,7 @@ const styles = StyleSheet.create({
   },
   routeAddrText: {
     fontSize: 14,
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: '500',
     lineHeight: 20,
   },
@@ -723,11 +736,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: orbiTheme.colors.border,
+    borderBottomColor: theme.colors.border,
   },
   routeDurationText: {
     fontSize: 12,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontWeight: '500',
   },
 
@@ -742,7 +755,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.accentDark,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -757,20 +770,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   driverMeta: {
     fontSize: 13,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
   },
   driverVehicle: {
     fontSize: 13,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
   },
   driverPlate: {
     fontSize: 12,
     fontWeight: '700',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     letterSpacing: 0,
   },
 
@@ -789,13 +802,13 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
     flexShrink: 0,
   },
   timelineLine: {
     flex: 1,
     width: 1,
-    backgroundColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.border,
     marginTop: 4,
     minHeight: 12,
   },
@@ -803,37 +816,37 @@ const styles = StyleSheet.create({
   timelineLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   timelineTime: {
     fontSize: 12,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
   },
 
   // Actions
   actions: { gap: 10, marginTop: 4 },
   primaryBtn: {
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.text,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
   },
   primaryBtnLabel: {
-    color: '#FFFFFF',
+    color: theme.colors.textInverse,
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
   },
   secondaryBtn: {
-    backgroundColor: orbiTheme.colors.riderBackground,
+    backgroundColor: theme.colors.riderBackground,
     borderRadius: 14,
     paddingVertical: 15,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   secondaryBtnLabel: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -842,14 +855,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ghostBtnLabel: {
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontSize: 14,
     fontWeight: '500',
   },
   btnPressed: { opacity: 0.75 },
 });
 
-const receiptIcon = StyleSheet.create({
+const makeReceiptIconStyles = (theme: OrbiTheme) => StyleSheet.create({
   closeWrap: {
     width: 16,
     height: 16,
@@ -861,7 +874,7 @@ const receiptIcon = StyleSheet.create({
     width: 16,
     height: 2,
     borderRadius: 999,
-    backgroundColor: orbiTheme.colors.textSoft,
+    backgroundColor: theme.colors.textSoft,
   },
   closeLineA: {
     transform: [{ rotate: '45deg' }],
@@ -880,7 +893,7 @@ const receiptIcon = StyleSheet.create({
     width: 2,
     height: 13,
     borderRadius: 999,
-    backgroundColor: orbiTheme.colors.textSoft,
+    backgroundColor: theme.colors.textSoft,
   },
   shareHead: {
     position: 'absolute',
@@ -888,7 +901,7 @@ const receiptIcon = StyleSheet.create({
     width: 8,
     height: 2,
     borderRadius: 999,
-    backgroundColor: orbiTheme.colors.textSoft,
+    backgroundColor: theme.colors.textSoft,
   },
   shareHeadLeft: {
     transform: [{ translateX: -3 }, { rotate: '-45deg' }],
@@ -905,7 +918,7 @@ const receiptIcon = StyleSheet.create({
     borderLeftWidth: 2,
     borderRightWidth: 2,
     borderBottomWidth: 2,
-    borderColor: orbiTheme.colors.textSoft,
+    borderColor: theme.colors.textSoft,
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
   },

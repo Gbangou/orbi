@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   SafeAreaView,
@@ -23,12 +23,13 @@ import {
 } from '@orbi/api';
 import { maskEmailForDisplay } from '@orbi/domain';
 import { router } from 'expo-router';
-import { formatOperationalStatus, orbiCopy, orbiTheme } from '@orbi/ui';
+import { formatOperationalStatus, orbiCopy, type OrbiTheme } from '@orbi/ui';
 import {
   OrbiButton,
   OrbiMetricTile,
   OrbiStatusBanner,
   OrbiSurface,
+  useOrbiTheme,
 } from '@orbi/ui/native';
 import { useTranslation } from '../../lib/i18n';
 import {
@@ -240,6 +241,8 @@ function toDisplayTier(tier: ServiceTierOption) {
 }
 
 export default function ProfilScreen() {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { t } = useTranslation();
   const td = (key: string, opts?: Record<string, unknown>): string => String(t(`driver.${key}`, opts as never));
   const [profile, setProfile] = useState<DriverProfileResponse>(fallbackProfile);
@@ -790,7 +793,7 @@ export default function ProfilScreen() {
         <OrbiSurface style={styles.statusRowCard}>
           <View style={styles.statusItem}>
             <Text style={styles.statusItemLabel}>Vérification</Text>
-            <Text style={[styles.statusItemValue, { color: orbiTheme.colors.teal }]}>
+            <Text style={[styles.statusItemValue, { color: theme.colors.teal }]}>
               {formatOperationalStatus(profile.profile.verificationStatus)}
             </Text>
           </View>
@@ -804,7 +807,7 @@ export default function ProfilScreen() {
           <View style={styles.statusDivider} />
           <View style={styles.statusItem}>
             <Text style={styles.statusItemLabel}>Dossier</Text>
-            <Text style={[styles.statusItemValue, { color: orbiTheme.colors.amber }]}>
+            <Text style={[styles.statusItemValue, { color: theme.colors.amber }]}>
               {formatDriverProfilePercent(profile.profile.onboarding.readinessPercent)}
             </Text>
           </View>
@@ -943,7 +946,7 @@ export default function ProfilScreen() {
           value={form.phoneNumber}
           onChangeText={(value) => updateForm('phoneNumber', value)}
           placeholder="+22670000000"
-          placeholderTextColor={orbiTheme.colors.muted}
+          placeholderTextColor={theme.colors.muted}
           keyboardType="phone-pad"
           style={styles.input}
         />
@@ -953,7 +956,7 @@ export default function ProfilScreen() {
           value={form.licenseNumber}
           onChangeText={(value) => updateForm('licenseNumber', value)}
           placeholder="BF-12345"
-          placeholderTextColor={orbiTheme.colors.muted}
+          placeholderTextColor={theme.colors.muted}
           style={styles.input}
         />
 
@@ -990,7 +993,7 @@ export default function ProfilScreen() {
           value={form.serviceRadiusKm}
           onChangeText={(value) => updateForm('serviceRadiusKm', value)}
           placeholder="8"
-          placeholderTextColor={orbiTheme.colors.muted}
+          placeholderTextColor={theme.colors.muted}
           keyboardType="decimal-pad"
           style={styles.input}
         />
@@ -1029,28 +1032,28 @@ export default function ProfilScreen() {
           value={form.vehiclePlateNumber}
           onChangeText={(value) => updateForm('vehiclePlateNumber', value)}
           placeholder="Plaque d immatriculation"
-          placeholderTextColor={orbiTheme.colors.muted}
+          placeholderTextColor={theme.colors.muted}
           style={styles.input}
         />
         <TextInput
           value={form.vehicleMake}
           onChangeText={(value) => updateForm('vehicleMake', value)}
           placeholder="Marque"
-          placeholderTextColor={orbiTheme.colors.muted}
+          placeholderTextColor={theme.colors.muted}
           style={styles.input}
         />
         <TextInput
           value={form.vehicleModel}
           onChangeText={(value) => updateForm('vehicleModel', value)}
           placeholder="Modele"
-          placeholderTextColor={orbiTheme.colors.muted}
+          placeholderTextColor={theme.colors.muted}
           style={styles.input}
         />
         <TextInput
           value={form.vehicleColor}
           onChangeText={(value) => updateForm('vehicleColor', value)}
           placeholder="Couleur"
-          placeholderTextColor={orbiTheme.colors.muted}
+          placeholderTextColor={theme.colors.muted}
           style={styles.input}
         />
 
@@ -1059,7 +1062,7 @@ export default function ProfilScreen() {
             value={form.vehicleYear}
             onChangeText={(value) => updateForm('vehicleYear', value)}
             placeholder="Annee"
-            placeholderTextColor={orbiTheme.colors.muted}
+            placeholderTextColor={theme.colors.muted}
             keyboardType="number-pad"
             style={[styles.input, styles.inlineInput]}
           />
@@ -1067,7 +1070,7 @@ export default function ProfilScreen() {
             value={form.vehicleSeats}
             onChangeText={(value) => updateForm('vehicleSeats', value)}
             placeholder="Places"
-            placeholderTextColor={orbiTheme.colors.muted}
+            placeholderTextColor={theme.colors.muted}
             keyboardType="number-pad"
             style={[styles.input, styles.inlineInput]}
           />
@@ -1111,7 +1114,7 @@ export default function ProfilScreen() {
               value={form.documentFileNames[document.type]}
               onChangeText={(value) => updateDocumentFileName(document.type, value)}
               placeholder={document.placeholder}
-              placeholderTextColor={orbiTheme.colors.muted}
+              placeholderTextColor={theme.colors.muted}
               style={styles.input}
             />
             {preparedDocumentLinks[document.type] ? (
@@ -1303,7 +1306,7 @@ export default function ProfilScreen() {
             <TextInput
               style={styles.input}
               placeholder="Sujet (ex: course non payee)"
-              placeholderTextColor={orbiTheme.colors.muted}
+              placeholderTextColor={theme.colors.muted}
               value={ticketForm.subject}
               onChangeText={(v) => setTicketForm((f) => ({ ...f, subject: v }))}
               maxLength={120}
@@ -1312,7 +1315,7 @@ export default function ProfilScreen() {
             <TextInput
               style={[styles.input, styles.ticketDescInput]}
               placeholder="Decrivez votre probleme en detail..."
-              placeholderTextColor={orbiTheme.colors.muted}
+              placeholderTextColor={theme.colors.muted}
               value={ticketForm.description}
               onChangeText={(v) => setTicketForm((f) => ({ ...f, description: v }))}
               maxLength={2000}
@@ -1377,9 +1380,9 @@ export default function ProfilScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // ── New consumer styles ────────────────────────────────────────────────────
-  safe: { flex: 1, backgroundColor: orbiTheme.colors.driverBackground },
+  safe: { flex: 1, backgroundColor: theme.colors.driverBackground },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1388,20 +1391,20 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: orbiTheme.colors.border,
+    borderBottomColor: theme.colors.border,
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerLiveText: {
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
     textTransform: 'uppercase',
   },
   signOutBtn: {
@@ -1426,7 +1429,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: orbiTheme.colors.amber,
+    backgroundColor: theme.colors.amber,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1441,27 +1444,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   userEmail: {
     fontSize: 13,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     fontFamily: 'Inter_400Regular',
   },
   privacyHint: {
     marginTop: 4,
     fontSize: 10,
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontFamily: 'Inter_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   statusRowCard: {
     flexDirection: 'row',
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     overflow: 'hidden',
   },
   statusItem: {
@@ -1475,7 +1478,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -1483,12 +1486,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     textAlign: 'center',
   },
   statusDivider: {
     width: 1,
-    backgroundColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.border,
     alignSelf: 'stretch',
   },
   // Driver performance stats
@@ -1501,7 +1504,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     textTransform: 'uppercase',
     letterSpacing: 0,
     paddingHorizontal: 2,
@@ -1512,16 +1515,16 @@ const styles = StyleSheet.create({
     paddingTop: 88,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: orbiTheme.colors.background,
+    backgroundColor: theme.colors.background,
     gap: 14,
   },
   title: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 32,
     fontWeight: '800',
   },
   subtitle: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
   },
   heroBadgeRow: {
     flexDirection: 'row',
@@ -1533,15 +1536,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   refreshButtonDisabled: {
     opacity: 0.65,
   },
   refreshButtonLabel: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -1552,10 +1555,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: 'rgba(255, 59, 48, 0.07)',
     borderWidth: 1,
-    borderColor: orbiTheme.colors.danger,
+    borderColor: theme.colors.danger,
   },
   signOutButtonLabel: {
-    color: orbiTheme.colors.danger,
+    color: theme.colors.danger,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -1572,26 +1575,26 @@ const styles = StyleSheet.create({
   metricCard: {
     flexGrow: 1,
     minWidth: 150,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     borderRadius: 22,
     padding: 18,
     gap: 6,
   },
   metricLabel: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     textTransform: 'uppercase',
     fontSize: 12,
     letterSpacing: 0,
   },
   metricValue: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: '800',
     fontSize: 22,
   },
   name: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 17,
     fontWeight: '800',
   },
@@ -1608,32 +1611,32 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   editToggleLabel: {
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
     fontSize: 13,
     fontWeight: '700',
   },
   sectionTitle: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 16,
     fontWeight: '800',
     marginTop: 8,
   },
   fieldLabel: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: '700',
     fontSize: 13,
     marginTop: 6,
   },
   meta: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
   },
   transitionMeta: {
-    color: orbiTheme.colors.sky,
+    color: theme.colors.sky,
     fontWeight: '700',
     lineHeight: 19,
   },
@@ -1641,9 +1644,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    color: orbiTheme.colors.text,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
+    color: theme.colors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -1659,12 +1662,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   pillActive: {
-    backgroundColor: orbiTheme.colors.amber,
-    borderColor: orbiTheme.colors.amber,
+    backgroundColor: theme.colors.amber,
+    borderColor: theme.colors.amber,
   },
   pillInactive: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
+    borderColor: theme.colors.border,
   },
   pillLabel: {
     fontWeight: '700',
@@ -1674,7 +1677,7 @@ const styles = StyleSheet.create({
     color: '#3b2205',
   },
   pillLabelInactive: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   inlineInputs: {
     flexDirection: 'row',
@@ -1690,7 +1693,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   documentHint: {
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontSize: 12,
   },
   actionStack: {
@@ -1719,46 +1722,46 @@ const styles = StyleSheet.create({
   vehicleRow: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: orbiTheme.colors.border,
+    borderTopColor: theme.colors.border,
     gap: 4,
   },
   checklistRow: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: orbiTheme.colors.border,
+    borderTopColor: theme.colors.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
   },
   checkLabel: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     flex: 1,
   },
   checkValue: {
     fontWeight: '800',
   },
   checkValueDone: {
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
   },
   checkValuePending: {
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
   },
   vehicleTitle: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: '700',
     fontSize: 16,
   },
   documentStatusRow: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: orbiTheme.colors.border,
+    borderTopColor: theme.colors.border,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 12,
   },
   documentStatusRowFresh: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingBottom: 10,
@@ -1770,7 +1773,7 @@ const styles = StyleSheet.create({
   },
   documentTransitionBadge: {
     alignSelf: 'flex-start',
-    color: orbiTheme.colors.sky,
+    color: theme.colors.sky,
     fontWeight: '800',
     fontSize: 11,
     textTransform: 'uppercase',
@@ -1787,34 +1790,34 @@ const styles = StyleSheet.create({
   },
   badgeSuccess: {
     backgroundColor: 'rgba(52, 211, 153, 0.18)',
-    color: orbiTheme.colors.success,
+    color: theme.colors.success,
   },
   badgeDanger: {
     backgroundColor: 'rgba(255, 59, 48, 0.08)',
-    color: orbiTheme.colors.danger,
+    color: theme.colors.danger,
   },
   badgePending: {
     backgroundColor: 'rgba(245, 158, 11, 0.18)',
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
   },
   timelineRow: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: orbiTheme.colors.border,
+    borderTopColor: theme.colors.border,
     gap: 4,
   },
   timelineRowFresh: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingBottom: 10,
     borderTopWidth: 0,
   },
   warningText: {
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
   },
   heading: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: '800',
     fontSize: 18,
   },
@@ -1834,25 +1837,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
   },
   chipActive: {
-    borderColor: orbiTheme.colors.amber,
+    borderColor: theme.colors.amber,
     backgroundColor: 'rgba(245, 158, 11, 0.14)',
   },
   chipLabel: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontWeight: '700',
     fontSize: 12,
   },
   chipLabelActive: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   ticketRow: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: orbiTheme.colors.border,
+    borderTopColor: theme.colors.border,
     gap: 4,
   },
   ticketHeader: {
@@ -1862,7 +1865,7 @@ const styles = StyleSheet.create({
   },
   ticketSubject: {
     flex: 1,
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -1881,7 +1884,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(100, 116, 139, 0.15)',
   },
   ticketBadgeLabel: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontWeight: '700',
     fontSize: 11,
     textTransform: 'uppercase',
@@ -1904,12 +1907,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0,
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
     marginBottom: 4,
   },
   adminNoteText: {
     fontSize: 13,
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     lineHeight: 18,
   },
 });

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -7,7 +7,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { orbiTheme } from '@orbi/ui';
+import type { OrbiTheme } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 import type { Place } from '@orbi/api';
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
@@ -77,6 +78,8 @@ export function PlaceSearch({
   suggestions = [],
   suggestionLabel = 'Suggestions',
 }: PlaceSearchProps) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Place[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -85,10 +88,10 @@ export function PlaceSearch({
 
   const accentColor =
     tone === 'teal'
-      ? orbiTheme.colors.teal
+      ? theme.colors.teal
       : tone === 'sky'
-        ? orbiTheme.colors.sky
-        : orbiTheme.colors.amber;
+        ? theme.colors.sky
+        : theme.colors.amber;
 
   const search = useCallback(async (q: string) => {
     if (q.trim().length < 3) {
@@ -145,14 +148,14 @@ export function PlaceSearch({
       <View
         style={[
           styles.inputRow,
-          { borderColor: query.length > 0 ? accentColor : orbiTheme.colors.border },
+          { borderColor: query.length > 0 ? accentColor : theme.colors.border },
         ]}
       >
         <TextInput
           value={query}
           onChangeText={handleChange}
           placeholder={placeholder}
-          placeholderTextColor={orbiTheme.colors.muted}
+          placeholderTextColor={theme.colors.muted}
           style={styles.input}
           returnKeyType="search"
           autoCorrect={false}
@@ -167,7 +170,7 @@ export function PlaceSearch({
             }}
             style={styles.clearButton}
           >
-            <CloseGlyph color={orbiTheme.colors.muted} />
+            <CloseGlyph color={theme.colors.muted} />
           </Pressable>
         ) : null}
       </View>
@@ -229,14 +232,14 @@ export function PlaceSearch({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   root: {
     gap: 6,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 10,
     borderWidth: 1,
     paddingHorizontal: 12,
@@ -244,7 +247,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 14,
     paddingVertical: 10,
   },
@@ -259,7 +262,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   error: {
-    color: orbiTheme.colors.rose ?? '#f87171',
+    color: theme.colors.rose ?? '#f87171',
     fontSize: 12,
     paddingHorizontal: 4,
   },
@@ -267,7 +270,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   suggestionsLabel: {
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -281,7 +284,7 @@ const styles = StyleSheet.create({
     width: '46.5%',
     borderRadius: 999,
     borderWidth: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 8,
     overflow: 'hidden',
@@ -290,7 +293,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,199,199,0.08)',
   },
   suggestionChipLabel: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 12,
     fontWeight: '700',
     width: '100%',
@@ -298,10 +301,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   resultsList: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     overflow: 'hidden',
   },
   resultItem: {
@@ -311,7 +314,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: orbiTheme.colors.border,
+    borderBottomColor: theme.colors.border,
   },
   resultItemPressed: {
     backgroundColor: 'rgba(0,199,199,0.08)',
@@ -327,12 +330,12 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   resultLabel: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 13,
     fontWeight: '600',
   },
   resultAddress: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 11,
   },
 });

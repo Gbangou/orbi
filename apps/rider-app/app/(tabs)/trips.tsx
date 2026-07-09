@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -9,8 +9,8 @@ import {
   View,
 } from 'react-native';
 import { fetchMyTrips, type MyTripsResponse } from '@orbi/api';
-import { formatXof, orbiTheme } from '@orbi/ui';
-import { OrbiButton, OrbiMetricTile, OrbiSurface } from '@orbi/ui/native';
+import { formatXof, type OrbiTheme } from '@orbi/ui';
+import { OrbiButton, OrbiMetricTile, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { restoreRiderSession } from '../../lib/auth';
 import { resolveRiderAppError } from '../../lib/session-feedback';
 import { OrbiLogo } from '../../lib/orbi-logo';
@@ -31,14 +31,18 @@ function formatDate(iso: string | null): string {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const cfg: Record<string, { label: string; bg: string; color: string }> = {
     COMPLETED: { label: 'Terminee', bg: 'rgba(34,197,94,0.12)', color: '#86efac' },
     CANCELLED: { label: 'Annulee', bg: 'rgba(248,113,113,0.12)', color: '#fca5a5' },
     IN_PROGRESS: { label: 'En cours', bg: 'rgba(0,199,199,0.12)', color: '#67e8f9' },
     MATCHED: { label: 'Chauffeur trouve', bg: 'rgba(56,189,248,0.12)', color: '#7dd3fc' },
     DRIVER_ARRIVING: { label: 'Chauffeur en route', bg: 'rgba(56,189,248,0.12)', color: '#7dd3fc' },
+    REQUESTED: { label: 'Recherche en cours', bg: 'rgba(255,176,32,0.14)', color: '#facc15' },
+    EXPIRED: { label: 'Expiree', bg: 'rgba(148,163,184,0.12)', color: theme.colors.muted },
   };
-  const c = cfg[status] ?? { label: status, bg: 'rgba(148,163,184,0.1)', color: orbiTheme.colors.muted };
+  const c = cfg[status] ?? { label: status, bg: 'rgba(148,163,184,0.1)', color: theme.colors.muted };
   return (
     <View style={[styles.badge, { backgroundColor: c.bg }]}>
       <Text style={[styles.badgeText, { color: c.color }]}>{c.label}</Text>
@@ -47,6 +51,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function TripCard({ trip, onPress }: { trip: TripItem; onPress: () => void }) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <Pressable
       onPress={onPress}
@@ -56,9 +62,9 @@ function TripCard({ trip, onPress }: { trip: TripItem; onPress: () => void }) {
         <View style={styles.cardHeader}>
           <View style={styles.cardRoute}>
             <View style={styles.routePin}>
-              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.teal }]} />
+              <View style={[styles.routeDot, { backgroundColor: theme.colors.teal }]} />
               <View style={styles.routeVert} />
-              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.amber }]} />
+              <View style={[styles.routeDot, { backgroundColor: theme.colors.amber }]} />
             </View>
             <View style={styles.routeAddresses}>
               <Text style={styles.addressText} numberOfLines={1}>
@@ -101,14 +107,16 @@ function TripCard({ trip, onPress }: { trip: TripItem; onPress: () => void }) {
 }
 
 function RequestCard({ request }: { request: RequestItem }) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <OrbiSurface tone="sky" style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.cardRoute}>
           <View style={styles.routePin}>
-            <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.sky }]} />
+            <View style={[styles.routeDot, { backgroundColor: theme.colors.sky }]} />
             <View style={styles.routeVert} />
-            <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.amber }]} />
+            <View style={[styles.routeDot, { backgroundColor: theme.colors.amber }]} />
           </View>
           <View style={styles.routeAddresses}>
             <Text style={styles.addressText} numberOfLines={1}>
@@ -123,7 +131,7 @@ function RequestCard({ request }: { request: RequestItem }) {
       </View>
       <View style={styles.cardMeta}>
         <Text style={styles.metaText}>{formatDate(request.createdAt)}</Text>
-        <Text style={[styles.metaText, { color: orbiTheme.colors.sky }]}>
+        <Text style={[styles.metaText, { color: theme.colors.sky }]}>
           Recherche chauffeur...
         </Text>
       </View>
@@ -142,6 +150,8 @@ function RequestCard({ request }: { request: RequestItem }) {
 
 export default function TripsScreen() {
   const router = useRouter();
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [data, setData] = useState<MyTripsResponse | null>(null);
   const [status, setStatus] = useState('Chargement de l historique...');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -174,13 +184,14 @@ export default function TripsScreen() {
 
   return (
     <ScrollView
+      style={styles.root}
       contentContainerStyle={styles.screen}
       refreshControl={
         <RefreshControl
           refreshing={isRefreshing}
           onRefresh={() => void loadTrips()}
-          tintColor={orbiTheme.colors.teal}
-          colors={[orbiTheme.colors.teal]}
+          tintColor={theme.colors.teal}
+          colors={[theme.colors.teal]}
         />
       }
     >
@@ -269,21 +280,25 @@ export default function TripsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: theme.colors.riderBackground,
+  },
   screen: {
     paddingTop: 72,
     paddingHorizontal: 18,
     paddingBottom: 40,
-    backgroundColor: orbiTheme.colors.riderBackground,
+    backgroundColor: theme.colors.riderBackground,
     gap: 14,
   },
   title: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 30,
     fontWeight: '800',
   },
   statusText: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 13,
   },
   statsRow: {
@@ -296,7 +311,7 @@ const styles = StyleSheet.create({
     minWidth: 150,
   },
   sectionTitle: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 16,
     fontWeight: '700',
     marginTop: 4,
@@ -333,7 +348,7 @@ const styles = StyleSheet.create({
   routeVert: {
     width: 1.5,
     height: 18,
-    backgroundColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.border,
     marginVertical: 2,
   },
   routeAddresses: {
@@ -341,7 +356,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   addressText: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 16,
@@ -363,7 +378,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   metaText: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 11,
   },
   cardFare: {
@@ -378,16 +393,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   fareAmount: {
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
     fontSize: 16,
     fontWeight: '800',
   },
   fareCurrency: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 11,
   },
   cardActionHint: {
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -399,13 +414,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   emptyTitle: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
   },
   emptyBody: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,

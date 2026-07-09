@@ -12,47 +12,50 @@ import {
   type ViewProps,
   type ViewStyle,
 } from 'react-native';
-import { orbiTheme } from './index';
+import { orbiTheme, type OrbiTheme } from './index';
+import { useOrbiTheme } from './theme-context';
 
 export type OrbiMobileTone = 'neutral' | 'teal' | 'amber' | 'sky' | 'danger';
 export type OrbiMobileRole = 'rider' | 'driver' | 'neutral';
 export type OrbiButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
-const toneTokens: Record<
+function makeToneTokens(theme: OrbiTheme): Record<
   OrbiMobileTone,
   { background: string; border: string; text: string; solid: string }
-> = {
-  neutral: {
-    background: '#FFFFFF',
-    border: orbiTheme.colors.border,
-    text: orbiTheme.colors.text,
-    solid: orbiTheme.colors.text,
-  },
-  teal: {
-    background: 'rgba(0, 194, 168, 0.11)',
-    border: 'rgba(0, 194, 168, 0.32)',
-    text: orbiTheme.colors.accentDark,
-    solid: orbiTheme.colors.teal,
-  },
-  amber: {
-    background: 'rgba(255, 176, 32, 0.13)',
-    border: 'rgba(255, 176, 32, 0.34)',
-    text: '#A86600',
-    solid: orbiTheme.colors.amber,
-  },
-  sky: {
-    background: 'rgba(61, 123, 255, 0.11)',
-    border: 'rgba(61, 123, 255, 0.30)',
-    text: orbiTheme.colors.sky,
-    solid: orbiTheme.colors.sky,
-  },
-  danger: {
-    background: 'rgba(240, 68, 94, 0.11)',
-    border: 'rgba(240, 68, 94, 0.30)',
-    text: orbiTheme.colors.danger,
-    solid: orbiTheme.colors.danger,
-  },
-};
+> {
+  return {
+    neutral: {
+      background: theme.colors.surface,
+      border: theme.colors.border,
+      text: theme.colors.text,
+      solid: theme.colors.text,
+    },
+    teal: {
+      background: 'rgba(0, 194, 168, 0.11)',
+      border: 'rgba(0, 194, 168, 0.32)',
+      text: theme.colors.accentDark,
+      solid: theme.colors.teal,
+    },
+    amber: {
+      background: 'rgba(255, 176, 32, 0.13)',
+      border: 'rgba(255, 176, 32, 0.34)',
+      text: '#A86600',
+      solid: theme.colors.amber,
+    },
+    sky: {
+      background: 'rgba(61, 123, 255, 0.11)',
+      border: 'rgba(61, 123, 255, 0.30)',
+      text: theme.colors.sky,
+      solid: theme.colors.sky,
+    },
+    danger: {
+      background: 'rgba(240, 68, 94, 0.11)',
+      border: 'rgba(240, 68, 94, 0.30)',
+      text: theme.colors.danger,
+      solid: theme.colors.danger,
+    },
+  };
+}
 
 export function OrbiScreen({
   children,
@@ -66,18 +69,19 @@ export function OrbiScreen({
   chrome?: boolean;
   style?: StyleProp<ViewStyle>;
 } & ViewProps) {
+  const theme = useOrbiTheme();
   const backgroundColor =
     audience === 'rider'
-      ? orbiTheme.colors.riderBackground
+      ? theme.colors.riderBackground
       : audience === 'driver'
-        ? orbiTheme.colors.driverBackground
-        : orbiTheme.colors.background;
+        ? theme.colors.driverBackground
+        : theme.colors.background;
   const chromeColor =
     audience === 'rider'
-      ? orbiTheme.colors.riderChrome
+      ? theme.colors.riderChrome
       : audience === 'driver'
-        ? orbiTheme.colors.driverChrome
-        : orbiTheme.colors.backgroundAlt;
+        ? theme.colors.driverChrome
+        : theme.colors.backgroundAlt;
 
   return (
     <SafeAreaView
@@ -107,16 +111,18 @@ export function OrbiSurface({
   tone?: OrbiMobileTone;
   elevated?: boolean;
 } & ViewProps) {
-  const token = toneTokens[tone];
+  const theme = useOrbiTheme();
+  const token = makeToneTokens(theme)[tone];
 
   return (
     <View
       {...viewProps}
       style={[
+        { backgroundColor: theme.colors.surface },
         mobileSurface.surface,
         { borderColor: token.border },
         tone !== 'neutral' ? { backgroundColor: token.background } : null,
-        elevated ? orbiTheme.shadows.card : null,
+        elevated ? theme.shadows.card : null,
         style,
       ]}
     >
@@ -143,33 +149,34 @@ export function OrbiButton({
   loading?: boolean;
   labelStyle?: StyleProp<TextStyle>;
 }) {
-  const token = toneTokens[tone];
+  const theme = useOrbiTheme();
+  const token = makeToneTokens(theme)[tone];
   const isPrimary = variant === 'primary';
   const isDanger = variant === 'danger';
   const isGhost = variant === 'ghost';
   const backgroundColor = isPrimary
     ? token.solid
     : isDanger
-      ? toneTokens.danger.background
+      ? makeToneTokens(theme).danger.background
       : isGhost
         ? 'transparent'
-        : orbiTheme.colors.backgroundAlt;
+        : theme.colors.backgroundAlt;
   const borderColor = isPrimary
     ? token.solid
     : isDanger
-      ? toneTokens.danger.border
+      ? makeToneTokens(theme).danger.border
       : isGhost
         ? 'transparent'
-        : orbiTheme.colors.border;
+        : theme.colors.border;
   const textColor = isPrimary
     ? tone === 'amber'
       ? '#3B2205'
       : '#FFFFFF'
     : isDanger
-      ? orbiTheme.colors.danger
+      ? theme.colors.danger
       : tone === 'teal'
-        ? orbiTheme.colors.accentDark
-        : orbiTheme.colors.text;
+        ? theme.colors.accentDark
+        : theme.colors.text;
   const isDisabled = disabled || loading;
 
   return (
@@ -180,7 +187,7 @@ export function OrbiButton({
       style={({ pressed }) => [
         mobileButton.button,
         { backgroundColor, borderColor },
-        isPrimary ? orbiTheme.shadows.button : null,
+        isPrimary ? theme.shadows.button : null,
         isDisabled ? mobileButton.disabled : null,
         pressed ? mobileButton.pressed : null,
         typeof style === 'function' ? style({ pressed }) : style,
@@ -189,7 +196,7 @@ export function OrbiButton({
       {loading ? (
         <ActivityIndicator size="small" color={textColor} />
       ) : (
-        <Text style={[mobileButton.label, { color: textColor }, labelStyle]}>
+        <Text style={[mobileButton.label, { fontFamily: orbiTheme.typography.fontFamily.bold, color: textColor }, labelStyle]}>
           {label}
         </Text>
       )}
@@ -197,7 +204,8 @@ export function OrbiButton({
         <Text
           style={[
             mobileButton.helper,
-            { color: isPrimary ? 'rgba(255,255,255,0.70)' : orbiTheme.colors.textMuted },
+            { fontFamily: orbiTheme.typography.fontFamily.regular },
+            { color: isPrimary ? 'rgba(255,255,255,0.70)' : theme.colors.textMuted },
           ]}
         >
           {helper}
@@ -219,14 +227,19 @@ export function OrbiStatusBanner({
   tone?: Exclude<OrbiMobileTone, 'neutral'>;
   style?: StyleProp<ViewStyle>;
 } & ViewProps) {
-  const token = toneTokens[tone];
+  const theme = useOrbiTheme();
+  const token = makeToneTokens(theme)[tone];
 
   return (
     <OrbiSurface tone={tone} style={[mobileBanner.banner, style]} {...viewProps}>
       <View style={[mobileBanner.dot, { backgroundColor: token.solid }]} />
       <View style={mobileBanner.copy}>
-        <Text style={[mobileBanner.title, { color: token.text }]}>{title}</Text>
-        {message ? <Text style={mobileBanner.message}>{message}</Text> : null}
+        <Text style={[mobileBanner.title, { fontFamily: orbiTheme.typography.fontFamily.bold, color: token.text }]}>{title}</Text>
+        {message ? (
+          <Text style={[mobileBanner.message, { fontFamily: orbiTheme.typography.fontFamily.regular, color: theme.colors.textSoft }]}>
+            {message}
+          </Text>
+        ) : null}
       </View>
     </OrbiSurface>
   );
@@ -245,25 +258,34 @@ export function OrbiMetricTile({
   tone?: OrbiMobileTone;
   style?: StyleProp<ViewStyle>;
 }) {
-  const token = toneTokens[tone];
+  const theme = useOrbiTheme();
+  const token = makeToneTokens(theme)[tone];
 
   return (
     <OrbiSurface tone={tone} style={[mobileMetric.tile, style]}>
-      <Text style={[mobileMetric.label, tone !== 'neutral' ? { color: token.text } : null]}>
+      <Text
+        style={[
+          mobileMetric.label,
+          { fontFamily: orbiTheme.typography.fontFamily.bold, color: theme.colors.textMuted },
+          tone !== 'neutral' ? { color: token.text } : null,
+        ]}
+      >
         {label}
       </Text>
-      <Text style={mobileMetric.value}>{value}</Text>
-      {helper ? <Text style={mobileMetric.helper}>{helper}</Text> : null}
+      <Text style={[mobileMetric.value, { fontFamily: orbiTheme.typography.fontFamily.bold, color: theme.colors.text }]}>{value}</Text>
+      {helper ? (
+        <Text style={[mobileMetric.helper, { fontFamily: orbiTheme.typography.fontFamily.regular, color: theme.colors.textMuted }]}>
+          {helper}
+        </Text>
+      ) : null}
     </OrbiSurface>
   );
 }
 
 const mobileSurface = StyleSheet.create({
   surface: {
-    backgroundColor: orbiTheme.colors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
     overflow: 'hidden',
   },
 });
@@ -315,12 +337,10 @@ const mobileButton = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: '800',
-    fontFamily: orbiTheme.typography.fontFamily.bold,
     textAlign: 'center',
   },
   helper: {
     fontSize: 11,
-    fontFamily: orbiTheme.typography.fontFamily.regular,
     textAlign: 'center',
   },
 });
@@ -346,13 +366,10 @@ const mobileBanner = StyleSheet.create({
   title: {
     fontSize: 13,
     fontWeight: '800',
-    fontFamily: orbiTheme.typography.fontFamily.bold,
     lineHeight: 18,
   },
   message: {
     fontSize: 12,
-    color: orbiTheme.colors.textSoft,
-    fontFamily: orbiTheme.typography.fontFamily.regular,
     lineHeight: 17,
   },
 });
@@ -365,21 +382,15 @@ const mobileMetric = StyleSheet.create({
   label: {
     fontSize: 10,
     fontWeight: '700',
-    fontFamily: orbiTheme.typography.fontFamily.bold,
-    color: orbiTheme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   value: {
     fontSize: 19,
     fontWeight: '800',
-    fontFamily: orbiTheme.typography.fontFamily.bold,
-    color: orbiTheme.colors.text,
   },
   helper: {
     fontSize: 11,
-    color: orbiTheme.colors.textMuted,
-    fontFamily: orbiTheme.typography.fontFamily.regular,
     lineHeight: 15,
   },
 });

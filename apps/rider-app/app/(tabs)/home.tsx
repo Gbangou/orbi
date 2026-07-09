@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -24,9 +24,9 @@ import {
   describeRealtimeEvent,
   describeRealtimeConnection,
   formatXof,
-  orbiTheme,
+  type OrbiTheme,
 } from '@orbi/ui';
-import { OfflineBanner, OrbiSurface, safeHaptics } from '@orbi/ui/native';
+import { OfflineBanner, OrbiSurface, safeHaptics, useOrbiTheme } from '@orbi/ui/native';
 import { restoreRiderSession } from '../../lib/auth';
 import { useTranslation } from '../../lib/i18n';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
@@ -76,6 +76,8 @@ function buildTripEtaLabel(status: string | undefined): string | null {
 // ── Dot indicator for real-time status ───────────────────────────────────────
 
 const StatusDot = memo(function StatusDot({ active }: { active: boolean }) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -94,7 +96,7 @@ const StatusDot = memo(function StatusDot({ active }: { active: boolean }) {
     <Animated.View
       style={[
         styles.statusDot,
-        { backgroundColor: active ? orbiTheme.colors.teal : '#BBBBBB' },
+        { backgroundColor: active ? theme.colors.teal : '#BBBBBB' },
         active ? { transform: [{ scale: pulse }] } : null,
       ]}
     />
@@ -104,6 +106,8 @@ const StatusDot = memo(function StatusDot({ active }: { active: boolean }) {
 // ── Skeleton row (shimmer loading placeholder) ────────────────────────────────
 
 const SkeletonServiceRow = memo(function SkeletonServiceRow() {
+  const theme = useOrbiTheme();
+  const skeletonStyles = useMemo(() => makeSkeletonStyles(theme), [theme]);
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -131,26 +135,27 @@ const SkeletonServiceRow = memo(function SkeletonServiceRow() {
   );
 });
 
-const skeletonStyles = StyleSheet.create({
+const makeSkeletonStyles = (theme: OrbiTheme) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: orbiTheme.colors.border,
+    borderBottomColor: theme.colors.border,
   },
-  icon: { width: 44, height: 44, borderRadius: 12, backgroundColor: orbiTheme.colors.backgroundDim },
+  icon: { width: 44, height: 44, borderRadius: 12, backgroundColor: theme.colors.backgroundDim },
   info: { flex: 1, gap: 6 },
-  titleBar: { height: 13, width: '60%', borderRadius: 6, backgroundColor: orbiTheme.colors.backgroundDim },
-  metaBar: { height: 10, width: '40%', borderRadius: 5, backgroundColor: orbiTheme.colors.backgroundDim },
-  fareBar: { height: 13, width: 52, borderRadius: 6, backgroundColor: orbiTheme.colors.backgroundDim },
+  titleBar: { height: 13, width: '60%', borderRadius: 6, backgroundColor: theme.colors.backgroundDim },
+  metaBar: { height: 10, width: '40%', borderRadius: 5, backgroundColor: theme.colors.backgroundDim },
+  fareBar: { height: 13, width: 52, borderRadius: 6, backgroundColor: theme.colors.backgroundDim },
 });
 
 // ── Vehicle mini icon ─────────────────────────────────────────────────────────
 
 const ServiceVehicleIcon = memo(function ServiceVehicleIcon({ isMoto }: { isMoto: boolean }) {
-  const color = isMoto ? orbiTheme.colors.teal : orbiTheme.colors.amber;
+  const theme = useOrbiTheme();
+  const color = isMoto ? theme.colors.teal : theme.colors.amber;
   if (isMoto) {
     return (
       <View style={{ width: 28, height: 22, alignItems: 'center', justifyContent: 'center' }}>
@@ -173,6 +178,8 @@ const ServiceVehicleIcon = memo(function ServiceVehicleIcon({ isMoto }: { isMoto
 // ── Service option row ────────────────────────────────────────────────────────
 
 const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideOption; onPress: () => void }) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const isMoto = option.category === 'motorcycle';
   return (
     <Pressable
@@ -188,7 +195,7 @@ const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideO
           isMoto ? styles.serviceRowPrimary : styles.serviceRowWarm,
         ]}
       >
-        <View style={[styles.serviceIcon, { backgroundColor: isMoto ? orbiTheme.colors.accentLight : 'rgba(255, 149, 0, 0.10)' }]}>
+        <View style={[styles.serviceIcon, { backgroundColor: isMoto ? theme.colors.accentLight : 'rgba(255, 149, 0, 0.10)' }]}>
           <ServiceVehicleIcon isMoto={isMoto} />
         </View>
         <View style={styles.serviceInfo}>
@@ -212,6 +219,8 @@ const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideO
 
 export default function RiderHomeScreen() {
   const router = useRouter();
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { t } = useTranslation();
   const [options, setOptions] = useState<RideOption[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
@@ -434,21 +443,21 @@ export default function RiderHomeScreen() {
           </View>
 
           {/* Right: surge badge + nearby + realtime dot */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, justifyContent: 'flex-end' }}>
             {/* Surge badge — visible quand demande élevée */}
             {options.some(o => o.surgeActive) ? (
-              <View style={styles.surgeBadge}>
-                <Text style={styles.surgeBadgeText}>
+              <View style={[styles.surgeBadge, { flexShrink: 1 }]}>
+                <Text style={styles.surgeBadgeText} numberOfLines={1} ellipsizeMode="tail">
                   Forte demande: {options.find(o => o.surgeActive)?.surgeLabel}
                 </Text>
               </View>
             ) : null}
             <Pressable
-              style={styles.nearbyBadge}
+              style={[styles.nearbyBadge, { flexShrink: 1 }]}
               onPress={() => router.push('/book')}
             >
               <StatusDot active={isRealtimeSyncing} />
-              <Text style={styles.nearbyText}>
+              <Text style={styles.nearbyText} numberOfLines={1} ellipsizeMode="tail">
                 {realNearbyCount > 0
                   ? `${realNearbyCount} chauffeur${realNearbyCount > 1 ? 's' : ''} proche${realNearbyCount > 1 ? 's' : ''}`
                   : 'Recherche'}
@@ -533,7 +542,7 @@ export default function RiderHomeScreen() {
               </View>
             </View>
             <View style={styles.tripCardArrow}>
-              <ForwardGlyph color="#FFFFFF" />
+              <ForwardGlyph color={theme.colors.textInverse} />
             </View>
           </Pressable>
         ) : (
@@ -598,10 +607,10 @@ export default function RiderHomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.backgroundDim,
+    backgroundColor: theme.colors.backgroundDim,
   },
 
   // Map — covers everything
@@ -631,21 +640,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(7, 17, 31, 0.08)',
+    borderColor: theme.colors.borderSoft,
     paddingRight: 14,
     paddingLeft: 4,
     paddingVertical: 4,
     maxWidth: SCREEN_W * 0.55,
-    ...orbiTheme.shadows.float,
+    ...theme.shadows.float,
   },
   avatarCircle: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.accentDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -658,20 +667,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   nearbyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(7, 17, 31, 0.08)',
+    borderColor: theme.colors.borderSoft,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    maxWidth: SCREEN_W * 0.54,
-    ...orbiTheme.shadows.float,
+    maxWidth: SCREEN_W * 0.4,
+    ...theme.shadows.float,
   },
   statusDot: {
     width: 8,
@@ -682,7 +691,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     flexShrink: 1,
   },
 
@@ -692,15 +701,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     borderWidth: 1,
-    borderColor: 'rgba(7, 17, 31, 0.07)',
+    borderColor: theme.colors.borderSoft,
     paddingHorizontal: 18,
     paddingBottom: 32,
     paddingTop: 12,
-    ...orbiTheme.shadows.sheet,
+    ...theme.shadows.sheet,
   },
   handle: {
     width: 44,
@@ -723,7 +732,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
     marginBottom: 12,
-    ...orbiTheme.shadows.card,
+    ...theme.shadows.card,
   },
   searchBarPressed: {
     transform: [{ scale: 0.985 }],
@@ -743,7 +752,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
   searchKicker: {
     fontSize: 11,
@@ -764,7 +773,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -782,13 +791,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   servicesHint: {
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
   },
   services: {
     gap: 2,
@@ -803,9 +812,9 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     paddingHorizontal: 12,
     borderRadius: 16,
-    backgroundColor: 'rgba(247, 250, 252, 0.84)',
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: 'rgba(7, 17, 31, 0.04)',
+    borderColor: theme.colors.borderSoft,
   },
   serviceRowPrimary: {
     borderColor: 'rgba(0, 194, 168, 0.18)',
@@ -832,18 +841,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   serviceMeta: {
     fontSize: 13,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
   },
   serviceFare: {
     fontSize: 15,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   servicesPlaceholder: {
     paddingVertical: 16,
@@ -851,19 +860,19 @@ const styles = StyleSheet.create({
   },
   servicesPlaceholderText: {
     fontSize: 13,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
   },
 
   // Active trip card
   tripCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 16,
     padding: 14,
     gap: 12,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   tripCardLeft: {
     flex: 1,
@@ -875,7 +884,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
     marginTop: 4,
     flexShrink: 0,
   },
@@ -886,36 +895,36 @@ const styles = StyleSheet.create({
   tripCardTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   tripCardSub: {
     fontSize: 13,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
   },
   tripCardStatus: {
     fontSize: 12,
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
   },
   tripCardStatusArrived: {
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
   },
   tripCardCode: {
     fontSize: 13,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     marginTop: 2,
   },
   tripCardCodeValue: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: '800',
     letterSpacing: 0,
   },
   tripTransition: {
     fontSize: 12,
-    color: orbiTheme.colors.sky,
+    color: theme.colors.sky,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -923,7 +932,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.text,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -946,13 +955,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
   },
 
   // ── Fare estimator hint ────────────────────────────────────────────────────
   fareHint: {
     fontSize: 11,
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontFamily: 'Inter_600SemiBold',
     fontWeight: '600',
     marginTop: 2,
@@ -996,7 +1005,7 @@ const styles = StyleSheet.create({
     bottom: 260,
     left: 16,
     right: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1014,17 +1023,17 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
   matchCardTitle: {
     fontSize: 15,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   matchCardSub: {
     fontSize: 12,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
     marginTop: 1,
   },
@@ -1032,7 +1041,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 32,
     borderRadius: 10,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },

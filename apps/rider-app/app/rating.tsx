@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -12,8 +12,8 @@ import {
   View,
 } from 'react-native';
 import { rateTripWithApi, type TripRatingResponse } from '@orbi/api';
-import { formatXof, orbiTheme } from '@orbi/ui';
-import { OrbiButton, OrbiStatusBanner, OrbiSurface } from '@orbi/ui/native';
+import { formatXof, type OrbiTheme } from '@orbi/ui';
+import { OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import { OrbiLogo } from '../lib/orbi-logo';
@@ -34,6 +34,8 @@ function StarIcon({
   animated: Animated.Value;
   onPress: () => void;
 }) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const scale = animated.interpolate({
     inputRange: [0, 0.45, 0.7, 1],
     outputRange: [1, 1.42, 1.18, 1],
@@ -70,6 +72,8 @@ function StarIcon({
 
 export default function RatingScreen() {
   const router = useRouter();
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const params = useLocalSearchParams<{
     tripId: string;
     driverName?: string;
@@ -160,7 +164,7 @@ export default function RatingScreen() {
 
   if (status === 'done') {
     return (
-      <ScrollView contentContainerStyle={styles.screen}>
+      <ScrollView style={styles.root} contentContainerStyle={styles.screen}>
         <OrbiSurface tone="teal" style={styles.doneCard} elevated>
           <View style={styles.doneIcon}>
             <View style={styles.checkOuter}>
@@ -194,6 +198,7 @@ export default function RatingScreen() {
 
   return (
     <ScrollView
+      style={styles.root}
       contentContainerStyle={styles.screen}
       keyboardShouldPersistTaps="handled"
     >
@@ -259,7 +264,7 @@ export default function RatingScreen() {
                 ? "Qu est-ce qui s est mal passe ?"
                 : 'Un detail a partager ? (facultatif)'
             }
-            placeholderTextColor={orbiTheme.colors.muted}
+            placeholderTextColor={theme.colors.muted}
             multiline
             numberOfLines={3}
             style={styles.commentInput}
@@ -299,26 +304,30 @@ export default function RatingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: theme.colors.riderBackground,
+  },
   screen: {
     paddingTop: 72,
     paddingHorizontal: 24,
     paddingBottom: 48,
-    backgroundColor: orbiTheme.colors.riderBackground,
+    backgroundColor: theme.colors.riderBackground,
     gap: 20,
   },
   header: {
     gap: 6,
   },
   title: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 34,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     lineHeight: 36,
   },
   subtitle: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     lineHeight: 20,
   },
   summaryCard: {
@@ -333,7 +342,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.accentDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -347,17 +356,17 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   summaryName: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 18,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
   },
   summaryMeta: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 13,
   },
   summaryFare: {
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontWeight: '700',
     fontSize: 15,
     marginTop: 2,
@@ -369,7 +378,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   ratingQuestion: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 17,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
@@ -391,7 +400,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   starGlyphFilled: {
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
     // Halo lumineux sur les étoiles sélectionnées
     textShadowColor: 'rgba(245, 158, 11, 0.55)',
     textShadowOffset: { width: 0, height: 3 },
@@ -401,13 +410,13 @@ const styles = StyleSheet.create({
     color: '#D0D0D0',
   },
   ratingLabel: {
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
     fontWeight: '800',
     fontSize: 17,
     letterSpacing: 0,
   },
   ratingPlaceholder: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 14,
   },
   commentBlock: {
@@ -415,26 +424,26 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   commentLabel: {
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     fontWeight: '700',
     fontSize: 13,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   commentInput: {
-    backgroundColor: orbiTheme.colors.panel,
+    backgroundColor: theme.colors.panel,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     borderRadius: 16,
     padding: 14,
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 15,
     lineHeight: 22,
     textAlignVertical: 'top',
     minHeight: 90,
   },
   commentCounter: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 11,
     textAlign: 'right',
   },
@@ -457,7 +466,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -471,19 +480,19 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
   doneTitle: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 36,
     fontWeight: '900',
     textAlign: 'center',
   },
   doneBody: {
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     textAlign: 'center',
     lineHeight: 22,
     fontSize: 16,
   },
   doneTip: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     textAlign: 'center',
     lineHeight: 20,
     fontSize: 13,

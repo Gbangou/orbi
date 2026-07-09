@@ -16,3 +16,4 @@ export {
 } from './mobile-primitives';
 export { safeHaptics, type OrbiImpactStyle, type OrbiNotificationType } from './haptics';
 export { OrbiAuthIcon, type OrbiAuthIconName } from './auth-icons';
+export { OrbiThemeProvider, useOrbiTheme } from './theme-context';

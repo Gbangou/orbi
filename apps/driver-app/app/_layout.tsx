@@ -18,7 +18,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
 import { orbiTheme, resolveTheme } from '@orbi/ui';
-import { ErrorBoundary } from '@orbi/ui/native';
+import { ErrorBoundary, OrbiThemeProvider } from '@orbi/ui/native';
 import { initDriverI18n } from '../lib/i18n';
 import { hasPersistedDriverSession } from '../lib/auth';
 
@@ -136,32 +136,34 @@ export default function RootLayout() {
   const canRenderApp = fontsLoaded || Boolean(fontError);
 
   return (
-    <ErrorBoundary fallbackLabel="Orbi chauffeur a rencontré un problème inattendu">
-      <>
-        <StatusBar style={isDark ? 'light' : 'dark'} />
-        {canRenderApp ? (
-          <TypedStack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: appBackground },
-            }}
-          />
-        ) : null}
-        {!isResolved || !canRenderApp ? (
-          <View style={[styles.loadingScreen, { backgroundColor: appBackground }]}>
-            <Text
-              style={[
-                canRenderApp ? styles.loadingWordmark : styles.loadingWordmarkSystem,
-                { color: theme.colors.text as string },
-              ]}
-            >
-              orbi
-            </Text>
-            <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
-          </View>
-        ) : null}
-      </>
-    </ErrorBoundary>
+    <OrbiThemeProvider>
+      <ErrorBoundary fallbackLabel="Orbi chauffeur a rencontré un problème inattendu">
+        <>
+          <StatusBar style={isDark ? 'light' : 'dark'} />
+          {canRenderApp ? (
+            <TypedStack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: appBackground },
+              }}
+            />
+          ) : null}
+          {!isResolved || !canRenderApp ? (
+            <View style={[styles.loadingScreen, { backgroundColor: appBackground }]}>
+              <Text
+                style={[
+                  canRenderApp ? styles.loadingWordmark : styles.loadingWordmarkSystem,
+                  { color: theme.colors.text as string },
+                ]}
+              >
+                orbi
+              </Text>
+              <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
+            </View>
+          ) : null}
+        </>
+      </ErrorBoundary>
+    </OrbiThemeProvider>
   );
 }
 

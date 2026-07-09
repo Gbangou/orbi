@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { orbiTheme } from '@orbi/ui';
+import type { OrbiTheme } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 import { hasPersistedDriverSession } from '../lib/auth';
 import {
   InsightBadge,
@@ -11,6 +12,8 @@ import {
 import { OrbiLogo } from '../lib/orbi-logo';
 
 export default function IndexScreen() {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   useEffect(() => {
     let isMounted = true;
 
@@ -55,22 +58,22 @@ export default function IndexScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   screen: {
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 48,
-    backgroundColor: orbiTheme.colors.driverBackground,
+    backgroundColor: theme.colors.driverBackground,
     gap: 16,
   },
   title: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 34,
     fontWeight: '800',
   },
   body: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     lineHeight: 22,
   },
   insightRow: {

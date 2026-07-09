@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -6,8 +6,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { orbiTheme } from '@orbi/ui';
-import { OrbiStatusBanner, OrbiSurface } from '@orbi/ui/native';
+import type { OrbiTheme } from '@orbi/ui';
+import { OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import type { PaymentMethod } from '@orbi/api';
 
 export type MobileMoneyNetwork = 'ORANGE_BFA' | 'MOOV_BFA';
@@ -47,6 +47,8 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
   onSelect,
   onSelectionChange,
 }: PaymentMethodsManagerProps) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [selectedNetwork, setSelectedNetwork] =
     useState<MobileMoneyNetwork>('ORANGE_BFA');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -195,7 +197,7 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
               onChangeText={handlePhoneChange}
               onBlur={handlePhoneBlur}
               placeholder="70 12 34 56"
-              placeholderTextColor={orbiTheme.colors.textMuted}
+              placeholderTextColor={theme.colors.textMuted}
               keyboardType="phone-pad"
               maxLength={13}
               returnKeyType="done"
@@ -309,14 +311,14 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
   );
 });
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   root: { gap: 8 },
 
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginBottom: 2,
@@ -326,15 +328,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   cardSelected: {
-    borderColor: orbiTheme.colors.teal,
+    borderColor: theme.colors.teal,
     backgroundColor: 'rgba(0,201,167,0.04)',
   },
   cardPressed: { opacity: 0.82 },
@@ -343,7 +345,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 38,
     borderRadius: 12,
-    backgroundColor: orbiTheme.colors.backgroundDim,
+    backgroundColor: theme.colors.backgroundDim,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -352,10 +354,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     letterSpacing: 0,
   },
-  iconSelected: { color: orbiTheme.colors.teal },
+  iconSelected: { color: theme.colors.teal },
 
   info: { flex: 1, gap: 2 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -363,11 +365,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   sublabel: {
     fontSize: 11,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     fontFamily: 'Inter_400Regular',
   },
 
@@ -381,7 +383,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
   },
   walletBadge: {
     backgroundColor: 'rgba(0,201,167,0.12)',
@@ -393,7 +395,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
   },
 
   radio: {
@@ -401,16 +403,16 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioSelected: { borderColor: orbiTheme.colors.teal },
+  radioSelected: { borderColor: theme.colors.teal },
   radioDot: {
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
 
   // Mobile Money expanded panel
@@ -424,7 +426,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
   },
 
   networkRow: { gap: 7 },
@@ -436,11 +438,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   networkChipActive: {
-    borderColor: orbiTheme.colors.teal,
+    borderColor: theme.colors.teal,
     backgroundColor: 'rgba(0,201,167,0.04)',
   },
   networkChipPressed: { opacity: 0.8 },
@@ -449,22 +451,22 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   networkDotActive: {
-    borderColor: orbiTheme.colors.teal,
-    backgroundColor: orbiTheme.colors.teal,
+    borderColor: theme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
   networkLabel: {
     fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
-  networkLabelActive: { color: orbiTheme.colors.teal },
+  networkLabelActive: { color: theme.colors.teal },
   networkSublabel: {
     fontSize: 10,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
   },
 
@@ -472,9 +474,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
   },
   phoneInputError: { borderColor: '#FF3B30' },
@@ -484,10 +486,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     borderRightWidth: 1,
-    borderRightColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundDim,
+    borderRightColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundDim,
   },
   phoneInput: {
     flex: 1,
@@ -496,7 +498,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     fontFamily: 'Inter_500Medium',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     letterSpacing: 0,
   },
   errorText: {

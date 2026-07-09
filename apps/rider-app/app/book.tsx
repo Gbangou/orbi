@@ -45,9 +45,9 @@ import {
   describeRealtimeConnection,
   formatXof,
   orbiCopy,
-  orbiTheme,
+  type OrbiTheme,
 } from '@orbi/ui';
-import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics } from '@orbi/ui/native';
+import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme } from '@orbi/ui/native';
 import {
   orbiRuntimeConfig,
   resolveOrbiApiBaseUrlForRuntime,
@@ -165,6 +165,8 @@ function findCityPresetForPlace(place: Place) {
 }
 
 function BackGlyph() {
+  const theme = useOrbiTheme();
+  const bookIconStyles = useMemo(() => makeBookIconStyles(theme), [theme]);
   return (
     <View style={bookIconStyles.backWrap}>
       <View style={[bookIconStyles.backLine, bookIconStyles.backLineTop]} />
@@ -174,6 +176,8 @@ function BackGlyph() {
 }
 
 function TargetGlyph() {
+  const theme = useOrbiTheme();
+  const bookIconStyles = useMemo(() => makeBookIconStyles(theme), [theme]);
   return (
     <View style={bookIconStyles.targetOuter}>
       <View style={bookIconStyles.targetInner} />
@@ -182,6 +186,8 @@ function TargetGlyph() {
 }
 
 function CheckGlyph() {
+  const theme = useOrbiTheme();
+  const bookIconStyles = useMemo(() => makeBookIconStyles(theme), [theme]);
   return (
     <View style={bookIconStyles.checkWrap}>
       <View style={[bookIconStyles.checkLine, bookIconStyles.checkLineShort]} />
@@ -191,6 +197,8 @@ function CheckGlyph() {
 }
 
 function ForwardGlyph({ color }: { color: string }) {
+  const theme = useOrbiTheme();
+  const bookIconStyles = useMemo(() => makeBookIconStyles(theme), [theme]);
   return (
     <View style={bookIconStyles.forwardWrap}>
       <View style={[bookIconStyles.forwardLine, bookIconStyles.forwardLineTop, { backgroundColor: color }]} />
@@ -200,6 +208,8 @@ function ForwardGlyph({ color }: { color: string }) {
 }
 
 function SavedPlaceGlyph() {
+  const theme = useOrbiTheme();
+  const bookIconStyles = useMemo(() => makeBookIconStyles(theme), [theme]);
   return (
     <View style={bookIconStyles.savedPin}>
       <View style={bookIconStyles.savedPinDot} />
@@ -207,11 +217,11 @@ function SavedPlaceGlyph() {
   );
 }
 
-const promoStyles = StyleSheet.create({
+const makePromoStyles = (theme: OrbiTheme) => StyleSheet.create({
   container: {
-    backgroundColor: orbiTheme.colors.panel,
+    backgroundColor: theme.colors.panel,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     borderRadius: 16,
     padding: 14,
     gap: 10,
@@ -221,7 +231,7 @@ const promoStyles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0,
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
   },
   row: {
     flexDirection: 'row',
@@ -233,10 +243,10 @@ const promoStyles = StyleSheet.create({
     height: 40,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
     paddingHorizontal: 12,
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: '700',
     letterSpacing: 0,
     fontSize: 14,
@@ -256,32 +266,35 @@ const promoStyles = StyleSheet.create({
     gap: 4,
   },
   successText: {
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontWeight: '800',
     fontSize: 14,
   },
   successMeta: {
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontSize: 12,
   },
   errorText: {
-    color: orbiTheme.colors.danger ?? '#ff7f66',
+    color: theme.colors.danger ?? '#ff7f66',
     fontSize: 12,
     fontWeight: '600',
   },
   strikePrice: {
     fontSize: 13,
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     textDecorationLine: 'line-through',
     fontWeight: '600',
   },
   discountedPrice: {
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
   },
 });
 
 export default function BookingScreen() {
   const router = useRouter();
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const promoStyles = useMemo(() => makePromoStyles(theme), [theme]);
   const { t } = useTranslation();
   const tb = (key: string) => t(`booking.${key}`);
   // Accept voice suggestion params from /voice screen
@@ -1062,10 +1075,10 @@ export default function BookingScreen() {
                   {
                     backgroundColor:
                       nearbyCompatibleDriverCount === null
-                        ? orbiTheme.colors.sky
+                        ? theme.colors.sky
                         : nearbyCompatibleDriverCount > 0
-                          ? orbiTheme.colors.teal
-                          : orbiTheme.colors.amber,
+                          ? theme.colors.teal
+                          : theme.colors.amber,
                   },
                 ]}
               />
@@ -1188,7 +1201,7 @@ export default function BookingScreen() {
                     : "Voir l'activité"}
               </Text>
               </View>
-              <ForwardGlyph color={orbiTheme.colors.amber} />
+              <ForwardGlyph color={theme.colors.amber} />
             </OrbiSurface>
           </Pressable>
         ) : immediateBookingUnavailable || immediateBookingSupplyUnknown ? (
@@ -1282,7 +1295,7 @@ export default function BookingScreen() {
                     onChangeText={setPromoCodeInput}
                     placeholder="CODE PROMO"
                     autoCapitalize="characters"
-                    placeholderTextColor={orbiTheme.colors.textMuted}
+                    placeholderTextColor={theme.colors.textMuted}
                     style={promoStyles.input}
                   />
                   <OrbiButton
@@ -1321,7 +1334,7 @@ export default function BookingScreen() {
                     {place.address}
                   </Text>
                 </View>
-                <ForwardGlyph color={orbiTheme.colors.textMuted} />
+                <ForwardGlyph color={theme.colors.textMuted} />
               </Pressable>
             ))}
           </View>
@@ -1381,10 +1394,10 @@ export default function BookingScreen() {
               {
                 backgroundColor:
                   immediateBookingUnavailable
-                    ? orbiTheme.colors.amber
+                    ? theme.colors.amber
                     : immediateBookingSupplyUnknown
-                      ? orbiTheme.colors.sky
-                      : orbiTheme.colors.teal,
+                      ? theme.colors.sky
+                      : theme.colors.teal,
               },
             ]}
           />
@@ -1407,7 +1420,7 @@ export default function BookingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   safe: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: {
@@ -1426,14 +1439,14 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.riderBackground,
+    borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.riderBackground,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1441,18 +1454,18 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
 
   // Route summary card
   routeSummaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(0,194,168,0.24)',
     paddingHorizontal: 12,
     paddingVertical: 4,
-    ...orbiTheme.shadows.card,
+    ...theme.shadows.card,
   },
   routeSummaryRow: {
     flexDirection: 'row',
@@ -1464,14 +1477,14 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
     flexShrink: 0,
   },
   routeDotDark: {
     width: 10,
     height: 10,
     borderRadius: 3,
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.text,
     flexShrink: 0,
   },
   routeSummaryField: { flex: 1 },
@@ -1479,7 +1492,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginBottom: 2,
@@ -1488,16 +1501,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   routeSummaryPlaceholder: {
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontWeight: '400',
     fontFamily: 'Inter_400Regular',
   },
   routeSummarySep: {
     height: 1,
-    backgroundColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.border,
     marginLeft: 22,
   },
   tripDecisionRow: {
@@ -1517,7 +1530,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     flex: 1,
   },
   tripDecisionSignal: {
@@ -1535,13 +1548,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
   },
   gpsBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: orbiTheme.colors.accentLight,
+    backgroundColor: theme.colors.accentLight,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -1560,7 +1573,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -1584,20 +1597,20 @@ const styles = StyleSheet.create({
     width: 8,
     height: 10,
     borderRadius: 4,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
   voiceIconStem: {
     width: 2,
     height: 4,
     borderRadius: 1,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
     marginTop: 1,
   },
   voiceBtnText: {
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
   },
 
   // City chips
@@ -1611,21 +1624,21 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   cityChipActive: {
-    backgroundColor: orbiTheme.colors.text,
-    borderColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.text,
+    borderColor: theme.colors.text,
   },
   cityChipLabel: {
     fontSize: 12,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
   },
-  cityChipLabelActive: { color: '#FFFFFF' },
+  cityChipLabelActive: { color: theme.colors.textInverse },
 
   // Map preview
   mapPreviewWrap: {
@@ -1635,7 +1648,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderWidth: 1,
     borderColor: 'rgba(0, 201, 167, 0.12)',
-    ...orbiTheme.shadows.card,
+    ...theme.shadows.card,
   },
   mapPreview: { width: '100%', height: '100%' },
   mapBadge: {
@@ -1664,11 +1677,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   activeFlowSub: {
     fontSize: 12,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     fontFamily: 'Inter_400Regular',
     marginTop: 2,
   },
@@ -1678,20 +1691,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     paddingHorizontal: 2,
   },
   vehicleScroll: { gap: 10, paddingHorizontal: 2 },
   vehicleCard: {
     width: 112,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     padding: 12,
     alignItems: 'center',
     gap: 6,
-    ...orbiTheme.shadows.card,
+    ...theme.shadows.card,
   },
   vehicleAvatar: {
     width: 64,
@@ -1700,19 +1713,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
   },
   vehicleName: {
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     textAlign: 'center',
   },
   vehicleEta: {
     fontSize: 11,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
     textAlign: 'center',
   },
@@ -1720,7 +1733,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     textAlign: 'center',
   },
   vehicleLoading: {
@@ -1732,14 +1745,14 @@ const styles = StyleSheet.create({
   },
   vehicleLoadingText: {
     fontSize: 14,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
   },
 
 
   // Promo
   promoToggleLink: {
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     fontSize: 13,
@@ -1753,10 +1766,10 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   savedIconWrap: {
     width: 36,
@@ -1770,11 +1783,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   savedAddress: {
     fontSize: 12,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
   },
   // ── Booking confirmation overlay ────────────────────────────────────────────
@@ -1811,9 +1824,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 22,
     paddingTop: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderTopWidth: 1,
-    borderTopColor: orbiTheme.colors.border,
+    borderTopColor: theme.colors.border,
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 16,
@@ -1838,12 +1851,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   ctaSignalMeta: {
     fontSize: 11,
     fontWeight: '500',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     marginTop: 1,
   },
   ctaAvailabilityDot: {
@@ -1860,27 +1873,27 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   paymentChipActive: {
-    backgroundColor: orbiTheme.colors.text,
-    borderColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.text,
+    borderColor: theme.colors.text,
   },
   paymentChipLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
   },
-  paymentChipLabelActive: { color: '#FFFFFF' },
+  paymentChipLabelActive: { color: theme.colors.textInverse },
   routeActionStack: { gap: 10 },
   inlineActions: { gap: 8 },
   inlineActionCard: { width: '100%' },
 
 });
 
-const bookIconStyles = StyleSheet.create({
+const makeBookIconStyles = (theme: OrbiTheme) => StyleSheet.create({
   backWrap: {
     width: 18,
     height: 18,
@@ -1892,7 +1905,7 @@ const bookIconStyles = StyleSheet.create({
     width: 12,
     height: 2.5,
     borderRadius: 999,
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.text,
     left: 3,
   },
   backLineTop: {
@@ -1906,7 +1919,7 @@ const bookIconStyles = StyleSheet.create({
     height: 17,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: orbiTheme.colors.teal,
+    borderColor: theme.colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1914,7 +1927,7 @@ const bookIconStyles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
   checkWrap: {
     width: 42,
@@ -1963,7 +1976,7 @@ const bookIconStyles = StyleSheet.create({
     height: 15,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: orbiTheme.colors.teal,
+    borderColor: theme.colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1971,6 +1984,6 @@ const bookIconStyles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
 });

@@ -1,12 +1,13 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import {
   escapeHtmlText,
-  orbiTheme,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
+  type OrbiTheme,
 } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 
 const TypedWebView = WebView as any;
 
@@ -89,6 +90,8 @@ export function SavedPlacesMap({
   onPlaceSelect,
   height = 200,
 }: SavedPlacesMapProps) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const webViewRef = useRef<WebView>(null);
 
   const validPlaces = places.filter(
@@ -169,12 +172,12 @@ export function SavedPlacesMap({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   container: {
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   webView: {
     flex: 1,
@@ -237,9 +240,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.5)',
+    borderColor: theme.colors.borderSoft,
   },
   webEyebrow: {
     color: '#6366f1',
@@ -254,7 +257,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   webMeta: {
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontSize: 12,
     lineHeight: 16,
   },

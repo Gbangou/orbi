@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { orbiTheme } from '@orbi/ui';
+import { type OrbiTheme } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 import { usePushRegistration } from '../../lib/use-push-registration';
 import { useRiderTabBadge } from '../../lib/use-rider-tab-badge';
 
@@ -9,6 +11,8 @@ type TabIconProps = { color: string; focused: boolean };
 // Simple clean SVG-style icons using pure View shapes
 
 function HomeIcon({ color }: TabIconProps) {
+  const theme = useOrbiTheme();
+  const icon = useMemo(() => makeIconStyles(theme), [theme]);
   return (
     <View style={icon.wrap}>
       <View style={[icon.roofBase, { borderBottomColor: color }]} />
@@ -20,6 +24,8 @@ function HomeIcon({ color }: TabIconProps) {
 }
 
 function ActivityIcon({ color, badge }: TabIconProps & { badge?: number }) {
+  const theme = useOrbiTheme();
+  const icon = useMemo(() => makeIconStyles(theme), [theme]);
   return (
     <View style={icon.wrap}>
       <View style={[icon.dotA, { backgroundColor: color }]} />
@@ -35,6 +41,8 @@ function ActivityIcon({ color, badge }: TabIconProps & { badge?: number }) {
 }
 
 function TripsIcon({ color }: TabIconProps) {
+  const theme = useOrbiTheme();
+  const icon = useMemo(() => makeIconStyles(theme), [theme]);
   return (
     <View style={icon.wrap}>
       <View style={[icon.tripLine, { backgroundColor: color }]} />
@@ -45,6 +53,8 @@ function TripsIcon({ color }: TabIconProps) {
 }
 
 function AccountIcon({ color }: TabIconProps) {
+  const theme = useOrbiTheme();
+  const icon = useMemo(() => makeIconStyles(theme), [theme]);
   return (
     <View style={icon.wrap}>
       <View style={[icon.head, { borderColor: color }]} />
@@ -56,14 +66,16 @@ function AccountIcon({ color }: TabIconProps) {
 export default function RiderTabsLayout() {
   usePushRegistration();
   const { activityBadge } = useRiderTabBadge();
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: orbiTheme.colors.text,
-        tabBarInactiveTintColor: '#BBBBBB',
+        tabBarActiveTintColor: theme.colors.text,
+        tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarLabelStyle: styles.label,
         tabBarItemStyle: styles.item,
       }}
@@ -100,16 +112,16 @@ export default function RiderTabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   tabBar: {
-    backgroundColor: '#FFFFFF',
-    borderTopColor: '#F0F0F0',
+    backgroundColor: theme.colors.surface,
+    borderTopColor: theme.colors.border,
     borderTopWidth: 1,
     height: 82,
     paddingBottom: 16,
     paddingTop: 10,
     elevation: 0,
-    shadowColor: '#000',
+    shadowColor: theme.shadows.card.shadowColor,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: -2 },
@@ -125,7 +137,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const icon = StyleSheet.create({
+const makeIconStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     width: 26,
     height: 22,
@@ -208,12 +220,12 @@ const icon = StyleSheet.create({
     minWidth: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: orbiTheme.colors.danger,
+    backgroundColor: theme.colors.danger,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
     borderWidth: 1.5,
-    borderColor: '#FFFFFF',
+    borderColor: theme.colors.surface,
   },
   badgeText: {
     fontSize: 9,

@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
-import { orbiTheme } from '@orbi/ui';
+import type { OrbiTheme } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 import { hasPersistedRiderSession } from '../lib/auth';
 import { OrbiLogo } from '../lib/orbi-logo';
 
@@ -10,6 +11,8 @@ import { OrbiLogo } from '../lib/orbi-logo';
  * Visible ~400ms maximum. Logo animé, aucun widget développeur.
  */
 export default function IndexScreen() {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const fadeIn = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.88)).current;
 
@@ -47,17 +50,17 @@ export default function IndexScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.riderBackground,
+    backgroundColor: theme.colors.riderBackground,
     alignItems: 'center',
     justifyContent: 'center',
   },
   content: { alignItems: 'center', gap: 16 },
   tagline: {
     fontSize: 16,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
     textAlign: 'center',
   },
@@ -65,7 +68,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 40,
     fontSize: 12,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
     letterSpacing: 0,
   },

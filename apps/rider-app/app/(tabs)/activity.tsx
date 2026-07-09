@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from "../../lib/privacy/screen-capture";
 import {
   Alert,
@@ -34,7 +34,7 @@ import {
   describeRealtimeConnection,
   formatOperationalStatus,
   formatXof,
-  orbiTheme,
+  type OrbiTheme,
 } from "@orbi/ui";
 import {
   OrbiButton,
@@ -42,6 +42,7 @@ import {
   OrbiStatusBanner,
   OrbiSurface,
   safeHaptics,
+  useOrbiTheme,
 } from "@orbi/ui/native";
 import { restoreRiderSession } from "../../lib/auth";
 import { useTranslation } from "../../lib/i18n";
@@ -80,6 +81,8 @@ const MILESTONES = [
 ] as const;
 
 function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
+  const theme = useOrbiTheme();
+  const loyaltyStyles = useMemo(() => makeLoyaltyStyles(theme), [theme]);
   const earned = MILESTONES.filter((m) => completedTrips >= m.trips);
   const next = MILESTONES.find((m) => completedTrips < m.trips);
   const progress = next
@@ -133,7 +136,7 @@ function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
   );
 }
 
-const loyaltyStyles = StyleSheet.create({
+const makeLoyaltyStyles = (theme: OrbiTheme) => StyleSheet.create({
   card: {
     padding: 16,
     gap: 10,
@@ -150,7 +153,7 @@ const loyaltyStyles = StyleSheet.create({
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0,
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
   },
   badgeRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   earnedBadge: {
@@ -162,11 +165,11 @@ const loyaltyStyles = StyleSheet.create({
   earnedBadgeText: {
     fontSize: 12,
     fontWeight: "700",
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
   },
   nextLabel: {
     fontSize: 13,
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "600",
   },
   progressTrack: {
@@ -178,11 +181,11 @@ const loyaltyStyles = StyleSheet.create({
   progressFill: {
     height: "100%",
     borderRadius: 99,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
   progressMeta: {
     fontSize: 11,
-    color: orbiTheme.colors.muted,
+    color: theme.colors.muted,
     fontWeight: "600",
   },
 });
@@ -190,6 +193,8 @@ const loyaltyStyles = StyleSheet.create({
 
 export default function ActivityScreen() {
   const router = useRouter();
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { t } = useTranslation();
   const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
   const [activeTripDetail, setActiveTripDetail] =
@@ -717,11 +722,11 @@ export default function ActivityScreen() {
   }
 
   function getStatusColor(status: string) {
-    if (status === 'MATCHED') return orbiTheme.colors.sky;
-    if (status === 'DRIVER_APPROACHING') return orbiTheme.colors.amber;
-    if (status === 'DRIVER_AT_PICKUP') return orbiTheme.colors.amber;
-    if (status === 'IN_PROGRESS') return orbiTheme.colors.teal;
-    return orbiTheme.colors.sky;
+    if (status === 'MATCHED') return theme.colors.sky;
+    if (status === 'DRIVER_APPROACHING') return theme.colors.amber;
+    if (status === 'DRIVER_AT_PICKUP') return theme.colors.amber;
+    if (status === 'IN_PROGRESS') return theme.colors.teal;
+    return theme.colors.sky;
   }
 
   function getStatusBg(status: string) {
@@ -772,7 +777,7 @@ export default function ActivityScreen() {
             style={StyleSheet.absoluteFill}
           />
         ) : (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: orbiTheme.colors.backgroundDim }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.backgroundDim }]} />
         )}
 
         {/* Bottom sheet */}
@@ -870,14 +875,14 @@ export default function ActivityScreen() {
           {/* Route */}
           <OrbiSurface style={styles.routeCard}>
             <View style={styles.routeRow}>
-              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.teal }]} />
+              <View style={[styles.routeDot, { backgroundColor: theme.colors.teal }]} />
               <Text style={styles.routeText} numberOfLines={1}>
                 {activeTrip.pickupAddress}
               </Text>
             </View>
             <View style={styles.routeLineSep} />
             <View style={styles.routeRow}>
-              <View style={[styles.routeDot, { backgroundColor: orbiTheme.colors.text }]} />
+              <View style={[styles.routeDot, { backgroundColor: theme.colors.text }]} />
               <Text style={styles.routeText} numberOfLines={1}>
                 {activeTrip.destinationAddress}
               </Text>
@@ -968,8 +973,8 @@ export default function ActivityScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => void loadHistory()}
-            tintColor={orbiTheme.colors.teal}
-            colors={[orbiTheme.colors.teal]}
+            tintColor={theme.colors.teal}
+            colors={[theme.colors.teal]}
           />
         }
       >
@@ -1057,7 +1062,13 @@ export default function ActivityScreen() {
                         ? t('activity.completed')
                         : trip.status === 'CANCELLED'
                           ? t('activity.cancelled')
-                          : trip.status}
+                          : trip.status === 'IN_PROGRESS'
+                            ? t('activity.inProgress')
+                            : trip.status === 'DRIVER_ARRIVING'
+                              ? t('activity.driverArriving')
+                              : trip.status === 'MATCHED'
+                                ? t('activity.matched')
+                                : trip.status}
                     </Text>
                   </View>
                   {trip.amount ? (
@@ -1098,7 +1109,7 @@ export default function ActivityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // ── Active trip layout
   tripRoot: { flex: 1 },
   tripStatusOverlay: {
@@ -1107,21 +1118,21 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     zIndex: 100,
-    backgroundColor: 'rgba(255,255,255,0.94)',
+    backgroundColor: theme.colors.surface,
   },
   tripSheet: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 16,
     paddingBottom: 36,
     paddingTop: 8,
     gap: 14,
-    ...orbiTheme.shadows.sheet,
+    ...theme.shadows.sheet,
   },
   sheetHandle: {
     width: 38,
@@ -1151,7 +1162,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     textTransform: 'uppercase',
   },
 
@@ -1167,7 +1178,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.accentDark,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -1184,18 +1195,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   driverMeta: {
     fontSize: 13,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     fontFamily: 'Inter_400Regular',
   },
   driverPlate: {
     fontSize: 13,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     letterSpacing: 0,
   },
 
@@ -1210,7 +1221,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -1218,12 +1229,12 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     letterSpacing: 0,
   },
   pickupCodeHint: {
     fontSize: 12,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
   },
 
@@ -1246,11 +1257,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     fontFamily: 'Inter_500Medium',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   routeLineSep: {
     height: 1,
-    backgroundColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.border,
     marginLeft: 18,
   },
 
@@ -1282,7 +1293,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.sky,
+    color: theme.colors.sky,
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginBottom: 2,
@@ -1291,7 +1302,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   etaDistBadge: {
     backgroundColor: 'rgba(0,122,255,0.12)',
@@ -1303,7 +1314,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.sky,
+    color: theme.colors.sky,
   },
 
   // Call driver button (inside driver card)
@@ -1315,7 +1326,7 @@ const styles = StyleSheet.create({
   callDriverLabel: { fontSize: 12 },
 
   // ── History layout
-  safe: { flex: 1, backgroundColor: orbiTheme.colors.riderBackground },
+  safe: { flex: 1, backgroundColor: theme.colors.riderBackground },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1324,13 +1335,13 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: orbiTheme.colors.border,
+    borderBottomColor: theme.colors.border,
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -1341,7 +1352,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     textTransform: 'uppercase',
   },
   historyStatusBanner: {
@@ -1365,7 +1376,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     paddingHorizontal: 2,
   },
 
@@ -1384,7 +1395,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: orbiTheme.colors.amber,
+    backgroundColor: theme.colors.amber,
     flexShrink: 0,
   },
   requestInfo: { flex: 1 },
@@ -1392,11 +1403,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   requestSub: {
     fontSize: 12,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     fontFamily: 'Inter_400Regular',
   },
   cancelBtn: {
@@ -1408,7 +1419,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.danger,
+    color: theme.colors.danger,
   },
 
   // Trip history rows
@@ -1418,7 +1429,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: orbiTheme.colors.border,
+    borderBottomColor: theme.colors.border,
   },
   tripHistDate: {
     width: 40,
@@ -1428,7 +1439,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textAlign: 'center',
   },
   tripHistInfo: { flex: 1 },
@@ -1436,20 +1447,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     fontFamily: 'Inter_500Medium',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   tripHistStatus: {
     fontSize: 11,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
     marginTop: 2,
   },
-  tripHistStatusDone: { color: orbiTheme.colors.teal },
+  tripHistStatusDone: { color: theme.colors.teal },
   tripHistFare: {
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
 
   // Empty state
@@ -1457,13 +1468,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    ...orbiTheme.shadows.card,
+    ...theme.shadows.card,
   },
   emptyOrbit: {
     width: 58,
@@ -1487,7 +1498,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
     borderWidth: 3,
     borderColor: '#FFFFFF',
   },
@@ -1499,7 +1510,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -1507,11 +1518,11 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   emptyMeta: {
     fontSize: 12,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
     lineHeight: 17,
   },
@@ -1527,8 +1538,8 @@ const styles = StyleSheet.create({
 
   // ── Legacy stubs
   screen: { gap: 16 },
-  title: { fontSize: 24, fontWeight: '800', color: orbiTheme.colors.text },
-  syncMeta: { color: orbiTheme.colors.muted, fontSize: 12 },
+  title: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
+  syncMeta: { color: theme.colors.muted, fontSize: 12 },
   refreshButton: {
     borderRadius: 10,
     minHeight: 38,
@@ -1536,23 +1547,23 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   refreshButtonLabel: { fontSize: 13 },
-  snapshotTitle: { fontSize: 13, fontWeight: '700', color: orbiTheme.colors.text },
+  snapshotTitle: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
   snapshotStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   trustCard: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 14,
     padding: 14,
     gap: 10,
   },
   identityRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   identityCopy: { flex: 1, gap: 2 },
-  identityTitle: { fontSize: 15, fontWeight: '700', color: orbiTheme.colors.text },
-  identityMeta: { fontSize: 12, color: orbiTheme.colors.textSoft },
+  identityTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+  identityMeta: { fontSize: 12, color: theme.colors.textSoft },
   identityDetails: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   avatarImage: { width: 48, height: 48, borderRadius: 24 },
   avatarFallback: {
     width: 48, height: 48, borderRadius: 24,
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.accentDark,
     alignItems: 'center', justifyContent: 'center',
   },
   avatarInitials: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },

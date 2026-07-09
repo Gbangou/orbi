@@ -82,28 +82,28 @@ export function buildDriverHomeStatusLabel(input: {
   fullName: string;
 }) {
   if (input.flow.activeTrip) {
-    return `Course ${input.flow.activeTrip.status} avec ${input.flow.activeTrip.counterpartyName ?? "votre client"}.`;
+    return `Course ${formatOperationalStatus(input.flow.activeTrip.status)} avec ${input.flow.activeTrip.counterpartyName ?? "votre client"}.`;
   }
 
   if (input.flow.operationalStatus === "SUSPENDED") {
     return "Compte suspendu. Contactez les operations pour reprendre le direct.";
   }
 
-  return `Connecte comme ${input.fullName}. Statut ${input.flow.availabilityStatus}. ${input.flow.visibleOfferCount} offres disponibles et 0 course active.`;
+  return `Connecte comme ${input.fullName}. Statut ${formatOperationalStatus(input.flow.availabilityStatus)}. ${input.flow.visibleOfferCount} offres disponibles et 0 course active.`;
 }
 
 export function buildDriverDispatchStatusLabel(input: {
   flow: DriverActiveFlowSummary;
 }) {
   if (input.flow.activeTrip) {
-    return `Course ${input.flow.activeTrip.status} avec ${input.flow.activeTrip.counterpartyName ?? "votre client"}.`;
+    return `Course ${formatOperationalStatus(input.flow.activeTrip.status)} avec ${input.flow.activeTrip.counterpartyName ?? "votre client"}.`;
   }
 
   if (input.flow.operationalStatus === "SUSPENDED") {
     return "Compte suspendu. Le dispatch reste bloque tant que les operations n ont pas reactive le profil.";
   }
 
-  return `${input.flow.visibleOfferCount} offres chargees. Statut chauffeur ${input.flow.availabilityStatus}.`;
+  return `${input.flow.visibleOfferCount} offres chargees. Statut chauffeur ${formatOperationalStatus(input.flow.availabilityStatus)}.`;
 }
 
 export function buildDriverNextActionHint(flow: DriverActiveFlowSummary) {

@@ -1,11 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
-  orbiTheme,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
+  type OrbiTheme,
 } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 import { enqueueRiderMapError } from './map-error-reporting';
 
 const TypedWebView = WebView as any;
@@ -145,6 +146,8 @@ export function TripMapView({
   onSelectCoordinate,
   style,
 }: TripMapViewProps) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const webRef = useRef<WebView>(null);
   const htmlRef = useRef<string>(
     buildMapHtml({
@@ -266,7 +269,7 @@ export function TripMapView({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   container: {
     overflow: 'hidden',
     borderRadius: 14,
@@ -301,7 +304,7 @@ const styles = StyleSheet.create({
   pickupNode: {
     left: '24%',
     top: '58%',
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
   destinationNode: {
     right: '24%',
@@ -326,7 +329,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#071311',
     borderWidth: 2,
-    borderColor: orbiTheme.colors.teal,
+    borderColor: theme.colors.teal,
   },
   driverMarkerText: {
     color: '#b8fff0',
@@ -342,12 +345,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(13, 42, 37, 0.08)',
+    borderColor: theme.colors.borderSoft,
   },
   fallbackEyebrow: {
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0,
@@ -359,7 +362,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   fallbackMeta: {
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontSize: 12,
     lineHeight: 16,
   },

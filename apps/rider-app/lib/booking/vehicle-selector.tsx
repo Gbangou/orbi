@@ -5,7 +5,7 @@
  * Affiche les options de service en scroll horizontal avec icônes 3D,
  * surge badge, prix et ETA.
  */
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -14,7 +14,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { formatXof, orbiTheme } from '@orbi/ui';
+import { formatXof, type OrbiTheme } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 import type { RideOption, PromoValidationResponse } from '@orbi/api';
 import { VehicleIllustration } from './vehicle-illustrations';
 
@@ -26,12 +27,14 @@ function VehicleAvatar({
   tone: 'teal' | 'sky' | 'amber';
   tier: RideOption['tier'];
 }) {
-  const accent = tone === 'teal' ? orbiTheme.colors.teal : tone === 'sky' ? orbiTheme.colors.sky : orbiTheme.colors.amber;
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const accent = tone === 'teal' ? theme.colors.teal : tone === 'sky' ? theme.colors.sky : theme.colors.amber;
   return (
     <View style={[
       styles.vehicleAvatar,
       isSelected && { backgroundColor: accent + '0F', borderColor: accent, borderWidth: 1.5 },
-      !isSelected && { borderColor: orbiTheme.colors.border },
+      !isSelected && { borderColor: theme.colors.border },
     ]}>
       <View style={[styles.vehicleAura, { backgroundColor: accent + '18' }]} />
       <View style={styles.svgWrap}>
@@ -58,6 +61,8 @@ export const VehicleSelector = memo(function VehicleSelector({
   isRefreshing,
   onSelect,
 }: VehicleSelectorProps) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   function buildRideOptionVisual(option: RideOption): { tone: 'teal' | 'sky' | 'amber' } {
     const isMoto = option.category === 'motorcycle';
     return { tone: isMoto ? 'teal' : option.tier === 'car-comfort' ? 'sky' : 'amber' };
@@ -66,7 +71,7 @@ export const VehicleSelector = memo(function VehicleSelector({
   if (isRefreshing && options.length === 0) {
     return (
       <View style={styles.loadingRow}>
-        <ActivityIndicator size="small" color={orbiTheme.colors.teal} />
+        <ActivityIndicator size="small" color={theme.colors.teal} />
         <Text style={styles.loadingText}>Calcul des options…</Text>
       </View>
     );
@@ -81,7 +86,7 @@ export const VehicleSelector = memo(function VehicleSelector({
         {options.map((option) => {
           const { tone } = buildRideOptionVisual(option);
           const isSelected = option.id === (selectedOptionId || options[0]?.id);
-          const accentColor = tone === 'teal' ? orbiTheme.colors.teal : tone === 'sky' ? orbiTheme.colors.sky : orbiTheme.colors.amber;
+          const accentColor = tone === 'teal' ? theme.colors.teal : tone === 'sky' ? theme.colors.sky : theme.colors.amber;
           const discountRate = promoValidation
             ? Math.min(Math.max(promoValidation.discountBps, 0), 10000) / 10000
             : 0;
@@ -107,7 +112,7 @@ export const VehicleSelector = memo(function VehicleSelector({
                 tone={tone}
                 tier={option.tier}
               />
-              <Text style={[styles.name, isSelected && { color: orbiTheme.colors.text }]}>{title}</Text>
+              <Text style={[styles.name, isSelected && { color: theme.colors.text }]}>{title}</Text>
               <View style={styles.etaRow}>
                 <Text style={styles.eta}>{option.etaMinutes} min</Text>
                 {option.marketplace?.nearbyDrivers != null && option.marketplace.nearbyDrivers > 0 ? (
@@ -132,26 +137,26 @@ export const VehicleSelector = memo(function VehicleSelector({
   );
 });
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   section: { gap: 8 },
-  sectionTitle: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text, paddingHorizontal: 2 },
+  sectionTitle: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.text, paddingHorizontal: 2 },
   scroll: { gap: 6, paddingHorizontal: 2 },
   card: {
-    width: 104, backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1.5,
-    borderColor: orbiTheme.colors.border, padding: 7, alignItems: 'center', gap: 4,
-    shadowColor: '#0B1220', shadowOpacity: 0.09, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 7,
+    width: 104, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1.5,
+    borderColor: theme.colors.border, padding: 7, alignItems: 'center', gap: 4,
+    shadowColor: theme.shadows.card.shadowColor, shadowOpacity: 0.09, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 7,
   },
   surgeBadge: { alignSelf: 'center', backgroundColor: 'rgba(255,149,0,0.90)', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 },
   surgeText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
   vehicleAvatar: {
     width: 82, height: 56, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: orbiTheme.colors.border, backgroundColor: '#F6F8FB', overflow: 'hidden',
+    borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.backgroundAlt, overflow: 'hidden',
   },
-  name: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, textAlign: 'center', minHeight: 18 },
-  eta: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
-  fare: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textSoft, textAlign: 'center' },
+  name: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.textSoft, textAlign: 'center', minHeight: 18 },
+  eta: { fontSize: 11, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  fare: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.textSoft, textAlign: 'center' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
-  loadingText: { fontSize: 14, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular' },
+  loadingText: { fontSize: 14, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular' },
   vehicleAura: { position: 'absolute', width: 70, height: 40, borderRadius: 22, top: 7 },
   svgWrap: { width: 84, height: 54, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   etaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
@@ -167,7 +172,7 @@ const styles = StyleSheet.create({
   },
   lowConfidence: {
     fontSize: 9,
-    color: orbiTheme.colors.amber,
+    color: theme.colors.amber,
     fontWeight: '600',
     textAlign: 'center',
     marginTop: -4,

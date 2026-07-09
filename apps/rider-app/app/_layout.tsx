@@ -21,7 +21,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
 import { orbiTheme, resolveTheme } from '@orbi/ui';
-import { ErrorBoundary } from '@orbi/ui/native';
+import { ErrorBoundary, OrbiThemeProvider } from '@orbi/ui/native';
 import { hasPersistedRiderSession } from '../lib/auth';
 
 const TypedStack = Stack as any;
@@ -111,37 +111,39 @@ export default function RootLayout() {
   const showSplash = !isResolved || !canRenderApp;
 
   return (
-    <ErrorBoundary fallbackLabel="Orbi a rencontré un problème inattendu">
-      <>
-        <StatusBar style={isDark ? 'light' : 'dark'} />
-        {canRenderApp ? (
-          <TypedStack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: appBackground },
-            }}
-          />
-        ) : null}
-        {showSplash ? (
-          <View style={styles.splash}>
-            <View style={styles.splashLogo}>
-              <Text
-                style={[
-                  canRenderApp ? styles.splashWordmark : styles.splashWordmarkSystem,
-                ]}
-              >
-                orbi
-              </Text>
-            </View>
-            <ActivityIndicator
-              size="small"
-              color={orbiTheme.colors.teal}
-              style={styles.splashSpinner}
+    <OrbiThemeProvider>
+      <ErrorBoundary fallbackLabel="Orbi a rencontré un problème inattendu">
+        <>
+          <StatusBar style={isDark ? 'light' : 'dark'} />
+          {canRenderApp ? (
+            <TypedStack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: appBackground },
+              }}
             />
-          </View>
-        ) : null}
-      </>
-    </ErrorBoundary>
+          ) : null}
+          {showSplash ? (
+            <View style={styles.splash}>
+              <View style={styles.splashLogo}>
+                <Text
+                  style={[
+                    canRenderApp ? styles.splashWordmark : styles.splashWordmarkSystem,
+                  ]}
+                >
+                  orbi
+                </Text>
+              </View>
+              <ActivityIndicator
+                size="small"
+                color={orbiTheme.colors.teal}
+                style={styles.splashSpinner}
+              />
+            </View>
+          ) : null}
+        </>
+      </ErrorBoundary>
+    </OrbiThemeProvider>
   );
 }
 

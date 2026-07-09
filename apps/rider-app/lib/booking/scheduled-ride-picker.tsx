@@ -5,9 +5,10 @@
  * Interface: chip "Maintenant" vs "Programmer" avec date/heure.
  * Design Bolt-style — intégré dans le book.tsx.
  */
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { orbiTheme } from '@orbi/ui';
+import type { OrbiTheme } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 
 export type ScheduledRideMode = 'now' | 'scheduled';
 
@@ -58,6 +59,8 @@ function generateDateOptions(): Array<{ label: string; value: string }> {
 }
 
 function CalendarGlyph() {
+  const theme = useOrbiTheme();
+  const glyphStyles = useMemo(() => makeGlyphStyles(theme), [theme]);
   return (
     <View style={glyphStyles.calendar}>
       <View style={glyphStyles.calendarRings}>
@@ -74,6 +77,8 @@ function CalendarGlyph() {
 }
 
 function ChevronGlyph({ expanded }: { expanded: boolean }) {
+  const theme = useOrbiTheme();
+  const glyphStyles = useMemo(() => makeGlyphStyles(theme), [theme]);
   return (
     <View
       style={[
@@ -95,6 +100,8 @@ export const ScheduledRidePicker = memo(function ScheduledRidePicker({
   onDateChange,
   onTimeChange,
 }: ScheduledRidePickerProps) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [showTimeSlots, setShowTimeSlots] = useState(false);
   const timeSlots = generateTimeSlots();
   const dateOptions = generateDateOptions();
@@ -191,44 +198,44 @@ export const ScheduledRidePicker = memo(function ScheduledRidePicker({
   );
 });
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   container: { gap: 9 },
   toggle: {
     flexDirection: 'row',
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 12, padding: 3, gap: 2,
   },
   toggleBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
-  toggleBtnActive: { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 8, elevation: 3 },
-  toggleLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.textMuted },
-  toggleLabelActive: { color: orbiTheme.colors.text },
+  toggleBtnActive: { backgroundColor: theme.colors.surface, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 8, elevation: 3 },
+  toggleLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.textMuted },
+  toggleLabelActive: { color: theme.colors.text },
 
   pickers: { gap: 11 },
   pickerSection: { gap: 7 },
-  pickerLabel: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 0 },
+  pickerLabel: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 0 },
 
   dateChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  dateChip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: orbiTheme.colors.backgroundAlt, borderWidth: 1, borderColor: orbiTheme.colors.border },
-  dateChipActive: { backgroundColor: orbiTheme.colors.text, borderColor: orbiTheme.colors.text },
-  dateChipText: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.textSoft },
-  dateChipTextActive: { color: '#FFFFFF' },
+  dateChip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: theme.colors.backgroundAlt, borderWidth: 1, borderColor: theme.colors.border },
+  dateChipActive: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
+  dateChipText: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.textSoft },
+  dateChipTextActive: { color: theme.colors.textInverse },
 
   timeDisplay: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: orbiTheme.colors.backgroundAlt, borderRadius: 12,
-    borderWidth: 1, borderColor: orbiTheme.colors.border, paddingHorizontal: 13, paddingVertical: 10,
+    backgroundColor: theme.colors.backgroundAlt, borderRadius: 12,
+    borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 13, paddingVertical: 10,
   },
-  timeValue: { fontSize: 16, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.text },
+  timeValue: { fontSize: 16, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.text },
 
   timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   timeSlot: {
     borderRadius: 8, paddingHorizontal: 9, paddingVertical: 6,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
-    borderWidth: 1, borderColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
+    borderWidth: 1, borderColor: theme.colors.border,
     minWidth: 60, alignItems: 'center',
   },
-  timeSlotActive: { backgroundColor: orbiTheme.colors.teal, borderColor: orbiTheme.colors.teal },
-  timeSlotText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.textSoft },
+  timeSlotActive: { backgroundColor: theme.colors.teal, borderColor: theme.colors.teal },
+  timeSlotText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.textSoft },
   timeSlotTextActive: { color: '#FFFFFF' },
 
   scheduledInfo: {
@@ -237,17 +244,17 @@ const styles = StyleSheet.create({
   },
   scheduledInfoHeader: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   scheduledInfoCopy: { flex: 1, gap: 4 },
-  scheduledInfoText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.teal },
-  scheduledInfoNote: { fontSize: 12, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular' },
+  scheduledInfoText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.teal },
+  scheduledInfoNote: { fontSize: 12, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular' },
 });
 
-const glyphStyles = StyleSheet.create({
+const makeGlyphStyles = (theme: OrbiTheme) => StyleSheet.create({
   calendar: {
     width: 22,
     height: 22,
     borderRadius: 7,
     borderWidth: 1.5,
-    borderColor: orbiTheme.colors.teal,
+    borderColor: theme.colors.teal,
     paddingHorizontal: 4,
     paddingTop: 5,
   },
@@ -263,7 +270,7 @@ const glyphStyles = StyleSheet.create({
     width: 3,
     height: 7,
     borderRadius: 2,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
   calendarLine: {
     height: 1.5,
@@ -279,7 +286,7 @@ const glyphStyles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 2,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
   chevron: {
     width: 18,
@@ -295,7 +302,7 @@ const glyphStyles = StyleSheet.create({
     width: 8,
     height: 2,
     borderRadius: 999,
-    backgroundColor: orbiTheme.colors.textMuted,
+    backgroundColor: theme.colors.textMuted,
     transform: [{ translateX: -3 }, { rotate: '45deg' }],
   },
   chevronLineRight: {
@@ -303,7 +310,7 @@ const glyphStyles = StyleSheet.create({
     width: 8,
     height: 2,
     borderRadius: 999,
-    backgroundColor: orbiTheme.colors.textMuted,
+    backgroundColor: theme.colors.textMuted,
     transform: [{ translateX: 3 }, { rotate: '-45deg' }],
   },
 });

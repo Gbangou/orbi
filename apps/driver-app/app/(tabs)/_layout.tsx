@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { orbiTheme } from '@orbi/ui';
+import { useMemo } from 'react';
+import { type OrbiTheme } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 import { usePushRegistration } from '../../lib/use-push-registration';
 
 type TabIconProps = { color: string; focused: boolean };
@@ -27,10 +29,16 @@ function MissionsIcon({ color, focused }: TabIconProps) {
 }
 
 function EarningsIcon({ color, focused }: TabIconProps) {
+  const theme = useOrbiTheme();
   return (
     <View style={icon.wrap}>
       <View style={[icon.walletBody, { borderColor: color }]}>
-        <View style={[icon.walletFlap, { borderColor: color, opacity: focused ? 1 : 0.72 }]} />
+        <View
+          style={[
+            icon.walletFlap,
+            { borderColor: color, backgroundColor: theme.colors.surface, opacity: focused ? 1 : 0.72 },
+          ]}
+        />
         <View style={[icon.walletDot, { backgroundColor: color }]} />
       </View>
     </View>
@@ -48,14 +56,16 @@ function ProfileIcon({ color, focused }: TabIconProps) {
 
 export default function DriverTabsLayout() {
   usePushRegistration();
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: orbiTheme.colors.text,
-        tabBarInactiveTintColor: '#BBBBBB',
+        tabBarActiveTintColor: theme.colors.text,
+        tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
       }}
@@ -100,30 +110,31 @@ export default function DriverTabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: '#FFFFFF',
-    borderTopColor: '#F0F0F0',
-    borderTopWidth: 1,
-    height: 82,
-    paddingBottom: 16,
-    paddingTop: 10,
-    elevation: 0,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: -2 },
-  },
-  tabLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0,
-    marginTop: 3,
-  },
-  tabItem: {
-    paddingTop: 2,
-  },
-});
+const makeStyles = (theme: OrbiTheme) =>
+  StyleSheet.create({
+    tabBar: {
+      backgroundColor: theme.colors.surface,
+      borderTopColor: theme.colors.border,
+      borderTopWidth: 1,
+      height: 82,
+      paddingBottom: 16,
+      paddingTop: 10,
+      elevation: 0,
+      shadowColor: theme.shadows.card.shadowColor,
+      shadowOpacity: 0.06,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: -2 },
+    },
+    tabLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      letterSpacing: 0,
+      marginTop: 3,
+    },
+    tabItem: {
+      paddingTop: 2,
+    },
+  });
 
 const icon = StyleSheet.create({
   wrap: {

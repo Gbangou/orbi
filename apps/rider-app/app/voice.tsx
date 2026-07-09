@@ -12,7 +12,7 @@
  *   4. Suggestions retournées → naviguer vers /book avec pré-remplissage
  */
 import { useRouter } from 'expo-router';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -26,8 +26,8 @@ import Voice, {
   type SpeechResultsEvent,
 } from '@react-native-voice/voice';
 import { createOrbiApiClient, resolveVoiceLocationIntentWithApi, type VoiceLocationIntentResponse } from '@orbi/api';
-import { orbiTheme } from '@orbi/ui';
-import { OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics } from '@orbi/ui/native';
+import type { OrbiTheme } from '@orbi/ui';
+import { OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme } from '@orbi/ui/native';
 import { orbiRuntimeConfig, resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
 
 const VOICE_LOCALE = 'fr-FR';
@@ -44,6 +44,8 @@ const SAMPLE_PHRASES = [
 ] as const;
 
 function BackGlyph() {
+  const theme = useOrbiTheme();
+  const voiceIcon = useMemo(() => makeVoiceIconStyles(theme), [theme]);
   return (
     <View style={voiceIcon.backWrap}>
       <View style={[voiceIcon.backLine, voiceIcon.backLineTop]} />
@@ -53,6 +55,8 @@ function BackGlyph() {
 }
 
 function ForwardGlyph() {
+  const theme = useOrbiTheme();
+  const voiceIcon = useMemo(() => makeVoiceIconStyles(theme), [theme]);
   return (
     <View style={voiceIcon.forwardWrap}>
       <View style={[voiceIcon.forwardLine, voiceIcon.forwardLineTop]} />
@@ -72,6 +76,8 @@ const SuggestionCard = memo(function SuggestionCard({
   confidence: number;
   onSelect: () => void;
 }) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const pct = Math.round(confidence * 100);
   const isStrong = confidence >= 0.75;
   return (
@@ -82,7 +88,7 @@ const SuggestionCard = memo(function SuggestionCard({
       <OrbiSurface style={styles.suggCard} elevated={isStrong}>
         <View style={styles.suggHeader}>
           <View style={[styles.confBadge, { backgroundColor: isStrong ? 'rgba(0,201,167,0.12)' : 'rgba(255,149,0,0.12)' }]}>
-            <Text style={[styles.confText, { color: isStrong ? orbiTheme.colors.teal : orbiTheme.colors.amber }]}>{pct}%</Text>
+            <Text style={[styles.confText, { color: isStrong ? theme.colors.teal : theme.colors.amber }]}>{pct}%</Text>
           </View>
           <ForwardGlyph />
         </View>
@@ -104,6 +110,8 @@ const MicButton = memo(function MicButton({
   onPressIn: () => void;
   onPressOut: () => void;
 }) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -147,6 +155,8 @@ const MicButton = memo(function MicButton({
 
 export default function VoiceScreen() {
   const router = useRouter();
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -338,53 +348,53 @@ export default function VoiceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   safe: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: orbiTheme.colors.border },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: orbiTheme.colors.backgroundAlt, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.backgroundAlt, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text },
   content: { paddingHorizontal: 20, paddingTop: 28, gap: 20 },
 
   // Hero
   hero: { alignItems: 'center', gap: 14, paddingHorizontal: 18, paddingVertical: 24 },
-  micBtn: { width: 96, height: 96, borderRadius: 48, backgroundColor: orbiTheme.colors.backgroundAlt, borderWidth: 2, borderColor: orbiTheme.colors.border, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
-  micBtnActive: { backgroundColor: 'rgba(255,59,48,0.08)', borderColor: orbiTheme.colors.danger, shadowColor: orbiTheme.colors.danger, shadowOpacity: 0.3 },
+  micBtn: { width: 96, height: 96, borderRadius: 48, backgroundColor: theme.colors.backgroundAlt, borderWidth: 2, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  micBtnActive: { backgroundColor: 'rgba(255,59,48,0.08)', borderColor: theme.colors.danger, shadowColor: theme.colors.danger, shadowOpacity: 0.3 },
   micGlyph: { width: 38, height: 44, alignItems: 'center', justifyContent: 'center' },
-  micHead: { width: 22, height: 28, borderRadius: 11, backgroundColor: orbiTheme.colors.text },
-  micStem: { width: 4, height: 10, backgroundColor: orbiTheme.colors.text, marginTop: 2, borderRadius: 2 },
-  micBase: { width: 24, height: 4, backgroundColor: orbiTheme.colors.text, borderRadius: 2, marginTop: 2 },
-  recDot: { position: 'absolute', top: 8, right: 8, width: 10, height: 10, borderRadius: 5, backgroundColor: orbiTheme.colors.danger },
-  heroTitle: { fontSize: 20, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text, textAlign: 'center' },
-  heroSub: { fontSize: 14, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20, maxWidth: 280 },
-  transcriptBubble: { backgroundColor: orbiTheme.colors.backgroundAlt, borderRadius: 14, borderWidth: 1, borderColor: orbiTheme.colors.border, paddingHorizontal: 16, paddingVertical: 10, maxWidth: 300 },
-  transcriptText: { fontSize: 15, fontStyle: 'italic', color: orbiTheme.colors.text, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  micHead: { width: 22, height: 28, borderRadius: 11, backgroundColor: theme.colors.text },
+  micStem: { width: 4, height: 10, backgroundColor: theme.colors.text, marginTop: 2, borderRadius: 2 },
+  micBase: { width: 24, height: 4, backgroundColor: theme.colors.text, borderRadius: 2, marginTop: 2 },
+  recDot: { position: 'absolute', top: 8, right: 8, width: 10, height: 10, borderRadius: 5, backgroundColor: theme.colors.danger },
+  heroTitle: { fontSize: 20, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text, textAlign: 'center' },
+  heroSub: { fontSize: 14, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20, maxWidth: 280 },
+  transcriptBubble: { backgroundColor: theme.colors.backgroundAlt, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 16, paddingVertical: 10, maxWidth: 300 },
+  transcriptText: { fontSize: 15, fontStyle: 'italic', color: theme.colors.text, fontFamily: 'Inter_400Regular', textAlign: 'center' },
 
   // Results
   results: { gap: 10 },
-  resultsTitle: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text },
+  resultsTitle: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text },
   suggCard: { padding: 14, gap: 6 },
   suggCardPressed: { opacity: 0.82 },
   suggHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   confBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
   confText: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  suggName: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text },
-  suggMeta: { fontSize: 12, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular' },
+  suggName: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text },
+  suggMeta: { fontSize: 12, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular' },
 
   // No results
   noResults: { alignItems: 'center', paddingHorizontal: 16, paddingVertical: 20, gap: 6 },
-  noResultsTitle: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: orbiTheme.colors.text },
-  noResultsMeta: { fontSize: 13, color: orbiTheme.colors.textMuted, fontFamily: 'Inter_400Regular' },
+  noResultsTitle: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text },
+  noResultsMeta: { fontSize: 13, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular' },
 
   // Samples
   samples: { gap: 12, padding: 14 },
-  samplesTitle: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: orbiTheme.colors.textMuted },
+  samplesTitle: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.textMuted },
   samplesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  sampleChip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: orbiTheme.colors.backgroundAlt, borderWidth: 1, borderColor: orbiTheme.colors.border },
+  sampleChip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: theme.colors.backgroundAlt, borderWidth: 1, borderColor: theme.colors.border },
   sampleChipPressed: { opacity: 0.75 },
-  sampleText: { fontSize: 13, fontWeight: '500', fontFamily: 'Inter_500Medium', color: orbiTheme.colors.textSoft },
+  sampleText: { fontSize: 13, fontWeight: '500', fontFamily: 'Inter_500Medium', color: theme.colors.textSoft },
 });
 
-const voiceIcon = StyleSheet.create({
+const makeVoiceIconStyles = (theme: OrbiTheme) => StyleSheet.create({
   backWrap: {
     width: 18,
     height: 18,
@@ -396,7 +406,7 @@ const voiceIcon = StyleSheet.create({
     width: 12,
     height: 2.5,
     borderRadius: 999,
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.text,
     left: 3,
   },
   backLineTop: {
@@ -416,7 +426,7 @@ const voiceIcon = StyleSheet.create({
     width: 10,
     height: 2.5,
     borderRadius: 999,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
     right: 3,
   },
   forwardLineTop: {

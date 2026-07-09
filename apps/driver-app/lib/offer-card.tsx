@@ -1,7 +1,7 @@
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
-import { formatXof, orbiTheme } from "@orbi/ui";
-import { OrbiButton, OrbiSurface } from "@orbi/ui/native";
+import { formatXof, type OrbiTheme } from "@orbi/ui";
+import { OrbiButton, OrbiSurface, useOrbiTheme } from "@orbi/ui/native";
 import type { DriverOffer } from "@orbi/api";
 import {
   buildDriverOfferConfidenceExplainer,
@@ -30,8 +30,9 @@ function formatDistanceKm(value: number | null | undefined): string {
 // ── Vehicle icon (pure View shapes, no external dependency) ──────────────────
 
 function VehicleIcon({ category }: { category: DriverOffer["category"] }) {
+  const theme = useOrbiTheme();
   const isMoto = category === "motorcycle";
-  const color = isMoto ? orbiTheme.colors.teal : orbiTheme.colors.sky;
+  const color = isMoto ? theme.colors.teal : theme.colors.sky;
   return (
     <View style={[iconStyles.wrap, { borderColor: color + "66" }]}>
       {isMoto ? (
@@ -84,14 +85,16 @@ function ConfidenceBar({
   windowLabel: string;
   tone: string;
 }) {
+  const theme = useOrbiTheme();
+  const confStyles = useMemo(() => makeConfStyles(theme), [theme]);
   const color =
     tone === "teal"
-      ? orbiTheme.colors.teal
+      ? theme.colors.teal
       : tone === "amber"
-        ? orbiTheme.colors.amber
+        ? theme.colors.amber
         : tone === "sky"
-          ? orbiTheme.colors.sky
-          : orbiTheme.colors.muted;
+          ? theme.colors.sky
+          : theme.colors.muted;
 
   return (
     <View style={[confStyles.wrap, { borderColor: color + "44" }]}>
@@ -115,7 +118,7 @@ function ConfidenceBar({
   );
 }
 
-const confStyles = StyleSheet.create({
+const makeConfStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: { borderRadius: 12, borderWidth: 1, padding: 12, gap: 6 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   badge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
@@ -125,7 +128,7 @@ const confStyles = StyleSheet.create({
   fill: { height: "100%", borderRadius: 4 },
   explanation: {
     fontSize: 12,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     fontFamily: "Inter_400Regular",
     lineHeight: 17,
   },
@@ -155,6 +158,8 @@ export const OfferCard = memo(function OfferCard({
   onAccept,
   onDecline,
 }: OfferCardProps) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const initials = buildInitials(offer.riderName);
   const confidence = buildDriverOfferConfidenceExplainer(offer);
   const detailLines = buildDriverOfferDetailLines(offer);
@@ -308,18 +313,18 @@ export const OfferCard = memo(function OfferCard({
   );
 });
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     padding: 14,
     gap: 10,
-    ...orbiTheme.shadows.card,
+    ...theme.shadows.card,
   },
   wrapFresh: {
-    borderColor: orbiTheme.colors.teal,
+    borderColor: theme.colors.teal,
     backgroundColor: "rgba(0,201,167,0.03)",
   },
   freshBadge: {
@@ -333,39 +338,39 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     fontFamily: "Inter_700Bold",
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
   },
   header: { flexDirection: "row", alignItems: "center", gap: 10 },
   avatar: {
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.accentDark,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarText: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: "#FFFFFF" },
   info: { flex: 1, gap: 2 },
-  riderName: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
-  route: { fontSize: 12, color: orbiTheme.colors.textSoft, fontFamily: "Inter_400Regular" },
+  riderName: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
+  route: { fontSize: 12, color: theme.colors.textSoft, fontFamily: "Inter_400Regular" },
   fareCol: { alignItems: "flex-end", gap: 4 },
-  fare: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
+  fare: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold", color: theme.colors.text },
   metrics: {
     flexDirection: "row",
     padding: 8,
   },
   metric: { flex: 1, alignItems: "center", gap: 2 },
-  metricVal: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
-  metricValNet: { color: orbiTheme.colors.amber },
+  metricVal: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
+  metricValNet: { color: theme.colors.amber },
   metricLbl: {
     fontSize: 10,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: "Inter_400Regular",
     textTransform: "uppercase",
     letterSpacing: 0,
   },
-  sep: { width: 1, backgroundColor: orbiTheme.colors.border, alignSelf: "stretch" },
-  expiry: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: orbiTheme.colors.amber },
+  sep: { width: 1, backgroundColor: theme.colors.border, alignSelf: "stretch" },
+  expiry: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: theme.colors.amber },
   actions: { flexDirection: "row", gap: 10 },
   acceptBtn: {
     flex: 1,
@@ -379,7 +384,7 @@ const styles = StyleSheet.create({
   detailLines: { gap: 2, paddingTop: 2 },
   detailLine: {
     fontSize: 11,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: "Inter_400Regular",
     lineHeight: 16,
   },

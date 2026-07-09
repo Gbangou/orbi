@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -9,7 +9,8 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { orbiTheme } from '@orbi/ui';
+import { orbiTheme, type OrbiTheme } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 
 type Tone = 'teal' | 'amber' | 'sky' | 'rose';
 
@@ -55,7 +56,7 @@ function resolvePressableStyle(
   return typeof style === 'function' ? style(state) : style;
 }
 
-// ── Status pill ──────────────────────────────────────────────────────────────
+// ── Status pill ───────────────────────────────────────────────────────────────
 
 export function LiveStatusPill({
   label,
@@ -109,6 +110,8 @@ export function LiveStatusBanner({
   secondaryMessage?: string | null;
   tone?: Tone;
 }) {
+  const theme = useOrbiTheme();
+  const banner = useMemo(() => makeBannerStyles(theme), [theme]);
   return (
     <View style={banner.wrap}>
       <LiveStatusPill label={label} tone={tone} />
@@ -120,23 +123,23 @@ export function LiveStatusBanner({
   );
 }
 
-const banner = StyleSheet.create({
+const makeBannerStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: orbiTheme.radius.card,
     padding: 14,
     gap: 8,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   message: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
   },
   secondary: {
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -165,6 +168,8 @@ export function LiveHeroCard({
   transitionMessage?: string | null;
   children?: ReactNode;
 }) {
+  const theme = useOrbiTheme();
+  const hero = useMemo(() => makeHeroStyles(theme), [theme]);
   return (
     <View style={[hero.wrap, isHighlighted && hero.wrapHighlight]}>
       <View style={hero.topRow}>
@@ -180,18 +185,18 @@ export function LiveHeroCard({
   );
 }
 
-const hero = StyleSheet.create({
+const makeHeroStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
-    backgroundColor: orbiTheme.colors.surface,
+    backgroundColor: theme.colors.surface,
     borderRadius: orbiTheme.radius.card,
     padding: 18,
     gap: 8,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    ...orbiTheme.shadows.card,
+    borderColor: theme.colors.border,
+    ...theme.shadows.card,
   },
   wrapHighlight: {
-    borderColor: orbiTheme.colors.teal,
+    borderColor: theme.colors.teal,
     borderWidth: 1.5,
   },
   topRow: {
@@ -202,29 +207,29 @@ const hero = StyleSheet.create({
   eyebrow: {
     fontSize: 11,
     fontWeight: '700',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     lineHeight: 24,
   },
   message: {
     fontSize: 14,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     lineHeight: 20,
   },
   sync: {
     fontSize: 12,
-    color: orbiTheme.colors.sky,
+    color: theme.colors.sky,
     fontWeight: '600',
   },
   transition: {
     fontSize: 12,
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontWeight: '600',
   },
 });
@@ -240,6 +245,8 @@ export function MetricTile({
   value: string;
   helper?: string | null;
 }) {
+  const theme = useOrbiTheme();
+  const metric = useMemo(() => makeMetricStyles(theme), [theme]);
   return (
     <View style={metric.wrap}>
       <Text style={metric.label}>{label}</Text>
@@ -249,31 +256,31 @@ export function MetricTile({
   );
 }
 
-const metric = StyleSheet.create({
+const makeMetricStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 2,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   label: {
     fontSize: 11,
     fontWeight: '600',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   value: {
     fontSize: 22,
     fontWeight: '700',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   helper: {
     fontSize: 11,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
   },
 });
 
@@ -290,6 +297,8 @@ export function DashboardMetricCard({
   helper?: string | null;
   tone?: Tone;
 }) {
+  const theme = useOrbiTheme();
+  const dmc = useMemo(() => makeDmcStyles(theme), [theme]);
   const t = toneTokens[tone];
   return (
     <View style={[dmc.wrap, { backgroundColor: t.bg, borderColor: t.border }]}>
@@ -300,7 +309,7 @@ export function DashboardMetricCard({
   );
 }
 
-const dmc = StyleSheet.create({
+const makeDmcStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     flex: 1,
     borderRadius: 14,
@@ -318,11 +327,11 @@ const dmc = StyleSheet.create({
   value: {
     fontSize: 24,
     fontWeight: '700',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   helper: {
     fontSize: 11,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     lineHeight: 14,
   },
 });
@@ -348,6 +357,8 @@ export function QuickActionCard({
   hitSlop,
   ...rest
 }: QuickActionCardProps) {
+  const theme = useOrbiTheme();
+  const qac = useMemo(() => makeQacStyles(theme), [theme]);
   const isPrimary = emphasis === 'primary';
 
   return (
@@ -380,21 +391,21 @@ export function QuickActionCard({
   );
 }
 
-const qac = StyleSheet.create({
+const makeQacStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     borderRadius: orbiTheme.radius.card,
     padding: 16,
     gap: 4,
   },
   primary: {
-    backgroundColor: orbiTheme.colors.text,
+    backgroundColor: theme.colors.text,
     borderWidth: 0,
   },
   secondary: {
-    backgroundColor: orbiTheme.colors.surface,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    ...orbiTheme.shadows.card,
+    borderColor: theme.colors.border,
+    ...theme.shadows.card,
   },
   pressed: {
     opacity: 0.85,
@@ -402,24 +413,24 @@ const qac = StyleSheet.create({
   eyebrow: {
     fontSize: 11,
     fontWeight: '700',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   eyebrowPrimary: {
-    color: 'rgba(255,255,255,0.55)',
+    color: theme.colors.textInverse + '8C',
   },
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   titlePrimary: {
-    color: '#FFFFFF',
+    color: theme.colors.textInverse,
   },
   desc: {
     fontSize: 13,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     lineHeight: 18,
     marginTop: 2,
   },
@@ -459,6 +470,8 @@ export function RouteSignalCard({
   isHighlighted?: boolean;
   children?: ReactNode;
 }) {
+  const theme = useOrbiTheme();
+  const rsc = useMemo(() => makeRscStyles(theme), [theme]);
   const nt = toneTokens[noteTone];
 
   return (
@@ -511,18 +524,18 @@ export function RouteSignalCard({
   );
 }
 
-const rsc = StyleSheet.create({
+const makeRscStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
-    backgroundColor: orbiTheme.colors.surface,
+    backgroundColor: theme.colors.surface,
     borderRadius: orbiTheme.radius.card,
     padding: 16,
     gap: 10,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    ...orbiTheme.shadows.card,
+    borderColor: theme.colors.border,
+    ...theme.shadows.card,
   },
   wrapHighlight: {
-    borderColor: orbiTheme.colors.teal,
+    borderColor: theme.colors.teal,
     borderWidth: 1.5,
   },
   topRow: {
@@ -533,7 +546,7 @@ const rsc = StyleSheet.create({
   eyebrow: {
     fontSize: 11,
     fontWeight: '700',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -547,17 +560,17 @@ const rsc = StyleSheet.create({
     flex: 1,
     fontSize: 17,
     fontWeight: '700',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     lineHeight: 22,
   },
   titleAside: {
     fontSize: 18,
     fontWeight: '800',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   description: {
     fontSize: 13,
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     lineHeight: 18,
   },
   chips: {
@@ -575,7 +588,7 @@ const rsc = StyleSheet.create({
   chipLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -585,7 +598,7 @@ const rsc = StyleSheet.create({
   },
   detail: {
     fontSize: 12,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     lineHeight: 16,
   },
   note: {
@@ -611,6 +624,8 @@ export function SectionCard({
   style?: StyleProp<ViewStyle>;
   tone?: Tone;
 }) {
+  const theme = useOrbiTheme();
+  const sc = useMemo(() => makeScStyles(theme), [theme]);
   const t = tone ? toneTokens[tone] : null;
   return (
     <View style={[
@@ -623,15 +638,15 @@ export function SectionCard({
   );
 }
 
-const sc = StyleSheet.create({
+const makeScStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
-    backgroundColor: orbiTheme.colors.surface,
+    backgroundColor: theme.colors.surface,
     borderRadius: orbiTheme.radius.card,
     padding: 16,
     gap: 12,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    ...orbiTheme.shadows.card,
+    borderColor: theme.colors.border,
+    ...theme.shadows.card,
   },
 });
 
@@ -651,6 +666,8 @@ export function SectionHeading({
   action?: string | null;
   onAction?: () => void;
 }) {
+  const theme = useOrbiTheme();
+  const sh = useMemo(() => makeShStyles(theme), [theme]);
   const sub = subtitle ?? description ?? null;
   return (
     <View style={sh.wrap}>
@@ -667,7 +684,7 @@ export function SectionHeading({
   );
 }
 
-const sh = StyleSheet.create({
+const makeShStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -681,16 +698,16 @@ const sh = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   subtitle: {
     fontSize: 13,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
   },
   action: {
     fontSize: 14,
     fontWeight: '600',
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
   },
 });
 
@@ -713,6 +730,8 @@ export function FlowActionButton({
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }) {
+  const theme = useOrbiTheme();
+  const fab = useMemo(() => makeFabStyles(theme), [theme]);
   const isDark = emphasis === 'primary';
   return (
     <Pressable
@@ -739,7 +758,7 @@ export function FlowActionButton({
   );
 }
 
-const fab = StyleSheet.create({
+const makeFabStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     borderRadius: orbiTheme.radius.button,
     paddingVertical: 16,
@@ -748,13 +767,13 @@ const fab = StyleSheet.create({
     gap: 3,
   },
   dark: {
-    backgroundColor: orbiTheme.colors.text,
-    ...orbiTheme.shadows.button,
+    backgroundColor: theme.colors.text,
+    ...theme.shadows.button,
   },
   light: {
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
   },
   pressed: {
     opacity: 0.82,
@@ -767,19 +786,19 @@ const fab = StyleSheet.create({
     fontWeight: '700',
   },
   labelDark: {
-    color: '#FFFFFF',
+    color: theme.colors.textInverse,
   },
   labelLight: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   sub: {
     fontSize: 12,
   },
   subDark: {
-    color: 'rgba(255,255,255,0.6)',
+    color: theme.colors.textInverse + '99',
   },
   subLight: {
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
   },
 });
 
@@ -856,6 +875,8 @@ export function LiveRouteProgressCard({
   accuracyLabel?: string;
   speedLabel?: string;
 }) {
+  const theme = useOrbiTheme();
+  const lrp = useMemo(() => makeLrpStyles(theme), [theme]);
   const pct = Math.min(100, Math.max(0, progressPercent));
   return (
     <View style={lrp.wrap}>
@@ -866,7 +887,6 @@ export function LiveRouteProgressCard({
         </View>
       </View>
 
-      {/* Progress bar */}
       <View style={lrp.track}>
         <View style={[lrp.fill, { width: `${pct}%` as any }]} />
       </View>
@@ -893,15 +913,15 @@ export function LiveRouteProgressCard({
   );
 }
 
-const lrp = StyleSheet.create({
+const makeLrpStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
-    backgroundColor: orbiTheme.colors.surface,
+    backgroundColor: theme.colors.surface,
     borderRadius: orbiTheme.radius.card,
     padding: 16,
     gap: 12,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    ...orbiTheme.shadows.card,
+    borderColor: theme.colors.border,
+    ...theme.shadows.card,
   },
   topRow: {
     flexDirection: 'row',
@@ -913,7 +933,7 @@ const lrp = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '700',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   statePill: {
     backgroundColor: toneTokens.teal.bg,
@@ -931,13 +951,13 @@ const lrp = StyleSheet.create({
   track: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: orbiTheme.colors.backgroundDim,
+    backgroundColor: theme.colors.backgroundDim,
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
     borderRadius: 3,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
   },
   metrics: {
     flexDirection: 'row',
@@ -950,18 +970,18 @@ const lrp = StyleSheet.create({
   metricLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   metricValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   coord: {
     fontSize: 12,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
   },
 });
 
@@ -974,6 +994,8 @@ export function LiveTimeline({
   events: Array<{ id: string; label: string; createdAt: string }>;
   freshEventIds?: Set<string> | string[];
 }) {
+  const theme = useOrbiTheme();
+  const lt = useMemo(() => makeLtStyles(theme), [theme]);
   if (!events.length) return null;
 
   return (
@@ -1008,20 +1030,20 @@ export function LiveTimeline({
   );
 }
 
-const lt = StyleSheet.create({
+const makeLtStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
-    backgroundColor: orbiTheme.colors.surface,
+    backgroundColor: theme.colors.surface,
     borderRadius: orbiTheme.radius.card,
     padding: 16,
     gap: 0,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
-    ...orbiTheme.shadows.card,
+    borderColor: theme.colors.border,
+    ...theme.shadows.card,
   },
   heading: {
     fontSize: 13,
     fontWeight: '700',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginBottom: 12,
@@ -1039,19 +1061,19 @@ const lt = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: orbiTheme.colors.backgroundDim,
+    backgroundColor: theme.colors.backgroundDim,
     borderWidth: 2,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     marginTop: 3,
   },
   dotFresh: {
-    backgroundColor: orbiTheme.colors.teal,
-    borderColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
+    borderColor: theme.colors.teal,
   },
   line: {
     flex: 1,
     width: 2,
-    backgroundColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.border,
     marginTop: 3,
   },
   content: {
@@ -1065,16 +1087,16 @@ const lt = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     lineHeight: 20,
   },
   labelFresh: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: '700',
   },
   time: {
     fontSize: 11,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
   },
 });
 

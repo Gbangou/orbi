@@ -195,13 +195,20 @@ export const orbiThemeDark = {
 
 // Structural type — allows different literal color values across light/dark themes
 export type OrbiThemeColors = Record<string, string>;
+export type OrbiThemeShadow = {
+  shadowColor: string;
+  shadowOpacity: number;
+  shadowRadius: number;
+  shadowOffset: { width: number; height: number };
+  elevation: number;
+};
 export type OrbiTheme = {
   colors: OrbiThemeColors;
   gradients: Record<string, readonly string[]>;
   radius: Record<string, number>;
   spacing: Record<string, number>;
   typography: Record<string, number | Record<string, string>>;
-  shadows: Record<string, object>;
+  shadows: Record<string, OrbiThemeShadow>;
 };
 
 export const orbiCopy = {

@@ -1,11 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
-  orbiTheme,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
+  type OrbiTheme,
 } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 import { enqueueDriverMapError } from './map-error-reporting';
 
 const TypedWebView = WebView as any;
@@ -127,6 +128,8 @@ export function TripMapView({
   vehicleTier,
   style,
 }: TripMapViewProps) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const webRef = useRef<WebView>(null);
   const htmlRef = useRef<string>(
     buildMapHtml({
@@ -212,7 +215,7 @@ export function TripMapView({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   container: {
     overflow: 'hidden',
     borderRadius: 14,
@@ -260,7 +263,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#071311',
     borderWidth: 2,
-    borderColor: orbiTheme.colors.teal,
+    borderColor: theme.colors.teal,
   },
   driverMarkerText: {
     color: '#b8fff0',
@@ -276,12 +279,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255,255,255,0.94)',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(13, 42, 37, 0.08)',
+    borderColor: theme.colors.borderSoft,
   },
   eyebrow: {
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0,
@@ -293,7 +296,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   meta: {
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontSize: 12,
     lineHeight: 16,
   },

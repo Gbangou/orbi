@@ -52,11 +52,11 @@ export function buildRiderHomeStatusLabel(input: {
   optionCount: number;
 }) {
   if (input.flow.activeTrip) {
-    return `Course ${input.flow.activeTrip.status} avec ${input.flow.activeTrip.counterpartyName ?? "votre chauffeur"}.`;
+    return `Course ${formatOperationalStatus(input.flow.activeTrip.status)} avec ${input.flow.activeTrip.counterpartyName ?? "votre chauffeur"}.`;
   }
 
   if (input.flow.activeRequest) {
-    return `Demande ${input.flow.activeRequest.status} en attente de chauffeur.`;
+    return `Demande ${formatOperationalStatus(input.flow.activeRequest.status)} en attente de chauffeur.`;
   }
 
   return `Connecte comme ${input.fullName}. ${input.optionCount} options tarifees disponibles.`;
@@ -498,15 +498,17 @@ export function buildRiderPeripheralStatusLabel(input: {
   fullName?: string;
 }) {
   if (input.flow.activeTrip) {
+    const label = formatOperationalStatus(input.flow.activeTrip.status);
     return input.surface === "account"
-      ? `Profil charge. Course ${input.flow.activeTrip.status} en cours.`
-      : `Contexte vocal charge. Course ${input.flow.activeTrip.status} en cours.`;
+      ? `Profil charge. Course ${label} en cours.`
+      : `Contexte vocal charge. Course ${label} en cours.`;
   }
 
   if (input.flow.activeRequest) {
+    const label = formatOperationalStatus(input.flow.activeRequest.status);
     return input.surface === "account"
-      ? `Profil charge. Demande ${input.flow.activeRequest.status} en cours.`
-      : `Contexte vocal charge. Demande ${input.flow.activeRequest.status} en cours.`;
+      ? `Profil charge. Demande ${label} en cours.`
+      : `Contexte vocal charge. Demande ${label} en cours.`;
   }
 
   if (input.surface === "account") {

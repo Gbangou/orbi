@@ -35,14 +35,14 @@ import {
   describeRealtimeConnection,
   formatXof,
   orbiCopy,
-  orbiTheme,
+  type OrbiTheme,
 } from "@orbi/ui";
 import {
   FlowActionButton,
   LiveTimeline,
   TransitionNoticeCard,
 } from "../../lib/realtime-widgets";
-import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics } from "@orbi/ui/native";
+import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme } from "@orbi/ui/native";
 import { OfferCard } from "../../lib/offer-card";
 import { restoreDriverSession } from "../../lib/auth";
 import { resolveDriverAppError } from "../../lib/session-feedback";
@@ -115,8 +115,10 @@ function buildInitials(name: string) {
 }
 
 function RefreshGlyph({ loading }: { loading: boolean }) {
+  const theme = useOrbiTheme();
+  const iconStyles = useMemo(() => makeIconStyles(theme), [theme]);
   if (loading) {
-    return <ActivityIndicator size="small" color={orbiTheme.colors.amber} />;
+    return <ActivityIndicator size="small" color={theme.colors.amber} />;
   }
 
   return (
@@ -128,6 +130,8 @@ function RefreshGlyph({ loading }: { loading: boolean }) {
 }
 
 function CloseGlyph() {
+  const theme = useOrbiTheme();
+  const iconStyles = useMemo(() => makeIconStyles(theme), [theme]);
   return (
     <View style={iconStyles.closeWrap}>
       <View style={[iconStyles.closeLine, iconStyles.closeLineA]} />
@@ -137,6 +141,8 @@ function CloseGlyph() {
 }
 
 export default function OffersScreen() {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { t } = useTranslation();
   const td = (key: string): string => String(t(`driver.${key}` as never));
   const [offers, setOffers] = useState<DriverOffer[]>([]);
@@ -776,7 +782,7 @@ export default function OffersScreen() {
             value={pickupCodeInput}
             onChangeText={handlePickupCodeChange}
             placeholder="Code a 4 chiffres"
-            placeholderTextColor={orbiTheme.colors.muted}
+            placeholderTextColor={theme.colors.muted}
             keyboardType="number-pad"
             maxLength={4}
             style={styles.codeInput}
@@ -836,7 +842,7 @@ export default function OffersScreen() {
         <Text style={styles.headerTitle}>{td('missions')}</Text>
         <View style={styles.headerRight}>
           {isRealtimeSyncing ? (
-            <ActivityIndicator size="small" color={orbiTheme.colors.amber} />
+            <ActivityIndicator size="small" color={theme.colors.amber} />
           ) : null}
           <View
             style={[
@@ -844,7 +850,7 @@ export default function OffersScreen() {
               {
                 backgroundColor:
                   flow.availabilityStatus === "ONLINE"
-                    ? orbiTheme.colors.teal
+                    ? theme.colors.teal
                     : "#C0C0C0",
               },
             ]}
@@ -867,8 +873,8 @@ export default function OffersScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => void loadDriverData()}
-            tintColor={orbiTheme.colors.amber}
-            colors={[orbiTheme.colors.amber]}
+            tintColor={theme.colors.amber}
+            colors={[theme.colors.amber]}
           />
         }
       >
@@ -938,7 +944,7 @@ export default function OffersScreen() {
               {(() => {
                 const inProgress = activeTrip.status === "IN_PROGRESS";
                 const bg = inProgress ? "rgba(0,201,167,0.10)" : "rgba(255,149,0,0.10)";
-                const color = inProgress ? orbiTheme.colors.teal : orbiTheme.colors.amber;
+                const color = inProgress ? theme.colors.teal : theme.colors.amber;
                 return (
                   <View style={[styles.missionStatusPill, { backgroundColor: bg }]}>
                     <View style={[styles.missionStatusDot, { backgroundColor: color }]} />
@@ -954,12 +960,12 @@ export default function OffersScreen() {
             {/* Route */}
             <View style={styles.missionRoute}>
               <View style={styles.missionRouteRow}>
-                <View style={[styles.missionRouteDot, { backgroundColor: orbiTheme.colors.teal }]} />
+                <View style={[styles.missionRouteDot, { backgroundColor: theme.colors.teal }]} />
                 <Text style={styles.missionRouteText} numberOfLines={1}>{activeTrip.pickupAddress}</Text>
               </View>
               <View style={styles.missionRouteSep} />
               <View style={styles.missionRouteRow}>
-                <View style={[styles.missionRouteDot, { backgroundColor: orbiTheme.colors.text }]} />
+                <View style={[styles.missionRouteDot, { backgroundColor: theme.colors.text }]} />
                 <Text style={styles.missionRouteText} numberOfLines={1}>{activeTrip.destinationAddress}</Text>
               </View>
             </View>
@@ -1166,8 +1172,8 @@ export default function OffersScreen() {
                       styles.emptySignalDot,
                       {
                         backgroundColor: flow.canReceiveOffers
-                          ? orbiTheme.colors.teal
-                          : orbiTheme.colors.amber,
+                          ? theme.colors.teal
+                          : theme.colors.amber,
                       },
                     ]}
                   />
@@ -1220,38 +1226,38 @@ export default function OffersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: orbiTheme.colors.border,
+    borderBottomWidth: 1, borderBottomColor: theme.colors.border,
   },
-  headerTitle: { fontSize: 22, fontWeight: "800", fontFamily: "Raleway_800ExtraBold", color: orbiTheme.colors.text },
+  headerTitle: { fontSize: 22, fontWeight: "800", fontFamily: "Raleway_800ExtraBold", color: theme.colors.text },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   onlineDot: { width: 9, height: 9, borderRadius: 5 },
-  headerRefreshBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: orbiTheme.colors.backgroundAlt, alignItems: "center", justifyContent: "center" },
+  headerRefreshBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.backgroundAlt, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 16, paddingTop: 12, gap: 10 },
   completionCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
     padding: 14,
   },
-  completionCheckWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: orbiTheme.colors.teal, alignItems: "center", justifyContent: "center" },
+  completionCheckWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.teal, alignItems: "center", justifyContent: "center" },
   completionCheck: { width: 12, height: 12, borderRadius: 6, backgroundColor: "#FFFFFF" },
   completionCopy: { flex: 1, gap: 2 },
-  completionTitle: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
-  completionFare: { fontSize: 13, color: orbiTheme.colors.textSoft, fontFamily: "Inter_400Regular" },
-  completionNet: { fontSize: 13, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: orbiTheme.colors.teal },
-  completionClose: { width: 28, height: 28, borderRadius: 14, backgroundColor: orbiTheme.colors.backgroundDim, alignItems: "center", justifyContent: "center" },
-  statusNotice: { fontSize: 13, color: orbiTheme.colors.textSoft, fontFamily: "Inter_400Regular", paddingHorizontal: 2 },
+  completionTitle: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
+  completionFare: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular" },
+  completionNet: { fontSize: 13, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: theme.colors.teal },
+  completionClose: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.colors.backgroundDim, alignItems: "center", justifyContent: "center" },
+  statusNotice: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular", paddingHorizontal: 2 },
   compactOfflineNotice: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     borderRadius: 999,
-    backgroundColor: "rgba(7,17,31,0.05)",
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: "rgba(7,17,31,0.07)",
+    borderColor: theme.colors.borderSoft,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -1259,44 +1265,44 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: orbiTheme.colors.amber,
+    backgroundColor: theme.colors.amber,
   },
   compactOfflineText: {
     flex: 1,
     fontSize: 12,
     fontWeight: "700",
     fontFamily: "Inter_700Bold",
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
   },
   missionCard: { padding: 14, gap: 10 },
   missionStatusRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   missionStatusDot: { width: 7, height: 7, borderRadius: 4 },
   missionStatusLabel: { fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold" },
-  missionTransition: { fontSize: 12, color: orbiTheme.colors.sky, fontFamily: "Inter_400Regular" },
-  missionRoute: { backgroundColor: "rgba(255,255,255,0.78)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,176,32,0.26)", paddingHorizontal: 12, paddingVertical: 2 },
+  missionTransition: { fontSize: 12, color: theme.colors.sky, fontFamily: "Inter_400Regular" },
+  missionRoute: { backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,176,32,0.26)", paddingHorizontal: 12, paddingVertical: 2 },
   missionRouteRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 },
   missionRouteDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  missionRouteSep: { height: 1, backgroundColor: orbiTheme.colors.border, marginLeft: 18 },
-  missionRouteText: { flex: 1, fontSize: 13, fontWeight: "500", fontFamily: "Inter_500Medium", color: orbiTheme.colors.text },
-  riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "rgba(255,255,255,0.82)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(7,17,31,0.08)", padding: 10 },
-  riderAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: orbiTheme.colors.text, alignItems: "center", justifyContent: "center" },
+  missionRouteSep: { height: 1, backgroundColor: theme.colors.border, marginLeft: 18 },
+  missionRouteText: { flex: 1, fontSize: 13, fontWeight: "500", fontFamily: "Inter_500Medium", color: theme.colors.text },
+  riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.borderSoft, padding: 10 },
+  riderAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.accentDark, alignItems: "center", justifyContent: "center" },
   riderInitials: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", color: "#FFFFFF" },
   riderInfo: { flex: 1, gap: 2 },
-  riderName: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text },
-  riderMeta: { fontSize: 12, color: orbiTheme.colors.textSoft, fontFamily: "Inter_400Regular" },
-  riderFare: { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.amber },
+  riderName: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
+  riderMeta: { fontSize: 12, color: theme.colors.textSoft, fontFamily: "Inter_400Regular" },
+  riderFare: { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.amber },
   missionMap: { height: 132, borderRadius: 14, overflow: "hidden" },
   missionActions: { gap: 7 },
   secondaryActions: { flexDirection: "row", gap: 8 },
   secondaryBtn: { flex: 1 },
-  tripDetailStatus: { fontSize: 12, color: orbiTheme.colors.textMuted, fontFamily: "Inter_400Regular" },
+  tripDetailStatus: { fontSize: 12, color: theme.colors.textMuted, fontFamily: "Inter_400Regular" },
   emptyState: {
     padding: 13,
     gap: 11,
     borderWidth: 1,
-    borderColor: "rgba(7,17,31,0.08)",
-    backgroundColor: "rgba(255,255,255,0.94)",
+    borderColor: theme.colors.borderSoft,
+    backgroundColor: theme.colors.surface,
   },
   emptyHeader: {
     flexDirection: "row",
@@ -1313,7 +1319,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 7,
     borderRadius: 999,
-    backgroundColor: "rgba(7,17,31,0.05)",
+    backgroundColor: theme.colors.backgroundAlt,
     paddingHorizontal: 9,
     paddingVertical: 4,
   },
@@ -1322,18 +1328,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: orbiTheme.colors.textSoft,
+    color: theme.colors.textSoft,
     textTransform: "uppercase",
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   emptyMeta: {
     fontSize: 12,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontFamily: "Inter_400Regular",
     lineHeight: 17,
   },
@@ -1358,7 +1364,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: orbiTheme.colors.teal,
+    backgroundColor: theme.colors.teal,
     borderWidth: 3,
     borderColor: "#FFFFFF",
   },
@@ -1367,8 +1373,8 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(7,17,31,0.08)",
-    backgroundColor: "rgba(246,248,251,0.92)",
+    borderColor: theme.colors.borderSoft,
+    backgroundColor: theme.colors.backgroundAlt,
     paddingHorizontal: 9,
     paddingVertical: 8,
     gap: 2,
@@ -1377,40 +1383,40 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     textTransform: "uppercase",
   },
   emptyCheckMeta: {
     fontSize: 12,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   disabled: { opacity: 0.38 },
   codeBlock: { gap: 10 },
-  meta: { fontSize: 13, color: orbiTheme.colors.textSoft, fontFamily: "Inter_400Regular", lineHeight: 18 },
-  codeInput: { backgroundColor: orbiTheme.colors.backgroundAlt, borderRadius: 12, borderWidth: 1, borderColor: orbiTheme.colors.border, paddingHorizontal: 16, paddingVertical: 14, fontSize: 22, fontWeight: "800", letterSpacing: 0, color: orbiTheme.colors.text, textAlign: "center", fontFamily: "Raleway_800ExtraBold" },
-  routeSafetyBlockNote: { fontSize: 12, color: orbiTheme.colors.danger, fontFamily: "Inter_400Regular", lineHeight: 17 },
+  meta: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  codeInput: { backgroundColor: theme.colors.backgroundAlt, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 16, paddingVertical: 14, fontSize: 22, fontWeight: "800", letterSpacing: 0, color: theme.colors.text, textAlign: "center", fontFamily: "Raleway_800ExtraBold" },
+  routeSafetyBlockNote: { fontSize: 12, color: theme.colors.danger, fontFamily: "Inter_400Regular", lineHeight: 17 },
   // Mission labels
-  missionSectionLabel: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.amber, textTransform: "uppercase", letterSpacing: 0 },
+  missionSectionLabel: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.amber, textTransform: "uppercase", letterSpacing: 0 },
   missionSignalsPanel: { gap: 7 },
   missionSignalGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  missionSignalTile: { width: "48%", minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: "rgba(7,17,31,0.07)", backgroundColor: "rgba(255,255,255,0.72)", paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
+  missionSignalTile: { width: "48%", minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.borderSoft, backgroundColor: theme.colors.surface, paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
   missionSignalTileDanger: { borderColor: "rgba(240,68,94,0.28)", backgroundColor: "rgba(240,68,94,0.08)" },
-  missionSignalLabel: { fontSize: 9, fontWeight: "800", fontFamily: "Inter_700Bold", color: orbiTheme.colors.textMuted, textTransform: "uppercase", letterSpacing: 0 },
-  missionSignalValue: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.text, lineHeight: 15 },
+  missionSignalLabel: { fontSize: 9, fontWeight: "800", fontFamily: "Inter_700Bold", color: theme.colors.textMuted, textTransform: "uppercase", letterSpacing: 0 },
+  missionSignalValue: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text, lineHeight: 15 },
   routeMonitoringCompact: { gap: 2 },
-  missionDetailLabel: { fontSize: 12, fontWeight: "800", fontFamily: "Inter_700Bold", color: orbiTheme.colors.textSoft },
-  missionDetailStatus: { fontSize: 10, color: orbiTheme.colors.textMuted, fontFamily: "Inter_400Regular", lineHeight: 14 },
-  missionBlockedLabel: { fontSize: 12, fontWeight: "700", fontFamily: "Inter_700Bold", color: orbiTheme.colors.danger },
-  shiftNote: { fontSize: 11, color: orbiTheme.colors.textMuted, fontFamily: "Inter_400Regular", paddingHorizontal: 2 },
+  missionDetailLabel: { fontSize: 12, fontWeight: "800", fontFamily: "Inter_700Bold", color: theme.colors.textSoft },
+  missionDetailStatus: { fontSize: 10, color: theme.colors.textMuted, fontFamily: "Inter_400Regular", lineHeight: 14 },
+  missionBlockedLabel: { fontSize: 12, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.danger },
+  shiftNote: { fontSize: 11, color: theme.colors.textMuted, fontFamily: "Inter_400Regular", paddingHorizontal: 2 },
   refreshBtn: {
     alignSelf: "center",
     marginTop: 4,
   },
 });
 
-const iconStyles = StyleSheet.create({
+const makeIconStyles = (theme: OrbiTheme) => StyleSheet.create({
   refreshWrap: {
     width: 18,
     height: 18,
@@ -1422,7 +1428,7 @@ const iconStyles = StyleSheet.create({
     height: 15,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: orbiTheme.colors.textSoft,
+    borderColor: theme.colors.textSoft,
     borderLeftColor: "transparent",
   },
   refreshTip: {
@@ -1434,7 +1440,7 @@ const iconStyles = StyleSheet.create({
     borderLeftWidth: 5,
     borderTopWidth: 4,
     borderBottomWidth: 4,
-    borderLeftColor: orbiTheme.colors.textSoft,
+    borderLeftColor: theme.colors.textSoft,
     borderTopColor: "transparent",
     borderBottomColor: "transparent",
     transform: [{ rotate: "22deg" }],
@@ -1450,7 +1456,7 @@ const iconStyles = StyleSheet.create({
     width: 14,
     height: 2,
     borderRadius: 999,
-    backgroundColor: orbiTheme.colors.textSoft,
+    backgroundColor: theme.colors.textSoft,
   },
   closeLineA: {
     transform: [{ rotate: "45deg" }],

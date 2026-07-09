@@ -1,12 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
   escapeHtmlText,
-  orbiTheme,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
+  type OrbiTheme,
 } from '@orbi/ui';
+import { useOrbiTheme } from '@orbi/ui/native';
 import { enqueueDriverMapError } from './map-error-reporting';
 
 const TypedWebView = WebView as any;
@@ -129,6 +130,8 @@ export function ApproachMapView({
   pickupAddress,
   style,
 }: ApproachMapViewProps) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const webRef = useRef<WebView>(null);
   const htmlRef = useRef<string>(
     buildApproachHtml({
@@ -209,7 +212,7 @@ export function ApproachMapView({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   container: {
     overflow: 'hidden',
     borderRadius: 14,
@@ -255,7 +258,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255,255,255,0.94)',
+    backgroundColor: theme.colors.surface,
   },
   eyebrow: {
     color: '#6366f1',
@@ -270,7 +273,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   meta: {
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontSize: 12,
     lineHeight: 16,
   },

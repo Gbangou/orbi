@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,13 +13,15 @@ import {
 } from 'react-native';
 import { extractApiErrorMessage } from '@orbi/api';
 import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
-import { orbiTheme } from '@orbi/ui';
-import { OrbiAuthIcon, OrbiButton, OrbiStatusBanner, OrbiSurface } from '@orbi/ui/native';
+import type { OrbiTheme } from '@orbi/ui';
+import { OrbiAuthIcon, OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { signInRiderAccount, signUpRiderAccount } from '../lib/auth';
 import { OrbiLogo } from '../lib/orbi-logo';
 import { useTranslation } from '../lib/i18n';
 
 export default function RiderAuthScreen() {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { t } = useTranslation();
   const ta = (key: string) => t(`auth.${key}`);
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
@@ -125,12 +127,12 @@ export default function RiderAuthScreen() {
           <OrbiSurface style={styles.form} elevated>
             {mode === 'sign-up' ? (
               <View style={styles.inputRow}>
-                <OrbiAuthIcon name="user" color={orbiTheme.colors.textMuted} />
+                <OrbiAuthIcon name="user" color={theme.colors.textMuted} />
                 <TextInput
                   value={fullName}
                   onChangeText={setFullName}
                   placeholder={ta('namePlaceholder')}
-                  placeholderTextColor={orbiTheme.colors.textMuted}
+                  placeholderTextColor={theme.colors.textMuted}
                   style={styles.input}
                   autoCapitalize="words"
                 />
@@ -138,26 +140,26 @@ export default function RiderAuthScreen() {
             ) : null}
 
             <View style={styles.inputRow}>
-              <OrbiAuthIcon name="mail" color={orbiTheme.colors.textMuted} />
+              <OrbiAuthIcon name="mail" color={theme.colors.textMuted} />
               <TextInput
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 placeholder={ta('emailPlaceholder')}
-                placeholderTextColor={orbiTheme.colors.textMuted}
+                placeholderTextColor={theme.colors.textMuted}
                 style={styles.input}
               />
             </View>
 
             <View style={styles.inputRow}>
-              <OrbiAuthIcon name="lock" color={orbiTheme.colors.textMuted} />
+              <OrbiAuthIcon name="lock" color={theme.colors.textMuted} />
               <TextInput
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 placeholder={mode === 'sign-up' ? ta('passwordHint') : ta('passwordPlaceholder')}
-                placeholderTextColor={orbiTheme.colors.textMuted}
+                placeholderTextColor={theme.colors.textMuted}
                 style={styles.input}
               />
               <Pressable
@@ -166,7 +168,7 @@ export default function RiderAuthScreen() {
                 style={styles.eyeBtn}
                 accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
               >
-                <OrbiAuthIcon name={showPassword ? 'eye-off' : 'eye'} color={orbiTheme.colors.textMuted} />
+                <OrbiAuthIcon name={showPassword ? 'eye-off' : 'eye'} color={theme.colors.textMuted} />
               </Pressable>
             </View>
 
@@ -220,10 +222,10 @@ export default function RiderAuthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: orbiTheme.colors.riderBackground,
+    backgroundColor: theme.colors.riderBackground,
   },
   flex: {
     flex: 1,
@@ -244,19 +246,19 @@ const styles = StyleSheet.create({
   wordmark: {
     fontSize: 48,
     fontWeight: '800',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
     letterSpacing: 0,
   },
   tagline: {
     fontSize: 15,
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontWeight: '400',
     fontFamily: 'Inter_400Regular',
     textAlign: 'center',
   },
   trustLine: {
     fontSize: 12,
-    color: orbiTheme.colors.teal,
+    color: theme.colors.teal,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     textAlign: 'center',
@@ -265,12 +267,12 @@ const styles = StyleSheet.create({
   // Mode toggle
   toggle: {
     flexDirection: 'row',
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 14,
     padding: 3,
     gap: 2,
     borderWidth: 1,
-    borderColor: 'rgba(7, 17, 31, 0.06)',
+    borderColor: theme.colors.borderSoft,
   },
   toggleBtn: {
     flex: 1,
@@ -279,16 +281,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   toggleBtnActive: {
-    backgroundColor: orbiTheme.colors.riderBackground,
-    ...orbiTheme.shadows.card,
+    backgroundColor: theme.colors.riderBackground,
+    ...theme.shadows.card,
   },
   toggleLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
   },
   toggleLabelActive: {
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
 
   // Form
@@ -300,10 +302,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: orbiTheme.colors.backgroundAlt,
+    backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: orbiTheme.colors.border,
+    borderColor: theme.colors.border,
     paddingHorizontal: 14,
   },
   input: {
@@ -312,7 +314,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     fontSize: 16,
     fontFamily: 'Inter_400Regular',
-    color: orbiTheme.colors.text,
+    color: theme.colors.text,
   },
   eyeBtn: {
     paddingVertical: 14,
@@ -343,12 +345,12 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: orbiTheme.colors.border,
+    backgroundColor: theme.colors.border,
   },
   dividerLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
   },
   demoBtn: {
     borderRadius: 12,
@@ -358,7 +360,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   legalFooter: {
-    color: orbiTheme.colors.textMuted,
+    color: theme.colors.textMuted,
     fontSize: 11.5,
     lineHeight: 17,
     textAlign: 'center',
