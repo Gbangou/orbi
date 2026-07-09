@@ -30,6 +30,7 @@ import {
   OrbiStatusBanner,
   OrbiSurface,
   useOrbiTheme,
+  VehicleIllustration,
 } from '@orbi/ui/native';
 import { useTranslation } from '../../lib/i18n';
 import {
@@ -1014,6 +1015,7 @@ export default function ProfilScreen() {
                   : styles.pillInactive,
               ]}
             >
+              <VehicleIllustration tier={type === 'MOTORCYCLE' ? 'moto-standard' : 'car-standard'} width={26} height={20} />
               <Text
                 style={[
                   styles.pillLabel,
@@ -1656,9 +1658,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 8,
   },
   pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderWidth: 1,
   },
   pillActive: {
