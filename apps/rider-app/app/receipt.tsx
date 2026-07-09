@@ -21,6 +21,48 @@ import { resolveRiderAppError } from '../lib/session-feedback';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+function ReceiptGlyph() {
+  return (
+    <View style={glyphStyles.badge}>
+      <View style={glyphStyles.doc}>
+        <View style={glyphStyles.line} />
+        <View style={[glyphStyles.line, glyphStyles.lineShort]} />
+        <View style={glyphStyles.line} />
+      </View>
+    </View>
+  );
+}
+
+const glyphStyles = StyleSheet.create({
+  badge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(7, 17, 31, 0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  doc: {
+    width: 26,
+    height: 32,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: orbiTheme.colors.textMuted,
+    padding: 5,
+    justifyContent: 'center',
+    gap: 4,
+  },
+  line: {
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: orbiTheme.colors.textMuted,
+  },
+  lineShort: {
+    width: '65%',
+  },
+});
+
 function buildInitials(name: string) {
   return name
     .split(/\s+/)
@@ -267,12 +309,14 @@ export default function ReceiptScreen() {
   if (errorMessage || !detail) {
     return (
       <SafeAreaView style={styles.errorScreen}>
+        <ReceiptGlyph />
         <Text style={styles.errorTitle}>Reçu indisponible</Text>
         <Text style={styles.errorMessage}>{errorMessage ?? 'Une erreur est survenue.'}</Text>
         <OrbiButton
           label="Retour à l'accueil"
           onPress={() => router.replace('/home')}
           tone="teal"
+          style={styles.errorButton}
         />
       </SafeAreaView>
     );
@@ -557,19 +601,26 @@ const styles = StyleSheet.create({
   errorScreen: {
     flex: 1,
     backgroundColor: orbiTheme.colors.riderBackground,
-    paddingHorizontal: 24,
+    paddingHorizontal: 32,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
   },
   errorTitle: {
     fontSize: 22,
     fontWeight: '700',
     color: orbiTheme.colors.text,
+    textAlign: 'center',
   },
   errorMessage: {
     fontSize: 14,
     color: orbiTheme.colors.textSoft,
     lineHeight: 20,
+    textAlign: 'center',
+  },
+  errorButton: {
+    marginTop: 14,
+    minWidth: 200,
   },
 
   // Hero
