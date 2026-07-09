@@ -15,9 +15,8 @@ import {
   View,
 } from 'react-native';
 import { formatXof, type OrbiTheme } from '@orbi/ui';
-import { useOrbiTheme } from '@orbi/ui/native';
+import { useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
 import type { RideOption, PromoValidationResponse } from '@orbi/api';
-import { VehicleIllustration } from './vehicle-illustrations';
 
 function VehicleAvatar({
   isSelected, tone, tier,

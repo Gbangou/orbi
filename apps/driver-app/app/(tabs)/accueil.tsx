@@ -19,7 +19,7 @@ import {
   orbiCopy,
   type OrbiTheme,
 } from '@orbi/ui';
-import { OrbiButton, OrbiStatusBanner, safeHaptics, useOrbiTheme } from '@orbi/ui/native';
+import { OrbiButton, OrbiStatusBanner, safeHaptics, useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
 import { restoreDriverSession } from '../../lib/auth';
 import { formatDriverEarningsAmount } from '../../lib/driver-earnings-signal';
 import { resolveDriverAppError } from '../../lib/session-feedback';
@@ -80,7 +80,7 @@ function OfferChip({ offer }: { offer: DriverOffer }) {
   const isMoto = offer.category === 'motorcycle';
   return (
     <View style={chip.wrap}>
-      <View style={[chip.dot, { backgroundColor: isMoto ? theme.colors.teal : theme.colors.amber }]} />
+      <VehicleIllustration tier={isMoto ? 'moto-standard' : 'car-standard'} width={30} height={22} />
       <Text style={chip.name}>{buildInitials(offer.riderName)}</Text>
       <Text style={chip.dist}>
         {typeof offer.pickupDistanceKm === 'number'
@@ -104,7 +104,6 @@ const makeChipStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
   },
-  dot: { width: 8, height: 8, borderRadius: 4 },
   name: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
   dist: { fontSize: 12, color: theme.colors.textMuted, flex: 1 },
   fare: { fontSize: 13, fontWeight: '800', color: theme.colors.text },
@@ -183,6 +182,9 @@ function TripRequestModal({
 
           {/* Header */}
           <View style={modal.headerRow}>
+            <View style={modal.headerVehicle}>
+              <VehicleIllustration tier={isMoto ? 'moto-standard' : 'car-standard'} width={54} height={40} />
+            </View>
             <View style={modal.headerCopy}>
               <View style={[modal.categoryTag, { backgroundColor: accent + '20', borderColor: accent + '50' }]}>
                 <Text style={[modal.categoryTagText, { color: accent }]}>
@@ -1029,6 +1031,9 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 10,
     gap: 12,
+  },
+  headerVehicle: {
+    flexShrink: 0,
   },
   headerCopy: {
     flex: 1,

@@ -604,8 +604,8 @@ const ILLUSTRATIONS: Record<Tier, React.ComponentType<any>> = {
   'car-xl': CarXLIllustration,
 };
 
-function normalizeTier(tier: string): Tier {
-  if (tier.startsWith('moto-')) return 'moto-standard';
+export function normalizeVehicleTier(tier: string): Tier {
+  if (tier.startsWith('moto-') || tier === 'motorcycle' || tier === 'moto') return 'moto-standard';
   if (tier === 'car-comfort') return 'car-comfort';
   if (tier === 'car-xl') return 'car-xl';
   return 'car-standard';
@@ -620,7 +620,7 @@ export function VehicleIllustration({
   width?: number;
   height?: number;
 }) {
-  const Comp = ILLUSTRATIONS[normalizeTier(tier)];
+  const Comp = ILLUSTRATIONS[normalizeVehicleTier(tier)];
   const scale = Math.min(width / W, height / H);
   return (
     <View style={{ width, height, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>

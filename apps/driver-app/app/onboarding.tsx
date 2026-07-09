@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { upsertDriverOnboarding, extractApiErrorMessage } from '@orbi/api';
 import type { OrbiTheme } from '@orbi/ui';
-import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme } from '@orbi/ui/native';
+import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
 import { restoreDriverSession } from '../lib/auth';
 
 // ── Constantes marché Burkina Faso ────────────────────────────────────────────
@@ -332,7 +332,7 @@ export default function DriverOnboardingScreen() {
                           onPress={() => { setVehicleType(type); setSelectedMake(''); setSelectedModel(''); }}
                           style={[styles.typeCard, isSelected && { borderColor: color, backgroundColor: color + '12' }]}
                         >
-                          <Text style={styles.typeEmoji}>{isMoto ? 'Moto' : 'Auto'}</Text>
+                          <VehicleIllustration tier={isMoto ? 'moto-standard' : 'car-standard'} width={72} height={54} />
                           <Text style={[styles.typeLabel, isSelected && { color }]}>{isMoto ? 'Moto' : 'Voiture'}</Text>
                           <Text style={styles.typeDesc}>{isMoto ? '1 passager · Urbain' : '4 places · Climatisée'}</Text>
                         </Pressable>
@@ -623,7 +623,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: theme.colors.backgroundAlt,
     borderRadius: 16, borderWidth: 2, borderColor: theme.colors.border,
   },
-  typeEmoji: { fontSize: 13, fontWeight: '800', color: theme.colors.textMuted, textTransform: 'uppercase' },
   typeLabel: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text },
   typeDesc: { fontSize: 11, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
 

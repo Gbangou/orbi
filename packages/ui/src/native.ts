@@ -17,3 +17,4 @@ export {
 export { safeHaptics, type OrbiImpactStyle, type OrbiNotificationType } from './haptics';
 export { OrbiAuthIcon, type OrbiAuthIconName } from './auth-icons';
 export { OrbiThemeProvider, useOrbiTheme } from './theme-context';
+export { VehicleIllustration, normalizeVehicleTier } from './vehicle-illustrations';

@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useRef } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import { formatXof, type OrbiTheme } from "@orbi/ui";
-import { OrbiButton, OrbiSurface, useOrbiTheme } from "@orbi/ui/native";
+import { OrbiButton, OrbiSurface, useOrbiTheme, VehicleIllustration } from "@orbi/ui/native";
 import type { DriverOffer } from "@orbi/api";
 import {
   buildDriverOfferConfidenceExplainer,
@@ -27,46 +27,12 @@ function formatDistanceKm(value: number | null | undefined): string {
     : "–";
 }
 
-// ── Vehicle icon (pure View shapes, no external dependency) ──────────────────
+// ── Vehicle icon — premium isometric SVG illustration ────────────────────────
 
 function VehicleIcon({ category }: { category: DriverOffer["category"] }) {
-  const theme = useOrbiTheme();
-  const isMoto = category === "motorcycle";
-  const color = isMoto ? theme.colors.teal : theme.colors.sky;
-  return (
-    <View style={[iconStyles.wrap, { borderColor: color + "66" }]}>
-      {isMoto ? (
-        <View style={iconStyles.motoRow}>
-          <View style={[iconStyles.wheel, { borderColor: color }]} />
-          <View style={[iconStyles.motoSeat, { backgroundColor: color }]} />
-          <View style={[iconStyles.wheel, { borderColor: color }]} />
-        </View>
-      ) : (
-        <View style={iconStyles.carStack}>
-          <View style={[iconStyles.carCabin, { backgroundColor: color, opacity: 0.7 }]} />
-          <View style={[iconStyles.carBody, { backgroundColor: color }]} />
-        </View>
-      )}
-    </View>
-  );
+  const tier = category === "motorcycle" ? "moto-standard" : "car-standard";
+  return <VehicleIllustration tier={tier} width={56} height={40} />;
 }
-
-const iconStyles = StyleSheet.create({
-  wrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  motoRow: { flexDirection: "row", alignItems: "center", gap: 3 },
-  wheel: { width: 8, height: 8, borderRadius: 4, borderWidth: 1.5 },
-  motoSeat: { width: 10, height: 5, borderRadius: 2, opacity: 0.85 },
-  carStack: { alignItems: "center" },
-  carCabin: { width: 12, height: 5, borderTopLeftRadius: 3, borderTopRightRadius: 3, marginBottom: -1 },
-  carBody: { width: 20, height: 8, borderRadius: 2 },
-});
 
 // ── Confidence bar ────────────────────────────────────────────────────────────
 

@@ -22,7 +22,8 @@
   "peerDependencies": {
     "react": "^18.3.1 || ^19.0.0",
     "react-native": "*",
-    "expo-haptics": "*"
+    "expo-haptics": "*",
+    "react-native-svg": "*"
   },
   "devDependencies": {
     "@types/react": "18.3.28",

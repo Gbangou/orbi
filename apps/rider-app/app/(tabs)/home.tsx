@@ -26,7 +26,7 @@ import {
   formatXof,
   type OrbiTheme,
 } from '@orbi/ui';
-import { OfflineBanner, OrbiSurface, safeHaptics, useOrbiTheme } from '@orbi/ui/native';
+import { OfflineBanner, OrbiSurface, safeHaptics, useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
 import { restoreRiderSession } from '../../lib/auth';
 import { useTranslation } from '../../lib/i18n';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
@@ -153,26 +153,8 @@ const makeSkeletonStyles = (theme: OrbiTheme) => StyleSheet.create({
 
 // ── Vehicle mini icon ─────────────────────────────────────────────────────────
 
-const ServiceVehicleIcon = memo(function ServiceVehicleIcon({ isMoto }: { isMoto: boolean }) {
-  const theme = useOrbiTheme();
-  const color = isMoto ? theme.colors.teal : theme.colors.amber;
-  if (isMoto) {
-    return (
-      <View style={{ width: 28, height: 22, alignItems: 'center', justifyContent: 'center' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <View style={{ width: 9, height: 9, borderRadius: 5, borderWidth: 2, borderColor: color }} />
-          <View style={{ width: 10, height: 4, borderRadius: 2, backgroundColor: color, opacity: 0.85 }} />
-          <View style={{ width: 9, height: 9, borderRadius: 5, borderWidth: 2, borderColor: color }} />
-        </View>
-      </View>
-    );
-  }
-  return (
-    <View style={{ width: 28, height: 22, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: 14, height: 5, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: color, opacity: 0.7, alignSelf: 'center', marginBottom: -1 }} />
-      <View style={{ width: 24, height: 9, borderRadius: 3, backgroundColor: color, opacity: 0.9 }} />
-    </View>
-  );
+const ServiceVehicleIcon = memo(function ServiceVehicleIcon({ tier }: { tier: string }) {
+  return <VehicleIllustration tier={tier} width={40} height={30} />;
 });
 
 // ── Service option row ────────────────────────────────────────────────────────
@@ -196,7 +178,7 @@ const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideO
         ]}
       >
         <View style={[styles.serviceIcon, { backgroundColor: isMoto ? theme.colors.accentLight : 'rgba(255, 149, 0, 0.10)' }]}>
-          <ServiceVehicleIcon isMoto={isMoto} />
+          <ServiceVehicleIcon tier={option.tier} />
         </View>
         <View style={styles.serviceInfo}>
           <Text style={styles.serviceTitle}>{option.title}</Text>
