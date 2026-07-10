@@ -16,7 +16,13 @@ function createBaseTrip(overrides: Record<string, unknown> = {}) {
     startedAt: new Date('2026-05-01T09:00:00.000Z'),
     completedAt: new Date('2026-05-01T09:18:00.000Z'),
     createdAt: new Date('2026-05-01T08:55:00.000Z'),
-    rider: { user: { fullName: 'Awa Rider', phoneNumber: '+22670000001' } },
+    rider: {
+      user: {
+        fullName: 'Awa Rider',
+        phoneNumber: '+22670000001',
+        isPhoneVerified: true,
+      },
+    },
     driver: {
       verificationStatus: 'APPROVED',
       averageRating: 4.8,
@@ -97,6 +103,23 @@ describe('serializeTripDetail — privacy guards', () => {
     );
 
     expect(trip.riderPhoneNumber).toBe('+22670000001');
+  });
+
+  it('hides rider phone number on active trips when phone is not verified', () => {
+    const { trip } = serializeTripDetail(
+      createBaseTrip({
+        status: 'DRIVER_ARRIVING',
+        rider: {
+          user: {
+            fullName: 'Awa Rider',
+            phoneNumber: '+22670000001',
+            isPhoneVerified: false,
+          },
+        },
+      }) as never,
+    );
+
+    expect(trip.riderPhoneNumber).toBeNull();
   });
 
   it('hides pickup code when trip is COMPLETED', () => {

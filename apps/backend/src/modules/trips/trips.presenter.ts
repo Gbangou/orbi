@@ -135,7 +135,13 @@ export function serializeTripDetail(trip: {
   startedAt: Date | null;
   completedAt: Date | null;
   createdAt: Date;
-  rider: { user: { fullName: string; phoneNumber?: string | null } };
+  rider: {
+    user: {
+      fullName: string;
+      phoneNumber?: string | null;
+      isPhoneVerified?: boolean;
+    };
+  };
   driver: {
     verificationStatus: string;
     averageRating: unknown;
@@ -180,7 +186,9 @@ export function serializeTripDetail(trip: {
       ? trip.driver.user.phoneNumber
       : null;
   const riderPhoneNumber =
-    isActiveTrip && trip.rider.user.phoneNumber
+    isActiveTrip &&
+    trip.rider.user.isPhoneVerified === true &&
+    trip.rider.user.phoneNumber
       ? trip.rider.user.phoneNumber
       : null;
   const routeMonitoring = resolveRouteMonitoringSummary(trip.events);
