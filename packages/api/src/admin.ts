@@ -162,6 +162,9 @@ export type AdminOverviewResponse = {
   vehicles: number;
   openRequests: number;
   activeTrips: number;
+  revenueXof24h: number;
+  completionRate24h: number;
+  avgPickupMinutes24h: number | null;
 };
 
 export type AdminLiveOpsResponse = {

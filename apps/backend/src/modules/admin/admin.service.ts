@@ -2007,18 +2007,21 @@ export class AdminService {
     return {
       metrics: [
         {
-          label: 'Reservations brutes',
-          value: `XOF ${(metrics.openRequests * 1850).toLocaleString('fr-FR')}`,
-          trend: 'Projection live preview',
+          label: 'Revenus encaisses (24h)',
+          value: `XOF ${metrics.revenueXof24h.toLocaleString('fr-FR')}`,
+          trend: 'Paiements reussis, dernieres 24h',
         },
         {
-          label: 'Taux de completion',
-          value: metrics.users ? '94,8%' : '0%',
+          label: 'Taux de completion (24h)',
+          value: `${metrics.completionRate24h.toLocaleString('fr-FR')}%`,
           trend: `${metrics.activeTrips} trajets actifs`,
         },
         {
-          label: 'Temps moyen pickup',
-          value: '3 min 12 s',
+          label: 'Temps moyen pickup (24h)',
+          value:
+            metrics.avgPickupMinutes24h === null
+              ? 'Pas de donnee'
+              : `${metrics.avgPickupMinutes24h.toLocaleString('fr-FR')} min`,
           trend: `${metrics.openRequests} demandes ouvertes`,
         },
         {
@@ -2283,23 +2286,65 @@ export class AdminService {
   }
 
   private async fetchOverview() {
-    const [users, riders, drivers, vehicles, openRequests, activeTrips] =
-      await Promise.all([
-        this.prisma.user.count(),
-        this.prisma.riderProfile.count(),
-        this.prisma.driverProfile.count(),
-        this.prisma.vehicle.count(),
-        this.prisma.rideRequest.count({
-          where: { status: 'REQUESTED' },
-        }),
-        this.prisma.trip.count({
-          where: {
-            status: {
-              in: ACTIVE_TRIP_STATUSES,
-            },
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [
+      users,
+      riders,
+      drivers,
+      vehicles,
+      openRequests,
+      activeTrips,
+      revenueAgg,
+      completedTrips24h,
+      cancelledTrips24h,
+      pickupTrips24h,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.riderProfile.count(),
+      this.prisma.driverProfile.count(),
+      this.prisma.vehicle.count(),
+      this.prisma.rideRequest.count({
+        where: { status: 'REQUESTED' },
+      }),
+      this.prisma.trip.count({
+        where: {
+          status: {
+            in: ACTIVE_TRIP_STATUSES,
           },
-        }),
-      ]);
+        },
+      }),
+      this.prisma.paymentAttempt.aggregate({
+        where: { status: 'SUCCEEDED', createdAt: { gte: since } },
+        _sum: { amount: true },
+      }),
+      this.prisma.trip.count({
+        where: { status: 'COMPLETED', completedAt: { gte: since } },
+      }),
+      this.prisma.trip.count({
+        where: { status: 'CANCELLED', updatedAt: { gte: since } },
+      }),
+      this.prisma.trip.findMany({
+        where: { startedAt: { not: null }, createdAt: { gte: since } },
+        select: { createdAt: true, startedAt: true },
+      }),
+    ]);
+
+    const revenueXof24h = Math.round(Number(revenueAgg._sum.amount ?? 0));
+    const completionRate24h = safeRate(
+      completedTrips24h,
+      completedTrips24h + cancelledTrips24h,
+    );
+    const pickupMinutesSamples = pickupTrips24h.map(
+      (trip) =>
+        (trip.startedAt!.getTime() - trip.createdAt.getTime()) / 60000,
+    );
+    const avgPickupMinutes24h = pickupMinutesSamples.length
+      ? Math.round(
+          (pickupMinutesSamples.reduce((total, value) => total + value, 0) /
+            pickupMinutesSamples.length) *
+            10,
+        ) / 10
+      : null;
 
     return {
       users,
@@ -2308,6 +2353,9 @@ export class AdminService {
       vehicles,
       openRequests,
       activeTrips,
+      revenueXof24h,
+      completionRate24h,
+      avgPickupMinutes24h,
     };
   }
 

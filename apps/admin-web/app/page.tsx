@@ -635,7 +635,7 @@ async function loadAdminData(): Promise<{
   launchReadiness: AdminLaunchReadinessResponse;
   health: HealthCheckResponse;
   promoCodes: ListAdminPromoCodesResponse;
-  overview: { users: number; riders: number; drivers: number; vehicles: number; openRequests: number; activeTrips: number };
+  overview: { users: number; riders: number; drivers: number; vehicles: number; openRequests: number; activeTrips: number; revenueXof24h: number; completionRate24h: number; avgPickupMinutes24h: number | null };
   pricingScenarios: Array<{
     id: string;
     title: string;
@@ -747,7 +747,7 @@ async function loadAdminData(): Promise<{
       return result.status === "fulfilled" ? result.value : fallback;
     }
 
-    const fallbackOverview = { users: 0, riders: 0, drivers: 0, vehicles: 0, openRequests: 0, activeTrips: 0 };
+    const fallbackOverview = { users: 0, riders: 0, drivers: 0, vehicles: 0, openRequests: 0, activeTrips: 0, revenueXof24h: 0, completionRate24h: 0, avgPickupMinutes24h: null };
 
     const overview = settled(overviewResult, fallbackOverview);
     const liveOps = settled(liveOpsResult, fallbackLiveOps);
@@ -780,18 +780,21 @@ async function loadAdminData(): Promise<{
       preview: {
         metrics: [
           {
-            label: "Reservations brutes",
-            value: `XOF ${(overview.openRequests * 1850).toLocaleString("fr-FR")}`,
-            trend: "Projection live authentifiee",
+            label: "Revenus encaisses (24h)",
+            value: `XOF ${overview.revenueXof24h.toLocaleString("fr-FR")}`,
+            trend: "Paiements reussis, dernieres 24h",
           },
           {
-            label: "Taux de completion",
-            value: overview.users ? "94,8%" : "0%",
+            label: "Taux de completion (24h)",
+            value: `${overview.completionRate24h.toLocaleString("fr-FR")}%`,
             trend: `${overview.activeTrips} trajets actifs`,
           },
           {
-            label: "Temps moyen pickup",
-            value: "3 min 12 s",
+            label: "Temps moyen pickup (24h)",
+            value:
+              overview.avgPickupMinutes24h === null
+                ? "Pas de donnee"
+                : `${overview.avgPickupMinutes24h.toLocaleString("fr-FR")} min`,
             trend: `${overview.openRequests} demandes ouvertes`,
           },
           {
@@ -933,7 +936,7 @@ async function loadAdminData(): Promise<{
       },
       health: fallbackHealth,
       promoCodes: { promoCodes: [] },
-      overview: { users: 0, riders: 0, drivers: 0, vehicles: 0, openRequests: 0, activeTrips: 0 },
+      overview: { users: 0, riders: 0, drivers: 0, vehicles: 0, openRequests: 0, activeTrips: 0, revenueXof24h: 0, completionRate24h: 0, avgPickupMinutes24h: null },
       pricingScenarios: [],
     };
   }
