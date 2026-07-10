@@ -858,13 +858,21 @@ export class AdminDriverOnboardingService {
       blockers.push('No active vehicle on record.');
     }
 
-    const requiredDocumentTypes = ['NATIONAL_ID', 'DRIVER_LICENSE'];
-    for (const docType of requiredDocumentTypes) {
+    for (const docType of requiredOnboardingDocumentTypes) {
       const doc = profile.onboardingDocuments.find(
-        (d) => d.type === docType && d.status === DriverDocumentStatus.APPROVED,
+        (d) =>
+          d.type === docType &&
+          resolveEffectiveDocumentStatus(d) === DriverDocumentStatus.APPROVED,
       );
       if (!doc) {
         blockers.push(`Document ${docType} is missing or not approved.`);
+        continue;
+      }
+
+      const integrity = resolveDriverDocumentIntegrity(doc.metadata);
+
+      if (integrity.state !== 'complete') {
+        blockers.push(`Document ${docType} does not have confirmed object integrity.`);
       }
     }
 
