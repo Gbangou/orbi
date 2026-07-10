@@ -44,6 +44,9 @@ const tripShareLinkTtlMinutes = 120;
 const routeMonitoringAlertCooldownMinutes = 15;
 const safetySosCooldownMinutes = 2;
 const safetyIncidentCooldownMinutes = 2;
+const incidentEvidenceDefaultRetentionHours = 24;
+const incidentEvidenceMinRetentionHours = 1;
+const incidentEvidenceMaxRetentionHours = 72;
 const routeStopMinutesThreshold = 8;
 const routeNoProgressMinutesThreshold = 10;
 const routeDeviationKmThreshold = 0.75;
@@ -1027,12 +1030,26 @@ export class TripsService {
     const priority = Math.min(3, Math.max(1, payload.priority ?? 2));
     const normalizedIncidentType = payload.incidentType.trim().toUpperCase();
     const details = payload.details?.trim() ?? '';
+    const evidenceRetentionHours = Math.min(
+      incidentEvidenceMaxRetentionHours,
+      Math.max(
+        incidentEvidenceMinRetentionHours,
+        payload.evidenceRetentionHours ??
+          incidentEvidenceDefaultRetentionHours,
+      ),
+    );
+    const evidenceDeclaredAt = new Date();
+    const evidenceExpiresAt = new Date(
+      evidenceDeclaredAt.getTime() + evidenceRetentionHours * 60 * 60 * 1000,
+    );
     const evidence =
       payload.evidenceConsent && payload.evidenceType
         ? {
             consent: true,
             type: payload.evidenceType,
-            retentionHours: payload.evidenceRetentionHours ?? 24,
+            declaredAt: evidenceDeclaredAt.toISOString(),
+            expiresAt: evidenceExpiresAt.toISOString(),
+            retentionHours: evidenceRetentionHours,
             storagePolicy: 'LOCAL_UNTIL_EXPLICIT_SUPPORT_UPLOAD',
             uploadRequired: false,
           }
@@ -1152,6 +1169,7 @@ export class TripsService {
               incidentType: normalizedIncidentType,
               evidenceType: evidence.type,
               retentionHours: evidence.retentionHours,
+              expiresAt: evidence.expiresAt,
               storagePolicy: evidence.storagePolicy,
               supportTicketId: ticket.id,
             },
@@ -1193,12 +1211,14 @@ export class TripsService {
               declared: true,
               type: evidence.type,
               retentionHours: evidence.retentionHours,
+              expiresAt: evidence.expiresAt,
               storagePolicy: evidence.storagePolicy,
             }
           : {
               declared: false,
               type: null,
               retentionHours: null,
+              expiresAt: null,
               storagePolicy: null,
             },
       },

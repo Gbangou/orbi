@@ -204,6 +204,7 @@ export type TripIncidentResponse = {
       declared: boolean;
       type: "AUDIO" | "PHOTO" | "VIDEO" | "TEXT_NOTE" | null;
       retentionHours: number | null;
+      expiresAt: string | null;
       storagePolicy: string | null;
     };
   };

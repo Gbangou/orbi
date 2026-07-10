@@ -981,6 +981,7 @@ describe('TripsService', () => {
               payload: expect.objectContaining({
                 evidence: expect.objectContaining({
                   type: 'AUDIO',
+                  expiresAt: expect.any(String),
                   retentionHours: 24,
                   uploadRequired: false,
                 }),
@@ -995,6 +996,10 @@ describe('TripsService', () => {
         action: 'TRIP_INCIDENT_EVIDENCE_DECLARED',
         entityType: 'TRIP',
         entityId: 'trip-evidence-1',
+        metadata: expect.objectContaining({
+          expiresAt: expect.any(String),
+          retentionHours: 24,
+        }),
       }),
     });
     expect(realtimeService.publish).toHaveBeenCalledWith(
@@ -1008,7 +1013,72 @@ describe('TripsService', () => {
     expect(result.incident.voluntaryEvidence).toMatchObject({
       declared: true,
       type: 'AUDIO',
+      expiresAt: expect.any(String),
       retentionHours: 24,
+    });
+  });
+
+  it('bounds voluntary incident evidence retention even when service is called directly', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-evidence-bound-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+    });
+    prisma.supportTicket.create.mockResolvedValue({
+      id: 'ticket-evidence-bound-1',
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-evidence-bound-1',
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.reportIncident(
+      {
+        user: {
+          id: 'user-rider-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      'trip-evidence-bound-1',
+      {
+        incidentType: 'SAFETY_ALERT',
+        evidenceConsent: true,
+        evidenceType: 'VIDEO',
+        evidenceRetentionHours: 999,
+      },
+    );
+
+    expect(prisma.trip.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          events: {
+            create: expect.arrayContaining([
+              expect.objectContaining({
+                eventType: 'INCIDENT_EVIDENCE_DECLARED',
+                payload: expect.objectContaining({
+                  evidence: expect.objectContaining({
+                    type: 'VIDEO',
+                    retentionHours: 72,
+                    expiresAt: expect.any(String),
+                  }),
+                }),
+              }),
+            ]),
+          },
+        },
+      }),
+    );
+    expect(result.incident.voluntaryEvidence).toMatchObject({
+      declared: true,
+      type: 'VIDEO',
+      retentionHours: 72,
+      expiresAt: expect.any(String),
     });
   });
 
