@@ -70,6 +70,27 @@ describe('serializeTripDetail — privacy guards', () => {
     expect(trip.driverPhoneNumber).toBe('+22671000002');
   });
 
+  it('hides driver phone number on active trips when phone is not verified', () => {
+    const { trip } = serializeTripDetail(
+      createBaseTrip({
+        status: 'IN_PROGRESS',
+        driver: {
+          verificationStatus: 'APPROVED',
+          averageRating: 4.8,
+          completedTripsCount: 120,
+          profilePhotoUrl: null,
+          user: {
+            fullName: 'Issa Driver',
+            isPhoneVerified: false,
+            phoneNumber: '+22671000002',
+          },
+        },
+      }) as never,
+    );
+
+    expect(trip.driverPhoneNumber).toBeNull();
+  });
+
   it('exposes rider phone number when trip is DRIVER_ARRIVING', () => {
     const { trip } = serializeTripDetail(
       createBaseTrip({ status: 'DRIVER_ARRIVING' }) as never,

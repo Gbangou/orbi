@@ -174,7 +174,9 @@ export function serializeTripDetail(trip: {
   const activeStatuses = ['MATCHED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
   const isActiveTrip = activeStatuses.includes(trip.status);
   const driverPhoneNumber =
-    isActiveTrip && trip.driver.user.phoneNumber
+    isActiveTrip &&
+    trip.driver.user.isPhoneVerified &&
+    trip.driver.user.phoneNumber
       ? trip.driver.user.phoneNumber
       : null;
   const riderPhoneNumber =
