@@ -8,11 +8,13 @@ import {
   Pressable,
   SafeAreaView,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import {
+  createTripShareLinkWithApi,
   fetchMyTrips,
   fetchRideOptionsPreview,
   triggerTripSafetySosWithApi,
@@ -30,6 +32,7 @@ import { createRiderPublicClient, restoreRiderSession } from '../../lib/auth';
 import { useTranslation } from '../../lib/i18n';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { useRiderRealtimeStream } from '../../lib/use-rider-realtime-stream';
+import { resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
 import { resolveRiderAppError } from '../../lib/session-feedback';
 import {
   buildRiderFlowTransitionLabel,
@@ -43,7 +46,7 @@ const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
 
 // Bottom sheet heights
 const SHEET_PEEK = 300;
-const SHEET_ACTIVE_TRIP = 222;
+const SHEET_ACTIVE_TRIP = 282;
 
 function ForwardGlyph({ color }: { color: string }) {
   return (
@@ -211,6 +214,7 @@ export default function RiderHomeScreen() {
   const [flowTransitionLabel, setFlowTransitionLabel] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [isSosBusy, setIsSosBusy] = useState(false);
+  const [isShareBusy, setIsShareBusy] = useState(false);
   const [matchedAnim] = useState(() => new Animated.Value(0));
   const [showMatchCard, setShowMatchCard] = useState(false);
   const previousFlowStateRef = useRef<string | null>(null);
@@ -258,6 +262,37 @@ export default function RiderHomeScreen() {
       ],
     );
   }, [isSosBusy, router]);
+
+  const handleShareTrip = useCallback(async (tripId: string) => {
+    if (isShareBusy) {
+      return;
+    }
+
+    setIsShareBusy(true);
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      const response = await createTripShareLinkWithApi(authClient, tripId);
+      const shareUrl = new URL(
+        response.share.path,
+        resolveOrbiApiBaseUrlForRuntime(),
+      ).toString();
+
+      await Share.share({
+        message: `Suivi securise de ma course Orbi: ${shareUrl}`,
+        url: shareUrl,
+      });
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        surface: 'safety',
+        fallback: "Le lien de partage n'a pas pu etre cree.",
+      });
+
+      Alert.alert('Partage indisponible', feedback.message);
+    } finally {
+      setIsShareBusy(false);
+    }
+  }, [isShareBusy]);
 
   const loadHomeContext = useCallback(async (silent = false) => {
     const client = createRiderPublicClient();
@@ -483,46 +518,82 @@ export default function RiderHomeScreen() {
 
         {hasActiveFlow ? (
           /* ── Active trip state ── */
-          <Pressable
-            style={styles.tripCard}
-            onPress={() => router.push('/activity')}
-          >
-            <View style={styles.tripCardLeft}>
-              <View style={styles.tripStatusDot} />
-              <View style={styles.tripCardText}>
-                <Text style={styles.tripCardTitle}>
-                  {activeTrip ? 'Course en cours' : 'Demande active'}
-                </Text>
-                <Text style={styles.tripCardSub} numberOfLines={1}>
-                  {activeTrip
-                    ? `${activeTrip.pickupAddress} → ${activeTrip.destinationAddress}`
-                    : `${activeRequest?.pickupAddress} → ${activeRequest?.destinationAddress}`}
-                </Text>
-                {/* Smart ETA label */}
-                {activeTrip ? (() => {
-                  const eta = buildTripEtaLabel(activeTrip.status);
-                  if (!eta) return null;
-                  const isArrived = activeTrip.status === 'DRIVER_AT_PICKUP';
-                  return (
-                    <Text style={[styles.tripCardStatus, isArrived && styles.tripCardStatusArrived]}>
-                      {eta}
-                    </Text>
-                  );
-                })() : null}
-                {activeTrip?.pickupCode && activeTrip.status === 'DRIVER_AT_PICKUP' ? (
-                  <Text style={styles.tripCardCode}>
-                    Code : <Text style={styles.tripCardCodeValue}>{activeTrip.pickupCode}</Text>
+          <>
+            <Pressable
+              style={styles.tripCard}
+              onPress={() => router.push('/activity')}
+            >
+              <View style={styles.tripCardLeft}>
+                <View style={styles.tripStatusDot} />
+                <View style={styles.tripCardText}>
+                  <Text style={styles.tripCardTitle}>
+                    {activeTrip ? 'Course en cours' : 'Demande active'}
                   </Text>
-                ) : null}
-                {flowTransitionLabel ? (
-                  <Text style={styles.tripTransition}>{flowTransitionLabel}</Text>
-                ) : null}
+                  <Text style={styles.tripCardSub} numberOfLines={1}>
+                    {activeTrip
+                      ? `${activeTrip.pickupAddress} → ${activeTrip.destinationAddress}`
+                      : `${activeRequest?.pickupAddress} → ${activeRequest?.destinationAddress}`}
+                  </Text>
+                  {/* Smart ETA label */}
+                  {activeTrip ? (() => {
+                    const eta = buildTripEtaLabel(activeTrip.status);
+                    if (!eta) return null;
+                    const isArrived = activeTrip.status === 'DRIVER_AT_PICKUP';
+                    return (
+                      <Text style={[styles.tripCardStatus, isArrived && styles.tripCardStatusArrived]}>
+                        {eta}
+                      </Text>
+                    );
+                  })() : null}
+                  {activeTrip?.pickupCode && activeTrip.status === 'DRIVER_AT_PICKUP' ? (
+                    <Text style={styles.tripCardCode}>
+                      Code : <Text style={styles.tripCardCodeValue}>{activeTrip.pickupCode}</Text>
+                    </Text>
+                  ) : null}
+                  {flowTransitionLabel ? (
+                    <Text style={styles.tripTransition}>{flowTransitionLabel}</Text>
+                  ) : null}
+                </View>
               </View>
-            </View>
-            <View style={styles.tripCardArrow}>
-              <ForwardGlyph color={theme.colors.textInverse} />
-            </View>
-          </Pressable>
+              <View style={styles.tripCardArrow}>
+                <ForwardGlyph color={theme.colors.textInverse} />
+              </View>
+            </Pressable>
+
+            {activeTrip ? (
+              <View style={styles.tripQuickActions}>
+                <Pressable
+                  accessibilityLabel="home-share-trip"
+                  disabled={isShareBusy}
+                  onPress={() => void handleShareTrip(activeTrip.id)}
+                  style={({ pressed }) => [
+                    styles.tripQuickAction,
+                    pressed ? styles.tripQuickActionPressed : null,
+                    isShareBusy ? styles.tripQuickActionDisabled : null,
+                  ]}
+                >
+                  <Text style={styles.tripQuickActionLabel}>
+                    {isShareBusy ? 'Creation...' : 'Partager'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityLabel="home-sos-trip"
+                  disabled={isSosBusy}
+                  onPress={() => handleSos(activeTrip.id)}
+                  style={({ pressed }) => [
+                    styles.tripQuickAction,
+                    styles.tripQuickActionDanger,
+                    pressed ? styles.tripQuickActionPressed : null,
+                    isSosBusy ? styles.tripQuickActionDisabled : null,
+                  ]}
+                >
+                  <Text style={[styles.tripQuickActionLabel, styles.tripQuickActionDangerLabel]}>
+                    {isSosBusy ? 'SOS...' : 'SOS securite'}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </>
         ) : (
           /* ── Default: search bar + services ── */
           <>
@@ -914,6 +985,43 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+  },
+  tripQuickActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  tripQuickAction: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 10,
+  },
+  tripQuickActionDanger: {
+    backgroundColor: '#E53935',
+    borderColor: '#E53935',
+  },
+  tripQuickActionPressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.988 }],
+  },
+  tripQuickActionDisabled: {
+    opacity: 0.58,
+  },
+  tripQuickActionLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text,
+    textAlign: 'center',
+  },
+  tripQuickActionDangerLabel: {
+    color: '#FFFFFF',
   },
 
   // ── Surge badge ───────────────────────────────────────────────────────────
