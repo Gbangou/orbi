@@ -158,6 +158,20 @@ decisive and calm:
 - Rider authentication small-screen polish now uses a real SVG eye affordance
   with a fixed touch target, removing the clipped text-symbol control detected
   at 360px width.
+- Admin overview/preview no longer show fabricated headline numbers. A
+  hardcoded "94,8%" completion rate (shown for any nonzero user count), a
+  static "3 min 12 s" pickup time, and a revenue figure invented from
+  `openRequests * 1850 XOF` were presented as live authenticated data on both
+  the public `/admin/preview` page and the authenticated admin dashboard.
+  Replaced with real 24h-windowed metrics: succeeded payment volume,
+  completed/(completed+cancelled) trip ratio, and average
+  createdAt→startedAt pickup duration.
+- Instrumented the five operational KPIs this doc had flagged as a gap:
+  crash-free session rate, first-booking conversion, offer acceptance,
+  driver online duration and support first-response time. All derived from
+  existing audit-log/session/trip/ticket history (no new tables needed) and
+  exposed via a new cached `/admin/operational-kpis` endpoint, rendered in
+  the admin console.
 
 ## Remaining Gaps
 
@@ -167,10 +181,9 @@ decisive and calm:
   error/loading/empty states visually.
 - Continue replacing one-off mobile UI with the shared native primitives across
   remaining secondary rider/driver support and edge-case surfaces.
-- Instrument crash-free sessions, first booking conversion, offer acceptance,
-  driver online duration and support first response.
 - Replace hardcoded preview assumptions with field-calibrated supply, ETA and
-  pricing data.
+  pricing data (pricing scenario driver/request counts on the admin dashboard
+  are still illustrative presets, not live-calibrated).
 - Finish production-grade realtime backplane, payment reconciliation coverage,
   observability dashboards and support timelines before claiming leader-level
   readiness.
