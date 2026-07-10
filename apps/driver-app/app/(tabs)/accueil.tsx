@@ -38,6 +38,7 @@ import { useDriverRealtimeStream } from '../../lib/use-driver-realtime-stream';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { buildDriverShiftReadiness } from '../../lib/driver-shift-readiness';
 import { DriverHomeMapView } from '../../lib/driver-home-map-view';
+import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../../lib/privacy/screen-capture';
 
 const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
 
@@ -322,6 +323,13 @@ export default function DriverHomeScreen() {
   const previousFlowStateRef = useRef<string | null>(null);
   const [modalOffer, setModalOffer] = useState<DriverOffer | null>(null);
   const modalShowingRef = useRef(false);
+
+  useEffect(() => {
+    preventSensitiveScreenCapture();
+    return () => {
+      restoreSensitiveScreenCapture();
+    };
+  }, []);
 
   const loadDriverHome = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +16,7 @@ import type { OrbiTheme } from '@orbi/ui';
 import { OrbiAuthIcon, OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { signInDriverAccount, signUpDriverAccount } from '../lib/auth';
 import { OrbiLogo } from '../lib/orbi-logo';
+import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
 
 export default function DriverAuthScreen() {
   const theme = useOrbiTheme();
@@ -27,6 +28,13 @@ export default function DriverAuthScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    preventSensitiveScreenCapture();
+    return () => {
+      restoreSensitiveScreenCapture();
+    };
+  }, []);
 
   const isPasswordStrong = (pw: string) =>
     pw.length >= 8 &&

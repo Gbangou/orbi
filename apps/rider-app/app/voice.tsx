@@ -29,6 +29,7 @@ import { resolveVoiceLocationIntentWithApi, type VoiceLocationIntentResponse } f
 import type { OrbiTheme } from '@orbi/ui';
 import { OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme } from '@orbi/ui/native';
 import { createRiderPublicClient } from '../lib/auth';
+import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
 
 const VOICE_LOCALE = 'fr-FR';
 
@@ -163,6 +164,13 @@ export default function VoiceScreen() {
   const [result, setResult] = useState<VoiceLocationIntentResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const hasSpokenRef = useRef(false);
+
+  useEffect(() => {
+    preventSensitiveScreenCapture();
+    return () => {
+      restoreSensitiveScreenCapture();
+    };
+  }, []);
 
   const analyseTranscript = useCallback(async (text: string) => {
     if (!text.trim()) return;

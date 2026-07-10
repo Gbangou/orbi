@@ -66,6 +66,7 @@ import {
 import { useRiderPosition } from '../lib/use-rider-position';
 import { TripMapView } from '../lib/trip-map-view';
 import { PlaceSearch } from '../lib/place-search';
+import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
 
 const cityPresets = burkinaPricingCityPresets;
 const fieldDispatchRadiusKm = 8;
@@ -359,6 +360,13 @@ export default function BookingScreen() {
   const riderPosition = useRiderPosition({
     enabled: true,
   });
+
+  useEffect(() => {
+    preventSensitiveScreenCapture();
+    return () => {
+      restoreSensitiveScreenCapture();
+    };
+  }, []);
 
   const selectedOption = useMemo(
     () =>
