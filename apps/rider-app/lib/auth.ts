@@ -15,9 +15,12 @@ import type { AuthenticatedApiContext } from '@orbi/api';
 import { flushRiderMobileErrorReports } from './mobile-error-reporting';
 import { riderSessionStorage, riderSessionStorageKey } from './session-storage';
 
+const riderFieldRequestTimeoutMs = 90_000;
+
 export function createRiderPublicClient() {
   return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
     version: orbiRuntimeConfig.apiVersion,
+    requestTimeoutMs: riderFieldRequestTimeoutMs,
   });
 }
 

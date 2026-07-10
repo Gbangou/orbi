@@ -519,7 +519,23 @@ describe('rider smoke flows', () => {
     expect(router.replace).not.toHaveBeenCalled();
     expectText(
       renderer,
-      'Connexion impossible. Vérifiez votre réseau.',
+      'Connexion impossible. Vérifiez votre réseau et réessayez.',
+    );
+  });
+
+  it('surfaces a slow-network auth timeout without blaming credentials', async () => {
+    mockedSignInRiderAccount.mockRejectedValue(
+      new DOMException('The operation was aborted.', 'AbortError'),
+    );
+
+    const renderer = await renderScreen(<RiderAuthScreen />);
+
+    await pressByText(renderer, 'Connexion compte de démonstration');
+
+    expect(router.replace).not.toHaveBeenCalled();
+    expectText(
+      renderer,
+      'Connexion trop lente. Vérifiez votre réseau puis réessayez.',
     );
   });
 

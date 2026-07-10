@@ -41,11 +41,28 @@ export default function DriverAuthScreen() {
     (mode === 'sign-in' || Boolean(fullName.trim()));
 
   function describeAuthError(error: unknown): string {
+    const errorRecord =
+      error && typeof error === 'object'
+        ? (error as { name?: unknown; message?: unknown })
+        : null;
+    const errorName =
+      typeof errorRecord?.name === 'string' ? errorRecord.name.toLowerCase() : '';
+    const message =
+      typeof errorRecord?.message === 'string'
+        ? errorRecord.message.toLowerCase()
+        : '';
+
     if (error instanceof TypeError) {
       return 'Connexion impossible. Vérifiez votre réseau et réessayez.';
     }
-    const message = error instanceof Error ? error.message.toLowerCase() : '';
+
+    if (errorName === 'aborterror') {
+      return 'Connexion trop lente. Vérifiez votre réseau puis réessayez.';
+    }
+
     if (
+      message.includes('aborted') ||
+      message.includes('aborterror') ||
       message.includes('network request failed') ||
       message.includes('fetch failed') ||
       message.includes('load failed') ||
@@ -336,4 +353,3 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     marginTop: 2,
   },
 });
-

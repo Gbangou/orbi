@@ -41,13 +41,35 @@ export default function RiderAuthScreen() {
     (mode === 'sign-in' || Boolean(fullName.trim()));
 
   function describeAuthError(error: unknown): string {
-    if (error instanceof TypeError) return 'Connexion impossible. Vérifiez votre réseau.';
-    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    const errorRecord =
+      error && typeof error === 'object'
+        ? (error as { name?: unknown; message?: unknown })
+        : null;
+    const errorName =
+      typeof errorRecord?.name === 'string' ? errorRecord.name.toLowerCase() : '';
+    const message =
+      typeof errorRecord?.message === 'string'
+        ? errorRecord.message.toLowerCase()
+        : '';
+
+    if (error instanceof TypeError) {
+      return 'Connexion impossible. Vérifiez votre réseau et réessayez.';
+    }
+
+    if (errorName === 'aborterror') {
+      return 'Connexion trop lente. Vérifiez votre réseau puis réessayez.';
+    }
+
     if (
+      message.includes('aborted') ||
+      message.includes('aborterror') ||
       message.includes('network request failed') ||
       message.includes('fetch failed') ||
-      message.includes('load failed')
-    ) return 'Connexion impossible. Vérifiez votre réseau.';
+      message.includes('load failed') ||
+      message.includes('networkerror')
+    ) {
+      return 'Connexion impossible. Vérifiez votre réseau et réessayez.';
+    }
     return extractApiErrorMessage(error, 'Identifiants incorrects. Réessayez.');
   }
 

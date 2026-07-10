@@ -457,6 +457,23 @@ describe('driver smoke flows', () => {
     expect(router.replace).toHaveBeenCalledWith('/accueil');
   });
 
+  it('explains slow network timeouts during driver sign-in', async () => {
+    mockedSignInDriverAccount.mockRejectedValue(
+      new DOMException('The operation was aborted.', 'AbortError'),
+    );
+
+    const renderer = await renderScreen(<DriverAuthScreen />);
+    await changeInputByPlaceholder(renderer, 'Adresse email', 'driver@orbi.app');
+    await changeInputByPlaceholder(renderer, 'Mot de passe', 'Orbi123!');
+    await pressByText(renderer, 'Se connecter');
+    await flushMicrotasks();
+
+    expectText(
+      renderer,
+      'Connexion trop lente. Vérifiez votre réseau puis réessayez.',
+    );
+  });
+
   it('loads the driver home cockpit', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverOffers.mockResolvedValue(driverOffers.slice(0, 2) as never);
@@ -475,10 +492,9 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<DriverHomeScreen />);
     await pressByText(renderer, 'Actualiser le direct');
 
-    expectText(
-      renderer,
-      'Connecte comme Issa Driver. Statut ONLINE. 2 offres disponibles et 0 course active.',
-    );
+    expectText(renderer, "Aujourd'hui");
+    expectText(renderer, '12 500 XOF');
+    expectText(renderer, 'En ligne');
     expectText(renderer, '2 offres — Ouagadougou');
   });
 
@@ -696,6 +712,7 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<ProfilScreen />);
     await flushMicrotasks();
+    await pressByText(renderer, 'Modifier');
     await pressByText(renderer, 'Soumettre le dossier ops');
 
     expect(mockedRequestDriverDocumentUploadLinks).not.toHaveBeenCalled();
@@ -744,6 +761,7 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<ProfilScreen />);
     await flushMicrotasks();
+    await pressByText(renderer, 'Modifier');
 
     await changeInputByPlaceholder(renderer, '+22670000000', '+22676000000');
     await changeInputByPlaceholder(renderer, 'BF-12345', 'BF-99887');

@@ -15,9 +15,12 @@ import type { AuthenticatedApiContext } from '@orbi/api';
 import { flushDriverMobileErrorReports } from './mobile-error-reporting';
 import { driverSessionStorage, driverSessionStorageKey } from './session-storage';
 
+const driverFieldRequestTimeoutMs = 90_000;
+
 export function createDriverPublicClient() {
   return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
     version: orbiRuntimeConfig.apiVersion,
+    requestTimeoutMs: driverFieldRequestTimeoutMs,
   });
 }
 
