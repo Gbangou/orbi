@@ -25,10 +25,10 @@ import Voice, {
   type SpeechErrorEvent,
   type SpeechResultsEvent,
 } from '@react-native-voice/voice';
-import { createOrbiApiClient, resolveVoiceLocationIntentWithApi, type VoiceLocationIntentResponse } from '@orbi/api';
+import { resolveVoiceLocationIntentWithApi, type VoiceLocationIntentResponse } from '@orbi/api';
 import type { OrbiTheme } from '@orbi/ui';
 import { OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme } from '@orbi/ui/native';
-import { orbiRuntimeConfig, resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
+import { createRiderPublicClient } from '../lib/auth';
 
 const VOICE_LOCALE = 'fr-FR';
 
@@ -169,9 +169,7 @@ export default function VoiceScreen() {
     setIsAnalyzing(true);
     setErrorMsg(null);
     try {
-      const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
-        version: orbiRuntimeConfig.apiVersion,
-      });
+      const client = createRiderPublicClient();
       const response = await resolveVoiceLocationIntentWithApi(client, { transcript: text.trim() });
       setResult(response);
     } catch {

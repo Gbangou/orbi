@@ -21,7 +21,6 @@ import {
   burkinaPricingCityPresets,
   createCheckoutIntentWithApi,
   createRideRequestWithApi,
-  createOrbiApiClient,
   createSavedPlaceWithApi,
   estimateDurationMinutes,
   fetchNearbyDrivers,
@@ -48,11 +47,8 @@ import {
   type OrbiTheme,
 } from '@orbi/ui';
 import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme } from '@orbi/ui/native';
-import {
-  orbiRuntimeConfig,
-  resolveOrbiApiBaseUrlForRuntime,
-} from '@orbi/config';
-import { restoreRiderSession } from '../lib/auth';
+import { orbiRuntimeConfig } from '@orbi/config';
+import { createRiderPublicClient, restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import { buildSavedPlacePayload } from '../lib/account-safety';
 import {
@@ -466,9 +462,7 @@ export default function BookingScreen() {
   async function loadBookingContext(
     options: { resetPaymentPreview?: boolean } = {},
   ) {
-    const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
-      version: orbiRuntimeConfig.apiVersion,
-    });
+    const client = createRiderPublicClient();
 
     setIsRefreshing(true);
 

@@ -13,7 +13,6 @@ import {
   View,
 } from 'react-native';
 import {
-  createOrbiApiClient,
   fetchMyTrips,
   fetchRideOptionsPreview,
   triggerTripSafetySosWithApi,
@@ -27,11 +26,10 @@ import {
   type OrbiTheme,
 } from '@orbi/ui';
 import { OfflineBanner, OrbiSurface, safeHaptics, useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
-import { restoreRiderSession } from '../../lib/auth';
+import { createRiderPublicClient, restoreRiderSession } from '../../lib/auth';
 import { useTranslation } from '../../lib/i18n';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { useRiderRealtimeStream } from '../../lib/use-rider-realtime-stream';
-import { orbiRuntimeConfig, resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
 import { resolveRiderAppError } from '../../lib/session-feedback';
 import {
   buildRiderFlowTransitionLabel,
@@ -262,9 +260,7 @@ export default function RiderHomeScreen() {
   }, [isSosBusy, router]);
 
   const loadHomeContext = useCallback(async (silent = false) => {
-    const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
-      version: orbiRuntimeConfig.apiVersion,
-    });
+    const client = createRiderPublicClient();
 
     try {
       const { authClient, me, session } = await restoreRiderSession();

@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { createOrbiApiClient, fetchNearbyDrivers, type NearbyDriverMarker } from '@orbi/api';
-import { resolveOrbiApiBaseUrlForRuntime, orbiRuntimeConfig } from '@orbi/config';
+import { fetchNearbyDrivers, type NearbyDriverMarker } from '@orbi/api';
 import {
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
 } from '@orbi/ui';
 import { useOrbiTheme } from '@orbi/ui/native';
+import { createRiderPublicClient } from './auth';
 import { enqueueRiderMapError } from './map-error-reporting';
 
 const TypedWebView = WebView as any;
@@ -146,9 +146,7 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
 
   const refreshDrivers = useCallback(async () => {
     try {
-      const client = createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
-        version: orbiRuntimeConfig.apiVersion,
-      });
+      const client = createRiderPublicClient();
       const lat = riderLat ?? OUAGA_LAT;
       const lng = riderLng ?? OUAGA_LNG;
       const response = await fetchNearbyDrivers(client, { lat, lng, radiusKm: 5 });

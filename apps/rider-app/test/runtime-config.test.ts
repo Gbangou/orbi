@@ -60,10 +60,7 @@ describe('Orbi runtime config', () => {
   });
 
   it('keeps mobile API clients and realtime streams on the runtime-resolved base URL', () => {
-    const files = [
-      'app/(tabs)/home.tsx',
-      'app/book.tsx',
-      'app/voice.tsx',
+    const directRuntimeFiles = [
       'app/(tabs)/activity.tsx',
       'lib/auth.ts',
       'lib/use-rider-realtime-stream.ts',
@@ -71,10 +68,17 @@ describe('Orbi runtime config', () => {
       '../driver-app/lib/use-driver-realtime-stream.ts',
     ];
 
-    for (const file of files) {
+    for (const file of directRuntimeFiles) {
       const source = readFileSync(join(process.cwd(), file), 'utf8');
 
       expect(source).toContain('resolveOrbiApiBaseUrlForRuntime');
+      expect(source).not.toContain('orbiRuntimeConfig.apiBaseUrl');
+    }
+
+    for (const file of ['app/(tabs)/home.tsx', 'app/book.tsx', 'app/voice.tsx']) {
+      const source = readFileSync(join(process.cwd(), file), 'utf8');
+
+      expect(source).toContain('createRiderPublicClient');
       expect(source).not.toContain('orbiRuntimeConfig.apiBaseUrl');
     }
   });

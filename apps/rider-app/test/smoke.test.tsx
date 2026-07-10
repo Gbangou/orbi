@@ -49,6 +49,7 @@ import {
 } from '../../../scripts/testing/mobile/test-utils';
 
 jest.mock('../lib/auth', () => ({
+  createRiderPublicClient: jest.fn(() => ({ kind: 'mock-client' })),
   signInRiderAccount: jest.fn(),
   signUpRiderAccount: jest.fn(),
   restoreRiderSession: jest.fn(),
