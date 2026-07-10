@@ -11,6 +11,7 @@ import {
   fetchAdminFeatureFlags,
   fetchAdminLaunchReadiness,
   fetchAdminOverview,
+  fetchAdminOperationalKpis,
   fetchAdminDriverOnboardingQueue,
   fetchAdminDriverWallets,
   fetchAdminPaymentWebhookEvents,
@@ -26,6 +27,7 @@ import {
   type AdminDriversResponse,
   type AdminLaunchReadinessResponse,
   type AdminLiveOpsResponse,
+  type AdminOperationalKpisResponse,
   type AdminTripsAuditResponse,
   type AdminPaymentWebhookEventsResponse,
   type AdminPricingCalibrationResponse,
@@ -94,6 +96,15 @@ const fallbackOperations = [
     note: "A surveiller pendant le pic de 18h",
   },
 ];
+
+const fallbackOperationalKpis: AdminOperationalKpisResponse = {
+  windowDays: 7,
+  crashFreeSessionRate7d: 0,
+  firstBookingConversionRate30d: 0,
+  offerAcceptanceRate7d: 0,
+  avgDriverOnlineMinutes7d: null,
+  avgSupportFirstResponseMinutes7d: null,
+};
 
 const fallbackLiveOps: AdminLiveOpsResponse = {
   summary: {
@@ -622,6 +633,7 @@ async function loadAdminData(): Promise<{
   };
   preview: AdminPreviewResponse;
   liveOps: AdminLiveOpsResponse;
+  operationalKpis: AdminOperationalKpisResponse;
   tripsAudit: AdminTripsAuditResponse;
   support: SupportTicketQueueResponse;
   onboardingQueue: DriverOnboardingQueueResponse;
@@ -662,6 +674,7 @@ async function loadAdminData(): Promise<{
     const me = await fetchCurrentUser(authClient);
     const [
       overviewResult,
+      operationalKpisResult,
       liveOpsResult,
       tripsAuditResult,
       supportResult,
@@ -681,6 +694,7 @@ async function loadAdminData(): Promise<{
       northEstimateResult,
     ] = await Promise.allSettled([
       fetchAdminOverview(authClient),
+      fetchAdminOperationalKpis(authClient),
       fetchAdminLiveOps(authClient),
       fetchAdminTripsAudit(authClient, { lookbackHours: 24 }),
       fetchAdminSupportTickets(authClient),
@@ -750,6 +764,10 @@ async function loadAdminData(): Promise<{
     const fallbackOverview = { users: 0, riders: 0, drivers: 0, vehicles: 0, openRequests: 0, activeTrips: 0, revenueXof24h: 0, completionRate24h: 0, avgPickupMinutes24h: null };
 
     const overview = settled(overviewResult, fallbackOverview);
+    const operationalKpis = settled(
+      operationalKpisResult,
+      fallbackOperationalKpis,
+    );
     const liveOps = settled(liveOpsResult, fallbackLiveOps);
     const tripsAudit = settled(tripsAuditResult, fallbackTripsAudit);
     const support = settled(supportResult, { tickets: [] });
@@ -837,6 +855,7 @@ async function loadAdminData(): Promise<{
       health,
       promoCodes,
       overview,
+      operationalKpis,
       pricingScenarios: pricingScenarioCandidates.flatMap((s) =>
         s.result.status === "fulfilled"
           ? [{ id: s.id, title: s.title, note: s.note, estimate: s.result.value }]
@@ -857,6 +876,7 @@ async function loadAdminData(): Promise<{
         incidents: fallbackIncidents,
       },
       liveOps: fallbackLiveOps,
+      operationalKpis: fallbackOperationalKpis,
       tripsAudit: fallbackTripsAudit,
       support: {
         tickets: [],
@@ -966,6 +986,7 @@ export default async function AdminHomePage({
     health,
     promoCodes,
     overview,
+    operationalKpis,
     pricingScenarios,
   } = await loadAdminData();
   const showDemoPasswords = shouldShowDemoPasswords();
@@ -1130,6 +1151,53 @@ export default async function AdminHomePage({
               pour trouver plus vite les lieux.
             </p>
           </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <h2>KPIs operationnels ({operationalKpis.windowDays} jours)</h2>
+        <div className="row">
+          <div>
+            <h3>Sessions sans crash</h3>
+            <p>Sessions mobiles sans erreur critique remontee.</p>
+          </div>
+          <strong>{operationalKpis.crashFreeSessionRate7d}%</strong>
+        </div>
+        <div className="row">
+          <div>
+            <h3>Conversion premiere course</h3>
+            <p>Passagers inscrits (30j) ayant complete une course.</p>
+          </div>
+          <strong>{operationalKpis.firstBookingConversionRate30d}%</strong>
+        </div>
+        <div className="row">
+          <div>
+            <h3>Acceptation des offres</h3>
+            <p>Offres de dispatch acceptees par les chauffeurs.</p>
+          </div>
+          <strong>{operationalKpis.offerAcceptanceRate7d}%</strong>
+        </div>
+        <div className="row">
+          <div>
+            <h3>Duree de connexion chauffeur</h3>
+            <p>Duree moyenne des sessions en ligne.</p>
+          </div>
+          <strong>
+            {operationalKpis.avgDriverOnlineMinutes7d === null
+              ? "Pas de donnee"
+              : `${operationalKpis.avgDriverOnlineMinutes7d} min`}
+          </strong>
+        </div>
+        <div className="row">
+          <div>
+            <h3>Premiere reponse support</h3>
+            <p>Delai moyen avant premiere reponse a un ticket.</p>
+          </div>
+          <strong>
+            {operationalKpis.avgSupportFirstResponseMinutes7d === null
+              ? "Pas de donnee"
+              : `${operationalKpis.avgSupportFirstResponseMinutes7d} min`}
+          </strong>
         </div>
       </section>
 

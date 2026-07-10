@@ -167,6 +167,15 @@ export type AdminOverviewResponse = {
   avgPickupMinutes24h: number | null;
 };
 
+export type AdminOperationalKpisResponse = {
+  windowDays: number;
+  crashFreeSessionRate7d: number;
+  firstBookingConversionRate30d: number;
+  offerAcceptanceRate7d: number;
+  avgDriverOnlineMinutes7d: number | null;
+  avgSupportFirstResponseMinutes7d: number | null;
+};
+
 export type AdminLiveOpsResponse = {
   summary: {
     activeTrips: number;
@@ -1182,6 +1191,12 @@ export async function fetchAdminPreview(client: OrbiApiClient) {
 
 export async function fetchAdminOverview(client: OrbiApiClient) {
   return client.request<AdminOverviewResponse>(apiRoutes.admin.overview);
+}
+
+export async function fetchAdminOperationalKpis(client: OrbiApiClient) {
+  return client.request<AdminOperationalKpisResponse>(
+    apiRoutes.admin.operationalKpis,
+  );
 }
 
 export async function fetchAdminLiveOps(client: OrbiApiClient) {

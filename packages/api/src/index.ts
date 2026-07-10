@@ -153,6 +153,7 @@ export type {
   HealthCheckResponse,
   AdminPreviewResponse,
   AdminOverviewResponse,
+  AdminOperationalKpisResponse,
   AdminLiveOpsResponse,
   AdminTripsAuditResponse,
   AdminLaunchReadinessResponse,
@@ -189,6 +190,7 @@ export type {
 export {
   fetchAdminPreview,
   fetchAdminOverview,
+  fetchAdminOperationalKpis,
   fetchAdminLiveOps,
   fetchAdminTripsAudit,
   fetchAdminJobQueue,

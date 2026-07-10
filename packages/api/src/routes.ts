@@ -33,6 +33,7 @@ export const apiRoutes = {
     preview: "/admin/preview",
     overview: "/admin/overview",
     liveOps: "/admin/live-ops",
+    operationalKpis: "/admin/operational-kpis",
     tripsAudit: "/admin/trips/audit",
     launchReadiness: "/admin/launch-readiness",
     jobQueue: "/admin/job-queue",

@@ -89,6 +89,15 @@ export class AdminController {
     return this.adminService.liveOps();
   }
 
+  @Get('operational-kpis')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  operationalKpis() {
+    return this.adminService.operationalKpis();
+  }
+
   @Get('trips/audit')
   @Version('1')
   @ApiBearerAuth('session-token')

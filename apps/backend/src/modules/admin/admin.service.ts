@@ -2795,6 +2795,174 @@ export class AdminService {
     };
   }
 
+  async operationalKpis() {
+    // Interroge sur 7 jours glissants : ces indicateurs bougent lentement,
+    // un TTL d'une minute absorbe le trafic du tableau de bord sans les rendre perimes.
+    return this.cache.getOrSet(
+      'admin:operational-kpis',
+      () => this.fetchOperationalKpis(),
+      60,
+    );
+  }
+
+  private async fetchOperationalKpis() {
+    const now = new Date();
+    const since7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const since30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalSessions7d,
+      criticalCrashLogs7d,
+      riderCohort30d,
+      riderConverted30d,
+      offerAccepted7d,
+      offerDeclined7d,
+      offerExpired7d,
+      driverAvailabilityLogs7d,
+      supportTickets7d,
+      supportResponseLogs7d,
+    ] = await Promise.all([
+      this.prisma.userSession.count({ where: { createdAt: { gte: since7d } } }),
+      this.prisma.auditLog.findMany({
+        where: {
+          action: 'MOBILE_CLIENT_ERROR_REPORTED',
+          createdAt: { gte: since7d },
+          metadata: { path: ['classification', 'severity'], equals: 'critical' },
+        },
+        select: { metadata: true },
+      }),
+      this.prisma.riderProfile.count({
+        where: { createdAt: { gte: since30d } },
+      }),
+      this.prisma.riderProfile.count({
+        where: {
+          createdAt: { gte: since30d },
+          trips: { some: { status: 'COMPLETED' } },
+        },
+      }),
+      this.prisma.auditLog.count({
+        where: {
+          action: 'DISPATCH_RESERVATION_ACCEPTED',
+          createdAt: { gte: since7d },
+        },
+      }),
+      this.prisma.auditLog.count({
+        where: {
+          action: 'DISPATCH_RESERVATION_DECLINED',
+          createdAt: { gte: since7d },
+        },
+      }),
+      this.prisma.auditLog.count({
+        where: {
+          action: 'DISPATCH_RESERVATION_EXPIRED',
+          createdAt: { gte: since7d },
+        },
+      }),
+      this.prisma.auditLog.findMany({
+        where: {
+          action: 'DRIVER_AVAILABILITY_UPDATED',
+          createdAt: { gte: since7d },
+        },
+        select: { userId: true, metadata: true, createdAt: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.supportTicket.findMany({
+        where: { createdAt: { gte: since7d } },
+        select: { id: true, createdAt: true },
+      }),
+      this.prisma.auditLog.findMany({
+        where: {
+          action: 'SUPPORT_TICKET_UPDATED',
+          entityType: 'SUPPORT_TICKET',
+          createdAt: { gte: since7d },
+        },
+        select: { entityId: true, createdAt: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
+
+    const crashedSessionIds = new Set(
+      criticalCrashLogs7d
+        .map((log) =>
+          isDispatchSettingsRecord(log.metadata)
+            ? log.metadata.sessionId
+            : null,
+        )
+        .filter((sessionId): sessionId is string => typeof sessionId === 'string'),
+    );
+    const crashFreeSessionRate7d = safeRate(
+      Math.max(totalSessions7d - crashedSessionIds.size, 0),
+      totalSessions7d,
+    );
+
+    const firstBookingConversionRate30d = safeRate(
+      riderConverted30d,
+      riderCohort30d,
+    );
+
+    const totalOffers7d = offerAccepted7d + offerDeclined7d + offerExpired7d;
+    const offerAcceptanceRate7d = safeRate(offerAccepted7d, totalOffers7d);
+
+    const onlineStintMinutes: number[] = [];
+    const openStints = new Map<string, Date>();
+    for (const log of driverAvailabilityLogs7d) {
+      const status = isDispatchSettingsRecord(log.metadata)
+        ? log.metadata.status
+        : null;
+      if (status === 'ONLINE' && !openStints.has(log.userId)) {
+        openStints.set(log.userId, log.createdAt);
+      } else if (status === 'OFFLINE' && openStints.has(log.userId)) {
+        const startedAt = openStints.get(log.userId)!;
+        onlineStintMinutes.push(
+          (log.createdAt.getTime() - startedAt.getTime()) / 60000,
+        );
+        openStints.delete(log.userId);
+      }
+    }
+    for (const startedAt of openStints.values()) {
+      onlineStintMinutes.push((now.getTime() - startedAt.getTime()) / 60000);
+    }
+    const avgDriverOnlineMinutes7d = onlineStintMinutes.length
+      ? Math.round(
+          (onlineStintMinutes.reduce((total, value) => total + value, 0) /
+            onlineStintMinutes.length) *
+            10,
+        ) / 10
+      : null;
+
+    const firstResponseByTicket = new Map<string, Date>();
+    for (const log of supportResponseLogs7d) {
+      if (!log.entityId || firstResponseByTicket.has(log.entityId)) {
+        continue;
+      }
+      firstResponseByTicket.set(log.entityId, log.createdAt);
+    }
+    const supportResponseMinutes = supportTickets7d
+      .map((ticket) => {
+        const respondedAt = firstResponseByTicket.get(ticket.id);
+        return respondedAt
+          ? (respondedAt.getTime() - ticket.createdAt.getTime()) / 60000
+          : null;
+      })
+      .filter((minutes): minutes is number => minutes !== null && minutes >= 0);
+    const avgSupportFirstResponseMinutes7d = supportResponseMinutes.length
+      ? Math.round(
+          (supportResponseMinutes.reduce((total, value) => total + value, 0) /
+            supportResponseMinutes.length) *
+            10,
+        ) / 10
+      : null;
+
+    return {
+      windowDays: 7,
+      crashFreeSessionRate7d,
+      firstBookingConversionRate30d,
+      offerAcceptanceRate7d,
+      avgDriverOnlineMinutes7d,
+      avgSupportFirstResponseMinutes7d,
+    };
+  }
+
   async tripsAudit(query: { lookbackHours?: number } = {}) {
     const lookbackHours = Math.min(Math.max(query.lookbackHours ?? 24, 1), 168);
     const since = new Date(Date.now() - lookbackHours * 60 * 60 * 1000);

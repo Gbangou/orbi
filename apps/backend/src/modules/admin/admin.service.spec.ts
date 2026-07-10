@@ -92,6 +92,7 @@ describe('AdminService', () => {
         update: jest.fn(),
       },
       riderProfile: { count: jest.fn() },
+      userSession: { count: jest.fn().mockResolvedValue(0) },
       driverProfile: {
         count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn(),
@@ -103,6 +104,7 @@ describe('AdminService', () => {
       paymentAttempt: {
         count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn().mockResolvedValue([]),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
       },
       paymentWebhookEvent: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -131,7 +133,7 @@ describe('AdminService', () => {
       trip: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
       supportTicket: {
         count: jest.fn().mockResolvedValue(0),
-        findMany: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
@@ -4457,5 +4459,148 @@ describe('AdminService', () => {
     const ageHours = ageMs / (60 * 60 * 1000);
 
     expect(ageHours).toBeCloseTo(24, 0);
+  });
+
+  describe('overview', () => {
+    it('computes real 24h revenue, completion rate and pickup time instead of placeholders', async () => {
+      const { prisma, service } = createService();
+
+      prisma.trip.count
+        .mockResolvedValueOnce(1) // activeTrips
+        .mockResolvedValueOnce(3) // completedTrips24h
+        .mockResolvedValueOnce(1); // cancelledTrips24h
+      prisma.paymentAttempt.aggregate.mockResolvedValueOnce({
+        _sum: { amount: 12000 },
+      });
+      prisma.trip.findMany.mockResolvedValueOnce([
+        {
+          createdAt: new Date('2026-05-01T08:00:00.000Z'),
+          startedAt: new Date('2026-05-01T08:05:00.000Z'),
+        },
+        {
+          createdAt: new Date('2026-05-01T09:00:00.000Z'),
+          startedAt: new Date('2026-05-01T09:03:00.000Z'),
+        },
+      ]);
+
+      const overview = await service.overview();
+
+      expect(overview.revenueXof24h).toBe(12000);
+      expect(overview.completionRate24h).toBe(75);
+      expect(overview.avgPickupMinutes24h).toBe(4);
+    });
+
+    it('reports a null pickup average when no trip has started in the window', async () => {
+      const { prisma, service } = createService();
+
+      prisma.trip.count.mockResolvedValue(0);
+      prisma.trip.findMany.mockResolvedValueOnce([]);
+
+      const overview = await service.overview();
+
+      expect(overview.avgPickupMinutes24h).toBeNull();
+      expect(overview.completionRate24h).toBe(0);
+    });
+  });
+
+  describe('operationalKpis', () => {
+    it('derives crash-free sessions, conversion, offer acceptance and support response from audit history', async () => {
+      const { prisma, service } = createService();
+
+      prisma.userSession.count.mockResolvedValueOnce(10);
+      prisma.auditLog.findMany
+        .mockResolvedValueOnce([
+          {
+            metadata: {
+              sessionId: 'session-1',
+              classification: { severity: 'critical' },
+            },
+          },
+          {
+            metadata: {
+              sessionId: 'session-1',
+              classification: { severity: 'critical' },
+            },
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            userId: 'driver-1',
+            metadata: { status: 'ONLINE' },
+            createdAt: new Date('2026-05-01T08:00:00.000Z'),
+          },
+          {
+            userId: 'driver-1',
+            metadata: { status: 'OFFLINE' },
+            createdAt: new Date('2026-05-01T09:00:00.000Z'),
+          },
+          {
+            userId: 'driver-2',
+            metadata: { status: 'ONLINE' },
+            createdAt: new Date('2026-05-01T10:00:00.000Z'),
+          },
+          {
+            userId: 'driver-2',
+            metadata: { status: 'OFFLINE' },
+            createdAt: new Date('2026-05-01T10:30:00.000Z'),
+          },
+        ])
+        .mockResolvedValueOnce([
+          { entityId: 'ticket-1', createdAt: new Date('2026-05-01T08:30:00.000Z') },
+        ]);
+      prisma.riderProfile.count
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(2);
+      prisma.auditLog.count
+        .mockResolvedValueOnce(6)
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(1);
+      prisma.supportTicket.findMany.mockResolvedValueOnce([
+        { id: 'ticket-1', createdAt: new Date('2026-05-01T08:00:00.000Z') },
+        { id: 'ticket-2', createdAt: new Date('2026-05-01T08:00:00.000Z') },
+      ]);
+
+      const kpis = await service.operationalKpis();
+
+      expect(kpis.crashFreeSessionRate7d).toBe(90);
+      expect(kpis.firstBookingConversionRate30d).toBe(40);
+      expect(kpis.offerAcceptanceRate7d).toBe(60);
+      expect(kpis.avgDriverOnlineMinutes7d).toBe(45);
+      expect(kpis.avgSupportFirstResponseMinutes7d).toBe(30);
+    });
+
+    it('caps a still-open driver online stint at the current time instead of dropping it', async () => {
+      const { prisma, service } = createService();
+      const startedAt = new Date(Date.now() - 10 * 60 * 1000);
+
+      prisma.auditLog.findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            userId: 'driver-1',
+            metadata: { status: 'ONLINE' },
+            createdAt: startedAt,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+
+      const kpis = await service.operationalKpis();
+
+      expect(kpis.avgDriverOnlineMinutes7d).toBeGreaterThanOrEqual(9);
+      expect(kpis.avgDriverOnlineMinutes7d).toBeLessThanOrEqual(11);
+    });
+
+    it('reports zero crash-free rate denominator and null averages when there is no data', async () => {
+      const { prisma, service } = createService();
+
+      prisma.userSession.count.mockResolvedValueOnce(0);
+      prisma.supportTicket.findMany.mockResolvedValueOnce([]);
+
+      const kpis = await service.operationalKpis();
+
+      expect(kpis.crashFreeSessionRate7d).toBe(0);
+      expect(kpis.avgDriverOnlineMinutes7d).toBeNull();
+      expect(kpis.avgSupportFirstResponseMinutes7d).toBeNull();
+    });
   });
 });
