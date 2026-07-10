@@ -217,7 +217,14 @@ Orbi expose enfin une declaration de preuve incident volontaire:
 timeline recoit `INCIDENT_EVIDENCE_DECLARED`, l audit log recoit
 `TRIP_INCIDENT_EVIDENCE_DECLARED`, et le ticket support mentionne que la preuve
 reste locale jusqu a upload explicite. Aucun fichier n est envoye
-automatiquement.
+automatiquement. La reponse API et l audit log portent aussi `expiresAt`, calcule
+sur une retention bornee a 1h-72h dans la couche service meme si l appel contourne
+la validation DTO.
+
+Les surfaces mobiles sensibles utilisent aussi la protection anti-capture native:
+authentification rider/driver, booking/paiement, recherche vocale, activite,
+compte, recu, onboarding chauffeur, cockpit, offres, profil et revenus. Les
+tests de couverture `screen-privacy` doivent rester verts avant pilote terrain.
 
 Orbi ne doit pas copier aveuglement ces produits. La regle de production est
 plus stricte: une capacite securite n est consideree comme concurrentielle que

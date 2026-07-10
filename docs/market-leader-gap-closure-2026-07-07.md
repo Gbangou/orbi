@@ -148,6 +148,13 @@ decisive and calm:
   overlays. Rider and driver now route sensitive-screen protection through
   platform-safe wrappers, preserving native anti-screen-capture behavior without
   crashing web QA.
+- Sensitive mobile surfaces now have an explicit screen-capture coverage guard:
+  rider auth, booking/payment, voice, receipt, activity and account; driver
+  auth, onboarding, home cockpit, offers, profile and earnings. Static smoke
+  tests fail if those screens lose the privacy wrapper.
+- Incident evidence declarations now expose a concrete `expiresAt`, clamp
+  retention to the 1h-72h support window inside the service layer, and carry
+  the expiry into audit metadata and the shared API contract.
 - Rider authentication small-screen polish now uses a real SVG eye affordance
   with a fixed touch target, removing the clipped text-symbol control detected
   at 360px width.
