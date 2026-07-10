@@ -507,6 +507,33 @@ export class HealthService {
           userMessage:
             'Alerte securite recue. Le support peut suivre le dossier.',
         },
+        {
+          code: 'MOB-NETWORK-OFFLINE',
+          surface: 'mobile-network',
+          severity: 'medium' as const,
+          owner: 'engineering' as const,
+          retryPolicy: 'local-queue-and-retry-when-online',
+          userMessage:
+            'Connexion instable. Les actions critiques seront retentees.',
+        },
+        {
+          code: 'MOB-VALIDATION-INPUT',
+          surface: 'forms',
+          severity: 'low' as const,
+          owner: 'product' as const,
+          retryPolicy: 'fix-input-before-retry',
+          userMessage:
+            'Certaines informations doivent etre corrigees avant envoi.',
+        },
+        {
+          code: 'MOB-GENERIC-API',
+          surface: 'mobile-api',
+          severity: 'high' as const,
+          owner: 'engineering' as const,
+          retryPolicy: 'classify-and-route-to-owner',
+          userMessage:
+            'Service temporairement indisponible. Le support peut qualifier le signal.',
+        },
       ],
     };
   }

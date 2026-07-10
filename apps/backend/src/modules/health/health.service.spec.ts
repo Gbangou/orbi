@@ -224,6 +224,18 @@ describe('HealthService', () => {
           code: 'MOB-SAFETY-INCIDENT',
           owner: 'support',
         }),
+        expect.objectContaining({
+          code: 'MOB-NETWORK-OFFLINE',
+          retryPolicy: 'local-queue-and-retry-when-online',
+        }),
+        expect.objectContaining({
+          code: 'MOB-VALIDATION-INPUT',
+          owner: 'product',
+        }),
+        expect.objectContaining({
+          code: 'MOB-GENERIC-API',
+          severity: 'high',
+        }),
       ]),
     );
     expect(result.operations.driverReservationExpiry).toEqual({
