@@ -2027,6 +2027,7 @@ describe('TripsService', () => {
       currency: 'XOF',
     });
     prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.rideRequest.update.mockResolvedValue(undefined);
 
     const result = await service.updateStatus(
       {
@@ -2049,6 +2050,12 @@ describe('TripsService', () => {
         }),
       }),
     );
+    // Sans ceci, la ride request reste bloquee en statut actif pour toujours
+    // et le rider ne peut plus jamais reserver une course differente.
+    expect(prisma.rideRequest.update).toHaveBeenCalledWith({
+      where: { id: 'request-1' },
+      data: { status: 'FULFILLED' },
+    });
     expect(prisma.driverProfile.update).toHaveBeenCalledWith({
       where: { id: 'driver-1' },
       data: { status: 'ONLINE', completedTripsCount: { increment: 1 } },

@@ -1520,6 +1520,21 @@ export class TripsService {
         });
       }
 
+      // Sans ceci, la RideRequest reste bloquee sur un statut actif
+      // (DRIVER_ARRIVING) pour toujours apres la fin reelle du trajet,
+      // empechant le rider de jamais reserver une nouvelle course differente
+      // (bloque par le garde-fou "1 ride request active par rider").
+      if (nextStatus === 'COMPLETED') {
+        await tx.rideRequest.update({
+          where: {
+            id: trip.rideRequestId,
+          },
+          data: {
+            status: 'FULFILLED',
+          },
+        });
+      }
+
       if (nextStatus === 'CANCELLED') {
         await tx.rideRequest.update({
           where: {
