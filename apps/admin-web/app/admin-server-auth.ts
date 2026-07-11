@@ -95,6 +95,24 @@ async function isUsableAdminSession(authClient: OrbiApiClient) {
   }
 }
 
+// Next.js only allows cookies() writes from a Server Action or Route Handler —
+// calling .set()/.delete() during a plain page render throws
+// "Cookies can only be modified in a Server Action or Route Handler" and, left
+// unguarded, that exception propagated all the way up and forced the whole
+// admin dashboard into its "backend unreachable" fallback mode on every
+// render that didn't already have a valid session cookie (i.e. every first
+// visit, and every visit after the cookie's natural expiry) — confirmed live,
+// not hypothetical. The write is best-effort persistence for the *next*
+// request; the *current* request only needs the returned authClient/token, so
+// a failed write must never fail the auth call itself.
+function tryPersistCookieWrite(write: () => void) {
+  try {
+    write();
+  } catch {
+    // Best-effort only — see comment above.
+  }
+}
+
 export async function getAdminServerAuthSession() {
   const cookieStore = await cookies();
   const baseClient = createAdminBaseClient();
@@ -108,7 +126,9 @@ export async function getAdminServerAuthSession() {
 
     if (await isUsableAdminSession(authClient)) {
       if (isProductionRuntime() && legacyToken) {
-        cookieStore.delete(legacyAdminSessionCookieName);
+        tryPersistCookieWrite(() =>
+          cookieStore.delete(legacyAdminSessionCookieName),
+        );
       }
 
       return {
@@ -120,7 +140,9 @@ export async function getAdminServerAuthSession() {
 
   if (!canUseAdminDemoAccess()) {
     if (isProductionRuntime() && legacyToken) {
-      cookieStore.delete(legacyAdminSessionCookieName);
+      tryPersistCookieWrite(() =>
+        cookieStore.delete(legacyAdminSessionCookieName),
+      );
     }
 
     throw new AdminServerAuthRequiredError();
@@ -129,13 +151,17 @@ export async function getAdminServerAuthSession() {
   const session = await signInWithApi(baseClient, orbiDemoAccounts.admin);
 
   if (isProductionRuntime() && legacyToken) {
-    cookieStore.delete(legacyAdminSessionCookieName);
+    tryPersistCookieWrite(() =>
+      cookieStore.delete(legacyAdminSessionCookieName),
+    );
   }
 
-  cookieStore.set(
-    activeCookieName,
-    session.sessionToken,
-    buildAdminSessionCookieOptions(),
+  tryPersistCookieWrite(() =>
+    cookieStore.set(
+      activeCookieName,
+      session.sessionToken,
+      buildAdminSessionCookieOptions(),
+    ),
   );
 
   return {
