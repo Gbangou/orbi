@@ -62,6 +62,19 @@ export default () => ({
       process.env.DRIVER_RESERVATION_EXPIRY_MAX_SILENCE_MS ?? '30000',
       10,
     ),
+    paymentAttemptReconciliationSweepIntervalMs: Number.parseInt(
+      process.env.PAYMENT_ATTEMPT_RECONCILIATION_SWEEP_INTERVAL_MS ??
+        '120000',
+      10,
+    ),
+    paymentAttemptReconciliationStaleAfterMs: Number.parseInt(
+      process.env.PAYMENT_ATTEMPT_RECONCILIATION_STALE_AFTER_MS ?? '600000',
+      10,
+    ),
+    paymentAttemptReconciliationBatchSize: Number.parseInt(
+      process.env.PAYMENT_ATTEMPT_RECONCILIATION_BATCH_SIZE ?? '25',
+      10,
+    ),
     healthWatchdogIntervalMs: Number.parseInt(
       process.env.HEALTH_WATCHDOG_INTERVAL_MS ?? '15000',
       10,

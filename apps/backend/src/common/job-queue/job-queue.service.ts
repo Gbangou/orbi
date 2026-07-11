@@ -6,6 +6,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 export type JobQueueKind =
   | 'PAYMENT_WEBHOOK'
   | 'PAYMENT_REFUND_VERIFICATION'
+  | 'PAYMENT_ATTEMPT_RECONCILIATION_SWEEP'
   | 'DRIVER_DOCUMENT'
   | 'NOTIFICATION'
   | 'DRIVER_RESERVATION_EXPIRY'

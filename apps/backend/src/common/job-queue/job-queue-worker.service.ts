@@ -11,6 +11,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { DocumentObjectStorageService } from '../document-links/document-object-storage.service';
 import { DriverReservationExpiryService } from '../../modules/drivers/driver-reservation-expiry.service';
 import { PaymentsService } from '../../modules/payments/payments.service';
+import { PaymentAttemptReconciliationSweepService } from '../../modules/payments/payment-attempt-reconciliation-sweep.service';
 import { ScheduledRidesService } from '../../modules/scheduled-rides/scheduled-rides.service';
 import {
   JobQueueEntry,
@@ -168,6 +169,11 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
 
     if (job.kind === 'DRIVER_RESERVATION_EXPIRY') {
       await this.handleDriverReservationExpiryJob();
+      return;
+    }
+
+    if (job.kind === 'PAYMENT_ATTEMPT_RECONCILIATION_SWEEP') {
+      await this.handlePaymentAttemptReconciliationSweepJob();
       return;
     }
 
@@ -372,6 +378,15 @@ export class JobQueueWorkerService implements OnModuleInit, OnModuleDestroy {
     );
 
     await reservationExpiryService.runSweep();
+  }
+
+  private async handlePaymentAttemptReconciliationSweepJob() {
+    const sweepService = this.moduleRef.get(
+      PaymentAttemptReconciliationSweepService,
+      { strict: false },
+    );
+
+    await sweepService.runSweep();
   }
 
   /**

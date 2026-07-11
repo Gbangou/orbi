@@ -96,6 +96,9 @@ describe('JobQueueWorkerService', () => {
     const driverReservationExpiryService = {
       runSweep: jest.fn().mockResolvedValue(undefined),
     };
+    const paymentAttemptReconciliationSweepService = {
+      runSweep: jest.fn().mockResolvedValue(undefined),
+    };
     const paymentsService = {
       verifyPaymentAttemptWithProvider: jest.fn().mockResolvedValue({
         verified: true,
@@ -115,11 +118,13 @@ describe('JobQueueWorkerService', () => {
       }),
     };
     const moduleRef = {
-      get: jest.fn((token: { name?: string }) =>
-        token?.name === 'PaymentsService'
-          ? paymentsService
-          : driverReservationExpiryService,
-      ),
+      get: jest.fn((token: { name?: string }) => {
+        if (token?.name === 'PaymentsService') return paymentsService;
+        if (token?.name === 'PaymentAttemptReconciliationSweepService') {
+          return paymentAttemptReconciliationSweepService;
+        }
+        return driverReservationExpiryService;
+      }),
     };
 
     return {
@@ -130,6 +135,7 @@ describe('JobQueueWorkerService', () => {
       documentSafetyScannerService,
       documentObjectStorageService,
       driverReservationExpiryService,
+      paymentAttemptReconciliationSweepService,
       paymentsService,
       moduleRef,
       service: new JobQueueWorkerService(
@@ -513,6 +519,50 @@ describe('JobQueueWorkerService', () => {
     expect(driverReservationExpiryService.runSweep).toHaveBeenCalledTimes(1);
     expect(jobQueueService.complete).toHaveBeenCalledWith(
       'job-reservation-expiry',
+      {
+        lockedAt: now,
+      },
+    );
+    expect(result).toEqual({
+      claimed: 1,
+      completed: 1,
+      failed: 0,
+    });
+  });
+
+  it('runs payment attempt reconciliation sweep jobs through the shared worker', async () => {
+    const {
+      paymentAttemptReconciliationSweepService,
+      jobQueueService,
+      moduleRef,
+      service,
+    } = createService();
+    jobQueueService.claimDueJobs.mockResolvedValue([
+      job({
+        id: 'job-payment-reconciliation',
+        kind: 'PAYMENT_ATTEMPT_RECONCILIATION_SWEEP',
+        dedupeKey: 'payment-attempt-reconciliation:sweep',
+        entityType: 'payment_attempt_reconciliation',
+        entityId: 'sweep',
+        payload: {
+          requestedAt: now.toISOString(),
+        },
+      }),
+    ]);
+
+    const result = await service.processDueJobs({
+      kinds: ['PAYMENT_ATTEMPT_RECONCILIATION_SWEEP'],
+      limit: 1,
+    });
+
+    expect(moduleRef.get).toHaveBeenCalledWith(expect.any(Function), {
+      strict: false,
+    });
+    expect(
+      paymentAttemptReconciliationSweepService.runSweep,
+    ).toHaveBeenCalledTimes(1);
+    expect(jobQueueService.complete).toHaveBeenCalledWith(
+      'job-payment-reconciliation',
       {
         lockedAt: now,
       },

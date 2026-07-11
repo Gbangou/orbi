@@ -232,12 +232,42 @@ progress (shipping code that "looks closed" but changes nothing measurable).
 **Phase 1 — Measurable reliability (weeks)**
 - Run the operational KPIs against real pilot traffic (category B — nothing
   to build, just needs usage).
-- Harden payment reconciliation coverage (missed webhooks, refund edge cases)
-  — real money is at stake here, higher priority than visual polish.
+- Payment reconciliation hardening — done 2026-07-11:
+  - Found and deleted `PaymentReconciliationService` (1107 lines): a complete,
+    untested, unreachable duplicate of the reconciliation logic that's
+    actually running inside `PaymentsService`. Registered in the DI container
+    but never injected anywhere — a real "phantom fix" trap for whoever next
+    tried to patch a reconciliation bug there.
+  - Found and fixed a second Prisma/TypeScript enum drift bug of the same
+    class as the `MOTO_PLUS` one: `SCHEDULED_RIDE_DISPATCH` existed in the
+    hand-written `JobQueueKind` TS union but not in the actual Prisma enum —
+    `scheduled-rides.service.ts` unconditionally enqueues a job with that kind
+    on every scheduled-ride creation with no try/catch, so this would throw a
+    live Postgres error and fail the request in production, after the ride
+    row was already created. Fixed via migration.
+  - Built the missing safety net: no automatic reconciliation existed for a
+    `PaymentAttempt` stuck in INITIATED/PENDING because a provider webhook
+    simply never arrived (network blip, provider outage) — the only recovery
+    was an admin noticing and manually clicking "verify." New
+    `PaymentAttemptReconciliationSweepService` (mirrors the existing
+    `DriverReservationExpiryService` sweep pattern) periodically finds stale
+    attempts and calls the existing `verifyPaymentAttemptWithProvider` for
+    each. New `PAYMENT_ATTEMPT_RECONCILIATION_SWEEP` job kind.
+  - Refund double-spend guard and payment-attempt idempotency (userId +
+    idempotencyKey unique constraint, hash-verified against replay-with-
+    different-payload) both re-checked and confirmed already solid, no
+    changes needed.
 - Real low-end Android device testing (category B/C — needs a build + physical
   devices, not achievable from this sandboxed environment).
 
 **Phase 2 — Product parity (continuous, in parallel)**
+- Full driver + rider UX/UI redesign pass explicitly requested 2026-07-11:
+  eliminate unnecessary scrolling app-wide (building on the scroll-depth
+  rounds already done — see [[dev-status]] rounds 1-3) and bring every screen
+  to a genuinely premium, professional finish matching Uber/Bolt/Yango, not
+  just the handful of screens touched so far. Not yet started as a dedicated
+  pass — needs its own scoped session given the breadth (every tab, every
+  secondary screen, both apps).
 - Remaining scroll-depth/dark-mode/native-screen verification work.
 
 **Phase 3 — Not code**

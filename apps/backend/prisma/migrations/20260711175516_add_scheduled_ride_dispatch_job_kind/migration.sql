@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "JobQueueKind" ADD VALUE 'SCHEDULED_RIDE_DISPATCH';
