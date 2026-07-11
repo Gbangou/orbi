@@ -21,6 +21,7 @@ import { orbiTheme, resolveTheme } from '@orbi/ui';
 import { ErrorBoundary, OrbiThemeProvider } from '@orbi/ui/native';
 import { initDriverI18n } from '../lib/i18n';
 import { hasPersistedDriverSession } from '../lib/auth';
+import { reportDriverRenderCrash } from '../lib/mobile-error-reporting';
 
 const TypedStack = Stack as any;
 
@@ -137,7 +138,10 @@ export default function RootLayout() {
 
   return (
     <OrbiThemeProvider>
-      <ErrorBoundary fallbackLabel="Orbi chauffeur a rencontré un problème inattendu">
+      <ErrorBoundary
+        fallbackLabel="Orbi chauffeur a rencontré un problème inattendu"
+        onError={(error) => reportDriverRenderCrash(error, { pathname })}
+      >
         <>
           <StatusBar style={isDark ? 'light' : 'dark'} />
           {canRenderApp ? (

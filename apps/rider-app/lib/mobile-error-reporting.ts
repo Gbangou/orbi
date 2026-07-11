@@ -11,6 +11,34 @@ import { riderSessionStorage } from './session-storage';
 export const riderMobileErrorReportQueueKey = 'orbi.rider.mobile-error-reports';
 const maxQueuedReports = 20;
 
+const renderCrashClassification: OrbiClientErrorClassification = {
+  code: 'MOB-GENERIC-API',
+  surface: 'unknown',
+  severity: 'critical',
+  owner: 'engineering',
+  retryPolicy: 'manual-refresh',
+  userMessage: "L'application a rencontre un probleme inattendu.",
+  shouldClearSessionToken: false,
+  shouldNavigateToAuth: false,
+  reportable: true,
+};
+
+// Signale un crash de rendu (React ErrorBoundary) comme critique, toujours
+// notifiable au support — memes garanties que les rapports d'erreur reseau,
+// avec une tentative d'envoi immediat si une session est deja active.
+export function reportRiderRenderCrash(
+  error: unknown,
+  context?: Record<string, unknown>,
+) {
+  void enqueueRiderMobileErrorReport(error, {
+    classification: renderCrashClassification,
+    context,
+  })
+    .then(() => import('./auth'))
+    .then(({ restoreRiderSession }) => restoreRiderSession())
+    .catch(() => undefined);
+}
+
 export async function enqueueRiderMobileErrorReport(
   error: unknown,
   input: {

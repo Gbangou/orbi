@@ -4,37 +4,43 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 type Props = {
   children: React.ReactNode;
   fallbackLabel?: string;
+  fallbackDetail?: string;
+  onError?: (error: unknown, info: React.ErrorInfo) => void;
 };
 
 type State = {
   hasError: boolean;
-  errorMessage: string;
 };
+
+const defaultFallbackDetail =
+  "L'incident a ete signale automatiquement. Reessayez dans un instant.";
 
 export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, errorMessage: '' };
+    this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: unknown): State {
-    const msg =
-      error instanceof Error
-        ? error.message
-        : typeof error === 'string'
-          ? error
-          : 'Une erreur inattendue est survenue.';
-    return { hasError: true, errorMessage: msg };
+  static getDerivedStateFromError(): State {
+    // Le detail technique de l'erreur ne doit jamais atteindre l'ecran utilisateur
+    // (fuite d'infos internes) : seul componentDidCatch le transmet au signalement.
+    return { hasError: true };
   }
 
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
       console.warn('[ErrorBoundary]', error, info.componentStack);
     }
+
+    try {
+      this.props.onError?.(error, info);
+    } catch {
+      // Le signalement ne doit jamais empecher l'affichage de l'ecran de secours.
+    }
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, errorMessage: '' });
+    this.setState({ hasError: false });
   };
 
   render() {
@@ -46,7 +52,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             {this.props.fallbackLabel ?? 'Quelque chose s\'est mal passé'}
           </Text>
           <Text style={styles.detail} numberOfLines={3}>
-            {this.state.errorMessage}
+            {this.props.fallbackDetail ?? defaultFallbackDetail}
           </Text>
           <Pressable
             onPress={this.handleRetry}

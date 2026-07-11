@@ -23,6 +23,7 @@ import * as Notifications from 'expo-notifications';
 import { orbiTheme, resolveTheme } from '@orbi/ui';
 import { ErrorBoundary, OrbiThemeProvider } from '@orbi/ui/native';
 import { hasPersistedRiderSession } from '../lib/auth';
+import { reportRiderRenderCrash } from '../lib/mobile-error-reporting';
 
 const TypedStack = Stack as any;
 
@@ -112,7 +113,10 @@ export default function RootLayout() {
 
   return (
     <OrbiThemeProvider>
-      <ErrorBoundary fallbackLabel="Orbi a rencontré un problème inattendu">
+      <ErrorBoundary
+        fallbackLabel="Orbi a rencontré un problème inattendu"
+        onError={(error) => reportRiderRenderCrash(error, { pathname })}
+      >
         <>
           <StatusBar style={isDark ? 'light' : 'dark'} />
           {canRenderApp ? (
