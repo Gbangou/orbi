@@ -262,13 +262,42 @@ progress (shipping code that "looks closed" but changes nothing measurable).
 
 **Phase 2 — Product parity (continuous, in parallel)**
 - Full driver + rider UX/UI redesign pass explicitly requested 2026-07-11:
-  eliminate unnecessary scrolling app-wide (building on the scroll-depth
-  rounds already done — see [[dev-status]] rounds 1-3) and bring every screen
-  to a genuinely premium, professional finish matching Uber/Bolt/Yango, not
-  just the handful of screens touched so far. Not yet started as a dedicated
-  pass — needs its own scoped session given the breadth (every tab, every
-  secondary screen, both apps).
+  eliminate unnecessary scrolling app-wide and bring every screen to a
+  genuinely premium finish matching Uber/Bolt/Yango. First real slice done
+  2026-07-11 — see below. Broader per-screen redesign still needs a dedicated
+  session (every tab, every secondary screen, both apps).
 - Remaining scroll-depth/dark-mode/native-screen verification work.
+
+**First live authenticated-screen audit with real seeded data, done 2026-07-11.**
+Previous rounds (see [[dev-status]] rounds 1-3) only ever measured empty-state
+screens — the demo rider/driver accounts had zero completed trips. This round
+scripted a full booking→accept→pickup-code→complete→rate cycle three times
+through the real local API to seed genuine trip/earnings/rating history, then
+measured `scrollHeight` on every main tab of both apps with that real data:
+
+| Screen | Scroll depth | Finding |
+|---|---|---|
+| driver Profil | 2.8 screens | Correctly expanded (test account's onboarding is genuinely incomplete — collapse-when-has-vehicle logic from round 2 confirmed still working) |
+| driver Revenus | 2.4 screens | **Real bug**: earnings amounts wrapped mid-currency ("11 816 F CF" / "A") at real amounts — never visible with zero-earnings empty state. Fixed. |
+| rider Compte | 2.2 screens | Fine as before |
+| rider Trajets | 1.3 screens | Real trip history renders cleanly, no changes needed |
+| rider Accueil/Activité, driver Cockpit/Missions | 1 screen | Fine |
+
+This same real-data pass also surfaced two bugs with nothing to do with
+scrolling, both far more severe than any visual issue found this session:
+
+- **Critical**: completing a trip never advanced its `RideRequest` off an
+  "active" status, so any rider who ever completed a trip could never book a
+  different one again ("The rider already has an active ride request",
+  permanently). Undetectable by empty-state testing — only reproduces on the
+  *second* booking. Fixed with a new terminal `FULFILLED` status.
+- Driver "Taux acceptation" showed 311% (recency-weighted rate sums with no
+  upper bound). Fixed by clamping to 100%.
+
+**Lesson for future audits**: empty-state and single-happy-path testing both
+systematically miss an entire class of bugs. Seeding a *complete* real
+lifecycle before auditing anything else should be the default from now on,
+not an afterthought.
 
 **Phase 3 — Not code**
 - Driver supply density, support response staffing, field-calibrated
