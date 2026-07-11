@@ -4,6 +4,35 @@ import { RideRequestProjector } from './ride-request.projector';
 import { RideRequestsService } from './ride-requests.service';
 
 describe('RideRequestsService', () => {
+  // Certains calculs de trajet dependent de l'heure reelle (inferRideRequestPeakHour
+  // compare l'heure locale a la fenetre de pointe 7h-9h/17h-20h). Sans horloge figee,
+  // ces tests deviennent aleatoires selon l'heure a laquelle ils s'executent — fige
+  // sur une heure hors pointe en UTC, coherent avec le fuseau UTC+0 du Burkina Faso.
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'UTC';
+    // Fige uniquement Date — laisse setTimeout/setImmediate reels pour ne pas
+    // bloquer les tests de dispatch proactif qui dependent de vrais timers async.
+    jest.useFakeTimers({
+      doNotFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'setImmediate',
+        'clearImmediate',
+        'nextTick',
+      ],
+    });
+    jest.setSystemTime(new Date('2026-05-10T10:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    process.env.TZ = originalTz;
+  });
+
   function createService() {
     const prisma = {
       $transaction: jest.fn(),
@@ -15,6 +44,9 @@ describe('RideRequestsService', () => {
       },
       trip: {
         findFirst: jest.fn(),
+      },
+      driverProfile: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
     };
     const pricingService = {
