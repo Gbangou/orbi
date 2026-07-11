@@ -17,8 +17,11 @@ import { PaymentsService } from './payments.service';
  *    est un fallback ; une valeur incorrecte est rejetée.
  * 4. Token CinetPay : HMAC-SHA256 hex sur une concaténation canonique de champs
  *    doit correspondre au x-token ; un token incorrect est rejeté.
- * 5. Passthrough : sans clé de signature configurée, la vérification est ignorée
- *    (environnements dev/test — jamais en production où les clés sont définies).
+ * 5. Passthrough dev/test uniquement : sans clé de signature configurée, la
+ *    vérification est ignorée en développement/test, mais REJETÉE (fail-closed)
+ *    si `app.environment === 'production'` — un secret manquant en prod ne doit
+ *    jamais laisser passer un webhook non authentifié (voir describe ci-dessous
+ *    "Production environment never passes through an unconfigured provider secret").
  */
 describe('PaymentsService — Sécurité des webhooks', () => {
   function createService(
@@ -333,6 +336,56 @@ describe('PaymentsService — Sécurité des webhooks', () => {
 
       await expect(
         service.handleWebhook('secret_123', baseCinetPayPayload, {}),
+      ).resolves.toBeDefined();
+    });
+  });
+
+  // ── Production fail-closed invariant ──────────────────────────────────────
+  // The dev/test passthrough above (verification skipped when no provider
+  // secret is configured) must never silently apply in production — a missing
+  // secret there means a webhook can be forged to mark payments as succeeded.
+
+  describe('Production environment never passes through an unconfigured provider secret', () => {
+    it('rejects a Flutterwave webhook when the secret hash is missing in production', async () => {
+      const { service } = createService('flutterwave', {
+        'app.environment': 'production',
+        'payments.flutterwave.webhookSecretHash': undefined,
+      });
+
+      await expect(
+        service.handleWebhook('secret_123', baseFlutterwavePayload),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('rejects a CinetPay webhook when the secret key is missing in production', async () => {
+      const { service } = createService('cinetpay', {
+        'app.environment': 'production',
+        'payments.cinetpay.secretKey': undefined,
+        'payments.cinetpay.siteId': 'site_123',
+        'payments.cinetpay.apiKey': 'api_123',
+      });
+
+      await expect(
+        service.handleWebhook('secret_123', baseCinetPayPayload, {}),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('still accepts a correctly signed Flutterwave webhook in production', async () => {
+      const secretHash = 'fw_prod_secret_hash';
+      const rawBody = JSON.stringify(baseFlutterwavePayload);
+      const validHmac = createHmac('sha256', secretHash)
+        .update(rawBody)
+        .digest('base64');
+      const { service } = createService('flutterwave', {
+        'app.environment': 'production',
+        'payments.flutterwave.webhookSecretHash': secretHash,
+      });
+
+      await expect(
+        service.handleWebhook('secret_123', baseFlutterwavePayload, {
+          rawBody,
+          flutterwaveSignature: validHmac,
+        }),
       ).resolves.toBeDefined();
     });
   });

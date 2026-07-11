@@ -2390,6 +2390,19 @@ export class PaymentsService {
     );
   }
 
+  // Le passthrough (verif ignoree si aucun secret n'est configure) n'est
+  // acceptable qu'en dev/test — en production, un secret manquant ne doit
+  // jamais laisser passer un webhook non verifie (perte d'argent possible).
+  private assertWebhookSignatureOptionalOutsideProduction(reason: string) {
+    const environment = this.configService.get<string>('app.environment');
+
+    if (environment === 'production') {
+      throw new UnauthorizedException(
+        `Webhook provider signature cannot be verified: ${reason}`,
+      );
+    }
+  }
+
   private assertProviderWebhookSignature(
     payload: PaymentWebhookPayload,
     signatureContext: PaymentWebhookSignatureContext,
@@ -2439,6 +2452,9 @@ export class PaymentsService {
     );
 
     if (!secretHash) {
+      this.assertWebhookSignatureOptionalOutsideProduction(
+        'Flutterwave webhook secret hash is not configured.',
+      );
       return;
     }
 
@@ -2468,6 +2484,9 @@ export class PaymentsService {
     );
 
     if (!secretKey) {
+      this.assertWebhookSignatureOptionalOutsideProduction(
+        'CinetPay secret key is not configured.',
+      );
       return;
     }
 

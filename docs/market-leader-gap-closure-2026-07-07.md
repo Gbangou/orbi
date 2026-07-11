@@ -172,6 +172,67 @@ decisive and calm:
   existing audit-log/session/trip/ticket history (no new tables needed) and
   exposed via a new cached `/admin/operational-kpis` endpoint, rendered in
   the admin console.
+- Fixed a real cross-role authentication bug found via live device testing:
+  rider and driver share one `users` table, but neither email/password
+  sign-in nor phone-OTP verification ever checked that an account's actual
+  role matched which app (rider vs driver) was authenticating — a driver's
+  correct credentials could sign into the rider app and vice versa. Both
+  paths now reject on role mismatch with the same generic "invalid
+  credentials" message used for a wrong password (no distinct error, so an
+  attacker still can't learn an email/phone is registered under a different
+  role), without penalizing `failedLoginCount`/lockout since the credentials
+  were valid — just for the wrong app.
+- Fixed the shared mobile `ErrorBoundary`: it rendered the raw
+  `error.message` (internal component/library names) directly on the crash
+  screen, and — more importantly — a full render-tree crash was never
+  actually reported to the backend at all, making it invisible to support.
+  The fallback screen now always shows a fixed message, and every crash is
+  reported through the existing critical-severity error-report pipeline
+  (same one used for network/session errors), which also auto-opens a
+  support ticket.
+
+## Roadmap — Phased Plan (2026-07-11)
+
+Closing "all gaps vs market leaders" conflates four different kinds of gap
+that don't close the same way. Naming which kind a gap is prevents false
+progress (shipping code that "looks closed" but changes nothing measurable).
+
+- **A. Code-fixable now** — an engineering bug/gap, closed by editing code,
+  verified by tests. Most items closed so far are this type.
+- **B. Verifiable only on real traffic/devices** — the code is right, but the
+  proof requires real usage (e.g. the operational KPIs above will read 0%/null
+  until real riders and drivers generate data; native rendering/performance
+  can only be confirmed on physical devices via a real build, not this
+  environment).
+- **C. Infra/deployment decisions** — requires the human operator, not just
+  code (e.g. moving off the free-tier Render/Neon stack).
+- **D. Business/operational, not code** — driver supply density, support
+  staffing/SLAs, local pricing calibration. No amount of code closes these.
+
+**Phase 0 — Stop the trust bleeding (immediate)**
+- Full security audit across auth/payments/data-access (in progress
+  2026-07-11 — see findings appended below as they're confirmed and fixed).
+- Native-build hygiene checklist: the `RNSVGLinearGradient` crash showed
+  there's no guard today preventing a JS change that depends on a native
+  module version the last-built APK doesn't have. Needs a documented "does
+  this change require a native rebuild" checklist, not just a memory note.
+- Finish the pre-existing "Remaining Gaps" list below (mostly category A/B).
+
+**Phase 1 — Measurable reliability (weeks)**
+- Run the operational KPIs against real pilot traffic (category B — nothing
+  to build, just needs usage).
+- Harden payment reconciliation coverage (missed webhooks, refund edge cases)
+  — real money is at stake here, higher priority than visual polish.
+- Real low-end Android device testing (category B/C — needs a build + physical
+  devices, not achievable from this sandboxed environment).
+
+**Phase 2 — Product parity (continuous, in parallel)**
+- Remaining scroll-depth/dark-mode/native-screen verification work.
+
+**Phase 3 — Not code**
+- Driver supply density, support response staffing, field-calibrated
+  pricing/ETA (category D — tooling can support these, code alone can't
+  close them).
 
 ## Remaining Gaps
 
