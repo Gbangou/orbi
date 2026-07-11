@@ -1015,7 +1015,12 @@ export default function OffersScreen() {
               )
             ) : null}
 
-            {/* Mission details — operational signals accessible for tests */}
+            {/* Mission details — internal operational signals kept for automated
+                tests only, never meant to be shown to real drivers: raw
+                state-machine status strings and diagnostic labels like
+                "Statut: MATCHED" or "Finalisation bloquee" leaked to production
+                UI, confirmed live while auditing a real active mission. */}
+            {process.env.NODE_ENV !== 'production' ? (
             <View style={styles.missionSignalsPanel}>
               <Text style={styles.missionDetailLabel}>Mission en direct</Text>
               <View style={styles.missionSignalGrid}>
@@ -1088,6 +1093,7 @@ export default function OffersScreen() {
                 ))}
               </View>
             </View>
+            ) : null}
 
             {/* Action buttons */}
             <View style={styles.missionActions}>{renderActiveTripAction()}</View>

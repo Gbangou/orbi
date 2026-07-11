@@ -506,6 +506,11 @@ export default function DriverHomeScreen() {
   void isRealtimeSyncing; void recentlyExpiredCount;
 
   const isOnline = flow.availabilityStatus === 'ONLINE';
+  // Le statut brut passe a BUSY des qu'une mission est acceptee — sans ce cas
+  // a part, le badge retombe sur "Hors ligne" alors que le chauffeur est bien
+  // en ligne, juste occupe (constate en direct avec une vraie mission active).
+  const isOnDuty = isOnline || Boolean(activeTrip);
+  const statusLabel = activeTrip ? 'En mission' : isOnline ? 'En ligne' : 'Hors ligne';
   const sheetH = activeTrip ? 244 : isOnline ? 246 : 226;
 
   return (
@@ -548,9 +553,9 @@ export default function DriverHomeScreen() {
           ) : null}
 
           <View style={styles.statusPill}>
-            <View style={[styles.statusDot, { backgroundColor: isOnline ? theme.colors.teal : '#BBBBBB' }]} />
-            <Text style={[styles.statusPillText, { color: isOnline ? theme.colors.teal : theme.colors.textMuted }]}>
-              {isOnline ? 'En ligne' : 'Hors ligne'}
+            <View style={[styles.statusDot, { backgroundColor: isOnDuty ? theme.colors.teal : '#BBBBBB' }]} />
+            <Text style={[styles.statusPillText, { color: isOnDuty ? theme.colors.teal : theme.colors.textMuted }]}>
+              {statusLabel}
             </Text>
           </View>
         </View>
