@@ -581,7 +581,10 @@ export default function RevenusScreen() {
         <View style={styles.metricsRow}>
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>{td('earningsWeek')}</Text>
-            <Text style={styles.metricValue}>
+            <Text
+              style={styles.metricValue}
+              numberOfLines={1}
+            >
               {formatDriverEarningsAmount(earnings.summary.week)}
             </Text>
             <Text style={styles.metricMeta}>
@@ -590,14 +593,20 @@ export default function RevenusScreen() {
           </View>
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>{td('earningsMonth')}</Text>
-            <Text style={styles.metricValue}>
+            <Text
+              style={styles.metricValue}
+              numberOfLines={1}
+            >
               {formatDriverEarningsAmount(earnings.summary.month)}
             </Text>
             <Text style={styles.metricMeta}>vision long terme</Text>
           </View>
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>{td('earningsAverage')}</Text>
-            <Text style={styles.metricValue}>
+            <Text
+              style={styles.metricValue}
+              numberOfLines={1}
+            >
               {formatDriverEarningsAmount(earnings.summary.averagePayout)}
             </Text>
             <Text style={styles.metricMeta}>par course</Text>
@@ -819,7 +828,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   metricValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     color: theme.colors.amber,
