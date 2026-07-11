@@ -299,6 +299,28 @@ systematically miss an entire class of bugs. Seeding a *complete* real
 lifecycle before auditing anything else should be the default from now on,
 not an afterthought.
 
+**Second slice, same session**: seeded one *active* (matched-but-not-completed)
+trip and audited every rider/driver secondary screen live — book.tsx,
+rating.tsx, receipt.tsx, voice.tsx, driver onboarding.tsx, and both apps'
+active-mission views. Two more real bugs surfaced, both only reachable with a
+genuine in-progress mission (never exercised before):
+
+- Driver status pill showed "Hors ligne" while the driver was actively on an
+  assigned mission (the real backend status is BUSY at that point, not
+  OFFLINE, but the label only ever checked for exactly ONLINE). Added a third
+  "En mission" state.
+- A fully-styled "Mission en direct" diagnostic panel — raw state strings
+  like "Statut: MATCHED" and an alarming red "Finalisation bloquee" — was
+  visible to real drivers on the Missions tab. Its own code comment said
+  "operational signals accessible for tests," confirming it was meant as
+  hidden test instrumentation that shipped visible by accident. Gated behind
+  `process.env.NODE_ENV !== 'production'`.
+
+Everything else checked this round (booking screen, receipt, rating, voice
+search, driver onboarding intro) was already premium-quality, no changes
+needed — confirms the earlier scroll-depth-only rounds got the easy wins
+right; the bugs still hiding were state-dependent, not visual.
+
 **Phase 3 — Not code**
 - Driver supply density, support response staffing, field-calibrated
   pricing/ETA (category D — tooling can support these, code alone can't
