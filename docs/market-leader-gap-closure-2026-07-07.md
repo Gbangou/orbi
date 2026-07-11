@@ -321,6 +321,25 @@ search, driver onboarding intro) was already premium-quality, no changes
 needed — confirms the earlier scroll-depth-only rounds got the easy wins
 right; the bugs still hiding were state-dependent, not visual.
 
+**Third slice, same session — admin-web, with real data flowing for the
+first time.** Loaded the admin console (never verified against real seeded
+data before) and found the single most consequential bug of the session:
+`getAdminServerAuthSession()` calls `cookieStore.set()` directly from the page
+component's render — Next.js only allows cookie writes from a Server Action
+or Route Handler, so this threw on every render without an existing valid
+session cookie (i.e. every first visit, or any time 30 days after the last
+one). The exception was swallowed by a bare `catch {}` with zero logging, so
+it silently forced the *entire* admin dashboard into "Mode degrade" —
+masking real data behind hardcoded fallback copy (a static "12 480 passagers"
+placeholder among others) even with a fully reachable backend and correct
+credentials. Confirmed by reproducing with a fresh browser context (no
+cookie) before the fix (always degraded) and after (real data, "Backend
+connecte", genuinely useful live incident text). Fixed by making the cookie
+persistence best-effort — the write only matters for the *next* request, the
+*current* one already has a usable token — and replaced the silent catch
+with logged errors so a real future outage is visible instead of
+indistinguishable from this bug.
+
 **Phase 3 — Not code**
 - Driver supply density, support response staffing, field-calibrated
   pricing/ETA (category D — tooling can support these, code alone can't
