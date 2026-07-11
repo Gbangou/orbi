@@ -15,6 +15,9 @@ export type SignUpPayload = {
 export type SignInPayload = {
   email: string;
   password: string;
+  // Rejette la connexion (message générique, comme un mot de passe invalide)
+  // si le compte existe mais sous un autre rôle. Omis pour l'admin-web.
+  expectedRole?: "RIDER" | "DRIVER";
 };
 
 export type SignUpApiPayload = {

@@ -193,6 +193,53 @@ describe('AuthService', () => {
     expect(prisma.userSession.updateMany).not.toHaveBeenCalled();
   });
 
+  it('rejects sign-in when credentials are correct but the account is a different role than the calling app expects', async () => {
+    const { prisma, service } = createService();
+    const passwordHash = await hashPassword('Orbi123!');
+
+    // Compte chauffeur reel, mais l'app passagere s'attend a un rider.
+    prisma.user.findUnique.mockResolvedValue(
+      makeUser({ role: UserRole.DRIVER, passwordHash }),
+    );
+
+    await expect(
+      service.signIn({
+        email: 'driver@orbi.app',
+        password: 'Orbi123!',
+        expectedRole: SignUpRole.RIDER,
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    // Le mot de passe etait correct : pas de comptage d'echec ni de session creee.
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ action: 'SIGN_IN_ROLE_MISMATCH' }),
+      }),
+    );
+  });
+
+  it('allows sign-in without expectedRole (admin-web) regardless of the account role', async () => {
+    const { prisma, service } = createService();
+    const passwordHash = await hashPassword('Orbi123!');
+
+    prisma.user.findUnique.mockResolvedValue(
+      makeUser({ role: UserRole.ADMIN, passwordHash }),
+    );
+    prisma.$transaction.mockResolvedValue([
+      { ...SESSION_STUB, id: 'session-admin' },
+      undefined,
+    ]);
+
+    const result = await service.signIn({
+      email: 'driver@orbi.app',
+      password: 'Orbi123!',
+    });
+
+    expect(result.user.role).toBe(UserRole.ADMIN);
+  });
+
   it('rejects sign-in with invalid credentials and increments failedLoginCount', async () => {
     const { prisma, service } = createService();
     const passwordHash = await hashPassword('Orbi123!');
@@ -647,6 +694,31 @@ describe('AuthService', () => {
       expect(result.user.isPhoneVerified).toBe(true);
       expect(result.sessionToken).toBeTruthy();
       expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects verification when the phone number is already registered under a different role', async () => {
+      const { prisma, service } = createService();
+      prisma.phoneOtp.findFirst.mockResolvedValue(stubOtp('111111'));
+      // Le numero est deja un compte chauffeur reel, mais l'OTP a ete verifie
+      // via l'app passagere (role: RIDER dans la requete).
+      prisma.user.findUnique.mockResolvedValue(
+        makeUser({ role: UserRole.DRIVER, phoneNumber: '+22670000000' }),
+      );
+
+      await expect(
+        service.verifyPhoneOtp({
+          phoneNumber: '+22670000000',
+          code: '111111',
+          role: SignUpRole.RIDER,
+        }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ action: 'SIGN_IN_ROLE_MISMATCH' }),
+        }),
+      );
     });
   });
 });

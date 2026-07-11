@@ -157,6 +157,19 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password.');
     }
 
+    // Identifiants corrects, mais mauvaise app (ex: identifiants chauffeur
+    // utilisés sur l'app passagère). Même message générique qu'un mot de
+    // passe invalide — ne jamais révéler que le compte existe sous un autre
+    // rôle — mais sans compter d'échec ni verrouiller, puisque le mot de
+    // passe était bien correct.
+    if (payload.expectedRole && user.role !== payload.expectedRole) {
+      await this.logAuthEvent(user.id, 'SIGN_IN_ROLE_MISMATCH', metadata, {
+        actualRole: user.role,
+        expectedRole: payload.expectedRole,
+      });
+      throw new UnauthorizedException('Invalid email or password.');
+    }
+
     // Connexion réussie : réinitialiser le compteur d'échecs et mettre à jour lastLoginAt.
     const sessionSeed = this.createSessionSeed(metadata);
 
@@ -317,6 +330,17 @@ export class AuthService {
 
     if (!existingUser.isActive) {
       throw new UnauthorizedException('This account is currently inactive.');
+    }
+
+    // Code correct, mais numéro déjà enregistré sous un autre rôle (ex: compte
+    // chauffeur essayant de se vérifier via l'app passagère). Même message
+    // générique que "code invalide" — anti-énumération de compte par rôle.
+    if (existingUser.role !== role) {
+      await this.logAuthEvent(existingUser.id, 'SIGN_IN_ROLE_MISMATCH', metadata, {
+        actualRole: existingUser.role,
+        expectedRole: role,
+      });
+      throw new UnauthorizedException('Invalid or expired code.');
     }
 
     const [session] = await this.prisma.$transaction([
@@ -886,6 +910,7 @@ export class AuthService {
     action:
       | 'SIGN_IN_SUCCESS'
       | 'SIGN_IN_FAILED'
+      | 'SIGN_IN_ROLE_MISMATCH'
       | 'SIGN_UP'
       | 'SIGN_OUT'
       | 'NEW_DEVICE_SIGN_IN'

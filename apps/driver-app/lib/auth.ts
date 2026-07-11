@@ -40,7 +40,10 @@ export async function signInDriverAccount(payload: {
   password: string;
 }) {
   const client = createDriverPublicClient();
-  const session = await signInWithApi(client, payload);
+  const session = await signInWithApi(client, {
+    ...payload,
+    expectedRole: 'DRIVER',
+  });
   await persistSessionToken(
     driverSessionStorage,
     driverSessionStorageKey,

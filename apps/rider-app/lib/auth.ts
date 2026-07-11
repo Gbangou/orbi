@@ -40,7 +40,10 @@ export async function signInRiderAccount(payload: {
   password: string;
 }) {
   const client = createRiderPublicClient();
-  const session = await signInWithApi(client, payload);
+  const session = await signInWithApi(client, {
+    ...payload,
+    expectedRole: 'RIDER',
+  });
   await persistSessionToken(
     riderSessionStorage,
     riderSessionStorageKey,
