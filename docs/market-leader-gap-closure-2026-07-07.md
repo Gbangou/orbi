@@ -210,8 +210,19 @@ progress (shipping code that "looks closed" but changes nothing measurable).
   staffing/SLAs, local pricing calibration. No amount of code closes these.
 
 **Phase 0 — Stop the trust bleeding (immediate)**
-- Full security audit across auth/payments/data-access (in progress
-  2026-07-11 — see findings appended below as they're confirmed and fixed).
+- Full security audit across auth/payments/admin-roles/rate-limiting/data-
+  exposure/raw-SQL completed 2026-07-11. One confirmed, serious, fixed finding:
+  Flutterwave/CinetPay webhook signature verification silently passed through
+  (no check at all) whenever the provider secret wasn't configured — a
+  forgotten env var in production would have let anyone POST a forged
+  "payment succeeded" webhook with zero verification. Fixed to fail closed
+  in production (dev/test passthrough preserved), locked in with regression
+  tests. Everything else audited came back solid: trip/ride-request/wallet
+  IDOR checks are consistently enforced, admin endpoints are all correctly
+  role-guarded except the intentionally-public `/admin/preview`, rate
+  limiting is IP-scoped and applied to every auth/OTP endpoint, no raw SQL
+  injection surface (all parameterized or hardcoded, no `$queryRawUnsafe`
+  anywhere), and serializers never leak `passwordHash`.
 - Native-build hygiene checklist: the `RNSVGLinearGradient` crash showed
   there's no guard today preventing a JS change that depends on a native
   module version the last-built APK doesn't have. Needs a documented "does
