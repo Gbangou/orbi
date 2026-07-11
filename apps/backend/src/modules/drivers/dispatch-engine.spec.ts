@@ -76,6 +76,42 @@ describe('dispatch-engine', () => {
     expect(signal.score).toBeGreaterThan(70);
   });
 
+  it('never reports an acceptance rate above 100% even when recent accepts outweigh older assignments', () => {
+    // Reproduit un cas reel observe en production : les evenements sont des
+    // sommes independantes ponderees par recence (demi-vie), pas un decompte
+    // tire d'un meme total — plusieurs ACCEPTED tres recents peuvent peser
+    // plus lourd qu'un lot d'ASSIGNED bien plus anciens (donc fortement
+    // decayes), produisant un ratio brut superieur a 1 sans plafond explicite.
+    const now = Date.parse('2026-04-24T16:00:00.000Z');
+    const signal = evaluateDispatchBehaviorSignal({
+      nowMs: now,
+      halfLifeHours: 18,
+      events: [
+        // Assignations anciennes (poids fortement decaye apres plusieurs demi-vies).
+        {
+          action: 'DISPATCH_RESERVATION_ASSIGNED',
+          createdAt: new Date('2026-04-20T16:00:00.000Z'),
+        },
+        // Acceptations tres recentes (poids proche de 1 chacune).
+        {
+          action: 'DISPATCH_RESERVATION_ACCEPTED',
+          createdAt: new Date('2026-04-24T15:59:00.000Z'),
+        },
+        {
+          action: 'DISPATCH_RESERVATION_ACCEPTED',
+          createdAt: new Date('2026-04-24T15:58:00.000Z'),
+        },
+        {
+          action: 'DISPATCH_RESERVATION_ACCEPTED',
+          createdAt: new Date('2026-04-24T15:57:00.000Z'),
+        },
+      ],
+    });
+
+    expect(signal.acceptanceRate).not.toBeNull();
+    expect(signal.acceptanceRate as number).toBeLessThanOrEqual(1);
+  });
+
   it('falls back to a neutral signal when no assignment history exists', () => {
     const signal = evaluateDispatchBehaviorSignal({
       nowMs: Date.parse('2026-04-24T16:00:00.000Z'),

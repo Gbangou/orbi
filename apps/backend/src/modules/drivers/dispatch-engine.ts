@@ -303,10 +303,15 @@ export function evaluateDispatchBehaviorSignal(input: {
     };
   }
 
-  const acceptanceRate = acceptedWeight / assignedWeight;
-  const declineRate = declinedWeight / assignedWeight;
-  const expirationRate = expiredWeight / assignedWeight;
-  const releaseRate = releasedWeight / assignedWeight;
+  // assignedWeight/acceptedWeight/etc. sont des sommes independantes ponderees
+  // par recence (demi-vie), pas des comptages tires d'un meme total partitionne
+  // — un evenement ACCEPTED tres recent peut peser plus qu'un lot d'ASSIGNED
+  // plus anciens, ce qui produirait un ratio superieur a 1 sans ce plafond
+  // (deja observe en pratique : 311% affiche a l'ecran chauffeur).
+  const acceptanceRate = Math.min(1, acceptedWeight / assignedWeight);
+  const declineRate = Math.min(1, declinedWeight / assignedWeight);
+  const expirationRate = Math.min(1, expiredWeight / assignedWeight);
+  const releaseRate = Math.min(1, releasedWeight / assignedWeight);
   const score = Math.max(
     34,
     Math.min(
