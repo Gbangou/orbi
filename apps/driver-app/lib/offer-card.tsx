@@ -251,7 +251,9 @@ export const OfferCard = memo(function OfferCard({
       {detailLines.length > 0 ? (
         <View style={styles.detailLines}>
           {detailLines.map((line, i) => (
-            <Text key={i} style={styles.detailLine}>{line}</Text>
+            <Text key={i} style={styles.detailLine} numberOfLines={2} ellipsizeMode="tail">
+              {line}
+            </Text>
           ))}
         </View>
       ) : null}
@@ -347,7 +349,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   declineLabel: {
     fontSize: 12,
   },
-  detailLines: { gap: 2, paddingTop: 2 },
+  detailLines: { gap: 3, paddingTop: 2 },
   detailLine: {
     fontSize: 11,
     color: theme.colors.textMuted,

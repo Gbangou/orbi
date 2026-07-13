@@ -278,6 +278,10 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   chauffeur / ops et resume visible cote chauffeur; ce signal sert aussi de
   tie-breaker et est journalise dans l audit de reservation. La calibration
   economique par donnees pilote reste B/D.
+- 13 juillet 2026: debut Phase 4, gap A "petits ecrans signaux marketplace".
+  Les lignes longues de details d offre chauffeur sont maintenant bornees et le
+  selecteur de vehicule rider gagne de l espace stable pour ETA, source du
+  signal et chauffeurs proches. L audit visuel device reel reste B.
 
 ## Master Prompt Operationnel
 

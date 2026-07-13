@@ -118,7 +118,9 @@ export const VehicleSelector = memo(function VehicleSelector({
               <Text style={[styles.name, isSelected && { color: theme.colors.text }]}>{title}</Text>
               <View style={styles.etaRow}>
                 <Text style={styles.eta}>{option.etaMinutes} min</Text>
-                <Text style={styles.signalText}>{buildSignalLabel(option)}</Text>
+                <Text style={styles.signalText} numberOfLines={1} ellipsizeMode="tail">
+                  {buildSignalLabel(option)}
+                </Text>
                 {option.marketplace?.nearbyDrivers != null && option.marketplace.nearbyDrivers > 0 ? (
                   <View style={[styles.driverCountBadge, { borderColor: accentColor + '60' }]}>
                     <Text style={[styles.driverCountText, { color: accentColor }]}>
@@ -150,7 +152,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   sectionTitle: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.text, paddingHorizontal: 2 },
   scroll: { gap: 6, paddingHorizontal: 2 },
   card: {
-    width: 104, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1.5,
+    width: 112, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1.5,
     borderColor: theme.colors.border, padding: 7, alignItems: 'center', gap: 4,
     shadowColor: theme.shadows.card.shadowColor, shadowOpacity: 0.09, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 7,
   },
@@ -167,8 +169,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   loadingText: { fontSize: 14, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular' },
   vehicleAura: { position: 'absolute', width: 70, height: 40, borderRadius: 22, top: 7 },
   svgWrap: { width: 84, height: 54, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  etaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  etaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, width: '100%' },
   signalText: {
+    maxWidth: 52,
     fontSize: 9,
     color: theme.colors.textMuted,
     fontWeight: '700',
