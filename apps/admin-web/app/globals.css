@@ -1135,6 +1135,27 @@ body {
   color: var(--muted);
 }
 
+.ticket-sla-panel {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(123, 154, 190, 0.18);
+  background: rgba(9, 16, 27, 0.62);
+}
+
+.ticket-sla-panel span,
+.ticket-sla-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ticket-sla-panel strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
 .pricing-panel {
   margin-top: 16px;
 }

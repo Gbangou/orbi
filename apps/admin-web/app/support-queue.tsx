@@ -32,6 +32,21 @@ function getTicketStatusClass(status: string) {
   return 'phase-status-completed';
 }
 
+function getTicketSlaClass(state: SupportTicketQueueResponse['tickets'][number]['sla']['state']) {
+  if (state === 'breached') return 'phase-status-next';
+  if (state === 'due_soon') return 'phase-status-planned';
+  return 'phase-status-completed';
+}
+
+function describeTicketSla(ticket: SupportTicketQueueResponse['tickets'][number]) {
+  if (ticket.sla.state === 'closed') return 'SLA ferme';
+  if (ticket.sla.state === 'responded') return 'Premiere reponse envoyee';
+  if (ticket.sla.state === 'breached') {
+    return `Retard ${ticket.sla.breachedMinutes ?? 0} min`;
+  }
+  return `${ticket.sla.remainingMinutes ?? 0} min restantes`;
+}
+
 async function fetchSupportTickets() {
   return fetchAdminJson<SupportTicketQueueResponse>('/api/admin/support-tickets');
 }
@@ -94,8 +109,10 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
       (ticket) => ticket.status === 'RESOLVED' || ticket.status === 'CLOSED',
     ).length;
     const urgent = tickets.filter((ticket) => ticket.priority === 3).length;
+    const breached = tickets.filter((ticket) => ticket.sla.state === 'breached').length;
+    const dueSoon = tickets.filter((ticket) => ticket.sla.state === 'due_soon').length;
 
-    return { open, inReview, resolved, urgent };
+    return { open, inReview, resolved, urgent, breached, dueSoon };
   }, [tickets]);
 
   useEffect(() => {
@@ -273,6 +290,11 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
           <p>Priorite P3 a surveiller en premier</p>
         </article>
         <article className="board-summary-card">
+          <span>SLA</span>
+          <strong>{summary.breached}</strong>
+          <p>{summary.dueSoon} ticket(s) proche(s) de l echeance</p>
+        </article>
+        <article className="board-summary-card">
           <span>Resolus</span>
           <strong>{summary.resolved}</strong>
           <p>Tickets deja fermes ou resolus</p>
@@ -297,6 +319,9 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
               <span className={`phase-status ${getTicketStatusClass(ticket.status)}`}>
                 {formatOperationalStatus(ticket.status)}
               </span>
+              <span className={`phase-status ${getTicketSlaClass(ticket.sla.state)}`}>
+                {describeTicketSla(ticket)}
+              </span>
             </div>
             <h3>{ticket.subject}</h3>
             <p>
@@ -308,6 +333,18 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
                 : 'Trajet non identifie'}
             </p>
             <p>{ticket.description}</p>
+            <div className="ticket-sla-panel">
+              <span>Owner {ticket.sla.owner}</span>
+              <strong>
+                P{ticket.priority} - {ticket.sla.targetMinutes} min
+              </strong>
+              <p>
+                Echeance {new Date(ticket.sla.dueAt).toLocaleTimeString('fr-FR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
             {ticket.adminNote ? (
               <div className="ticket-admin-note">
                 <span className="ticket-admin-note-label">Reponse ops</span>

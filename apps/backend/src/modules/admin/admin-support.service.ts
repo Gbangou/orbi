@@ -35,6 +35,7 @@ export type AdminSupportTicketQueueResponse = {
     tripId: string | null;
     createdAt: string;
     updatedAt: string;
+    sla: SupportTicketSla;
   }>;
   meta: {
     page: number;
@@ -42,6 +43,17 @@ export type AdminSupportTicketQueueResponse = {
     total: number;
     pageCount: number;
   };
+};
+
+type SupportTicketSla = {
+  tier: 'critical' | 'standard' | 'normal';
+  targetMinutes: number;
+  dueAt: string;
+  respondedAt: string | null;
+  state: 'on_track' | 'due_soon' | 'breached' | 'responded' | 'closed';
+  remainingMinutes: number | null;
+  breachedMinutes: number | null;
+  owner: 'support' | 'ops';
 };
 
 export type AdminSupportTicketUpdateResponse = {
@@ -73,6 +85,55 @@ function maskRequesterName(fullName: string | null | undefined): string {
   const parts = fullName.trim().split(/\s+/);
   if (parts.length === 1) return `${parts[0]?.charAt(0) ?? '?'}.`;
   return `${parts[0]} ${parts[1]?.charAt(0) ?? '?'}.`;
+}
+
+function resolveSupportSla(ticket: {
+  priority: number;
+  status: SupportTicketStatus;
+  adminNote?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): SupportTicketSla {
+  const targetMinutes = ticket.priority >= 3 ? 10 : ticket.priority === 2 ? 30 : 120;
+  const tier =
+    ticket.priority >= 3
+      ? ('critical' as const)
+      : ticket.priority === 2
+        ? ('standard' as const)
+        : ('normal' as const);
+  const owner = ticket.priority >= 3 ? ('ops' as const) : ('support' as const);
+  const dueAt = new Date(ticket.createdAt.getTime() + targetMinutes * 60_000);
+  const isClosed =
+    ticket.status === SupportTicketStatus.RESOLVED ||
+    ticket.status === SupportTicketStatus.CLOSED;
+  const respondedAt =
+    ticket.status !== SupportTicketStatus.OPEN || ticket.adminNote
+      ? ticket.updatedAt
+      : null;
+  const now = new Date();
+  const remainingMinutes = Math.ceil((dueAt.getTime() - now.getTime()) / 60_000);
+  const breachedMinutes = remainingMinutes < 0 ? Math.abs(remainingMinutes) : null;
+  const state =
+    isClosed
+      ? ('closed' as const)
+      : respondedAt
+        ? ('responded' as const)
+        : remainingMinutes < 0
+          ? ('breached' as const)
+          : remainingMinutes <= Math.max(5, Math.ceil(targetMinutes * 0.2))
+            ? ('due_soon' as const)
+            : ('on_track' as const);
+
+  return {
+    tier,
+    targetMinutes,
+    dueAt: dueAt.toISOString(),
+    respondedAt: respondedAt?.toISOString() ?? null,
+    state,
+    remainingMinutes: state === 'on_track' || state === 'due_soon' ? remainingMinutes : null,
+    breachedMinutes,
+    owner,
+  };
 }
 
 // ── Service ───────────────────────────────────────────────────────────────────
@@ -117,6 +178,7 @@ export class AdminSupportService {
           tripId: tripIdMatch?.[1] ?? null,
           createdAt: ticket.createdAt.toISOString(),
           updatedAt: ticket.updatedAt.toISOString(),
+          sla: resolveSupportSla(ticket),
         };
       }),
       meta: {

@@ -464,6 +464,16 @@ export type SupportTicketQueueResponse = {
     tripId: string | null;
     createdAt: string;
     updatedAt: string;
+    sla: {
+      tier: "critical" | "standard" | "normal";
+      targetMinutes: number;
+      dueAt: string;
+      respondedAt: string | null;
+      state: "on_track" | "due_soon" | "breached" | "responded" | "closed";
+      remainingMinutes: number | null;
+      breachedMinutes: number | null;
+      owner: "support" | "ops";
+    };
   }>;
 };
 

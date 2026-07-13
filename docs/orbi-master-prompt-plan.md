@@ -193,6 +193,15 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
 6. Observabilite externe mobile/backend. Categories A/C.
 7. Calibration pricing/ETA par donnees pilote. Categories B/D.
 
+## Journal D Execution
+
+- 13 juillet 2026: debut Phase 0, gap A "SLA support critique". La file
+  support admin expose maintenant un SLA derive par ticket: tier, target,
+  `dueAt`, premiere reponse, owner support/ops, retard et etat
+  `on_track`/`due_soon`/`breached`/`responded`/`closed`. Ce travail ne ferme
+  pas le staffing support ni la preuve de temps de reponse terrain, qui restent
+  des gaps B/D.
+
 ## Master Prompt Operationnel
 
 ```text
@@ -214,4 +223,3 @@ clarte UX et verite des metriques. La qualite visible doit etre aussi serieuse
 que la logique backend. Le produit doit etre local Burkina Faso, operable par
 une petite equipe, et plus clair que les leaders mondiaux.
 ```
-
