@@ -55,6 +55,8 @@ const routeMinimumProgressKm = 0.2;
 const gpsAnomalyMaxImpliedSpeedKph = 500;
 const gpsAnomalyMinDistanceKm = 0.5;
 const gpsAnomalyMaxGapMinutes = 30;
+const pickupMismatchGraceMinutes = 7;
+const pickupMismatchDistanceKmThreshold = 0.8;
 const routeCompletionMaxSignalAgeMinutes = 10;
 const routeCompletionMaxAccuracyMeters = 250;
 const routeCompletionMaxSpeedKph = 110;
@@ -2139,6 +2141,8 @@ export class TripsService {
 
   private evaluateRouteMonitoringAlerts(input: {
     trip: {
+      status: TripStatus;
+      createdAt: Date;
       distanceKm: unknown;
       durationMinutes: number | null;
       rideRequest: {
@@ -2173,7 +2177,8 @@ export class TripsService {
         | 'LONG_STOP'
         | 'ROUTE_DEVIATION'
         | 'NO_PROGRESS'
-        | 'GPS_POSITION_ANOMALY';
+        | 'GPS_POSITION_ANOMALY'
+        | 'PICKUP_MISMATCH';
       severity: 'warning' | 'critical';
       priority: 2 | 3;
       message: string;
@@ -2258,6 +2263,30 @@ export class TripsService {
       destinationLatitude !== null &&
       destinationLongitude !== null
     ) {
+      const distanceToPickupKm = haversineKm(input.position, {
+        latitude: pickupLatitude,
+        longitude: pickupLongitude,
+      });
+
+      if (input.trip.status === TripStatus.MATCHED) {
+        const matchedAgeMinutes =
+          (input.observedAt.getTime() - input.trip.createdAt.getTime()) / 60000;
+
+        if (
+          matchedAgeMinutes >= pickupMismatchGraceMinutes &&
+          distanceToPickupKm >= pickupMismatchDistanceKmThreshold
+        ) {
+          alerts.push({
+            alertType: 'PICKUP_MISMATCH',
+            severity: 'warning',
+            priority: 2,
+            message: `Pickup suspect: chauffeur encore a ${Math.round(distanceToPickupKm * 10) / 10} km du point de depart apres ${Math.round(matchedAgeMinutes)} minutes.`,
+            measuredValue: Math.round(distanceToPickupKm * 100) / 100,
+            threshold: pickupMismatchDistanceKmThreshold,
+          });
+        }
+      }
+
       const deviationKm = distanceToRouteKm(
         input.position,
         { latitude: pickupLatitude, longitude: pickupLongitude },

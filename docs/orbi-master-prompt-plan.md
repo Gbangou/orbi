@@ -216,6 +216,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `trustedContacts[]` dans le contrat API et utilise le premier contact actif
   prioritaire pour l auto-share. L UI multi-contacts et la livraison provider
   restent des gaps A/B/C separes.
+- 13 juillet 2026: Phase 1, gap A "pickup suspect route monitoring". Le backend
+  ajoute l alerte `PICKUP_MISMATCH`: apres une periode de grace, une course
+  encore `MATCHED` avec un chauffeur trop loin du point de depart cree un ticket
+  support, un audit log et un event realtime dedupe. La calibration terrain des
+  seuils reste un gap B/D.
 
 ## Master Prompt Operationnel
 

@@ -184,13 +184,17 @@ Orbi expose maintenant le premier socle route monitoring:
 `POST /api/v1/trips/:tripId/route-position` journalise une position bornee dans
 `ROUTE_POSITION_RECORDED`, compare le signal au corridor pickup-destination et
 aux derniers pings, puis cree une alerte `ROUTE_MONITORING_ALERT` avec ticket
-support si une deviation, un arret long ou une absence de progression est
-detectee. L alerte est auditee via `TRIP_ROUTE_MONITORING_ALERT_CREATED`,
-publiee en temps reel avec `trip.route-monitor-alert`, et visible dans Live Ops.
-Live Ops affiche aussi le progres depart/destination a partir du dernier signal
-chauffeur disponible, sans exposer les coordonnees brutes; un ping rider plus
-recent ne remplace pas la position vehicule cote operations. Les alertes sont
-refroidies par type pour eviter le spam support.
+support si une deviation, un arret long, une absence de progression, un saut GPS
+impossible ou un pickup suspect est detecte. Le signal `PICKUP_MISMATCH` se
+declenche seulement sur une course encore `MATCHED`, apres la periode de grace,
+quand le chauffeur reste trop loin du point de depart; ce seuil doit etre
+calibre avec le pilote terrain. L alerte est auditee via
+`TRIP_ROUTE_MONITORING_ALERT_CREATED`, publiee en temps reel avec
+`trip.route-monitor-alert`, et visible dans Live Ops. Live Ops affiche aussi le
+progres depart/destination a partir du dernier signal chauffeur disponible,
+sans exposer les coordonnees brutes; un ping rider plus recent ne remplace pas
+la position vehicule cote operations. Les alertes sont refroidies par type pour
+eviter le spam support.
 
 Orbi expose aussi un socle extensible de contacts de confiance cote rider:
 `PATCH /api/v1/riders/trusted-contact` accepte uniquement un numero Burkina

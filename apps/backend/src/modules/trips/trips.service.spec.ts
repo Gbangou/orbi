@@ -2702,6 +2702,8 @@ describe('TripsService', () => {
     function buildTripWithHistory(overrides: {
       previousEventCreatedAt: Date;
       previousPayload: Record<string, unknown>;
+      status?: string;
+      createdAt?: Date;
       extraEvents?: Array<{
         eventType: string;
         payload: Record<string, unknown>;
@@ -2713,7 +2715,8 @@ describe('TripsService', () => {
         id: 'trip-monitor-1',
         riderId: 'rider-monitor',
         driverId: 'driver-monitor',
-        status: 'IN_PROGRESS',
+        status: overrides.status ?? 'IN_PROGRESS',
+        createdAt: overrides.createdAt ?? new Date(Date.now() - 20 * 60 * 1000),
         distanceKm: 5,
         durationMinutes: 20,
         rideRequest: overrides.rideRequest ?? {},
@@ -2890,6 +2893,106 @@ describe('TripsService', () => {
       );
 
       expect(prisma.supportTicket.create).not.toHaveBeenCalled();
+    });
+
+    it('raises PICKUP_MISMATCH when a matched driver stays far from pickup after grace period', async () => {
+      const { prisma, service } = createService();
+      const eightMinutesAgo = new Date(Date.now() - 8 * 60 * 1000);
+
+      prisma.trip.findUnique.mockResolvedValue(
+        buildTripWithHistory({
+          status: 'MATCHED',
+          createdAt: eightMinutesAgo,
+          previousEventCreatedAt: new Date(Date.now() - 2 * 60 * 1000),
+          previousPayload: {
+            latitude: 12.39,
+            longitude: -1.58,
+            speedKph: 10,
+            sourceRole: 'DRIVER',
+          },
+          rideRequest: {
+            pickupLatitude: 12.3714,
+            pickupLongitude: -1.5197,
+            destinationLatitude: 12.359,
+            destinationLongitude: -1.536,
+          },
+        }),
+      );
+      prisma.trip.update.mockResolvedValue({ id: 'trip-monitor-1' });
+      prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-pickup-1' });
+      prisma.auditLog.create.mockResolvedValue(undefined);
+
+      const result = await service.recordRoutePosition(
+        buildDriverMonitorAuth(),
+        'trip-monitor-1',
+        {
+          latitude: 12.39,
+          longitude: -1.58,
+          speedKph: 10,
+        },
+      );
+
+      const pickupAlerts = result.routeMonitoring.alerts.filter(
+        (a) => a.alertType === 'PICKUP_MISMATCH',
+      );
+      expect(pickupAlerts).toHaveLength(1);
+      expect(pickupAlerts[0]).toEqual(
+        expect.objectContaining({
+          severity: 'warning',
+          priority: 2,
+          threshold: 0.8,
+        }),
+      );
+      expect(prisma.supportTicket.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          priority: 2,
+          description: expect.stringContaining('PICKUP_MISMATCH'),
+        }),
+      });
+    });
+
+    it('does not raise PICKUP_MISMATCH during the pickup grace period', async () => {
+      const { prisma, service } = createService();
+      const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
+
+      prisma.trip.findUnique.mockResolvedValue(
+        buildTripWithHistory({
+          status: 'MATCHED',
+          createdAt: threeMinutesAgo,
+          previousEventCreatedAt: new Date(Date.now() - 60 * 1000),
+          previousPayload: {
+            latitude: 12.39,
+            longitude: -1.58,
+            speedKph: 10,
+            sourceRole: 'DRIVER',
+          },
+          rideRequest: {
+            pickupLatitude: 12.3714,
+            pickupLongitude: -1.5197,
+            destinationLatitude: 12.359,
+            destinationLongitude: -1.536,
+          },
+        }),
+      );
+      prisma.trip.update.mockResolvedValue({ id: 'trip-monitor-1' });
+      prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-pickup-2' });
+      prisma.auditLog.create.mockResolvedValue(undefined);
+
+      const result = await service.recordRoutePosition(
+        buildDriverMonitorAuth(),
+        'trip-monitor-1',
+        {
+          latitude: 12.39,
+          longitude: -1.58,
+          speedKph: 10,
+        },
+      );
+
+      expect(
+        result.routeMonitoring.alerts.filter(
+          (a) => a.alertType === 'PICKUP_MISMATCH',
+        ),
+      ).toHaveLength(0);
     });
 
     it('raises GPS_POSITION_ANOMALY when driver teleports faster than 500 km/h', async () => {

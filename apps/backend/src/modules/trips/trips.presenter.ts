@@ -93,10 +93,19 @@ function resolveRouteMonitoringSummary(
         ? 'clear'
         : 'unknown',
     alertCount: routeAlertEvents.length,
-    lastAlertType: ['LONG_STOP', 'ROUTE_DEVIATION', 'NO_PROGRESS'].includes(
-      latestAlertType ?? '',
-    )
-      ? (latestAlertType as 'LONG_STOP' | 'ROUTE_DEVIATION' | 'NO_PROGRESS')
+    lastAlertType: [
+      'LONG_STOP',
+      'ROUTE_DEVIATION',
+      'NO_PROGRESS',
+      'GPS_POSITION_ANOMALY',
+      'PICKUP_MISMATCH',
+    ].includes(latestAlertType ?? '')
+      ? (latestAlertType as
+          | 'LONG_STOP'
+          | 'ROUTE_DEVIATION'
+          | 'NO_PROGRESS'
+          | 'GPS_POSITION_ANOMALY'
+          | 'PICKUP_MISMATCH')
       : null,
     lastAlertAt: latestRouteAlert?.createdAt.toISOString() ?? null,
     lastPositionAt: latestRoutePosition?.createdAt.toISOString() ?? null,

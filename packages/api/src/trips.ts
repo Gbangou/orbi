@@ -21,6 +21,13 @@ import { apiRoutes } from "./routes";
 
 // ── Shared payload/response types ─────────────────────────────────────────────
 
+export type TripRouteMonitoringAlertType =
+  | "LONG_STOP"
+  | "ROUTE_DEVIATION"
+  | "NO_PROGRESS"
+  | "GPS_POSITION_ANOMALY"
+  | "PICKUP_MISMATCH";
+
 export type MyTripsResponse = {
   role: ApiUserRole;
   stats: {
@@ -101,7 +108,7 @@ export type TripDetailResponse = {
     routeMonitoring: {
       state: "unknown" | "clear" | "warning" | "critical";
       alertCount: number;
-      lastAlertType: "LONG_STOP" | "ROUTE_DEVIATION" | "NO_PROGRESS" | null;
+      lastAlertType: TripRouteMonitoringAlertType | null;
       lastAlertAt: string | null;
       lastPositionAt: string | null;
       latestPosition: {
@@ -163,7 +170,7 @@ export type TripRoutePositionResponse = {
       sourceRole: string | null;
     } | null;
     alerts: Array<{
-      alertType: "LONG_STOP" | "ROUTE_DEVIATION" | "NO_PROGRESS";
+      alertType: TripRouteMonitoringAlertType;
       severity: "warning" | "critical";
       priority: 2 | 3;
       message: string;
