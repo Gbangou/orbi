@@ -3,14 +3,17 @@ import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, TextInput, View
 import { changeLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage, useTranslation } from '../../lib/i18n';
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../../lib/privacy/screen-capture';
 import {
+  createTrustedContactWithApi,
   createSavedPlaceWithApi,
   createSupportTicketWithApi,
+  deleteTrustedContactWithApi,
   deleteSavedPlaceWithApi,
   fetchMyTrips,
   fetchRiderProfile,
   fetchWalletBalanceWithApi,
   initiateWalletTopUpWithApi,
   getMySupportTicketsWithApi,
+  updateTrustedContactEntryWithApi,
   updateTrustedContactWithApi,
   updateSavedPlaceWithApi,
   type MyTripsResponse,
@@ -101,6 +104,7 @@ export default function AccountScreen() {
   const [isSavingPlace, setIsSavingPlace] = useState(false);
   const [isGeocodingPlace, setIsGeocodingPlace] = useState(false);
   const [isSavingTrustedContact, setIsSavingTrustedContact] = useState(false);
+  const [isSavingTrustedRoster, setIsSavingTrustedRoster] = useState(false);
   const [accountTransitionLabel, setAccountTransitionLabel] = useState<string | null>(null);
   const [freshPlaceIds, setFreshPlaceIds] = useState<string[]>([]);
   const [editingPlaceId, setEditingPlaceId] = useState<string | null>(null);
@@ -114,6 +118,11 @@ export default function AccountScreen() {
     phoneNumber: '',
     shareMode: 'MANUAL' as TrustedContactShareMode,
     notes: '',
+  });
+  const [trustedRosterForm, setTrustedRosterForm] = useState({
+    label: '',
+    phoneNumber: '',
+    priority: 2,
   });
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [isTicketFormOpen, setIsTicketFormOpen] = useState(false);
@@ -536,6 +545,99 @@ export default function AccountScreen() {
     }
   }
 
+  async function handleCreateTrustedContactEntry() {
+    if (isSavingTrustedRoster) {
+      return;
+    }
+
+    const phoneNumber = trustedRosterForm.phoneNumber.trim();
+    const label = trustedRosterForm.label.trim() || 'Contact de confiance';
+
+    if (!/^\+226[0-9]{8}$/.test(phoneNumber)) {
+      setStatus('Le contact doit etre un numero Burkina au format +226XXXXXXXX.');
+      return;
+    }
+
+    if (activeTrustedContacts.length >= 3) {
+      setStatus('Vous pouvez garder au maximum 3 contacts de confiance actifs.');
+      return;
+    }
+
+    setIsSavingTrustedRoster(true);
+    setStatus('Ajout du contact de confiance...');
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      await createTrustedContactWithApi(authClient, {
+        label,
+        phoneNumber,
+        priority: trustedRosterForm.priority,
+      });
+      setTrustedRosterForm({ label: '', phoneNumber: '', priority: 2 });
+      await loadProfile();
+      setStatus('Contact de confiance ajoute et audite.');
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        fallback: "L'ajout du contact de confiance a echoue.",
+      });
+      setStatus(feedback.message);
+    } finally {
+      setIsSavingTrustedRoster(false);
+    }
+  }
+
+  async function handlePrioritizeTrustedContactEntry(
+    contact: RiderProfileResponse['profile']['trustedContacts'][number],
+  ) {
+    if (isSavingTrustedRoster || !contact.id || contact.priority === 1) {
+      return;
+    }
+
+    setIsSavingTrustedRoster(true);
+    setStatus('Mise a jour de la priorite du contact...');
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      await updateTrustedContactEntryWithApi(authClient, contact.id, {
+        priority: 1,
+      });
+      await loadProfile();
+      setStatus('Contact principal mis a jour.');
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        fallback: 'La priorite du contact n a pas pu etre modifiee.',
+      });
+      setStatus(feedback.message);
+    } finally {
+      setIsSavingTrustedRoster(false);
+    }
+  }
+
+  async function handleDeactivateTrustedContactEntry(
+    contact: RiderProfileResponse['profile']['trustedContacts'][number],
+  ) {
+    if (isSavingTrustedRoster || !contact.id) {
+      return;
+    }
+
+    setIsSavingTrustedRoster(true);
+    setStatus('Retrait du contact de confiance...');
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      await deleteTrustedContactWithApi(authClient, contact.id);
+      await loadProfile();
+      setStatus('Contact de confiance retire.');
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        fallback: 'Le retrait du contact de confiance a echoue.',
+      });
+      setStatus(feedback.message);
+    } finally {
+      setIsSavingTrustedRoster(false);
+    }
+  }
+
   async function handleDeletePlace(savedPlaceId: string) {
     if (isSavingPlace) {
       return;
@@ -822,6 +924,33 @@ export default function AccountScreen() {
                 {contact.priority === 1 ? (
                   <Text style={styles.trustedContactBadge}>Principal</Text>
                 ) : null}
+                {contact.id ? (
+                  <View style={styles.trustedContactActions}>
+                    {contact.priority !== 1 ? (
+                      <Pressable
+                        onPress={() => void handlePrioritizeTrustedContactEntry(contact)}
+                        disabled={isSavingTrustedRoster}
+                        style={[
+                          styles.trustedContactSmallAction,
+                          isSavingTrustedRoster ? styles.refreshButtonDisabled : null,
+                        ]}
+                      >
+                        <Text style={styles.trustedContactSmallActionLabel}>Prioriser</Text>
+                      </Pressable>
+                    ) : null}
+                    <Pressable
+                      onPress={() => void handleDeactivateTrustedContactEntry(contact)}
+                      disabled={isSavingTrustedRoster}
+                      style={[
+                        styles.trustedContactSmallAction,
+                        styles.trustedContactDangerAction,
+                        isSavingTrustedRoster ? styles.refreshButtonDisabled : null,
+                      ]}
+                    >
+                      <Text style={styles.trustedContactDangerActionLabel}>Retirer</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
             ))
           ) : (
@@ -830,8 +959,68 @@ export default function AccountScreen() {
             </Text>
           )}
           <Text style={styles.trustedContactsHint}>
-            Cette version synchronise le contact principal; la gestion avancee multi-contacts arrive sur le prochain palier.
+            Le contact en priorite 1 recoit le partage automatique en premier.
           </Text>
+        </View>
+        <View style={styles.trustedContactEditor}>
+          <Text style={styles.trustedContactsPanelTitle}>Ajouter un contact</Text>
+          <TextInput
+            value={trustedRosterForm.label}
+            onChangeText={(value) =>
+              setTrustedRosterForm((current) => ({ ...current, label: value }))
+            }
+            placeholder="Nom du contact"
+            placeholderTextColor={theme.colors.muted}
+            maxLength={40}
+            style={styles.input}
+          />
+          <TextInput
+            value={trustedRosterForm.phoneNumber}
+            onChangeText={(value) =>
+              setTrustedRosterForm((current) => ({ ...current, phoneNumber: value }))
+            }
+            placeholder="+22670000002"
+            placeholderTextColor={theme.colors.muted}
+            keyboardType="phone-pad"
+            style={styles.input}
+          />
+          <View style={styles.modeRow}>
+            {([1, 2, 3] as const).map((priority) => (
+              <Pressable
+                key={priority}
+                onPress={() =>
+                  setTrustedRosterForm((current) => ({ ...current, priority }))
+                }
+                style={[
+                  styles.modeChip,
+                  trustedRosterForm.priority === priority ? styles.modeChipActive : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modeChipLabel,
+                    trustedRosterForm.priority === priority ? styles.modeChipLabelActive : null,
+                  ]}
+                >
+                  Priorite {priority}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable
+            onPress={() => void handleCreateTrustedContactEntry()}
+            disabled={isSavingTrustedRoster || activeTrustedContacts.length >= 3}
+            style={[
+              styles.secondaryAction,
+              isSavingTrustedRoster || activeTrustedContacts.length >= 3
+                ? styles.refreshButtonDisabled
+                : null,
+            ]}
+          >
+            <Text style={styles.secondaryActionLabel}>
+              {isSavingTrustedRoster ? 'Synchronisation...' : 'Ajouter un contact'}
+            </Text>
+          </Pressable>
         </View>
         <TextInput
           value={trustedContactForm.phoneNumber}
@@ -1452,6 +1641,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 10,
     paddingTop: 10,
     borderTopWidth: 1,
@@ -1495,6 +1685,35 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
   },
+  trustedContactActions: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingLeft: 40,
+  },
+  trustedContactSmallAction: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: theme.colors.panel,
+  },
+  trustedContactSmallActionLabel: {
+    color: theme.colors.text,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  trustedContactDangerAction: {
+    borderColor: 'rgba(239,68,68,0.35)',
+    backgroundColor: 'rgba(239,68,68,0.08)',
+  },
+  trustedContactDangerActionLabel: {
+    color: theme.colors.danger,
+    fontSize: 11,
+    fontWeight: '800',
+  },
   trustedContactsEmpty: {
     color: theme.colors.muted,
     fontSize: 12,
@@ -1504,6 +1723,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.muted,
     fontSize: 11,
     lineHeight: 16,
+  },
+  trustedContactEditor: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: 'rgba(56,189,248,0.06)',
+    padding: 12,
+    gap: 10,
   },
   heading: {
     color: theme.colors.text,

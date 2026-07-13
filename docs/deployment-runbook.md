@@ -205,8 +205,9 @@ met a jour `RiderProfile.emergencyPhone` et le mode persistant
 `rider_trusted_contacts`, puis journalise `RIDER_TRUSTED_CONTACT_UPDATED`. La
 reponse profil expose `trustedContact` pour compatibilite mobile et
 `trustedContacts[]` pour la suite multi-contacts auditee. L ecran compte rider
-rend le contact principal visible, modifiable, desactivable, et affiche la liste
-des contacts actifs avec numeros masques quand l API en renvoie plusieurs.
+rend le contact principal visible, modifiable, desactivable, affiche la liste
+des contacts actifs avec numeros masques, puis permet d ajouter, prioriser et
+retirer un contact depuis l app.
 `POST /api/v1/riders/trusted-contacts`,
 `PATCH /api/v1/riders/trusted-contacts/:trustedContactId` et
 `DELETE /api/v1/riders/trusted-contacts/:trustedContactId` permettent de gerer

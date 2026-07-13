@@ -233,6 +233,10 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   expose creation, mise a jour, priorite et desactivation douce de jusqu a trois
   contacts actifs, resynchronise le contact principal, audite chaque mutation et
   publie le contrat API client. La livraison SMS/WhatsApp reste un gap B/C.
+- 13 juillet 2026: Phase 1, gap A "UI gestion trusted contacts complete". L app
+  rider permet maintenant d ajouter un contact, choisir sa priorite, promouvoir
+  un contact en principal et retirer un contact actif avec numeros masques et
+  tests smoke. La livraison provider reste separee.
 
 ## Master Prompt Operationnel
 

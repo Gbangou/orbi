@@ -8,8 +8,10 @@ import {
   createCheckoutIntentWithApi,
   createRideRequestWithApi,
   createSavedPlaceWithApi,
+  createTrustedContactWithApi,
   createTripShareLinkWithApi,
   deleteSavedPlaceWithApi,
+  deleteTrustedContactWithApi,
   fetchNearbyDrivers,
   fetchMyTrips,
   fetchRideOptionsPreview,
@@ -21,6 +23,7 @@ import {
   resolveVoiceLocationIntentWithApi,
   riderRideOptions,
   triggerTripSafetySosWithApi,
+  updateTrustedContactEntryWithApi,
   updateSavedPlaceWithApi,
   updateTrustedContactWithApi,
   updateTripStatusWithApi,
@@ -126,7 +129,8 @@ jest.mock('@orbi/api', () => {
     triggerTripSafetySosWithApi: jest.fn(),
     resolveVoiceLocationIntentWithApi: jest.fn(),
     createRideRequestWithApi: jest.fn(),
-    createTripShareLinkWithApi: jest.fn(),
+  createTripShareLinkWithApi: jest.fn(),
+  createTrustedContactWithApi: jest.fn(),
   createCheckoutIntentWithApi: jest.fn(),
   createSavedPlaceWithApi: jest.fn(),
   getMySupportTicketsWithApi: jest.fn().mockResolvedValue({ tickets: [] }),
@@ -136,6 +140,8 @@ jest.mock('@orbi/api', () => {
   registerPushTokenWithApi: jest.fn().mockResolvedValue(undefined),
   updateSavedPlaceWithApi: jest.fn(),
     deleteSavedPlaceWithApi: jest.fn(),
+    deleteTrustedContactWithApi: jest.fn(),
+    updateTrustedContactEntryWithApi: jest.fn(),
     updateTrustedContactWithApi: jest.fn(),
     updateTripStatusWithApi: jest.fn(),
   };
@@ -157,10 +163,13 @@ const mockedTriggerTripSafetySosWithApi = jest.mocked(triggerTripSafetySosWithAp
 const mockedResolveVoiceLocationIntentWithApi = jest.mocked(resolveVoiceLocationIntentWithApi);
 const mockedCreateRideRequestWithApi = jest.mocked(createRideRequestWithApi);
 const mockedCreateTripShareLinkWithApi = jest.mocked(createTripShareLinkWithApi);
+const mockedCreateTrustedContactWithApi = jest.mocked(createTrustedContactWithApi);
 const mockedCreateCheckoutIntentWithApi = jest.mocked(createCheckoutIntentWithApi);
 const mockedCreateSavedPlaceWithApi = jest.mocked(createSavedPlaceWithApi);
 const mockedUpdateSavedPlaceWithApi = jest.mocked(updateSavedPlaceWithApi);
 const mockedDeleteSavedPlaceWithApi = jest.mocked(deleteSavedPlaceWithApi);
+const mockedDeleteTrustedContactWithApi = jest.mocked(deleteTrustedContactWithApi);
+const mockedUpdateTrustedContactEntryWithApi = jest.mocked(updateTrustedContactEntryWithApi);
 const mockedUpdateTrustedContactWithApi = jest.mocked(updateTrustedContactWithApi);
 const mockedUpdateTripStatusWithApi = jest.mocked(updateTripStatusWithApi);
 const mockedResolveRiderAppError = jest.mocked(resolveRiderAppError);
@@ -365,10 +374,13 @@ beforeEach(() => {
   mockedResolveVoiceLocationIntentWithApi.mockReset();
   mockedCreateRideRequestWithApi.mockReset();
   mockedCreateTripShareLinkWithApi.mockReset();
+  mockedCreateTrustedContactWithApi.mockReset();
   mockedCreateCheckoutIntentWithApi.mockReset();
   mockedCreateSavedPlaceWithApi.mockReset();
   mockedUpdateSavedPlaceWithApi.mockReset();
   mockedDeleteSavedPlaceWithApi.mockReset();
+  mockedDeleteTrustedContactWithApi.mockReset();
+  mockedUpdateTrustedContactEntryWithApi.mockReset();
   mockedUpdateTrustedContactWithApi.mockReset();
   mockedUpdateTripStatusWithApi.mockReset();
   mockedResolveRiderAppError.mockReset();
@@ -476,6 +488,40 @@ beforeEach(() => {
         isActive: true,
       },
     ],
+  } as never);
+  mockedCreateTrustedContactWithApi.mockResolvedValue({
+    trustedContacts: [
+      {
+        id: 'trusted-contact-1',
+        label: 'Contact principal',
+        phoneNumber: '+22670000001',
+        priority: 1,
+        isActive: true,
+      },
+      {
+        id: 'trusted-contact-2',
+        label: 'Frere',
+        phoneNumber: '+22670000002',
+        priority: 2,
+        isActive: true,
+      },
+    ],
+  } as never);
+  mockedUpdateTrustedContactEntryWithApi.mockResolvedValue({
+    trustedContacts: [
+      {
+        id: 'trusted-contact-2',
+        label: 'Frere',
+        phoneNumber: '+22670000002',
+        priority: 1,
+        isActive: true,
+      },
+    ],
+  } as never);
+  mockedDeleteTrustedContactWithApi.mockResolvedValue({
+    deleted: true,
+    trustedContactId: 'trusted-contact-2',
+    trustedContacts: [],
   } as never);
 
   riderRealtimeState.eventHandler = null;
@@ -1016,6 +1062,66 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Principal');
     expectText(renderer, '*** 0001');
     expectText(renderer, '*** 0002');
+  });
+
+  it('adds and manages rider trusted contacts from account', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRiderProfile.mockResolvedValue(
+      buildRiderProfile({
+        trustedContact: {
+          phoneNumber: '+22670000001',
+          shareMode: 'ALL_TRIPS',
+          status: 'READY',
+          safetyNote: 'Contact de confiance pret pour le partage trajet automatique selon vos regles.',
+        },
+        trustedContacts: [
+          {
+            id: 'trusted-contact-1',
+            label: 'Contact principal',
+            phoneNumber: '+22670000001',
+            priority: 1,
+            isActive: true,
+          },
+          {
+            id: 'trusted-contact-2',
+            label: 'Frere',
+            phoneNumber: '+22670000002',
+            priority: 2,
+            isActive: true,
+          },
+        ],
+      }) as never,
+    );
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+
+    const renderer = await renderScreen(<AccountScreen />);
+    await flushMicrotasks();
+    await changeInputByPlaceholder(renderer, 'Nom du contact', 'Tantie');
+    await changeInputByPlaceholder(renderer, '+22670000002', '+22670000003');
+    await pressByText(renderer, 'Priorite 3');
+    await pressByText(renderer, 'Ajouter un contact');
+
+    expect(mockedCreateTrustedContactWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      {
+        label: 'Tantie',
+        phoneNumber: '+22670000003',
+        priority: 3,
+      },
+    );
+
+    await pressByText(renderer, 'Prioriser');
+    expect(mockedUpdateTrustedContactEntryWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      'trusted-contact-2',
+      { priority: 1 },
+    );
+
+    await pressByText(renderer, 'Retirer');
+    expect(mockedDeleteTrustedContactWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      'trusted-contact-1',
+    );
   });
 
   it('blocks automatic trusted-contact sharing until a phone number is present', async () => {
