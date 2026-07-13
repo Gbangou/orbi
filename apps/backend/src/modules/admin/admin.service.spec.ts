@@ -1152,7 +1152,7 @@ describe('AdminService', () => {
     expect(result.summary).toMatchObject({
       failedChecks: 0,
       warningChecks: 1,
-      totalChecks: 12,
+      totalChecks: 13,
     });
     expect(result.nextActions).toEqual([
       expect.objectContaining({
@@ -1226,6 +1226,10 @@ describe('AdminService', () => {
         }),
         expect.objectContaining({
           id: 'safety-benchmark',
+          state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'mobile-observability-gate',
           state: 'pass',
         }),
         expect.objectContaining({
@@ -1324,22 +1328,24 @@ describe('AdminService', () => {
         },
       },
     });
-    prisma.auditLog.findMany.mockResolvedValue([
-      {
-        entityId: 'runtime-production-readiness',
-        createdAt: new Date('2026-05-01T12:10:00.000Z'),
-        metadata: {
-          owner: 'engineering',
-          severity: 'blocking',
-          notes: 'Redis backplane assigne.',
+    prisma.auditLog.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          entityId: 'runtime-production-readiness',
+          createdAt: new Date('2026-05-01T12:10:00.000Z'),
+          metadata: {
+            owner: 'engineering',
+            severity: 'blocking',
+            notes: 'Redis backplane assigne.',
+          },
+          user: {
+            id: 'ops-1',
+            fullName: 'Ops Orbi',
+            role: 'OPS',
+          },
         },
-        user: {
-          id: 'ops-1',
-          fullName: 'Ops Orbi',
-          role: 'OPS',
-        },
-      },
-    ]);
+      ]);
 
     const result = await service.launchReadiness();
 
@@ -1415,6 +1421,55 @@ describe('AdminService', () => {
         expect.objectContaining({
           id: 'payment-production-gate',
           state: 'warn',
+        }),
+      ]),
+    );
+  });
+
+  it('blocks launch readiness when critical mobile crashes are recurrent', async () => {
+    const { prisma, service } = createService();
+
+    prisma.userSession.count.mockResolvedValue(10);
+    prisma.auditLog.findMany.mockResolvedValueOnce([
+      {
+        metadata: {
+          sessionId: 'session-1',
+          classification: { severity: 'critical' },
+        },
+      },
+      {
+        metadata: {
+          sessionId: 'session-2',
+          classification: { severity: 'critical' },
+        },
+      },
+      {
+        metadata: {
+          sessionId: 'session-2',
+          classification: { severity: 'critical' },
+        },
+      },
+    ]);
+
+    const result = await service.launchReadiness();
+
+    expect(result.decision.state).toBe('blocked');
+    expect(result.summary.failedChecks).toBe(1);
+    expect(result.nextActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          checkId: 'mobile-observability-gate',
+          severity: 'blocking',
+          owner: 'engineering',
+        }),
+      ]),
+    );
+    expect(result.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'mobile-observability-gate',
+          state: 'fail',
+          detail: expect.stringContaining('3 erreur(s) critique(s)'),
         }),
       ]),
     );

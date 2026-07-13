@@ -296,6 +296,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   posture `good`/`warn`/`bad` et action ops recommandee; l admin affiche ce
   signal avec le crash-free rate. Le branchement Sentry/Crashlytics externe
   reste un gap C.
+- 13 juillet 2026: Phase 5, gap A "gate readiness crash mobile". Launch
+  readiness expose maintenant `mobile-observability-gate`: les crashs mobiles
+  critiques recents limitent ou bloquent le pilote selon recurrence, generent
+  une action engineering et empechent de traiter l observabilite comme un simple
+  indicateur dashboard. Les alertes externes Sentry/Crashlytics restent un gap C.
 
 ## Master Prompt Operationnel
 

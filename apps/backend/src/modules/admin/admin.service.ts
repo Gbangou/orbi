@@ -1402,6 +1402,13 @@ function resolveLaunchReadinessNextActions(
         'Verifier finance dashboard, journal webhooks, settlement batch et payout backlog avant ouverture de trafic argent reel.',
       runbookAnchor: 'paiements-et-argent',
     },
+    'mobile-observability-gate': {
+      checkId: 'mobile-observability-gate',
+      owner: 'engineering',
+      action:
+        'Analyser les rapports mobiles critiques, corriger la surface incriminee et garder le pilote limite tant que la recurrence existe.',
+      runbookAnchor: 'observabilite-mobile',
+    },
     'admin-realtime': {
       checkId: 'admin-realtime',
       owner: 'engineering',
@@ -3147,27 +3154,10 @@ export class AdminService {
       }),
     ]);
 
-    const crashedSessionIds = new Set(
-      criticalCrashLogs7d
-        .map((log) =>
-          isDispatchSettingsRecord(log.metadata)
-            ? log.metadata.sessionId
-            : null,
-        )
-        .filter((sessionId): sessionId is string => typeof sessionId === 'string'),
-    );
-    const criticalMobileErrors7d = criticalCrashLogs7d.length;
-    const affectedMobileSessions7d = crashedSessionIds.size;
-    const crashFreeSessionRate7d = safeRate(
-      Math.max(totalSessions7d - crashedSessionIds.size, 0),
+    const mobileObservability = this.resolveMobileObservabilitySignal({
       totalSessions7d,
-    );
-    const mobileObservability =
-      this.resolveMobileObservabilityPosture({
-        crashFreeSessionRate7d,
-        criticalMobileErrors7d,
-        affectedMobileSessions7d,
-      });
+      criticalCrashLogs7d,
+    });
 
     const firstBookingConversionRate30d = safeRate(
       riderConverted30d,
@@ -3229,15 +3219,49 @@ export class AdminService {
 
     return {
       windowDays: 7,
-      crashFreeSessionRate7d,
-      criticalMobileErrors7d,
-      affectedMobileSessions7d,
+      crashFreeSessionRate7d: mobileObservability.crashFreeSessionRate7d,
+      criticalMobileErrors7d: mobileObservability.criticalMobileErrors7d,
+      affectedMobileSessions7d: mobileObservability.affectedMobileSessions7d,
       mobileObservabilityPosture: mobileObservability.posture,
       mobileObservabilityAction: mobileObservability.action,
       firstBookingConversionRate30d,
       offerAcceptanceRate7d,
       avgDriverOnlineMinutes7d,
       avgSupportFirstResponseMinutes7d,
+    };
+  }
+
+  private resolveMobileObservabilitySignal(input: {
+    totalSessions7d: number;
+    criticalCrashLogs7d: Array<{ metadata: unknown }>;
+  }) {
+    const crashedSessionIds = new Set(
+      input.criticalCrashLogs7d
+        .map((log) =>
+          isDispatchSettingsRecord(log.metadata)
+            ? log.metadata.sessionId
+            : null,
+        )
+        .filter((sessionId): sessionId is string => typeof sessionId === 'string'),
+    );
+    const criticalMobileErrors7d = input.criticalCrashLogs7d.length;
+    const affectedMobileSessions7d = crashedSessionIds.size;
+    const crashFreeSessionRate7d = safeRate(
+      Math.max(input.totalSessions7d - affectedMobileSessions7d, 0),
+      input.totalSessions7d,
+    );
+    const posture = this.resolveMobileObservabilityPosture({
+      crashFreeSessionRate7d,
+      criticalMobileErrors7d,
+      affectedMobileSessions7d,
+    });
+
+    return {
+      crashFreeSessionRate7d,
+      criticalMobileErrors7d,
+      affectedMobileSessions7d,
+      posture: posture.posture,
+      action: posture.action,
     };
   }
 
@@ -3488,6 +3512,7 @@ export class AdminService {
 
   async launchReadiness() {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const [
       health,
       openSupportTickets,
@@ -3498,6 +3523,8 @@ export class AdminService {
       ignoredPaymentWebhooks,
       recoveryWallets,
       preparedPayoutBacklog,
+      totalSessions7d,
+      criticalCrashLogs7d,
     ] = await Promise.all([
       this.healthService.check(),
       this.prisma.supportTicket.count({
@@ -3562,6 +3589,15 @@ export class AdminService {
           status: DriverPayoutStatus.PREPARED,
         },
       }),
+      this.prisma.userSession.count({ where: { createdAt: { gte: since7d } } }),
+      this.prisma.auditLog.findMany({
+        where: {
+          action: 'MOBILE_CLIENT_ERROR_REPORTED',
+          createdAt: { gte: since7d },
+          metadata: { path: ['classification', 'severity'], equals: 'critical' },
+        },
+        select: { metadata: true },
+      }),
     ]);
     const productionReadiness = health.operations.productionReadiness;
     const runtimeState =
@@ -3616,6 +3652,16 @@ export class AdminService {
         ? `${preparedPayoutBacklog} payout(s) prepares`
         : null,
     ].filter((issue): issue is string => Boolean(issue));
+    const mobileObservability = this.resolveMobileObservabilitySignal({
+      totalSessions7d,
+      criticalCrashLogs7d,
+    });
+    const mobileObservabilityState =
+      mobileObservability.posture === 'bad'
+        ? 'fail'
+        : mobileObservability.posture === 'warn'
+          ? 'warn'
+          : 'pass';
     const checks: LaunchReadinessCheck[] = [
       {
         id: 'runtime-production-readiness',
@@ -3672,6 +3718,12 @@ export class AdminService {
         detail: paymentProductionIssues.length
           ? `A stabiliser: ${paymentProductionIssues.join(', ')}.`
           : 'Finance dashboard, webhooks, refunds, recovery et payout backlog sont propres cote code.',
+      },
+      {
+        id: 'mobile-observability-gate',
+        label: 'Gate crash mobile',
+        state: mobileObservabilityState,
+        detail: `${mobileObservability.criticalMobileErrors7d} erreur(s) critique(s), ${mobileObservability.affectedMobileSessions7d} session(s) touchee(s), ${mobileObservability.crashFreeSessionRate7d}% sessions sans crash. ${mobileObservability.action}`,
       },
       {
         id: 'admin-realtime',
