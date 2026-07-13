@@ -24,6 +24,7 @@ ce flux doit changer dans le meme travail.
 | Demo locale clic par clic | `demo-local-click-by-click.md` |
 | Directive production | `production-readiness-directive.md` |
 | Programme de tests securite et fiabilite | `security-test-program.md` |
+| Master prompt et plan leader-parity | `orbi-master-prompt-plan.md` |
 | Roadmap world-class | `world-class-readiness-roadmap.md` |
 | Audit professionnel app/APK du 30 juin 2026 | `professional-app-audit-2026-06-30.md` |
 
@@ -49,6 +50,7 @@ Documents d'execution locale, terrain et production:
 Documents qui cadrent les choix marche et operationnels:
 
 - `competitive-benchmark.md`
+- `orbi-master-prompt-plan.md`
 - `professional-app-audit-2026-06-30.md`
 - `payment-strategy.md`
 - `pricing-burkina-strategy.md`
