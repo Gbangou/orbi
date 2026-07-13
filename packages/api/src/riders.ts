@@ -22,6 +22,7 @@ export type RiderProfileResponse = {
       safetyNote: string;
     };
     trustedContacts: Array<{
+      id: string | null;
       label: string;
       phoneNumber: string;
       priority: number;
@@ -56,6 +57,15 @@ export type TrustedContactMutationResponse = {
     safetyNote: string;
   };
   trustedContacts: RiderProfileResponse["profile"]["trustedContacts"];
+};
+
+export type TrustedContactRosterMutationResponse = {
+  trustedContacts: RiderProfileResponse["profile"]["trustedContacts"];
+};
+
+export type TrustedContactDeleteResponse = TrustedContactRosterMutationResponse & {
+  deleted: boolean;
+  trustedContactId: string;
 };
 
 export type SavedPlaceDeleteResponse = {
@@ -100,6 +110,54 @@ export async function updateTrustedContactWithApi(
     {
       method: "PATCH",
       body: payload,
+    },
+  );
+}
+
+export async function createTrustedContactWithApi(
+  client: OrbiApiClient,
+  payload: {
+    label?: string;
+    phoneNumber: string;
+    priority?: number;
+  },
+) {
+  return client.request<TrustedContactRosterMutationResponse>(
+    apiRoutes.riders.trustedContacts,
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
+}
+
+export async function updateTrustedContactEntryWithApi(
+  client: OrbiApiClient,
+  trustedContactId: string,
+  payload: {
+    label?: string;
+    phoneNumber?: string;
+    priority?: number;
+    isActive?: boolean;
+  },
+) {
+  return client.request<TrustedContactRosterMutationResponse>(
+    `${apiRoutes.riders.trustedContacts}/${trustedContactId}`,
+    {
+      method: "PATCH",
+      body: payload,
+    },
+  );
+}
+
+export async function deleteTrustedContactWithApi(
+  client: OrbiApiClient,
+  trustedContactId: string,
+) {
+  return client.request<TrustedContactDeleteResponse>(
+    `${apiRoutes.riders.trustedContacts}/${trustedContactId}`,
+    {
+      method: "DELETE",
     },
   );
 }

@@ -229,6 +229,10 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   affiche maintenant `trustedContacts[]`, compte les contacts actifs, masque les
   numeros et garde l edition du contact principal. L API de creation/ordre de
   plusieurs contacts reste un gap A separe.
+- 13 juillet 2026: Phase 1, gap A "API trusted contacts complete". Le backend
+  expose creation, mise a jour, priorite et desactivation douce de jusqu a trois
+  contacts actifs, resynchronise le contact principal, audite chaque mutation et
+  publie le contrat API client. La livraison SMS/WhatsApp reste un gap B/C.
 
 ## Master Prompt Operationnel
 

@@ -6,8 +6,12 @@ import {
 import { PrismaService } from '../../core/prisma/prisma.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { CreateSavedPlaceDto } from './dto/create-saved-place.dto';
+import { CreateTrustedContactDto } from './dto/create-trusted-contact.dto';
+import { UpdateTrustedContactEntryDto } from './dto/update-trusted-contact-entry.dto';
 import { UpdateTrustedContactDto } from './dto/update-trusted-contact.dto';
 import { UpdateSavedPlaceDto } from './dto/update-saved-place.dto';
+
+const maxActiveTrustedContacts = 3;
 
 function toNumber(value: unknown) {
   if (value === null || value === undefined) {
@@ -203,18 +207,6 @@ export class RidersService {
       });
 
       if (normalizedPhone) {
-        await tx.riderTrustedContact.updateMany({
-          where: {
-            riderId: riderProfileId,
-            phoneNumber: {
-              not: normalizedPhone,
-            },
-          },
-          data: {
-            isActive: false,
-          },
-        });
-
         await tx.riderTrustedContact.upsert({
           where: {
             riderId_phoneNumber: {
@@ -285,6 +277,181 @@ export class RidersService {
             },
           ]
         : [],
+      };
+  }
+
+  async createTrustedContact(
+    auth: RequestAuthContext,
+    payload: CreateTrustedContactDto,
+  ) {
+    const riderProfileId = this.getRiderProfileId(auth);
+    const phoneNumber = payload.phoneNumber.trim();
+    const label = payload.label?.trim() || 'Contact de confiance';
+
+    const trustedContacts = await this.prisma.$transaction(async (tx) => {
+      const activeContacts = await tx.riderTrustedContact.findMany({
+        where: { riderId: riderProfileId, isActive: true },
+        orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
+      });
+      const existingActive = activeContacts.find(
+        (contact) => contact.phoneNumber === phoneNumber,
+      );
+
+      if (!existingActive && activeContacts.length >= maxActiveTrustedContacts) {
+        throw new BadRequestException(
+          `A rider can have at most ${maxActiveTrustedContacts} active trusted contacts.`,
+        );
+      }
+
+      const priority =
+        payload.priority ??
+        Math.min(activeContacts.length + 1, maxActiveTrustedContacts);
+
+      await tx.riderTrustedContact.upsert({
+        where: {
+          riderId_phoneNumber: {
+            riderId: riderProfileId,
+            phoneNumber,
+          },
+        },
+        update: {
+          label,
+          priority,
+          isActive: true,
+        },
+        create: {
+          riderId: riderProfileId,
+          label,
+          phoneNumber,
+          priority,
+          isActive: true,
+        },
+      });
+
+      const contacts = await this.syncTrustedContactPrimary(tx, riderProfileId);
+
+      await tx.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'RIDER_TRUSTED_CONTACT_CREATED',
+          entityType: 'RIDER_PROFILE',
+          entityId: riderProfileId,
+          metadata: {
+            phoneNumber,
+            priority,
+            activeTrustedContacts: contacts.length,
+          },
+        },
+      });
+
+      return contacts;
+    });
+
+    return {
+      trustedContacts,
+    };
+  }
+
+  async updateTrustedContactEntry(
+    auth: RequestAuthContext,
+    trustedContactId: string,
+    payload: UpdateTrustedContactEntryDto,
+  ) {
+    const riderProfileId = this.getRiderProfileId(auth);
+
+    const trustedContacts = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.riderTrustedContact.findUnique({
+        where: { id: trustedContactId },
+      });
+
+      if (!existing || existing.riderId !== riderProfileId) {
+        throw new NotFoundException('Trusted contact not found for this rider.');
+      }
+
+      const reactivating = payload.isActive === true && !existing.isActive;
+      if (reactivating) {
+        const activeCount = await tx.riderTrustedContact.count({
+          where: { riderId: riderProfileId, isActive: true },
+        });
+
+        if (activeCount >= maxActiveTrustedContacts) {
+          throw new BadRequestException(
+            `A rider can have at most ${maxActiveTrustedContacts} active trusted contacts.`,
+          );
+        }
+      }
+
+      await tx.riderTrustedContact.update({
+        where: { id: trustedContactId },
+        data: {
+          label: payload.label?.trim(),
+          phoneNumber: payload.phoneNumber?.trim(),
+          priority: payload.priority,
+          isActive: payload.isActive,
+        },
+      });
+
+      const contacts = await this.syncTrustedContactPrimary(tx, riderProfileId);
+
+      await tx.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'RIDER_TRUSTED_CONTACT_ENTRY_UPDATED',
+          entityType: 'RIDER_TRUSTED_CONTACT',
+          entityId: trustedContactId,
+          metadata: {
+            changedFields: Object.keys(payload),
+            activeTrustedContacts: contacts.length,
+          },
+        },
+      });
+
+      return contacts;
+    });
+
+    return {
+      trustedContacts,
+    };
+  }
+
+  async deleteTrustedContact(auth: RequestAuthContext, trustedContactId: string) {
+    const riderProfileId = this.getRiderProfileId(auth);
+
+    const trustedContacts = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.riderTrustedContact.findUnique({
+        where: { id: trustedContactId },
+      });
+
+      if (!existing || existing.riderId !== riderProfileId) {
+        throw new NotFoundException('Trusted contact not found for this rider.');
+      }
+
+      await tx.riderTrustedContact.update({
+        where: { id: trustedContactId },
+        data: { isActive: false },
+      });
+
+      const contacts = await this.syncTrustedContactPrimary(tx, riderProfileId);
+
+      await tx.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'RIDER_TRUSTED_CONTACT_DEACTIVATED',
+          entityType: 'RIDER_TRUSTED_CONTACT',
+          entityId: trustedContactId,
+          metadata: {
+            activeTrustedContacts: contacts.length,
+          },
+        },
+      });
+
+      return contacts;
+    });
+
+    return {
+      deleted: true,
+      trustedContactId,
+      trustedContacts,
     };
   }
 
@@ -388,6 +555,7 @@ export class RidersService {
 
   private serializeTrustedContacts(
     contacts: Array<{
+      id?: string;
       label: string;
       phoneNumber: string;
       priority: number;
@@ -399,6 +567,7 @@ export class RidersService {
       return contacts
         .filter((contact) => contact.isActive)
         .map((contact) => ({
+          id: contact.id ?? null,
           label: contact.label,
           phoneNumber: contact.phoneNumber,
           priority: contact.priority,
@@ -412,11 +581,59 @@ export class RidersService {
 
     return [
       {
+        id: null,
         label: 'Contact principal',
         phoneNumber: fallbackEmergencyPhone,
         priority: 1,
         isActive: true,
       },
     ];
+  }
+
+  private async syncTrustedContactPrimary(
+    tx: {
+      riderTrustedContact: {
+        findMany: (args: unknown) => Promise<
+          Array<{
+            id: string;
+            label: string;
+            phoneNumber: string;
+            priority: number;
+            isActive: boolean;
+          }>
+        >;
+      };
+      riderProfile: {
+        findUnique: (args: unknown) => Promise<{
+          trustedContactShareMode: 'MANUAL' | 'NIGHT' | 'ALL_TRIPS';
+        } | null>;
+        update: (args: unknown) => Promise<unknown>;
+      };
+    },
+    riderProfileId: string,
+  ) {
+    const [profile, contacts] = await Promise.all([
+      tx.riderProfile.findUnique({
+        where: { id: riderProfileId },
+        select: { trustedContactShareMode: true },
+      }),
+      tx.riderTrustedContact.findMany({
+        where: { riderId: riderProfileId, isActive: true },
+        orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
+      }),
+    ]);
+    const primaryContact = contacts[0] ?? null;
+
+    await tx.riderProfile.update({
+      where: { id: riderProfileId },
+      data: {
+        emergencyPhone: primaryContact?.phoneNumber ?? null,
+        trustedContactShareMode: primaryContact
+          ? (profile?.trustedContactShareMode ?? 'MANUAL')
+          : 'MANUAL',
+      },
+    });
+
+    return this.serializeTrustedContacts(contacts, null);
   }
 }

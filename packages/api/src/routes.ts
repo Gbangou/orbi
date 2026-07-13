@@ -62,6 +62,7 @@ export const apiRoutes = {
     overview: "/riders/overview",
     savedPlaces: "/riders/saved-places",
     trustedContact: "/riders/trusted-contact",
+    trustedContacts: "/riders/trusted-contacts",
   },
   drivers: {
     root: "/drivers",

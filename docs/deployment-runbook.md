@@ -207,13 +207,18 @@ reponse profil expose `trustedContact` pour compatibilite mobile et
 `trustedContacts[]` pour la suite multi-contacts auditee. L ecran compte rider
 rend le contact principal visible, modifiable, desactivable, et affiche la liste
 des contacts actifs avec numeros masques quand l API en renvoie plusieurs.
+`POST /api/v1/riders/trusted-contacts`,
+`PATCH /api/v1/riders/trusted-contacts/:trustedContactId` et
+`DELETE /api/v1/riders/trusted-contacts/:trustedContactId` permettent de gerer
+jusqu a trois contacts actifs, leur ordre de priorite et leur desactivation
+douce; chaque changement resynchronise le contact principal et ecrit un audit.
 Quand le mode est `ALL_TRIPS`, ou `NIGHT` sur plage nocturne, l acceptation
 chauffeur choisit le premier contact actif par priorite, prepare
 automatiquement un lien de partage trajet audite avec
 `TRIP_TRUSTED_CONTACT_SHARE_PREPARED` et un event `SHARE_LINK_CREATED` marque
 `TRUSTED_CONTACT_AUTO_SHARE`. Le prochain palier production consiste a brancher
-SMS/WhatsApp/provider et l API de gestion multi-contacts complete sans exposer
-de donnees personnelles dans le lien public de trajet.
+SMS/WhatsApp/provider sans exposer de donnees personnelles dans le lien public
+de trajet.
 
 Orbi impose maintenant un premier garde-fou fatigue chauffeur. Avant mise en
 ligne et avant acceptation d une mission, le backend calcule les courses

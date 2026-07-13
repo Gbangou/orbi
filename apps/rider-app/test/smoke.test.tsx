@@ -469,6 +469,7 @@ beforeEach(() => {
     },
     trustedContacts: [
       {
+        id: 'trusted-contact-1',
         label: 'Contact principal',
         phoneNumber: '+22670000001',
         priority: 1,
@@ -987,12 +988,14 @@ describe('rider smoke flows', () => {
         },
         trustedContacts: [
           {
+            id: 'trusted-contact-1',
             label: 'Contact principal',
             phoneNumber: '+22670000001',
             priority: 1,
             isActive: true,
           },
           {
+            id: 'trusted-contact-2',
             label: 'Frere',
             phoneNumber: '+22670000002',
             priority: 2,

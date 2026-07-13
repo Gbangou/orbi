@@ -22,6 +22,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { CreateSavedPlaceDto } from './dto/create-saved-place.dto';
+import { CreateTrustedContactDto } from './dto/create-trusted-contact.dto';
+import { UpdateTrustedContactEntryDto } from './dto/update-trusted-contact-entry.dto';
 import { UpdateTrustedContactDto } from './dto/update-trusted-contact.dto';
 import { UpdateSavedPlaceDto } from './dto/update-saved-place.dto';
 import { RidersService } from './riders.service';
@@ -69,6 +71,52 @@ export class RidersController {
     @Body() payload: UpdateTrustedContactDto,
   ) {
     return this.ridersService.updateTrustedContact(auth, payload);
+  }
+
+  @Post('trusted-contacts')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000, scope: 'user' })
+  @Roles(UserRole.RIDER)
+  @RequireProfile('rider')
+  createTrustedContact(
+    @CurrentAuth() auth: RequestAuthContext,
+    @Body() payload: CreateTrustedContactDto,
+  ) {
+    return this.ridersService.createTrustedContact(auth, payload);
+  }
+
+  @Patch('trusted-contacts/:trustedContactId')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000, scope: 'user' })
+  @Roles(UserRole.RIDER)
+  @RequireProfile('rider')
+  updateTrustedContactEntry(
+    @CurrentAuth() auth: RequestAuthContext,
+    @Param('trustedContactId', new OpaqueIdPipe('trustedContactId'))
+    trustedContactId: string,
+    @Body() payload: UpdateTrustedContactEntryDto,
+  ) {
+    return this.ridersService.updateTrustedContactEntry(
+      auth,
+      trustedContactId,
+      payload,
+    );
+  }
+
+  @Delete('trusted-contacts/:trustedContactId')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000, scope: 'user' })
+  @Roles(UserRole.RIDER)
+  @RequireProfile('rider')
+  deleteTrustedContact(
+    @CurrentAuth() auth: RequestAuthContext,
+    @Param('trustedContactId', new OpaqueIdPipe('trustedContactId'))
+    trustedContactId: string,
+  ) {
+    return this.ridersService.deleteTrustedContact(auth, trustedContactId);
   }
 
   @Patch('saved-places/:savedPlaceId')
