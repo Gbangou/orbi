@@ -11,7 +11,6 @@ export const adminSyncHighlightDurationMs = 5000;
 type AdminJobQueueEntry = AdminJobQueueResponse['jobs'][number];
 type LiveOpsRouteMonitoring = AdminLiveOpsResponse['trips'][number]['routeMonitoring'];
 type LiveOpsTrip = AdminLiveOpsResponse['trips'][number];
-const liveOpsStaleGpsThresholdMs = 2 * 60 * 1000;
 export type JobQueueKindFilter =
   | 'ALL'
   | 'PAYMENT_WEBHOOK'
@@ -46,7 +45,9 @@ export function resolveLiveOpsRouteMonitoringCopy(
   options: { now?: string | Date } = {},
 ) {
   const signalAge = resolveLiveOpsRouteSignalAge(routeMonitoring.lastPositionAt, options.now);
-  const isStale = signalAge.isStale && routeMonitoring.state === 'clear';
+  const isStale =
+    routeMonitoring.signalState?.state === 'stale' &&
+    routeMonitoring.state === 'clear';
   const statusLabel =
     isStale
       ? 'Signal GPS ancien'
@@ -61,7 +62,7 @@ export function resolveLiveOpsRouteMonitoringCopy(
     lastSignalLabel:
       routeMonitoring.lastAlertType
         ? formatOperationalStatus(routeMonitoring.lastAlertType)
-        : signalAge.label,
+        : routeMonitoring.signalState?.label ?? signalAge.label,
     progressLabel: resolveLiveOpsRouteProgressLabel(routeMonitoring),
   };
 }
@@ -152,12 +153,7 @@ export function resolveLiveOpsTripTriage(
     };
   }
 
-  const routeSignalAge = resolveLiveOpsRouteSignalAge(
-    trip.routeMonitoring.lastPositionAt,
-    options.now,
-  );
-
-  if (routeSignalAge.isStale) {
+  if (trip.routeMonitoring.signalState?.state === 'stale') {
     return {
       level: 'watch' as const,
       label: 'Signal GPS ancien',
@@ -206,11 +202,8 @@ export function resolveLiveOpsRouteSignalAge(
 
   return {
     ageSeconds,
-    isStale: ageSeconds * 1000 >= liveOpsStaleGpsThresholdMs,
-    label:
-      ageSeconds * 1000 >= liveOpsStaleGpsThresholdMs
-        ? `Dernier GPS il y a ${ageMinutes} min`
-        : `GPS il y a ${ageMinutes} min`,
+    isStale: false,
+    label: `GPS il y a ${ageMinutes} min`,
   };
 }
 
@@ -232,6 +225,10 @@ export function hasLiveOpsTripChanged(
       nextTrip.routeMonitoring.lastAlertAt ||
     previousTrip.routeMonitoring.lastPositionAt !==
       nextTrip.routeMonitoring.lastPositionAt ||
+    previousTrip.routeMonitoring.signalState?.state !==
+      nextTrip.routeMonitoring.signalState?.state ||
+    previousTrip.routeMonitoring.signalState?.ageMinutes !==
+      nextTrip.routeMonitoring.signalState?.ageMinutes ||
     previousTrip.routeMonitoring.latestPosition?.observedAt !==
       nextTrip.routeMonitoring.latestPosition?.observedAt ||
     previousTrip.routeMonitoring.latestPosition?.distanceToPickupKm !==

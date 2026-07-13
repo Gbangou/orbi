@@ -1018,6 +1018,26 @@ function resolveLiveOpsRoutePosition(input: {
   };
 }
 
+function findLatestDriverRoutePositionEvent(
+  events: Array<{
+    eventType: string;
+    payload?: unknown;
+    createdAt: Date;
+  }>,
+) {
+  return [...events].reverse().find((event) => {
+    if (event.eventType !== 'ROUTE_POSITION_RECORDED') {
+      return false;
+    }
+
+    const payload = isDispatchSettingsRecord(event.payload)
+      ? event.payload
+      : {};
+
+    return payload.sourceRole !== 'RIDER';
+  });
+}
+
 function resolveLiveOpsCompletionGate(input: {
   status: string;
   routeMonitoring: {
@@ -1116,6 +1136,44 @@ function resolveLiveOpsCompletionGate(input: {
     reason: 'Le signal route chauffeur est exploitable.',
     action: 'Laisser le chauffeur finaliser ou assister le support si besoin.',
     canOpsOverride: false,
+  };
+}
+
+function resolveLiveOpsRouteSignalState(input: {
+  lastPositionAt: string | null;
+  now: Date;
+}) {
+  if (!input.lastPositionAt) {
+    return {
+      state: 'missing' as const,
+      ageMinutes: null,
+      label: 'Signal chauffeur absent',
+    };
+  }
+
+  const observedAt = new Date(input.lastPositionAt);
+  const ageMinutes = (input.now.getTime() - observedAt.getTime()) / 60000;
+
+  if (!Number.isFinite(ageMinutes)) {
+    return {
+      state: 'missing' as const,
+      ageMinutes: null,
+      label: 'Signal chauffeur inexploitable',
+    };
+  }
+
+  if (ageMinutes > routeCompletionMaxSignalAgeMinutes) {
+    return {
+      state: 'stale' as const,
+      ageMinutes: Math.round(ageMinutes),
+      label: `Signal chauffeur ancien (${Math.round(ageMinutes)} min)`,
+    };
+  }
+
+  return {
+    state: 'fresh' as const,
+    ageMinutes: Math.max(0, Math.round(ageMinutes)),
+    label: 'Signal chauffeur recent',
   };
 }
 
@@ -2507,8 +2565,9 @@ export class AdminService {
     const routeMonitoringAlertTrips = activeTrips.filter((trip) =>
       trip.events.some((event) => event.eventType === 'ROUTE_MONITORING_ALERT'),
     ).length;
+    const now = new Date();
     const stalledMatchedCutoff = new Date(
-      Date.now() - matchedSlaStalledMinutes * 60 * 1000,
+      now.getTime() - matchedSlaStalledMinutes * 60 * 1000,
     );
     const stalledMatchedTrips = activeTrips.filter(
       (trip) =>
@@ -2517,19 +2576,22 @@ export class AdminService {
         !trip.events.some((event) => event.eventType === 'DRIVER_ARRIVING'),
     ).length;
     const activeTripsMissingDriverRoutePosition = activeTrips.filter(
-      (trip) =>
-        !trip.events.some((event) => {
-          if (event.eventType !== 'ROUTE_POSITION_RECORDED') {
-            return false;
-          }
-
-          const payload = isDispatchSettingsRecord(event.payload)
-            ? event.payload
-            : {};
-
-          return payload.sourceRole !== 'RIDER';
-        }),
+      (trip) => !findLatestDriverRoutePositionEvent(trip.events),
     ).length;
+    const activeTripsStaleDriverRoutePosition = activeTrips.filter((trip) => {
+      const latestDriverRoutePosition = findLatestDriverRoutePositionEvent(
+        trip.events,
+      );
+
+      if (!latestDriverRoutePosition) {
+        return false;
+      }
+
+      return (
+        now.getTime() - latestDriverRoutePosition.createdAt.getTime() >
+        routeCompletionMaxSignalAgeMinutes * 60 * 1000
+      );
+    }).length;
     const succeededPayments = paymentAttempts.filter(
       (attempt) => attempt.status === 'SUCCEEDED',
     ).length;
@@ -2545,8 +2607,6 @@ export class AdminService {
     const reconciledPayments = paymentAttempts.filter(
       (attempt) => attempt.providerReference,
     ).length;
-    const now = new Date();
-
     const driverDispatchStats = new Map<
       string,
       {
@@ -2644,6 +2704,7 @@ export class AdminService {
         urgentSupportTickets,
         tripsByStatus,
         stalledMatchedTrips,
+        staleDriverSignals: activeTripsStaleDriverRoutePosition,
         payments: {
           lookbackHours: 24,
           attempts: paymentAttempts.length,
@@ -2678,20 +2739,18 @@ export class AdminService {
         )
           ? latestRouteAlert.payload
           : {};
-        const latestRoutePosition = [...trip.events].reverse().find((event) => {
-          if (event.eventType !== 'ROUTE_POSITION_RECORDED') {
-            return false;
-          }
-
-          const payload = isDispatchSettingsRecord(event.payload)
-            ? event.payload
-            : {};
-
-          return payload.sourceRole !== 'RIDER';
-        });
+        const latestRoutePosition = findLatestDriverRoutePositionEvent(
+          trip.events,
+        );
+        const lastPositionAt =
+          latestRoutePosition?.createdAt.toISOString() ?? null;
         const latestPosition = resolveLiveOpsRoutePosition({
           event: latestRoutePosition,
           rideRequest: trip.rideRequest,
+        });
+        const signalState = resolveLiveOpsRouteSignalState({
+          lastPositionAt,
+          now,
         });
         const routeMonitoring: {
           state: 'clear' | 'warning' | 'critical' | 'unknown';
@@ -2699,6 +2758,7 @@ export class AdminService {
           lastAlertType: string | null;
           lastAlertAt: string | null;
           lastPositionAt: string | null;
+          signalState: ReturnType<typeof resolveLiveOpsRouteSignalState>;
           latestPosition: ReturnType<typeof resolveLiveOpsRoutePosition>;
         } = {
           state: latestRouteAlert
@@ -2714,7 +2774,8 @@ export class AdminService {
               ? latestRouteAlertPayload.alertType
               : null,
           lastAlertAt: latestRouteAlert?.createdAt.toISOString() ?? null,
-          lastPositionAt: latestRoutePosition?.createdAt.toISOString() ?? null,
+          lastPositionAt,
+          signalState,
           latestPosition,
         };
 
@@ -2761,9 +2822,11 @@ export class AdminService {
           : 'Aucun signalement d incident sur les trajets actifs.',
         routeMonitoringAlertTrips > 0
           ? `${routeMonitoringAlertTrips} trajet(s) actif(s) ont une alerte route monitoring.`
-          : activeTripsMissingDriverRoutePosition > 0
-            ? `${activeTripsMissingDriverRoutePosition} trajet(s) actif(s) attendent le premier signal GPS chauffeur.`
-            : 'Route monitoring clair sur les trajets actifs instrumentes.',
+          : activeTripsStaleDriverRoutePosition > 0
+            ? `${activeTripsStaleDriverRoutePosition} trajet(s) actif(s) ont un signal GPS chauffeur ancien.`
+            : activeTripsMissingDriverRoutePosition > 0
+              ? `${activeTripsMissingDriverRoutePosition} trajet(s) actif(s) attendent le premier signal GPS chauffeur.`
+              : 'Route monitoring clair sur les trajets actifs instrumentes.',
         stalledMatchedTrips > 0
           ? `${stalledMatchedTrips} trajet(s) MATCHED depuis plus de ${matchedSlaStalledMinutes} min sans signal DRIVER_ARRIVING — vérifier disponibilité chauffeur.`
           : 'Aucun trajet MATCHED en dépassement SLA.',

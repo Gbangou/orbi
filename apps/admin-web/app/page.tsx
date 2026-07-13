@@ -117,6 +117,7 @@ const fallbackLiveOps: AdminLiveOpsResponse = {
       inProgress: 0,
     },
     stalledMatchedTrips: 0,
+    staleDriverSignals: 0,
     payments: {
       lookbackHours: 24,
       attempts: 0,

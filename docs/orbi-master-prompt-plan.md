@@ -221,6 +221,10 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   encore `MATCHED` avec un chauffeur trop loin du point de depart cree un ticket
   support, un audit log et un event realtime dedupe. La calibration terrain des
   seuils reste un gap B/D.
+- 13 juillet 2026: Phase 1, gap A "signal chauffeur ancien Live Ops". Live Ops
+  expose maintenant `signalState` par trajet, compte `staleDriverSignals` et
+  affiche le compteur dans la console admin. Le seuil est aligne sur le garde-
+  fou de finalisation; les procedures d appel support restent un gap D.
 
 ## Master Prompt Operationnel
 

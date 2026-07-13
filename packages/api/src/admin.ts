@@ -187,6 +187,7 @@ export type AdminLiveOpsResponse = {
       inProgress: number;
     };
     stalledMatchedTrips: number;
+    staleDriverSignals: number;
     payments: {
       lookbackHours: number;
       attempts: number;
@@ -220,6 +221,11 @@ export type AdminLiveOpsResponse = {
       lastAlertType: string | null;
       lastAlertAt: string | null;
       lastPositionAt: string | null;
+      signalState: {
+        state: "fresh" | "stale" | "missing";
+        ageMinutes: number | null;
+        label: string;
+      };
       latestPosition: {
         latitude: number;
         longitude: number;

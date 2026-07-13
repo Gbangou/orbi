@@ -315,6 +315,11 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
           <strong>{liveOps.summary.stalledMatchedTrips}</strong>
           <p>Trajet(s) MATCHED en attente {'>'} 10 min</p>
         </article>
+        <article className={`card${liveOps.summary.staleDriverSignals > 0 ? ' card-alert' : ''}`}>
+          <span>Signal GPS</span>
+          <strong>{liveOps.summary.staleDriverSignals}</strong>
+          <p>Trajet(s) avec signal chauffeur ancien</p>
+        </article>
         <article className="card">
           <span>Paiements 24h</span>
           <strong>{liveOps.summary.payments.reconciliationRate}%</strong>

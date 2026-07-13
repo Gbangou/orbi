@@ -566,6 +566,66 @@ describe('AdminService', () => {
     );
   });
 
+  it('flags active trips with stale driver route position in liveOps', async () => {
+    const { prisma, service } = createService();
+    const stalePositionAt = new Date(Date.now() - 12 * 60 * 1000);
+
+    prisma.trip.findMany.mockResolvedValueOnce([
+      {
+        id: 'trip-stale-gps-1',
+        status: 'DRIVER_ARRIVING',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        actualFare: 1600,
+        currency: 'XOF',
+        rider: { user: { fullName: 'Awa Rider' } },
+        driver: { user: { fullName: 'Issa Driver' } },
+        vehicle: { make: 'Yamaha', model: 'Crypton' },
+        rideRequest: {
+          pickupLatitude: 12.3783,
+          pickupLongitude: -1.4994,
+          destinationLatitude: 12.3032,
+          destinationLongitude: -1.5241,
+        },
+        events: [
+          {
+            id: 'event-1',
+            eventType: 'TRIP_ACCEPTED',
+            createdAt: new Date(Date.now() - 20 * 60 * 1000),
+          },
+          {
+            id: 'event-2',
+            eventType: 'ROUTE_POSITION_RECORDED',
+            payload: {
+              latitude: 12.3776,
+              longitude: -1.501,
+              accuracyMeters: 8,
+              speedKph: 0,
+              observedAt: stalePositionAt.toISOString(),
+              sourceRole: 'DRIVER',
+            },
+            createdAt: stalePositionAt,
+          },
+        ],
+      },
+    ]);
+    prisma.supportTicket.count.mockResolvedValue(0);
+    prisma.rideRequest.count.mockResolvedValue(0);
+
+    const result = await service.liveOps();
+
+    expect(result.summary.staleDriverSignals).toBe(1);
+    expect(result.trips[0].routeMonitoring.signalState).toEqual(
+      expect.objectContaining({
+        state: 'stale',
+        ageMinutes: expect.any(Number),
+      }),
+    );
+    expect(result.alerts).toContain(
+      '1 trajet(s) actif(s) ont un signal GPS chauffeur ancien.',
+    );
+  });
+
   it('exposes completion gate blockers for active in-progress trips', async () => {
     const { prisma, service } = createService();
 

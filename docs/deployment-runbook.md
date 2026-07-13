@@ -192,9 +192,10 @@ calibre avec le pilote terrain. L alerte est auditee via
 `TRIP_ROUTE_MONITORING_ALERT_CREATED`, publiee en temps reel avec
 `trip.route-monitor-alert`, et visible dans Live Ops. Live Ops affiche aussi le
 progres depart/destination a partir du dernier signal chauffeur disponible,
-sans exposer les coordonnees brutes; un ping rider plus recent ne remplace pas
-la position vehicule cote operations. Les alertes sont refroidies par type pour
-eviter le spam support.
+qualifie chaque trajet avec `signalState` (`fresh`, `stale`, `missing`) et
+compte `staleDriverSignals` dans le resume ops, sans exposer les coordonnees
+brutes; un ping rider plus recent ne remplace pas la position vehicule cote
+operations. Les alertes sont refroidies par type pour eviter le spam support.
 
 Orbi expose aussi un socle extensible de contacts de confiance cote rider:
 `PATCH /api/v1/riders/trusted-contact` accepte uniquement un numero Burkina

@@ -125,6 +125,11 @@ function createLiveOpsTrip(
       lastAlertType: 'LONG_STOP',
       lastAlertAt: '2026-04-19T08:03:00.000Z',
       lastPositionAt: '2026-04-19T08:02:30.000Z',
+      signalState: {
+        state: 'fresh',
+        ageMinutes: 1,
+        label: 'Signal chauffeur recent',
+      },
       latestPosition: null,
     },
     completionGate: {
@@ -245,6 +250,11 @@ describe('admin-ops-kernel', () => {
             lastAlertType: 'ROUTE_DEVIATION',
             lastAlertAt: '2026-04-19T08:04:00.000Z',
             lastPositionAt: '2026-04-19T08:03:30.000Z',
+            signalState: {
+              state: 'fresh',
+              ageMinutes: 1,
+              label: 'Signal chauffeur recent',
+            },
             latestPosition: null,
           },
         }),
@@ -260,11 +270,16 @@ describe('admin-ops-kernel', () => {
         lastAlertType: null,
         lastAlertAt: null,
         lastPositionAt: null,
+        signalState: {
+          state: 'missing',
+          ageMinutes: null,
+          label: 'Signal chauffeur absent',
+        },
         latestPosition: null,
       }),
     ).toEqual({
       statusLabel: 'En attente',
-      lastSignalLabel: null,
+      lastSignalLabel: 'Signal chauffeur absent',
       progressLabel: null,
     });
 
@@ -275,11 +290,16 @@ describe('admin-ops-kernel', () => {
         lastAlertType: null,
         lastAlertAt: null,
         lastPositionAt: '2026-04-19T08:02:30.000Z',
+        signalState: {
+          state: 'fresh',
+          ageMinutes: 1,
+          label: 'Signal chauffeur recent',
+        },
         latestPosition: null,
       }, { now: '2026-04-19T08:03:00.000Z' }),
     ).toEqual({
       statusLabel: 'Clair',
-      lastSignalLabel: 'GPS il y a 1 min',
+      lastSignalLabel: 'Signal chauffeur recent',
       progressLabel: null,
     });
 
@@ -290,6 +310,11 @@ describe('admin-ops-kernel', () => {
         lastAlertType: 'ROUTE_DEVIATION',
         lastAlertAt: '2026-04-19T08:03:00.000Z',
         lastPositionAt: '2026-04-19T08:02:30.000Z',
+        signalState: {
+          state: 'fresh',
+          ageMinutes: 1,
+          label: 'Signal chauffeur recent',
+        },
         latestPosition: null,
       }),
     ).toEqual({
@@ -307,6 +332,11 @@ describe('admin-ops-kernel', () => {
         lastAlertType: null,
         lastAlertAt: null,
         lastPositionAt: '2026-04-19T08:02:30.000Z',
+        signalState: {
+          state: 'fresh',
+          ageMinutes: 1,
+          label: 'Signal chauffeur recent',
+        },
         latestPosition: {
           latitude: 12.371,
           longitude: -1.519,
@@ -329,8 +359,8 @@ describe('admin-ops-kernel', () => {
       ),
     ).toEqual({
       ageSeconds: 210,
-      isStale: true,
-      label: 'Dernier GPS il y a 4 min',
+      isStale: false,
+      label: 'GPS il y a 4 min',
     });
 
     expect(
@@ -341,13 +371,18 @@ describe('admin-ops-kernel', () => {
           lastAlertType: null,
           lastAlertAt: null,
           lastPositionAt: '2026-04-19T08:00:00.000Z',
+          signalState: {
+            state: 'stale',
+            ageMinutes: 11,
+            label: 'Signal chauffeur ancien (11 min)',
+          },
           latestPosition: null,
         },
         { now: '2026-04-19T08:03:30.000Z' },
       ),
     ).toEqual({
       statusLabel: 'Signal GPS ancien',
-      lastSignalLabel: 'Dernier GPS il y a 4 min',
+      lastSignalLabel: 'Signal chauffeur ancien (11 min)',
       progressLabel: null,
     });
 
@@ -360,6 +395,11 @@ describe('admin-ops-kernel', () => {
             lastAlertType: null,
             lastAlertAt: null,
             lastPositionAt: '2026-04-19T08:00:00.000Z',
+            signalState: {
+              state: 'stale',
+              ageMinutes: 11,
+              label: 'Signal chauffeur ancien (11 min)',
+            },
             latestPosition: null,
           },
         }),
@@ -386,6 +426,11 @@ describe('admin-ops-kernel', () => {
             lastAlertType: null,
             lastAlertAt: null,
             lastPositionAt: '2026-04-19T08:02:30.000Z',
+            signalState: {
+              state: 'fresh',
+              ageMinutes: 1,
+              label: 'Signal chauffeur recent',
+            },
             latestPosition: null,
           },
         }),
@@ -408,6 +453,11 @@ describe('admin-ops-kernel', () => {
             lastAlertType: 'ROUTE_DEVIATION',
             lastAlertAt: '2026-04-19T08:03:00.000Z',
             lastPositionAt: '2026-04-19T08:02:30.000Z',
+            signalState: {
+              state: 'fresh',
+              ageMinutes: 1,
+              label: 'Signal chauffeur recent',
+            },
             latestPosition: null,
           },
         }),
@@ -430,6 +480,11 @@ describe('admin-ops-kernel', () => {
             lastAlertType: null,
             lastAlertAt: null,
             lastPositionAt: '2026-04-19T08:02:30.000Z',
+            signalState: {
+              state: 'fresh',
+              ageMinutes: 1,
+              label: 'Signal chauffeur recent',
+            },
             latestPosition: null,
           },
           completionGate: {
@@ -459,6 +514,11 @@ describe('admin-ops-kernel', () => {
             lastAlertType: null,
             lastAlertAt: null,
             lastPositionAt: null,
+            signalState: {
+              state: 'missing',
+              ageMinutes: null,
+              label: 'Signal chauffeur absent',
+            },
             latestPosition: null,
           },
         }),
