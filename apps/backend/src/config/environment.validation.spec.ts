@@ -16,6 +16,8 @@ describe('validateEnvironment', () => {
     MOBILE_ERROR_COLLECTOR_WEBHOOK_URL:
       'https://observability.orbi.app/mobile-errors',
     OPERATIONS_BACKUP_RESTORE_DRILL_AT: '2026-07-01T08:00:00.000Z',
+    OPERATIONS_CANARY_RELEASE_DRILL_AT: '2026-07-02T08:00:00.000Z',
+    OPERATIONS_CHAOS_DRAIN_DRILL_AT: '2026-07-03T08:00:00.000Z',
     OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS: '25',
     ENABLE_SWAGGER: 'false',
   };
@@ -202,6 +204,26 @@ describe('validateEnvironment', () => {
       'invalid backup restore drill proof',
       { OPERATIONS_BACKUP_RESTORE_DRILL_AT: 'last Tuesday' },
       'OPERATIONS_BACKUP_RESTORE_DRILL_AT must be a valid ISO date in production.',
+    ],
+    [
+      'missing canary release drill proof',
+      { OPERATIONS_CANARY_RELEASE_DRILL_AT: undefined },
+      'OPERATIONS_CANARY_RELEASE_DRILL_AT must be a valid ISO date in production.',
+    ],
+    [
+      'invalid canary release drill proof',
+      { OPERATIONS_CANARY_RELEASE_DRILL_AT: 'soon' },
+      'OPERATIONS_CANARY_RELEASE_DRILL_AT must be a valid ISO date in production.',
+    ],
+    [
+      'missing chaos drain drill proof',
+      { OPERATIONS_CHAOS_DRAIN_DRILL_AT: undefined },
+      'OPERATIONS_CHAOS_DRAIN_DRILL_AT must be a valid ISO date in production.',
+    ],
+    [
+      'invalid chaos drain drill proof',
+      { OPERATIONS_CHAOS_DRAIN_DRILL_AT: 'after launch' },
+      'OPERATIONS_CHAOS_DRAIN_DRILL_AT must be a valid ISO date in production.',
     ],
     [
       'missing pilot capacity envelope',

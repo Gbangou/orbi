@@ -196,4 +196,6 @@ de developpement est encore exposee:
 - les secrets paiement/document ne doivent pas utiliser les valeurs de dev
 - `MOBILE_ERROR_COLLECTOR_PROVIDER=webhook` avec URL HTTPS non locale est obligatoire
 - `OPERATIONS_BACKUP_RESTORE_DRILL_AT` doit contenir une date ISO de restore DB prouve
+- `OPERATIONS_CANARY_RELEASE_DRILL_AT` doit contenir une date ISO de canary/rollback prouve
+- `OPERATIONS_CHAOS_DRAIN_DRILL_AT` doit contenir une date ISO de drain/restart instance prouve
 - `OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS` doit contenir une limite pilote positive

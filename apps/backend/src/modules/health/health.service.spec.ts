@@ -166,7 +166,7 @@ describe('HealthService', () => {
         environment: 'test',
         riskLevel: 'medium',
         failedChecks: 0,
-        warningChecks: 8,
+        warningChecks: 10,
       }),
     );
     expect(result.operations.productionReadiness.checks).toEqual(
@@ -195,6 +195,14 @@ describe('HealthService', () => {
         }),
         expect.objectContaining({
           id: 'pilot-capacity-envelope',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'canary-release-drill',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'chaos-drain-drill',
           state: 'warn',
         }),
       ]),
@@ -451,6 +459,8 @@ describe('HealthService', () => {
         'observability.mobileErrorCollector.provider': 'local',
         'observability.mobileErrorCollector.webhookUrl': '',
         'operations.backupRestoreDrillAt': '',
+        'operations.canaryReleaseDrillAt': '',
+        'operations.chaosDrainDrillAt': '',
         'operations.pilotMaxConcurrentTrips': 0,
       };
 
@@ -476,7 +486,7 @@ describe('HealthService', () => {
     const result = await service.check();
 
     expect(result.operations.productionReadiness.riskLevel).toBe('high');
-    expect(result.operations.productionReadiness.failedChecks).toBe(10);
+    expect(result.operations.productionReadiness.failedChecks).toBe(12);
     expect(result.operations.productionReadiness.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -506,6 +516,14 @@ describe('HealthService', () => {
           id: 'pilot-capacity-envelope',
           state: 'fail',
         }),
+        expect.objectContaining({
+          id: 'canary-release-drill',
+          state: 'fail',
+        }),
+        expect.objectContaining({
+          id: 'chaos-drain-drill',
+          state: 'fail',
+        }),
       ]),
     );
   });
@@ -529,6 +547,8 @@ describe('HealthService', () => {
         'observability.mobileErrorCollector.webhookUrl':
           'https://observability.orbi.app/mobile-errors',
         'operations.backupRestoreDrillAt': new Date().toISOString(),
+        'operations.canaryReleaseDrillAt': new Date().toISOString(),
+        'operations.chaosDrainDrillAt': new Date().toISOString(),
         'operations.pilotMaxConcurrentTrips': 25,
       };
 
@@ -550,6 +570,14 @@ describe('HealthService', () => {
         }),
         expect.objectContaining({
           id: 'pilot-capacity-envelope',
+          state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'canary-release-drill',
+          state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'chaos-drain-drill',
           state: 'pass',
         }),
       ]),

@@ -326,6 +326,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   extrait maintenant ces checks dans une carte `resilience pilote`, pour que les
   ops voient immediatement restore DB et capacite pilote sans parcourir tous les
   checks runtime. Les exercices chaos/canary reels restent des gaps C/D.
+- 13 juillet 2026: Phase 5, gap A "canary chaos gates". Le backend exige aussi
+  `OPERATIONS_CANARY_RELEASE_DRILL_AT` et `OPERATIONS_CHAOS_DRAIN_DRILL_AT` en
+  production, expose `canary-release-drill` et `chaos-drain-drill` dans
+  `productionReadiness`, et la carte admin resilience les rend visibles avec
+  restore DB et capacite. Les preuves terrain/cloud restent a produire hors code.
 
 ## Master Prompt Operationnel
 

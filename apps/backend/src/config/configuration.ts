@@ -76,6 +76,9 @@ export default () => ({
       10,
     ),
     backupRestoreDrillAt: process.env.OPERATIONS_BACKUP_RESTORE_DRILL_AT ?? '',
+    canaryReleaseDrillAt:
+      process.env.OPERATIONS_CANARY_RELEASE_DRILL_AT ?? '',
+    chaosDrainDrillAt: process.env.OPERATIONS_CHAOS_DRAIN_DRILL_AT ?? '',
     pilotMaxConcurrentTrips: Number.parseInt(
       process.env.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS ?? '0',
       10,

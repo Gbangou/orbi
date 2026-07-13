@@ -421,9 +421,12 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
     ],
   };
   const resilienceChecks = productionReadiness.checks.filter((check) =>
-    ['database-backup-restore-drill', 'pilot-capacity-envelope'].includes(
-      check.id,
-    ),
+    [
+      'database-backup-restore-drill',
+      'pilot-capacity-envelope',
+      'canary-release-drill',
+      'chaos-drain-drill',
+    ].includes(check.id),
   );
   const resilienceState = resilienceChecks.some((check) => check.state === 'fail')
     ? 'fail'

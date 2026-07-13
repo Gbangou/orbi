@@ -64,6 +64,8 @@ type EnvironmentVariables = {
   MOBILE_ERROR_COLLECTOR_WEBHOOK_URL?: string;
   MOBILE_ERROR_COLLECTOR_TIMEOUT_MS?: string;
   OPERATIONS_BACKUP_RESTORE_DRILL_AT?: string;
+  OPERATIONS_CANARY_RELEASE_DRILL_AT?: string;
+  OPERATIONS_CHAOS_DRAIN_DRILL_AT?: string;
   OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS?: string;
   DOCUMENT_SIGNING_SECRET?: string;
   DOCUMENT_SAFETY_SCANNER_PROVIDER?: string;
@@ -183,6 +185,10 @@ export function validateEnvironment(config: EnvironmentVariables) {
       config.MOBILE_ERROR_COLLECTOR_TIMEOUT_MS ?? '1500',
     OPERATIONS_BACKUP_RESTORE_DRILL_AT:
       config.OPERATIONS_BACKUP_RESTORE_DRILL_AT ?? '',
+    OPERATIONS_CANARY_RELEASE_DRILL_AT:
+      config.OPERATIONS_CANARY_RELEASE_DRILL_AT ?? '',
+    OPERATIONS_CHAOS_DRAIN_DRILL_AT:
+      config.OPERATIONS_CHAOS_DRAIN_DRILL_AT ?? '',
     OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS:
       config.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS ?? '0',
     DOCUMENT_SIGNING_SECRET:
@@ -215,6 +221,9 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   const mobileErrorCollectorWebhookUrl =
     config.MOBILE_ERROR_COLLECTOR_WEBHOOK_URL ?? '';
   const backupRestoreDrillAt = config.OPERATIONS_BACKUP_RESTORE_DRILL_AT ?? '';
+  const canaryReleaseDrillAt =
+    config.OPERATIONS_CANARY_RELEASE_DRILL_AT ?? '';
+  const chaosDrainDrillAt = config.OPERATIONS_CHAOS_DRAIN_DRILL_AT ?? '';
   const pilotMaxConcurrentTrips =
     config.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS ?? '';
   const databaseUrl = config.DATABASE_URL ?? '';
@@ -332,6 +341,18 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   if (!isValidIsoDate(backupRestoreDrillAt)) {
     throw new Error(
       'OPERATIONS_BACKUP_RESTORE_DRILL_AT must be a valid ISO date in production.',
+    );
+  }
+
+  if (!isValidIsoDate(canaryReleaseDrillAt)) {
+    throw new Error(
+      'OPERATIONS_CANARY_RELEASE_DRILL_AT must be a valid ISO date in production.',
+    );
+  }
+
+  if (!isValidIsoDate(chaosDrainDrillAt)) {
+    throw new Error(
+      'OPERATIONS_CHAOS_DRAIN_DRILL_AT must be a valid ISO date in production.',
     );
   }
 

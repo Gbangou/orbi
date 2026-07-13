@@ -213,22 +213,34 @@ export class HealthService {
       ) ?? '';
     const backupRestoreDrillAt =
       this.configService.get<string>('operations.backupRestoreDrillAt') ?? '';
+    const canaryReleaseDrillAt =
+      this.configService.get<string>('operations.canaryReleaseDrillAt') ?? '';
+    const chaosDrainDrillAt =
+      this.configService.get<string>('operations.chaosDrainDrillAt') ?? '';
     const pilotMaxConcurrentTrips =
       this.configService.get<number>(
         'operations.pilotMaxConcurrentTrips',
         0,
       ) ?? 0;
-    const backupRestoreDrillAgeDays =
-      backupRestoreDrillAt && !Number.isNaN(Date.parse(backupRestoreDrillAt))
-        ? Math.floor(
-            (Date.now() - new Date(backupRestoreDrillAt).getTime()) /
-              (24 * 60 * 60 * 1000),
-          )
-        : null;
+    const backupRestoreDrillAgeDays = resolveRecentDrillAgeDays(
+      backupRestoreDrillAt,
+    );
+    const canaryReleaseDrillAgeDays = resolveRecentDrillAgeDays(
+      canaryReleaseDrillAt,
+    );
+    const chaosDrainDrillAgeDays = resolveRecentDrillAgeDays(chaosDrainDrillAt);
     const hasRecentBackupRestoreDrill =
       backupRestoreDrillAgeDays !== null &&
       backupRestoreDrillAgeDays >= 0 &&
       backupRestoreDrillAgeDays <= 30;
+    const hasRecentCanaryReleaseDrill =
+      canaryReleaseDrillAgeDays !== null &&
+      canaryReleaseDrillAgeDays >= 0 &&
+      canaryReleaseDrillAgeDays <= 30;
+    const hasRecentChaosDrainDrill =
+      chaosDrainDrillAgeDays !== null &&
+      chaosDrainDrillAgeDays >= 0 &&
+      chaosDrainDrillAgeDays <= 30;
     const hasPilotCapacityEnvelope =
       Number.isInteger(pilotMaxConcurrentTrips) && pilotMaxConcurrentTrips > 0;
     const paymentFixtureReadiness = resolvePaymentFixtureProductionReadiness();
@@ -378,6 +390,30 @@ export class HealthService {
         detail: hasPilotCapacityEnvelope
           ? `Pilote borne a ${pilotMaxConcurrentTrips} course(s) simultanee(s).`
           : 'Capacite pilote non bornee; definir une limite de courses simultanees.',
+      },
+      {
+        id: 'canary-release-drill',
+        label: 'Canary release',
+        state: hasRecentCanaryReleaseDrill
+          ? ('pass' as const)
+          : environment === 'production'
+            ? ('fail' as const)
+            : ('warn' as const),
+        detail: hasRecentCanaryReleaseDrill
+          ? `Canary/rollback prouve il y a ${canaryReleaseDrillAgeDays} jour(s).`
+          : 'Aucune preuve recente de canary/rollback; requis avant production.',
+      },
+      {
+        id: 'chaos-drain-drill',
+        label: 'Chaos drain',
+        state: hasRecentChaosDrainDrill
+          ? ('pass' as const)
+          : environment === 'production'
+            ? ('fail' as const)
+            : ('warn' as const),
+        detail: hasRecentChaosDrainDrill
+          ? `Drain/restart instance prouve il y a ${chaosDrainDrillAgeDays} jour(s).`
+          : 'Aucune preuve recente de drain/restart instance; requis avant production.',
       },
     ];
     const failedChecks = checks.filter(
@@ -599,4 +635,14 @@ function isHttpsUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function resolveRecentDrillAgeDays(value: string) {
+  if (!value || Number.isNaN(Date.parse(value))) {
+    return null;
+  }
+
+  return Math.floor(
+    (Date.now() - new Date(value).getTime()) / (24 * 60 * 60 * 1000),
+  );
 }
