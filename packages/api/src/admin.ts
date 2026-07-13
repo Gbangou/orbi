@@ -1522,6 +1522,9 @@ export async function fetchAdminTripsExportCsv(
       | "COMPLETED"
       | "CANCELLED";
     limit?: number;
+    fromDate?: string;
+    toDate?: string;
+    search?: string;
   },
 ) {
   return client.requestText(apiRoutes.admin.tripsExportCsv, {

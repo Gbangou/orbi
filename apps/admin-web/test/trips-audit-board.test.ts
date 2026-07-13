@@ -48,4 +48,23 @@ describe('trips audit board', () => {
     expect(source).toContain('getAdminServerAuthClient');
     expect(source).toContain('createAdminServerAuthErrorResponse');
   });
+
+  it('forwards the date-range and search export filters instead of silently dropping them', () => {
+    // Le board collectait deja fromDate/toDate/search dans l'URL d'export,
+    // mais la route serveur ne lisait que status/limit avant de proxyer vers
+    // le backend: un ops filtrant par date ou par nom recevait un export non
+    // filtre sans aucun signal d'erreur. Verifie que les trois filtres sont
+    // desormais lus et transmis au backend.
+    const source = readFileSync(
+      join(process.cwd(), 'app/api/admin/trips/export.csv/route.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain("searchParams.get('fromDate')");
+    expect(source).toContain("searchParams.get('toDate')");
+    expect(source).toContain("searchParams.get('search')");
+    expect(source).toContain('fromDate: resolveIsoDate(');
+    expect(source).toContain('toDate: resolveIsoDate(');
+    expect(source).toContain('search: resolveSearch(');
+  });
 });

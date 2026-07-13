@@ -35,12 +35,27 @@ function resolveExportLimit(value: string | null) {
     : 200;
 }
 
+const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+function resolveIsoDate(value: string | null) {
+  return value && isoDatePattern.test(value) ? value : undefined;
+}
+
+function resolveSearch(value: string | null) {
+  const trimmed = value?.trim() ?? '';
+
+  return trimmed.length > 0 ? trimmed.slice(0, 80) : undefined;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const authClient = await getAdminServerAuthClient();
     const csv = await fetchAdminTripsExportCsv(authClient, {
       status: resolveTripStatus(request.nextUrl.searchParams.get('status')),
       limit: resolveExportLimit(request.nextUrl.searchParams.get('limit')),
+      fromDate: resolveIsoDate(request.nextUrl.searchParams.get('fromDate')),
+      toDate: resolveIsoDate(request.nextUrl.searchParams.get('toDate')),
+      search: resolveSearch(request.nextUrl.searchParams.get('search')),
     });
 
     return new NextResponse(csv, {

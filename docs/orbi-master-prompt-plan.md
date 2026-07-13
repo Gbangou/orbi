@@ -1,11 +1,19 @@
 # Orbi Master Prompt And Leader-Parity Plan
 
-Date de reference: 13 juillet 2026
+Date de reference: 13 juillet 2026 (revise et verifie par audit croise le 13
+juillet 2026)
 
-## Role Permanent De Codex
+Ce document est le plan unique et partage, quel que soit l agent d ingenierie
+qui l execute (Codex, Claude ou equivalent). Il ne doit pas etre duplique en
+plusieurs versions concurrentes par agent: chaque session lit ce fichier,
+ajoute sa tranche au journal, et le laisse plus vrai qu elle ne l a trouve.
 
-Tu es Codex, directeur technique, produit, securite, design et operations pour
-Orbi, plateforme mobilite Burkina Faso rider, driver, admin, support et finance.
+## Role Permanent De L Agent D Ingenierie
+
+Tu es l agent d ingenierie principal — directeur technique, produit, securite,
+design et operations pour Orbi, plateforme mobilite Burkina Faso rider, driver,
+admin, support et finance. Que tu sois Codex, Claude ou un autre systeme, le
+mandat et les regles ci-dessous sont identiques.
 
 Objectif absolu: transformer Orbi en plateforme plus serieuse, plus sure, plus
 claire, plus locale et plus operable que Uber, Bolt et Yango sur les plans
@@ -38,6 +46,63 @@ fermee que si elle est:
 
 Chaque gap doit avoir une categorie. Un gap B/C/D ne doit pas etre declare ferme
 par un patch de code seul.
+
+## Etat Global Verifie (Audit Du 13 Juillet 2026)
+
+Audit croise effectue directement sur le code (pas seulement sur la
+documentation) pour confirmer ce qui est reellement livre. Chiffres et niveaux
+de maturite detailles: `../DEVELOPMENT_STATUS.md`. Resume honnete par domaine:
+
+- **Backend/domaine**: NestJS modulaire (auth, riders, drivers, dispatch,
+  trips, payments, admin, ratings, promo-codes, health) avec RBAC, audit log
+  systematique sur les mutations sensibles, idempotence sur les flux argent,
+  backplane PostgreSQL partage pour realtime/rate-limit, file durable avec
+  dead-letter pour webhooks/documents/notifications. Integrations paiement
+  reelles (Flutterwave, CinetPay) et service de detection de fraude existants
+  dans le code, pas seulement planifies.
+- **Onboarding chauffeur**: workflow de revue explicite avec decisions
+  auditees, expiration de documents deja modelisee et exposee
+  (`expiresAt`, `expiringSoonDocuments`) jusque dans l export CSV. La
+  reverification periodique de type selfie live/anti-spoof n est pas
+  implementee (gap A/B reel, pas seulement documentaire).
+- **Mobile (rider/driver)**: i18n reel branche (`packages/i18n`, usage
+  `useTranslation` dans les ecrans cles, pas un stub), dark mode reellement
+  implemente (pas un simple flag), configuration EAS presente pour les deux
+  apps. Aucun SDK de crash reporting externe (Sentry/Crashlytics) n est
+  present dans aucun `package.json` du repo: la file locale d erreurs mobiles
+  et le collector webhook existent, mais le branchement a un vrai provider
+  externe reste un gap C non ferme.
+- **Admin web**: audit trajets (`/admin/trips/audit`), dashboard finance,
+  journal jobs, launch-readiness et system health sont branches sur des
+  requetes Prisma reelles, pas des donnees simulees. Convention de tests
+  "lire le fichier source, verifier des sous-chaines cles" largement utilisee
+  cote admin-web — un test qui verrouille un comportement precis, mais qui ne
+  remplace pas un test de rendu; a garder en tete pour ne pas sur-estimer la
+  couverture reelle des regressions visuelles.
+- **CI/Infra**: deux workflows GitHub Actions (`ci.yml`,
+  `production-readiness-gate.yml`). Stack de deploiement actuelle: Neon
+  (Postgres) + Render (API) + Vercel (admin) + Cloudflare Worker keep-alive
+  (voir `deployment-runbook.md`) — un stack gratuit/terrain, pas encore une
+  infra de production a grande echelle (pas d autoscaling documente, pas de
+  multi-region, pas d alerting externe type PagerDuty/Better Uptime confirme
+  dans le repo).
+- **Documentation**: le repo dispose deja d une gouvernance documentaire mature
+  (`AGENTS.md`, `DEVELOPMENT_STATUS.md`, `EXECUTION_PLAN.md`,
+  `ORBI_ARCHITECTURE.md`, `SECURITY.md`, plus une douzaine de docs `docs/`
+  specialisees). Le risque n est plus l absence de plan, mais la
+  synchronisation: ce fichier doit rester le point d entree unique pour la
+  reduction de gaps, les autres docs restant des sources de verite
+  specialisees qu il reference plutot qu il ne duplique.
+
+Conclusion honnete: Orbi n est pas un prototype. C est une fondation MVP/pilote
+credible avec une discipline d ingenierie rare pour ce stade (idempotence,
+audit, gates de readiness, tests systematiques). L ecart avec Uber/Bolt/Yango
+n est presque plus un ecart de "code manquant" sur les fondations deja citees
+ci-dessus; il est concentre dans: preuves terrain reelles (categorie B),
+infra/observabilite externe de production (categorie C), et operations/business
+(categorie D). Le travail de code (categorie A) qui reste est reel mais plus
+cible et plus rare qu au debut du projet — ce qui veut dire que chaque session
+doit chercher le gap A avec plus de rigueur, pas relacher l exigence.
 
 ## Definition De Parfait
 
@@ -363,12 +428,28 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   chauffeur approuvees mais expirees bloquent le lancement, et celles qui
   expirent sous 30 jours limitent le pilote avec action ops. La suspension
   automatique apres expiration terrain reste un gap A/D distinct.
+- 13 juillet 2026: audit croise complet du repo (code + toute la
+  documentation existante) avant de generaliser ce document a tout agent
+  d ingenierie. Gap A confirme et ferme dans la foulee: "export CSV trajets
+  qui ment silencieusement". Le board `trips-audit-board.tsx` collectait deja
+  `fromDate`/`toDate`/`search` pour l export, et le backend
+  (`TripsExportQueryDto`, `admin.service.ts#tripsExportCsv`) les supportait
+  deja completement, mais la route serveur admin-web
+  `app/api/admin/trips/export.csv/route.ts` ne lisait et ne transmettait que
+  `status`/`limit` — un ops filtrant par date ou par nom recevait un export
+  non filtre sans aucun signal d erreur. Corrige: la route lit et borne
+  desormais les trois filtres avant de proxyer au backend, le contrat
+  `packages/api` declare le type complet, et un test de regression verrouille
+  les trois filtres transmis. Verifie par `pnpm --filter @orbi/api build`,
+  la suite complete `@orbi/admin-web` (16 suites, 103 tests) et
+  `pnpm typecheck` sur tout le workspace.
 
 ## Master Prompt Operationnel
 
 ```text
-Tu es Codex pour Orbi. Ta mission est de reduire les gaps avec Uber, Bolt et
-Yango sans tomber dans la copie superficielle.
+Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est
+de reduire les gaps avec Uber, Bolt et Yango sans tomber dans la copie
+superficielle.
 
 A chaque tour:
 - lis le code avant d agir;
