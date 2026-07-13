@@ -25,6 +25,7 @@ import {
   updateTrustedContactWithApi,
   updateTripStatusWithApi,
 } from '@orbi/api';
+import type { RiderProfileResponse } from '@orbi/api';
 import {
   restoreRiderSession,
   signInRiderAccount,
@@ -303,37 +304,44 @@ function buildTripDetail(eventIds: string[], labels: string[]) {
   };
 }
 
-function buildRiderProfile() {
+function buildRiderProfile(
+  overrides: Partial<RiderProfileResponse['profile']> = {},
+): RiderProfileResponse {
+  const profile: RiderProfileResponse['profile'] = {
+    id: 'rider-1',
+    fullName: 'Awa Ouedraogo',
+    email: 'rider@orbi.app',
+    phoneNumber: '+22670000000',
+    preferredTier: 'MOTO_STANDARD',
+    emergencyPhone: null,
+    trustedContact: {
+      phoneNumber: null,
+      shareMode: 'DISABLED',
+      status: 'MISSING',
+      safetyNote: 'Ajoutez un numero Burkina pour accelerer le partage en cas de trajet sensible.',
+    },
+    trustedContacts: [],
+    savedPlaces: [
+      {
+        id: 'saved-home',
+        label: 'Maison',
+        address: 'Patte d Oie, Ouagadougou',
+        latitude: 12.3412,
+        longitude: -1.5601,
+      },
+    ],
+    stats: {
+      totalRideRequests: 12,
+      totalTrips: 10,
+      completedTrips: 9,
+      savedPlaces: 1,
+    },
+    ...overrides,
+  };
+
   return {
     profile: {
-      id: 'rider-1',
-      fullName: 'Awa Ouedraogo',
-      email: 'rider@orbi.app',
-      phoneNumber: '+22670000000',
-      preferredTier: 'MOTO_STANDARD',
-      emergencyPhone: null,
-      trustedContact: {
-        phoneNumber: null,
-        shareMode: 'DISABLED',
-        status: 'MISSING',
-        safetyNote: 'Ajoutez un numero Burkina pour accelerer le partage en cas de trajet sensible.',
-      },
-      trustedContacts: [],
-      savedPlaces: [
-        {
-          id: 'saved-home',
-          label: 'Maison',
-          address: 'Patte d Oie, Ouagadougou',
-          latitude: 12.3412,
-          longitude: -1.5601,
-        },
-      ],
-      stats: {
-        totalRideRequests: 12,
-        totalTrips: 10,
-        completedTrips: 9,
-        savedPlaces: 1,
-      },
+      ...profile,
     },
   };
 }
@@ -965,6 +973,46 @@ describe('rider smoke flows', () => {
       }),
     );
     expectText(renderer, 'Contact de confiance configure et audite.');
+  });
+
+  it('shows the rider trusted contacts list with masked phone numbers', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRiderProfile.mockResolvedValue(
+      buildRiderProfile({
+        trustedContact: {
+          phoneNumber: '+22670000001',
+          shareMode: 'ALL_TRIPS',
+          status: 'READY',
+          safetyNote: 'Contact de confiance pret pour le partage trajet automatique selon vos regles.',
+        },
+        trustedContacts: [
+          {
+            label: 'Contact principal',
+            phoneNumber: '+22670000001',
+            priority: 1,
+            isActive: true,
+          },
+          {
+            label: 'Frere',
+            phoneNumber: '+22670000002',
+            priority: 2,
+            isActive: true,
+          },
+        ],
+      }) as never,
+    );
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+
+    const renderer = await renderScreen(<AccountScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Contacts suivis');
+    expectText(renderer, '2 contacts actifs');
+    expectText(renderer, 'Contact principal');
+    expectText(renderer, 'Frere');
+    expectText(renderer, 'Principal');
+    expectText(renderer, '*** 0001');
+    expectText(renderer, '*** 0002');
   });
 
   it('blocks automatic trusted-contact sharing until a phone number is present', async () => {

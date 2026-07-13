@@ -225,6 +225,10 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   expose maintenant `signalState` par trajet, compte `staleDriverSignals` et
   affiche le compteur dans la console admin. Le seuil est aligne sur le garde-
   fou de finalisation; les procedures d appel support restent un gap D.
+- 13 juillet 2026: Phase 1, gap A "UI trusted contacts rider". L app rider
+  affiche maintenant `trustedContacts[]`, compte les contacts actifs, masque les
+  numeros et garde l edition du contact principal. L API de creation/ordre de
+  plusieurs contacts reste un gap A separe.
 
 ## Master Prompt Operationnel
 

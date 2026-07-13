@@ -205,13 +205,14 @@ met a jour `RiderProfile.emergencyPhone` et le mode persistant
 `rider_trusted_contacts`, puis journalise `RIDER_TRUSTED_CONTACT_UPDATED`. La
 reponse profil expose `trustedContact` pour compatibilite mobile et
 `trustedContacts[]` pour la suite multi-contacts auditee. L ecran compte rider
-rend le contact visible, modifiable et desactivable.
+rend le contact principal visible, modifiable, desactivable, et affiche la liste
+des contacts actifs avec numeros masques quand l API en renvoie plusieurs.
 Quand le mode est `ALL_TRIPS`, ou `NIGHT` sur plage nocturne, l acceptation
 chauffeur choisit le premier contact actif par priorite, prepare
 automatiquement un lien de partage trajet audite avec
 `TRIP_TRUSTED_CONTACT_SHARE_PREPARED` et un event `SHARE_LINK_CREATED` marque
 `TRUSTED_CONTACT_AUTO_SHARE`. Le prochain palier production consiste a brancher
-SMS/WhatsApp/provider et l UI de gestion multi-contacts complete sans exposer
+SMS/WhatsApp/provider et l API de gestion multi-contacts complete sans exposer
 de donnees personnelles dans le lien public de trajet.
 
 Orbi impose maintenant un premier garde-fou fatigue chauffeur. Avant mise en

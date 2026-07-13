@@ -570,6 +570,13 @@ export default function AccountScreen() {
     .join('') || 'OR';
   const maskedEmail = maskEmailForDisplay(profile.profile.email);
   const maskedPhone = maskPhoneForDisplay(profile.profile.phoneNumber);
+  const activeTrustedContacts = profile.profile.trustedContacts
+    .filter((contact) => contact.isActive)
+    .sort((a, b) => a.priority - b.priority);
+  const trustedContactCountLabel =
+    activeTrustedContacts.length > 0
+      ? `${activeTrustedContacts.length} contact${activeTrustedContacts.length > 1 ? 's' : ''} actif${activeTrustedContacts.length > 1 ? 's' : ''}`
+      : 'Aucun contact actif';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -795,6 +802,37 @@ export default function AccountScreen() {
           </View>
         </View>
         <Text style={styles.cardMeta}>{profile.profile.trustedContact.safetyNote}</Text>
+        <View style={styles.trustedContactsPanel}>
+          <View style={styles.trustedContactsPanelHeader}>
+            <Text style={styles.trustedContactsPanelTitle}>Contacts suivis</Text>
+            <Text style={styles.trustedContactsCount}>{trustedContactCountLabel}</Text>
+          </View>
+          {activeTrustedContacts.length > 0 ? (
+            activeTrustedContacts.map((contact, index) => (
+              <View style={styles.trustedContactRow} key={`${contact.phoneNumber}-${contact.priority}`}>
+                <View style={styles.trustedContactRank}>
+                  <Text style={styles.trustedContactRankLabel}>{index + 1}</Text>
+                </View>
+                <View style={styles.trustedContactInfo}>
+                  <Text style={styles.trustedContactName}>{contact.label}</Text>
+                  <Text style={styles.trustedContactPhone}>
+                    {maskPhoneForDisplay(contact.phoneNumber)}
+                  </Text>
+                </View>
+                {contact.priority === 1 ? (
+                  <Text style={styles.trustedContactBadge}>Principal</Text>
+                ) : null}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.trustedContactsEmpty}>
+              Ajoutez un numero Burkina pour preparer le partage trajet.
+            </Text>
+          )}
+          <Text style={styles.trustedContactsHint}>
+            Cette version synchronise le contact principal; la gestion avancee multi-contacts arrive sur le prochain palier.
+          </Text>
+        </View>
         <TextInput
           value={trustedContactForm.phoneNumber}
           onChangeText={(value) =>
@@ -1384,6 +1422,88 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  trustedContactsPanel: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
+    padding: 12,
+    gap: 10,
+  },
+  trustedContactsPanelHeader: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  trustedContactsPanelTitle: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  trustedContactsCount: {
+    color: theme.colors.teal,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  trustedContactRow: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  trustedContactRank: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20,184,166,0.14)',
+  },
+  trustedContactRankLabel: {
+    color: theme.colors.teal,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  trustedContactInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  trustedContactName: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  trustedContactPhone: {
+    color: theme.colors.textSoft,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  trustedContactBadge: {
+    color: theme.colors.textInverse,
+    backgroundColor: theme.colors.text,
+    borderRadius: 999,
+    overflow: 'hidden',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  trustedContactsEmpty: {
+    color: theme.colors.muted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  trustedContactsHint: {
+    color: theme.colors.muted,
+    fontSize: 11,
+    lineHeight: 16,
   },
   heading: {
     color: theme.colors.text,
