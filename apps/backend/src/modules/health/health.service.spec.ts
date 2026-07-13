@@ -166,7 +166,7 @@ describe('HealthService', () => {
         environment: 'test',
         riskLevel: 'medium',
         failedChecks: 0,
-        warningChecks: 6,
+        warningChecks: 8,
       }),
     );
     expect(result.operations.productionReadiness.checks).toEqual(
@@ -187,6 +187,14 @@ describe('HealthService', () => {
         }),
         expect.objectContaining({
           id: 'mobile-error-collector',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'database-backup-restore-drill',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'pilot-capacity-envelope',
           state: 'warn',
         }),
       ]),
@@ -427,7 +435,7 @@ describe('HealthService', () => {
     } = createService();
 
     configService.get = jest.fn((key: string) => {
-      const values: Record<string, string | boolean> = {
+      const values: Record<string, string | number | boolean> = {
         'app.environment': 'production',
         'infrastructure.rateLimitAdapter': 'redis',
         'infrastructure.rateLimit.strict': true,
@@ -442,6 +450,8 @@ describe('HealthService', () => {
           'http://localhost:3000/api/v1/payments/webhooks',
         'observability.mobileErrorCollector.provider': 'local',
         'observability.mobileErrorCollector.webhookUrl': '',
+        'operations.backupRestoreDrillAt': '',
+        'operations.pilotMaxConcurrentTrips': 0,
       };
 
       return values[key];
@@ -466,7 +476,7 @@ describe('HealthService', () => {
     const result = await service.check();
 
     expect(result.operations.productionReadiness.riskLevel).toBe('high');
-    expect(result.operations.productionReadiness.failedChecks).toBe(8);
+    expect(result.operations.productionReadiness.failedChecks).toBe(10);
     expect(result.operations.productionReadiness.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -488,15 +498,23 @@ describe('HealthService', () => {
           id: 'mobile-error-collector',
           state: 'fail',
         }),
+        expect.objectContaining({
+          id: 'database-backup-restore-drill',
+          state: 'fail',
+        }),
+        expect.objectContaining({
+          id: 'pilot-capacity-envelope',
+          state: 'fail',
+        }),
       ]),
     );
   });
 
-  it('passes mobile error collector readiness when an external HTTPS webhook is configured', async () => {
+  it('passes production resilience readiness when external collector, restore proof and capacity are configured', async () => {
     const { configService, prisma, service } = createService();
 
     configService.get = jest.fn((key: string) => {
-      const values: Record<string, string | boolean> = {
+      const values: Record<string, string | number | boolean> = {
         'app.environment': 'production',
         'infrastructure.rateLimitAdapter': 'postgres',
         'infrastructure.rateLimit.strict': true,
@@ -510,6 +528,8 @@ describe('HealthService', () => {
         'observability.mobileErrorCollector.provider': 'webhook',
         'observability.mobileErrorCollector.webhookUrl':
           'https://observability.orbi.app/mobile-errors',
+        'operations.backupRestoreDrillAt': new Date().toISOString(),
+        'operations.pilotMaxConcurrentTrips': 25,
       };
 
       return values[key];
@@ -522,6 +542,14 @@ describe('HealthService', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: 'mobile-error-collector',
+          state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'database-backup-restore-drill',
+          state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'pilot-capacity-envelope',
           state: 'pass',
         }),
       ]),

@@ -79,6 +79,10 @@ Utiliser la strategie `expand -> migrate traffic -> contract`:
   `payment-production-gate` doit etre vert ou explicitement reconnu avec owner
   finance, et ses causes doivent correspondre au dashboard finance
 - en production multi-instance, brancher les adapters `rate limit` et `realtime` sur le backplane PostgreSQL partage: `RATE_LIMIT_ADAPTER=postgres`, `REALTIME_ADAPTER=postgres`, `RATE_LIMIT_STRICT=true`, `REALTIME_STRICT=true`
+- avant pilote production, renseigner `OPERATIONS_BACKUP_RESTORE_DRILL_AT` avec
+  la date ISO du dernier restore DB prouve et `OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS`
+  avec la limite de courses simultanees autorisee; `/health.operations.productionReadiness`
+  expose `database-backup-restore-drill` et `pilot-capacity-envelope`
 - verifier que la job queue durable traite `DRIVER_RESERVATION_EXPIRY`: le timer ne fait qu enqueuer un job deduplique et le worker partage execute le sweep avec verrou PostgreSQL
 
 ## Temps reel

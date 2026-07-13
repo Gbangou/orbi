@@ -63,6 +63,8 @@ type EnvironmentVariables = {
   MOBILE_ERROR_COLLECTOR_PROVIDER?: string;
   MOBILE_ERROR_COLLECTOR_WEBHOOK_URL?: string;
   MOBILE_ERROR_COLLECTOR_TIMEOUT_MS?: string;
+  OPERATIONS_BACKUP_RESTORE_DRILL_AT?: string;
+  OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS?: string;
   DOCUMENT_SIGNING_SECRET?: string;
   DOCUMENT_SAFETY_SCANNER_PROVIDER?: string;
   DOCUMENT_UPLOAD_BASE_URL?: string;
@@ -179,6 +181,10 @@ export function validateEnvironment(config: EnvironmentVariables) {
       config.MOBILE_ERROR_COLLECTOR_WEBHOOK_URL ?? '',
     MOBILE_ERROR_COLLECTOR_TIMEOUT_MS:
       config.MOBILE_ERROR_COLLECTOR_TIMEOUT_MS ?? '1500',
+    OPERATIONS_BACKUP_RESTORE_DRILL_AT:
+      config.OPERATIONS_BACKUP_RESTORE_DRILL_AT ?? '',
+    OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS:
+      config.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS ?? '0',
     DOCUMENT_SIGNING_SECRET:
       config.DOCUMENT_SIGNING_SECRET ?? 'orbi_dev_document_secret',
     DOCUMENT_SAFETY_SCANNER_PROVIDER:
@@ -208,6 +214,9 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
     config.MOBILE_ERROR_COLLECTOR_PROVIDER ?? '';
   const mobileErrorCollectorWebhookUrl =
     config.MOBILE_ERROR_COLLECTOR_WEBHOOK_URL ?? '';
+  const backupRestoreDrillAt = config.OPERATIONS_BACKUP_RESTORE_DRILL_AT ?? '';
+  const pilotMaxConcurrentTrips =
+    config.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS ?? '';
   const databaseUrl = config.DATABASE_URL ?? '';
 
   if (config.ENABLE_SWAGGER !== 'false') {
@@ -320,6 +329,18 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
     );
   }
 
+  if (!isValidIsoDate(backupRestoreDrillAt)) {
+    throw new Error(
+      'OPERATIONS_BACKUP_RESTORE_DRILL_AT must be a valid ISO date in production.',
+    );
+  }
+
+  if (!isPositiveInteger(pilotMaxConcurrentTrips)) {
+    throw new Error(
+      'OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS must be a positive integer in production.',
+    );
+  }
+
   if (
     config.PAYMENTS_REFUND_MODE === 'provider' &&
     config.PAYMENTS_PROVIDER === 'flutterwave' &&
@@ -348,6 +369,15 @@ function isHttpsUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function isValidIsoDate(value: string) {
+  return Boolean(value) && !Number.isNaN(Date.parse(value));
+}
+
+function isPositiveInteger(value: string) {
+  const numeric = Number(value);
+  return Number.isInteger(numeric) && numeric > 0;
 }
 
 function isSharedPostgresAdapter(value: string | undefined) {

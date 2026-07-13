@@ -211,6 +211,26 @@ export class HealthService {
       this.configService.get<string>(
         'observability.mobileErrorCollector.webhookUrl',
       ) ?? '';
+    const backupRestoreDrillAt =
+      this.configService.get<string>('operations.backupRestoreDrillAt') ?? '';
+    const pilotMaxConcurrentTrips =
+      this.configService.get<number>(
+        'operations.pilotMaxConcurrentTrips',
+        0,
+      ) ?? 0;
+    const backupRestoreDrillAgeDays =
+      backupRestoreDrillAt && !Number.isNaN(Date.parse(backupRestoreDrillAt))
+        ? Math.floor(
+            (Date.now() - new Date(backupRestoreDrillAt).getTime()) /
+              (24 * 60 * 60 * 1000),
+          )
+        : null;
+    const hasRecentBackupRestoreDrill =
+      backupRestoreDrillAgeDays !== null &&
+      backupRestoreDrillAgeDays >= 0 &&
+      backupRestoreDrillAgeDays <= 30;
+    const hasPilotCapacityEnvelope =
+      Number.isInteger(pilotMaxConcurrentTrips) && pilotMaxConcurrentTrips > 0;
     const paymentFixtureReadiness = resolvePaymentFixtureProductionReadiness();
     const checks = [
       {
@@ -334,6 +354,30 @@ export class HealthService {
           !containsLocalhost(mobileErrorCollectorWebhookUrl)
             ? 'Collector mobile externe HTTPS configure.'
             : 'Collector mobile local ou incomplet; interdit en production.',
+      },
+      {
+        id: 'database-backup-restore-drill',
+        label: 'Backup/restore DB',
+        state: hasRecentBackupRestoreDrill
+          ? ('pass' as const)
+          : environment === 'production'
+            ? ('fail' as const)
+            : ('warn' as const),
+        detail: hasRecentBackupRestoreDrill
+          ? `Restore DB prouve il y a ${backupRestoreDrillAgeDays} jour(s).`
+          : 'Aucune preuve recente de restore DB; requis avant production.',
+      },
+      {
+        id: 'pilot-capacity-envelope',
+        label: 'Capacite pilote',
+        state: hasPilotCapacityEnvelope
+          ? ('pass' as const)
+          : environment === 'production'
+            ? ('fail' as const)
+            : ('warn' as const),
+        detail: hasPilotCapacityEnvelope
+          ? `Pilote borne a ${pilotMaxConcurrentTrips} course(s) simultanee(s).`
+          : 'Capacite pilote non bornee; definir une limite de courses simultanees.',
       },
     ];
     const failedChecks = checks.filter(

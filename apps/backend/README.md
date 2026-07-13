@@ -194,3 +194,6 @@ de developpement est encore exposee:
 - `PAYMENTS_DEFAULT_REDIRECT_URL` et `PAYMENTS_DEFAULT_WEBHOOK_URL` ne doivent pas pointer localhost
 - `DOCUMENT_UPLOAD_BASE_URL` et `DOCUMENT_VIEW_BASE_URL` doivent etre HTTPS et non locales
 - les secrets paiement/document ne doivent pas utiliser les valeurs de dev
+- `MOBILE_ERROR_COLLECTOR_PROVIDER=webhook` avec URL HTTPS non locale est obligatoire
+- `OPERATIONS_BACKUP_RESTORE_DRILL_AT` doit contenir une date ISO de restore DB prouve
+- `OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS` doit contenir une limite pilote positive

@@ -316,6 +316,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `mobile-observability-gate` passe en warning si la collecte externe echoue,
   meme sans crash mobile critique recurrent. Les alertes hors plateforme restent
   un gap C.
+- 13 juillet 2026: Phase 5, gap A "resilience production explicite". Le backend
+  refuse maintenant une production sans preuve ISO de restore DB
+  `OPERATIONS_BACKUP_RESTORE_DRILL_AT` ni enveloppe
+  `OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS`; `productionReadiness` expose les
+  checks `database-backup-restore-drill` et `pilot-capacity-envelope`. La preuve
+  cloud/provider reelle et les drills chaos restent des gaps C/D.
 
 ## Master Prompt Operationnel
 

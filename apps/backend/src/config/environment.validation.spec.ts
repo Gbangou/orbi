@@ -15,6 +15,8 @@ describe('validateEnvironment', () => {
     MOBILE_ERROR_COLLECTOR_PROVIDER: 'webhook',
     MOBILE_ERROR_COLLECTOR_WEBHOOK_URL:
       'https://observability.orbi.app/mobile-errors',
+    OPERATIONS_BACKUP_RESTORE_DRILL_AT: '2026-07-01T08:00:00.000Z',
+    OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS: '25',
     ENABLE_SWAGGER: 'false',
   };
 
@@ -45,6 +47,7 @@ describe('validateEnvironment', () => {
     expect(env.NODE_ENV).toBe('production');
     expect(env.PAYMENTS_WEBHOOK_SECRET).toBe('prod_webhook_secret');
     expect(env.MOBILE_ERROR_COLLECTOR_PROVIDER).toBe('webhook');
+    expect(env.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS).toBe('25');
   });
 
   it('rejects a production configuration that relies on local adapter defaults', () => {
@@ -189,6 +192,26 @@ describe('validateEnvironment', () => {
       'localhost mobile error collector webhook',
       { MOBILE_ERROR_COLLECTOR_WEBHOOK_URL: 'https://localhost:9001/errors' },
       'MOBILE_ERROR_COLLECTOR_WEBHOOK_URL must not use localhost in production.',
+    ],
+    [
+      'missing backup restore drill proof',
+      { OPERATIONS_BACKUP_RESTORE_DRILL_AT: undefined },
+      'OPERATIONS_BACKUP_RESTORE_DRILL_AT must be a valid ISO date in production.',
+    ],
+    [
+      'invalid backup restore drill proof',
+      { OPERATIONS_BACKUP_RESTORE_DRILL_AT: 'last Tuesday' },
+      'OPERATIONS_BACKUP_RESTORE_DRILL_AT must be a valid ISO date in production.',
+    ],
+    [
+      'missing pilot capacity envelope',
+      { OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS: undefined },
+      'OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS must be a positive integer in production.',
+    ],
+    [
+      'zero pilot capacity envelope',
+      { OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS: '0' },
+      'OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS must be a positive integer in production.',
     ],
   ])('rejects production config with %s', (_label, override, message) => {
     expect(() =>

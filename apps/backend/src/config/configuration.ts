@@ -75,6 +75,11 @@ export default () => ({
       process.env.PAYMENT_ATTEMPT_RECONCILIATION_BATCH_SIZE ?? '25',
       10,
     ),
+    backupRestoreDrillAt: process.env.OPERATIONS_BACKUP_RESTORE_DRILL_AT ?? '',
+    pilotMaxConcurrentTrips: Number.parseInt(
+      process.env.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS ?? '0',
+      10,
+    ),
     healthWatchdogIntervalMs: Number.parseInt(
       process.env.HEALTH_WATCHDOG_INTERVAL_MS ?? '15000',
       10,
