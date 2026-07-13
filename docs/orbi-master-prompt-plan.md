@@ -205,6 +205,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   partage du contact de confiance n est plus seulement renvoye apres update:
   il est persiste sur le profil rider via `trusted_contact_share_mode`, afin que
   les modes `NIGHT` et `ALL_TRIPS` restent vrais apres rechargement.
+- 13 juillet 2026: Phase 1, gap A "auto-share trusted contact". Quand un
+  chauffeur accepte une course, le backend prepare maintenant automatiquement un
+  lien de partage audite si le rider a configure `ALL_TRIPS` ou `NIGHT` pendant
+  la plage nocturne. La livraison externe SMS/WhatsApp/provider reste un gap
+  B/C distinct et ne doit pas etre declaree fermee.
 
 ## Master Prompt Operationnel
 

@@ -195,9 +195,13 @@ refroidies par type pour eviter le spam support.
 Orbi expose aussi un contact de confiance principal cote rider:
 `PATCH /api/v1/riders/trusted-contact` accepte uniquement un numero Burkina
 borne au format `+226XXXXXXXX`, un mode `MANUAL`, `NIGHT` ou `ALL_TRIPS`, puis
-met a jour `RiderProfile.emergencyPhone` et journalise
-`RIDER_TRUSTED_CONTACT_UPDATED`. L ecran compte rider rend le contact visible,
-modifiable et desactivable. Le prochain palier production consiste a brancher
+met a jour `RiderProfile.emergencyPhone` et le mode persistant
+`trusted_contact_share_mode`, puis journalise `RIDER_TRUSTED_CONTACT_UPDATED`.
+L ecran compte rider rend le contact visible, modifiable et desactivable.
+Quand le mode est `ALL_TRIPS`, ou `NIGHT` sur plage nocturne, l acceptation
+chauffeur prepare automatiquement un lien de partage trajet audite avec
+`TRIP_TRUSTED_CONTACT_SHARE_PREPARED` et un event `SHARE_LINK_CREATED` marque
+`TRUSTED_CONTACT_AUTO_SHARE`. Le prochain palier production consiste a brancher
 SMS/WhatsApp et plusieurs contacts sans exposer de donnees personnelles dans le
 lien public de trajet.
 

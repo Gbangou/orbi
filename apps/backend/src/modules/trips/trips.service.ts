@@ -9,6 +9,7 @@ import {
   DriverDocumentType,
   NotificationChannel,
   Prisma,
+  TrustedContactShareMode,
   TripStatus,
   UserRole,
 } from '@prisma/client';
@@ -57,9 +58,27 @@ const gpsAnomalyMaxGapMinutes = 30;
 const routeCompletionMaxSignalAgeMinutes = 10;
 const routeCompletionMaxAccuracyMeters = 250;
 const routeCompletionMaxSpeedKph = 110;
+const trustedContactNightStartHour = 20;
+const trustedContactNightEndHour = 5;
 
 function hashShareToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
+}
+
+function shouldAutoShareWithTrustedContact(
+  mode: TrustedContactShareMode,
+  now: Date,
+) {
+  if (mode === TrustedContactShareMode.ALL_TRIPS) {
+    return true;
+  }
+
+  if (mode !== TrustedContactShareMode.NIGHT) {
+    return false;
+  }
+
+  const hour = now.getUTCHours();
+  return hour >= trustedContactNightStartHour || hour < trustedContactNightEndHour;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -822,6 +841,31 @@ export class TripsService {
       }
 
       const pickupCode = generatePickupCode();
+      const trustedContact = await tx.riderProfile.findUnique({
+        where: {
+          id: rideRequest.riderId,
+        },
+        select: {
+          emergencyPhone: true,
+          trustedContactShareMode: true,
+        },
+      });
+      const shouldAutoShare =
+        Boolean(trustedContact?.emergencyPhone) &&
+        shouldAutoShareWithTrustedContact(
+          trustedContact?.trustedContactShareMode ??
+            TrustedContactShareMode.MANUAL,
+          now,
+        );
+      const autoShareToken = shouldAutoShare
+        ? randomBytes(24).toString('base64url')
+        : null;
+      const autoShareTokenHash = autoShareToken
+        ? hashShareToken(autoShareToken)
+        : null;
+      const autoShareExpiresAt = autoShareToken
+        ? new Date(now.getTime() + tripShareLinkTtlMinutes * 60 * 1000)
+        : null;
 
       const trip = await tx.trip.create({
         data: {
@@ -850,6 +894,23 @@ export class TripsService {
                   pickupCode,
                 },
               },
+              ...(autoShareTokenHash && autoShareExpiresAt
+                ? [
+                    {
+                      eventType: 'SHARE_LINK_CREATED',
+                      payload: {
+                        tokenHash: autoShareTokenHash,
+                        expiresAt: autoShareExpiresAt.toISOString(),
+                        createdByRole: 'SYSTEM',
+                        createdByUserId: null,
+                        reason: 'TRUSTED_CONTACT_AUTO_SHARE',
+                        shareMode: trustedContact?.trustedContactShareMode,
+                        deliveryState: 'PENDING_PROVIDER',
+                        ttlMinutes: tripShareLinkTtlMinutes,
+                      },
+                    },
+                  ]
+                : []),
             ],
           },
         },
@@ -874,6 +935,24 @@ export class TripsService {
             metadata: {
               tripId: trip.id,
               driverId: driverProfileId,
+            } as Prisma.InputJsonValue,
+          },
+        });
+      }
+
+      if (autoShareExpiresAt) {
+        await tx.auditLog.create({
+          data: {
+            userId: auth.user.id,
+            action: 'TRIP_TRUSTED_CONTACT_SHARE_PREPARED',
+            entityType: 'TRIP',
+            entityId: trip.id,
+            metadata: {
+              riderId: rideRequest.riderId,
+              shareMode: trustedContact?.trustedContactShareMode,
+              expiresAt: autoShareExpiresAt.toISOString(),
+              ttlMinutes: tripShareLinkTtlMinutes,
+              deliveryState: 'PENDING_PROVIDER',
             } as Prisma.InputJsonValue,
           },
         });
@@ -906,6 +985,35 @@ export class TripsService {
         rideRequestId: trip.rideRequestId,
       },
     });
+
+    const autoShareEvent = trip.events.find((event) => {
+      const payload = isRecord(event.payload) ? event.payload : {};
+      return (
+        event.eventType === 'SHARE_LINK_CREATED' &&
+        payload.reason === 'TRUSTED_CONTACT_AUTO_SHARE'
+      );
+    });
+
+    if (autoShareEvent) {
+      const payload = isRecord(autoShareEvent.payload)
+        ? autoShareEvent.payload
+        : {};
+      this.realtimeService.publish({
+        channel: 'trip',
+        type: 'trip.share-link-created',
+        entityId: trip.id,
+        riderId: trip.riderId,
+        driverId: trip.driverId,
+        actorRole: 'SYSTEM',
+        payload: {
+          reason: 'TRUSTED_CONTACT_AUTO_SHARE',
+          expiresAt:
+            typeof payload.expiresAt === 'string' ? payload.expiresAt : null,
+          ttlMinutes: tripShareLinkTtlMinutes,
+          deliveryState: 'PENDING_PROVIDER',
+        },
+      });
+    }
 
     void this.notificationsService.enqueue({
       userId: trip.rider.user.id,

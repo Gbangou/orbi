@@ -28,6 +28,9 @@ describe('TripsService', () => {
         findUnique: jest.fn(),
         update: jest.fn(),
       },
+      riderProfile: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
       supportTicket: {
         create: jest.fn(),
       },
@@ -341,6 +344,143 @@ describe('TripsService', () => {
         riderName: 'Awa Rider',
         vehicleLabel: 'Yamaha Crypton',
         pickupCode: null,
+      }),
+    );
+  });
+
+  it('prepares a trusted-contact share link when the rider enables all-trip sharing', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'ONLINE',
+      verificationStatus: 'APPROVED',
+      vehicles: [
+        {
+          id: 'vehicle-1',
+          type: 'MOTORCYCLE',
+          tier: 'MOTO_STANDARD',
+        },
+      ],
+    });
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.rideRequest.findUnique.mockResolvedValue({
+      id: 'request-auto-share-1',
+      riderId: 'rider-1',
+      status: 'REQUESTED',
+      assignedDriverId: null,
+      assignmentExpiresAt: null,
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      destinationAddress: 'Ouaga 2000',
+      estimatedFare: 1600,
+      estimatedDistanceKm: 5.8,
+      estimatedDurationMinutes: 16,
+      currency: 'XOF',
+    });
+    prisma.riderProfile.findUnique.mockResolvedValue({
+      emergencyPhone: '+22670000001',
+      trustedContactShareMode: 'ALL_TRIPS',
+    });
+    prisma.trip.findUnique.mockResolvedValue(null);
+    prisma.rideRequest.updateMany.mockResolvedValue({ count: 1 });
+    prisma.trip.create.mockResolvedValue({
+      id: 'trip-auto-share-1',
+      rideRequestId: 'request-auto-share-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'MATCHED',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      destinationAddress: 'Ouaga 2000',
+      actualFare: 1600,
+      currency: 'XOF',
+      createdAt: new Date('2026-04-17T08:00:00.000Z'),
+      rider: {
+        user: {
+          id: 'user-rider-1',
+          fullName: 'Awa Rider',
+        },
+      },
+      vehicle: {
+        make: 'Yamaha',
+        model: 'Crypton',
+      },
+      events: [
+        {
+          eventType: 'PICKUP_CODE_ISSUED',
+          payload: {
+            pickupCode: '4821',
+          },
+        },
+        {
+          eventType: 'SHARE_LINK_CREATED',
+          payload: {
+            reason: 'TRUSTED_CONTACT_AUTO_SHARE',
+            expiresAt: '2026-04-17T10:00:00.000Z',
+            ttlMinutes: 120,
+            deliveryState: 'PENDING_PROVIDER',
+          },
+        },
+      ],
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+
+    await service.acceptRideRequest(
+      {
+        user: {
+          id: 'user-driver-1',
+          role: 'DRIVER',
+          driverProfile: {
+            id: 'driver-1',
+          },
+        },
+      } as never,
+      'request-auto-share-1',
+    );
+
+    expect(prisma.trip.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          events: {
+            create: expect.arrayContaining([
+              expect.objectContaining({
+                eventType: 'SHARE_LINK_CREATED',
+                payload: expect.objectContaining({
+                  reason: 'TRUSTED_CONTACT_AUTO_SHARE',
+                  shareMode: 'ALL_TRIPS',
+                  deliveryState: 'PENDING_PROVIDER',
+                  ttlMinutes: 120,
+                  tokenHash: expect.any(String),
+                  expiresAt: expect.any(String),
+                }),
+              }),
+            ]),
+          },
+        }),
+      }),
+    );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'TRIP_TRUSTED_CONTACT_SHARE_PREPARED',
+        entityType: 'TRIP',
+        entityId: 'trip-auto-share-1',
+        metadata: expect.objectContaining({
+          shareMode: 'ALL_TRIPS',
+          deliveryState: 'PENDING_PROVIDER',
+        }),
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.share-link-created',
+        entityId: 'trip-auto-share-1',
+        actorRole: 'SYSTEM',
+        payload: expect.objectContaining({
+          reason: 'TRUSTED_CONTACT_AUTO_SHARE',
+          deliveryState: 'PENDING_PROVIDER',
+        }),
       }),
     );
   });
