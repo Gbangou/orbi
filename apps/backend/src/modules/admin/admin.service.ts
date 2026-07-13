@@ -1395,6 +1395,13 @@ function resolveLaunchReadinessNextActions(
         'Examiner les wallets chauffeur en recouvrement avant tout payout ou extension de volume.',
       runbookAnchor: 'paiements-et-argent',
     },
+    'payment-production-gate': {
+      checkId: 'payment-production-gate',
+      owner: 'finance',
+      action:
+        'Verifier finance dashboard, journal webhooks, settlement batch et payout backlog avant ouverture de trafic argent reel.',
+      runbookAnchor: 'paiements-et-argent',
+    },
     'admin-realtime': {
       checkId: 'admin-realtime',
       owner: 'engineering',
@@ -3447,6 +3454,7 @@ export class AdminService {
       refundPendingPayments,
       ignoredPaymentWebhooks,
       recoveryWallets,
+      preparedPayoutBacklog,
     ] = await Promise.all([
       this.healthService.check(),
       this.prisma.supportTicket.count({
@@ -3506,6 +3514,11 @@ export class AdminService {
           },
         },
       }),
+      this.prisma.driverPayout.count({
+        where: {
+          status: DriverPayoutStatus.PREPARED,
+        },
+      }),
     ]);
     const productionReadiness = health.operations.productionReadiness;
     const runtimeState =
@@ -3548,6 +3561,18 @@ export class AdminService {
       safetyParityRate: safetyBenchmark.summary.competitorParityRate,
       criticalSafetyGaps: safetyBenchmark.summary.criticalGaps,
     });
+    const paymentProductionIssues = [
+      refundPendingPayments > 0
+        ? `${refundPendingPayments} refund pending`
+        : null,
+      ignoredPaymentWebhooks > 0
+        ? `${ignoredPaymentWebhooks} webhook(s) ignore(s)`
+        : null,
+      recoveryWallets > 0 ? `${recoveryWallets} wallet(s) recovery` : null,
+      preparedPayoutBacklog > 0
+        ? `${preparedPayoutBacklog} payout(s) prepares`
+        : null,
+    ].filter((issue): issue is string => Boolean(issue));
     const checks: LaunchReadinessCheck[] = [
       {
         id: 'runtime-production-readiness',
@@ -3596,6 +3621,14 @@ export class AdminService {
         label: 'Recouvrement wallet',
         state: recoveryWallets === 0 ? 'pass' : 'warn',
         detail: `${recoveryWallets} wallet(s) chauffeur avec recouvrement du.`,
+      },
+      {
+        id: 'payment-production-gate',
+        label: 'Gate production argent',
+        state: paymentProductionIssues.length === 0 ? 'pass' : 'warn',
+        detail: paymentProductionIssues.length
+          ? `A stabiliser: ${paymentProductionIssues.join(', ')}.`
+          : 'Finance dashboard, webhooks, refunds, recovery et payout backlog sont propres cote code.',
       },
       {
         id: 'admin-realtime',

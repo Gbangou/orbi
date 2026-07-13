@@ -124,6 +124,7 @@ describe('AdminService', () => {
         create: jest.fn(),
       },
       driverPayout: {
+        count: jest.fn().mockResolvedValue(0),
         create: jest.fn(),
         findFirst: jest.fn(),
         findMany: jest.fn(),
@@ -1151,7 +1152,7 @@ describe('AdminService', () => {
     expect(result.summary).toMatchObject({
       failedChecks: 0,
       warningChecks: 1,
-      totalChecks: 11,
+      totalChecks: 12,
     });
     expect(result.nextActions).toEqual([
       expect.objectContaining({
@@ -1378,6 +1379,7 @@ describe('AdminService', () => {
     prisma.paymentAttempt.count.mockResolvedValue(1);
     prisma.paymentWebhookEvent.count.mockResolvedValue(1);
     prisma.wallet.count.mockResolvedValue(1);
+    prisma.driverPayout.count.mockResolvedValue(2);
 
     const result = await service.launchReadiness();
 
@@ -1394,6 +1396,10 @@ describe('AdminService', () => {
           checkId: 'payment-webhooks',
           owner: 'finance',
         }),
+        expect.objectContaining({
+          checkId: 'payment-production-gate',
+          owner: 'finance',
+        }),
       ]),
     );
     expect(result.checks).toEqual(
@@ -1404,6 +1410,10 @@ describe('AdminService', () => {
         }),
         expect.objectContaining({
           id: 'payment-webhooks',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'payment-production-gate',
           state: 'warn',
         }),
       ]),

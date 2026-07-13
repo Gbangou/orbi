@@ -262,6 +262,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   CSV/PDF de settlement chauffeur incluent maintenant un `settlementBatchId`
   stable derive du statut, des payouts et du total, egalement journalise dans
   l audit. La validation bancaire/mobile money terrain reste un gap B/D.
+- 13 juillet 2026: Phase 2, gap A "gate production argent". Launch readiness
+  expose maintenant `payment-production-gate`, qui synthese refunds pending,
+  webhooks ignores, wallet recovery et payout backlog avant trafic argent reel.
+  Ce gate cloture la partie code Phase 2; provider live, secrets production et
+  tests reseau reel restent B/C et seront geres hors code.
 
 ## Master Prompt Operationnel
 
