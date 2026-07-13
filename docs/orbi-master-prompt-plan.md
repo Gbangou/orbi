@@ -201,6 +201,10 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `on_track`/`due_soon`/`breached`/`responded`/`closed`. Ce travail ne ferme
   pas le staffing support ni la preuve de temps de reponse terrain, qui restent
   des gaps B/D.
+- 13 juillet 2026: debut Phase 1, gap A "trusted contact durable". Le mode de
+  partage du contact de confiance n est plus seulement renvoye apres update:
+  il est persiste sur le profil rider via `trusted_contact_share_mode`, afin que
+  les modes `NIGHT` et `ALL_TRIPS` restent vrais apres rechargement.
 
 ## Master Prompt Operationnel
 

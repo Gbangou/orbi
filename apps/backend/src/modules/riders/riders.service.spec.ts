@@ -41,6 +41,7 @@ describe('RidersService', () => {
     prisma.riderProfile.findUnique.mockResolvedValue({
       id: 'rider-1',
       emergencyPhone: '+22670000001',
+      trustedContactShareMode: 'ALL_TRIPS',
       preferredTier: 'MOTO_STANDARD',
       savedPlaces: [
         {
@@ -72,7 +73,7 @@ describe('RidersService', () => {
     expect(result.profile.trustedContact).toEqual(
       expect.objectContaining({
         phoneNumber: '+22670000001',
-        shareMode: 'MANUAL',
+        shareMode: 'ALL_TRIPS',
         status: 'READY',
       }),
     );
@@ -93,6 +94,7 @@ describe('RidersService', () => {
     prisma.riderProfile.update.mockResolvedValue({
       id: 'rider-1',
       emergencyPhone: '+22670000001',
+      trustedContactShareMode: 'ALL_TRIPS',
     });
     prisma.auditLog.create.mockResolvedValue(undefined);
 
@@ -116,6 +118,7 @@ describe('RidersService', () => {
       where: { id: 'rider-1' },
       data: {
         emergencyPhone: '+22670000001',
+        trustedContactShareMode: 'ALL_TRIPS',
       },
     });
     expect(prisma.auditLog.create).toHaveBeenCalledWith({

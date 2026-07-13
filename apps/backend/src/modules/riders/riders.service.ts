@@ -77,10 +77,14 @@ export class RidersService {
         emergencyPhone: profile.emergencyPhone,
         trustedContact: {
           phoneNumber: profile.emergencyPhone,
-          shareMode: profile.emergencyPhone ? 'MANUAL' : 'DISABLED',
+          shareMode: profile.emergencyPhone
+            ? profile.trustedContactShareMode
+            : 'DISABLED',
           status: profile.emergencyPhone ? 'READY' : 'MISSING',
           safetyNote: profile.emergencyPhone
-            ? 'Contact de confiance pret pour recevoir un lien trajet manuel.'
+            ? profile.trustedContactShareMode === 'MANUAL'
+              ? 'Contact de confiance pret pour recevoir un lien trajet manuel.'
+              : 'Contact de confiance pret pour le partage trajet automatique selon vos regles.'
             : 'Ajoutez un numero Burkina pour accelerer le partage en cas de trajet sensible.',
         },
         savedPlaces: profile.savedPlaces.map((place) => ({
@@ -184,6 +188,7 @@ export class RidersService {
         },
         data: {
           emergencyPhone: normalizedPhone,
+          trustedContactShareMode: shareMode,
         },
       });
 

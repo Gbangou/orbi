@@ -171,6 +171,12 @@ enum SupportTicketStatus {
   CLOSED
 }
 
+enum TrustedContactShareMode {
+  MANUAL
+  NIGHT
+  ALL_TRIPS
+}
+
 enum JobQueueKind {
   PAYMENT_WEBHOOK
   PAYMENT_REFUND_VERIFICATION
@@ -254,12 +260,13 @@ model PhoneOtp {
 }
 
 model RiderProfile {
-  id             String        @id @default(cuid())
-  userId         String        @unique @map("user_id")
-  emergencyPhone String?       @map("emergency_phone")
-  preferredTier  ServiceTier?  @map("preferred_tier")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  id                      String                  @id @default(cuid())
+  userId                  String                  @unique @map("user_id")
+  emergencyPhone          String?                 @map("emergency_phone")
+  trustedContactShareMode TrustedContactShareMode @default(MANUAL) @map("trusted_contact_share_mode")
+  preferredTier           ServiceTier?            @map("preferred_tier")
+  createdAt               DateTime                @default(now()) @map("created_at")
+  updatedAt               DateTime                @updatedAt @map("updated_at")
   user             User            @relation(fields: [userId], references: [id])
   savedPlaces      SavedPlace[]
   rideRequests     RideRequest[]
