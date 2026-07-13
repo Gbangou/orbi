@@ -347,6 +347,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   comparees aux chauffeurs approuves non suspendus, avec warning sous 2x et
   blocage si une demande ouverte existe sans chauffeur exploitable. La densite
   terrain par zone, les horaires reels et l acquisition chauffeurs restent D.
+- 13 juillet 2026: Phase 6, gap A "cadence revue pilote". Le backend exige en
+  production `OPERATIONS_PILOT_REVIEW_AT`, expose `pilot-review-cadence` dans
+  `productionReadiness` et la carte admin resilience pilote, afin qu aucune
+  extension ne parte sans revue recente produit/pricing/safety. Les comptes
+  rendus terrain et decisions business restent D.
 
 ## Master Prompt Operationnel
 

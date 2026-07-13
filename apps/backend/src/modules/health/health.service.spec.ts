@@ -166,7 +166,7 @@ describe('HealthService', () => {
         environment: 'test',
         riskLevel: 'medium',
         failedChecks: 0,
-        warningChecks: 13,
+        warningChecks: 14,
       }),
     );
     expect(result.operations.productionReadiness.checks).toEqual(
@@ -203,6 +203,10 @@ describe('HealthService', () => {
         }),
         expect.objectContaining({
           id: 'chaos-drain-drill',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'pilot-review-cadence',
           state: 'warn',
         }),
         expect.objectContaining({
@@ -473,6 +477,7 @@ describe('HealthService', () => {
         'operations.backupRestoreDrillAt': '',
         'operations.canaryReleaseDrillAt': '',
         'operations.chaosDrainDrillAt': '',
+        'operations.pilotReviewAt': '',
         'operations.termsVersion': '',
         'operations.privacyVersion': '',
         'operations.insurancePolicyRef': '',
@@ -501,7 +506,7 @@ describe('HealthService', () => {
     const result = await service.check();
 
     expect(result.operations.productionReadiness.riskLevel).toBe('high');
-    expect(result.operations.productionReadiness.failedChecks).toBe(15);
+    expect(result.operations.productionReadiness.failedChecks).toBe(16);
     expect(result.operations.productionReadiness.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -537,6 +542,10 @@ describe('HealthService', () => {
         }),
         expect.objectContaining({
           id: 'chaos-drain-drill',
+          state: 'fail',
+        }),
+        expect.objectContaining({
+          id: 'pilot-review-cadence',
           state: 'fail',
         }),
         expect.objectContaining({
@@ -576,6 +585,7 @@ describe('HealthService', () => {
         'operations.backupRestoreDrillAt': new Date().toISOString(),
         'operations.canaryReleaseDrillAt': new Date().toISOString(),
         'operations.chaosDrainDrillAt': new Date().toISOString(),
+        'operations.pilotReviewAt': new Date().toISOString(),
         'operations.termsVersion': 'cgu-bf-2026-07',
         'operations.privacyVersion': 'privacy-bf-2026-07',
         'operations.insurancePolicyRef': 'orbi-insurance-2026',
@@ -608,6 +618,10 @@ describe('HealthService', () => {
         }),
         expect.objectContaining({
           id: 'chaos-drain-drill',
+          state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'pilot-review-cadence',
           state: 'pass',
         }),
         expect.objectContaining({

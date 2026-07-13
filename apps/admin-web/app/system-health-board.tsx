@@ -426,6 +426,7 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
       'pilot-capacity-envelope',
       'canary-release-drill',
       'chaos-drain-drill',
+      'pilot-review-cadence',
     ].includes(check.id),
   );
   const resilienceState = resilienceChecks.some((check) => check.state === 'fail')

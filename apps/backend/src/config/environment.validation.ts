@@ -66,6 +66,7 @@ type EnvironmentVariables = {
   OPERATIONS_BACKUP_RESTORE_DRILL_AT?: string;
   OPERATIONS_CANARY_RELEASE_DRILL_AT?: string;
   OPERATIONS_CHAOS_DRAIN_DRILL_AT?: string;
+  OPERATIONS_PILOT_REVIEW_AT?: string;
   OPERATIONS_TERMS_VERSION?: string;
   OPERATIONS_PRIVACY_VERSION?: string;
   OPERATIONS_INSURANCE_POLICY_REF?: string;
@@ -192,6 +193,7 @@ export function validateEnvironment(config: EnvironmentVariables) {
       config.OPERATIONS_CANARY_RELEASE_DRILL_AT ?? '',
     OPERATIONS_CHAOS_DRAIN_DRILL_AT:
       config.OPERATIONS_CHAOS_DRAIN_DRILL_AT ?? '',
+    OPERATIONS_PILOT_REVIEW_AT: config.OPERATIONS_PILOT_REVIEW_AT ?? '',
     OPERATIONS_TERMS_VERSION: config.OPERATIONS_TERMS_VERSION ?? '',
     OPERATIONS_PRIVACY_VERSION: config.OPERATIONS_PRIVACY_VERSION ?? '',
     OPERATIONS_INSURANCE_POLICY_REF:
@@ -231,6 +233,7 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   const canaryReleaseDrillAt =
     config.OPERATIONS_CANARY_RELEASE_DRILL_AT ?? '';
   const chaosDrainDrillAt = config.OPERATIONS_CHAOS_DRAIN_DRILL_AT ?? '';
+  const pilotReviewAt = config.OPERATIONS_PILOT_REVIEW_AT ?? '';
   const termsVersion = config.OPERATIONS_TERMS_VERSION ?? '';
   const privacyVersion = config.OPERATIONS_PRIVACY_VERSION ?? '';
   const insurancePolicyRef = config.OPERATIONS_INSURANCE_POLICY_REF ?? '';
@@ -363,6 +366,12 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   if (!isValidIsoDate(chaosDrainDrillAt)) {
     throw new Error(
       'OPERATIONS_CHAOS_DRAIN_DRILL_AT must be a valid ISO date in production.',
+    );
+  }
+
+  if (!isValidIsoDate(pilotReviewAt)) {
+    throw new Error(
+      'OPERATIONS_PILOT_REVIEW_AT must be a valid ISO date in production.',
     );
   }
 

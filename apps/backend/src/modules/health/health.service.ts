@@ -217,6 +217,8 @@ export class HealthService {
       this.configService.get<string>('operations.canaryReleaseDrillAt') ?? '';
     const chaosDrainDrillAt =
       this.configService.get<string>('operations.chaosDrainDrillAt') ?? '';
+    const pilotReviewAt =
+      this.configService.get<string>('operations.pilotReviewAt') ?? '';
     const termsVersion =
       this.configService.get<string>('operations.termsVersion') ?? '';
     const privacyVersion =
@@ -235,6 +237,7 @@ export class HealthService {
       canaryReleaseDrillAt,
     );
     const chaosDrainDrillAgeDays = resolveRecentDrillAgeDays(chaosDrainDrillAt);
+    const pilotReviewAgeDays = resolveRecentDrillAgeDays(pilotReviewAt);
     const hasRecentBackupRestoreDrill =
       backupRestoreDrillAgeDays !== null &&
       backupRestoreDrillAgeDays >= 0 &&
@@ -247,6 +250,10 @@ export class HealthService {
       chaosDrainDrillAgeDays !== null &&
       chaosDrainDrillAgeDays >= 0 &&
       chaosDrainDrillAgeDays <= 30;
+    const hasRecentPilotReview =
+      pilotReviewAgeDays !== null &&
+      pilotReviewAgeDays >= 0 &&
+      pilotReviewAgeDays <= 14;
     const hasPilotCapacityEnvelope =
       Number.isInteger(pilotMaxConcurrentTrips) && pilotMaxConcurrentTrips > 0;
     const hasTermsVersion = Boolean(termsVersion.trim());
@@ -423,6 +430,18 @@ export class HealthService {
         detail: hasRecentChaosDrainDrill
           ? `Drain/restart instance prouve il y a ${chaosDrainDrillAgeDays} jour(s).`
           : 'Aucune preuve recente de drain/restart instance; requis avant production.',
+      },
+      {
+        id: 'pilot-review-cadence',
+        label: 'Revue pilote',
+        state: hasRecentPilotReview
+          ? ('pass' as const)
+          : environment === 'production'
+            ? ('fail' as const)
+            : ('warn' as const),
+        detail: hasRecentPilotReview
+          ? `Revue produit/pricing/safety prouvee il y a ${pilotReviewAgeDays} jour(s).`
+          : 'Aucune revue pilote recente produit/pricing/safety; requis avant extension.',
       },
       {
         id: 'legal-terms-version',

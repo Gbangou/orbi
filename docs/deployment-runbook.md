@@ -82,10 +82,11 @@ Utiliser la strategie `expand -> migrate traffic -> contract`:
 - avant pilote production, renseigner `OPERATIONS_BACKUP_RESTORE_DRILL_AT` avec
   la date ISO du dernier restore DB prouve, `OPERATIONS_CANARY_RELEASE_DRILL_AT`
   avec la preuve canary/rollback, `OPERATIONS_CHAOS_DRAIN_DRILL_AT` avec la
-  preuve drain/restart instance et `OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS` avec
+  preuve drain/restart instance, `OPERATIONS_PILOT_REVIEW_AT` avec la derniere
+  revue produit/pricing/safety et `OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS` avec
   la limite de courses simultanees autorisee; `/health.operations.productionReadiness`
   expose `database-backup-restore-drill`, `canary-release-drill`,
-  `chaos-drain-drill` et `pilot-capacity-envelope`
+  `chaos-drain-drill`, `pilot-review-cadence` et `pilot-capacity-envelope`
 - avant pilote production, renseigner `OPERATIONS_TERMS_VERSION`,
   `OPERATIONS_PRIVACY_VERSION` et `OPERATIONS_INSURANCE_POLICY_REF`; la console
   health expose `legal-terms-version`, `privacy-policy-version` et

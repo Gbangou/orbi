@@ -18,6 +18,7 @@ describe('validateEnvironment', () => {
     OPERATIONS_BACKUP_RESTORE_DRILL_AT: '2026-07-01T08:00:00.000Z',
     OPERATIONS_CANARY_RELEASE_DRILL_AT: '2026-07-02T08:00:00.000Z',
     OPERATIONS_CHAOS_DRAIN_DRILL_AT: '2026-07-03T08:00:00.000Z',
+    OPERATIONS_PILOT_REVIEW_AT: '2026-07-04T08:00:00.000Z',
     OPERATIONS_TERMS_VERSION: 'cgu-bf-2026-07',
     OPERATIONS_PRIVACY_VERSION: 'privacy-bf-2026-07',
     OPERATIONS_INSURANCE_POLICY_REF: 'orbi-insurance-2026',
@@ -53,6 +54,7 @@ describe('validateEnvironment', () => {
     expect(env.PAYMENTS_WEBHOOK_SECRET).toBe('prod_webhook_secret');
     expect(env.MOBILE_ERROR_COLLECTOR_PROVIDER).toBe('webhook');
     expect(env.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS).toBe('25');
+    expect(env.OPERATIONS_PILOT_REVIEW_AT).toBe('2026-07-04T08:00:00.000Z');
   });
 
   it('rejects a production configuration that relies on local adapter defaults', () => {
@@ -227,6 +229,16 @@ describe('validateEnvironment', () => {
       'invalid chaos drain drill proof',
       { OPERATIONS_CHAOS_DRAIN_DRILL_AT: 'after launch' },
       'OPERATIONS_CHAOS_DRAIN_DRILL_AT must be a valid ISO date in production.',
+    ],
+    [
+      'missing pilot review proof',
+      { OPERATIONS_PILOT_REVIEW_AT: undefined },
+      'OPERATIONS_PILOT_REVIEW_AT must be a valid ISO date in production.',
+    ],
+    [
+      'invalid pilot review proof',
+      { OPERATIONS_PILOT_REVIEW_AT: 'after standup' },
+      'OPERATIONS_PILOT_REVIEW_AT must be a valid ISO date in production.',
     ],
     [
       'missing terms version',
