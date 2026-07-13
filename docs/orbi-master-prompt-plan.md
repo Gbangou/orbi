@@ -287,6 +287,10 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   benefices, documents et recapitulatif pour petits Android; le CTA final est
   plus court et un garde-fou statique empeche de perdre ces bornes. La capture
   visuelle sur device reel reste B.
+- 13 juillet 2026: Phase 4, gap A "premiers moments rider compacts". L auth
+  passager borne maintenant slogan, trust line, footer legal et bouton demo; le
+  CTA booking garde un label compact et un guard statique protege auth/booking
+  contre les regressions petits ecrans. La capture visuelle device reel reste B.
 
 ## Master Prompt Operationnel
 

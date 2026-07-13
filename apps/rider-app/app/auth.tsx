@@ -129,8 +129,12 @@ export default function RiderAuthScreen() {
           {/* Wordmark */}
           <View style={styles.brand}>
             <OrbiLogo size="md" />
-            <Text style={styles.tagline}>Votre course en quelques secondes</Text>
-            <Text style={styles.trustLine}>Prix clair · Chauffeur proche · Départ rapide</Text>
+            <Text style={styles.tagline} numberOfLines={1}>
+              Votre course en quelques secondes
+            </Text>
+            <Text style={styles.trustLine} numberOfLines={2} ellipsizeMode="tail">
+              Prix clair · Chauffeur proche · Départ rapide
+            </Text>
           </View>
 
           {/* Mode toggle */}
@@ -139,7 +143,10 @@ export default function RiderAuthScreen() {
               onPress={() => { setMode('sign-in'); setErrorMessage(''); }}
               style={[styles.toggleBtn, mode === 'sign-in' && styles.toggleBtnActive]}
             >
-              <Text style={[styles.toggleLabel, mode === 'sign-in' && styles.toggleLabelActive]}>
+              <Text
+                style={[styles.toggleLabel, mode === 'sign-in' && styles.toggleLabelActive]}
+                numberOfLines={1}
+              >
                 {ta('tabSignIn')}
               </Text>
             </Pressable>
@@ -147,7 +154,11 @@ export default function RiderAuthScreen() {
               onPress={() => { setMode('sign-up'); setErrorMessage(''); }}
               style={[styles.toggleBtn, mode === 'sign-up' && styles.toggleBtnActive]}
             >
-              <Text style={[styles.toggleLabel, mode === 'sign-up' && styles.toggleLabelActive]}>
+              <Text
+                style={[styles.toggleLabel, mode === 'sign-up' && styles.toggleLabelActive]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
                 {ta('tabSignUp')}
               </Text>
             </Pressable>
@@ -233,7 +244,7 @@ export default function RiderAuthScreen() {
                 onPress={() => void handleDemoSignIn()}
                 disabled={isSubmitting}
                 loading={isSubmitting}
-                label="Connexion compte de démonstration"
+                label="Compte de démonstration"
                 variant="secondary"
                 tone="teal"
                 style={styles.demoBtn}
@@ -242,7 +253,7 @@ export default function RiderAuthScreen() {
             </View>
           ) : null}
 
-          <Text style={styles.legalFooter}>
+          <Text style={styles.legalFooter} numberOfLines={3}>
             En continuant, vous acceptez les Conditions d&apos;utilisation et la
             Politique de confidentialité d&apos;Orbi.
           </Text>

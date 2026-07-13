@@ -1417,6 +1417,7 @@ export default function BookingScreen() {
           label={bookingCtaLabel}
           tone="teal"
           style={styles.ctaBtn}
+          labelStyle={styles.ctaBtnLabel}
         />
       </View>
     </OrbiScreen>
@@ -1838,6 +1839,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   ctaBtn: {
     minHeight: 50,
+  },
+  ctaBtnLabel: {
+    fontSize: 15,
   },
   ctaSignalRow: {
     flexDirection: 'row',

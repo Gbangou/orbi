@@ -1,0 +1,27 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const appRoot = resolve(__dirname, '..');
+
+function readAppFile(relativePath: string) {
+  return readFileSync(resolve(appRoot, relativePath), 'utf8');
+}
+
+describe('rider mobile UX guards', () => {
+  it('keeps auth first-screen copy bounded on compact Android screens', () => {
+    const source = readAppFile('app/auth.tsx');
+
+    expect(source).toContain('styles.trustLine} numberOfLines={2}');
+    expect(source).toContain('styles.legalFooter} numberOfLines={3}');
+    expect(source).toContain('label="Compte de démonstration"');
+  });
+
+  it('keeps booking bottom CTA compact', () => {
+    const source = readAppFile('app/book.tsx');
+
+    expect(source).toContain('labelStyle={styles.ctaBtnLabel}');
+    expect(source).toContain('ctaBtnLabel');
+    expect(source).toContain('ctaSignalTitle} numberOfLines={1}');
+    expect(source).toContain('ctaSignalMeta} numberOfLines={1}');
+  });
+});

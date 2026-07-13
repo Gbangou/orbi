@@ -550,7 +550,7 @@ describe('rider smoke flows', () => {
     mockedSignInRiderAccount.mockResolvedValue(buildRiderSession() as never);
 
     const renderer = await renderScreen(<RiderAuthScreen />);
-    await pressByText(renderer, 'Connexion compte de démonstration');
+    await pressByText(renderer, 'Compte de démonstration');
 
     expect(mockedSignInRiderAccount).toHaveBeenCalledWith({
       email: 'rider@orbi.app',
@@ -579,7 +579,7 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
 
-    await pressByText(renderer, 'Connexion compte de démonstration');
+    await pressByText(renderer, 'Compte de démonstration');
 
     expect(router.replace).not.toHaveBeenCalled();
     expectText(
@@ -595,7 +595,7 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
 
-    await pressByText(renderer, 'Connexion compte de démonstration');
+    await pressByText(renderer, 'Compte de démonstration');
 
     expect(router.replace).not.toHaveBeenCalled();
     expectText(
