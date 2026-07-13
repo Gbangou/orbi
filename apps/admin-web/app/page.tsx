@@ -103,6 +103,11 @@ const fallbackOperations = [
 const fallbackOperationalKpis: AdminOperationalKpisResponse = {
   windowDays: 7,
   crashFreeSessionRate7d: 0,
+  criticalMobileErrors7d: 0,
+  affectedMobileSessions7d: 0,
+  mobileObservabilityPosture: "good",
+  mobileObservabilityAction:
+    "Aucune donnee live chargee; verifier la collecte mobile pendant le pilote.",
   firstBookingConversionRate30d: 0,
   offerAcceptanceRate7d: 0,
   avgDriverOnlineMinutes7d: null,
@@ -1196,9 +1201,19 @@ export default async function AdminHomePage({
         <div className="row">
           <div>
             <h3>Sessions sans crash</h3>
-            <p>Sessions mobiles sans erreur critique remontee.</p>
+            <p>
+              {operationalKpis.criticalMobileErrors7d} erreur(s) critique(s),{" "}
+              {operationalKpis.affectedMobileSessions7d} session(s) touchee(s).
+            </p>
           </div>
           <strong>{operationalKpis.crashFreeSessionRate7d}%</strong>
+        </div>
+        <div className="row">
+          <div>
+            <h3>Posture observabilite mobile</h3>
+            <p>{operationalKpis.mobileObservabilityAction}</p>
+          </div>
+          <strong>{operationalKpis.mobileObservabilityPosture}</strong>
         </div>
         <div className="row">
           <div>

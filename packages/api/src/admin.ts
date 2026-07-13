@@ -170,6 +170,10 @@ export type AdminOverviewResponse = {
 export type AdminOperationalKpisResponse = {
   windowDays: number;
   crashFreeSessionRate7d: number;
+  criticalMobileErrors7d: number;
+  affectedMobileSessions7d: number;
+  mobileObservabilityPosture: "good" | "warn" | "bad";
+  mobileObservabilityAction: string;
   firstBookingConversionRate30d: number;
   offerAcceptanceRate7d: number;
   avgDriverOnlineMinutes7d: number | null;

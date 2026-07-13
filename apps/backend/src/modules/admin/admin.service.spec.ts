@@ -4423,6 +4423,10 @@ describe('AdminService', () => {
       const kpis = await service.operationalKpis();
 
       expect(kpis.crashFreeSessionRate7d).toBe(90);
+      expect(kpis.criticalMobileErrors7d).toBe(2);
+      expect(kpis.affectedMobileSessions7d).toBe(1);
+      expect(kpis.mobileObservabilityPosture).toBe('bad');
+      expect(kpis.mobileObservabilityAction).toContain('Bloquer le pilote large');
       expect(kpis.firstBookingConversionRate30d).toBe(40);
       expect(kpis.offerAcceptanceRate7d).toBe(60);
       expect(kpis.avgDriverOnlineMinutes7d).toBe(45);
@@ -4459,8 +4463,37 @@ describe('AdminService', () => {
       const kpis = await service.operationalKpis();
 
       expect(kpis.crashFreeSessionRate7d).toBe(0);
+      expect(kpis.criticalMobileErrors7d).toBe(0);
+      expect(kpis.affectedMobileSessions7d).toBe(0);
+      expect(kpis.mobileObservabilityPosture).toBe('good');
       expect(kpis.avgDriverOnlineMinutes7d).toBeNull();
       expect(kpis.avgSupportFirstResponseMinutes7d).toBeNull();
+    });
+
+    it('warns when a single critical mobile crash is present but crash-free rate remains high', async () => {
+      const { prisma, service } = createService();
+
+      prisma.userSession.count.mockResolvedValueOnce(100);
+      prisma.auditLog.findMany
+        .mockResolvedValueOnce([
+          {
+            metadata: {
+              sessionId: 'session-critical',
+              classification: { severity: 'critical' },
+            },
+          },
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      prisma.supportTicket.findMany.mockResolvedValueOnce([]);
+
+      const kpis = await service.operationalKpis();
+
+      expect(kpis.crashFreeSessionRate7d).toBe(99);
+      expect(kpis.criticalMobileErrors7d).toBe(1);
+      expect(kpis.affectedMobileSessions7d).toBe(1);
+      expect(kpis.mobileObservabilityPosture).toBe('warn');
+      expect(kpis.mobileObservabilityAction).toContain('pilote limite');
     });
   });
 });

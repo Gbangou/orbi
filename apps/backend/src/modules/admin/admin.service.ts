@@ -3156,10 +3156,18 @@ export class AdminService {
         )
         .filter((sessionId): sessionId is string => typeof sessionId === 'string'),
     );
+    const criticalMobileErrors7d = criticalCrashLogs7d.length;
+    const affectedMobileSessions7d = crashedSessionIds.size;
     const crashFreeSessionRate7d = safeRate(
       Math.max(totalSessions7d - crashedSessionIds.size, 0),
       totalSessions7d,
     );
+    const mobileObservability =
+      this.resolveMobileObservabilityPosture({
+        crashFreeSessionRate7d,
+        criticalMobileErrors7d,
+        affectedMobileSessions7d,
+      });
 
     const firstBookingConversionRate30d = safeRate(
       riderConverted30d,
@@ -3222,10 +3230,45 @@ export class AdminService {
     return {
       windowDays: 7,
       crashFreeSessionRate7d,
+      criticalMobileErrors7d,
+      affectedMobileSessions7d,
+      mobileObservabilityPosture: mobileObservability.posture,
+      mobileObservabilityAction: mobileObservability.action,
       firstBookingConversionRate30d,
       offerAcceptanceRate7d,
       avgDriverOnlineMinutes7d,
       avgSupportFirstResponseMinutes7d,
+    };
+  }
+
+  private resolveMobileObservabilityPosture(input: {
+    crashFreeSessionRate7d: number;
+    criticalMobileErrors7d: number;
+    affectedMobileSessions7d: number;
+  }) {
+    if (
+      input.criticalMobileErrors7d >= 3 ||
+      (input.affectedMobileSessions7d > 0 && input.crashFreeSessionRate7d < 95)
+    ) {
+      return {
+        posture: 'bad' as const,
+        action:
+          'Bloquer le pilote large: analyser les tickets crash mobile, isoler la surface et publier un correctif avant extension.',
+      };
+    }
+
+    if (input.criticalMobileErrors7d > 0) {
+      return {
+        posture: 'warn' as const,
+        action:
+          'Garder le pilote limite: verifier les rapports mobiles critiques et confirmer la recurrence avant extension.',
+      };
+    }
+
+    return {
+      posture: 'good' as const,
+      action:
+        'Aucun crash mobile critique remonte sur la fenetre; maintenir la collecte et surveiller les nouvelles sessions.',
     };
   }
 

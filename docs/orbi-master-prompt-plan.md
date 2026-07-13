@@ -291,6 +291,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   passager borne maintenant slogan, trust line, footer legal et bouton demo; le
   CTA booking garde un label compact et un guard statique protege auth/booking
   contre les regressions petits ecrans. La capture visuelle device reel reste B.
+- 13 juillet 2026: debut Phase 5, gap A "posture observabilite mobile". Les KPIs
+  operationnels exposent maintenant erreurs mobiles critiques, sessions touchees,
+  posture `good`/`warn`/`bad` et action ops recommandee; l admin affiche ce
+  signal avec le crash-free rate. Le branchement Sentry/Crashlytics externe
+  reste un gap C.
 
 ## Master Prompt Operationnel
 
