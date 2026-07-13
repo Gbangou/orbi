@@ -172,6 +172,12 @@ export type AdminOperationalKpisResponse = {
   crashFreeSessionRate7d: number;
   criticalMobileErrors7d: number;
   affectedMobileSessions7d: number;
+  topCriticalMobileSignal: {
+    surface: string;
+    code: string;
+    owner: string;
+    count: number;
+  } | null;
   mobileObservabilityPosture: "good" | "warn" | "bad";
   mobileObservabilityAction: string;
   firstBookingConversionRate30d: number;

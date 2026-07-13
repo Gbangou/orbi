@@ -105,6 +105,7 @@ const fallbackOperationalKpis: AdminOperationalKpisResponse = {
   crashFreeSessionRate7d: 0,
   criticalMobileErrors7d: 0,
   affectedMobileSessions7d: 0,
+  topCriticalMobileSignal: null,
   mobileObservabilityPosture: "good",
   mobileObservabilityAction:
     "Aucune donnee live chargee; verifier la collecte mobile pendant le pilote.",
@@ -1212,6 +1213,14 @@ export default async function AdminHomePage({
           <div>
             <h3>Posture observabilite mobile</h3>
             <p>{operationalKpis.mobileObservabilityAction}</p>
+            {operationalKpis.topCriticalMobileSignal ? (
+              <p>
+                Signal dominant: {operationalKpis.topCriticalMobileSignal.count}
+                x {operationalKpis.topCriticalMobileSignal.code} sur{" "}
+                {operationalKpis.topCriticalMobileSignal.surface} (
+                {operationalKpis.topCriticalMobileSignal.owner}).
+              </p>
+            ) : null}
           </div>
           <strong>{operationalKpis.mobileObservabilityPosture}</strong>
         </div>

@@ -3222,6 +3222,7 @@ export class AdminService {
       crashFreeSessionRate7d: mobileObservability.crashFreeSessionRate7d,
       criticalMobileErrors7d: mobileObservability.criticalMobileErrors7d,
       affectedMobileSessions7d: mobileObservability.affectedMobileSessions7d,
+      topCriticalMobileSignal: mobileObservability.topCriticalMobileSignal,
       mobileObservabilityPosture: mobileObservability.posture,
       mobileObservabilityAction: mobileObservability.action,
       firstBookingConversionRate30d,
@@ -3235,14 +3236,47 @@ export class AdminService {
     totalSessions7d: number;
     criticalCrashLogs7d: Array<{ metadata: unknown }>;
   }) {
+    const signalCounts = new Map<
+      string,
+      { surface: string; code: string; owner: string; count: number }
+    >();
     const crashedSessionIds = new Set(
       input.criticalCrashLogs7d
-        .map((log) =>
-          isDispatchSettingsRecord(log.metadata)
-            ? log.metadata.sessionId
-            : null,
-        )
-        .filter((sessionId): sessionId is string => typeof sessionId === 'string'),
+        .map((log) => {
+          if (!isDispatchSettingsRecord(log.metadata)) {
+            return null;
+          }
+          const classification = isDispatchSettingsRecord(
+            log.metadata.classification,
+          )
+            ? log.metadata.classification
+            : null;
+          const surface = this.mobileSignalText(
+            classification?.surface,
+            'unknown-surface',
+          );
+          const code = this.mobileSignalText(
+            classification?.code,
+            'unknown-code',
+          );
+          const owner = this.mobileSignalText(
+            classification?.owner,
+            'engineering',
+          );
+          const key = `${surface}|${code}|${owner}`;
+          const existing = signalCounts.get(key);
+          signalCounts.set(key, {
+            surface,
+            code,
+            owner,
+            count: (existing?.count ?? 0) + 1,
+          });
+
+          return log.metadata.sessionId;
+        })
+        .filter(
+          (sessionId): sessionId is string => typeof sessionId === 'string',
+        ),
     );
     const criticalMobileErrors7d = input.criticalCrashLogs7d.length;
     const affectedMobileSessions7d = crashedSessionIds.size;
@@ -3260,9 +3294,20 @@ export class AdminService {
       crashFreeSessionRate7d,
       criticalMobileErrors7d,
       affectedMobileSessions7d,
+      topCriticalMobileSignal:
+        [...signalCounts.values()].sort(
+          (left, right) =>
+            right.count - left.count || left.surface.localeCompare(right.surface),
+        )[0] ?? null,
       posture: posture.posture,
       action: posture.action,
     };
+  }
+
+  private mobileSignalText(value: unknown, fallback: string) {
+    return typeof value === 'string' && value.trim()
+      ? value.trim().slice(0, 48)
+      : fallback;
   }
 
   private resolveMobileObservabilityPosture(input: {
@@ -3662,6 +3707,9 @@ export class AdminService {
         : mobileObservability.posture === 'warn'
           ? 'warn'
           : 'pass';
+    const topCriticalMobileSignal = mobileObservability.topCriticalMobileSignal
+      ? ` Signal dominant: ${mobileObservability.topCriticalMobileSignal.count}x ${mobileObservability.topCriticalMobileSignal.code} sur ${mobileObservability.topCriticalMobileSignal.surface} (${mobileObservability.topCriticalMobileSignal.owner}).`
+      : '';
     const checks: LaunchReadinessCheck[] = [
       {
         id: 'runtime-production-readiness',
@@ -3723,7 +3771,7 @@ export class AdminService {
         id: 'mobile-observability-gate',
         label: 'Gate crash mobile',
         state: mobileObservabilityState,
-        detail: `${mobileObservability.criticalMobileErrors7d} erreur(s) critique(s), ${mobileObservability.affectedMobileSessions7d} session(s) touchee(s), ${mobileObservability.crashFreeSessionRate7d}% sessions sans crash. ${mobileObservability.action}`,
+        detail: `${mobileObservability.criticalMobileErrors7d} erreur(s) critique(s), ${mobileObservability.affectedMobileSessions7d} session(s) touchee(s), ${mobileObservability.crashFreeSessionRate7d}% sessions sans crash.${topCriticalMobileSignal} ${mobileObservability.action}`,
       },
       {
         id: 'admin-realtime',

@@ -1434,19 +1434,34 @@ describe('AdminService', () => {
       {
         metadata: {
           sessionId: 'session-1',
-          classification: { severity: 'critical' },
+          classification: {
+            code: 'MOB-BOOKING-DISPATCH',
+            owner: 'ops',
+            severity: 'critical',
+            surface: 'booking',
+          },
         },
       },
       {
         metadata: {
           sessionId: 'session-2',
-          classification: { severity: 'critical' },
+          classification: {
+            code: 'MOB-BOOKING-DISPATCH',
+            owner: 'ops',
+            severity: 'critical',
+            surface: 'booking',
+          },
         },
       },
       {
         metadata: {
           sessionId: 'session-2',
-          classification: { severity: 'critical' },
+          classification: {
+            code: 'MOB-PAYMENT-PROVIDER',
+            owner: 'finance',
+            severity: 'critical',
+            surface: 'payments',
+          },
         },
       },
     ]);
@@ -1470,6 +1485,10 @@ describe('AdminService', () => {
           id: 'mobile-observability-gate',
           state: 'fail',
           detail: expect.stringContaining('3 erreur(s) critique(s)'),
+        }),
+        expect.objectContaining({
+          id: 'mobile-observability-gate',
+          detail: expect.stringContaining('MOB-BOOKING-DISPATCH'),
         }),
       ]),
     );
@@ -4428,13 +4447,23 @@ describe('AdminService', () => {
           {
             metadata: {
               sessionId: 'session-1',
-              classification: { severity: 'critical' },
+              classification: {
+                code: 'MOB-BOOKING-DISPATCH',
+                owner: 'ops',
+                severity: 'critical',
+                surface: 'booking',
+              },
             },
           },
           {
             metadata: {
               sessionId: 'session-1',
-              classification: { severity: 'critical' },
+              classification: {
+                code: 'MOB-BOOKING-DISPATCH',
+                owner: 'ops',
+                severity: 'critical',
+                surface: 'booking',
+              },
             },
           },
         ])
@@ -4480,6 +4509,12 @@ describe('AdminService', () => {
       expect(kpis.crashFreeSessionRate7d).toBe(90);
       expect(kpis.criticalMobileErrors7d).toBe(2);
       expect(kpis.affectedMobileSessions7d).toBe(1);
+      expect(kpis.topCriticalMobileSignal).toEqual({
+        code: 'MOB-BOOKING-DISPATCH',
+        count: 2,
+        owner: 'ops',
+        surface: 'booking',
+      });
       expect(kpis.mobileObservabilityPosture).toBe('bad');
       expect(kpis.mobileObservabilityAction).toContain('Bloquer le pilote large');
       expect(kpis.firstBookingConversionRate30d).toBe(40);
@@ -4520,6 +4555,7 @@ describe('AdminService', () => {
       expect(kpis.crashFreeSessionRate7d).toBe(0);
       expect(kpis.criticalMobileErrors7d).toBe(0);
       expect(kpis.affectedMobileSessions7d).toBe(0);
+      expect(kpis.topCriticalMobileSignal).toBeNull();
       expect(kpis.mobileObservabilityPosture).toBe('good');
       expect(kpis.avgDriverOnlineMinutes7d).toBeNull();
       expect(kpis.avgSupportFirstResponseMinutes7d).toBeNull();
@@ -4534,7 +4570,12 @@ describe('AdminService', () => {
           {
             metadata: {
               sessionId: 'session-critical',
-              classification: { severity: 'critical' },
+              classification: {
+                code: 'MOB-AUTH-SESSION',
+                owner: 'engineering',
+                severity: 'critical',
+                surface: 'rider-driver-auth',
+              },
             },
           },
         ])
@@ -4547,6 +4588,12 @@ describe('AdminService', () => {
       expect(kpis.crashFreeSessionRate7d).toBe(99);
       expect(kpis.criticalMobileErrors7d).toBe(1);
       expect(kpis.affectedMobileSessions7d).toBe(1);
+      expect(kpis.topCriticalMobileSignal).toEqual({
+        code: 'MOB-AUTH-SESSION',
+        count: 1,
+        owner: 'engineering',
+        surface: 'rider-driver-auth',
+      });
       expect(kpis.mobileObservabilityPosture).toBe('warn');
       expect(kpis.mobileObservabilityAction).toContain('pilote limite');
     });
