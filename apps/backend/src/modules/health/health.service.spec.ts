@@ -166,7 +166,7 @@ describe('HealthService', () => {
         environment: 'test',
         riskLevel: 'medium',
         failedChecks: 0,
-        warningChecks: 10,
+        warningChecks: 13,
       }),
     );
     expect(result.operations.productionReadiness.checks).toEqual(
@@ -203,6 +203,18 @@ describe('HealthService', () => {
         }),
         expect.objectContaining({
           id: 'chaos-drain-drill',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'legal-terms-version',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'privacy-policy-version',
+          state: 'warn',
+        }),
+        expect.objectContaining({
+          id: 'insurance-policy-reference',
           state: 'warn',
         }),
       ]),
@@ -461,6 +473,9 @@ describe('HealthService', () => {
         'operations.backupRestoreDrillAt': '',
         'operations.canaryReleaseDrillAt': '',
         'operations.chaosDrainDrillAt': '',
+        'operations.termsVersion': '',
+        'operations.privacyVersion': '',
+        'operations.insurancePolicyRef': '',
         'operations.pilotMaxConcurrentTrips': 0,
       };
 
@@ -486,7 +501,7 @@ describe('HealthService', () => {
     const result = await service.check();
 
     expect(result.operations.productionReadiness.riskLevel).toBe('high');
-    expect(result.operations.productionReadiness.failedChecks).toBe(12);
+    expect(result.operations.productionReadiness.failedChecks).toBe(15);
     expect(result.operations.productionReadiness.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -524,6 +539,18 @@ describe('HealthService', () => {
           id: 'chaos-drain-drill',
           state: 'fail',
         }),
+        expect.objectContaining({
+          id: 'legal-terms-version',
+          state: 'fail',
+        }),
+        expect.objectContaining({
+          id: 'privacy-policy-version',
+          state: 'fail',
+        }),
+        expect.objectContaining({
+          id: 'insurance-policy-reference',
+          state: 'fail',
+        }),
       ]),
     );
   });
@@ -549,6 +576,9 @@ describe('HealthService', () => {
         'operations.backupRestoreDrillAt': new Date().toISOString(),
         'operations.canaryReleaseDrillAt': new Date().toISOString(),
         'operations.chaosDrainDrillAt': new Date().toISOString(),
+        'operations.termsVersion': 'cgu-bf-2026-07',
+        'operations.privacyVersion': 'privacy-bf-2026-07',
+        'operations.insurancePolicyRef': 'orbi-insurance-2026',
         'operations.pilotMaxConcurrentTrips': 25,
       };
 
@@ -578,6 +608,18 @@ describe('HealthService', () => {
         }),
         expect.objectContaining({
           id: 'chaos-drain-drill',
+          state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'legal-terms-version',
+          state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'privacy-policy-version',
+          state: 'pass',
+        }),
+        expect.objectContaining({
+          id: 'insurance-policy-reference',
           state: 'pass',
         }),
       ]),

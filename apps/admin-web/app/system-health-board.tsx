@@ -433,6 +433,18 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
     : resilienceChecks.some((check) => check.state === 'warn')
     ? 'warn'
     : 'pass';
+  const complianceChecks = productionReadiness.checks.filter((check) =>
+    [
+      'legal-terms-version',
+      'privacy-policy-version',
+      'insurance-policy-reference',
+    ].includes(check.id),
+  );
+  const complianceState = complianceChecks.some((check) => check.state === 'fail')
+    ? 'fail'
+    : complianceChecks.some((check) => check.state === 'warn')
+      ? 'warn'
+      : 'pass';
   const serviceLevelObjectives = health.operations.serviceLevelObjectives ?? {
     posture: 'watch' as const,
     failingObjectives: 0,
@@ -982,6 +994,51 @@ export function SystemHealthBoard({ initialHealth }: SystemHealthBoardProps) {
                   <p>
                     Le backend courant ne fournit pas encore les checks restore
                     DB et capacite pilote.
+                  </p>
+                </div>
+                <span className="readiness-pill readiness-pill-warn">
+                  Attention
+                </span>
+              </div>
+            )}
+          </div>
+        </article>
+
+        <article className="feature-runtime-card health-card">
+          <div className="ticket-topline">
+            <span className="priority-badge priority-2">conformite pilote</span>
+            <span
+              className={`readiness-pill readiness-pill-${readinessTone(
+                complianceState,
+              )}`}
+            >
+              {describeReadinessCheckState(complianceState)}
+            </span>
+          </div>
+          <div className="health-dependency-list">
+            {complianceChecks.length ? (
+              complianceChecks.map((check) => (
+                <div className="health-dependency-row" key={check.id}>
+                  <div>
+                    <strong>{check.label}</strong>
+                    <p>{check.detail}</p>
+                  </div>
+                  <span
+                    className={`readiness-pill readiness-pill-${readinessTone(
+                      check.state,
+                    )}`}
+                  >
+                    {describeReadinessCheckState(check.state)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="health-dependency-row">
+                <div>
+                  <strong>Preuves conformite</strong>
+                  <p>
+                    Le backend courant ne fournit pas encore les checks CGU,
+                    confidentialite et assurance.
                   </p>
                 </div>
                 <span className="readiness-pill readiness-pill-warn">

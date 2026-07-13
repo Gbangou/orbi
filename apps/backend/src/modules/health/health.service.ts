@@ -217,6 +217,12 @@ export class HealthService {
       this.configService.get<string>('operations.canaryReleaseDrillAt') ?? '';
     const chaosDrainDrillAt =
       this.configService.get<string>('operations.chaosDrainDrillAt') ?? '';
+    const termsVersion =
+      this.configService.get<string>('operations.termsVersion') ?? '';
+    const privacyVersion =
+      this.configService.get<string>('operations.privacyVersion') ?? '';
+    const insurancePolicyRef =
+      this.configService.get<string>('operations.insurancePolicyRef') ?? '';
     const pilotMaxConcurrentTrips =
       this.configService.get<number>(
         'operations.pilotMaxConcurrentTrips',
@@ -243,6 +249,9 @@ export class HealthService {
       chaosDrainDrillAgeDays <= 30;
     const hasPilotCapacityEnvelope =
       Number.isInteger(pilotMaxConcurrentTrips) && pilotMaxConcurrentTrips > 0;
+    const hasTermsVersion = Boolean(termsVersion.trim());
+    const hasPrivacyVersion = Boolean(privacyVersion.trim());
+    const hasInsurancePolicyRef = Boolean(insurancePolicyRef.trim());
     const paymentFixtureReadiness = resolvePaymentFixtureProductionReadiness();
     const checks = [
       {
@@ -414,6 +423,42 @@ export class HealthService {
         detail: hasRecentChaosDrainDrill
           ? `Drain/restart instance prouve il y a ${chaosDrainDrillAgeDays} jour(s).`
           : 'Aucune preuve recente de drain/restart instance; requis avant production.',
+      },
+      {
+        id: 'legal-terms-version',
+        label: 'CGU versionnees',
+        state: hasTermsVersion
+          ? ('pass' as const)
+          : environment === 'production'
+            ? ('fail' as const)
+            : ('warn' as const),
+        detail: hasTermsVersion
+          ? `Version CGU active: ${termsVersion.trim().slice(0, 48)}.`
+          : 'Version CGU non declaree; requis avant production.',
+      },
+      {
+        id: 'privacy-policy-version',
+        label: 'Confidentialite versionnee',
+        state: hasPrivacyVersion
+          ? ('pass' as const)
+          : environment === 'production'
+            ? ('fail' as const)
+            : ('warn' as const),
+        detail: hasPrivacyVersion
+          ? `Version confidentialite active: ${privacyVersion.trim().slice(0, 48)}.`
+          : 'Version politique de confidentialite non declaree; requis avant production.',
+      },
+      {
+        id: 'insurance-policy-reference',
+        label: 'Assurance reference',
+        state: hasInsurancePolicyRef
+          ? ('pass' as const)
+          : environment === 'production'
+            ? ('fail' as const)
+            : ('warn' as const),
+        detail: hasInsurancePolicyRef
+          ? `Reference assurance active: ${insurancePolicyRef.trim().slice(0, 48)}.`
+          : 'Reference assurance exploitation non declaree; requis avant production.',
       },
     ];
     const failedChecks = checks.filter(

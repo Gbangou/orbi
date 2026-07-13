@@ -86,6 +86,11 @@ Utiliser la strategie `expand -> migrate traffic -> contract`:
   la limite de courses simultanees autorisee; `/health.operations.productionReadiness`
   expose `database-backup-restore-drill`, `canary-release-drill`,
   `chaos-drain-drill` et `pilot-capacity-envelope`
+- avant pilote production, renseigner `OPERATIONS_TERMS_VERSION`,
+  `OPERATIONS_PRIVACY_VERSION` et `OPERATIONS_INSURANCE_POLICY_REF`; la console
+  health expose `legal-terms-version`, `privacy-policy-version` et
+  `insurance-policy-reference` pour eviter une ouverture sans base legale
+  explicite
 - verifier que la job queue durable traite `DRIVER_RESERVATION_EXPIRY`: le timer ne fait qu enqueuer un job deduplique et le worker partage execute le sweep avec verrou PostgreSQL
 
 ## Temps reel

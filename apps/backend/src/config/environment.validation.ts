@@ -66,6 +66,9 @@ type EnvironmentVariables = {
   OPERATIONS_BACKUP_RESTORE_DRILL_AT?: string;
   OPERATIONS_CANARY_RELEASE_DRILL_AT?: string;
   OPERATIONS_CHAOS_DRAIN_DRILL_AT?: string;
+  OPERATIONS_TERMS_VERSION?: string;
+  OPERATIONS_PRIVACY_VERSION?: string;
+  OPERATIONS_INSURANCE_POLICY_REF?: string;
   OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS?: string;
   DOCUMENT_SIGNING_SECRET?: string;
   DOCUMENT_SAFETY_SCANNER_PROVIDER?: string;
@@ -189,6 +192,10 @@ export function validateEnvironment(config: EnvironmentVariables) {
       config.OPERATIONS_CANARY_RELEASE_DRILL_AT ?? '',
     OPERATIONS_CHAOS_DRAIN_DRILL_AT:
       config.OPERATIONS_CHAOS_DRAIN_DRILL_AT ?? '',
+    OPERATIONS_TERMS_VERSION: config.OPERATIONS_TERMS_VERSION ?? '',
+    OPERATIONS_PRIVACY_VERSION: config.OPERATIONS_PRIVACY_VERSION ?? '',
+    OPERATIONS_INSURANCE_POLICY_REF:
+      config.OPERATIONS_INSURANCE_POLICY_REF ?? '',
     OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS:
       config.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS ?? '0',
     DOCUMENT_SIGNING_SECRET:
@@ -224,6 +231,9 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   const canaryReleaseDrillAt =
     config.OPERATIONS_CANARY_RELEASE_DRILL_AT ?? '';
   const chaosDrainDrillAt = config.OPERATIONS_CHAOS_DRAIN_DRILL_AT ?? '';
+  const termsVersion = config.OPERATIONS_TERMS_VERSION ?? '';
+  const privacyVersion = config.OPERATIONS_PRIVACY_VERSION ?? '';
+  const insurancePolicyRef = config.OPERATIONS_INSURANCE_POLICY_REF ?? '';
   const pilotMaxConcurrentTrips =
     config.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS ?? '';
   const databaseUrl = config.DATABASE_URL ?? '';
@@ -354,6 +364,18 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
     throw new Error(
       'OPERATIONS_CHAOS_DRAIN_DRILL_AT must be a valid ISO date in production.',
     );
+  }
+
+  if (!termsVersion.trim()) {
+    throw new Error('OPERATIONS_TERMS_VERSION is required in production.');
+  }
+
+  if (!privacyVersion.trim()) {
+    throw new Error('OPERATIONS_PRIVACY_VERSION is required in production.');
+  }
+
+  if (!insurancePolicyRef.trim()) {
+    throw new Error('OPERATIONS_INSURANCE_POLICY_REF is required in production.');
   }
 
   if (!isPositiveInteger(pilotMaxConcurrentTrips)) {

@@ -198,4 +198,7 @@ de developpement est encore exposee:
 - `OPERATIONS_BACKUP_RESTORE_DRILL_AT` doit contenir une date ISO de restore DB prouve
 - `OPERATIONS_CANARY_RELEASE_DRILL_AT` doit contenir une date ISO de canary/rollback prouve
 - `OPERATIONS_CHAOS_DRAIN_DRILL_AT` doit contenir une date ISO de drain/restart instance prouve
+- `OPERATIONS_TERMS_VERSION` doit contenir la version CGU active
+- `OPERATIONS_PRIVACY_VERSION` doit contenir la version de politique confidentialite active
+- `OPERATIONS_INSURANCE_POLICY_REF` doit contenir la reference assurance exploitation active
 - `OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS` doit contenir une limite pilote positive

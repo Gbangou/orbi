@@ -336,6 +336,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   les tickets actifs/urgents/SLA en retard et la charge par owner support/ops;
   l admin affiche ce signal avant la liste des tickets. Le staffing humain reel
   et les horaires d astreinte restent des gaps D.
+- 13 juillet 2026: Phase 6, gap A "conformite pilote explicite". Le backend
+  exige en production `OPERATIONS_TERMS_VERSION`,
+  `OPERATIONS_PRIVACY_VERSION` et `OPERATIONS_INSURANCE_POLICY_REF`, expose les
+  checks `legal-terms-version`, `privacy-policy-version` et
+  `insurance-policy-reference`, et la console health les affiche dans une carte
+  conformite pilote. La revue juridique et les contrats signes restent des gaps D.
 
 ## Master Prompt Operationnel
 
