@@ -103,6 +103,9 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
 - calcul des documents expires et proches expiration: une piece approuvee qui
   expire sous 30 jours apparait comme `expiringSoon`, repasse la guidance en
   revue ops et bloque l approbation chauffeur tant qu elle n est pas renouvelee
+- mise en ligne chauffeur protegee: un chauffeur approuve ne peut plus passer
+  `ONLINE` si une piece approuvee est deja expiree; l API ecrit
+  `DRIVER_DOCUMENT_RENEWAL_AVAILABILITY_BLOCKED` dans `AuditLog`
 - file ops pour dossiers `PENDING` ou `REJECTED`
 - decision ops explicite:
   - `UNDER_REVIEW`

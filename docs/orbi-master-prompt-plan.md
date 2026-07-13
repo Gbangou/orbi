@@ -428,6 +428,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   chauffeur approuvees mais expirees bloquent le lancement, et celles qui
   expirent sous 30 jours limitent le pilote avec action ops. La suspension
   automatique apres expiration terrain reste un gap A/D distinct.
+- 13 juillet 2026: Phase 6, gap A "blocage mise en ligne document expire".
+  L API chauffeur refuse maintenant `ONLINE` quand un document approuve du
+  chauffeur est expire, journalise
+  `DRIVER_DOCUMENT_RENEWAL_AVAILABILITY_BLOCKED` et force le renouvellement
+  avant reprise des offres. Les relances automatiques restent un gap A separe.
 - 13 juillet 2026: audit croise complet du repo (code + toute la
   documentation existante) avant de generaliser ce document a tout agent
   d ingenierie. Gap A confirme et ferme dans la foulee: "export CSV trajets

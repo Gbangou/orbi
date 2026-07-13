@@ -738,6 +738,36 @@ export class DriversService {
     }
 
     if (nextStatus === DriverStatus.ONLINE) {
+      const expiredApprovedDocuments = await this.prisma.driverDocument.count({
+        where: {
+          driverProfileId,
+          status: DriverDocumentStatus.APPROVED,
+          expiresAt: {
+            lte: new Date(),
+          },
+        },
+      });
+
+      if (expiredApprovedDocuments > 0) {
+        await this.prisma.auditLog.create({
+          data: {
+            userId: auth.user.id,
+            action: 'DRIVER_DOCUMENT_RENEWAL_AVAILABILITY_BLOCKED',
+            entityType: 'DRIVER_PROFILE',
+            entityId: driverProfileId,
+            metadata: {
+              expiredApprovedDocuments,
+            } as Prisma.InputJsonValue,
+          },
+        });
+
+        throw new BadRequestException(
+          'Document chauffeur expire: renouvellement requis avant mise en ligne.',
+        );
+      }
+    }
+
+    if (nextStatus === DriverStatus.ONLINE) {
       const fatigue = await this.resolveDriverFatigue(driverProfileId);
 
       if (fatigue.state === 'blocked') {

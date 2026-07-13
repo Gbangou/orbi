@@ -28,6 +28,7 @@ describe('DriversService', () => {
         update: jest.fn(),
       },
       driverDocument: {
+        count: jest.fn().mockResolvedValue(0),
         findUnique: jest.fn(),
         create: jest.fn((input) =>
           Promise.resolve({
@@ -492,6 +493,44 @@ describe('DriversService', () => {
     expect(prisma.auditLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         action: 'DRIVER_FATIGUE_AVAILABILITY_BLOCKED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: 'driver-1',
+      }),
+    });
+  });
+
+  it('blocks going online when an approved driver document is expired', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'OFFLINE',
+      verificationStatus: 'APPROVED',
+      vehicles: [
+        {
+          id: 'vehicle-1',
+          isActive: true,
+        },
+      ],
+    });
+    prisma.driverDocument.count.mockResolvedValue(1);
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    await expect(
+      service.updateAvailability(
+        {
+          user: {
+            id: 'user-1',
+            driverProfile: { id: 'driver-1' },
+          },
+        } as never,
+        'ONLINE',
+      ),
+    ).rejects.toThrow('Document chauffeur expire');
+    expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'DRIVER_DOCUMENT_RENEWAL_AVAILABILITY_BLOCKED',
         entityType: 'DRIVER_PROFILE',
         entityId: 'driver-1',
       }),
