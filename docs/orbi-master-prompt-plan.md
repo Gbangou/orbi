@@ -322,6 +322,10 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS`; `productionReadiness` expose les
   checks `database-backup-restore-drill` et `pilot-capacity-envelope`. La preuve
   cloud/provider reelle et les drills chaos restent des gaps C/D.
+- 13 juillet 2026: Phase 5, gap A "resilience visible ops". La console health
+  extrait maintenant ces checks dans une carte `resilience pilote`, pour que les
+  ops voient immediatement restore DB et capacite pilote sans parcourir tous les
+  checks runtime. Les exercices chaos/canary reels restent des gaps C/D.
 
 ## Master Prompt Operationnel
 
