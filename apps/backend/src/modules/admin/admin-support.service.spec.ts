@@ -76,6 +76,22 @@ describe('AdminSupportService', () => {
       }),
     );
     expect(result.tickets[0].sla.breachedMinutes).toBeGreaterThanOrEqual(9);
+    expect(result.staffing).toMatchObject({
+      posture: 'blocked',
+      activeTickets: 1,
+      urgentTickets: 1,
+      breachedSlaTickets: 1,
+      dueSoonTickets: 0,
+      ownerLoad: expect.arrayContaining([
+        expect.objectContaining({
+          owner: 'ops',
+          activeTickets: 1,
+          urgentTickets: 1,
+          breachedSlaTickets: 1,
+        }),
+      ]),
+    });
+    expect(result.staffing.action).toContain('Bloquer extension pilote');
   });
 
   it('marks SLA as responded after a ticket is taken in review', async () => {
@@ -109,6 +125,12 @@ describe('AdminSupportService', () => {
       state: 'responded',
       owner: 'support',
       respondedAt: updatedAt.toISOString(),
+    });
+    expect(result.staffing).toMatchObject({
+      posture: 'ready',
+      activeTickets: 1,
+      urgentTickets: 0,
+      breachedSlaTickets: 0,
     });
   });
 });

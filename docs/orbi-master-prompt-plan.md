@@ -331,6 +331,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   production, expose `canary-release-drill` et `chaos-drain-drill` dans
   `productionReadiness`, et la carte admin resilience les rend visibles avec
   restore DB et capacite. Les preuves terrain/cloud restent a produire hors code.
+- 13 juillet 2026: debut Phase 6, gap A "permanence support". La file support
+  expose maintenant une posture `ready`/`strained`/`blocked`, une action ops,
+  les tickets actifs/urgents/SLA en retard et la charge par owner support/ops;
+  l admin affiche ce signal avant la liste des tickets. Le staffing humain reel
+  et les horaires d astreinte restent des gaps D.
 
 ## Master Prompt Operationnel
 

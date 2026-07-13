@@ -37,6 +37,7 @@ export type AdminSupportTicketQueueResponse = {
     updatedAt: string;
     sla: SupportTicketSla;
   }>;
+  staffing: SupportStaffingReadiness;
   meta: {
     page: number;
     pageSize: number;
@@ -54,6 +55,21 @@ type SupportTicketSla = {
   remainingMinutes: number | null;
   breachedMinutes: number | null;
   owner: 'support' | 'ops';
+};
+
+type SupportStaffingReadiness = {
+  posture: 'ready' | 'strained' | 'blocked';
+  action: string;
+  activeTickets: number;
+  urgentTickets: number;
+  breachedSlaTickets: number;
+  dueSoonTickets: number;
+  ownerLoad: Array<{
+    owner: 'support' | 'ops';
+    activeTickets: number;
+    urgentTickets: number;
+    breachedSlaTickets: number;
+  }>;
 };
 
 export type AdminSupportTicketUpdateResponse = {
@@ -136,6 +152,55 @@ function resolveSupportSla(ticket: {
   };
 }
 
+function resolveSupportStaffingReadiness(
+  tickets: Array<{ status: SupportTicketStatus; priority: number; sla: SupportTicketSla }>,
+): SupportStaffingReadiness {
+  const activeTickets = tickets.filter(
+    (ticket) =>
+      ticket.status === SupportTicketStatus.OPEN ||
+      ticket.status === SupportTicketStatus.IN_REVIEW,
+  );
+  const urgentTickets = activeTickets.filter((ticket) => ticket.priority >= 3);
+  const breachedSlaTickets = activeTickets.filter(
+    (ticket) => ticket.sla.state === 'breached',
+  );
+  const dueSoonTickets = activeTickets.filter(
+    (ticket) => ticket.sla.state === 'due_soon',
+  );
+  const posture =
+    breachedSlaTickets.length > 0 || urgentTickets.length >= 3
+      ? ('blocked' as const)
+      : dueSoonTickets.length > 0 || activeTickets.length > 5
+        ? ('strained' as const)
+        : ('ready' as const);
+  const ownerLoad = (['ops', 'support'] as const).map((owner) => {
+    const ownerTickets = activeTickets.filter((ticket) => ticket.sla.owner === owner);
+    return {
+      owner,
+      activeTickets: ownerTickets.length,
+      urgentTickets: ownerTickets.filter((ticket) => ticket.priority >= 3).length,
+      breachedSlaTickets: ownerTickets.filter(
+        (ticket) => ticket.sla.state === 'breached',
+      ).length,
+    };
+  });
+
+  return {
+    posture,
+    action:
+      posture === 'blocked'
+        ? 'Bloquer extension pilote: assigner une permanence ops/support et traiter les SLA en retard avant nouveau volume.'
+        : posture === 'strained'
+          ? 'Garder le pilote limite: ajouter renfort support ou reduire les tickets actifs avant pic demande.'
+          : 'Permanence support compatible avec un pilote encadre; maintenir surveillance SLA.',
+    activeTickets: activeTickets.length,
+    urgentTickets: urgentTickets.length,
+    breachedSlaTickets: breachedSlaTickets.length,
+    dueSoonTickets: dueSoonTickets.length,
+    ownerLoad,
+  };
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -163,8 +228,7 @@ export class AdminSupportService {
       this.prisma.supportTicket.count(),
     ]);
 
-    return {
-      tickets: tickets.map((ticket) => {
+    const queueTickets = tickets.map((ticket) => {
         const tripIdMatch = ticket.subject.match(/Incident trajet ([a-z0-9]+)/i);
         return {
           id: ticket.id,
@@ -180,7 +244,11 @@ export class AdminSupportService {
           updatedAt: ticket.updatedAt.toISOString(),
           sla: resolveSupportSla(ticket),
         };
-      }),
+      });
+
+    return {
+      tickets: queueTickets,
+      staffing: resolveSupportStaffingReadiness(queueTickets),
       meta: {
         page,
         pageSize,

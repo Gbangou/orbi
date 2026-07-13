@@ -18,6 +18,7 @@ import { subscribeToAdminRealtime } from './admin-realtime';
 
 type SupportQueueProps = {
   initialTickets: SupportTicketQueueResponse['tickets'];
+  initialStaffing?: SupportTicketQueueResponse['staffing'];
 };
 
 function getTicketStatusClass(status: string) {
@@ -47,6 +48,52 @@ function describeTicketSla(ticket: SupportTicketQueueResponse['tickets'][number]
   return `${ticket.sla.remainingMinutes ?? 0} min restantes`;
 }
 
+function deriveFallbackStaffing(
+  tickets: SupportTicketQueueResponse['tickets'],
+): SupportTicketQueueResponse['staffing'] {
+  const activeTickets = tickets.filter(
+    (ticket) => ticket.status === 'OPEN' || ticket.status === 'IN_REVIEW',
+  );
+  const urgentTickets = activeTickets.filter((ticket) => ticket.priority >= 3);
+  const breachedSlaTickets = activeTickets.filter(
+    (ticket) => ticket.sla.state === 'breached',
+  );
+  const dueSoonTickets = activeTickets.filter(
+    (ticket) => ticket.sla.state === 'due_soon',
+  );
+  const posture =
+    breachedSlaTickets.length > 0 || urgentTickets.length >= 3
+      ? 'blocked'
+      : dueSoonTickets.length > 0 || activeTickets.length > 5
+        ? 'strained'
+        : 'ready';
+
+  return {
+    posture,
+    action:
+      posture === 'blocked'
+        ? 'Bloquer extension pilote: assigner une permanence ops/support.'
+        : posture === 'strained'
+          ? 'Garder le pilote limite: ajouter renfort support avant pic demande.'
+          : 'Permanence support compatible avec un pilote encadre.',
+    activeTickets: activeTickets.length,
+    urgentTickets: urgentTickets.length,
+    breachedSlaTickets: breachedSlaTickets.length,
+    dueSoonTickets: dueSoonTickets.length,
+    ownerLoad: (['ops', 'support'] as const).map((owner) => {
+      const ownerTickets = activeTickets.filter((ticket) => ticket.sla.owner === owner);
+      return {
+        owner,
+        activeTickets: ownerTickets.length,
+        urgentTickets: ownerTickets.filter((ticket) => ticket.priority >= 3).length,
+        breachedSlaTickets: ownerTickets.filter(
+          (ticket) => ticket.sla.state === 'breached',
+        ).length,
+      };
+    }),
+  };
+}
+
 async function fetchSupportTickets() {
   return fetchAdminJson<SupportTicketQueueResponse>('/api/admin/support-tickets');
 }
@@ -72,8 +119,11 @@ async function updateSupportTicket(
   );
 }
 
-export function SupportQueue({ initialTickets }: SupportQueueProps) {
+export function SupportQueue({ initialTickets, initialStaffing }: SupportQueueProps) {
   const [tickets, setTickets] = useState(initialTickets);
+  const [staffing, setStaffing] = useState(
+    initialStaffing ?? deriveFallbackStaffing(initialTickets),
+  );
   const [status, setStatus] = useState('File support synchronisee.');
   const [busyTicketId, setBusyTicketId] = useState<string | null>(null);
   const [transitionLabel, setTransitionLabel] = useState<string | null>(null);
@@ -87,6 +137,7 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
       try {
         const response = await fetchSupportTickets();
         setTickets(response.tickets);
+        setStaffing(response.staffing ?? deriveFallbackStaffing(response.tickets));
 
         if (showMessage) {
           setStatus(successMessage);
@@ -275,6 +326,11 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
 
       <div className="board-summary-grid">
         <article className="board-summary-card">
+          <span>Permanence</span>
+          <strong>{staffing.posture}</strong>
+          <p>{staffing.action}</p>
+        </article>
+        <article className="board-summary-card">
           <span>Ouverts</span>
           <strong>{summary.open}</strong>
           <p>Tickets encore sans prise en charge</p>
@@ -291,7 +347,7 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
         </article>
         <article className="board-summary-card">
           <span>SLA</span>
-          <strong>{summary.breached}</strong>
+          <strong>{staffing.breachedSlaTickets}</strong>
           <p>{summary.dueSoon} ticket(s) proche(s) de l echeance</p>
         </article>
         <article className="board-summary-card">
@@ -299,6 +355,19 @@ export function SupportQueue({ initialTickets }: SupportQueueProps) {
           <strong>{summary.resolved}</strong>
           <p>Tickets deja fermes ou resolus</p>
         </article>
+      </div>
+
+      <div className="job-owner-grid" aria-label="Charge support par owner">
+        {staffing.ownerLoad.map((owner) => (
+          <article className="job-owner-card" key={owner.owner}>
+            <span>{owner.owner}</span>
+            <strong>{owner.activeTickets}</strong>
+            <p>
+              {owner.urgentTickets} urgent(s), {owner.breachedSlaTickets} SLA
+              en retard
+            </p>
+          </article>
+        ))}
       </div>
 
       <div className="ticket-grid">

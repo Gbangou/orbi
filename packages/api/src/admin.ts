@@ -492,6 +492,20 @@ export type SupportTicketQueueResponse = {
       owner: "support" | "ops";
     };
   }>;
+  staffing: {
+    posture: "ready" | "strained" | "blocked";
+    action: string;
+    activeTickets: number;
+    urgentTickets: number;
+    breachedSlaTickets: number;
+    dueSoonTickets: number;
+    ownerLoad: Array<{
+      owner: "support" | "ops";
+      activeTickets: number;
+      urgentTickets: number;
+      breachedSlaTickets: number;
+    }>;
+  };
 };
 
 export type SupportTicketUpdateResponse = {

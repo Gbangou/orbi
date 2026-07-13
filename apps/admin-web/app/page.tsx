@@ -150,6 +150,32 @@ const fallbackLiveOps: AdminLiveOpsResponse = {
   lowConfidenceDrivers: [],
 };
 
+const fallbackSupport: SupportTicketQueueResponse = {
+  tickets: [],
+  staffing: {
+    posture: "ready",
+    action: "Aucun ticket actif dans le mode degrade.",
+    activeTickets: 0,
+    urgentTickets: 0,
+    breachedSlaTickets: 0,
+    dueSoonTickets: 0,
+    ownerLoad: [
+      {
+        owner: "ops",
+        activeTickets: 0,
+        urgentTickets: 0,
+        breachedSlaTickets: 0,
+      },
+      {
+        owner: "support",
+        activeTickets: 0,
+        urgentTickets: 0,
+        breachedSlaTickets: 0,
+      },
+    ],
+  },
+};
+
 const fallbackTripsAudit: AdminTripsAuditResponse = {
   window: {
     lookbackHours: 24,
@@ -809,7 +835,7 @@ async function loadAdminData(): Promise<{
     );
     const liveOps = settled(liveOpsResult, fallbackLiveOps);
     const tripsAudit = settled(tripsAuditResult, fallbackTripsAudit);
-    const support = settled(supportResult, { tickets: [] });
+    const support = settled(supportResult, fallbackSupport);
     const onboardingQueue = settled(onboardingQueueResult, { drivers: [], meta: { page: 1, pageSize: 10, total: 0, pageCount: 0 } });
     const featureFlags = settled(featureFlagsResult, { flags: [], infrastructure: { realtime: { adapter: "in-memory" as const, sharedBackplane: false, degraded: false, degradeReason: null, activeStreams: 0, publishedEvents: 0, featureFlagMode: "on" as const, featureFlagEnabled: true } } });
     const dispatchSettings = settled(dispatchSettingsResult, { settings: { lookbackHours: 72, halfLifeHours: 18, declineCooldownMinutes: 20, historyLimit: 48, source: "DEFAULT" as const, updatedAt: null, updatedBy: null }, history: [] });
@@ -920,9 +946,7 @@ async function loadAdminData(): Promise<{
       liveOps: fallbackLiveOps,
       operationalKpis: fallbackOperationalKpis,
       tripsAudit: fallbackTripsAudit,
-      support: {
-        tickets: [],
-      },
+      support: fallbackSupport,
       featureFlags: {
         flags: [
           {
@@ -1318,7 +1342,10 @@ export default async function AdminHomePage({
       <DriverOnboardingReviewBoard initialQueue={onboardingQueue.drivers} />
 
       <div id="support" className="section-anchor" />
-      <SupportQueue initialTickets={support.tickets} />
+      <SupportQueue
+        initialStaffing={support.staffing}
+        initialTickets={support.tickets}
+      />
 
       <div id="promo" className="section-anchor" />
       <PromoCodesBoard initialCodes={promoCodes.promoCodes} />
