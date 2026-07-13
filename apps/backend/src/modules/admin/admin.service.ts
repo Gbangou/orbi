@@ -11,6 +11,7 @@ import {
   type DriverPayout,
   DriverPayoutStatus,
   DriverStatus,
+  PaymentAttemptStatus,
   Prisma,
   SupportTicketStatus,
   UserRole,
@@ -2421,6 +2422,200 @@ export class AdminService {
     // Interrogé toutes les 30s + à chaque événement SSE (rafales possibles) :
     // un TTL court absorbe les rafales sans nuire à la fraîcheur perçue.
     return this.cache.getOrSet('admin:live-ops', () => this.fetchLiveOps(), 5);
+  }
+
+  async financeDashboard() {
+    return this.cache.getOrSet(
+      'admin:finance-dashboard',
+      () => this.fetchFinanceDashboard(),
+      10,
+    );
+  }
+
+  private async fetchFinanceDashboard() {
+    const now = new Date();
+    const lookbackHours = 24;
+    const since = new Date(now.getTime() - lookbackHours * 60 * 60 * 1000);
+    const [
+      paymentAttempts,
+      webhookEvents,
+      recoveryWallets,
+      preparedPayouts,
+    ] = await Promise.all([
+      this.prisma.paymentAttempt.findMany({
+        where: { createdAt: { gte: since } },
+        select: {
+          status: true,
+          providerReference: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.paymentWebhookEvent.findMany({
+        where: { createdAt: { gte: since } },
+        select: { action: true },
+      }),
+      this.prisma.wallet.findMany({
+        where: {
+          user: { role: 'DRIVER' },
+          balance: { lt: 0 },
+        },
+        select: {
+          balance: true,
+          currency: true,
+        },
+      }),
+      this.prisma.driverPayout.findMany({
+        where: { status: DriverPayoutStatus.PREPARED },
+        select: {
+          amount: true,
+          currency: true,
+        },
+      }),
+    ]);
+
+    const succeededPayments = paymentAttempts.filter(
+      (attempt) => attempt.status === PaymentAttemptStatus.SUCCEEDED,
+    ).length;
+    const failedPayments = paymentAttempts.filter(
+      (attempt) => attempt.status === PaymentAttemptStatus.FAILED,
+    ).length;
+    const refundPending = paymentAttempts.filter(
+      (attempt) => attempt.status === PaymentAttemptStatus.REFUND_PENDING,
+    ).length;
+    const refundedPayments = paymentAttempts.filter(
+      (attempt) => attempt.status === PaymentAttemptStatus.REFUNDED,
+    ).length;
+    const reconciledPayments = paymentAttempts.filter(
+      (attempt) => attempt.providerReference,
+    ).length;
+    const unresolvedPaymentAttempts = paymentAttempts.filter(
+      (attempt) =>
+        !attempt.providerReference &&
+        attempt.status !== PaymentAttemptStatus.CANCELLED &&
+        attempt.status !== PaymentAttemptStatus.REFUNDED,
+    );
+    const oldestUnreconciledAgeMinutes = unresolvedPaymentAttempts.length
+      ? Math.max(
+          ...unresolvedPaymentAttempts.map((attempt) =>
+            Math.floor((now.getTime() - attempt.createdAt.getTime()) / 60000),
+          ),
+        )
+      : null;
+    const ignoredWebhooks = webhookEvents.filter((event) =>
+      event.action.startsWith('ignored_'),
+    ).length;
+    const webhookConflicts = webhookEvents.filter(
+      (event) => event.action === 'ignored_conflicting_provider_reference',
+    ).length;
+    const webhookUnknownReferences = webhookEvents.filter(
+      (event) => event.action === 'ignored_unknown_reference',
+    ).length;
+    const walletRecoveryDue = recoveryWallets.reduce(
+      (total, wallet) => total + Math.abs(Number(wallet.balance)),
+      0,
+    );
+    const payoutBacklog = preparedPayouts.reduce(
+      (total, payout) => total + Number(payout.amount),
+      0,
+    );
+    const currency =
+      preparedPayouts[0]?.currency ?? recoveryWallets[0]?.currency ?? 'XOF';
+
+    const risk = (
+      id: string,
+      label: string,
+      value: number | null,
+      watchThreshold: number | null,
+      criticalThreshold: number | null,
+      owner: 'finance' | 'ops' | 'engineering',
+      action: string,
+    ) => ({
+      id,
+      label,
+      severity:
+        value === null
+          ? ('ok' as const)
+          : criticalThreshold !== null && value >= criticalThreshold
+            ? ('critical' as const)
+            : watchThreshold !== null && value >= watchThreshold
+              ? ('watch' as const)
+              : ('ok' as const),
+      owner,
+      value,
+      threshold: criticalThreshold ?? watchThreshold,
+      action,
+    });
+
+    return {
+      generatedAt: now.toISOString(),
+      lookbackHours,
+      summary: {
+        paymentAttempts: paymentAttempts.length,
+        succeededPayments,
+        failedPayments,
+        refundPending,
+        refundedPayments,
+        reconciledPayments,
+        reconciliationRate: safeRate(reconciledPayments, paymentAttempts.length),
+        oldestUnreconciledAgeMinutes,
+        webhookEvents: webhookEvents.length,
+        ignoredWebhooks,
+        webhookConflicts,
+        webhookUnknownReferences,
+        walletRecoveryDue,
+        walletsInRecovery: recoveryWallets.length,
+        payoutBacklog,
+        preparedPayouts: preparedPayouts.length,
+        currency,
+      },
+      risks: [
+        risk(
+          'refund-pending',
+          'Refund pending',
+          refundPending,
+          1,
+          3,
+          'finance',
+          'Verifier chaque tentative en attente et confirmer le remboursement operateur.',
+        ),
+        risk(
+          'wallet-recovery',
+          'Wallet recovery',
+          walletRecoveryDue,
+          1,
+          5000,
+          'finance',
+          'Traiter les soldes chauffeur negatifs avant nouveau payout.',
+        ),
+        risk(
+          'payout-backlog',
+          'Payout backlog',
+          preparedPayouts.length,
+          1,
+          5,
+          'ops',
+          'Payer ou annuler les payouts prepares en attente de settlement.',
+        ),
+        risk(
+          'webhook-ignored',
+          'Webhook ignored',
+          ignoredWebhooks,
+          1,
+          5,
+          'engineering',
+          'Examiner les webhooks ignores et relancer les reconciliations valides.',
+        ),
+        risk(
+          'reconciliation-age',
+          'Reconciliation age',
+          oldestUnreconciledAgeMinutes,
+          30,
+          120,
+          'finance',
+          'Verifier provider reference et relancer la verification fournisseur.',
+        ),
+      ],
+    };
   }
 
   private async fetchLiveOps() {

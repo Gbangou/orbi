@@ -58,6 +58,10 @@ Utiliser la strategie `expand -> migrate traffic -> contract`:
 - tout traitement webhook doit etre idempotent
 - ne jamais lier une mise a jour critique de paiement a un seul process en memoire
 - preferer des traitements rejouables et journalises
+- avant chaque pilote ou release argent, ouvrir la console admin section
+  paiements et verifier le dashboard finance: `refund pending`, `wallet
+  recovery`, `payout backlog`, `webhook ignored` et `reconciliation age` doivent
+  avoir un owner et une action claire avant d accepter du trafic reel
 - en production multi-instance, brancher les adapters `rate limit` et `realtime` sur le backplane PostgreSQL partage: `RATE_LIMIT_ADAPTER=postgres`, `REALTIME_ADAPTER=postgres`, `RATE_LIMIT_STRICT=true`, `REALTIME_STRICT=true`
 - verifier que la job queue durable traite `DRIVER_RESERVATION_EXPIRY`: le timer ne fait qu enqueuer un job deduplique et le worker partage execute le sweep avec verrou PostgreSQL
 

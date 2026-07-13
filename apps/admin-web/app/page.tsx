@@ -6,6 +6,7 @@ import {
   fetchHealthCheck,
   fetchPricingEstimate,
   fetchAdminLiveOps,
+  fetchAdminFinanceDashboard,
   fetchAdminTripsAudit,
   fetchAdminDispatchSettings,
   fetchAdminFeatureFlags,
@@ -24,6 +25,7 @@ import {
   type AdminDispatchSettingsResponse,
   type AdminFeatureFlagsResponse,
   type AdminDriverWalletsResponse,
+  type AdminFinanceDashboardResponse,
   type AdminDriversResponse,
   type AdminLaunchReadinessResponse,
   type AdminLiveOpsResponse,
@@ -63,6 +65,7 @@ import { DispatchControlBoard } from "./dispatch-control-board";
 import { PricingCalibrationBoard } from "./pricing-calibration-board";
 import { PaymentWebhookJournalBoard } from "./payment-webhook-journal-board";
 import { DriverWalletsBoard } from "./driver-wallets-board";
+import { FinanceDashboardBoard } from "./finance-dashboard-board";
 import { TripsAuditBoard } from "./trips-audit-board";
 import { PromoCodesBoard } from "./promo-codes-board";
 import { RidersBoard } from "./riders-board";
@@ -430,6 +433,31 @@ const fallbackDriverWallets: AdminDriverWalletsResponse = {
   },
 };
 
+const fallbackFinanceDashboard: AdminFinanceDashboardResponse = {
+  generatedAt: new Date(0).toISOString(),
+  lookbackHours: 24,
+  summary: {
+    paymentAttempts: 0,
+    succeededPayments: 0,
+    failedPayments: 0,
+    refundPending: 0,
+    refundedPayments: 0,
+    reconciledPayments: 0,
+    reconciliationRate: 0,
+    oldestUnreconciledAgeMinutes: null,
+    webhookEvents: 0,
+    ignoredWebhooks: 0,
+    webhookConflicts: 0,
+    webhookUnknownReferences: 0,
+    walletRecoveryDue: 0,
+    walletsInRecovery: 0,
+    payoutBacklog: 0,
+    preparedPayouts: 0,
+    currency: "XOF",
+  },
+  risks: [],
+};
+
 function shouldShowDemoPasswords() {
   return process.env.NODE_ENV !== "production";
 }
@@ -642,6 +670,7 @@ async function loadAdminData(): Promise<{
   dispatchSettings: AdminDispatchSettingsResponse;
   pricingCalibration: AdminPricingCalibrationResponse;
   paymentWebhookJournal: AdminPaymentWebhookEventsResponse;
+  financeDashboard: AdminFinanceDashboardResponse;
   driverWallets: AdminDriverWalletsResponse;
   riders: AdminRidersResponse;
   drivers: AdminDriversResponse;
@@ -684,6 +713,7 @@ async function loadAdminData(): Promise<{
       dispatchSettingsResult,
       pricingCalibrationResult,
       paymentWebhookJournalResult,
+      financeDashboardResult,
       driverWalletsResult,
       ridersResult,
       driversResult,
@@ -707,6 +737,7 @@ async function loadAdminData(): Promise<{
         page: 1,
         pageSize: 8,
       }),
+      fetchAdminFinanceDashboard(authClient),
       fetchAdminDriverWallets(authClient),
       fetchAdminRiders(authClient, { page: 1, pageSize: 30 }),
       fetchAdminDrivers(authClient, { page: 1, pageSize: 30 }),
@@ -777,6 +808,7 @@ async function loadAdminData(): Promise<{
     const dispatchSettings = settled(dispatchSettingsResult, { settings: { lookbackHours: 72, halfLifeHours: 18, declineCooldownMinutes: 20, historyLimit: 48, source: "DEFAULT" as const, updatedAt: null, updatedBy: null }, history: [] });
     const pricingCalibration = settled(pricingCalibrationResult, fallbackPricingCalibration);
     const paymentWebhookJournal = settled(paymentWebhookJournalResult, fallbackPaymentWebhookJournal);
+    const financeDashboard = settled(financeDashboardResult, fallbackFinanceDashboard);
     const driverWallets = settled(driverWalletsResult, fallbackDriverWallets);
     const riders = settled(ridersResult, fallbackRiders);
     const drivers = settled(driversResult, fallbackDrivers);
@@ -849,6 +881,7 @@ async function loadAdminData(): Promise<{
       dispatchSettings,
       pricingCalibration,
       paymentWebhookJournal,
+      financeDashboard,
       driverWallets,
       riders,
       drivers,
@@ -943,6 +976,7 @@ async function loadAdminData(): Promise<{
       },
       pricingCalibration: fallbackPricingCalibration,
       paymentWebhookJournal: fallbackPaymentWebhookJournal,
+      financeDashboard: fallbackFinanceDashboard,
       driverWallets: fallbackDriverWallets,
       riders: fallbackRiders,
       drivers: fallbackDrivers,
@@ -981,6 +1015,7 @@ export default async function AdminHomePage({
     dispatchSettings,
     pricingCalibration,
     paymentWebhookJournal,
+    financeDashboard,
     driverWallets,
     riders,
     drivers,
@@ -1235,6 +1270,8 @@ export default async function AdminHomePage({
       <PricingCalibrationBoard calibration={pricingCalibration} />
 
       <div id="payments" className="section-anchor" />
+      <FinanceDashboardBoard dashboard={financeDashboard} />
+
       <PaymentWebhookJournalBoard journal={paymentWebhookJournal} />
 
       <div id="wallets" className="section-anchor" />

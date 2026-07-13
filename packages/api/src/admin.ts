@@ -600,6 +600,39 @@ export type AdminDriverWalletsResponse = {
   };
 };
 
+export type AdminFinanceDashboardResponse = {
+  generatedAt: string;
+  lookbackHours: number;
+  summary: {
+    paymentAttempts: number;
+    succeededPayments: number;
+    failedPayments: number;
+    refundPending: number;
+    refundedPayments: number;
+    reconciledPayments: number;
+    reconciliationRate: number;
+    oldestUnreconciledAgeMinutes: number | null;
+    webhookEvents: number;
+    ignoredWebhooks: number;
+    webhookConflicts: number;
+    webhookUnknownReferences: number;
+    walletRecoveryDue: number;
+    walletsInRecovery: number;
+    payoutBacklog: number;
+    preparedPayouts: number;
+    currency: string;
+  };
+  risks: Array<{
+    id: string;
+    label: string;
+    severity: "ok" | "watch" | "critical";
+    owner: "finance" | "ops" | "engineering";
+    value: number | null;
+    threshold: number | null;
+    action: string;
+  }>;
+};
+
 export type AdminDriverPayoutResponse = {
   action:
     | "prepared"
@@ -1328,6 +1361,12 @@ export async function updateAdminRiderStatus(
 export async function fetchAdminDriverWallets(client: OrbiApiClient) {
   return client.request<AdminDriverWalletsResponse>(
     apiRoutes.admin.driverWallets,
+  );
+}
+
+export async function fetchAdminFinanceDashboard(client: OrbiApiClient) {
+  return client.request<AdminFinanceDashboardResponse>(
+    apiRoutes.admin.financeDashboard,
   );
 }
 

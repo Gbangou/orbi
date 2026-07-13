@@ -237,6 +237,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   rider permet maintenant d ajouter un contact, choisir sa priorite, promouvoir
   un contact en principal et retirer un contact actif avec numeros masques et
   tests smoke. La livraison provider reste separee.
+- 13 juillet 2026: debut Phase 2, gap A "dashboard finance argent". Le backend
+  expose `GET /admin/finance-dashboard`, le contrat API partage publie
+  `AdminFinanceDashboardResponse` et la console admin affiche refund pending,
+  wallet recovery, payout backlog, webhook ignored et reconciliation age avec
+  owner, severite et prochain geste. Les tests provider live, secrets et mobile
+  money terrain restent des gaps B/C.
 
 ## Master Prompt Operationnel
 

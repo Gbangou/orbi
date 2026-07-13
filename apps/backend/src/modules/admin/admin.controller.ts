@@ -89,6 +89,15 @@ export class AdminController {
     return this.adminService.liveOps();
   }
 
+  @Get('finance-dashboard')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  financeDashboard() {
+    return this.adminService.financeDashboard();
+  }
+
   @Get('operational-kpis')
   @Version('1')
   @ApiBearerAuth('session-token')

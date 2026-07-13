@@ -381,6 +381,82 @@ describe('AdminService', () => {
     };
   }
 
+  it('builds a finance dashboard with reconciliation, refund, recovery and payout risks', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-05-01T12:00:00.000Z'));
+    const { prisma, service } = createService();
+
+    prisma.paymentAttempt.findMany.mockResolvedValueOnce([
+      {
+        status: 'SUCCEEDED',
+        providerReference: 'provider-1',
+        createdAt: new Date('2026-05-01T11:50:00.000Z'),
+      },
+      {
+        status: 'REFUND_PENDING',
+        providerReference: null,
+        createdAt: new Date('2026-05-01T09:30:00.000Z'),
+      },
+      {
+        status: 'FAILED',
+        providerReference: null,
+        createdAt: new Date('2026-05-01T11:00:00.000Z'),
+      },
+    ]);
+    prisma.paymentWebhookEvent.findMany.mockResolvedValueOnce([
+      { action: 'ignored_unknown_reference' },
+      { action: 'ignored_conflicting_provider_reference' },
+      { action: 'payment_reconciled' },
+    ]);
+    prisma.wallet.findMany.mockResolvedValueOnce([
+      { balance: new Prisma.Decimal(-3500), currency: 'XOF' },
+    ]);
+    prisma.driverPayout.findMany.mockResolvedValueOnce([
+      { amount: new Prisma.Decimal(12000), currency: 'XOF' },
+      { amount: new Prisma.Decimal(8000), currency: 'XOF' },
+    ]);
+
+    const result = await service.financeDashboard();
+
+    expect(result.summary).toMatchObject({
+      paymentAttempts: 3,
+      succeededPayments: 1,
+      failedPayments: 1,
+      refundPending: 1,
+      reconciledPayments: 1,
+      reconciliationRate: 33.3,
+      oldestUnreconciledAgeMinutes: 150,
+      ignoredWebhooks: 2,
+      webhookConflicts: 1,
+      webhookUnknownReferences: 1,
+      walletRecoveryDue: 3500,
+      walletsInRecovery: 1,
+      payoutBacklog: 20000,
+      preparedPayouts: 2,
+      currency: 'XOF',
+    });
+    expect(result.risks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'reconciliation-age',
+          severity: 'critical',
+          value: 150,
+        }),
+        expect.objectContaining({
+          id: 'wallet-recovery',
+          severity: 'watch',
+          value: 3500,
+        }),
+        expect.objectContaining({
+          id: 'payout-backlog',
+          severity: 'watch',
+          value: 2,
+        }),
+      ]),
+    );
+
+    jest.useRealTimers();
+  });
+
   it('builds a live ops payload from active trips and events', async () => {
     const { prisma, service } = createService();
 
