@@ -10,7 +10,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DriverStatus, Prisma, UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 
@@ -24,6 +24,7 @@ export type AdminDriverListItem = {
   phoneNumber: string | null;
   isActive: boolean;
   status: string;
+  verificationStatus: string;
   createdAt: string;
   completedTripsCount: number;
   vehicle: {
@@ -62,12 +63,32 @@ export type AdminRidersResponse = {
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
-const ALLOWED_DRIVER_STATUSES = new Set<string>([
-  'PENDING',
-  'ACTIVE',
-  'SUSPENDED',
-  'REJECTED',
-]);
+// Le filtre exposé aux ops (PENDING/ACTIVE/SUSPENDED/REJECTED) décrit le cycle
+// de vie du dossier chauffeur, pas la présence en direct (DriverStatus:
+// OFFLINE/ONLINE/BUSY/SUSPENDED) — seul SUSPENDED existe dans les deux
+// modèles. Caster directement les 3 autres valeurs vers DriverStatus faisait
+// planter la requête Prisma avec une valeur d'enum invalide (500 reproduit en
+// direct en filtrant "Actifs" depuis la console). Chaque valeur est
+// maintenant traduite vers le bon champ sous-jacent.
+function resolveDriverStatusFilter(
+  rawStatus: string | undefined,
+): Prisma.DriverProfileWhereInput {
+  switch (rawStatus?.toUpperCase()) {
+    case 'ACTIVE':
+      return {
+        verificationStatus: 'APPROVED',
+        status: { not: 'SUSPENDED' },
+      };
+    case 'PENDING':
+      return { verificationStatus: 'PENDING' };
+    case 'REJECTED':
+      return { verificationStatus: 'REJECTED' };
+    case 'SUSPENDED':
+      return { status: 'SUSPENDED' };
+    default:
+      return {};
+  }
+}
 
 const DEFAULT_PAGE_SIZE = 30;
 const MAX_PAGE_SIZE = 100;
@@ -87,10 +108,6 @@ export class AdminUsersService {
     const page = Math.max(1, query.page ?? 1);
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, query.pageSize ?? DEFAULT_PAGE_SIZE));
     const searchTerm = query.search?.trim();
-    const filterStatus =
-      query.status && ALLOWED_DRIVER_STATUSES.has(query.status.toUpperCase())
-        ? (query.status.toUpperCase() as DriverStatus)
-        : undefined;
 
     const where: Prisma.DriverProfileWhereInput = {
       ...(searchTerm
@@ -102,7 +119,7 @@ export class AdminUsersService {
             ],
           }
         : {}),
-      ...(filterStatus ? { status: filterStatus } : {}),
+      ...resolveDriverStatusFilter(query.status),
     };
 
     const [driverRows, total] = await Promise.all([
@@ -137,6 +154,7 @@ export class AdminUsersService {
           phoneNumber: d.user.phoneNumber ?? null,
           isActive: d.user.isActive,
           status: d.status,
+          verificationStatus: d.verificationStatus,
           createdAt: d.createdAt.toISOString(),
           completedTripsCount: d.completedTripsCount,
           vehicle: firstVehicle

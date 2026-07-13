@@ -88,8 +88,17 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
   const inFlightRef = useRef(new Set<string>());
 
   const summary = useMemo(() => {
-    const active = drivers.filter((d) => d.status === "ACTIVE").length;
-    const pending = drivers.filter((d) => d.status === "PENDING").length;
+    // "status" est la presence en direct (OFFLINE/ONLINE/BUSY/SUSPENDED),
+    // "verificationStatus" est le cycle de vie du dossier (PENDING/APPROVED/
+    // REJECTED) — les deux etaient confondus ici (Actifs/En attente
+    // cherchaient des valeurs de "status" qui n'existent jamais), faisant
+    // afficher 0 en permanence sur ces deux tuiles.
+    const active = drivers.filter(
+      (d) => d.verificationStatus === "APPROVED" && d.status !== "SUSPENDED",
+    ).length;
+    const pending = drivers.filter(
+      (d) => d.verificationStatus === "PENDING",
+    ).length;
     const suspended = drivers.filter((d) => d.status === "SUSPENDED").length;
     const trips = drivers.reduce((t, d) => t + d.completedTripsCount, 0);
 

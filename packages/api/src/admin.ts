@@ -508,6 +508,7 @@ export type AdminDriversResponse = {
     phoneNumber: string | null;
     isActive: boolean;
     status: string;
+    verificationStatus: string;
     createdAt: string;
     completedTripsCount: number;
     vehicle: {

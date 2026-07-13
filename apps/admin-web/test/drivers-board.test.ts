@@ -125,6 +125,23 @@ describe('drivers board', () => {
     expect(source).toContain('isSafeAdminMutationRequest');
   });
 
+  it('computes the Actifs/En attente summary tiles from verificationStatus, not the raw presence status', () => {
+    // "status" est la presence en direct (OFFLINE/ONLINE/BUSY/SUSPENDED),
+    // "verificationStatus" est le cycle de vie du dossier (PENDING/APPROVED/
+    // REJECTED). Les deux etaient confondus ici — "Actifs"/"En attente"
+    // cherchaient des valeurs de "status" qui n'existent jamais (ex: 'ACTIVE'),
+    // affichant 0 en permanence quel que soit le nombre reel de chauffeurs
+    // operationnels. Verifie que le calcul lit desormais le bon champ.
+    const source = readFileSync(
+      join(process.cwd(), 'app/drivers-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('d.verificationStatus === "APPROVED"');
+    expect(source).toContain('d.status !== "SUSPENDED"');
+    expect(source).toContain('d.verificationStatus === "PENDING"');
+  });
+
   it('keeps the suspend route no-store and auth-guarded', () => {
     const source = readFileSync(
       join(process.cwd(), 'app/api/admin/drivers/[driverId]/suspend/route.ts'),
