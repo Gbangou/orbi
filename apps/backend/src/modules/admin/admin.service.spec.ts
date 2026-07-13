@@ -3389,6 +3389,7 @@ describe('AdminService', () => {
     );
 
     expect(csv).toContain('"driver-payout-1"');
+    expect(csv).toContain('"settlement-prepared-');
     expect(csv).toContain('"Paiement terrain valide."');
     expect(csv).toContain('"prepared:Ops Orbi:ops-1; paid:pending"');
     expect(prisma.auditLog.create).toHaveBeenCalledWith(
@@ -3399,6 +3400,9 @@ describe('AdminService', () => {
             format: 'csv',
             payoutCount: 1,
             totalAmount: 1968,
+            settlementBatchId: expect.stringMatching(
+              /^settlement-prepared-[a-f0-9]{12}$/,
+            ),
           }),
         }),
       }),
@@ -3441,6 +3445,7 @@ describe('AdminService', () => {
 
     expect(Buffer.isBuffer(pdf)).toBe(true);
     expect(pdf.toString('utf8', 0, 8)).toBe('%PDF-1.4');
+    expect(pdf.toString('utf8')).toContain('Settlement batch: settlement-prepared-');
   });
 
   it('records an onboarding review decision and updates documents', async () => {

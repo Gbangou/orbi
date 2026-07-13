@@ -5,6 +5,7 @@
  * chauffeurs (wallet, virements, réconciliation financière).
  * Extrait de AdminService pour respecter le Single Responsibility Principle.
  */
+import { createHash } from 'crypto';
 import {
   BadRequestException,
   Injectable,
@@ -757,6 +758,7 @@ export class AdminDriverPayoutsService {
       'csv',
     );
     const headers = [
+      'settlement_batch_id',
       'payout_id',
       'wallet_id',
       'driver_user_id',
@@ -773,6 +775,7 @@ export class AdminDriverPayoutsService {
       'approval_signature',
     ];
     const rows = settlement.payouts.map((payout) => [
+      settlement.batchId,
       payout.id,
       payout.walletId,
       payout.wallet.userId,
@@ -806,6 +809,7 @@ export class AdminDriverPayoutsService {
     );
     const lines = [
       'Orbi - Settlement payouts chauffeurs',
+      `Settlement batch: ${settlement.batchId}`,
       `Genere le: ${settlement.generatedAt.toISOString()}`,
       `Statut: ${settlement.status}`,
       `Exporte par: ${auth.user.fullName} (${auth.user.role})`,
@@ -894,11 +898,22 @@ export class AdminDriverPayoutsService {
           status,
           payoutCount: payouts.length,
           totalAmount,
+          settlementBatchId: this.driverPayoutSettlementBatchId(
+            status,
+            payouts,
+            totalAmount,
+          ),
         } satisfies Prisma.InputJsonObject,
       },
     });
+    const batchId = this.driverPayoutSettlementBatchId(
+      status,
+      payouts,
+      totalAmount,
+    );
 
     return {
+      batchId,
       generatedAt: new Date(),
       status,
       totalAmount,
@@ -918,5 +933,38 @@ export class AdminDriverPayoutsService {
       : 'paid:pending';
 
     return `${prepared}; ${paid}`;
+  }
+
+  private driverPayoutSettlementBatchId(
+    status: DriverPayoutStatus,
+    payouts: Array<{
+      id: string;
+      walletId: string;
+      amount: Prisma.Decimal | number;
+      currency: string;
+      reference: string;
+      preparedAt: Date;
+    }>,
+    totalAmount: number,
+  ) {
+    const hash = createHash('sha256')
+      .update(
+        JSON.stringify({
+          status,
+          totalAmount,
+          payouts: payouts.map((payout) => ({
+            id: payout.id,
+            walletId: payout.walletId,
+            amount: Number(payout.amount),
+            currency: payout.currency,
+            reference: payout.reference,
+            preparedAt: payout.preparedAt.toISOString(),
+          })),
+        }),
+      )
+      .digest('hex')
+      .slice(0, 12);
+
+    return `settlement-${status.toLowerCase()}-${hash}`;
   }
 }

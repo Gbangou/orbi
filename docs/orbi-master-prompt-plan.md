@@ -258,6 +258,10 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   les metadata refund, rejettent une reutilisation de cle avec payload different
   et distinguent les replays dans l audit ops. La confirmation provider live
   reste un gap B/C.
+- 13 juillet 2026: Phase 2, gap A "settlement payouts rapprochable". Les exports
+  CSV/PDF de settlement chauffeur incluent maintenant un `settlementBatchId`
+  stable derive du statut, des payouts et du total, egalement journalise dans
+  l audit. La validation bancaire/mobile money terrain reste un gap B/D.
 
 ## Master Prompt Operationnel
 

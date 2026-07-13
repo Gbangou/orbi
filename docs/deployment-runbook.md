@@ -72,6 +72,9 @@ Utiliser la strategie `expand -> migrate traffic -> contract`:
   en `persisted_wallet_top_up_credited`, `persisted_wallet_top_up_failed` ou
   `persisted_wallet_top_up_replay`; un top-up wallet ne doit jamais rester en
   `ignored_unknown_reference`
+- conserver le `settlement_batch_id` des exports payouts chauffeur dans le
+  registre finance terrain; il doit etre identique entre CSV/PDF pour le meme
+  lot et servir de reference de rapprochement
 - en production multi-instance, brancher les adapters `rate limit` et `realtime` sur le backplane PostgreSQL partage: `RATE_LIMIT_ADAPTER=postgres`, `REALTIME_ADAPTER=postgres`, `RATE_LIMIT_STRICT=true`, `REALTIME_STRICT=true`
 - verifier que la job queue durable traite `DRIVER_RESERVATION_EXPIRY`: le timer ne fait qu enqueuer un job deduplique et le worker partage execute le sweep avec verrou PostgreSQL
 
