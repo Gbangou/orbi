@@ -1152,7 +1152,7 @@ describe('AdminService', () => {
     expect(result.summary).toMatchObject({
       failedChecks: 0,
       warningChecks: 1,
-      totalChecks: 13,
+      totalChecks: 14,
     });
     expect(result.nextActions).toEqual([
       expect.objectContaining({
@@ -1233,8 +1233,57 @@ describe('AdminService', () => {
           state: 'pass',
         }),
         expect.objectContaining({
+          id: 'driver-supply-coverage',
+          state: 'pass',
+        }),
+        expect.objectContaining({
           id: 'security-assurance',
           state: 'warn',
+        }),
+      ]),
+    );
+  });
+
+  it('keeps launch readiness limited when driver supply coverage is thin', async () => {
+    const { prisma, service } = createService();
+
+    prisma.rideRequest.count.mockResolvedValue(4);
+    prisma.driverProfile.count
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(3);
+
+    const result = await service.launchReadiness();
+
+    expect(result.decision.state).toBe('limited');
+    expect(result.summary.warningChecks).toBe(2);
+    expect(prisma.rideRequest.count).toHaveBeenCalledWith({
+      where: {
+        status: 'REQUESTED',
+      },
+    });
+    expect(prisma.driverProfile.count).toHaveBeenNthCalledWith(2, {
+      where: {
+        verificationStatus: 'APPROVED',
+        status: {
+          not: 'SUSPENDED',
+        },
+      },
+    });
+    expect(result.nextActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          checkId: 'driver-supply-coverage',
+          severity: 'warning',
+          owner: 'ops',
+        }),
+      ]),
+    );
+    expect(result.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'driver-supply-coverage',
+          state: 'warn',
+          detail: expect.stringContaining('ratio supply/demand 0.75x'),
         }),
       ]),
     );

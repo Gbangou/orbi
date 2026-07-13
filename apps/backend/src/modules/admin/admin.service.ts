@@ -14,6 +14,7 @@ import {
   DriverStatus,
   PaymentAttemptStatus,
   Prisma,
+  RideRequestStatus,
   SupportTicketStatus,
   UserRole,
   VerificationStatus,
@@ -1332,6 +1333,50 @@ function resolveLaunchDecision(checks: LaunchReadinessCheck[]) {
   };
 }
 
+function resolveDriverSupplyCoverage(input: {
+  openRideRequests: number;
+  approvedDrivers: number;
+}): LaunchReadinessCheck {
+  const openRideRequests = Math.max(0, input.openRideRequests);
+  const approvedDrivers = Math.max(0, input.approvedDrivers);
+  const ratio =
+    openRideRequests === 0 ? null : approvedDrivers / openRideRequests;
+
+  if (openRideRequests === 0) {
+    return {
+      id: 'driver-supply-coverage',
+      label: 'Couverture chauffeurs',
+      state: 'pass',
+      detail: `${approvedDrivers} chauffeur(s) approuve(s), aucune demande ouverte en attente de matching.`,
+    };
+  }
+
+  if (approvedDrivers === 0) {
+    return {
+      id: 'driver-supply-coverage',
+      label: 'Couverture chauffeurs',
+      state: 'fail',
+      detail: `${openRideRequests} demande(s) ouverte(s), aucun chauffeur approuve disponible dans le pool pilote.`,
+    };
+  }
+
+  if (approvedDrivers < openRideRequests * 2) {
+    return {
+      id: 'driver-supply-coverage',
+      label: 'Couverture chauffeurs',
+      state: 'warn',
+      detail: `${openRideRequests} demande(s) ouverte(s), ${approvedDrivers} chauffeur(s) approuve(s), ratio supply/demand ${ratio?.toFixed(2)}x; garder le pilote limite.`,
+    };
+  }
+
+  return {
+    id: 'driver-supply-coverage',
+    label: 'Couverture chauffeurs',
+    state: 'pass',
+    detail: `${openRideRequests} demande(s) ouverte(s), ${approvedDrivers} chauffeur(s) approuve(s), ratio supply/demand ${ratio?.toFixed(2)}x.`,
+  };
+}
+
 function resolveLaunchReadinessNextActions(
   checks: LaunchReadinessCheck[],
 ): LaunchReadinessNextAction[] {
@@ -1372,6 +1417,13 @@ function resolveLaunchReadinessNextActions(
       owner: 'ops',
       action:
         'Approuver, rejeter ou demander correction pour les justificatifs chauffeur en attente.',
+      runbookAnchor: 'checklist-apres-deploiement',
+    },
+    'driver-supply-coverage': {
+      checkId: 'driver-supply-coverage',
+      owner: 'ops',
+      action:
+        'Reduire la demande ouverte, activer des chauffeurs approuves ou limiter la zone pilote tant que la couverture supply reste insuffisante.',
       runbookAnchor: 'checklist-apres-deploiement',
     },
     'payment-refunds': {
@@ -3576,6 +3628,8 @@ export class AdminService {
       ignoredPaymentWebhooks,
       recoveryWallets,
       preparedPayoutBacklog,
+      openRideRequestsForSupply,
+      approvedDriversForSupply,
       totalSessions7d,
       criticalCrashLogs7d,
       collectorDegradedDeliveries7d,
@@ -3641,6 +3695,19 @@ export class AdminService {
       this.prisma.driverPayout.count({
         where: {
           status: DriverPayoutStatus.PREPARED,
+        },
+      }),
+      this.prisma.rideRequest.count({
+        where: {
+          status: RideRequestStatus.REQUESTED,
+        },
+      }),
+      this.prisma.driverProfile.count({
+        where: {
+          verificationStatus: VerificationStatus.APPROVED,
+          status: {
+            not: DriverStatus.SUSPENDED,
+          },
         },
       }),
       this.prisma.userSession.count({ where: { createdAt: { gte: since7d } } }),
@@ -3726,6 +3793,10 @@ export class AdminService {
     const topCriticalMobileSignal = mobileObservability.topCriticalMobileSignal
       ? ` Signal dominant: ${mobileObservability.topCriticalMobileSignal.count}x ${mobileObservability.topCriticalMobileSignal.code} sur ${mobileObservability.topCriticalMobileSignal.surface} (${mobileObservability.topCriticalMobileSignal.owner}).`
       : '';
+    const driverSupplyCoverage = resolveDriverSupplyCoverage({
+      openRideRequests: openRideRequestsForSupply ?? 0,
+      approvedDrivers: approvedDriversForSupply ?? 0,
+    });
     const checks: LaunchReadinessCheck[] = [
       {
         id: 'runtime-production-readiness',
@@ -3757,6 +3828,7 @@ export class AdminService {
         state: pendingDocuments === 0 ? 'pass' : 'warn',
         detail: `${pendingDocuments} justificatif(s) en attente.`,
       },
+      driverSupplyCoverage,
       {
         id: 'payment-refunds',
         label: 'Refunds provider',

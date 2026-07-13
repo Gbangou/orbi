@@ -161,6 +161,13 @@ Cela evite qu un cluster multi-instance expose des limites incoherentes selon le
 - traiter les entrees `nextActions` avant extension du pilote:
   - `severity=blocking`: owner obligatoire avant toute ouverture production
   - `severity=warning`: acceptable uniquement avec pilote limite et suivi actif
+- surveiller `driver-supply-coverage` avant toute extension de zone:
+  - `fail`: ne pas ouvrir le pilote si une demande ouverte existe sans
+    chauffeur approuve non suspendu
+  - `warn`: garder le pilote limite quand le ratio chauffeurs approuves /
+    demandes ouvertes reste sous 2x
+  - `pass`: le code ne voit pas de pression supply immediate, mais la densite
+    terrain et les horaires reels restent a confirmer par les operations
 - utiliser `POST /api/v1/admin/launch-readiness/actions/:checkId/acknowledge`
   pour tracer l owner et la prise en charge dans l audit log; cela ne rend pas
   le check vert automatiquement

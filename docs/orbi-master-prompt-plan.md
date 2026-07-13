@@ -342,6 +342,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   checks `legal-terms-version`, `privacy-policy-version` et
   `insurance-policy-reference`, et la console health les affiche dans une carte
   conformite pilote. La revue juridique et les contrats signes restent des gaps D.
+- 13 juillet 2026: Phase 6, gap A "couverture supply pilote". Launch readiness
+  expose maintenant `driver-supply-coverage`: les demandes `REQUESTED` sont
+  comparees aux chauffeurs approuves non suspendus, avec warning sous 2x et
+  blocage si une demande ouverte existe sans chauffeur exploitable. La densite
+  terrain par zone, les horaires reels et l acquisition chauffeurs restent D.
 
 ## Master Prompt Operationnel
 
