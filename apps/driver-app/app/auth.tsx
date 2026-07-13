@@ -133,8 +133,12 @@ export default function DriverAuthScreen() {
         {/* Logo */}
         <View style={styles.logoArea}>
           <OrbiLogo size="lg" tint={theme.colors.amber} wordmarkColor={theme.colors.amber} />
-          <Text style={styles.tagline}>Espace chauffeur Orbi</Text>
-          <Text style={styles.trustLine}>Courses claires · Gains visibles · Terrain sécurisé</Text>
+          <Text style={styles.tagline} numberOfLines={1}>
+            Espace chauffeur Orbi
+          </Text>
+          <Text style={styles.trustLine} numberOfLines={2} ellipsizeMode="tail">
+            Courses claires · Gains visibles · Terrain sécurisé
+          </Text>
         </View>
 
         {/* Mode toggle */}
@@ -143,7 +147,10 @@ export default function DriverAuthScreen() {
             onPress={() => { setMode('sign-in'); setErrorMessage(''); }}
             style={[styles.modeChip, mode === 'sign-in' && styles.modeChipActive]}
           >
-            <Text style={[styles.modeChipLabel, mode === 'sign-in' && styles.modeChipLabelActive]}>
+            <Text
+              style={[styles.modeChipLabel, mode === 'sign-in' && styles.modeChipLabelActive]}
+              numberOfLines={1}
+            >
               Connexion
             </Text>
           </Pressable>
@@ -151,7 +158,11 @@ export default function DriverAuthScreen() {
             onPress={() => { setMode('sign-up'); setErrorMessage(''); }}
             style={[styles.modeChip, mode === 'sign-up' && styles.modeChipActive]}
           >
-            <Text style={[styles.modeChipLabel, mode === 'sign-up' && styles.modeChipLabelActive]}>
+            <Text
+              style={[styles.modeChipLabel, mode === 'sign-up' && styles.modeChipLabelActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               Créer un compte
             </Text>
           </Pressable>
@@ -206,7 +217,7 @@ export default function DriverAuthScreen() {
           </View>
 
           {mode === 'sign-up' && (
-            <Text style={styles.passwordHint}>
+            <Text style={styles.passwordHint} numberOfLines={2}>
               Minimum 8 caractères · une majuscule · un chiffre · un caractère spécial (ex: !)
             </Text>
           )}
@@ -243,7 +254,7 @@ export default function DriverAuthScreen() {
           )}
         </OrbiSurface>
 
-        <Text style={styles.legalFooter}>
+        <Text style={styles.legalFooter} numberOfLines={3}>
           En continuant, vous acceptez les Conditions d&apos;utilisation et la
           Politique de confidentialité d&apos;Orbi.
         </Text>

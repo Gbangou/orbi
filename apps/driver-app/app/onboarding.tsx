@@ -300,8 +300,12 @@ export default function DriverOnboardingScreen() {
                       <Text style={styles.benefitBadgeText}>{item.code}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.benefitTitle}>{item.title}</Text>
-                      <Text style={styles.benefitDesc}>{item.desc}</Text>
+                      <Text style={styles.benefitTitle} numberOfLines={1} ellipsizeMode="tail">
+                        {item.title}
+                      </Text>
+                      <Text style={styles.benefitDesc} numberOfLines={2} ellipsizeMode="tail">
+                        {item.desc}
+                      </Text>
                     </View>
                   </OrbiSurface>
                 ))}
@@ -333,8 +337,12 @@ export default function DriverOnboardingScreen() {
                           style={[styles.typeCard, isSelected && { borderColor: color, backgroundColor: color + '12' }]}
                         >
                           <VehicleIllustration tier={isMoto ? 'moto-standard' : 'car-standard'} width={72} height={54} />
-                          <Text style={[styles.typeLabel, isSelected && { color }]}>{isMoto ? 'Moto' : 'Voiture'}</Text>
-                          <Text style={styles.typeDesc}>{isMoto ? '1 passager · Urbain' : '4 places · Climatisée'}</Text>
+                          <Text style={[styles.typeLabel, isSelected && { color }]} numberOfLines={1}>
+                            {isMoto ? 'Moto' : 'Voiture'}
+                          </Text>
+                          <Text style={styles.typeDesc} numberOfLines={1} ellipsizeMode="tail">
+                            {isMoto ? '1 passager · Urbain' : '4 places · Climatisée'}
+                          </Text>
                         </Pressable>
                       );
                     })}
@@ -497,10 +505,16 @@ export default function DriverOnboardingScreen() {
                       {docs[doc.key] ? <CheckGlyph /> : null}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.docLabel, docs[doc.key] && { color: theme.colors.teal }]}>
+                      <Text
+                        style={[styles.docLabel, docs[doc.key] && { color: theme.colors.teal }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
                         {doc.label}
                       </Text>
-                      <Text style={styles.docDesc}>{doc.desc}</Text>
+                      <Text style={styles.docDesc} numberOfLines={1} ellipsizeMode="tail">
+                        {doc.desc}
+                      </Text>
                     </View>
                   </Pressable>
                 ))}
@@ -508,10 +522,10 @@ export default function DriverOnboardingScreen() {
                 {/* Summary card */}
                 <OrbiSurface style={styles.summaryCard}>
                   <Text style={styles.summaryTitle}>Récapitulatif</Text>
-                  <Text style={styles.summaryLine}>Véhicule : {selectedMake} {selectedModel} {vehicleYear}</Text>
-                  <Text style={styles.summaryLine}>Plaque : {plateNumber || '—'}</Text>
-                  <Text style={styles.summaryLine}>Ville : {CITIES.find(c => c.id === selectedCity)?.label}</Text>
-                  <Text style={styles.summaryLine}>Téléphone : {phoneNumber || '—'}</Text>
+                  <Text style={styles.summaryLine} numberOfLines={1} ellipsizeMode="tail">Véhicule : {selectedMake} {selectedModel} {vehicleYear}</Text>
+                  <Text style={styles.summaryLine} numberOfLines={1}>Plaque : {plateNumber || '—'}</Text>
+                  <Text style={styles.summaryLine} numberOfLines={1} ellipsizeMode="tail">Ville : {CITIES.find(c => c.id === selectedCity)?.label}</Text>
+                  <Text style={styles.summaryLine} numberOfLines={1}>Téléphone : {phoneNumber || '—'}</Text>
                 </OrbiSurface>
 
                 {errorMessage ? (
@@ -542,7 +556,7 @@ export default function DriverOnboardingScreen() {
               onPress={() => void handleSubmit()}
               disabled={isSubmitting}
               loading={isSubmitting}
-              label="Soumettre mon dossier"
+              label="Soumettre le dossier"
               tone="amber"
               style={styles.ctaBtn}
               labelStyle={styles.ctaBtnLabel}
