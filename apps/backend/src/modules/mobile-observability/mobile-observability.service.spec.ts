@@ -18,7 +18,12 @@ describe('MobileObservabilityService', () => {
       publish: jest.fn(),
     };
     const mobileErrorCollectorService = {
-      dispatchReports: jest.fn().mockResolvedValue(undefined),
+      dispatchReports: jest.fn().mockResolvedValue({
+        provider: 'local',
+        reportCount: 1,
+        attempted: false,
+        delivered: true,
+      }),
     };
 
     return {
@@ -127,6 +132,19 @@ describe('MobileObservabilityService', () => {
         }),
       ],
     );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'rider-user-1',
+        action: 'MOBILE_ERROR_COLLECTOR_LOCAL_ONLY',
+        entityType: 'MOBILE_ERROR_COLLECTOR',
+        entityId: 'moberr-1',
+        metadata: expect.objectContaining({
+          provider: 'local',
+          delivered: true,
+          criticalReports: 1,
+        }),
+      }),
+    });
   });
 
   it('redacts secrets from mobile error metadata on the server boundary', async () => {
@@ -219,6 +237,42 @@ describe('MobileObservabilityService', () => {
     expect(prisma.auditLog.create).not.toHaveBeenCalled();
     expect(prisma.supportTicket.create).not.toHaveBeenCalled();
     expect(mobileErrorCollectorService.dispatchReports).not.toHaveBeenCalled();
+  });
+
+  it('audits degraded external collector dispatch without rejecting the report', async () => {
+    const { service, prisma, mobileErrorCollectorService } = createService();
+    mobileErrorCollectorService.dispatchReports.mockResolvedValueOnce({
+      provider: 'webhook',
+      reportCount: 1,
+      attempted: true,
+      delivered: false,
+      statusCode: 503,
+      failureReason: 'http_503',
+    });
+
+    const result = await service.submitErrorReports(riderAuth(), {
+      reports: [buildReport()],
+    });
+
+    expect(result).toMatchObject({
+      acceptedReports: 1,
+      supportTicketCount: 1,
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'rider-user-1',
+        action: 'MOBILE_ERROR_COLLECTOR_DEGRADED',
+        entityType: 'MOBILE_ERROR_COLLECTOR',
+        entityId: 'moberr-1',
+        metadata: expect.objectContaining({
+          provider: 'webhook',
+          attempted: true,
+          delivered: false,
+          statusCode: 503,
+          failureReason: 'http_503',
+        }),
+      }),
+    });
   });
 
   it('rejects reports that do not match the authenticated app role', async () => {

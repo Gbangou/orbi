@@ -6,6 +6,7 @@ import type { RequestAuthContext } from '../auth/auth.types';
 import type { SubmitMobileErrorReportsDto } from './dto/submit-mobile-error-reports.dto';
 import {
   MobileErrorCollectorService,
+  type MobileErrorCollectorDispatchResult,
   type MobileErrorCollectorReport,
 } from './mobile-error-collector.service';
 
@@ -106,8 +107,14 @@ export class MobileObservabilityService {
     }
 
     if (acceptedReports > 0 || supportTicketCount > 0) {
-      await this.mobileErrorCollectorService.dispatchReports(
+      const collectorDispatch =
+        await this.mobileErrorCollectorService.dispatchReports(
+          auth,
+          collectorReports,
+        );
+      await this.recordCollectorDispatchAudit(
         auth,
+        collectorDispatch,
         collectorReports,
       );
 
@@ -188,6 +195,43 @@ export class MobileObservabilityService {
     });
 
     return true;
+  }
+
+  private async recordCollectorDispatchAudit(
+    auth: RequestAuthContext,
+    dispatch: MobileErrorCollectorDispatchResult,
+    reports: MobileErrorCollectorReport[],
+  ) {
+    if (!reports.length) {
+      return;
+    }
+
+    const action = dispatch.delivered
+      ? dispatch.attempted
+        ? 'MOBILE_ERROR_COLLECTOR_DELIVERED'
+        : 'MOBILE_ERROR_COLLECTOR_LOCAL_ONLY'
+      : 'MOBILE_ERROR_COLLECTOR_DEGRADED';
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action,
+        entityType: 'MOBILE_ERROR_COLLECTOR',
+        entityId: reports[0]?.id ?? auth.user.id,
+        metadata: {
+          provider: dispatch.provider,
+          reportCount: dispatch.reportCount,
+          attempted: dispatch.attempted,
+          delivered: dispatch.delivered,
+          statusCode: dispatch.statusCode ?? null,
+          failureReason: dispatch.failureReason ?? null,
+          appRoles: [...new Set(reports.map((report) => report.appRole))],
+          criticalReports: reports.filter(
+            (report) => report.classification.severity === 'critical',
+          ).length,
+        } satisfies Prisma.InputJsonValue,
+      },
+    });
   }
 
   private boundContext(

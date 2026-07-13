@@ -22,6 +22,15 @@ export type MobileErrorCollectorReport = {
   context: Record<string, string | number | boolean | null>;
 };
 
+export type MobileErrorCollectorDispatchResult = {
+  provider: string;
+  reportCount: number;
+  attempted: boolean;
+  delivered: boolean;
+  statusCode?: number;
+  failureReason?: string;
+};
+
 @Injectable()
 export class MobileErrorCollectorService {
   private readonly logger = new Logger(MobileErrorCollectorService.name);
@@ -33,7 +42,12 @@ export class MobileErrorCollectorService {
     reports: MobileErrorCollectorReport[],
   ) {
     if (!reports.length) {
-      return;
+      return {
+        provider: 'none',
+        reportCount: 0,
+        attempted: false,
+        delivered: true,
+      } satisfies MobileErrorCollectorDispatchResult;
     }
 
     const provider = this.configService.get<string>(
@@ -42,23 +56,34 @@ export class MobileErrorCollectorService {
     );
 
     if (provider === 'local') {
-      return;
+      return {
+        provider,
+        reportCount: reports.length,
+        attempted: false,
+        delivered: true,
+      } satisfies MobileErrorCollectorDispatchResult;
     }
 
     if (provider !== 'webhook') {
       this.logger.warn(
         `Unsupported mobile error collector provider "${provider}". Reports were kept in local audit only.`,
       );
-      return;
+      return {
+        provider,
+        reportCount: reports.length,
+        attempted: false,
+        delivered: false,
+        failureReason: 'unsupported_provider',
+      } satisfies MobileErrorCollectorDispatchResult;
     }
 
-    await this.dispatchWebhook(auth, reports);
+    return this.dispatchWebhook(auth, reports);
   }
 
   private async dispatchWebhook(
     auth: RequestAuthContext,
     reports: MobileErrorCollectorReport[],
-  ) {
+  ): Promise<MobileErrorCollectorDispatchResult> {
     const webhookUrl = this.configService.get<string>(
       'observability.mobileErrorCollector.webhookUrl',
       '',
@@ -68,7 +93,13 @@ export class MobileErrorCollectorService {
       this.logger.warn(
         'MOBILE_ERROR_COLLECTOR_PROVIDER=webhook is configured without MOBILE_ERROR_COLLECTOR_WEBHOOK_URL.',
       );
-      return;
+      return {
+        provider: 'webhook',
+        reportCount: reports.length,
+        attempted: false,
+        delivered: false,
+        failureReason: 'missing_webhook_url',
+      };
     }
 
     const timeoutMs = this.configService.get<number>(
@@ -99,12 +130,27 @@ export class MobileErrorCollectorService {
           `Mobile error collector webhook returned HTTP ${response.status}. Reports were kept in local audit.`,
         );
       }
+
+      return {
+        provider: 'webhook',
+        reportCount: reports.length,
+        attempted: true,
+        delivered: response.ok,
+        statusCode: response.status,
+        failureReason: response.ok ? undefined : `http_${response.status}`,
+      };
     } catch (error) {
+      const failureReason = error instanceof Error ? error.message : 'unknown';
       this.logger.warn(
-        `Mobile error collector webhook failed: ${
-          error instanceof Error ? error.message : 'unknown error'
-        }`,
+        `Mobile error collector webhook failed: ${failureReason}`,
       );
+      return {
+        provider: 'webhook',
+        reportCount: reports.length,
+        attempted: true,
+        delivered: false,
+        failureReason,
+      };
     } finally {
       clearTimeout(timeout);
     }

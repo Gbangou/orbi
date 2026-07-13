@@ -306,6 +306,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   surface/code/owner/count, afin que l equipe sache quelle surface mobile
   corriger en premier sans ouvrir les payloads bruts. Les tendances long terme
   et alertes externes restent un gap C.
+- 13 juillet 2026: Phase 5, gap A "livraison collector auditable". Le collector
+  mobile retourne maintenant un resultat structure local/webhook, succes,
+  HTTP degrade ou exception; le backend ecrit un audit `LOCAL_ONLY`,
+  `DELIVERED` ou `DEGRADED` pour que les ops voient aussi les pannes de
+  livraison observabilite. Le routage d alerte externe reste un gap C.
 
 ## Master Prompt Operationnel
 

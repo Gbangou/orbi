@@ -60,9 +60,15 @@ describe('MobileErrorCollectorService', () => {
       'observability.mobileErrorCollector.provider': 'local',
     });
 
-    await service.dispatchReports(auth(), [report()]);
+    const result = await service.dispatchReports(auth(), [report()]);
 
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      provider: 'local',
+      reportCount: 1,
+      attempted: false,
+      delivered: true,
+    });
   });
 
   it('posts sanitized reports to the configured webhook collector', async () => {
@@ -78,7 +84,7 @@ describe('MobileErrorCollectorService', () => {
       'observability.mobileErrorCollector.timeoutMs': 1500,
     });
 
-    await service.dispatchReports(auth(), [report()]);
+    const result = await service.dispatchReports(auth(), [report()]);
 
     expect(fetchMock).toHaveBeenCalledWith(
       'https://observability.orbi.app/mobile-errors',
@@ -96,6 +102,38 @@ describe('MobileErrorCollectorService', () => {
         }),
       }),
     );
+    expect(result).toEqual({
+      provider: 'webhook',
+      reportCount: 1,
+      attempted: true,
+      delivered: true,
+      statusCode: 202,
+      failureReason: undefined,
+    });
+  });
+
+  it('returns a degraded result when the webhook collector returns an error', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+    }) as never;
+    const service = createService({
+      'observability.mobileErrorCollector.provider': 'webhook',
+      'observability.mobileErrorCollector.webhookUrl':
+        'https://observability.orbi.app/mobile-errors',
+      'observability.mobileErrorCollector.timeoutMs': 1500,
+    });
+
+    const result = await service.dispatchReports(auth(), [report()]);
+
+    expect(result).toEqual({
+      provider: 'webhook',
+      reportCount: 1,
+      attempted: true,
+      delivered: false,
+      statusCode: 503,
+      failureReason: 'http_503',
+    });
   });
 
   it('does not throw when the webhook collector fails', async () => {
@@ -109,8 +147,12 @@ describe('MobileErrorCollectorService', () => {
       'observability.mobileErrorCollector.timeoutMs': 1500,
     });
 
-    await expect(
-      service.dispatchReports(auth(), [report()]),
-    ).resolves.toBeUndefined();
+    await expect(service.dispatchReports(auth(), [report()])).resolves.toEqual({
+      provider: 'webhook',
+      reportCount: 1,
+      attempted: true,
+      delivered: false,
+      failureReason: 'collector down',
+    });
   });
 });
