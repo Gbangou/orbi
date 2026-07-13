@@ -113,6 +113,8 @@ const requiredOnboardingDocumentTypes = [
   'INSURANCE_PROOF',
   'SELFIE_VERIFICATION',
 ] as const;
+const driverDocumentRenewalWarningWindowMs =
+  30 * 24 * 60 * 60 * 1000;
 const documentSafetyPolicies: Record<
   string,
   {
@@ -290,6 +292,25 @@ function resolveEffectiveDocumentStatus(document: {
   }
 
   return document.status;
+}
+
+function isDriverDocumentRenewalDueSoon(document: {
+  status: DriverDocumentStatus;
+  expiresAt?: Date | null;
+}) {
+  if (resolveEffectiveDocumentStatus(document) !== DriverDocumentStatus.APPROVED) {
+    return false;
+  }
+
+  if (!document.expiresAt) {
+    return false;
+  }
+
+  const renewalLeadMs = document.expiresAt.getTime() - Date.now();
+
+  return (
+    renewalLeadMs > 0 && renewalLeadMs <= driverDocumentRenewalWarningWindowMs
+  );
 }
 
 function isJsonRecord(
@@ -510,6 +531,7 @@ function resolveDriverOnboardingDecisionGuidance(input: {
   approvedDocuments: number;
   pendingDocuments: number;
   rejectedDocuments: number;
+  expiringSoonDocuments: number;
   missingRequiredTypes: string[];
   documentsWithIntegrity: Array<{
     document: {
@@ -531,7 +553,9 @@ function resolveDriverOnboardingDecisionGuidance(input: {
   const documentsToReview = input.documentsWithIntegrity.filter(
     ({ document, integrity }) =>
       resolveEffectiveDocumentStatus(document) ===
-        DriverDocumentStatus.PENDING || integrity.guidance.level === 'review',
+        DriverDocumentStatus.PENDING ||
+      isDriverDocumentRenewalDueSoon(document) ||
+      integrity.guidance.level === 'review',
   );
   const blockers = [
     ...input.missingRequiredTypes.map((type) => `${type}: piece absente`),
@@ -553,6 +577,7 @@ function resolveDriverOnboardingDecisionGuidance(input: {
 
   if (
     input.pendingDocuments > 0 ||
+    input.expiringSoonDocuments > 0 ||
     documentsToReview.length > 0 ||
     input.approvedDocuments < requiredOnboardingDocumentTypes.length
   ) {
@@ -561,7 +586,7 @@ function resolveDriverOnboardingDecisionGuidance(input: {
       recommendedStatus: 'UNDER_REVIEW',
       label: 'Revue prudente',
       detail:
-        'Les pieces essentielles sont presentes, mais au moins un point doit etre valide par les operations avant approbation.',
+        'Les pieces essentielles sont presentes, mais au moins un point doit etre valide par les operations avant approbation ou renouvellement.',
       blockers: documentsToReview.map(
         ({ document }) => `${document.type}: verification ops requise`,
       ),
@@ -640,6 +665,9 @@ function resolveDriverOnboardingDecisionSnapshot(input: {
 
     return status === 'REJECTED' || status === 'EXPIRED';
   }).length;
+  const expiringSoonDocuments = reviewableDocuments.filter(
+    isDriverDocumentRenewalDueSoon,
+  ).length;
   const documentsWithIntegrity = reviewableDocuments.map((document) => ({
     document,
     integrity: resolveDriverDocumentIntegrity(document.metadata),
@@ -654,6 +682,7 @@ function resolveDriverOnboardingDecisionSnapshot(input: {
       approved: approvedDocuments,
       pending: pendingDocuments,
       rejected: rejectedDocuments,
+      expiringSoon: expiringSoonDocuments,
       missingRequired: missingRequiredTypes.length,
       integrityWarnings: documentsWithIntegrity.filter(
         ({ integrity }) => integrity.state !== 'complete',
@@ -663,6 +692,7 @@ function resolveDriverOnboardingDecisionSnapshot(input: {
       approvedDocuments,
       pendingDocuments,
       rejectedDocuments,
+      expiringSoonDocuments,
       missingRequiredTypes: [...missingRequiredTypes],
       documentsWithIntegrity,
     }),
@@ -790,6 +820,7 @@ function resolveStoredDocumentSummary(
   const approved = nullableNonNegativeInteger(summary.approved);
   const pending = nullableNonNegativeInteger(summary.pending);
   const rejected = nullableNonNegativeInteger(summary.rejected);
+  const expiringSoon = nullableNonNegativeInteger(summary.expiringSoon) ?? 0;
   const missingRequired = nullableNonNegativeInteger(summary.missingRequired);
   const integrityWarnings = nullableNonNegativeInteger(
     summary.integrityWarnings,
@@ -811,6 +842,7 @@ function resolveStoredDocumentSummary(
     approved,
     pending,
     rejected,
+    expiringSoon,
     missingRequired,
     integrityWarnings,
   };
@@ -5038,6 +5070,9 @@ export class AdminService {
             resolveEffectiveDocumentStatus(document) === 'REJECTED' ||
             resolveEffectiveDocumentStatus(document) === 'EXPIRED',
         ).length;
+        const expiringSoonDocuments = reviewableDocuments.filter(
+          isDriverDocumentRenewalDueSoon,
+        ).length;
         const documentsWithIntegrity = reviewableDocuments.map((document) => ({
           document,
           integrity: resolveDriverDocumentIntegrity(document.metadata),
@@ -5060,6 +5095,7 @@ export class AdminService {
           approvedDocuments,
           pendingDocuments,
           rejectedDocuments,
+          expiringSoonDocuments,
           missingRequiredTypes: [...missingRequiredTypes],
           documentsWithIntegrity,
         });
@@ -5093,6 +5129,7 @@ export class AdminService {
             approved: approvedDocuments,
             pending: pendingDocuments,
             rejected: rejectedDocuments,
+            expiringSoon: expiringSoonDocuments,
             integrityWarnings,
             averageIntegrityScore,
             missingRequired: missingRequiredTypes.length,
@@ -5188,6 +5225,7 @@ export class AdminService {
       'total_documents',
       'pending_documents',
       'rejected_documents',
+      'expiring_soon_documents',
       'missing_required',
       'integrity_warnings',
       'average_integrity_score',
@@ -5209,6 +5247,7 @@ export class AdminService {
       driver.documentSummary.total,
       driver.documentSummary.pending,
       driver.documentSummary.rejected,
+      driver.documentSummary.expiringSoon,
       driver.documentSummary.missingRequired,
       driver.documentSummary.integrityWarnings,
       driver.documentSummary.averageIntegrityScore,
@@ -6715,6 +6754,18 @@ export class AdminService {
       if (effectiveExpiry && effectiveExpiry.getTime() <= Date.now()) {
         throw new BadRequestException(
           `Document ${type} is expired and cannot be approved.`,
+        );
+      }
+
+      if (
+        isDriverDocumentRenewalDueSoon({
+          ...document,
+          status: effectiveStatus as DriverDocumentStatus,
+          expiresAt: effectiveExpiry,
+        })
+      ) {
+        throw new BadRequestException(
+          `Document ${type} expires within 30 days and must be renewed.`,
         );
       }
     }

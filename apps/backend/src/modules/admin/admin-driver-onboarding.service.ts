@@ -42,6 +42,7 @@ import {
   maskEmailAddress,
   maskPhoneNumber,
   maskRequesterName,
+  isDriverDocumentRenewalDueSoon,
   normalizeOnboardingExportGuidanceFilter,
   nullableNonNegativeInteger,
   nullablePositiveInteger,
@@ -147,6 +148,9 @@ export class AdminDriverOnboardingService {
             resolveEffectiveDocumentStatus(document) === 'REJECTED' ||
             resolveEffectiveDocumentStatus(document) === 'EXPIRED',
         ).length;
+        const expiringSoonDocuments = reviewableDocuments.filter(
+          isDriverDocumentRenewalDueSoon,
+        ).length;
         const documentsWithIntegrity = reviewableDocuments.map((document) => ({
           document,
           integrity: resolveDriverDocumentIntegrity(document.metadata),
@@ -169,6 +173,7 @@ export class AdminDriverOnboardingService {
           approvedDocuments,
           pendingDocuments,
           rejectedDocuments,
+          expiringSoonDocuments,
           missingRequiredTypes: [...missingRequiredTypes],
           documentsWithIntegrity,
         });
@@ -202,6 +207,7 @@ export class AdminDriverOnboardingService {
             approved: approvedDocuments,
             pending: pendingDocuments,
             rejected: rejectedDocuments,
+            expiringSoon: expiringSoonDocuments,
             integrityWarnings,
             averageIntegrityScore,
             missingRequired: missingRequiredTypes.length,
@@ -297,6 +303,7 @@ export class AdminDriverOnboardingService {
       'total_documents',
       'pending_documents',
       'rejected_documents',
+      'expiring_soon_documents',
       'missing_required',
       'integrity_warnings',
       'average_integrity_score',
@@ -318,6 +325,7 @@ export class AdminDriverOnboardingService {
       driver.documentSummary.total,
       driver.documentSummary.pending,
       driver.documentSummary.rejected,
+      driver.documentSummary.expiringSoon,
       driver.documentSummary.missingRequired,
       driver.documentSummary.integrityWarnings,
       driver.documentSummary.averageIntegrityScore,
@@ -873,6 +881,10 @@ export class AdminDriverOnboardingService {
 
       if (integrity.state !== 'complete') {
         blockers.push(`Document ${docType} does not have confirmed object integrity.`);
+      }
+
+      if (isDriverDocumentRenewalDueSoon(doc)) {
+        blockers.push(`Document ${docType} expires within 30 days and must be renewed.`);
       }
     }
 

@@ -146,6 +146,18 @@ function formatReviewDate(value: string) {
   });
 }
 
+function formatDocumentExpiry(value: string | null) {
+  if (!value) {
+    return 'expiration non renseignee';
+  }
+
+  return `expire ${formatAdminDateTime(value, 'date invalide', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })}`;
+}
+
 function formatExportFilterLabel(
   value: DriverOnboardingExportHistoryResponse['exports'][number]['guidanceFilter'],
 ) {
@@ -917,6 +929,10 @@ export function DriverOnboardingReviewBoard({
                 <span>Pieces absentes</span>
                 <strong>{driver.documentSummary.missingRequired}</strong>
               </div>
+              <div>
+                <span>A renouveler</span>
+                <strong>{driver.documentSummary.expiringSoon}</strong>
+              </div>
             </div>
             {driver.latestDecisionReason ? (
               <p className="latest-decision-note">
@@ -954,7 +970,8 @@ export function DriverOnboardingReviewBoard({
                         <span>
                           {review.documentSummary.approved}/
                           {review.documentSummary.total} docs,{' '}
-                          {review.documentSummary.integrityWarnings} point(s)
+                          {review.documentSummary.integrityWarnings} point(s),{' '}
+                          {review.documentSummary.expiringSoon} proche(s)
                         </span>
                       ) : null}
                     </div>
@@ -991,6 +1008,7 @@ export function DriverOnboardingReviewBoard({
                         Integrite {document.integrity.score}%
                       </span>
                       <span>{formatDocumentSize(document.integrity.sizeBytes)}</span>
+                      <span>{formatDocumentExpiry(document.expiresAt)}</span>
                       <span>{document.integrity.uploadSource ?? 'source absente'}</span>
                       <span>{formatShaPreview(document.integrity.sha256)}</span>
                       <span>

@@ -848,6 +848,7 @@ export type DriverOnboardingQueueResponse = {
       approved: number;
       pending: number;
       rejected: number;
+      expiringSoon: number;
       integrityWarnings: number;
       averageIntegrityScore: number;
       missingRequired: number;
@@ -882,6 +883,7 @@ export type DriverOnboardingQueueResponse = {
         approved: number;
         pending: number;
         rejected: number;
+        expiringSoon: number;
         missingRequired: number;
         integrityWarnings: number;
       } | null;

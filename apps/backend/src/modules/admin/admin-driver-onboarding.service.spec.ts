@@ -236,4 +236,29 @@ describe('AdminDriverOnboardingService', () => {
     );
     expect(prisma.driverProfile.update).not.toHaveBeenCalled();
   });
+
+  it('rejects driver approval when an approved required document expires soon', async () => {
+    const { prisma, service } = createService();
+    const profile = completeProfile();
+    profile.onboardingDocuments[1] = {
+      ...profile.onboardingDocuments[1],
+      expiresAt: new Date('2026-07-20T00:00:00.000Z'),
+    };
+
+    prisma.driverProfile.findUnique.mockResolvedValue(profile);
+
+    await expect(
+      service.updateDriverOnboardingReview(
+        'driver-1',
+        {
+          status: 'APPROVED',
+          decisionReason: 'Dossier complet mais permis presque expire.',
+        },
+        authContext(),
+      ),
+    ).rejects.toThrow(
+      'Document DRIVER_LICENSE expires within 30 days and must be renewed.',
+    );
+    expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+  });
 });

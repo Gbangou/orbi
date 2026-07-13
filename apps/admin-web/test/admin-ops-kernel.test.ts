@@ -76,6 +76,7 @@ function createDriver(
       approved: 0,
       pending: 1,
       rejected: 0,
+      expiringSoon: 0,
       integrityWarnings: 0,
       averageIntegrityScore: 100,
       missingRequired: 4,

@@ -352,6 +352,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `productionReadiness` et la carte admin resilience pilote, afin qu aucune
   extension ne parte sans revue recente produit/pricing/safety. Les comptes
   rendus terrain et decisions business restent D.
+- 13 juillet 2026: Phase 6, gap A "renouvellement documents chauffeur". Les
+  dossiers onboarding comptent maintenant les pieces approuvees qui expirent
+  sous 30 jours (`expiringSoon`), les affichent dans l admin, les exportent en
+  CSV et bloquent l approbation chauffeur tant que la piece requise n est pas
+  renouvelee. Les relances automatiques, selfie match et suspension periodique
+  restent des gaps A/B/D distincts.
 
 ## Master Prompt Operationnel
 

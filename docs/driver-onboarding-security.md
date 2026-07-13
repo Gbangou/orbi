@@ -100,6 +100,9 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
   pour rendre visibles l acteur, le filtre, la recherche et le volume partage
 - verification explicite que la meme plaque ne peut pas etre reattribuee silencieusement a un autre chauffeur
 - calcul d un resume de readiness et d une checklist exploitable
+- calcul des documents expires et proches expiration: une piece approuvee qui
+  expire sous 30 jours apparait comme `expiringSoon`, repasse la guidance en
+  revue ops et bloque l approbation chauffeur tant qu elle n est pas renouvelee
 - file ops pour dossiers `PENDING` ou `REJECTED`
 - decision ops explicite:
   - `UNDER_REVIEW`
@@ -134,4 +137,4 @@ Mettre en place un onboarding chauffeur credible, securise et exploitable par le
 - empreinte perceptuelle anti-duplication
 - controle anti-fraude documentaire
 - selfie match automatise
-- expiration des documents et re-verification periodique
+- relances automatiques et suspension periodique apres expiration terrain

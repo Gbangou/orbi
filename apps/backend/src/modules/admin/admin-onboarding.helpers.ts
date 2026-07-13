@@ -15,6 +15,8 @@ export const requiredOnboardingDocumentTypes = [
   'INSURANCE_PROOF',
   'SELFIE_VERIFICATION',
 ] as const;
+export const driverDocumentRenewalWarningWindowMs =
+  30 * 24 * 60 * 60 * 1000;
 
 export const csvFormulaPrefixPattern = /^[=+\-@\t\r]/;
 
@@ -79,6 +81,25 @@ export function resolveEffectiveDocumentStatus(document: {
     return DriverDocumentStatus.EXPIRED;
   }
   return document.status;
+}
+
+export function isDriverDocumentRenewalDueSoon(document: {
+  status: DriverDocumentStatus;
+  expiresAt?: Date | null;
+}) {
+  if (resolveEffectiveDocumentStatus(document) !== DriverDocumentStatus.APPROVED) {
+    return false;
+  }
+
+  if (!document.expiresAt) {
+    return false;
+  }
+
+  const renewalLeadMs = document.expiresAt.getTime() - Date.now();
+
+  return (
+    renewalLeadMs > 0 && renewalLeadMs <= driverDocumentRenewalWarningWindowMs
+  );
 }
 
 export function isJsonRecord(
@@ -334,6 +355,7 @@ export function resolveDriverOnboardingDecisionGuidance(input: {
   approvedDocuments: number;
   pendingDocuments: number;
   rejectedDocuments: number;
+  expiringSoonDocuments: number;
   missingRequiredTypes: string[];
   documentsWithIntegrity: Array<{
     document: {
@@ -353,6 +375,7 @@ export function resolveDriverOnboardingDecisionGuidance(input: {
   const documentsToReview = input.documentsWithIntegrity.filter(
     ({ document, integrity }) =>
       resolveEffectiveDocumentStatus(document) === DriverDocumentStatus.PENDING ||
+      isDriverDocumentRenewalDueSoon(document) ||
       integrity.guidance.level === 'review',
   );
   const blockers = [
@@ -373,6 +396,7 @@ export function resolveDriverOnboardingDecisionGuidance(input: {
 
   if (
     input.pendingDocuments > 0 ||
+    input.expiringSoonDocuments > 0 ||
     documentsToReview.length > 0 ||
     input.approvedDocuments < requiredOnboardingDocumentTypes.length
   ) {
@@ -381,7 +405,7 @@ export function resolveDriverOnboardingDecisionGuidance(input: {
       recommendedStatus: 'UNDER_REVIEW',
       label: 'Revue prudente',
       detail:
-        'Les pieces essentielles sont presentes, mais au moins un point doit etre valide par les operations avant approbation.',
+        'Les pieces essentielles sont presentes, mais au moins un point doit etre valide par les operations avant approbation ou renouvellement.',
       blockers: documentsToReview.map(
         ({ document }) => `${document.type}: verification ops requise`,
       ),
@@ -457,6 +481,9 @@ export function resolveDriverOnboardingDecisionSnapshot(input: {
     const status = resolveEffectiveDocumentStatus(d);
     return status === 'REJECTED' || status === 'EXPIRED';
   }).length;
+  const expiringSoonDocuments = reviewableDocuments.filter(
+    isDriverDocumentRenewalDueSoon,
+  ).length;
   const documentsWithIntegrity = reviewableDocuments.map((document) => ({
     document,
     integrity: resolveDriverDocumentIntegrity(document.metadata),
@@ -471,6 +498,7 @@ export function resolveDriverOnboardingDecisionSnapshot(input: {
       approved: approvedDocuments,
       pending: pendingDocuments,
       rejected: rejectedDocuments,
+      expiringSoon: expiringSoonDocuments,
       missingRequired: missingRequiredTypes.length,
       integrityWarnings: documentsWithIntegrity.filter(
         ({ integrity }) => integrity.state !== 'complete',
@@ -480,6 +508,7 @@ export function resolveDriverOnboardingDecisionSnapshot(input: {
       approvedDocuments,
       pendingDocuments,
       rejectedDocuments,
+      expiringSoonDocuments,
       missingRequiredTypes: [...missingRequiredTypes],
       documentsWithIntegrity,
     }),
@@ -532,6 +561,7 @@ export function resolveStoredDocumentSummary(
   const rejected = nullableNonNegativeInteger(summary.rejected);
   const missingRequired = nullableNonNegativeInteger(summary.missingRequired);
   const integrityWarnings = nullableNonNegativeInteger(summary.integrityWarnings);
+  const expiringSoon = nullableNonNegativeInteger(summary.expiringSoon) ?? 0;
 
   if (
     total === null ||
@@ -544,5 +574,13 @@ export function resolveStoredDocumentSummary(
     return null;
   }
 
-  return { total, approved, pending, rejected, missingRequired, integrityWarnings };
+  return {
+    total,
+    approved,
+    pending,
+    rejected,
+    expiringSoon,
+    missingRequired,
+    integrityWarnings,
+  };
 }
