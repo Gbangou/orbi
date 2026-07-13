@@ -318,6 +318,7 @@ function buildRiderProfile() {
         status: 'MISSING',
         safetyNote: 'Ajoutez un numero Burkina pour accelerer le partage en cas de trajet sensible.',
       },
+      trustedContacts: [],
       savedPlaces: [
         {
           id: 'saved-home',
@@ -458,6 +459,14 @@ beforeEach(() => {
       status: 'READY',
       safetyNote: 'Contact de confiance configure et audite.',
     },
+    trustedContacts: [
+      {
+        label: 'Contact principal',
+        phoneNumber: '+22670000001',
+        priority: 1,
+        isActive: true,
+      },
+    ],
   } as never);
 
   riderRealtimeState.eventHandler = null;

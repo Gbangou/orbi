@@ -380,8 +380,13 @@ describe('TripsService', () => {
       currency: 'XOF',
     });
     prisma.riderProfile.findUnique.mockResolvedValue({
-      emergencyPhone: '+22670000001',
+      emergencyPhone: '+22670000009',
       trustedContactShareMode: 'ALL_TRIPS',
+      trustedContacts: [
+        {
+          phoneNumber: '+22670000001',
+        },
+      ],
     });
     prisma.trip.findUnique.mockResolvedValue(null);
     prisma.rideRequest.updateMany.mockResolvedValue({ count: 1 });

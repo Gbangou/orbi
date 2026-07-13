@@ -38,6 +38,9 @@ export class RidersService {
           },
           include: {
             user: true,
+            trustedContacts: {
+              orderBy: [{ isActive: 'desc' }, { priority: 'asc' }],
+            },
             savedPlaces: {
               orderBy: {
                 createdAt: 'asc',
@@ -67,6 +70,12 @@ export class RidersService {
       throw new NotFoundException('Rider profile could not be loaded.');
     }
 
+    const trustedContacts = this.serializeTrustedContacts(
+      profile.trustedContacts,
+      profile.emergencyPhone,
+    );
+    const primaryTrustedContact = trustedContacts[0] ?? null;
+
     return {
       profile: {
         id: profile.id,
@@ -76,17 +85,18 @@ export class RidersService {
         preferredTier: profile.preferredTier,
         emergencyPhone: profile.emergencyPhone,
         trustedContact: {
-          phoneNumber: profile.emergencyPhone,
-          shareMode: profile.emergencyPhone
+          phoneNumber: primaryTrustedContact?.phoneNumber ?? null,
+          shareMode: primaryTrustedContact
             ? profile.trustedContactShareMode
             : 'DISABLED',
-          status: profile.emergencyPhone ? 'READY' : 'MISSING',
-          safetyNote: profile.emergencyPhone
+          status: primaryTrustedContact ? 'READY' : 'MISSING',
+          safetyNote: primaryTrustedContact
             ? profile.trustedContactShareMode === 'MANUAL'
               ? 'Contact de confiance pret pour recevoir un lien trajet manuel.'
               : 'Contact de confiance pret pour le partage trajet automatique selon vos regles.'
             : 'Ajoutez un numero Burkina pour accelerer le partage en cas de trajet sensible.',
         },
+        trustedContacts,
         savedPlaces: profile.savedPlaces.map((place) => ({
           id: place.id,
           label: place.label,
@@ -192,6 +202,51 @@ export class RidersService {
         },
       });
 
+      if (normalizedPhone) {
+        await tx.riderTrustedContact.updateMany({
+          where: {
+            riderId: riderProfileId,
+            phoneNumber: {
+              not: normalizedPhone,
+            },
+          },
+          data: {
+            isActive: false,
+          },
+        });
+
+        await tx.riderTrustedContact.upsert({
+          where: {
+            riderId_phoneNumber: {
+              riderId: riderProfileId,
+              phoneNumber: normalizedPhone,
+            },
+          },
+          update: {
+            label: 'Contact principal',
+            priority: 1,
+            isActive: true,
+          },
+          create: {
+            riderId: riderProfileId,
+            label: 'Contact principal',
+            phoneNumber: normalizedPhone,
+            priority: 1,
+            isActive: true,
+          },
+        });
+      } else {
+        await tx.riderTrustedContact.updateMany({
+          where: {
+            riderId: riderProfileId,
+            isActive: true,
+          },
+          data: {
+            isActive: false,
+          },
+        });
+      }
+
       await tx.auditLog.create({
         data: {
           userId: auth.user.id,
@@ -202,6 +257,7 @@ export class RidersService {
             hasTrustedContact: Boolean(normalizedPhone),
             shareMode,
             notes,
+            activeTrustedContacts: normalizedPhone ? 1 : 0,
           },
         },
       });
@@ -219,6 +275,16 @@ export class RidersService {
           ? 'Contact de confiance configure et audite.'
           : 'Aucun contact de confiance actif.',
       },
+      trustedContacts: updatedProfile.emergencyPhone
+        ? [
+            {
+              label: 'Contact principal',
+              phoneNumber: updatedProfile.emergencyPhone,
+              priority: 1,
+              isActive: true,
+            },
+          ]
+        : [],
     };
   }
 
@@ -318,5 +384,39 @@ export class RidersService {
       latitude: toNumber(place.latitude),
       longitude: toNumber(place.longitude),
     };
+  }
+
+  private serializeTrustedContacts(
+    contacts: Array<{
+      label: string;
+      phoneNumber: string;
+      priority: number;
+      isActive: boolean;
+    }>,
+    fallbackEmergencyPhone: string | null,
+  ) {
+    if (contacts.length > 0) {
+      return contacts
+        .filter((contact) => contact.isActive)
+        .map((contact) => ({
+          label: contact.label,
+          phoneNumber: contact.phoneNumber,
+          priority: contact.priority,
+          isActive: contact.isActive,
+        }));
+    }
+
+    if (!fallbackEmergencyPhone) {
+      return [];
+    }
+
+    return [
+      {
+        label: 'Contact principal',
+        phoneNumber: fallbackEmergencyPhone,
+        priority: 1,
+        isActive: true,
+      },
+    ];
   }
 }

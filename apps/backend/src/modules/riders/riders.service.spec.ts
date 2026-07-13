@@ -9,6 +9,10 @@ describe('RidersService', () => {
         findUnique: jest.fn(),
         update: jest.fn(),
       },
+      riderTrustedContact: {
+        updateMany: jest.fn(),
+        upsert: jest.fn(),
+      },
       auditLog: {
         create: jest.fn(),
       },
@@ -43,6 +47,14 @@ describe('RidersService', () => {
       emergencyPhone: '+22670000001',
       trustedContactShareMode: 'ALL_TRIPS',
       preferredTier: 'MOTO_STANDARD',
+      trustedContacts: [
+        {
+          label: 'Contact principal',
+          phoneNumber: '+22670000001',
+          priority: 1,
+          isActive: true,
+        },
+      ],
       savedPlaces: [
         {
           id: 'place-1',
@@ -77,6 +89,14 @@ describe('RidersService', () => {
         status: 'READY',
       }),
     );
+    expect(result.profile.trustedContacts).toEqual([
+      {
+        label: 'Contact principal',
+        phoneNumber: '+22670000001',
+        priority: 1,
+        isActive: true,
+      },
+    ]);
     expect(result.profile.stats.totalRideRequests).toBe(7);
     expect(result.profile.stats.totalTrips).toBe(5);
     expect(result.profile.stats.completedTrips).toBe(4);
@@ -121,6 +141,37 @@ describe('RidersService', () => {
         trustedContactShareMode: 'ALL_TRIPS',
       },
     });
+    expect(prisma.riderTrustedContact.updateMany).toHaveBeenCalledWith({
+      where: {
+        riderId: 'rider-1',
+        phoneNumber: {
+          not: '+22670000001',
+        },
+      },
+      data: {
+        isActive: false,
+      },
+    });
+    expect(prisma.riderTrustedContact.upsert).toHaveBeenCalledWith({
+      where: {
+        riderId_phoneNumber: {
+          riderId: 'rider-1',
+          phoneNumber: '+22670000001',
+        },
+      },
+      update: {
+        label: 'Contact principal',
+        priority: 1,
+        isActive: true,
+      },
+      create: {
+        riderId: 'rider-1',
+        label: 'Contact principal',
+        phoneNumber: '+22670000001',
+        priority: 1,
+        isActive: true,
+      },
+    });
     expect(prisma.auditLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId: 'user-rider-1',
@@ -130,6 +181,7 @@ describe('RidersService', () => {
         metadata: expect.objectContaining({
           hasTrustedContact: true,
           shareMode: 'ALL_TRIPS',
+          activeTrustedContacts: 1,
         }),
       }),
     });

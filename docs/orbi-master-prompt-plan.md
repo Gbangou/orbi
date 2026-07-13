@@ -210,6 +210,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   lien de partage audite si le rider a configure `ALL_TRIPS` ou `NIGHT` pendant
   la plage nocturne. La livraison externe SMS/WhatsApp/provider reste un gap
   B/C distinct et ne doit pas etre declaree fermee.
+- 13 juillet 2026: Phase 1, gap A "modele trusted contacts extensible". Le
+  backend ajoute `rider_trusted_contacts`, backfill les contacts existants,
+  synchronise le contact principal depuis l endpoint actuel, expose
+  `trustedContacts[]` dans le contrat API et utilise le premier contact actif
+  prioritaire pour l auto-share. L UI multi-contacts et la livraison provider
+  restent des gaps A/B/C separes.
 
 ## Master Prompt Operationnel
 

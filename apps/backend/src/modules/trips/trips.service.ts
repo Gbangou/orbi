@@ -848,10 +848,26 @@ export class TripsService {
         select: {
           emergencyPhone: true,
           trustedContactShareMode: true,
+          trustedContacts: {
+            where: {
+              isActive: true,
+            },
+            orderBy: {
+              priority: 'asc',
+            },
+            take: 1,
+            select: {
+              phoneNumber: true,
+            },
+          },
         },
       });
+      const trustedContactPhone =
+        trustedContact?.trustedContacts[0]?.phoneNumber ??
+        trustedContact?.emergencyPhone ??
+        null;
       const shouldAutoShare =
-        Boolean(trustedContact?.emergencyPhone) &&
+        Boolean(trustedContactPhone) &&
         shouldAutoShareWithTrustedContact(
           trustedContact?.trustedContactShareMode ??
             TrustedContactShareMode.MANUAL,

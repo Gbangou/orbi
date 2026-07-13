@@ -62,6 +62,14 @@ async function main() {
         create: {
           emergencyPhone: '+22670000001',
           preferredTier: ServiceTier.MOTO_STANDARD,
+          trustedContacts: {
+            create: {
+              label: 'Contact principal',
+              phoneNumber: '+22670000001',
+              priority: 1,
+              isActive: true,
+            },
+          },
           savedPlaces: {
             create: {
               label: 'Home',

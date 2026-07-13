@@ -85,6 +85,7 @@ const fallbackRiderProfile: RiderProfileResponse = {
       status: 'MISSING',
       safetyNote: '',
     },
+    trustedContacts: [],
     savedPlaces: [],
     stats: {
       totalRideRequests: 0,

@@ -60,6 +60,7 @@ const fallbackProfile: RiderProfileResponse = {
       status: 'MISSING',
       safetyNote: 'Ajoutez un numéro Burkina pour accélérer le partage en cas de trajet sensible.',
     },
+    trustedContacts: [],
     savedPlaces: [],
     stats: {
       totalRideRequests: 0,

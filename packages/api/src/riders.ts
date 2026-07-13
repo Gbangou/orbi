@@ -21,6 +21,12 @@ export type RiderProfileResponse = {
       status: "MISSING" | "READY";
       safetyNote: string;
     };
+    trustedContacts: Array<{
+      label: string;
+      phoneNumber: string;
+      priority: number;
+      isActive: boolean;
+    }>;
     savedPlaces: Array<{
       id: string;
       label: string;
@@ -49,6 +55,7 @@ export type TrustedContactMutationResponse = {
     status: "MISSING" | "READY";
     safetyNote: string;
   };
+  trustedContacts: RiderProfileResponse["profile"]["trustedContacts"];
 };
 
 export type SavedPlaceDeleteResponse = {
