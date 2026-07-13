@@ -248,6 +248,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   stable, reutilise le top-up existant sur retry reseau, rejette la reutilisation
   avec payload different et expose l option dans le client API. Les tests
   provider live PawaPay et reseau mobile money restent des gaps B/C.
+- 13 juillet 2026: Phase 2, gap A "webhook PawaPay wallet". Les callbacks
+  PawaPay dont le `depositId` correspond a un wallet top-up sont maintenant
+  traites avant la reconciliation des paiements course: credit wallet idempotent,
+  ledger unique, replay final explicite et journal admin `persisted_wallet_*`.
+  La preuve provider live sur reseau reel reste un gap B/C.
 
 ## Master Prompt Operationnel
 

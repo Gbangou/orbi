@@ -65,6 +65,10 @@ Utiliser la strategie `expand -> migrate traffic -> contract`:
   paiements et verifier le dashboard finance: `refund pending`, `wallet
   recovery`, `payout backlog`, `webhook ignored` et `reconciliation age` doivent
   avoir un owner et une action claire avant d accepter du trafic reel
+- verifier dans le journal webhooks que les recharges wallet PawaPay apparaissent
+  en `persisted_wallet_top_up_credited`, `persisted_wallet_top_up_failed` ou
+  `persisted_wallet_top_up_replay`; un top-up wallet ne doit jamais rester en
+  `ignored_unknown_reference`
 - en production multi-instance, brancher les adapters `rate limit` et `realtime` sur le backplane PostgreSQL partage: `RATE_LIMIT_ADAPTER=postgres`, `REALTIME_ADAPTER=postgres`, `RATE_LIMIT_STRICT=true`, `REALTIME_STRICT=true`
 - verifier que la job queue durable traite `DRIVER_RESERVATION_EXPIRY`: le timer ne fait qu enqueuer un job deduplique et le worker partage execute le sweep avec verrou PostgreSQL
 

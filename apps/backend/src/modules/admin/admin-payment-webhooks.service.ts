@@ -516,6 +516,12 @@ export class AdminPaymentWebhooksService {
       ];
     }
 
-    return ['persisted_and_reconciled', 'persisted_idempotent_replay'];
+    return [
+      'persisted_and_reconciled',
+      'persisted_idempotent_replay',
+      'persisted_wallet_top_up_credited',
+      'persisted_wallet_top_up_failed',
+      'persisted_wallet_top_up_replay',
+    ];
   }
 }

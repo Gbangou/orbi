@@ -138,6 +138,12 @@ describe('PaymentsService', () => {
           id: 'wallet-transaction-1',
         }),
       },
+      walletTopUp: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        updateMany: jest.fn().mockResolvedValue({
+          count: 1,
+        }),
+      },
       $transaction: jest.fn(async (callback: (tx: unknown) => unknown) =>
         callback(prisma),
       ),
@@ -478,6 +484,95 @@ describe('PaymentsService', () => {
 
     expect(result.nextAction).toBe('ignored_unknown_reference');
     expect(result.reconciledAttemptCount).toBe(0);
+  });
+
+  it('credits a rider wallet when a PawaPay webhook belongs to a wallet top-up', async () => {
+    const { service, prisma } = createService('pawapay');
+    prisma.walletTopUp.findUnique.mockResolvedValue({
+      id: 'topup-1',
+      walletId: 'wallet-rider-1',
+      userId: 'rider-user-1',
+      amount: new Prisma.Decimal(2500),
+      currency: 'XOF',
+      status: 'PENDING',
+      depositId: '7f344d0b-476e-4f94-8c99-f1e9d09d7c65',
+    });
+
+    const result = await service.handlePawaPayWebhook(
+      JSON.stringify({
+        depositId: '7f344d0b-476e-4f94-8c99-f1e9d09d7c65',
+        status: 'COMPLETED',
+      }),
+      undefined,
+      {
+        event: 'deposit.completed',
+        depositId: '7f344d0b-476e-4f94-8c99-f1e9d09d7c65',
+        status: 'COMPLETED',
+      },
+    );
+
+    expect(result.nextAction).toBe('persisted_wallet_top_up_credited');
+    expect(result).toMatchObject({
+      walletTopUpId: 'topup-1',
+      reconciledAttemptCount: 0,
+    });
+    expect(prisma.paymentAttempt.updateMany).not.toHaveBeenCalled();
+    expect(prisma.walletTopUp.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'topup-1',
+        status: {
+          notIn: ['COMPLETED', 'FAILED', 'CANCELLED'],
+        },
+      },
+      data: { status: 'COMPLETED' },
+    });
+    expect(prisma.walletTransaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        walletId: 'wallet-rider-1',
+        type: 'CREDIT',
+        amount: new Prisma.Decimal(2500),
+        reference: '7f344d0b-476e-4f94-8c99-f1e9d09d7c65',
+      }),
+    });
+    expect(prisma.wallet.update).toHaveBeenCalledWith({
+      where: { id: 'wallet-rider-1' },
+      data: { balance: { increment: new Prisma.Decimal(2500) } },
+    });
+    expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'persisted_wallet_top_up_credited',
+        transactionRef: '7f344d0b-476e-4f94-8c99-f1e9d09d7c65',
+        paymentAttemptId: null,
+        userId: 'rider-user-1',
+      }),
+    });
+  });
+
+  it('treats final wallet top-up webhooks as idempotent replays', async () => {
+    const { service, prisma } = createService('pawapay');
+    prisma.walletTopUp.findUnique.mockResolvedValue({
+      id: 'topup-1',
+      walletId: 'wallet-rider-1',
+      userId: 'rider-user-1',
+      amount: new Prisma.Decimal(2500),
+      currency: 'XOF',
+      status: 'COMPLETED',
+      depositId: '7f344d0b-476e-4f94-8c99-f1e9d09d7c65',
+    });
+
+    const result = await service.handlePawaPayWebhook(
+      '{}',
+      undefined,
+      {
+        event: 'deposit.completed',
+        depositId: '7f344d0b-476e-4f94-8c99-f1e9d09d7c65',
+        status: 'COMPLETED',
+      },
+    );
+
+    expect(result.nextAction).toBe('persisted_wallet_top_up_replay');
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.wallet.update).not.toHaveBeenCalled();
   });
 
   it('ignores successful webhooks when provider amount does not match the attempt', async () => {

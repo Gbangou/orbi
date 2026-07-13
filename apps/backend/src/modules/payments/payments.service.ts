@@ -459,12 +459,53 @@ export class PaymentsService {
     let nextAction:
       | 'persisted_and_reconciled'
       | 'persisted_idempotent_replay'
+      | 'persisted_wallet_top_up_credited'
+      | 'persisted_wallet_top_up_failed'
+      | 'persisted_wallet_top_up_replay'
       | 'ignored_amount_mismatch'
       | 'ignored_conflicting_provider_reference'
       | 'ignored_unknown_reference'
       | 'ignored_missing_reference' = transactionRef
       ? 'ignored_unknown_reference'
       : 'ignored_missing_reference';
+
+    const walletTopUpReconciliation =
+      providerContext.providerKey === 'pawapay' && transactionRef
+        ? await this.reconcileWalletTopUpWebhook({
+            depositId: transactionRef,
+            event,
+            payload,
+          })
+        : null;
+
+    if (walletTopUpReconciliation) {
+      const result = {
+        received: true,
+        event,
+        transactionRef,
+        provider: providerContext.providerKey,
+        providerReference,
+        reconciledAttemptCount,
+        nextAction: walletTopUpReconciliation.nextAction,
+        walletTopUpId: walletTopUpReconciliation.walletTopUpId,
+      };
+
+      await this.persistWebhookEvent({
+        provider,
+        event,
+        transactionRef,
+        providerReference,
+        nextAction: result.nextAction,
+        reconciledAttemptCount,
+        signatureVerified,
+        payload,
+        signatureContext,
+        paymentAttemptId: null,
+        userId: walletTopUpReconciliation.userId,
+      });
+
+      return result;
+    }
 
     if (providerReference) {
       const existingProviderAttempt =
@@ -1986,6 +2027,137 @@ export class PaymentsService {
       reconciliationPayload: payload as unknown as Prisma.InputJsonValue,
       failureReason: this.resolveFailureReason(nextStatus, payload, event),
     };
+  }
+
+  private async reconcileWalletTopUpWebhook(input: {
+    depositId: string;
+    event: string;
+    payload: PaymentWebhookPayload;
+  }) {
+    const topUp = await this.prisma.walletTopUp.findUnique({
+      where: { depositId: input.depositId },
+      select: {
+        id: true,
+        walletId: true,
+        userId: true,
+        amount: true,
+        currency: true,
+        status: true,
+        depositId: true,
+      },
+    });
+
+    if (!topUp) {
+      return null;
+    }
+
+    if (topUp.status === 'COMPLETED' || topUp.status === 'FAILED') {
+      return {
+        walletTopUpId: topUp.id,
+        userId: topUp.userId,
+        nextAction: 'persisted_wallet_top_up_replay' as const,
+      };
+    }
+
+    const providerStatus = this.extractWebhookTopUpStatus(
+      input.event,
+      input.payload,
+    );
+
+    if (providerStatus === 'COMPLETED') {
+      const reference = topUp.depositId ?? topUp.id;
+
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          const update = await tx.walletTopUp.updateMany({
+            where: {
+              id: topUp.id,
+              status: {
+                notIn: ['COMPLETED', 'FAILED', 'CANCELLED'],
+              },
+            },
+            data: { status: 'COMPLETED' },
+          });
+
+          if (update.count === 0) {
+            return;
+          }
+
+          await tx.walletTransaction.create({
+            data: {
+              walletId: topUp.walletId,
+              type: 'CREDIT',
+              amount: topUp.amount,
+              reference,
+              description: `Recharge Mobile Money ${Number(topUp.amount).toLocaleString('fr-BF')} XOF`,
+              metadata: {
+                topUpId: topUp.id,
+                depositId: topUp.depositId,
+                provider: 'PAWAPAY',
+                providerStatus,
+              } satisfies Prisma.InputJsonObject,
+            },
+          });
+          await tx.wallet.update({
+            where: { id: topUp.walletId },
+            data: { balance: { increment: topUp.amount } },
+          });
+        });
+      } catch (error) {
+        if (!isPrismaUniqueConstraintError(error)) {
+          throw error;
+        }
+
+        return {
+          walletTopUpId: topUp.id,
+          userId: topUp.userId,
+          nextAction: 'persisted_wallet_top_up_replay' as const,
+        };
+      }
+
+      return {
+        walletTopUpId: topUp.id,
+        userId: topUp.userId,
+        nextAction: 'persisted_wallet_top_up_credited' as const,
+      };
+    }
+
+    await this.prisma.walletTopUp.updateMany({
+      where: {
+        id: topUp.id,
+        status: {
+          notIn: ['COMPLETED', 'FAILED', 'CANCELLED'],
+        },
+      },
+      data: {
+        status: 'FAILED',
+        failureReason: 'PawaPay deposit failed',
+      },
+    });
+
+    return {
+      walletTopUpId: topUp.id,
+      userId: topUp.userId,
+      nextAction: 'persisted_wallet_top_up_failed' as const,
+    };
+  }
+
+  private extractWebhookTopUpStatus(
+    event: string,
+    payload: PaymentWebhookPayload,
+  ) {
+    const data = this.asRecord(payload.data);
+    const status = (
+      this.stringValue(payload.status) ??
+      this.stringValue(payload.Status) ??
+      this.stringValue(data.status) ??
+      this.stringValue(data.Status) ??
+      event
+    ).toUpperCase();
+
+    return status === 'COMPLETED' || status === 'SUCCESSFUL'
+      ? 'COMPLETED'
+      : 'FAILED';
   }
 
   private async recordSuccessfulPaymentLedgerIfNeeded(

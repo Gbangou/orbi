@@ -6,6 +6,9 @@ const paymentWebhookProviders = ['FLUTTERWAVE', 'CINETPAY', 'PAWAPAY'] as const;
 const paymentWebhookActions = [
   'persisted_and_reconciled',
   'persisted_idempotent_replay',
+  'persisted_wallet_top_up_credited',
+  'persisted_wallet_top_up_failed',
+  'persisted_wallet_top_up_replay',
   'ignored_amount_mismatch',
   'ignored_conflicting_provider_reference',
   'ignored_unknown_reference',
