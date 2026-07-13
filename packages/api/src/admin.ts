@@ -1588,7 +1588,7 @@ export async function verifyAdminPaymentAttemptWithProvider(
 export async function refundAdminPaymentAttempt(
   client: OrbiApiClient,
   paymentAttemptId: string,
-  payload: { reason?: string } = {},
+  payload: { reason?: string; idempotencyKey?: string } = {},
 ) {
   return client.request<AdminPaymentAttemptRefundResponse>(
     `${apiRoutes.admin.paymentAttempts}/${paymentAttemptId}/refund`,

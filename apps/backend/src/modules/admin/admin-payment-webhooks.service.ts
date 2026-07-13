@@ -451,6 +451,7 @@ export class AdminPaymentWebhooksService {
         actorUserId: auth.user.id,
         actorName: auth.user.fullName ?? null,
         reason: payload.reason?.trim() || null,
+        idempotencyKey: payload.idempotencyKey?.trim() || null,
       },
     );
 
@@ -458,9 +459,11 @@ export class AdminPaymentWebhooksService {
       data: {
         userId: auth.user.id,
         action:
-          refund.action === 'refund_pending'
-            ? 'PAYMENT_ATTEMPT_REFUND_REQUESTED'
-            : 'PAYMENT_ATTEMPT_REFUNDED',
+          refund.action === 'already_refunded'
+            ? 'PAYMENT_ATTEMPT_REFUND_REPLAYED'
+            : refund.action === 'refund_pending'
+              ? 'PAYMENT_ATTEMPT_REFUND_REQUESTED'
+              : 'PAYMENT_ATTEMPT_REFUNDED',
         entityType: 'PAYMENT_ATTEMPT',
         entityId: paymentAttemptId,
         metadata: {
@@ -472,6 +475,7 @@ export class AdminPaymentWebhooksService {
           providerRefundReference: refund.providerRefundReference,
           walletReversal: refund.walletReversal,
           reason: payload.reason?.trim() || null,
+          idempotencyKey: payload.idempotencyKey?.trim() || null,
         } satisfies Prisma.InputJsonObject,
       },
     });

@@ -9,6 +9,7 @@ import {
   isSafeAdminMutationRequest,
   isSafeOpaqueAdminId,
 } from '../../../../../admin-server-security';
+import { isSafeAdminGeneratedIdempotencyKey } from '../../../../../admin-idempotency';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,11 +35,15 @@ export async function POST(
 
   try {
     const authClient = await getAdminServerAuthClient();
+    const idempotencyKey = request.headers.get('idempotency-key');
     const response = await refundAdminPaymentAttempt(
       authClient,
       paymentAttemptId,
       {
         reason: 'Remboursement ops depuis le journal webhooks.',
+        idempotencyKey: isSafeAdminGeneratedIdempotencyKey(idempotencyKey)
+          ? idempotencyKey.trim()
+          : undefined,
       },
     );
 

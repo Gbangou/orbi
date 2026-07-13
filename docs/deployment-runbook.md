@@ -59,6 +59,9 @@ Utiliser la strategie `expand -> migrate traffic -> contract`:
 - tous les POST argent declenches par mobile doivent transmettre une
   `Idempotency-Key` stable par intention utilisateur: checkout intent, wallet
   top-up, remboursement ou ajustement wallet cote ops
+- les remboursements admin doivent aussi transmettre une `idempotencyKey` et
+  conserver le meme motif lors d un retry; une meme cle avec un motif different
+  doit etre traitee comme incident d usage, pas comme nouveau remboursement
 - ne jamais lier une mise a jour critique de paiement a un seul process en memoire
 - preferer des traitements rejouables et journalises
 - avant chaque pilote ou release argent, ouvrir la console admin section

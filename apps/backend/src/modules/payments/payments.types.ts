@@ -96,6 +96,7 @@ export type PaymentRefundInput = {
   actorUserId: string;
   actorName?: string | null;
   reason?: string | null;
+  idempotencyKey?: string | null;
 };
 
 export type PaymentRefundProviderResult = {

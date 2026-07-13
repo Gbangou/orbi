@@ -805,6 +805,7 @@ describe('PaymentsService', () => {
       actorUserId: 'ops-1',
       actorName: 'Ops Orbi',
       reason: 'Rider charged after cancellation.',
+      idempotencyKey: 'refund-key-001',
     });
 
     expect(prisma.paymentAttempt.update).toHaveBeenCalledWith(
@@ -815,6 +816,8 @@ describe('PaymentsService', () => {
             refund: expect.objectContaining({
               providerRefundReference: 'flutterwave_refund_payment-1',
               reason: 'Rider charged after cancellation.',
+              idempotencyKey: 'refund-key-001',
+              idempotencyHash: expect.any(String),
             }),
           }),
         }),
@@ -877,6 +880,39 @@ describe('PaymentsService', () => {
     expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
     expect(result.action).toBe('already_refunded');
     expect(result.providerRefundReference).toBe('cinetpay_refund_payment-1');
+  });
+
+  it('rejects refund idempotency key reuse when the refund payload changes', async () => {
+    const { service, prisma } = createService();
+
+    prisma.paymentAttempt.findUnique.mockResolvedValue({
+      id: 'payment-1',
+      status: 'REFUNDED',
+      amount: { toString: () => '2400', valueOf: () => 2400 },
+      currency: 'XOF',
+      provider: 'FLUTTERWAVE',
+      providerReference: 'fw_ref_123',
+      providerMetadata: {
+        refund: {
+          idempotencyHash: 'different-refund-hash',
+        },
+      },
+      transactionRef: 'orbi_123_ride-request-1',
+      updatedAt: new Date('2026-05-01T08:05:00.000Z'),
+      rideRequest: {
+        trip: null,
+      },
+    });
+
+    await expect(
+      service.refundPaymentAttempt('payment-1', {
+        actorUserId: 'ops-1',
+        reason: 'Different reason.',
+        idempotencyKey: 'refund-key-001',
+      }),
+    ).rejects.toThrow(
+      'The provided idempotency key was already used with a different refund payload.',
+    );
   });
 
   it('initiates a Flutterwave provider refund and queues verification until provider processing completes', async () => {

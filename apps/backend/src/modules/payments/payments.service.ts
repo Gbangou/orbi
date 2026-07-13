@@ -306,6 +306,12 @@ export class PaymentsService {
     input: PaymentRefundInput,
   ) {
     const refundedAt = new Date();
+    const normalizedIdempotencyKey = this.normalizeIdempotencyKey(
+      input.idempotencyKey ?? undefined,
+    );
+    const refundIdempotencyHash = normalizedIdempotencyKey
+      ? this.buildRefundIdempotencyHash(paymentAttemptId, input)
+      : undefined;
     const result = await this.prisma.$transaction(async (tx) => {
       const attempt = await tx.paymentAttempt.findUnique({
         where: {
@@ -337,6 +343,11 @@ export class PaymentsService {
         attempt.status === 'REFUNDED' ||
         attempt.status === 'REFUND_PENDING'
       ) {
+        this.assertRefundIdempotencyReplay(
+          attempt.providerMetadata,
+          refundIdempotencyHash,
+        );
+
         return {
           action:
             attempt.status === 'REFUNDED'
@@ -377,6 +388,8 @@ export class PaymentsService {
           requestedByUserId: input.actorUserId,
           requestedByName: input.actorName ?? null,
           reason: input.reason ?? null,
+          idempotencyKey: normalizedIdempotencyKey ?? null,
+          idempotencyHash: refundIdempotencyHash ?? null,
           providerMode: providerRefund.providerMode,
           providerStatus: providerRefund.status,
           providerRefundId: providerRefund.providerRefundReference,
@@ -973,6 +986,42 @@ export class PaymentsService {
         }),
       )
       .digest('hex');
+  }
+
+  private buildRefundIdempotencyHash(
+    paymentAttemptId: string,
+    input: PaymentRefundInput,
+  ) {
+    return createHash('sha256')
+      .update(
+        JSON.stringify({
+          paymentAttemptId,
+          actorUserId: input.actorUserId,
+          reason: input.reason ?? null,
+        }),
+      )
+      .digest('hex');
+  }
+
+  private assertRefundIdempotencyReplay(
+    providerMetadata: unknown,
+    refundIdempotencyHash: string | undefined,
+  ) {
+    if (!refundIdempotencyHash) {
+      return;
+    }
+
+    const refund = jsonObject(jsonObject(providerMetadata).refund);
+    const existingHash =
+      typeof refund.idempotencyHash === 'string'
+        ? refund.idempotencyHash
+        : null;
+
+    if (existingHash && existingHash !== refundIdempotencyHash) {
+      throw new BadRequestException(
+        'The provided idempotency key was already used with a different refund payload.',
+      );
+    }
   }
 
   private serializeExistingCheckoutIntent(attempt: {

@@ -253,6 +253,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   traites avant la reconciliation des paiements course: credit wallet idempotent,
   ledger unique, replay final explicite et journal admin `persisted_wallet_*`.
   La preuve provider live sur reseau reel reste un gap B/C.
+- 13 juillet 2026: Phase 2, gap A "idempotence refund admin". Les remboursements
+  admin acceptent maintenant `idempotencyKey`, stockent un hash d intention dans
+  les metadata refund, rejettent une reutilisation de cle avec payload different
+  et distinguent les replays dans l audit ops. La confirmation provider live
+  reste un gap B/C.
 
 ## Master Prompt Operationnel
 

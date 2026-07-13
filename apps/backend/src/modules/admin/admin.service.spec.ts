@@ -2139,6 +2139,7 @@ describe('AdminService', () => {
       'payment-1',
       {
         reason: 'Course annulee apres debit.',
+        idempotencyKey: 'refund-key-001',
       },
       {
         user: {
@@ -2155,6 +2156,7 @@ describe('AdminService', () => {
         actorUserId: 'ops-1',
         actorName: 'Ops Orbi',
         reason: 'Course annulee apres debit.',
+        idempotencyKey: 'refund-key-001',
       },
     );
     expect(prisma.auditLog.create).toHaveBeenCalledWith({

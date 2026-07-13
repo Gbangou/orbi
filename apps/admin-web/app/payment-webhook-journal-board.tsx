@@ -8,6 +8,7 @@ import {
   type AdminPaymentWebhookInvestigationResponse,
   type AdminPaymentWebhookReplayResponse,
 } from '@orbi/api';
+import { createAdminIdempotencyKey } from './admin-idempotency';
 import { fetchAdminJson, postAdminMutation } from './admin-client-fetch';
 import { formatAdminDateTime } from './admin-ops-kernel';
 
@@ -263,6 +264,13 @@ export function PaymentWebhookJournalBoard({
     try {
       const response = await postAdminMutation<AdminPaymentAttemptRefundResponse>(
         `/api/admin/payment-attempts/${paymentAttemptId}/refund`,
+        {
+          headers: {
+            'Idempotency-Key': createAdminIdempotencyKey(
+              `refund-${paymentAttemptId}`,
+            ),
+          },
+        },
       );
 
       setJournalState((current) =>
