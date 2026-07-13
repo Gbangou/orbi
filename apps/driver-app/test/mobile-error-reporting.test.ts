@@ -1,6 +1,7 @@
 import {
   flushDriverMobileErrorReports,
   readDriverMobileErrorReports,
+  reportDriverRenderCrash,
   driverMobileErrorReportQueueKey,
 } from '../lib/mobile-error-reporting';
 import { driverSessionStorage } from '../lib/session-storage';
@@ -12,6 +13,10 @@ jest.mock('../lib/session-storage', () => ({
     setItem: jest.fn(),
     removeItem: jest.fn(),
   },
+}));
+
+jest.mock('../lib/auth', () => ({
+  restoreDriverSession: jest.fn().mockRejectedValue(new Error('no session in test')),
 }));
 
 jest.mock('@orbi/api', () => {
@@ -113,6 +118,28 @@ describe('driver mobile error reporting queue', () => {
     expect(mockedSubmitMobileErrorReportsWithApi).not.toHaveBeenCalled();
     expect(mockedStorage.removeItem).not.toHaveBeenCalledWith(
       driverMobileErrorReportQueueKey,
+    );
+  });
+
+  it('derives the crash surface from pathname instead of always reporting unknown', async () => {
+    // Meme defaut que cote rider: le crash de rendu renvoyait toujours
+    // "unknown" quel que soit l'ecran chauffeur casse. Verifie que le pathname
+    // est desormais traduit en surface exploitable pour le triage support.
+    mockedStorage.getItem.mockResolvedValue(null);
+    mockedStorage.setItem.mockResolvedValue(undefined);
+
+    reportDriverRenderCrash(new Error('boom'), { pathname: '/(tabs)/offres' });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockedStorage.setItem).toHaveBeenCalledWith(
+      driverMobileErrorReportQueueKey,
+      expect.stringContaining('"surface":"driver-availability"'),
+    );
+    expect(mockedStorage.setItem).not.toHaveBeenCalledWith(
+      driverMobileErrorReportQueueKey,
+      expect.stringContaining('"surface":"unknown"'),
     );
   });
 });

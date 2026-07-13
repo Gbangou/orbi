@@ -581,6 +581,62 @@ function buildOrbiClientErrorFingerprint(input: {
   return (hash >>> 0).toString(36);
 }
 
+// Deduit la surface d'un crash de rendu (React ErrorBoundary) depuis le
+// pathname du router, afin que "Surface: unknown" cesse d'etre la valeur
+// systematique de tout crash quel que soit l'ecran ou il survient.
+export function resolveMobileRenderCrashSurface(
+  pathname: string | null | undefined,
+): OrbiClientErrorSurface {
+  if (typeof pathname !== "string" || pathname.length === 0) {
+    return "unknown";
+  }
+
+  const path = pathname.toLowerCase();
+
+  if (path.includes("auth") || path.includes("onboarding")) {
+    return "auth";
+  }
+
+  if (
+    path.includes("payment") ||
+    path.includes("wallet") ||
+    path.includes("receipt") ||
+    path.includes("revenus")
+  ) {
+    return "payments";
+  }
+
+  if (
+    path.includes("sos") ||
+    path.includes("safety") ||
+    path.includes("incident")
+  ) {
+    return "safety";
+  }
+
+  if (path.includes("activity") || path.includes("trip")) {
+    return "active-trip";
+  }
+
+  if (
+    path.includes("account") ||
+    path.includes("profil") ||
+    path.includes("profile")
+  ) {
+    return "profile";
+  }
+
+  if (path.includes("offres") || path.includes("accueil")) {
+    return "driver-availability";
+  }
+
+  if (path.includes("book") || path.includes("home")) {
+    return "booking";
+  }
+
+  return "unknown";
+}
+
 function inferOrbiErrorSurface(error: unknown): OrbiClientErrorSurface {
   const message = normalizeOrbiErrorMessage(error);
 

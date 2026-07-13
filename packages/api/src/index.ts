@@ -103,6 +103,7 @@ export {
   classifyOrbiClientError,
   createOrbiClientErrorReport,
   createOrbiClientErrorReportFromClassification,
+  resolveMobileRenderCrashSurface,
 } from "./error-reporting";
 
 export {

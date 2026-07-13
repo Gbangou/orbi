@@ -2,6 +2,7 @@ import {
   clearRiderMobileErrorReports,
   flushRiderMobileErrorReports,
   readRiderMobileErrorReports,
+  reportRiderRenderCrash,
   riderMobileErrorReportQueueKey,
 } from '../lib/mobile-error-reporting';
 import { riderSessionStorage } from '../lib/session-storage';
@@ -13,6 +14,10 @@ jest.mock('../lib/session-storage', () => ({
     setItem: jest.fn(),
     removeItem: jest.fn(),
   },
+}));
+
+jest.mock('../lib/auth', () => ({
+  restoreRiderSession: jest.fn().mockRejectedValue(new Error('no session in test')),
 }));
 
 jest.mock('@orbi/api', () => {
@@ -135,6 +140,44 @@ describe('rider mobile error reporting queue', () => {
 
     expect(mockedStorage.removeItem).toHaveBeenCalledWith(
       riderMobileErrorReportQueueKey,
+    );
+  });
+
+  it('derives the crash surface from pathname instead of always reporting unknown', async () => {
+    // Le crash de rendu (React ErrorBoundary) recevait toujours "unknown" comme
+    // surface, meme quand le pathname de l'ecran casse etait connu — le support
+    // ne pouvait jamais savoir quel ecran corriger. Verifie que le pathname est
+    // desormais traduit en surface exploitable.
+    mockedStorage.getItem.mockResolvedValue(null);
+    mockedStorage.setItem.mockResolvedValue(undefined);
+
+    reportRiderRenderCrash(new Error('boom'), { pathname: '/book' });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockedStorage.setItem).toHaveBeenCalledWith(
+      riderMobileErrorReportQueueKey,
+      expect.stringContaining('"surface":"booking"'),
+    );
+    expect(mockedStorage.setItem).not.toHaveBeenCalledWith(
+      riderMobileErrorReportQueueKey,
+      expect.stringContaining('"surface":"unknown"'),
+    );
+  });
+
+  it('falls back to unknown surface when no pathname is available', async () => {
+    mockedStorage.getItem.mockResolvedValue(null);
+    mockedStorage.setItem.mockResolvedValue(undefined);
+
+    reportRiderRenderCrash(new Error('boom'), {});
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockedStorage.setItem).toHaveBeenCalledWith(
+      riderMobileErrorReportQueueKey,
+      expect.stringContaining('"surface":"unknown"'),
     );
   });
 });

@@ -1,6 +1,7 @@
 import {
   createOrbiClientErrorReportFromClassification,
   normalizeOrbiClientErrorReportQueue,
+  resolveMobileRenderCrashSurface,
   submitMobileErrorReportsWithApi,
   type OrbiClientErrorClassification,
   type OrbiClientErrorReport,
@@ -11,27 +12,35 @@ import { driverSessionStorage } from './session-storage';
 export const driverMobileErrorReportQueueKey = 'orbi.driver.mobile-error-reports';
 const maxQueuedReports = 20;
 
-const renderCrashClassification: OrbiClientErrorClassification = {
-  code: 'MOB-GENERIC-API',
-  surface: 'unknown',
-  severity: 'critical',
-  owner: 'engineering',
-  retryPolicy: 'manual-refresh',
-  userMessage: "L'application a rencontre un probleme inattendu.",
-  shouldClearSessionToken: false,
-  shouldNavigateToAuth: false,
-  reportable: true,
-};
+function buildRenderCrashClassification(
+  pathname?: unknown,
+): OrbiClientErrorClassification {
+  return {
+    code: 'MOB-GENERIC-API',
+    surface: resolveMobileRenderCrashSurface(
+      typeof pathname === 'string' ? pathname : null,
+    ),
+    severity: 'critical',
+    owner: 'engineering',
+    retryPolicy: 'manual-refresh',
+    userMessage: "L'application a rencontre un probleme inattendu.",
+    shouldClearSessionToken: false,
+    shouldNavigateToAuth: false,
+    reportable: true,
+  };
+}
 
 // Signale un crash de rendu (React ErrorBoundary) comme critique, toujours
 // notifiable au support — memes garanties que les rapports d'erreur reseau,
-// avec une tentative d'envoi immediat si une session est deja active.
+// avec une tentative d'envoi immediat si une session est deja active. La
+// surface est deduite du pathname courant pour que le support sache quel
+// ecran a casse au lieu de recevoir systematiquement "unknown".
 export function reportDriverRenderCrash(
   error: unknown,
   context?: Record<string, unknown>,
 ) {
   void enqueueDriverMobileErrorReport(error, {
-    classification: renderCrashClassification,
+    classification: buildRenderCrashClassification(context?.pathname),
     context,
   })
     .then(() => import('./auth'))
