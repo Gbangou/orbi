@@ -19,10 +19,7 @@ import {
   apiWeatherConditions,
 } from '@orbi/domain';
 
-export class EstimatePricingQueryDto {
-  @IsIn(apiVehicleTypes)
-  vehicleType!: (typeof apiVehicleTypes)[number];
-
+class BasePricingQueryDto {
   @IsOptional()
   @IsIn(apiServiceTiers)
   serviceTier?: (typeof apiServiceTiers)[number];
@@ -111,4 +108,15 @@ export class EstimatePricingQueryDto {
   @Type(() => Number)
   @IsNumber()
   destinationLongitude?: number;
+}
+
+export class EstimatePricingQueryDto extends BasePricingQueryDto {
+  @IsIn(apiVehicleTypes)
+  vehicleType!: (typeof apiVehicleTypes)[number];
+}
+
+export class RideOptionsPricingQueryDto extends BasePricingQueryDto {
+  @IsOptional()
+  @IsIn(apiVehicleTypes)
+  vehicleType?: (typeof apiVehicleTypes)[number];
 }

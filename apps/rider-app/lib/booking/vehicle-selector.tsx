@@ -67,6 +67,10 @@ export const VehicleSelector = memo(function VehicleSelector({
     return { tone: isMoto ? 'teal' : option.tier === 'car-comfort' ? 'sky' : 'amber' };
   }
 
+  function buildSignalLabel(option: RideOption) {
+    return option.marketplace?.signalLabel ?? 'Estime';
+  }
+
   if (isRefreshing && options.length === 0) {
     return (
       <View style={styles.loadingRow}>
@@ -114,6 +118,7 @@ export const VehicleSelector = memo(function VehicleSelector({
               <Text style={[styles.name, isSelected && { color: theme.colors.text }]}>{title}</Text>
               <View style={styles.etaRow}>
                 <Text style={styles.eta}>{option.etaMinutes} min</Text>
+                <Text style={styles.signalText}>{buildSignalLabel(option)}</Text>
                 {option.marketplace?.nearbyDrivers != null && option.marketplace.nearbyDrivers > 0 ? (
                   <View style={[styles.driverCountBadge, { borderColor: accentColor + '60' }]}>
                     <Text style={[styles.driverCountText, { color: accentColor }]}>
@@ -125,8 +130,12 @@ export const VehicleSelector = memo(function VehicleSelector({
               <Text style={[styles.fare, isSelected && { color: accentColor }]}>
                 {formatXof(discountedFare)}
               </Text>
-              {option.marketplace?.etaConfidence === 'LOW' ? (
-                <Text style={styles.lowConfidence}>Disponibilité limitée</Text>
+              {option.marketplace?.etaConfidence === 'LOW' || option.marketplace?.etaSource === 'DEGRADED' ? (
+                <Text style={styles.lowConfidence}>
+                  {option.marketplace?.etaSource === 'DEGRADED'
+                    ? 'ETA a confirmer'
+                    : 'Disponibilite limitee'}
+                </Text>
               ) : null}
             </Pressable>
           );
@@ -159,6 +168,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   vehicleAura: { position: 'absolute', width: 70, height: 40, borderRadius: 22, top: 7 },
   svgWrap: { width: 84, height: 54, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   etaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  signalText: {
+    fontSize: 9,
+    color: theme.colors.textMuted,
+    fontWeight: '700',
+  },
   driverCountBadge: {
     borderRadius: 999,
     borderWidth: 1,

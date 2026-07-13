@@ -158,6 +158,21 @@ const ServiceVehicleIcon = memo(function ServiceVehicleIcon({ tier }: { tier: st
   return <VehicleIllustration tier={tier} width={40} height={30} />;
 });
 
+function buildMarketplaceTrustLine(option: RideOption) {
+  const marketplace = option.marketplace;
+  if (!marketplace) {
+    return `${option.etaMinutes} min estime · ${option.capacity}`;
+  }
+
+  const signalLabel = marketplace.signalLabel || 'Estime';
+  const supplyLabel =
+    marketplace.nearbyDrivers > 0
+      ? `${marketplace.nearbyDrivers} proches`
+      : marketplace.availabilityLabel;
+
+  return `${option.etaMinutes} min ${signalLabel.toLowerCase()} · ${supplyLabel}`;
+}
+
 // ── Service option row ────────────────────────────────────────────────────────
 
 const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideOption; onPress: () => void }) {
@@ -183,9 +198,14 @@ const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideO
         </View>
         <View style={styles.serviceInfo}>
           <Text style={styles.serviceTitle}>{option.title}</Text>
-          <Text style={styles.serviceMeta}>
-            {`${option.etaMinutes} min · ${option.capacity}`}
+          <Text style={styles.serviceMeta} numberOfLines={1} ellipsizeMode="tail">
+            {buildMarketplaceTrustLine(option)}
           </Text>
+          {option.marketplace?.reliabilityNote ? (
+            <Text style={styles.serviceTrustNote} numberOfLines={1} ellipsizeMode="tail">
+              {option.marketplace.reliabilityNote}
+            </Text>
+          ) : null}
         </View>
         <View style={{ alignItems: 'flex-end', gap: 2 }}>
           <Text style={styles.serviceFare}>{formatXof(option.fare)}</Text>
@@ -894,6 +914,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   serviceMeta: {
     fontSize: 13,
+    color: theme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+  },
+  serviceTrustNote: {
+    fontSize: 11,
     color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
   },

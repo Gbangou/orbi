@@ -492,7 +492,7 @@ describe('PricingService — estimateRideOptions catalogue Burkina', () => {
     }
   });
 
-  it('marketplace expose nearbyDrivers et etaConfidence', async () => {
+  it('marketplace expose nearbyDrivers, etaConfidence et sources de signal', async () => {
     const { service } = createService();
     const preview = await service.estimateRideOptions({
       distanceKm: 5.8,
@@ -503,6 +503,28 @@ describe('PricingService — estimateRideOptions catalogue Burkina', () => {
     for (const option of preview.options) {
       expect(option.marketplace?.nearbyDrivers).toBeGreaterThan(0);
       expect(['LOW', 'MEDIUM', 'HIGH']).toContain(option.marketplace?.etaConfidence);
+      expect(['LIVE', 'ESTIMATED', 'DEGRADED']).toContain(option.marketplace?.etaSource);
+      expect(['LIVE', 'ESTIMATED', 'DEGRADED']).toContain(option.marketplace?.supplySource);
+      expect(typeof option.marketplace?.signalLabel).toBe('string');
+      expect(typeof option.marketplace?.reliabilityNote).toBe('string');
+      expect(option.marketplace?.supplySource).toBe('LIVE');
+      expect(option.marketplace?.signalFreshnessSeconds).toBeGreaterThan(0);
+    }
+  });
+
+  it('marque les options estimees quand aucun signal supply live n est fourni', async () => {
+    const { service } = createService();
+    const preview = await service.estimateRideOptions({
+      distanceKm: 5.8,
+      durationMinutes: 16,
+      demandLevel: 'NORMAL',
+    } as never);
+
+    for (const option of preview.options) {
+      expect(option.marketplace?.etaSource).toBe('ESTIMATED');
+      expect(option.marketplace?.supplySource).toBe('ESTIMATED');
+      expect(option.marketplace?.signalFreshnessSeconds).toBeNull();
+      expect(option.marketplace?.signalLabel).toBe('Estime');
     }
   });
 

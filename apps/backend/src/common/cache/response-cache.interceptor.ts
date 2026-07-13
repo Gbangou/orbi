@@ -4,8 +4,8 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { mergeMap } from 'rxjs/operators';
 import { createHash } from 'crypto';
 import type { Request, Response } from 'express';
 
@@ -35,8 +35,8 @@ export class ResponseCacheInterceptor implements NestInterceptor {
     }
 
     return next.handle().pipe(
-      map((data) => {
-        if (res.headersSent) return data;
+      mergeMap((data) => {
+        if (res.headersSent) return of(data);
 
         const body = JSON.stringify(data);
         const etag = `"${createHash('sha256').update(body).digest('hex').slice(0, 32)}"`;
@@ -46,11 +46,11 @@ export class ResponseCacheInterceptor implements NestInterceptor {
 
         const ifNoneMatch = req.headers['if-none-match'];
         if (ifNoneMatch && ifNoneMatch === etag) {
-          res.status(304).end();
-          return null;
+          res.status(304);
+          return of(undefined);
         }
 
-        return data;
+        return of(data);
       }),
     );
   }

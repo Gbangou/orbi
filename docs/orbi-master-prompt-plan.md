@@ -267,6 +267,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   webhooks ignores, wallet recovery et payout backlog avant trafic argent reel.
   Ce gate cloture la partie code Phase 2; provider live, secrets production et
   tests reseau reel restent B/C et seront geres hors code.
+- 13 juillet 2026: debut Phase 3, gap A "ETA/supply estimes vs live". Les
+  options de trajet exposent maintenant `etaSource`, `supplySource`,
+  `signalFreshnessSeconds`, `signalLabel` et `reliabilityNote`; le backend
+  distingue live recent, estime et degrade, et les apps rider home/booking
+  affichent cette verite au lieu de presenter les ETA comme des certitudes.
+  La calibration terrain par ville, meteo, quartier et trafic reste B/D.
 
 ## Master Prompt Operationnel
 

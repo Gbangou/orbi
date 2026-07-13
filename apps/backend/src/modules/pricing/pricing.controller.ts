@@ -1,6 +1,9 @@
 import { Controller, Get, Query, UseInterceptors, Version } from '@nestjs/common';
 import { ResponseCacheInterceptor } from '../../common/cache/response-cache.interceptor';
-import { EstimatePricingQueryDto } from './dto/estimate-pricing-query.dto';
+import {
+  EstimatePricingQueryDto,
+  RideOptionsPricingQueryDto,
+} from './dto/estimate-pricing-query.dto';
 import { PricingService } from './pricing.service';
 
 @Controller('pricing')
@@ -24,7 +27,7 @@ export class PricingController {
   @Get('ride-options')
   @Version('1')
   @UseInterceptors(ResponseCacheInterceptor)
-  rideOptions(@Query() query: EstimatePricingQueryDto) {
+  rideOptions(@Query() query: RideOptionsPricingQueryDto) {
     return this.pricingService.estimateRideOptions(query);
   }
 }

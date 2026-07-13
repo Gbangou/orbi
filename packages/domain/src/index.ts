@@ -488,6 +488,11 @@ export type RideOption = {
     nearbyDrivers: number;
     pickupRadiusKm: number;
     etaConfidence: 'LOW' | 'MEDIUM' | 'HIGH';
+    etaSource: 'LIVE' | 'ESTIMATED' | 'DEGRADED';
+    supplySource: 'LIVE' | 'ESTIMATED' | 'DEGRADED';
+    signalFreshnessSeconds: number | null;
+    signalLabel: string;
+    reliabilityNote?: string;
     vehicleExamples: string[];
     pricePromise: string;
   };

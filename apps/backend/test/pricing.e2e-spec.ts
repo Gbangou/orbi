@@ -6,6 +6,7 @@
  * La base de données est mockée : ces tests portent sur la couche HTTP.
  */
 import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
+import { WsAdapter } from '@nestjs/platform-ws';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -35,6 +36,7 @@ async function createTestApp(prisma: ReturnType<typeof buildPrismaFallbackMock>)
     .compile();
 
   const app = module.createNestApplication<INestApplication<App>>();
+  app.useWebSocketAdapter(new WsAdapter(app));
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }));
@@ -78,6 +80,14 @@ describe('Pricing API (e2e)', () => {
         expect(option.driverPayout).toBeGreaterThan(0);
         expect(typeof option.surgeActive).toBe('boolean');
         expect(option.marketplace).toBeDefined();
+        expect(['LIVE', 'ESTIMATED', 'DEGRADED']).toContain(
+          option.marketplace.etaSource,
+        );
+        expect(['LIVE', 'ESTIMATED', 'DEGRADED']).toContain(
+          option.marketplace.supplySource,
+        );
+        expect(typeof option.marketplace.signalLabel).toBe('string');
+        expect(typeof option.marketplace.reliabilityNote).toBe('string');
         expect(option.safetyNote).toBeDefined();
       }
     });

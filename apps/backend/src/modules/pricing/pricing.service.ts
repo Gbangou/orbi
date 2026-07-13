@@ -3,7 +3,10 @@ import { ServiceTier, VehicleType } from '@prisma/client';
 import { RedisCacheService } from '../../core/cache/redis-cache.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RoutingService } from '../../core/routing/routing.service';
-import { EstimatePricingQueryDto } from './dto/estimate-pricing-query.dto';
+import {
+  EstimatePricingQueryDto,
+  RideOptionsPricingQueryDto,
+} from './dto/estimate-pricing-query.dto';
 
 type PricingQuoteInput = {
   vehicleType: 'MOTORCYCLE' | 'CAR';
@@ -50,6 +53,8 @@ type OperatingContextInput = Pick<
   | 'activeDriverCount'
   | 'openRequestCount'
 >;
+
+type MarketplaceSignalSource = 'LIVE' | 'ESTIMATED' | 'DEGRADED';
 
 type RateCard = {
   serviceTier: ServiceTier;
@@ -113,12 +118,18 @@ export class PricingService {
     });
   }
 
-  async estimateRideOptions(query: EstimatePricingQueryDto) {
+  async estimateRideOptions(query: RideOptionsPricingQueryDto) {
     // Calculer la demande en temps réel si le client ne la fournit pas
     let resolvedDemandLevel = query.demandLevel as 'NORMAL' | 'HIGH' | 'PEAK' | undefined;
     let resolvedActiveDriverCount = query.activeDriverCount;
     let resolvedOpenRequestCount = query.openRequestCount;
     let resolvedIsPeakHour = query.isPeakHour === 'true';
+    let supplySignalSource: MarketplaceSignalSource =
+      resolvedActiveDriverCount !== undefined || resolvedOpenRequestCount !== undefined
+        ? 'LIVE'
+        : 'ESTIMATED';
+    let signalFreshnessSeconds: number | null =
+      supplySignalSource === 'LIVE' ? 600 : null;
 
     if (!resolvedDemandLevel) {
       const realTimeDemand = await this.calculateRealTimeDemandLevel(query.city);
@@ -126,6 +137,8 @@ export class PricingService {
       resolvedActiveDriverCount = resolvedActiveDriverCount ?? realTimeDemand.activeDriverCount;
       resolvedOpenRequestCount = resolvedOpenRequestCount ?? realTimeDemand.openRequestCount;
       resolvedIsPeakHour = realTimeDemand.isPeakHour;
+      supplySignalSource = 'LIVE';
+      signalFreshnessSeconds = 600;
     }
 
     // ── Catalogue de services Orbi Burkina Faso ─────────────────────────────
@@ -179,6 +192,7 @@ export class PricingService {
     // Enhance route metrics with OSRM when pickup/destination coordinates are available
     let resolvedDistanceKm = query.distanceKm;
     let resolvedDurationMinutes = query.durationMinutes;
+    let routeSignalSource: MarketplaceSignalSource = 'ESTIMATED';
 
     if (
       this.routingService &&
@@ -192,6 +206,9 @@ export class PricingService {
       if (route) {
         resolvedDistanceKm = route.distanceKm;
         resolvedDurationMinutes = route.durationMinutes;
+        routeSignalSource = 'LIVE';
+      } else {
+        routeSignalSource = 'DEGRADED';
       }
     }
 
@@ -252,6 +269,11 @@ export class PricingService {
             resolvedActiveDriverCount,
             estimate.operatingContext.availabilityScore,
             configuration.vehicleExamples,
+            {
+              supplySignalSource,
+              routeSignalSource,
+              signalFreshnessSeconds,
+            },
           ),
           driverPayout: estimate.driverEconomics.driverPayout,
           surgeActive,
@@ -273,8 +295,8 @@ export class PricingService {
 
     return {
       route: {
-        distanceKm: query.distanceKm,
-        durationMinutes: query.durationMinutes,
+        distanceKm: resolvedDistanceKm,
+        durationMinutes: resolvedDurationMinutes,
       },
       options,
     };
@@ -286,6 +308,11 @@ export class PricingService {
     activeDriverCount: number | undefined,
     availabilityScore: number,
     vehicleExamples: string[],
+    signal: {
+      supplySignalSource: MarketplaceSignalSource;
+      routeSignalSource: MarketplaceSignalSource;
+      signalFreshnessSeconds: number | null;
+    },
   ) {
     const onlineDrivers = Math.max(
       vehicleType === 'MOTORCYCLE' ? 2 : 1,
@@ -305,6 +332,22 @@ export class PricingService {
         : availabilityScore >= 54
           ? 'MEDIUM'
           : 'LOW';
+    const etaSource: MarketplaceSignalSource =
+      signal.routeSignalSource === 'DEGRADED'
+        ? 'DEGRADED'
+        : signal.supplySignalSource;
+    const signalLabel =
+      etaSource === 'LIVE'
+        ? 'Live recent'
+        : etaSource === 'DEGRADED'
+          ? 'Estime degrade'
+          : 'Estime';
+    const reliabilityNote =
+      etaSource === 'LIVE'
+        ? 'Disponibilite calculee depuis les chauffeurs en ligne recents.'
+        : etaSource === 'DEGRADED'
+          ? 'Signal temps reel partiel; ETA a confirmer au matching.'
+          : 'Disponibilite estimee; confirmation chauffeur requise avant depart.';
 
     return {
       availabilityLabel:
@@ -316,6 +359,11 @@ export class PricingService {
       nearbyDrivers: onlineDrivers,
       pickupRadiusKm,
       etaConfidence,
+      etaSource,
+      supplySource: signal.supplySignalSource,
+      signalFreshnessSeconds: signal.signalFreshnessSeconds,
+      signalLabel,
+      reliabilityNote,
       vehicleExamples,
       pricePromise:
         'Prix upfront affiche avant confirmation; approche chauffeur utilisee pour l ETA sans frais caches.',
