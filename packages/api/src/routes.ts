@@ -257,6 +257,15 @@ export const driverOffers: DriverOffer[] = [
     reservationWindowSeconds: 45,
     dispatchLearningSummary:
       "Memoire dispatch solide: acceptations recentes elevees. Signal recent.",
+    fairnessScore: 84,
+    fairnessLabel: "BALANCED",
+    fairnessSummary:
+      "Equilibre marketplace sain. Rider 88/100 - Chauffeur 78/100 - Ops 96/100.",
+    fairnessBreakdown: {
+      riderAccessibilityScore: 88,
+      driverPayoutScore: 78,
+      opsMarginScore: 96,
+    },
   },
   {
     id: "offer-002",
@@ -281,6 +290,15 @@ export const driverOffers: DriverOffer[] = [
     reservationWindowSeconds: 35,
     dispatchLearningSummary:
       "Memoire dispatch correcte: quelques expirations recentes a surveiller. Signal recent.",
+    fairnessScore: 67,
+    fairnessLabel: "DRIVER_PAYOUT_WATCH",
+    fairnessSummary:
+      "Payout chauffeur a surveiller avant priorisation. Rider 91/100 - Chauffeur 52/100 - Ops 96/100.",
+    fairnessBreakdown: {
+      riderAccessibilityScore: 91,
+      driverPayoutScore: 52,
+      opsMarginScore: 96,
+    },
   },
 ];
 

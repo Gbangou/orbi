@@ -1,4 +1,5 @@
 import {
+  calculateMarketplaceFairnessSignal,
   calculateDispatchScore,
   evaluateDispatchBehaviorSignal,
   resolveAssignmentWindowMs,
@@ -44,6 +45,36 @@ describe('dispatch-engine', () => {
     });
 
     expect(strongScore).toBeGreaterThan(weakScore);
+  });
+
+  it('keeps marketplace fairness balanced when rider price, payout and margin are healthy', () => {
+    const signal = calculateMarketplaceFairnessSignal({
+      fare: 1800,
+      driverPayout: 1476,
+      estimatedTripDistanceKm: 5.8,
+      pickupDistanceKm: 1.1,
+      vehicleType: 'MOTORCYCLE',
+    });
+
+    expect(signal.label).toBe('BALANCED');
+    expect(signal.score).toBeGreaterThanOrEqual(70);
+    expect(signal.summary).toContain('Rider');
+    expect(signal.summary).toContain('Chauffeur');
+    expect(signal.summary).toContain('Ops');
+  });
+
+  it('flags driver payout fairness when pickup effort makes the offer weak', () => {
+    const signal = calculateMarketplaceFairnessSignal({
+      fare: 1300,
+      driverPayout: 1066,
+      estimatedTripDistanceKm: 2.2,
+      pickupDistanceKm: 10.5,
+      vehicleType: 'MOTORCYCLE',
+    });
+
+    expect(signal.label).toBe('DRIVER_PAYOUT_WATCH');
+    expect(signal.driverPayoutScore).toBeLessThan(68);
+    expect(signal.summary).toContain('Payout chauffeur a surveiller');
   });
 
   it('derives a strong behavior signal from recent acceptances', () => {

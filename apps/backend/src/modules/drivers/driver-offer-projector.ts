@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ServiceTier, VehicleType } from '@prisma/client';
 import {
+  calculateMarketplaceFairnessSignal,
   summarizeDispatchLearning,
   type DispatchBehaviorSignal,
+  type FairnessSignalLabel,
 } from './dispatch-engine';
 
 export type DriverOfferViewModel = {
@@ -27,6 +29,14 @@ export type DriverOfferViewModel = {
   offerConfidenceLabel: 'LOW' | 'MEDIUM' | 'HIGH' | 'PRIORITY';
   reservationWindowSeconds: number;
   dispatchLearningSummary: string;
+  fairnessScore: number;
+  fairnessLabel: FairnessSignalLabel;
+  fairnessSummary: string;
+  fairnessBreakdown: {
+    riderAccessibilityScore: number;
+    driverPayoutScore: number;
+    opsMarginScore: number;
+  };
 };
 
 export type DriverOfferProjectionInput = {
@@ -55,6 +65,18 @@ export type DriverOfferProjectionInput = {
 @Injectable()
 export class DriverOfferProjector {
   project(input: DriverOfferProjectionInput): DriverOfferViewModel {
+    const driverPayout = Math.round(input.fare * 0.82);
+    const fairness = calculateMarketplaceFairnessSignal({
+      fare: input.fare,
+      driverPayout,
+      estimatedTripDistanceKm: input.estimatedTripDistanceKm,
+      pickupDistanceKm: input.pickupDistanceKm,
+      vehicleType:
+        input.requestedVehicleType === VehicleType.MOTORCYCLE
+          ? 'MOTORCYCLE'
+          : 'CAR',
+    });
+
     return {
       id: input.id,
       riderName: input.riderName,
@@ -70,7 +92,7 @@ export class DriverOfferProjector {
         input.pickupDistanceKm,
         input.ageMinutes,
       ),
-      driverPayout: Math.round(input.fare * 0.82),
+      driverPayout,
       pickupCodeRequired: true,
       pickupDistanceKm: input.pickupDistanceKm,
       pickupDistanceSource:
@@ -96,6 +118,14 @@ export class DriverOfferProjector {
         confidenceScore: input.offerConfidenceScore,
         signalFreshness: input.dispatchBehavior.signalFreshness,
       }),
+      fairnessScore: fairness.score,
+      fairnessLabel: fairness.label,
+      fairnessSummary: fairness.summary,
+      fairnessBreakdown: {
+        riderAccessibilityScore: fairness.riderAccessibilityScore,
+        driverPayoutScore: fairness.driverPayoutScore,
+        opsMarginScore: fairness.opsMarginScore,
+      },
     };
   }
 
@@ -113,6 +143,10 @@ export class DriverOfferProjector {
 
     if (leftPickupDistance !== rightPickupDistance) {
       return leftPickupDistance - rightPickupDistance;
+    }
+
+    if (right.fairnessScore !== left.fairnessScore) {
+      return right.fairnessScore - left.fairnessScore;
     }
 
     return right.fare - left.fare;

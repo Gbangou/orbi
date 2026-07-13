@@ -42,8 +42,12 @@ describe('DriverOfferProjector', () => {
         dispatchContextSummary: 'HIGH - HEAVY - dispo 74/100',
         offerConfidenceLabel: 'PRIORITY',
         reservationWindowSeconds: 45,
+        fairnessLabel: 'BALANCED',
       }),
     );
+    expect(offer.fairnessScore).toBeGreaterThan(70);
+    expect(offer.fairnessBreakdown.driverPayoutScore).toBeGreaterThan(0);
+    expect(offer.fairnessSummary).toContain('Rider');
     expect(offer.dispatchLearningSummary).toContain(
       'Memoire dispatch solide: acceptations recentes elevees.',
     );
@@ -84,7 +88,7 @@ describe('DriverOfferProjector', () => {
     expect(offer.dispatchLearningSummary).toContain('Memoire dispatch neutre');
   });
 
-  it('sorts offers by dispatch score, then pickup distance, then fare', () => {
+  it('sorts offers by dispatch score, pickup distance, fairness, then fare', () => {
     const strongest = projector.project({
       id: 'offer-strong',
       riderName: 'Strong Rider',
@@ -169,14 +173,43 @@ describe('DriverOfferProjector', () => {
         signalFreshness: 'RECENT',
       },
     });
+    const fairer = projector.project({
+      id: 'offer-fairer',
+      riderName: 'Fair Rider',
+      pickup: 'A',
+      destination: 'B',
+      requestedVehicleType: VehicleType.MOTORCYCLE,
+      fare: 1800,
+      estimatedTripDistanceKm: 5.5,
+      ageMinutes: 2,
+      pickupDistanceKm: 2.6,
+      serviceRadiusKm: 8,
+      matchedTier: ServiceTier.MOTO_STANDARD,
+      dispatchScore: 78,
+      offerConfidenceScore: 74,
+      offerConfidenceLabel: 'HIGH',
+      reservationExpiresAt: null,
+      reservationWindowSeconds: 38,
+      availabilityScore: 72,
+      demandLevel: 'HIGH',
+      trafficLevel: 'MODERATE',
+      dispatchBehavior: {
+        score: 72,
+        acceptanceRate: 0.55,
+        declineRate: 0.12,
+        expirationRate: 0.08,
+        signalFreshness: 'RECENT',
+      },
+    });
 
-    const ranked = [richerButFarther, nearer, strongest].sort((left, right) =>
-      projector.comparePriority(left, right),
+    const ranked = [richerButFarther, fairer, nearer, strongest].sort(
+      (left, right) => projector.comparePriority(left, right),
     );
 
     expect(ranked.map((offer) => offer.id)).toEqual([
       'offer-strong',
       'offer-nearer',
+      'offer-fairer',
       'offer-richer',
     ]);
   });

@@ -500,6 +500,8 @@ export class DispatchCoordinator {
             expiresAt: assignmentExpiresAt.toISOString(),
             dispatchScore: offer.dispatchScore ?? null,
             offerConfidenceScore: offer.offerConfidenceScore ?? null,
+            fairnessScore: offer.fairnessScore ?? null,
+            fairnessLabel: offer.fairnessLabel ?? null,
           },
         });
         this.publishReservationRealtimeEvent(

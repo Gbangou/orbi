@@ -50,6 +50,133 @@ export type DispatchBehaviorAuditEvent = {
   createdAt: Date;
 };
 
+export type FairnessSignalLabel =
+  | 'BALANCED'
+  | 'RIDER_ACCESSIBILITY_WATCH'
+  | 'DRIVER_PAYOUT_WATCH'
+  | 'OPS_MARGIN_WATCH';
+
+export type MarketplaceFairnessSignal = {
+  score: number;
+  label: FairnessSignalLabel;
+  riderAccessibilityScore: number;
+  driverPayoutScore: number;
+  opsMarginScore: number;
+  summary: string;
+};
+
+function clampScore(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function resolveFairnessLabel(input: {
+  riderAccessibilityScore: number;
+  driverPayoutScore: number;
+  opsMarginScore: number;
+}): FairnessSignalLabel {
+  const weakest = Math.min(
+    input.riderAccessibilityScore,
+    input.driverPayoutScore,
+    input.opsMarginScore,
+  );
+
+  if (weakest >= 68) {
+    return 'BALANCED';
+  }
+
+  if (input.opsMarginScore === weakest) {
+    return 'OPS_MARGIN_WATCH';
+  }
+
+  if (input.driverPayoutScore === weakest) {
+    return 'DRIVER_PAYOUT_WATCH';
+  }
+
+  return 'RIDER_ACCESSIBILITY_WATCH';
+}
+
+function resolveFairnessSummary(input: {
+  label: FairnessSignalLabel;
+  riderAccessibilityScore: number;
+  driverPayoutScore: number;
+  opsMarginScore: number;
+}) {
+  const suffix = `Rider ${input.riderAccessibilityScore}/100 - Chauffeur ${input.driverPayoutScore}/100 - Ops ${input.opsMarginScore}/100`;
+
+  switch (input.label) {
+    case 'BALANCED':
+      return `Equilibre marketplace sain. ${suffix}.`;
+    case 'DRIVER_PAYOUT_WATCH':
+      return `Payout chauffeur a surveiller avant priorisation. ${suffix}.`;
+    case 'OPS_MARGIN_WATCH':
+      return `Marge ops a surveiller avant forte exposition. ${suffix}.`;
+    case 'RIDER_ACCESSIBILITY_WATCH':
+    default:
+      return `Accessibilite prix rider a surveiller. ${suffix}.`;
+  }
+}
+
+export function calculateMarketplaceFairnessSignal(input: {
+  fare: number;
+  driverPayout: number;
+  estimatedTripDistanceKm: number;
+  pickupDistanceKm: number | null;
+  vehicleType: 'MOTORCYCLE' | 'CAR';
+}): MarketplaceFairnessSignal {
+  const tripDistanceKm = Math.max(1, input.estimatedTripDistanceKm);
+  const pickupDistanceKm =
+    input.pickupDistanceKm === null
+      ? input.vehicleType === 'MOTORCYCLE'
+        ? 0.8
+        : 1.2
+      : Math.max(0, input.pickupDistanceKm);
+  const driverEffortKm = Math.max(1, tripDistanceKm + pickupDistanceKm);
+  const riderFarePerKm = input.fare / tripDistanceKm;
+  const driverPayoutPerKm = input.driverPayout / driverEffortKm;
+  const riderTargetPerKm = input.vehicleType === 'MOTORCYCLE' ? 360 : 650;
+  const driverTargetPerKm = input.vehicleType === 'MOTORCYCLE' ? 185 : 300;
+  const marginRate =
+    input.fare > 0 ? (input.fare - input.driverPayout) / input.fare : 0;
+
+  const riderAccessibilityScore = clampScore(
+    100 - Math.max(0, riderFarePerKm - riderTargetPerKm) * 0.12,
+  );
+  const driverPayoutScore = clampScore(
+    42 + (driverPayoutPerKm / driverTargetPerKm) * 48,
+  );
+  const opsMarginScore = clampScore(
+    marginRate < 0.1
+      ? 45 + marginRate * 350
+      : marginRate > 0.26
+        ? 100 - (marginRate - 0.26) * 260
+        : 96,
+  );
+  const score = clampScore(
+    riderAccessibilityScore * 0.36 +
+      driverPayoutScore * 0.39 +
+      opsMarginScore * 0.25,
+  );
+  const label = resolveFairnessLabel({
+    riderAccessibilityScore,
+    driverPayoutScore,
+    opsMarginScore,
+  });
+
+  return {
+    score,
+    label,
+    riderAccessibilityScore,
+    driverPayoutScore,
+    opsMarginScore,
+    summary: resolveFairnessSummary({
+      label,
+      riderAccessibilityScore,
+      driverPayoutScore,
+      opsMarginScore,
+    }),
+  };
+}
+
 export function calculateDispatchScore(input: {
   pickupDistanceKm: number | null;
   estimatedTripDistanceKm: number;

@@ -92,6 +92,7 @@ export function buildDriverOfferDetailLines(offer: DriverOffer) {
   const hasPickupDistance = isFiniteNumber(offer.pickupDistanceKm);
   const hasServiceRadius = isFiniteNumber(offer.serviceRadiusKm);
   const hasOfferConfidenceScore = isFiniteNumber(offer.offerConfidenceScore);
+  const hasFairnessScore = isFiniteNumber(offer.fairnessScore);
   const reservationWindowSeconds = offer.reservationWindowSeconds;
   const hasReservationWindow = isFiniteNumber(reservationWindowSeconds);
   const lines = [
@@ -112,6 +113,11 @@ export function buildDriverOfferDetailLines(offer: DriverOffer) {
     offer.offerConfidenceLabel || hasOfferConfidenceScore
       ? `Confiance offre: ${offer.offerConfidenceLabel ?? 'ND'}${hasOfferConfidenceScore ? ` (${offer.offerConfidenceScore}/100)` : ''}`
       : null,
+    offer.fairnessSummary
+      ? `Fairness marketplace: ${offer.fairnessSummary}`
+      : hasFairnessScore
+        ? `Fairness marketplace: ${offer.fairnessScore}/100`
+        : null,
     hasReservationWindow && reservationWindowSeconds >= 0
       ? `Fenetre d acceptation: ${reservationWindowSeconds}s`
       : null,

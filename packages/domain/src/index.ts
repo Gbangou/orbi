@@ -534,6 +534,19 @@ export type DriverOffer = {
   offerConfidenceLabel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'PRIORITY' | null;
   reservationWindowSeconds?: number | null;
   dispatchLearningSummary?: string | null;
+  fairnessScore?: number | null;
+  fairnessLabel?:
+    | 'BALANCED'
+    | 'RIDER_ACCESSIBILITY_WATCH'
+    | 'DRIVER_PAYOUT_WATCH'
+    | 'OPS_MARGIN_WATCH'
+    | null;
+  fairnessSummary?: string | null;
+  fairnessBreakdown?: {
+    riderAccessibilityScore: number;
+    driverPayoutScore: number;
+    opsMarginScore: number;
+  } | null;
 };
 
 export type AdminMetric = {

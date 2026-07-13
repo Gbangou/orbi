@@ -273,6 +273,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   distingue live recent, estime et degrade, et les apps rider home/booking
   affichent cette verite au lieu de presenter les ETA comme des certitudes.
   La calibration terrain par ville, meteo, quartier et trafic reste B/D.
+- 13 juillet 2026: Phase 3, gap A "fairness engine initial". Le dispatch calcule
+  maintenant un `fairnessScore` par offre, avec label, breakdown rider /
+  chauffeur / ops et resume visible cote chauffeur; ce signal sert aussi de
+  tie-breaker et est journalise dans l audit de reservation. La calibration
+  economique par donnees pilote reste B/D.
 
 ## Master Prompt Operationnel
 
