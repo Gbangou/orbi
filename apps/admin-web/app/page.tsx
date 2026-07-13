@@ -106,6 +106,7 @@ const fallbackOperationalKpis: AdminOperationalKpisResponse = {
   criticalMobileErrors7d: 0,
   affectedMobileSessions7d: 0,
   topCriticalMobileSignal: null,
+  mobileCollectorDegradedDeliveries7d: 0,
   mobileObservabilityPosture: "good",
   mobileObservabilityAction:
     "Aucune donnee live chargee; verifier la collecte mobile pendant le pilote.",
@@ -1204,7 +1205,9 @@ export default async function AdminHomePage({
             <h3>Sessions sans crash</h3>
             <p>
               {operationalKpis.criticalMobileErrors7d} erreur(s) critique(s),{" "}
-              {operationalKpis.affectedMobileSessions7d} session(s) touchee(s).
+              {operationalKpis.affectedMobileSessions7d} session(s) touchee(s),{" "}
+              {operationalKpis.mobileCollectorDegradedDeliveries7d} livraison(s)
+              collector degradee(s).
             </p>
           </div>
           <strong>{operationalKpis.crashFreeSessionRate7d}%</strong>

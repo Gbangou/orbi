@@ -311,6 +311,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   HTTP degrade ou exception; le backend ecrit un audit `LOCAL_ONLY`,
   `DELIVERED` ou `DEGRADED` pour que les ops voient aussi les pannes de
   livraison observabilite. Le routage d alerte externe reste un gap C.
+- 13 juillet 2026: Phase 5, gap A "readiness collector degrade". Les KPIs admin
+  comptent maintenant les livraisons collector degradees sur 7 jours et le gate
+  `mobile-observability-gate` passe en warning si la collecte externe echoue,
+  meme sans crash mobile critique recurrent. Les alertes hors plateforme restent
+  un gap C.
 
 ## Master Prompt Operationnel
 

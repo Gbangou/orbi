@@ -1426,6 +1426,36 @@ describe('AdminService', () => {
     );
   });
 
+  it('keeps launch readiness limited when mobile collector delivery is degraded', async () => {
+    const { prisma, service } = createService();
+
+    prisma.auditLog.count.mockResolvedValueOnce(2);
+
+    const result = await service.launchReadiness();
+
+    expect(result.decision.state).toBe('limited');
+    expect(result.nextActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          checkId: 'mobile-observability-gate',
+          severity: 'warning',
+          owner: 'engineering',
+        }),
+      ]),
+    );
+    expect(result.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'mobile-observability-gate',
+          state: 'warn',
+          detail: expect.stringContaining(
+            '2 livraison(s) collector degradee(s)',
+          ),
+        }),
+      ]),
+    );
+  });
+
   it('blocks launch readiness when critical mobile crashes are recurrent', async () => {
     const { prisma, service } = createService();
 
@@ -4496,6 +4526,7 @@ describe('AdminService', () => {
         .mockResolvedValueOnce(5)
         .mockResolvedValueOnce(2);
       prisma.auditLog.count
+        .mockResolvedValueOnce(0)
         .mockResolvedValueOnce(6)
         .mockResolvedValueOnce(3)
         .mockResolvedValueOnce(1);
@@ -4509,6 +4540,7 @@ describe('AdminService', () => {
       expect(kpis.crashFreeSessionRate7d).toBe(90);
       expect(kpis.criticalMobileErrors7d).toBe(2);
       expect(kpis.affectedMobileSessions7d).toBe(1);
+      expect(kpis.mobileCollectorDegradedDeliveries7d).toBe(0);
       expect(kpis.topCriticalMobileSignal).toEqual({
         code: 'MOB-BOOKING-DISPATCH',
         count: 2,
@@ -4555,6 +4587,7 @@ describe('AdminService', () => {
       expect(kpis.crashFreeSessionRate7d).toBe(0);
       expect(kpis.criticalMobileErrors7d).toBe(0);
       expect(kpis.affectedMobileSessions7d).toBe(0);
+      expect(kpis.mobileCollectorDegradedDeliveries7d).toBe(0);
       expect(kpis.topCriticalMobileSignal).toBeNull();
       expect(kpis.mobileObservabilityPosture).toBe('good');
       expect(kpis.avgDriverOnlineMinutes7d).toBeNull();
@@ -4588,6 +4621,7 @@ describe('AdminService', () => {
       expect(kpis.crashFreeSessionRate7d).toBe(99);
       expect(kpis.criticalMobileErrors7d).toBe(1);
       expect(kpis.affectedMobileSessions7d).toBe(1);
+      expect(kpis.mobileCollectorDegradedDeliveries7d).toBe(0);
       expect(kpis.topCriticalMobileSignal).toEqual({
         code: 'MOB-AUTH-SESSION',
         count: 1,

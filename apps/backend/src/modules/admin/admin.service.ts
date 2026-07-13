@@ -3086,6 +3086,7 @@ export class AdminService {
     const [
       totalSessions7d,
       criticalCrashLogs7d,
+      collectorDegradedDeliveries7d,
       riderCohort30d,
       riderConverted30d,
       offerAccepted7d,
@@ -3103,6 +3104,12 @@ export class AdminService {
           metadata: { path: ['classification', 'severity'], equals: 'critical' },
         },
         select: { metadata: true },
+      }),
+      this.prisma.auditLog.count({
+        where: {
+          action: 'MOBILE_ERROR_COLLECTOR_DEGRADED',
+          createdAt: { gte: since7d },
+        },
       }),
       this.prisma.riderProfile.count({
         where: { createdAt: { gte: since30d } },
@@ -3223,6 +3230,7 @@ export class AdminService {
       criticalMobileErrors7d: mobileObservability.criticalMobileErrors7d,
       affectedMobileSessions7d: mobileObservability.affectedMobileSessions7d,
       topCriticalMobileSignal: mobileObservability.topCriticalMobileSignal,
+      mobileCollectorDegradedDeliveries7d: collectorDegradedDeliveries7d,
       mobileObservabilityPosture: mobileObservability.posture,
       mobileObservabilityAction: mobileObservability.action,
       firstBookingConversionRate30d,
@@ -3570,6 +3578,7 @@ export class AdminService {
       preparedPayoutBacklog,
       totalSessions7d,
       criticalCrashLogs7d,
+      collectorDegradedDeliveries7d,
     ] = await Promise.all([
       this.healthService.check(),
       this.prisma.supportTicket.count({
@@ -3643,6 +3652,12 @@ export class AdminService {
         },
         select: { metadata: true },
       }),
+      this.prisma.auditLog.count({
+        where: {
+          action: 'MOBILE_ERROR_COLLECTOR_DEGRADED',
+          createdAt: { gte: since7d },
+        },
+      }),
     ]);
     const productionReadiness = health.operations.productionReadiness;
     const runtimeState =
@@ -3704,7 +3719,8 @@ export class AdminService {
     const mobileObservabilityState =
       mobileObservability.posture === 'bad'
         ? 'fail'
-        : mobileObservability.posture === 'warn'
+        : mobileObservability.posture === 'warn' ||
+            collectorDegradedDeliveries7d > 0
           ? 'warn'
           : 'pass';
     const topCriticalMobileSignal = mobileObservability.topCriticalMobileSignal
@@ -3771,7 +3787,7 @@ export class AdminService {
         id: 'mobile-observability-gate',
         label: 'Gate crash mobile',
         state: mobileObservabilityState,
-        detail: `${mobileObservability.criticalMobileErrors7d} erreur(s) critique(s), ${mobileObservability.affectedMobileSessions7d} session(s) touchee(s), ${mobileObservability.crashFreeSessionRate7d}% sessions sans crash.${topCriticalMobileSignal} ${mobileObservability.action}`,
+        detail: `${mobileObservability.criticalMobileErrors7d} erreur(s) critique(s), ${mobileObservability.affectedMobileSessions7d} session(s) touchee(s), ${collectorDegradedDeliveries7d} livraison(s) collector degradee(s), ${mobileObservability.crashFreeSessionRate7d}% sessions sans crash.${topCriticalMobileSignal} ${mobileObservability.action}`,
       },
       {
         id: 'admin-realtime',

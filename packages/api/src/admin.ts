@@ -178,6 +178,7 @@ export type AdminOperationalKpisResponse = {
     owner: string;
     count: number;
   } | null;
+  mobileCollectorDegradedDeliveries7d: number;
   mobileObservabilityPosture: "good" | "warn" | "bad";
   mobileObservabilityAction: string;
   firstBookingConversionRate30d: number;
