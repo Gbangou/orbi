@@ -5,6 +5,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
@@ -17,6 +18,7 @@ import { PAWAPAY_NETWORK_TO_CORRESPONDENT } from '../payments/payments.constants
 
 const MIN_TOPUP_XOF = 500;
 const MAX_TOPUP_XOF = 100_000;
+const idempotencyKeyPattern = /^[A-Za-z0-9._:-]{8,128}$/;
 
 export type InitiateWalletTopUpInput = {
   amountXof: number;
@@ -36,6 +38,7 @@ export class WalletTopUpService {
   async initiateTopUp(
     auth: RequestAuthContext,
     input: InitiateWalletTopUpInput,
+    idempotencyKey?: string,
   ) {
     const { amountXof, mobileMoneyNetwork, customerPhoneNumber } = input;
 
@@ -70,19 +73,76 @@ export class WalletTopUpService {
     // Resolve or create rider wallet
     const wallet = await this.resolveRiderWallet(auth.user.id);
 
-    const depositId = randomUUID();
-    const topUp = await this.prisma.walletTopUp.create({
-      data: {
-        walletId: wallet.id,
-        userId: auth.user.id,
-        amount: new Prisma.Decimal(amountXof),
-        currency: 'XOF',
-        status: 'INITIATED',
-        depositId,
-        mobileMoneyNetwork: correspondent,
-        customerPhoneNumber: phoneDigits,
-      },
-    });
+    const normalizedIdempotencyKey =
+      this.normalizeIdempotencyKey(idempotencyKey);
+    const idempotencyHash = normalizedIdempotencyKey
+      ? this.buildTopUpIdempotencyHash({
+          userId: auth.user.id,
+          amountXof,
+          correspondent,
+          phoneDigits,
+        })
+      : null;
+    const depositId = normalizedIdempotencyKey
+      ? this.buildDeterministicDepositId(auth.user.id, normalizedIdempotencyKey)
+      : randomUUID();
+    const existingTopUp = normalizedIdempotencyKey
+      ? await this.prisma.walletTopUp.findUnique({
+          where: { depositId },
+        })
+      : null;
+
+    if (existingTopUp) {
+      if (
+        jsonObject(existingTopUp.providerMetadata).idempotencyHash !==
+        idempotencyHash
+      ) {
+        throw new BadRequestException(
+          'The provided idempotency key was already used with a different wallet top-up payload.',
+        );
+      }
+
+      return this.serializeTopUp(existingTopUp);
+    }
+
+    let topUp;
+    try {
+      topUp = await this.prisma.walletTopUp.create({
+        data: {
+          walletId: wallet.id,
+          userId: auth.user.id,
+          amount: new Prisma.Decimal(amountXof),
+          currency: 'XOF',
+          status: 'INITIATED',
+          depositId,
+          mobileMoneyNetwork: correspondent,
+          customerPhoneNumber: phoneDigits,
+          providerMetadata: normalizedIdempotencyKey
+            ? {
+                idempotencyKey: normalizedIdempotencyKey,
+                idempotencyHash,
+              }
+            : undefined,
+        },
+      });
+    } catch (error) {
+      if (!isPrismaUniqueConstraintError(error) || !normalizedIdempotencyKey) {
+        throw error;
+      }
+
+      const concurrentTopUp = await this.prisma.walletTopUp.findUnique({
+        where: { depositId },
+      });
+      if (
+        !concurrentTopUp ||
+        jsonObject(concurrentTopUp.providerMetadata).idempotencyHash !==
+          idempotencyHash
+      ) {
+        throw error;
+      }
+
+      return this.serializeTopUp(concurrentTopUp);
+    }
 
     if (this.pawaPayService) {
       try {
@@ -104,13 +164,13 @@ export class WalletTopUpService {
           response.status === 'ACCEPTED' ||
           response.status === 'DUPLICATE_IGNORED'
         ) {
-          await this.prisma.walletTopUp.update({
+          topUp = await this.prisma.walletTopUp.update({
             where: { id: topUp.id },
             data: { status: 'PENDING' },
           });
         } else {
           const failCode = response.failureReason?.failureCode ?? 'UNKNOWN';
-          await this.prisma.walletTopUp.update({
+          topUp = await this.prisma.walletTopUp.update({
             where: { id: topUp.id },
             data: { status: 'FAILED', failureReason: failCode },
           });
@@ -127,21 +187,13 @@ export class WalletTopUpService {
       }
     } else {
       this.logger.warn('PawaPayService not configured — sandbox top-up initiated.');
-      await this.prisma.walletTopUp.update({
+      topUp = await this.prisma.walletTopUp.update({
         where: { id: topUp.id },
         data: { status: 'PENDING' },
       });
     }
 
-    return {
-      topUpId: topUp.id,
-      depositId,
-      amount: amountXof,
-      currency: 'XOF',
-      status: 'PENDING',
-      awaitingPhoneConfirmation: true,
-      message: 'Vérifiez votre téléphone pour confirmer le rechargement.',
-    };
+    return this.serializeTopUp(topUp);
   }
 
   async handlePawaPayTopUpWebhook(depositId: string, status: 'COMPLETED' | 'FAILED') {
@@ -248,4 +300,91 @@ export class WalletTopUpService {
       },
     });
   }
+
+  private normalizeIdempotencyKey(idempotencyKey?: string) {
+    const normalized = idempotencyKey?.trim();
+    if (!normalized) {
+      return null;
+    }
+
+    if (!idempotencyKeyPattern.test(normalized)) {
+      throw new BadRequestException(
+        'Idempotency-Key must be 8 to 128 URL-safe characters.',
+      );
+    }
+
+    return normalized;
+  }
+
+  private buildTopUpIdempotencyHash(input: {
+    userId: string;
+    amountXof: number;
+    correspondent: PawaPayCorrespondent;
+    phoneDigits: string;
+  }) {
+    return createHash('sha256')
+      .update(
+        JSON.stringify({
+          userId: input.userId,
+          amountXof: Math.round(input.amountXof),
+          correspondent: input.correspondent,
+          phoneDigits: input.phoneDigits,
+        }),
+      )
+      .digest('hex');
+  }
+
+  private buildDeterministicDepositId(userId: string, idempotencyKey: string) {
+    const hex = createHash('sha256')
+      .update(`wallet-topup:${userId}:${idempotencyKey}`)
+      .digest('hex');
+    const variantNibble = ((Number.parseInt(hex[16], 16) & 0x3) | 0x8).toString(
+      16,
+    );
+
+    return [
+      hex.slice(0, 8),
+      hex.slice(8, 12),
+      `4${hex.slice(13, 16)}`,
+      `${variantNibble}${hex.slice(17, 20)}`,
+      hex.slice(20, 32),
+    ].join('-');
+  }
+
+  private serializeTopUp(topUp: {
+    id: string;
+    depositId: string | null;
+    amount: Prisma.Decimal | number;
+    currency: string;
+    status: string;
+  }) {
+    const isFinal = topUp.status === 'COMPLETED' || topUp.status === 'FAILED';
+
+    return {
+      topUpId: topUp.id,
+      depositId: topUp.depositId ?? topUp.id,
+      amount: Number(topUp.amount),
+      currency: topUp.currency,
+      status: topUp.status,
+      awaitingPhoneConfirmation: !isFinal,
+      message: isFinal
+        ? topUp.status === 'COMPLETED'
+          ? 'Votre wallet a ete credite.'
+          : 'Le rechargement a echoue.'
+        : 'Vérifiez votre téléphone pour confirmer le rechargement.',
+    };
+  }
+}
+
+function isPrismaUniqueConstraintError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  );
+}
+
+function jsonObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }

@@ -243,6 +243,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   wallet recovery, payout backlog, webhook ignored et reconciliation age avec
   owner, severite et prochain geste. Les tests provider live, secrets et mobile
   money terrain restent des gaps B/C.
+- 13 juillet 2026: Phase 2, gap A "idempotence wallet top-up". Le rechargement
+  wallet rider accepte maintenant `Idempotency-Key`, derive un `depositId`
+  stable, reutilise le top-up existant sur retry reseau, rejette la reutilisation
+  avec payload different et expose l option dans le client API. Les tests
+  provider live PawaPay et reseau mobile money restent des gaps B/C.
 
 ## Master Prompt Operationnel
 

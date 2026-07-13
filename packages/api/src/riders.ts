@@ -207,7 +207,7 @@ export type WalletTopUpResponse = {
   depositId: string;
   amount: number;
   currency: string;
-  status: "PENDING" | "FAILED";
+  status: "INITIATED" | "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED";
   awaitingPhoneConfirmation: boolean;
   message: string;
 };
@@ -233,10 +233,14 @@ export async function initiateWalletTopUpWithApi(
     mobileMoneyNetwork: string;
     customerPhoneNumber: string;
   },
+  options: { idempotencyKey?: string } = {},
 ) {
   return client.request<WalletTopUpResponse>("/riders/me/wallet/topup", {
     method: "POST",
     body: payload,
+    headers: options.idempotencyKey
+      ? { "Idempotency-Key": options.idempotencyKey }
+      : undefined,
   });
 }
 

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -186,7 +187,8 @@ export class RidersController {
   initiateWalletTopUp(
     @CurrentAuth() auth: RequestAuthContext,
     @Body() payload: InitiateWalletTopUpDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
   ) {
-    return this.walletTopUpService.initiateTopUp(auth, payload);
+    return this.walletTopUpService.initiateTopUp(auth, payload, idempotencyKey);
   }
 }

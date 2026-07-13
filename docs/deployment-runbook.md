@@ -56,6 +56,9 @@ Utiliser la strategie `expand -> migrate traffic -> contract`:
 ## Paiements et argent
 
 - tout traitement webhook doit etre idempotent
+- tous les POST argent declenches par mobile doivent transmettre une
+  `Idempotency-Key` stable par intention utilisateur: checkout intent, wallet
+  top-up, remboursement ou ajustement wallet cote ops
 - ne jamais lier une mise a jour critique de paiement a un seul process en memoire
 - preferer des traitements rejouables et journalises
 - avant chaque pilote ou release argent, ouvrir la console admin section

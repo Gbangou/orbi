@@ -122,6 +122,25 @@ describe('RidersController (HTTP e2e)', () => {
       expect(walletTopUpService.initiateTopUp).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ amountXof: 2000, mobileMoneyNetwork: 'ORANGE_BFA' }),
+        undefined,
+      );
+    });
+
+    it('passes the idempotency key header to the wallet top-up service', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/riders/me/wallet/topup')
+        .set('idempotency-key', 'wallet-topup-001')
+        .send({
+          amountXof: 2000,
+          mobileMoneyNetwork: 'ORANGE_BFA',
+          customerPhoneNumber: '70123456',
+        });
+
+      expect(res.status).toBe(201);
+      expect(walletTopUpService.initiateTopUp).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ amountXof: 2000 }),
+        'wallet-topup-001',
       );
     });
   });
