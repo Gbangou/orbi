@@ -358,6 +358,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   CSV et bloquent l approbation chauffeur tant que la piece requise n est pas
   renouvelee. Les relances automatiques, selfie match et suspension periodique
   restent des gaps A/B/D distincts.
+- 13 juillet 2026: Phase 6, gap A "gate documents chauffeur expires".
+  Launch readiness expose maintenant `driver-document-renewals`: les pieces
+  chauffeur approuvees mais expirees bloquent le lancement, et celles qui
+  expirent sous 30 jours limitent le pilote avec action ops. La suspension
+  automatique apres expiration terrain reste un gap A/D distinct.
 
 ## Master Prompt Operationnel
 

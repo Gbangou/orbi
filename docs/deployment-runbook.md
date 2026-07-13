@@ -169,6 +169,11 @@ Cela evite qu un cluster multi-instance expose des limites incoherentes selon le
     demandes ouvertes reste sous 2x
   - `pass`: le code ne voit pas de pression supply immediate, mais la densite
     terrain et les horaires reels restent a confirmer par les operations
+- surveiller `driver-document-renewals` avant extension chauffeur:
+  - `fail`: retirer ou suspendre les chauffeurs dont une piece approuvee est
+    expiree avant toute ouverture pilote
+  - `warn`: planifier renouvellement quand une piece approuvee expire sous
+    30 jours; pas de montee en charge sans owner ops
 - utiliser `POST /api/v1/admin/launch-readiness/actions/:checkId/acknowledge`
   pour tracer l owner et la prise en charge dans l audit log; cela ne rend pas
   le check vert automatiquement

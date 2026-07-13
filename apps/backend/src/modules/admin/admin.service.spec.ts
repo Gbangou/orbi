@@ -1152,7 +1152,7 @@ describe('AdminService', () => {
     expect(result.summary).toMatchObject({
       failedChecks: 0,
       warningChecks: 1,
-      totalChecks: 14,
+      totalChecks: 15,
     });
     expect(result.nextActions).toEqual([
       expect.objectContaining({
@@ -1237,8 +1237,61 @@ describe('AdminService', () => {
           state: 'pass',
         }),
         expect.objectContaining({
+          id: 'driver-document-renewals',
+          state: 'pass',
+        }),
+        expect.objectContaining({
           id: 'security-assurance',
           state: 'warn',
+        }),
+      ]),
+    );
+  });
+
+  it('blocks launch readiness when approved driver documents are expired', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverDocument.count
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(2);
+
+    const result = await service.launchReadiness();
+
+    expect(result.decision.state).toBe('blocked');
+    expect(result.summary.failedChecks).toBe(1);
+    expect(prisma.driverDocument.count).toHaveBeenNthCalledWith(2, {
+      where: {
+        status: 'APPROVED',
+        expiresAt: {
+          lte: expect.any(Date),
+        },
+      },
+    });
+    expect(prisma.driverDocument.count).toHaveBeenNthCalledWith(3, {
+      where: {
+        status: 'APPROVED',
+        expiresAt: {
+          gt: expect.any(Date),
+          lte: expect.any(Date),
+        },
+      },
+    });
+    expect(result.nextActions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          checkId: 'driver-document-renewals',
+          severity: 'blocking',
+          owner: 'ops',
+        }),
+      ]),
+    );
+    expect(result.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'driver-document-renewals',
+          state: 'fail',
+          detail: expect.stringContaining('1 piece(s) approuvee(s) expiree(s)'),
         }),
       ]),
     );
@@ -1430,7 +1483,10 @@ describe('AdminService', () => {
       .mockResolvedValueOnce(7)
       .mockResolvedValueOnce(1);
     prisma.driverProfile.count.mockResolvedValue(4);
-    prisma.driverDocument.count.mockResolvedValue(2);
+    prisma.driverDocument.count
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0);
     prisma.paymentAttempt.count.mockResolvedValue(1);
     prisma.paymentWebhookEvent.count.mockResolvedValue(1);
     prisma.wallet.count.mockResolvedValue(1);

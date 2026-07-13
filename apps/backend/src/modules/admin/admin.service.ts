@@ -1409,6 +1409,45 @@ function resolveDriverSupplyCoverage(input: {
   };
 }
 
+function resolveDriverDocumentRenewalReadiness(input: {
+  expiredApprovedDocuments: number;
+  expiringSoonApprovedDocuments: number;
+}): LaunchReadinessCheck {
+  const expiredApprovedDocuments = Math.max(
+    0,
+    input.expiredApprovedDocuments,
+  );
+  const expiringSoonApprovedDocuments = Math.max(
+    0,
+    input.expiringSoonApprovedDocuments,
+  );
+
+  if (expiredApprovedDocuments > 0) {
+    return {
+      id: 'driver-document-renewals',
+      label: 'Renouvellement documents',
+      state: 'fail',
+      detail: `${expiredApprovedDocuments} piece(s) approuvee(s) expiree(s), ${expiringSoonApprovedDocuments} piece(s) a renouveler sous 30 jours.`,
+    };
+  }
+
+  if (expiringSoonApprovedDocuments > 0) {
+    return {
+      id: 'driver-document-renewals',
+      label: 'Renouvellement documents',
+      state: 'warn',
+      detail: `${expiringSoonApprovedDocuments} piece(s) approuvee(s) expirent sous 30 jours; planifier renouvellement avant extension.`,
+    };
+  }
+
+  return {
+    id: 'driver-document-renewals',
+    label: 'Renouvellement documents',
+    state: 'pass',
+    detail: 'Aucune piece chauffeur approuvee expiree ou proche expiration dans le signal readiness.',
+  };
+}
+
 function resolveLaunchReadinessNextActions(
   checks: LaunchReadinessCheck[],
 ): LaunchReadinessNextAction[] {
@@ -1456,6 +1495,13 @@ function resolveLaunchReadinessNextActions(
       owner: 'ops',
       action:
         'Reduire la demande ouverte, activer des chauffeurs approuves ou limiter la zone pilote tant que la couverture supply reste insuffisante.',
+      runbookAnchor: 'checklist-apres-deploiement',
+    },
+    'driver-document-renewals': {
+      checkId: 'driver-document-renewals',
+      owner: 'ops',
+      action:
+        'Suspendre ou retirer du pilote les chauffeurs avec documents expires, puis obtenir les renouvellements avant extension.',
       runbookAnchor: 'checklist-apres-deploiement',
     },
     'payment-refunds': {
@@ -3648,14 +3694,20 @@ export class AdminService {
   }
 
   async launchReadiness() {
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const since7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const renewalDueBefore = new Date(
+      now.getTime() + driverDocumentRenewalWarningWindowMs,
+    );
     const [
       health,
       openSupportTickets,
       urgentSupportTickets,
       onboardingReviewQueue,
       pendingDocuments,
+      expiredApprovedDocuments,
+      expiringSoonApprovedDocuments,
       refundPendingPayments,
       ignoredPaymentWebhooks,
       recoveryWallets,
@@ -3694,6 +3746,23 @@ export class AdminService {
       this.prisma.driverDocument.count({
         where: {
           status: 'PENDING',
+        },
+      }),
+      this.prisma.driverDocument.count({
+        where: {
+          status: DriverDocumentStatus.APPROVED,
+          expiresAt: {
+            lte: now,
+          },
+        },
+      }),
+      this.prisma.driverDocument.count({
+        where: {
+          status: DriverDocumentStatus.APPROVED,
+          expiresAt: {
+            gt: now,
+            lte: renewalDueBefore,
+          },
         },
       }),
       this.prisma.paymentAttempt.count({
@@ -3829,6 +3898,10 @@ export class AdminService {
       openRideRequests: openRideRequestsForSupply ?? 0,
       approvedDrivers: approvedDriversForSupply ?? 0,
     });
+    const driverDocumentRenewals = resolveDriverDocumentRenewalReadiness({
+      expiredApprovedDocuments: expiredApprovedDocuments ?? 0,
+      expiringSoonApprovedDocuments: expiringSoonApprovedDocuments ?? 0,
+    });
     const checks: LaunchReadinessCheck[] = [
       {
         id: 'runtime-production-readiness',
@@ -3860,6 +3933,7 @@ export class AdminService {
         state: pendingDocuments === 0 ? 'pass' : 'warn',
         detail: `${pendingDocuments} justificatif(s) en attente.`,
       },
+      driverDocumentRenewals,
       driverSupplyCoverage,
       {
         id: 'payment-refunds',
