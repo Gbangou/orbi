@@ -448,6 +448,30 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   les trois filtres transmis. Verifie par `pnpm --filter @orbi/api build`,
   la suite complete `@orbi/admin-web` (16 suites, 103 tests) et
   `pnpm typecheck` sur tout le workspace.
+- 13 juillet 2026: gap A ferme "surface crash mobile toujours unknown". Le
+  crash de rendu (ErrorBoundary) rider et driver capturait deja le pathname
+  courant en contexte mais classifiait chaque crash avec `surface: 'unknown'`
+  en dur, quel que soit l ecran casse — impossible pour le support de savoir
+  quoi corriger. Ajoute `resolveMobileRenderCrashSurface` (partage dans
+  `@orbi/api`) pour deriver la surface depuis le pathname, branche cote rider
+  et driver, avec tests de regression. Decouvert en direct: un vrai ticket
+  production ("Erreur mobile MOB-GENERIC-API cy9x0g", 13 juillet 2026 17:59)
+  cree par le compte rider reel de l operateur avait exactement ce symptome.
+- 13 juillet 2026: incident ouvert et non ferme, gap B "crash reel bloquant
+  la connexion rider". L operateur a un APK rider installe qui plante (ecran
+  ErrorBoundary) de maniere reproductible et instantanee en soumettant le
+  formulaire de connexion avec son compte reel, reseau actif, sans lien avec
+  le fix de surface ci-dessus (qui necessite un nouvel APK pour s appliquer).
+  Aucun nouveau ticket support n est apparu cote production lors de la
+  reproduction, donc le rapport de crash n a pas pu etre livre au backend
+  cette fois — signe possible que le crash survient avant qu une session
+  persistee existe pour l authentifier. Diagnostic tente sans nouvel APK
+  (refuse explicitement) ni acces `adb logcat` (telephone non connecte en
+  USB au moment de l investigation): code de `auth.tsx`, `OrbiButton`,
+  `ErrorBoundary` et `home.tsx` relus sans defaut evident trouve. Reste
+  strictement classe B: nécessite soit une connexion USB avec `adb logcat`
+  lors d une reproduction, soit une autorisation explicite de build de
+  diagnostic, pour identifier la ligne fautive avec certitude.
 
 ## Master Prompt Operationnel
 
