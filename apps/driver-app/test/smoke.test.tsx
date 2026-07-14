@@ -498,6 +498,41 @@ describe('driver smoke flows', () => {
     expectText(renderer, '2 offres — Ouagadougou');
   });
 
+  it('keeps the driver home usable when offer numeric fields arrive as strings', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers.mockResolvedValue([
+      {
+        ...driverOffers[0],
+        fare: '1800',
+        driverPayout: '1476',
+        distanceKm: '5,8',
+        pickupDistanceKm: '1,2',
+        etaToPickupMinutes: '4',
+        serviceRadiusKm: '8',
+        dispatchScore: '86',
+        offerConfidenceScore: '91',
+        reservationWindowSeconds: '45',
+      },
+    ] as never);
+    mockedFetchMyTrips.mockResolvedValue(buildDriverTrips() as never);
+    mockedFetchDriverEarnings.mockResolvedValue(
+      buildDriverEarningsResponse({
+        today: 12500,
+        week: 48200,
+        month: 160300,
+        completedTrips: 6,
+        averagePayout: 8033,
+      }) as never,
+    );
+    mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
+
+    const renderer = await renderScreen(<DriverHomeScreen />);
+    await pressByText(renderer, 'Actualiser le direct');
+
+    expectText(renderer, '1 offre — Ouagadougou');
+    expect(collectText(renderer.root)).toContain('1.2 km');
+  });
+
   it('loads the driver earnings cockpit with active mission context', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverEarnings.mockResolvedValue(

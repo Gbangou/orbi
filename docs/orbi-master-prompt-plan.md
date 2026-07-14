@@ -527,6 +527,19 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   fares affiches via `.toFixed`) sans trouver d autre occurrence non convertie
   cote backend. APK rider regenere en profil `field-test` apres verification
   complete (tests + typecheck) suite a autorisation explicite de l operateur.
+- 14 juillet 2026: gap A ferme "offres chauffeur fragiles aux nombres sales".
+  Le crash rider lie aux coordonnees texte a revele une classe de risque plus
+  large: plusieurs surfaces driver formataient les distances/gains d offre via
+  `.toFixed`, `Math.round` ou `formatXof` en supposant des nombres JS purs.
+  Si un backend, cache ou proxy renvoyait `distanceKm`, `pickupDistanceKm`,
+  `driverPayout`, `etaToPickupMinutes` ou scores sous forme de chaine
+  (`"5,8"`, `"1476"`) ou valeur non finie, le cockpit chauffeur pouvait
+  planter ou afficher une information incoherente. Ajout de helpers
+  `toFiniteOfferNumber`, `formatDriverOfferDistance` et
+  `formatDriverOfferMinutes`, reutilises par l accueil chauffeur et les cartes
+  d offres; les valeurs texte avec virgule sont normalisees, les valeurs sales
+  degradent en libelle indisponible. Tests helpers et smoke driver couvrent
+  une offre complete avec champs numeriques stringifies.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

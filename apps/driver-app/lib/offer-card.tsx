@@ -6,7 +6,10 @@ import type { DriverOffer } from "@orbi/api";
 import {
   buildDriverOfferConfidenceExplainer,
   buildDriverOfferDetailLines,
+  formatDriverOfferDistance,
   formatDriverOfferFare,
+  formatDriverOfferMinutes,
+  toFiniteOfferNumber,
 } from "./offer-signal";
 import { formatReservationCountdown } from "./offer-reservation";
 
@@ -19,12 +22,6 @@ function buildInitials(name: string): string {
       .map((w) => w.charAt(0).toUpperCase())
       .join("") || "OR"
   );
-}
-
-function formatDistanceKm(value: number | null | undefined): string {
-  return typeof value === "number" && Number.isFinite(value)
-    ? `${value.toFixed(1)} km`
-    : "–";
 }
 
 // ── Vehicle icon — premium isometric SVG illustration ────────────────────────
@@ -130,6 +127,7 @@ export const OfferCard = memo(function OfferCard({
   const confidence = buildDriverOfferConfidenceExplainer(offer);
   const detailLines = buildDriverOfferDetailLines(offer);
   const isDisabled = isSubmitting || hasActiveTrip;
+  const driverPayout = toFiniteOfferNumber(offer.driverPayout);
 
   // Spring slide-in animation — staggered by index
   const slideY = useRef(new Animated.Value(32)).current;
@@ -202,25 +200,31 @@ export const OfferCard = memo(function OfferCard({
       {/* Metrics: pickup distance · ETA · trip distance · net (if available) */}
       <OrbiSurface style={styles.metrics}>
         <View style={styles.metric}>
-          <Text style={styles.metricVal}>{formatDistanceKm(offer.pickupDistanceKm)}</Text>
+          <Text style={styles.metricVal}>
+            {formatDriverOfferDistance(offer.pickupDistanceKm, "–")}
+          </Text>
           <Text style={styles.metricLbl}>Pickup</Text>
         </View>
         <View style={styles.sep} />
         <View style={styles.metric}>
-          <Text style={styles.metricVal}>{Math.round(offer.etaToPickupMinutes)} min</Text>
+          <Text style={styles.metricVal}>
+            {formatDriverOfferMinutes(offer.etaToPickupMinutes, "–")}
+          </Text>
           <Text style={styles.metricLbl}>ETA</Text>
         </View>
         <View style={styles.sep} />
         <View style={styles.metric}>
-          <Text style={styles.metricVal}>{formatDistanceKm(offer.distanceKm)}</Text>
+          <Text style={styles.metricVal}>
+            {formatDriverOfferDistance(offer.distanceKm, "–")}
+          </Text>
           <Text style={styles.metricLbl}>Trajet</Text>
         </View>
-        {typeof offer.driverPayout === "number" ? (
+        {driverPayout !== null ? (
           <>
             <View style={styles.sep} />
             <View style={styles.metric}>
               <Text style={[styles.metricVal, styles.metricValNet]}>
-                {formatXof(offer.driverPayout)}
+                {formatXof(driverPayout)}
               </Text>
               <Text style={styles.metricLbl}>Net</Text>
             </View>

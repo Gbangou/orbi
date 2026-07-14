@@ -39,6 +39,11 @@ import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { buildDriverShiftReadiness } from '../../lib/driver-shift-readiness';
 import { DriverHomeMapView } from '../../lib/driver-home-map-view';
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../../lib/privacy/screen-capture';
+import {
+  formatDriverOfferDistance,
+  formatDriverOfferMinutes,
+  toFiniteOfferNumber,
+} from '../../lib/offer-signal';
 
 const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
 
@@ -79,15 +84,15 @@ function OfferChip({ offer }: { offer: DriverOffer }) {
   const theme = useOrbiTheme();
   const chip = useMemo(() => makeChipStyles(theme), [theme]);
   const isMoto = offer.category === 'motorcycle';
+  const pickupDistance = formatDriverOfferDistance(
+    offer.pickupDistanceKm,
+    formatDriverOfferMinutes(offer.etaToPickupMinutes, 'ETA indisponible'),
+  );
   return (
     <View style={chip.wrap}>
       <VehicleIllustration tier={isMoto ? 'moto-standard' : 'car-standard'} width={30} height={22} />
       <Text style={chip.name}>{buildInitials(offer.riderName)}</Text>
-      <Text style={chip.dist}>
-        {typeof offer.pickupDistanceKm === 'number'
-          ? `${offer.pickupDistanceKm.toFixed(1)} km`
-          : `${offer.etaToPickupMinutes} min`}
-      </Text>
+      <Text style={chip.dist}>{pickupDistance}</Text>
       <Text style={chip.fare}>{formatDriverEarningsAmount(offer.driverPayout ?? offer.fare)}</Text>
     </View>
   );
@@ -163,7 +168,12 @@ function TripRequestModal({
   const isUrgent = secondsLeft <= 7;
   const isWarn = secondsLeft <= 14;
   const accent = isUrgent ? '#FF3B30' : isWarn ? '#FF9500' : '#00C9A7';
-  const fareAmt = offer.driverPayout ?? offer.fare;
+  const pickupDistanceLabel = formatDriverOfferDistance(
+    offer.pickupDistanceKm,
+    formatDriverOfferMinutes(offer.etaToPickupMinutes, 'Pickup indisponible'),
+  );
+  const fareAmt = toFiniteOfferNumber(offer.driverPayout)
+    ?? toFiniteOfferNumber(offer.fare);
 
   return (
     <View style={modal.backdrop} pointerEvents="box-none">
@@ -194,9 +204,7 @@ function TripRequestModal({
               </View>
               <Text style={modal.offerTitle}>Nouvelle course</Text>
               <Text style={modal.offerSub} numberOfLines={1}>
-                {typeof offer.pickupDistanceKm === 'number'
-                  ? `${offer.pickupDistanceKm.toFixed(1)} km pour rejoindre le client`
-                  : `${offer.etaToPickupMinutes} min pour rejoindre le client`}
+                {pickupDistanceLabel} pour rejoindre le client
               </Text>
             </View>
             <View style={[modal.countdownCircle, { borderColor: accent }]}>
@@ -232,21 +240,21 @@ function TripRequestModal({
           {/* Stats */}
           <View style={modal.statsRow}>
             <View style={modal.stat}>
-              <Text style={modal.statVal}>{offer.distanceKm.toFixed(1)} km</Text>
+              <Text style={modal.statVal}>
+                {formatDriverOfferDistance(offer.distanceKm, 'ND')}
+              </Text>
               <Text style={modal.statKey}>Trajet</Text>
             </View>
             <View style={modal.statSep} />
             <View style={modal.stat}>
-              <Text style={modal.statVal}>
-                {typeof offer.pickupDistanceKm === 'number'
-                  ? `${offer.pickupDistanceKm.toFixed(1)} km`
-                  : `${offer.etaToPickupMinutes} min`}
-              </Text>
+              <Text style={modal.statVal}>{pickupDistanceLabel}</Text>
               <Text style={modal.statKey}>Jusqu'à vous</Text>
             </View>
             <View style={modal.statSep} />
             <View style={modal.stat}>
-              <Text style={modal.statVal}>{offer.etaToPickupMinutes} min</Text>
+              <Text style={modal.statVal}>
+                {formatDriverOfferMinutes(offer.etaToPickupMinutes, 'ND')}
+              </Text>
               <Text style={modal.statKey}>ETA pickup</Text>
             </View>
           </View>
@@ -258,7 +266,7 @@ function TripRequestModal({
               <Text style={modal.fareSub}>Prix visible avant acceptation</Text>
             </View>
             <Text style={[modal.fareAmt, { color: accent }]}>
-              {fareAmt.toLocaleString('fr-BF')} XOF
+              {fareAmt !== null ? `${fareAmt.toLocaleString('fr-BF')} XOF` : 'Gain indisponible'}
             </Text>
           </View>
 

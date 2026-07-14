@@ -34,32 +34,61 @@ function resolveOfferPriorityLabel(label: DriverOffer['offerConfidenceLabel']) {
   }
 }
 
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
+export function toFiniteOfferNumber(value: unknown) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim().replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
 }
 
 function formatOfferNumber(value: unknown, fallback = 'ND') {
-  return isFiniteNumber(value) ? String(value) : fallback;
+  const numeric = toFiniteOfferNumber(value);
+  return numeric !== null ? String(numeric) : fallback;
 }
 
-function formatOfferMinutes(value: unknown) {
-  return isFiniteNumber(value) && value >= 0 ? `${Math.round(value)} min` : 'Indisponible';
+export function formatDriverOfferMinutes(value: unknown, fallback = 'Indisponible') {
+  const numeric = toFiniteOfferNumber(value);
+  return numeric !== null && numeric >= 0
+    ? `${Math.round(numeric)} min`
+    : fallback;
+}
+
+export function formatDriverOfferDistance(
+  value: unknown,
+  fallback = 'Distance indisponible',
+) {
+  const numeric = toFiniteOfferNumber(value);
+
+  if (numeric === null || numeric < 0) {
+    return fallback;
+  }
+
+  return `${numeric.toFixed(1)} km`;
 }
 
 function formatOfferMoney(primary: unknown, fallback: unknown) {
-  if (isFiniteNumber(primary)) {
-    return formatXof(primary);
+  const primaryAmount = toFiniteOfferNumber(primary);
+  if (primaryAmount !== null) {
+    return formatXof(primaryAmount);
   }
 
-  if (isFiniteNumber(fallback)) {
-    return formatXof(fallback);
+  const fallbackAmount = toFiniteOfferNumber(fallback);
+  if (fallbackAmount !== null) {
+    return formatXof(fallbackAmount);
   }
 
   return 'Gain indisponible';
 }
 
 export function formatDriverOfferFare(offer: DriverOffer) {
-  return isFiniteNumber(offer.fare) ? formatXof(offer.fare) : 'Prix indisponible';
+  const fare = toFiniteOfferNumber(offer.fare);
+  return fare !== null ? formatXof(fare) : 'Prix indisponible';
 }
 
 export function buildDriverOfferInsights(
@@ -72,7 +101,7 @@ export function buildDriverOfferInsights(
   return [
     {
       label: 'Pickup',
-      value: formatOfferMinutes(offer.etaToPickupMinutes),
+      value: formatDriverOfferMinutes(offer.etaToPickupMinutes),
       tone: 'teal',
     },
     {
@@ -89,37 +118,37 @@ export function buildDriverOfferInsights(
 }
 
 export function buildDriverOfferDetailLines(offer: DriverOffer) {
-  const hasPickupDistance = isFiniteNumber(offer.pickupDistanceKm);
-  const hasServiceRadius = isFiniteNumber(offer.serviceRadiusKm);
-  const hasOfferConfidenceScore = isFiniteNumber(offer.offerConfidenceScore);
-  const hasFairnessScore = isFiniteNumber(offer.fairnessScore);
+  const pickupDistanceKm = toFiniteOfferNumber(offer.pickupDistanceKm);
+  const serviceRadiusKm = toFiniteOfferNumber(offer.serviceRadiusKm);
+  const offerConfidenceScore = toFiniteOfferNumber(offer.offerConfidenceScore);
+  const fairnessScore = toFiniteOfferNumber(offer.fairnessScore);
   const reservationWindowSeconds = offer.reservationWindowSeconds;
-  const hasReservationWindow = isFiniteNumber(reservationWindowSeconds);
+  const reservationWindow = toFiniteOfferNumber(reservationWindowSeconds);
   const lines = [
     `${offer.category === 'motorcycle' ? 'Moto' : 'Voiture'} - trajet ${formatOfferNumber(offer.distanceKm)} km - priorite dispatch ${formatOfferNumber(offer.dispatchScore, '-')}`,
-    hasPickupDistance
-      ? `Pickup a ${offer.pickupDistanceKm} km`
+    pickupDistanceKm !== null
+      ? `Pickup a ${pickupDistanceKm} km`
       : null,
     offer.pickupDistanceSource
       ? `Source pickup: ${offer.pickupDistanceSource === 'DRIVER_AND_PICKUP_COORDINATES' ? 'coordonnees reelles' : 'fallback dispatch'}`
       : null,
-    hasServiceRadius
-      ? `Rayon actif: ${offer.serviceRadiusKm} km`
+    serviceRadiusKm !== null
+      ? `Rayon actif: ${serviceRadiusKm} km`
       : null,
     offer.matchedTier ? `Vehicule retenu: ${offer.matchedTier}` : null,
     offer.dispatchContextSummary
       ? `Contexte dispatch: ${offer.dispatchContextSummary}`
       : null,
-    offer.offerConfidenceLabel || hasOfferConfidenceScore
-      ? `Confiance offre: ${offer.offerConfidenceLabel ?? 'ND'}${hasOfferConfidenceScore ? ` (${offer.offerConfidenceScore}/100)` : ''}`
+    offer.offerConfidenceLabel || offerConfidenceScore !== null
+      ? `Confiance offre: ${offer.offerConfidenceLabel ?? 'ND'}${offerConfidenceScore !== null ? ` (${offerConfidenceScore}/100)` : ''}`
       : null,
     offer.fairnessSummary
       ? `Fairness marketplace: ${offer.fairnessSummary}`
-      : hasFairnessScore
-        ? `Fairness marketplace: ${offer.fairnessScore}/100`
+      : fairnessScore !== null
+        ? `Fairness marketplace: ${fairnessScore}/100`
         : null,
-    hasReservationWindow && reservationWindowSeconds >= 0
-      ? `Fenetre d acceptation: ${reservationWindowSeconds}s`
+    reservationWindow !== null && reservationWindow >= 0
+      ? `Fenetre d acceptation: ${reservationWindow}s`
       : null,
     offer.dispatchLearningSummary ?? null,
   ];
@@ -139,12 +168,9 @@ export function buildDriverOfferConfidenceExplainer(offer: DriverOffer): {
     return null;
   }
 
-  const score = isFiniteNumber(offer.offerConfidenceScore)
-    ? offer.offerConfidenceScore
-    : 50;
-  const windowSeconds = isFiniteNumber(offer.reservationWindowSeconds)
-    ? offer.reservationWindowSeconds
-    : null;
+  const score = toFiniteOfferNumber(offer.offerConfidenceScore)
+    ?? 50;
+  const windowSeconds = toFiniteOfferNumber(offer.reservationWindowSeconds);
   const windowLabel =
     windowSeconds !== null && windowSeconds > 0
       ? `${windowSeconds}s pour accepter`
@@ -188,9 +214,10 @@ export function buildDriverOfferNote(offer: DriverOffer) {
     };
   }
 
-  if (isFiniteNumber(offer.driverPayout)) {
+  const driverPayout = toFiniteOfferNumber(offer.driverPayout);
+  if (driverPayout !== null) {
     return {
-      text: `Gain net estime: ${formatXof(offer.driverPayout)}`,
+      text: `Gain net estime: ${formatXof(driverPayout)}`,
       tone: 'sky' as const,
     };
   }
