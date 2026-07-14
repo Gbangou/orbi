@@ -550,6 +550,14 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `driver-presence-signal` normalisent desormais number/string avec virgule,
   puis degradent en libelles indisponibles quand la valeur est sale. Tests
   actifs et position/presence ajoutent des payloads stringifies.
+- 14 juillet 2026: gap A ferme "ratings et metriques profil fragiles". Les
+  surfaces rider activite/recu et driver profil utilisaient encore certains
+  `.toFixed`, `Math.round` ou ratios directement sur les ratings/distances
+  d affichage. Ajout d un helper rider `rider-display-format` pour ratings,
+  distances et ETA, raccorde a `activity.tsx` et `receipt.tsx`; extension des
+  helpers `driver-profile-signal` pour accepter nombres stringifies et ratios
+  d acceptation (`"0,82"` -> `82%`). Les valeurs sales degradent en fallback
+  au lieu de faire tomber l ecran.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

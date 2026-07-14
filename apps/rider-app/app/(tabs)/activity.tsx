@@ -44,6 +44,11 @@ import {
   safeHaptics,
   useOrbiTheme,
 } from "@orbi/ui/native";
+import {
+  estimateRiderPickupEtaMinutes,
+  formatRiderDistanceKm,
+  formatRiderRatingLabel,
+} from "../../lib/rider-display-format";
 import { restoreRiderSession } from "../../lib/auth";
 import { useTranslation } from "../../lib/i18n";
 import {
@@ -687,14 +692,16 @@ export default function ActivityScreen() {
       return [];
     }
 
+    const ratingLabel = formatRiderRatingLabel(verification.averageRating);
+
     return [
       `Chauffeur verifie: ${formatOperationalStatus(verification.verificationStatus)}`,
       `Telephone chauffeur: ${verification.phoneVerified ? "verifie" : "non verifie"}`,
       `Vehicule: ${verification.vehicle.color} ${verification.vehicle.make} ${verification.vehicle.model}`,
       `Plaque a verifier: ${verification.vehicle.plateNumber}`,
-      verification.averageRating === null
+      ratingLabel === null
         ? `${verification.completedTripsCount} courses terminees`
-        : `Note ${verification.averageRating.toFixed(1)}/5 - ${verification.completedTripsCount} courses terminees`,
+        : `Note ${ratingLabel}/5 - ${verification.completedTripsCount} courses terminees`,
     ];
   }
 
@@ -801,7 +808,8 @@ export default function ActivityScreen() {
           {/* ETA banner — live distance & ETA when driver is approaching */}
           {(activeTrip.status === 'MATCHED' || activeTrip.status === 'DRIVER_APPROACHING') ? (() => {
             const distKm = activeTripDetail?.trip.routeMonitoring.latestPosition?.distanceToPickupKm ?? null;
-            const etaMins = distKm != null ? Math.max(1, Math.ceil(distKm * 3)) : null;
+            const etaMins = estimateRiderPickupEtaMinutes(distKm);
+            const distanceLabel = formatRiderDistanceKm(distKm);
             return (
               <OrbiSurface tone="sky" style={styles.etaBanner}>
                 <View style={{ flex: 1 }}>
@@ -812,9 +820,9 @@ export default function ActivityScreen() {
                     {etaMins != null ? `Dans ~${etaMins} min` : 'En route vers vous'}
                   </Text>
                 </View>
-                {distKm != null ? (
+                {distanceLabel ? (
                   <View style={styles.etaDistBadge}>
-                    <Text style={styles.etaDistText}>{distKm.toFixed(1)} km</Text>
+                    <Text style={styles.etaDistText}>{distanceLabel}</Text>
                   </View>
                 ) : null}
               </OrbiSurface>

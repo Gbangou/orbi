@@ -12,38 +12,78 @@ export function formatDriverProfileDateTime(value: unknown, fallback = 'Date ind
   return date.toLocaleString('fr-FR');
 }
 
-function isFiniteProfileNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
+function toFiniteProfileNumber(value: unknown) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim().replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
 }
 
 export function formatDriverProfileCount(value: unknown, fallback = 'ND') {
-  return isFiniteProfileNumber(value) && value >= 0 ? String(Math.floor(value)) : fallback;
+  const numeric = toFiniteProfileNumber(value);
+  return numeric !== null && numeric >= 0 ? String(Math.floor(numeric)) : fallback;
 }
 
 export function formatDriverProfilePercent(value: unknown) {
-  return isFiniteProfileNumber(value) && value >= 0
-    ? `${Math.min(100, Math.floor(value))}%`
+  const numeric = toFiniteProfileNumber(value);
+  return numeric !== null && numeric >= 0
+    ? `${Math.min(100, Math.floor(numeric))}%`
     : 'ND%';
 }
 
+export function formatDriverProfileRatioPercent(value: unknown, fallback = '—') {
+  const numeric = toFiniteProfileNumber(value);
+  return numeric !== null && numeric >= 0
+    ? `${Math.round(Math.min(1, numeric) * 100)}%`
+    : fallback;
+}
+
+export function resolveDriverProfileRatioTone(value: unknown) {
+  const numeric = toFiniteProfileNumber(value);
+
+  if (numeric === null) {
+    return 'neutral' as const;
+  }
+
+  if (numeric >= 0.75) {
+    return 'teal' as const;
+  }
+
+  if (numeric >= 0.55) {
+    return 'amber' as const;
+  }
+
+  return 'danger' as const;
+}
+
 export function formatDriverProfileDistanceKm(value: unknown, fallback = 'ND') {
-  return isFiniteProfileNumber(value) && value >= 0 ? `${value} km` : `${fallback} km`;
+  const numeric = toFiniteProfileNumber(value);
+  return numeric !== null && numeric >= 0 ? `${numeric} km` : `${fallback} km`;
 }
 
 export function formatDriverProfileRating(value: unknown, fallback = 'Nouvelle activite') {
-  return isFiniteProfileNumber(value) && value >= 0 ? String(value) : fallback;
+  const numeric = toFiniteProfileNumber(value);
+  return numeric !== null && numeric >= 0 ? `${numeric.toFixed(1)}/5` : fallback;
 }
 
 export function formatDriverProfileBytes(value: unknown) {
-  if (!isFiniteProfileNumber(value) || value <= 0) {
+  const numeric = toFiniteProfileNumber(value);
+
+  if (numeric === null || numeric <= 0) {
     return 'Taille indisponible';
   }
 
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)} MB`;
+  if (numeric >= 1_000_000) {
+    return `${(numeric / 1_000_000).toFixed(1)} MB`;
   }
 
-  return `${Math.round(value / 1_000)} KB`;
+  return `${Math.round(numeric / 1_000)} KB`;
 }
 
 export function formatDriverOnboardingProgress(input: {

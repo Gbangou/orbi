@@ -6,7 +6,9 @@ import {
   formatDriverProfileDateTime,
   formatDriverProfileDistanceKm,
   formatDriverProfilePercent,
+  formatDriverProfileRatioPercent,
   formatDriverProfileRating,
+  resolveDriverProfileRatioTone,
 } from '../lib/driver-profile-signal';
 
 describe('driver profile signal helpers', () => {
@@ -37,5 +39,15 @@ describe('driver profile signal helpers', () => {
         readinessPercent: Number.NaN,
       }),
     ).toBe('Dossier ND/ND complete a ND%');
+  });
+
+  it('normalizes stringified profile metrics before display', () => {
+    expect(formatDriverProfileCount('12,9')).toBe('12');
+    expect(formatDriverProfilePercent('84,7')).toBe('84%');
+    expect(formatDriverProfileRatioPercent('0,82')).toBe('82%');
+    expect(resolveDriverProfileRatioTone('0,82')).toBe('teal');
+    expect(formatDriverProfileDistanceKm('9,5')).toBe('9.5 km');
+    expect(formatDriverProfileRating('4,8')).toBe('4.8/5');
+    expect(formatDriverProfileBytes('2500000')).toBe('2.5 MB');
   });
 });

@@ -18,6 +18,7 @@ import { formatXof, type OrbiTheme } from '@orbi/ui';
 import { OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
+import { formatRiderRatingLabel } from '../lib/rider-display-format';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -351,10 +352,10 @@ export default function ReceiptScreen() {
         )
       : null;
 
-  const ratingLabel =
-    typeof trip.driverVerification.averageRating === 'number'
-      ? `★ ${trip.driverVerification.averageRating.toFixed(1)}`
-      : null;
+  const ratingLabel = formatRiderRatingLabel(
+    trip.driverVerification.averageRating,
+    { prefix: '★ ' },
+  );
 
   const promoSavingsXof = trip.promoCode
     ? Math.round(trip.actualFare * (trip.promoCode.discountBps / (10000 - trip.promoCode.discountBps)))

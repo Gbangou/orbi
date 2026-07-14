@@ -50,7 +50,9 @@ import {
   formatDriverProfileDateTime,
   formatDriverProfileDistanceKm,
   formatDriverProfilePercent,
+  formatDriverProfileRatioPercent,
   formatDriverProfileRating,
+  resolveDriverProfileRatioTone,
 } from '../../lib/driver-profile-signal';
 
 const cityOptions = [
@@ -823,30 +825,18 @@ export default function ProfilScreen() {
           />
           <OrbiMetricTile
             label="Note"
-            value={
-              profile.profile.averageRating != null
-                ? `${profile.profile.averageRating.toFixed(1)}/5`
-                : '—'
-            }
+            value={formatDriverProfileRating(profile.profile.averageRating, '—')}
             tone="amber"
             style={styles.statCard}
           />
           <OrbiMetricTile
             label="Taux acc."
-            value={
-              profile.profile.dispatchSignal?.acceptanceRate != null
-                ? `${Math.round(profile.profile.dispatchSignal.acceptanceRate * 100)}%`
-                : '—'
-            }
-            tone={
-              profile.profile.dispatchSignal?.acceptanceRate == null
-                ? 'neutral'
-                : profile.profile.dispatchSignal.acceptanceRate >= 0.75
-                  ? 'teal'
-                  : profile.profile.dispatchSignal.acceptanceRate >= 0.55
-                    ? 'amber'
-                    : 'danger'
-            }
+            value={formatDriverProfileRatioPercent(
+              profile.profile.dispatchSignal?.acceptanceRate,
+            )}
+            tone={resolveDriverProfileRatioTone(
+              profile.profile.dispatchSignal?.acceptanceRate,
+            )}
             style={styles.statCard}
           />
         </View>
