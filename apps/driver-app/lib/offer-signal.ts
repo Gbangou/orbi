@@ -72,7 +72,11 @@ export function formatDriverOfferDistance(
   return `${numeric.toFixed(1)} km`;
 }
 
-function formatOfferMoney(primary: unknown, fallback: unknown) {
+export function formatDriverOfferMoney(
+  primary: unknown,
+  fallback: unknown = null,
+  unavailableLabel = 'Gain indisponible',
+) {
   const primaryAmount = toFiniteOfferNumber(primary);
   if (primaryAmount !== null) {
     return formatXof(primaryAmount);
@@ -83,7 +87,7 @@ function formatOfferMoney(primary: unknown, fallback: unknown) {
     return formatXof(fallbackAmount);
   }
 
-  return 'Gain indisponible';
+  return unavailableLabel;
 }
 
 export function formatDriverOfferFare(offer: DriverOffer) {
@@ -111,7 +115,7 @@ export function buildDriverOfferInsights(
     },
     {
       label: 'Gain',
-      value: formatOfferMoney(offer.driverPayout, offer.fare),
+      value: formatDriverOfferMoney(offer.driverPayout, offer.fare),
       tone: 'amber',
     },
   ];
@@ -217,7 +221,7 @@ export function buildDriverOfferNote(offer: DriverOffer) {
   const driverPayout = toFiniteOfferNumber(offer.driverPayout);
   if (driverPayout !== null) {
     return {
-      text: `Gain net estime: ${formatXof(driverPayout)}`,
+      text: `Gain net estime: ${formatDriverOfferMoney(driverPayout)}`,
       tone: 'sky' as const,
     };
   }

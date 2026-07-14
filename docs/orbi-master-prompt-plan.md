@@ -574,6 +574,14 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   remises et degrader en libelle indisponible au lieu de provoquer un crash.
   Les ecrans rider critiques utilisent desormais ce helper unique. Tests helper,
   smoke rider complet et typecheck workspace valident cette tranche.
+- 14 juillet 2026: gap A ferme "tarifs driver actifs hors helper". Les surfaces
+  driver de mission active, carte d offre, modal d accueil et flash de cloture
+  avaient encore quelques labels argent formates directement via `formatXof` ou
+  `toLocaleString`, avec risque de degradation incoherente si un montant arrive
+  en chaine. Le formatter d offre est desormais exporte et reutilise, la mission
+  active passe par `driver-earnings-signal`, et la cloture de trajet normalise
+  `actualFare` avant de calculer le net. Tests offer-signal et driver-active-flow
+  couvrent les montants stringifies.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

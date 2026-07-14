@@ -270,7 +270,7 @@ describe('driver-active-flow', () => {
               },
             },
             pickupCode: '1234',
-            actualFare: 3500,
+            actualFare: '3500',
             currency: 'XOF',
             startedAt: null,
             completedAt: null,
@@ -294,6 +294,10 @@ describe('driver-active-flow', () => {
         expect.objectContaining({
           label: 'Vehicule',
           value: 'Yamaha Crypton',
+        }),
+        expect.objectContaining({
+          label: 'Tarif',
+          value: expect.stringContaining('3 500'),
         }),
       ]),
     );

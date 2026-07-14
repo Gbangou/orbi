@@ -44,6 +44,7 @@ import { DriverHomeMapView } from '../../lib/driver-home-map-view';
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../../lib/privacy/screen-capture';
 import {
   formatDriverOfferDistance,
+  formatDriverOfferMoney,
   formatDriverOfferMinutes,
   toFiniteOfferNumber,
 } from '../../lib/offer-signal';
@@ -269,7 +270,7 @@ function TripRequestModal({
               <Text style={modal.fareSub}>Prix visible avant acceptation</Text>
             </View>
             <Text style={[modal.fareAmt, { color: accent }]}>
-              {fareAmt !== null ? `${fareAmt.toLocaleString('fr-BF')} XOF` : 'Gain indisponible'}
+              {formatDriverOfferMoney(fareAmt)}
             </Text>
           </View>
 

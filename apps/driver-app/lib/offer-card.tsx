@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
-import { formatXof, type OrbiTheme } from "@orbi/ui";
+import { type OrbiTheme } from "@orbi/ui";
 import { OrbiButton, OrbiSurface, useOrbiTheme, VehicleIllustration } from "@orbi/ui/native";
 import type { DriverOffer } from "@orbi/api";
 import {
@@ -8,6 +8,7 @@ import {
   buildDriverOfferDetailLines,
   formatDriverOfferDistance,
   formatDriverOfferFare,
+  formatDriverOfferMoney,
   formatDriverOfferMinutes,
   toFiniteOfferNumber,
 } from "./offer-signal";
@@ -224,7 +225,7 @@ export const OfferCard = memo(function OfferCard({
             <View style={styles.sep} />
             <View style={styles.metric}>
               <Text style={[styles.metricVal, styles.metricValNet]}>
-                {formatXof(driverPayout)}
+                {formatDriverOfferMoney(driverPayout)}
               </Text>
               <Text style={styles.metricLbl}>Net</Text>
             </View>

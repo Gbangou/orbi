@@ -4,6 +4,7 @@ import {
   buildDriverOfferNote,
   formatDriverOfferDistance,
   formatDriverOfferFare,
+  formatDriverOfferMoney,
   formatDriverOfferMinutes,
   toFiniteOfferNumber,
 } from '../lib/offer-signal';
@@ -50,6 +51,7 @@ describe('driver offer signal helpers', () => {
     ]);
     expect(buildDriverOfferNote(dirtyOffer)).toBeNull();
     expect(formatDriverOfferFare(dirtyOffer)).toBe('Prix indisponible');
+    expect(formatDriverOfferMoney(Number.NaN, undefined)).toBe('Gain indisponible');
     expect(formatDriverOfferDistance((dirtyOffer as { distanceKm: unknown }).distanceKm)).toBe(
       'Distance indisponible',
     );
@@ -62,6 +64,8 @@ describe('driver offer signal helpers', () => {
     expect(toFiniteOfferNumber('12,75')).toBe(12.75);
     expect(formatDriverOfferDistance('1,25')).toBe('1.3 km');
     expect(formatDriverOfferMinutes('4,4')).toBe('4 min');
+    expect(formatDriverOfferMoney('1476')).toContain('1 476');
+    expect(formatDriverOfferMoney(null, '1800')).toContain('1 800');
 
     const offer = {
       id: 'offer-string-values',

@@ -33,7 +33,6 @@ import {
 import {
   describeRealtimeEvent,
   describeRealtimeConnection,
-  formatXof,
   orbiCopy,
   type OrbiTheme,
 } from "@orbi/ui";
@@ -71,6 +70,10 @@ import { useDriverRealtimeStream } from "../../lib/use-driver-realtime-stream";
 import { TripMapView } from "../../lib/trip-map-view";
 import { ApproachMapView } from "../../lib/approach-map-view";
 import { useLiveRefresh } from "../../lib/use-live-refresh";
+import {
+  formatDriverEarningsAmount,
+  toFiniteEarningsNumber,
+} from "../../lib/driver-earnings-signal";
 import {
   normalizePickupCode,
   validateOfferAction,
@@ -579,12 +582,12 @@ export default function OffersScreen() {
         setStatus(
           `Trajet ${response.trip.id.slice(0, 8)} mis a jour: ${response.trip.status}.`,
         );
-        if (nextStatus === "COMPLETED" && typeof response.trip.actualFare === "number") {
-          const gross = response.trip.actualFare;
+        const gross = toFiniteEarningsNumber(response.trip.actualFare);
+        if (nextStatus === "COMPLETED" && gross !== null) {
           const net = Math.round(gross * 0.82);
           setCompletionFlash({
-            fareLabel: formatXof(gross),
-            netLabel: formatXof(net),
+            fareLabel: formatDriverEarningsAmount(gross),
+            netLabel: formatDriverEarningsAmount(net),
           });
         }
         await loadDriverData();

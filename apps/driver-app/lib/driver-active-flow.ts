@@ -4,7 +4,8 @@ import {
   type MyTripsResponse,
   type TripDetailResponse,
 } from "@orbi/api";
-import { formatOperationalStatus, formatXof } from "@orbi/ui";
+import { formatOperationalStatus } from "@orbi/ui";
+import { formatDriverEarningsAmount } from "./driver-earnings-signal";
 import { isOfferReservationActive } from "./offer-reservation";
 
 function toFiniteFlowNumber(value: unknown) {
@@ -208,7 +209,7 @@ export function buildDriverMissionSnapshot(input: {
     },
     {
       label: "Tarif",
-      value: formatXof(detail?.actualFare ?? activeTrip.amount),
+      value: formatDriverEarningsAmount(detail?.actualFare ?? activeTrip.amount),
       helper: activeTrip.currency,
     },
   ];
@@ -299,7 +300,7 @@ export function buildDriverRiderTrustSnapshot(input: {
     riderName: detail.riderName,
     initials: buildInitials(detail.riderName),
     routeLabel: `${detail.pickupAddress} vers ${detail.destinationAddress}`,
-    fareLabel: formatXof(detail.actualFare),
+    fareLabel: formatDriverEarningsAmount(detail.actualFare),
     vehicleLabel: detail.vehicleLabel,
   };
 }
