@@ -6,7 +6,7 @@ import {
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
 } from '@orbi/ui';
-import { useOrbiTheme } from '@orbi/ui/native';
+import { ErrorBoundary, useOrbiTheme } from '@orbi/ui/native';
 import { enqueueDriverMapError } from './map-error-reporting';
 
 const TypedWebView = WebView as any;
@@ -151,7 +151,7 @@ export function TripMapView({
     }
   }, [driverLat, driverLng]);
 
-  if (Platform.OS === 'web') {
+  function renderDegradedPanel() {
     const hasRoute = Number.isFinite(pickupLat) && Number.isFinite(destLat);
     const hasDriver = Number.isFinite(driverLat) && Number.isFinite(driverLng);
 
@@ -176,42 +176,53 @@ export function TripMapView({
     );
   }
 
+  if (Platform.OS === 'web') {
+    return renderDegradedPanel();
+  }
+
   return (
-    <View style={[styles.container, style]}>
-      <TypedWebView
-        ref={webRef}
-        source={{ html: htmlRef.current }}
-        scrollEnabled={false}
-        style={styles.webview}
-        javaScriptEnabled
-        originWhitelist={['about:blank', 'https://*']}
-        onShouldStartLoadWithRequest={(request: { url: string }) =>
-          shouldAllowLocalMapWebViewRequest(request.url)
-        }
-        onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
-          enqueueDriverMapError(
-            new Error(event.nativeEvent?.description ?? 'Driver trip map WebView error'),
-            {
-              surface: 'driver-trip-map',
-              code: event.nativeEvent?.code ?? null,
-            },
-          );
-        }}
-        onHttpError={(event: {
-          nativeEvent?: { statusCode?: number; description?: string; url?: string };
-        }) => {
-          enqueueDriverMapError(
-            new Error(event.nativeEvent?.description ?? 'Driver trip map HTTP error'),
-            {
-              surface: 'driver-trip-map',
-              statusCode: event.nativeEvent?.statusCode ?? null,
-              url: event.nativeEvent?.url ?? null,
-            },
-          );
-        }}
-        allowsInlineMediaPlayback
-      />
-    </View>
+    <ErrorBoundary
+      fallback={renderDegradedPanel()}
+      onError={(error) =>
+        enqueueDriverMapError(error, { surface: 'driver-trip-map', action: 'render-crash' })
+      }
+    >
+      <View style={[styles.container, style]}>
+        <TypedWebView
+          ref={webRef}
+          source={{ html: htmlRef.current }}
+          scrollEnabled={false}
+          style={styles.webview}
+          javaScriptEnabled
+          originWhitelist={['about:blank', 'https://*']}
+          onShouldStartLoadWithRequest={(request: { url: string }) =>
+            shouldAllowLocalMapWebViewRequest(request.url)
+          }
+          onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
+            enqueueDriverMapError(
+              new Error(event.nativeEvent?.description ?? 'Driver trip map WebView error'),
+              {
+                surface: 'driver-trip-map',
+                code: event.nativeEvent?.code ?? null,
+              },
+            );
+          }}
+          onHttpError={(event: {
+            nativeEvent?: { statusCode?: number; description?: string; url?: string };
+          }) => {
+            enqueueDriverMapError(
+              new Error(event.nativeEvent?.description ?? 'Driver trip map HTTP error'),
+              {
+                surface: 'driver-trip-map',
+                statusCode: event.nativeEvent?.statusCode ?? null,
+                url: event.nativeEvent?.url ?? null,
+              },
+            );
+          }}
+          allowsInlineMediaPlayback
+        />
+      </View>
+    </ErrorBoundary>
   );
 }
 
