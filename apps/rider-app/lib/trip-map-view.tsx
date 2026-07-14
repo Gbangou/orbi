@@ -6,7 +6,7 @@ import {
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
 } from '@orbi/ui';
-import { useOrbiTheme } from '@orbi/ui/native';
+import { ErrorBoundary, useOrbiTheme } from '@orbi/ui/native';
 import { enqueueRiderMapError } from './map-error-reporting';
 
 const TypedWebView = WebView as any;
@@ -171,7 +171,7 @@ export function TripMapView({
     }
   }, [driverLat, driverLng]);
 
-  if (Platform.OS === 'web') {
+  function renderDegradedPanel() {
     const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
     const hasDestination = Number.isFinite(destLat) && Number.isFinite(destLng);
     const hasDriver = Number.isFinite(driverLat) && Number.isFinite(driverLng);
@@ -206,66 +206,77 @@ export function TripMapView({
     );
   }
 
+  if (Platform.OS === 'web') {
+    return renderDegradedPanel();
+  }
+
   return (
-    <View style={[styles.container, style]}>
-      <TypedWebView
-        ref={webRef}
-        source={{ html: htmlRef.current }}
-        scrollEnabled={false}
-        style={styles.webview}
-        javaScriptEnabled
-        originWhitelist={['about:blank', 'https://*']}
-        onShouldStartLoadWithRequest={(request: { url: string }) =>
-          shouldAllowLocalMapWebViewRequest(request.url)
-        }
-        onMessage={(event: { nativeEvent?: { data?: string } }) => {
-          if (!onSelectCoordinate || !event.nativeEvent?.data) {
-            return;
+    <ErrorBoundary
+      fallback={renderDegradedPanel()}
+      onError={(error) =>
+        enqueueRiderMapError(error, { surface: 'trip-map', action: 'render-crash' })
+      }
+    >
+      <View style={[styles.container, style]}>
+        <TypedWebView
+          ref={webRef}
+          source={{ html: htmlRef.current }}
+          scrollEnabled={false}
+          style={styles.webview}
+          javaScriptEnabled
+          originWhitelist={['about:blank', 'https://*']}
+          onShouldStartLoadWithRequest={(request: { url: string }) =>
+            shouldAllowLocalMapWebViewRequest(request.url)
           }
-
-          try {
-            const message = JSON.parse(event.nativeEvent.data) as {
-              type?: string;
-              lat?: number;
-              lng?: number;
-            };
-
-            if (
-              message.type === 'MAP_COORDINATE_SELECTED' &&
-              Number.isFinite(message.lat) &&
-              Number.isFinite(message.lng)
-            ) {
-              onSelectCoordinate({
-                latitude: Number(message.lat),
-                longitude: Number(message.lng),
-              });
+          onMessage={(event: { nativeEvent?: { data?: string } }) => {
+            if (!onSelectCoordinate || !event.nativeEvent?.data) {
+              return;
             }
-          } catch {
-            // Ignore malformed messages from the embedded map.
-          }
-        }}
-        onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
-          enqueueRiderMapError(
-            new Error(event.nativeEvent?.description ?? 'Trip map WebView error'),
-            {
-              surface: 'trip-map',
-              code: event.nativeEvent?.code ?? null,
-            },
-          );
-        }}
-        onHttpError={(event: { nativeEvent?: { statusCode?: number; description?: string; url?: string } }) => {
-          enqueueRiderMapError(
-            new Error(event.nativeEvent?.description ?? 'Trip map HTTP error'),
-            {
-              surface: 'trip-map',
-              statusCode: event.nativeEvent?.statusCode ?? null,
-              url: event.nativeEvent?.url ?? null,
-            },
-          );
-        }}
-        allowsInlineMediaPlayback
-      />
-    </View>
+
+            try {
+              const message = JSON.parse(event.nativeEvent.data) as {
+                type?: string;
+                lat?: number;
+                lng?: number;
+              };
+
+              if (
+                message.type === 'MAP_COORDINATE_SELECTED' &&
+                Number.isFinite(message.lat) &&
+                Number.isFinite(message.lng)
+              ) {
+                onSelectCoordinate({
+                  latitude: Number(message.lat),
+                  longitude: Number(message.lng),
+                });
+              }
+            } catch {
+              // Ignore malformed messages from the embedded map.
+            }
+          }}
+          onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
+            enqueueRiderMapError(
+              new Error(event.nativeEvent?.description ?? 'Trip map WebView error'),
+              {
+                surface: 'trip-map',
+                code: event.nativeEvent?.code ?? null,
+              },
+            );
+          }}
+          onHttpError={(event: { nativeEvent?: { statusCode?: number; description?: string; url?: string } }) => {
+            enqueueRiderMapError(
+              new Error(event.nativeEvent?.description ?? 'Trip map HTTP error'),
+              {
+                surface: 'trip-map',
+                statusCode: event.nativeEvent?.statusCode ?? null,
+                url: event.nativeEvent?.url ?? null,
+              },
+            );
+          }}
+          allowsInlineMediaPlayback
+        />
+      </View>
+    </ErrorBoundary>
   );
 }
 

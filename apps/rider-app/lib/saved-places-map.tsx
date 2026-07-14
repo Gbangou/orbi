@@ -7,7 +7,8 @@ import {
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
 } from '@orbi/ui';
-import { useOrbiTheme } from '@orbi/ui/native';
+import { ErrorBoundary, useOrbiTheme } from '@orbi/ui/native';
+import { enqueueRiderMapError } from './map-error-reporting';
 
 const TypedWebView = WebView as any;
 
@@ -104,7 +105,7 @@ export function SavedPlacesMap({
 
   const html = buildSavedPlacesMapHtml(validPlaces);
 
-  if (Platform.OS === 'web') {
+  function renderDegradedPanel() {
     return (
       <View style={[styles.container, styles.webFallback, { height }]}>
         <View style={styles.webMapSurface}>
@@ -143,6 +144,10 @@ export function SavedPlacesMap({
     );
   }
 
+  if (Platform.OS === 'web') {
+    return renderDegradedPanel();
+  }
+
   function handleMessage(event: WebViewMessageEvent) {
     try {
       const data = JSON.parse(event.nativeEvent.data) as { placeId?: string };
@@ -155,20 +160,48 @@ export function SavedPlacesMap({
   }
 
   return (
-    <View style={[styles.container, { height }]}>
-      <TypedWebView
-        ref={webViewRef}
-        source={{ html }}
-        style={styles.webView}
-        scrollEnabled={false}
-        onMessage={handleMessage}
-        javaScriptEnabled
-        originWhitelist={['about:blank', 'https://*']}
-        onShouldStartLoadWithRequest={(request: { url: string }) =>
-          shouldAllowLocalMapWebViewRequest(request.url)
-        }
-      />
-    </View>
+    <ErrorBoundary
+      fallback={renderDegradedPanel()}
+      onError={(error) =>
+        enqueueRiderMapError(error, { surface: 'saved-places-map', action: 'render-crash' })
+      }
+    >
+      <View style={[styles.container, { height }]}>
+        <TypedWebView
+          ref={webViewRef}
+          source={{ html }}
+          style={styles.webView}
+          scrollEnabled={false}
+          onMessage={handleMessage}
+          javaScriptEnabled
+          originWhitelist={['about:blank', 'https://*']}
+          onShouldStartLoadWithRequest={(request: { url: string }) =>
+            shouldAllowLocalMapWebViewRequest(request.url)
+          }
+          onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
+            enqueueRiderMapError(
+              new Error(event.nativeEvent?.description ?? 'Saved places map WebView error'),
+              {
+                surface: 'saved-places-map',
+                code: event.nativeEvent?.code ?? null,
+              },
+            );
+          }}
+          onHttpError={(event: {
+            nativeEvent?: { statusCode?: number; description?: string; url?: string };
+          }) => {
+            enqueueRiderMapError(
+              new Error(event.nativeEvent?.description ?? 'Saved places map HTTP error'),
+              {
+                surface: 'saved-places-map',
+                statusCode: event.nativeEvent?.statusCode ?? null,
+                url: event.nativeEvent?.url ?? null,
+              },
+            );
+          }}
+        />
+      </View>
+    </ErrorBoundary>
   );
 }
 

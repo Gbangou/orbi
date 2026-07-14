@@ -7,7 +7,7 @@ import {
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
 } from '@orbi/ui';
-import { useOrbiTheme } from '@orbi/ui/native';
+import { ErrorBoundary, useOrbiTheme } from '@orbi/ui/native';
 import { createRiderPublicClient } from './auth';
 import { enqueueRiderMapError } from './map-error-reporting';
 
@@ -177,7 +177,7 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
     }
   }, [riderLat, riderLng]);
 
-  if (Platform.OS === 'web') {
+  function renderDegradedPanel() {
     const hasLocation = Number.isFinite(riderLat) && Number.isFinite(riderLng);
 
     return (
@@ -218,42 +218,53 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
     );
   }
 
+  if (Platform.OS === 'web') {
+    return renderDegradedPanel();
+  }
+
   return (
-    <View style={[styles.container, style]}>
-      <TypedWebView
-        ref={webRef}
-        source={{ html: htmlRef.current }}
-        scrollEnabled={false}
-        style={styles.webview}
-        javaScriptEnabled
-        originWhitelist={['about:blank', 'https://*']}
-        onShouldStartLoadWithRequest={(request: { url: string }) =>
-          shouldAllowLocalMapWebViewRequest(request.url)
-        }
-        onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
-          enqueueRiderMapError(
-            new Error(event.nativeEvent?.description ?? 'Home map WebView error'),
-            {
-              surface: 'home-map',
-              code: event.nativeEvent?.code ?? null,
-            },
-          );
-        }}
-        onHttpError={(event: {
-          nativeEvent?: { statusCode?: number; description?: string; url?: string };
-        }) => {
-          enqueueRiderMapError(
-            new Error(event.nativeEvent?.description ?? 'Home map HTTP error'),
-            {
-              surface: 'home-map',
-              statusCode: event.nativeEvent?.statusCode ?? null,
-              url: event.nativeEvent?.url ?? null,
-            },
-          );
-        }}
-        allowsInlineMediaPlayback
-      />
-    </View>
+    <ErrorBoundary
+      fallback={renderDegradedPanel()}
+      onError={(error) =>
+        enqueueRiderMapError(error, { surface: 'home-map', action: 'render-crash' })
+      }
+    >
+      <View style={[styles.container, style]}>
+        <TypedWebView
+          ref={webRef}
+          source={{ html: htmlRef.current }}
+          scrollEnabled={false}
+          style={styles.webview}
+          javaScriptEnabled
+          originWhitelist={['about:blank', 'https://*']}
+          onShouldStartLoadWithRequest={(request: { url: string }) =>
+            shouldAllowLocalMapWebViewRequest(request.url)
+          }
+          onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
+            enqueueRiderMapError(
+              new Error(event.nativeEvent?.description ?? 'Home map WebView error'),
+              {
+                surface: 'home-map',
+                code: event.nativeEvent?.code ?? null,
+              },
+            );
+          }}
+          onHttpError={(event: {
+            nativeEvent?: { statusCode?: number; description?: string; url?: string };
+          }) => {
+            enqueueRiderMapError(
+              new Error(event.nativeEvent?.description ?? 'Home map HTTP error'),
+              {
+                surface: 'home-map',
+                statusCode: event.nativeEvent?.statusCode ?? null,
+                url: event.nativeEvent?.url ?? null,
+              },
+            );
+          }}
+          allowsInlineMediaPlayback
+        />
+      </View>
+    </ErrorBoundary>
   );
 }
 

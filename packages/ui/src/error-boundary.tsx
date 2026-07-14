@@ -5,6 +5,10 @@ type Props = {
   children: React.ReactNode;
   fallbackLabel?: string;
   fallbackDetail?: string;
+  // Rendu a la place de l'ecran de secours plein ecran par defaut, pour les
+  // cas ou l'erreur doit degrader une seule zone (ex: une carte WebView) sans
+  // remplacer tout l'ecran par un message generique.
+  fallback?: React.ReactNode;
   onError?: (error: unknown, info: React.ErrorInfo) => void;
 };
 
@@ -45,6 +49,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback !== undefined) {
+        return this.props.fallback;
+      }
+
       return (
         <View style={styles.container}>
           <Text style={styles.icon}>⚠</Text>
