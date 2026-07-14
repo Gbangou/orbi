@@ -318,6 +318,7 @@ export type AdminTripsAuditResponse = {
     mobileMoneyReconciliationRate: number;
     refundPendingTrips: number;
     riskTripCount: number;
+    resolvedRiskTripCount: number;
     criticalRiskTripCount: number;
     moneyAtRisk: number;
     currency: string;
@@ -351,6 +352,15 @@ export type AdminTripsAuditResponse = {
     createdAt: string;
   }>;
   recommendations: string[];
+};
+
+export type AdminTripAuditRiskResolutionResponse = {
+  tripId: string;
+  status: "RESOLVED" | "ALREADY_RESOLVED";
+  owner: "ops" | "finance" | "support" | "engineering";
+  severity: "low" | "medium" | "high" | "critical";
+  resolvedAt: string | null;
+  riskReasons: string[];
 };
 
 export type AdminLaunchReadinessResponse = {
@@ -1300,6 +1310,20 @@ export async function fetchAdminTripsAudit(
   return client.request<AdminTripsAuditResponse>(apiRoutes.admin.tripsAudit, {
     query,
   });
+}
+
+export async function resolveAdminTripAuditRisk(
+  client: OrbiApiClient,
+  tripId: string,
+  payload: { reason: string },
+) {
+  return client.request<AdminTripAuditRiskResolutionResponse>(
+    `${apiRoutes.admin.tripsAudit}/${tripId}/resolve`,
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
 }
 
 export async function fetchAdminJobQueue(

@@ -40,6 +40,7 @@ import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-d
 import { UpdateSupportTicketDto } from './dto/update-support-ticket.dto';
 import { DriverSuspensionDto } from './dto/driver-suspension.dto';
 import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-action-acknowledgement.dto';
+import { ResolveTripAuditRiskDto } from './dto/resolve-trip-audit-risk.dto';
 import { CreatePromoCodeDto } from './dto/create-promo-code.dto';
 import { RidersQueryDto } from './dto/riders-query.dto';
 import { SetRiderStatusDto } from './dto/set-rider-status.dto';
@@ -114,6 +115,19 @@ export class AdminController {
   @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
   tripsAudit(@Query() query: TripsAuditQueryDto) {
     return this.adminService.tripsAudit(query);
+  }
+
+  @Post('trips/audit/:tripId/resolve')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  resolveTripAuditRisk(
+    @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
+    @Body() payload: ResolveTripAuditRiskDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.resolveTripAuditRisk(tripId, payload, auth);
   }
 
   @Get('job-queue')

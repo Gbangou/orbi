@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import type { AdminTripsAuditResponse } from '@orbi/api';
 import { formatOperationalStatus } from '@orbi/ui';
-import { fetchAdminJson } from './admin-client-fetch';
+import { fetchAdminJson, postAdminMutation } from './admin-client-fetch';
 
 type TripsAuditBoardProps = {
   initialAudit: AdminTripsAuditResponse;
@@ -65,6 +65,10 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
   const [filterTo, setFilterTo] = useState('');
   const [filterSearch, setFilterSearch] = useState('');
   const [filterLimit, setFilterLimit] = useState(300);
+  const [resolutionReasonByTripId, setResolutionReasonByTripId] = useState<
+    Record<string, string>
+  >({});
+  const [resolvingTripId, setResolvingTripId] = useState<string | null>(null);
 
   const refreshAudit = useCallback(
     async (opts: {
@@ -95,6 +99,49 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
       toDate: filterTo || undefined,
     });
   }, [filterFrom, filterStatus, filterTo, refreshAudit]);
+
+  const resolveRisk = useCallback(
+    async (tripId: string) => {
+      const reason = (resolutionReasonByTripId[tripId] ?? '').trim();
+
+      if (reason.length < 10) {
+        setStatusMsg('Ajoutez une justification de resolution plus precise.');
+        return;
+      }
+
+      setResolvingTripId(tripId);
+      setStatusMsg('Cloture auditee du risque trajet...');
+
+      try {
+        await postAdminMutation(`/api/admin/trips/audit/${tripId}/resolve`, {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason }),
+        });
+        setResolutionReasonByTripId((current) => {
+          const next = { ...current };
+          delete next[tripId];
+          return next;
+        });
+        setStatusMsg('Risque trajet cloture et audite.');
+        await refreshAudit({
+          status: filterStatus || undefined,
+          fromDate: filterFrom || undefined,
+          toDate: filterTo || undefined,
+        });
+      } catch {
+        setStatusMsg("Le risque trajet n'a pas pu etre cloture.");
+      } finally {
+        setResolvingTripId(null);
+      }
+    },
+    [
+      filterFrom,
+      filterStatus,
+      filterTo,
+      refreshAudit,
+      resolutionReasonByTripId,
+    ],
+  );
 
   const exportUrl = buildExportUrl({
     status: filterStatus,
@@ -213,7 +260,10 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
         <article className="card">
           <span>Risque critique</span>
           <strong>{audit.summary.criticalRiskTripCount}</strong>
-          <p>{audit.summary.riskTripCount} course(s) a traiter</p>
+          <p>
+            {audit.summary.riskTripCount} a traiter,{' '}
+            {audit.summary.resolvedRiskTripCount} resolue(s)
+          </p>
         </article>
         <article className="card">
           <span>Argent a verifier</span>
@@ -299,6 +349,30 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
                 {reason}
               </p>
             ))}
+            <div className="trip-risk-resolution">
+              <textarea
+                aria-label={`Justification de resolution du risque ${trip.id}`}
+                onChange={(event) =>
+                  setResolutionReasonByTripId((current) => ({
+                    ...current,
+                    [trip.id]: event.target.value,
+                  }))
+                }
+                placeholder="Justification ops/finance avant cloture"
+                rows={3}
+                value={resolutionReasonByTripId[trip.id] ?? ''}
+              />
+              <button
+                className="ghost-button"
+                disabled={resolvingTripId === trip.id}
+                onClick={() => void resolveRisk(trip.id)}
+                type="button"
+              >
+                {resolvingTripId === trip.id
+                  ? 'Cloture...'
+                  : 'Cloturer le risque'}
+              </button>
+            </div>
           </article>
         ))}
         {!audit.riskTrips.length ? (

@@ -43,6 +43,12 @@ function createService(trips = [createTrip()]) {
   const prisma = {
     trip: {
       findMany: jest.fn().mockResolvedValue(trips),
+      findUnique: jest.fn().mockResolvedValue(trips[0] ?? null),
+    },
+    auditLog: {
+      findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({ id: 'audit-log-1' }),
     },
   };
 
@@ -101,6 +107,77 @@ describe('AdminService.tripsAudit', () => {
         owner: 'finance',
         severity: 'critical',
         paymentStatus: 'FAILED',
+      }),
+    );
+  });
+
+  it('exclut les risques deja resolus avec la meme empreinte de raisons', async () => {
+    const { prisma, service } = createService([
+      createTrip({
+        rideRequest: {
+          paymentMethod: 'MOBILE_MONEY',
+          estimatedFare: 2200,
+          paymentAttempts: [{ status: 'FAILED', createdAt: new Date() }],
+        },
+      }),
+    ]);
+    prisma.auditLog.findMany.mockResolvedValue([
+      {
+        entityId: 'trip-1',
+        metadata: {
+          riskReasons: [
+            'Course terminee sans paiement mobile money reussi.',
+          ],
+        },
+      },
+    ]);
+
+    const audit = await service.tripsAudit();
+
+    expect(audit.summary.riskTripCount).toBe(0);
+    expect(audit.summary.resolvedRiskTripCount).toBe(1);
+    expect(audit.riskTrips).toEqual([]);
+  });
+
+  it('ecrit un audit log quand un ops resout un risque trajet actif', async () => {
+    const { prisma, service } = createService([
+      createTrip({
+        rideRequest: {
+          paymentMethod: 'MOBILE_MONEY',
+          estimatedFare: 2200,
+          paymentAttempts: [{ status: 'FAILED', createdAt: new Date() }],
+        },
+      }),
+    ]);
+
+    const response = await service.resolveTripAuditRisk(
+      'trip-1',
+      { reason: 'Paiement rapproche avec le journal provider terrain.' },
+      { user: { id: 'ops-1' } } as never,
+    );
+
+    expect(response).toEqual(
+      expect.objectContaining({
+        tripId: 'trip-1',
+        status: 'RESOLVED',
+        owner: 'finance',
+        severity: 'critical',
+      }),
+    );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'ops-1',
+          action: 'TRIP_AUDIT_RISK_RESOLVED',
+          entityType: 'TRIP',
+          entityId: 'trip-1',
+          metadata: expect.objectContaining({
+            reason: 'Paiement rapproche avec le journal provider terrain.',
+            riskReasons: [
+              'Course terminee sans paiement mobile money reussi.',
+            ],
+          }),
+        }),
       }),
     );
   });

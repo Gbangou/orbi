@@ -1324,6 +1324,156 @@ function safeRate(numerator: number, denominator: number) {
   return Math.round((numerator / denominator) * 1000) / 10;
 }
 
+const tripAuditRiskResolvedAction = 'TRIP_AUDIT_RISK_RESOLVED';
+
+const tripsAuditTripInclude = Prisma.validator<Prisma.TripInclude>()({
+  rider: { include: { user: true } },
+  driver: { include: { user: true } },
+  vehicle: true,
+  rideRequest: {
+    include: {
+      paymentAttempts: {
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      },
+    },
+  },
+  events: {
+    orderBy: { createdAt: 'asc' },
+    take: 40,
+  },
+});
+
+type TripsAuditTripRecord = Prisma.TripGetPayload<{
+  include: typeof tripsAuditTripInclude;
+}>;
+
+type TripAuditRiskRecord = {
+  id: string;
+  status: string;
+  route: string;
+  riderName: string;
+  driverName: string;
+  fare: number;
+  currency: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  owner: 'ops' | 'finance' | 'support' | 'engineering';
+  reasons: string[];
+  createdAt: string;
+};
+
+function buildTripAuditRisk(
+  trip: TripsAuditTripRecord,
+  now: Date,
+): TripAuditRiskRecord | null {
+  const latestDriverRoutePosition = [...trip.events].reverse().find((event) => {
+    if (event.eventType !== 'ROUTE_POSITION_RECORDED') {
+      return false;
+    }
+
+    const payload = isDispatchSettingsRecord(event.payload)
+      ? event.payload
+      : {};
+
+    return payload.sourceRole !== 'RIDER';
+  });
+  const routeSignalAgeMinutes = latestDriverRoutePosition
+    ? Math.round(
+        (now.getTime() - latestDriverRoutePosition.createdAt.getTime()) /
+          60_000,
+      )
+    : null;
+  const paymentSucceeded = trip.rideRequest.paymentAttempts.some(
+    (attempt) => attempt.status === 'SUCCEEDED',
+  );
+  const hasRefundPending = trip.rideRequest.paymentAttempts.some(
+    (attempt) => attempt.status === 'REFUND_PENDING',
+  );
+  const fare = Number(trip.actualFare ?? trip.rideRequest.estimatedFare ?? 0);
+  const reasons: string[] = [];
+  let severity: 'low' | 'medium' | 'high' | 'critical' = 'low';
+  let owner: 'ops' | 'finance' | 'support' | 'engineering' = 'ops';
+
+  if (
+    trip.status === 'COMPLETED' &&
+    trip.rideRequest.paymentMethod === 'MOBILE_MONEY' &&
+    !paymentSucceeded
+  ) {
+    reasons.push('Course terminee sans paiement mobile money reussi.');
+    severity = 'critical';
+    owner = 'finance';
+  }
+
+  if (trip.status === 'COMPLETED' && fare <= 0) {
+    reasons.push('Course terminee sans montant exploitable.');
+    severity = severity === 'critical' ? severity : 'high';
+    owner = 'finance';
+  }
+
+  if (hasRefundPending) {
+    reasons.push('Remboursement provider encore en attente.');
+    severity = severity === 'critical' ? severity : 'high';
+    owner = 'finance';
+  }
+
+  if (trip.status === 'CANCELLED' && trip.startedAt) {
+    reasons.push('Course annulee apres demarrage declare.');
+    severity =
+      severity === 'critical' || severity === 'high' ? severity : 'medium';
+    owner = owner === 'finance' ? owner : 'support';
+  }
+
+  if (
+    ['MATCHED', 'DRIVER_ARRIVING', 'IN_PROGRESS'].includes(trip.status) &&
+    (!routeSignalAgeMinutes || routeSignalAgeMinutes > 10)
+  ) {
+    reasons.push('Signal GPS chauffeur absent ou trop ancien.');
+    severity =
+      severity === 'critical' || severity === 'high' ? severity : 'medium';
+    owner = owner === 'finance' ? owner : 'ops';
+  }
+
+  if (!reasons.length) {
+    return null;
+  }
+
+  return {
+    id: trip.id,
+    status: trip.status,
+    route: `${trip.pickupAddress} vers ${trip.destinationAddress}`,
+    riderName: trip.rider.user.fullName,
+    driverName: trip.driver.user.fullName,
+    fare,
+    currency: trip.currency,
+    paymentMethod: trip.rideRequest.paymentMethod,
+    paymentStatus: trip.rideRequest.paymentAttempts[0]?.status ?? 'NO_ATTEMPT',
+    severity,
+    owner,
+    reasons,
+    createdAt: trip.createdAt.toISOString(),
+  };
+}
+
+function readAuditRiskReasons(metadata: Prisma.JsonValue | null | undefined) {
+  if (!isDispatchSettingsRecord(metadata)) {
+    return [];
+  }
+
+  const reasons = metadata.riskReasons;
+  return Array.isArray(reasons)
+    ? reasons.filter((reason): reason is string => typeof reason === 'string')
+    : [];
+}
+
+function auditRiskReasonsMatch(left: string[], right: string[]) {
+  return (
+    left.length === right.length &&
+    left.every((reason, index) => reason === right[index])
+  );
+}
+
 function average(values: number[]) {
   const usableValues = values.filter((value) => Number.isFinite(value));
 
@@ -3515,23 +3665,7 @@ export class AdminService {
       },
       orderBy: { createdAt: 'desc' },
       take: 300,
-      include: {
-        rider: { include: { user: true } },
-        driver: { include: { user: true } },
-        vehicle: true,
-        rideRequest: {
-          include: {
-            paymentAttempts: {
-              orderBy: { createdAt: 'desc' },
-              take: 5,
-            },
-          },
-        },
-        events: {
-          orderBy: { createdAt: 'asc' },
-          take: 40,
-        },
-      },
+      include: tripsAuditTripInclude,
     });
 
     const byStatus = {
@@ -3558,107 +3692,42 @@ export class AdminService {
       ),
     );
 
-    const riskTrips = trips
-      .map((trip) => {
-        const latestDriverRoutePosition = [...trip.events]
-          .reverse()
-          .find((event) => {
-            if (event.eventType !== 'ROUTE_POSITION_RECORDED') {
-              return false;
-            }
+    const candidateRiskTrips = trips
+      .map((trip) => buildTripAuditRisk(trip, now))
+      .filter((trip): trip is TripAuditRiskRecord => trip !== null);
 
-            const payload = isDispatchSettingsRecord(event.payload)
-              ? event.payload
-              : {};
+    const latestResolutionByTripId = new Map<string, Prisma.JsonValue | null>();
+    if (candidateRiskTrips.length) {
+      const resolutionLogs = await this.prisma.auditLog.findMany({
+        where: {
+          action: tripAuditRiskResolvedAction,
+          entityType: 'TRIP',
+          entityId: { in: candidateRiskTrips.map((trip) => trip.id) },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { entityId: true, metadata: true },
+      });
 
-            return payload.sourceRole !== 'RIDER';
-          });
-        const routeSignalAgeMinutes = latestDriverRoutePosition
-          ? Math.round(
-              (now.getTime() - latestDriverRoutePosition.createdAt.getTime()) /
-                60_000,
-            )
-          : null;
-        const paymentSucceeded = trip.rideRequest.paymentAttempts.some(
-          (attempt) => attempt.status === 'SUCCEEDED',
+      for (const log of resolutionLogs) {
+        if (log.entityId && !latestResolutionByTripId.has(log.entityId)) {
+          latestResolutionByTripId.set(log.entityId, log.metadata);
+        }
+      }
+    }
+
+    const riskTrips = candidateRiskTrips
+      .filter((trip) => {
+        const resolvedReasons = readAuditRiskReasons(
+          latestResolutionByTripId.get(trip.id),
         );
-        const hasRefundPending = trip.rideRequest.paymentAttempts.some(
-          (attempt) => attempt.status === 'REFUND_PENDING',
-        );
-        const fare = Number(
-          trip.actualFare ?? trip.rideRequest.estimatedFare ?? 0,
-        );
-        const reasons: string[] = [];
-        let severity: 'low' | 'medium' | 'high' | 'critical' = 'low';
-        let owner: 'ops' | 'finance' | 'support' | 'engineering' = 'ops';
 
-        if (
-          trip.status === 'COMPLETED' &&
-          trip.rideRequest.paymentMethod === 'MOBILE_MONEY' &&
-          !paymentSucceeded
-        ) {
-          reasons.push('Course terminee sans paiement mobile money reussi.');
-          severity = 'critical';
-          owner = 'finance';
-        }
-
-        if (trip.status === 'COMPLETED' && fare <= 0) {
-          reasons.push('Course terminee sans montant exploitable.');
-          severity = severity === 'critical' ? severity : 'high';
-          owner = 'finance';
-        }
-
-        if (hasRefundPending) {
-          reasons.push('Remboursement provider encore en attente.');
-          severity = severity === 'critical' ? severity : 'high';
-          owner = 'finance';
-        }
-
-        if (trip.status === 'CANCELLED' && trip.startedAt) {
-          reasons.push('Course annulee apres demarrage declare.');
-          severity =
-            severity === 'critical' || severity === 'high'
-              ? severity
-              : 'medium';
-          owner = owner === 'finance' ? owner : 'support';
-        }
-
-        if (
-          ['MATCHED', 'DRIVER_ARRIVING', 'IN_PROGRESS'].includes(trip.status) &&
-          (!routeSignalAgeMinutes || routeSignalAgeMinutes > 10)
-        ) {
-          reasons.push('Signal GPS chauffeur absent ou trop ancien.');
-          severity =
-            severity === 'critical' || severity === 'high'
-              ? severity
-              : 'medium';
-          owner = owner === 'finance' ? owner : 'ops';
-        }
-
-        return reasons.length
-          ? {
-              id: trip.id,
-              status: trip.status,
-              route: `${trip.pickupAddress} vers ${trip.destinationAddress}`,
-              riderName: trip.rider.user.fullName,
-              driverName: trip.driver.user.fullName,
-              fare,
-              currency: trip.currency,
-              paymentMethod: trip.rideRequest.paymentMethod,
-              paymentStatus:
-                trip.rideRequest.paymentAttempts[0]?.status ?? 'NO_ATTEMPT',
-              severity,
-              owner,
-              reasons,
-              createdAt: trip.createdAt.toISOString(),
-            }
-          : null;
+        return !auditRiskReasonsMatch(resolvedReasons, trip.reasons);
       })
-      .filter((trip): trip is NonNullable<typeof trip> => trip !== null)
       .sort((a, b) => {
         const score = { critical: 4, high: 3, medium: 2, low: 1 };
         return score[b.severity] - score[a.severity];
       });
+    const resolvedRiskTripCount = candidateRiskTrips.length - riskTrips.length;
 
     const moneyAtRisk = riskTrips
       .filter((trip) => trip.owner === 'finance')
@@ -3687,6 +3756,7 @@ export class AdminService {
         ),
         refundPendingTrips: refundPendingTrips.length,
         riskTripCount: riskTrips.length,
+        resolvedRiskTripCount,
         criticalRiskTripCount: riskTrips.filter(
           (trip) => trip.severity === 'critical',
         ).length,
@@ -3716,6 +3786,81 @@ export class AdminService {
           ? 'Traiter les trajets actifs sans signal GPS avant extension du pilote.'
           : 'Le signal operationnel des trajets actifs est sous controle.',
       ],
+    };
+  }
+
+  async resolveTripAuditRisk(
+    tripId: string,
+    payload: { reason: string },
+    auth: RequestAuthContext,
+  ) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      include: tripsAuditTripInclude,
+    });
+
+    if (!trip) {
+      throw new NotFoundException('Trip not found.');
+    }
+
+    const risk = buildTripAuditRisk(trip, new Date());
+    if (!risk) {
+      throw new BadRequestException('Trip has no active audit risk.');
+    }
+
+    const latestResolution = await this.prisma.auditLog.findFirst({
+      where: {
+        action: tripAuditRiskResolvedAction,
+        entityType: 'TRIP',
+        entityId: tripId,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { metadata: true, createdAt: true },
+    });
+    const latestResolvedReasons = readAuditRiskReasons(
+      latestResolution?.metadata,
+    );
+
+    if (auditRiskReasonsMatch(latestResolvedReasons, risk.reasons)) {
+      return {
+        tripId,
+        status: 'ALREADY_RESOLVED',
+        owner: risk.owner,
+        severity: risk.severity,
+        resolvedAt: latestResolution?.createdAt.toISOString() ?? null,
+        riskReasons: risk.reasons,
+      };
+    }
+
+    const resolvedAt = new Date();
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: tripAuditRiskResolvedAction,
+        entityType: 'TRIP',
+        entityId: tripId,
+        metadata: {
+          reason: payload.reason.trim(),
+          owner: risk.owner,
+          severity: risk.severity,
+          riskReasons: risk.reasons,
+          route: risk.route,
+          paymentMethod: risk.paymentMethod,
+          paymentStatus: risk.paymentStatus,
+          fare: risk.fare,
+          currency: risk.currency,
+          resolvedAt: resolvedAt.toISOString(),
+        } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    return {
+      tripId,
+      status: 'RESOLVED',
+      owner: risk.owner,
+      severity: risk.severity,
+      resolvedAt: resolvedAt.toISOString(),
+      riskReasons: risk.reasons,
     };
   }
 

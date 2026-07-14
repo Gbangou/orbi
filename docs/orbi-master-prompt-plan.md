@@ -502,6 +502,19 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   Rapprochement wallet/payout et resolution auditee des anomalies (le reste de
   la priorite DEVELOPMENT_STATUS.md) restent un gap A distinct, pas encore
   ferme.
+- 14 juillet 2026: gap A ferme "audit trajets sans resolution operable". La
+  vue audit classait les risques finance/ops/support mais ne permettait pas a
+  l equipe de cloturer un dossier avec justification, ce qui laissait un ecart
+  majeur avec une exploitation leader-level: files lisibles mais pas de
+  workflow de decision auditable. Ajout d une resolution backend
+  `TRIP_AUDIT_RISK_RESOLVED` liee au trajet, a l utilisateur ops/admin et a
+  l empreinte exacte des raisons de risque; un ancien resolu ne masque donc
+  pas un nouveau risque different sur le meme trajet. Le contrat `packages/api`,
+  la route proxy admin-web no-store/CSRF-safe et le board `trips-audit-board`
+  exposent desormais une justification par risque et la cloture auditee. Les
+  risques resolus sortent des files actives et `resolvedRiskTripCount` donne
+  la preuve de traitement. Les rapprochements provider live et la preuve terrain
+  restent des gaps B/C; les decisions support/process hors outil restent D.
 - 14 juillet 2026: incident production resolu, gap A "crash instantane sur
   Ou allez-vous". L operateur a fourni une reproduction precise (ecran
   reservation, champ destination) permettant de confirmer la cause exacte:

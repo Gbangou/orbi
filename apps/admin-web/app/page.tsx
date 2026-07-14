@@ -196,6 +196,7 @@ const fallbackTripsAudit: AdminTripsAuditResponse = {
     mobileMoneyReconciliationRate: 0,
     refundPendingTrips: 0,
     riskTripCount: 0,
+    resolvedRiskTripCount: 0,
     criticalRiskTripCount: 0,
     moneyAtRisk: 0,
     currency: "XOF",
