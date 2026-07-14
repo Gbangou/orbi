@@ -7,6 +7,24 @@ import {
 import { formatOperationalStatus, formatXof } from "@orbi/ui";
 import { isOfferReservationActive } from "./offer-reservation";
 
+function toFiniteFlowNumber(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value.trim().replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function formatDistanceKm(value: unknown, fallback = "Distance en attente") {
+  const numeric = toFiniteFlowNumber(value);
+  return numeric !== null && numeric >= 0 ? `${numeric.toFixed(1)} km` : fallback;
+}
+
 export type DriverResolvedOperationalStatus =
   | "ONLINE"
   | "OFFLINE"
@@ -149,6 +167,11 @@ export function buildDriverMissionSnapshot(input: {
     activeTrip.status === "IN_PROGRESS"
       ? latestPosition?.distanceToDestinationKm
       : latestPosition?.distanceToPickupKm;
+  const approachDistanceLabel = formatDistanceKm(
+    approachDistance,
+    routeMonitoring ? formatOperationalStatus(routeMonitoring.state) : "En attente",
+  );
+  const hasApproachDistance = toFiniteFlowNumber(approachDistance) !== null;
 
   return [
     {
@@ -166,14 +189,9 @@ export function buildDriverMissionSnapshot(input: {
     },
     {
       label: activeTrip.status === "IN_PROGRESS" ? "Destination" : "Pickup",
-      value:
-        typeof approachDistance === "number"
-          ? `${approachDistance.toFixed(1)} km`
-          : routeMonitoring
-            ? formatOperationalStatus(routeMonitoring.state)
-            : "En attente",
+      value: approachDistanceLabel,
       helper:
-        typeof approachDistance === "number"
+        hasApproachDistance
           ? latestPosition?.observedAt
             ? `Dernier signal ${formatTimeLabel(latestPosition.observedAt)}`
             : "Position mission recue"
@@ -212,6 +230,9 @@ export function buildDriverLiveRouteProgress(input: {
   const remainingDistanceKm = isHeadingToDestination
     ? latestPosition.distanceToDestinationKm
     : latestPosition.distanceToPickupKm;
+  const remainingDistance = toFiniteFlowNumber(remainingDistanceKm);
+  const speedKph = toFiniteFlowNumber(latestPosition.speedKph);
+  const accuracyMeters = toFiniteFlowNumber(latestPosition.accuracyMeters);
 
   return {
     title: isHeadingToDestination
@@ -219,12 +240,12 @@ export function buildDriverLiveRouteProgress(input: {
       : "Approche pickup",
     stateLabel: formatOperationalStatus(routeMonitoring.state),
     distanceLabel:
-      typeof remainingDistanceKm === "number"
-        ? `${remainingDistanceKm.toFixed(1)} km restant`
+      remainingDistance !== null
+        ? `${remainingDistance.toFixed(1)} km restant`
         : "Distance en attente",
     progressPercent:
-      typeof remainingDistanceKm === "number"
-        ? estimateRouteProgressPercent(remainingDistanceKm)
+      remainingDistance !== null
+        ? estimateRouteProgressPercent(remainingDistance)
         : routeMonitoring.state === "clear"
           ? 42
           : 18,
@@ -235,18 +256,18 @@ export function buildDriverLiveRouteProgress(input: {
       "Zone mission",
     ),
     accuracyLabel:
-      typeof latestPosition.accuracyMeters === "number"
-        ? `Precision ${Math.round(latestPosition.accuracyMeters)} m`
+      accuracyMeters !== null
+        ? `Precision ${Math.round(accuracyMeters)} m`
         : "Precision inconnue",
     speedLabel:
-      typeof latestPosition.speedKph === "number"
-        ? `${Math.round(latestPosition.speedKph)} km/h`
+      speedKph !== null
+        ? `${Math.round(speedKph)} km/h`
         : "Vitesse indisponible",
     etaLabel:
-      typeof remainingDistanceKm === "number"
+      remainingDistance !== null
         ? estimateArrivalLabel({
-            remainingDistanceKm,
-            speedKph: latestPosition.speedKph,
+            remainingDistanceKm: remainingDistance,
+            speedKph,
             isHeadingToDestination,
           })
         : "ETA en attente",
@@ -335,11 +356,16 @@ function buildInitials(name: string) {
 }
 
 function formatApproxCoordinateLabel(
-  latitude: number,
-  longitude: number,
+  latitude: unknown,
+  longitude: unknown,
   label: string,
 ) {
-  return `${label} approx. ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+  const lat = toFiniteFlowNumber(latitude);
+  const lon = toFiniteFlowNumber(longitude);
+
+  return lat !== null && lon !== null
+    ? `${label} approx. ${lat.toFixed(4)}, ${lon.toFixed(4)}`
+    : `${label} position approximative indisponible`;
 }
 
 function formatTimeLabel(value: string) {

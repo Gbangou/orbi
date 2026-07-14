@@ -36,7 +36,7 @@ export function buildDriverPresenceSyncedNote(input: {
   activeTripId?: string | null;
   latestPosition?: TripRoutePositionResponse["routeMonitoring"]["latestPosition"];
 }) {
-  const precision = Math.round(input.accuracyMeters ?? 0);
+  const precision = Math.round(toFiniteRouteNumber(input.accuracyMeters) ?? 0);
 
   if (!input.activeTripId) {
     return `Presence GPS synchronisee. Precision ${precision} m.`;
@@ -69,14 +69,29 @@ export function resolveDriverPresenceTrackingOptions(
   };
 }
 
-function formatRouteDistance(distanceKm: number | null | undefined) {
-  if (typeof distanceKm !== "number" || !Number.isFinite(distanceKm)) {
+function toFiniteRouteNumber(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value.trim().replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function formatRouteDistance(distanceKm: unknown) {
+  const numeric = toFiniteRouteNumber(distanceKm);
+
+  if (numeric === null || numeric < 0) {
     return null;
   }
 
-  if (distanceKm < 1) {
-    return `${Math.max(0, Math.round(distanceKm * 1000))} m`;
+  if (numeric < 1) {
+    return `${Math.max(0, Math.round(numeric * 1000))} m`;
   }
 
-  return `${distanceKm.toFixed(1)} km`;
+  return `${numeric.toFixed(1)} km`;
 }

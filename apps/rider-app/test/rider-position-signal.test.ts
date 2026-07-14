@@ -12,7 +12,7 @@ describe("rider-position-signal", () => {
   it("summarizes backend destination progress during an active trip", () => {
     expect(
       buildRiderPositionSyncedNote({
-        accuracyMeters: 17.6,
+        accuracyMeters: "17,6" as never,
         activeTripId: "trip-1",
         latestPosition: {
           latitude: 12.371,
@@ -20,7 +20,7 @@ describe("rider-position-signal", () => {
           accuracyMeters: 17.6,
           speedKph: 0,
           distanceToPickupKm: 0.08,
-          distanceToDestinationKm: 4.64,
+          distanceToDestinationKm: "4,64" as never,
           observedAt: "2026-05-17T20:00:00.000Z",
           sourceRole: "RIDER",
         },

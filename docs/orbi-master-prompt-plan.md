@@ -540,6 +540,16 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   d offres; les valeurs texte avec virgule sont normalisees, les valeurs sales
   degradent en libelle indisponible. Tests helpers et smoke driver couvrent
   une offre complete avec champs numeriques stringifies.
+- 14 juillet 2026: gap A ferme "suivi live rider/driver fragile aux nombres
+  stringifies". Les helpers de mission active rider et driver supposaient que
+  `routeMonitoring.latestPosition` exposait toujours des nombres JS purs pour
+  distances, precision, vitesse et coordonnees. En cas de replay API, cache ou
+  provider renvoyant `"0,4"`, `"12,37"` ou une valeur non finie, les labels
+  `.toFixed()` pouvaient planter le suivi live ou masquer l etat reel. Les
+  flux `rider-active-flow`, `driver-active-flow`, `rider-position-signal` et
+  `driver-presence-signal` normalisent desormais number/string avec virgule,
+  puis degradent en libelles indisponibles quand la valeur est sale. Tests
+  actifs et position/presence ajoutent des payloads stringifies.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

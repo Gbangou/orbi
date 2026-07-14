@@ -66,15 +66,15 @@ describe("driver-presence-signal", () => {
   it("summarizes backend route progress during an active mission", () => {
     expect(
       buildDriverPresenceSyncedNote({
-        accuracyMeters: 18.2,
+        accuracyMeters: "18,2" as never,
         activeTripId: "trip-1",
         latestPosition: {
           latitude: 12.371,
           longitude: -1.519,
           accuracyMeters: 18.2,
           speedKph: 22,
-          distanceToPickupKm: 0.24,
-          distanceToDestinationKm: 5.18,
+          distanceToPickupKm: "0,24" as never,
+          distanceToDestinationKm: "5,18" as never,
           observedAt: "2026-05-17T20:00:00.000Z",
           sourceRole: "DRIVER",
         },
