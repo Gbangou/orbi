@@ -21,7 +21,10 @@ import {
 } from '@orbi/ui';
 import { OrbiButton, OrbiStatusBanner, safeHaptics, useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
 import { restoreDriverSession } from '../../lib/auth';
-import { formatDriverEarningsAmount } from '../../lib/driver-earnings-signal';
+import {
+  formatDriverEarningsAmount,
+  formatDriverEarningsRatioPercent,
+} from '../../lib/driver-earnings-signal';
 import { resolveDriverAppError } from '../../lib/session-feedback';
 import {
   useReservationExpiryRefresh,
@@ -537,9 +540,7 @@ export default function DriverHomeScreen() {
           <View style={styles.earningsBadge}>
             <Text style={styles.earningsLabel}>Aujourd'hui</Text>
             <Text style={styles.earningsValue}>
-              {earnings?.summary.today
-                ? `${earnings.summary.today.toLocaleString('fr-BF')} XOF`
-                : '0 XOF'}
+              {earnings ? formatDriverEarningsAmount(earnings.summary.today) : '0 XOF'}
             </Text>
           </View>
 
@@ -555,7 +556,7 @@ export default function DriverHomeScreen() {
                 styles.acceptanceLabel,
                 acceptanceRate < 0.7 && styles.acceptanceLabelLow,
               ]}>
-                {Math.round(acceptanceRate * 100)}% acceptées
+                {formatDriverEarningsRatioPercent(acceptanceRate)} acceptées
               </Text>
             </View>
           ) : null}
@@ -681,7 +682,7 @@ export default function DriverHomeScreen() {
               <View style={styles.offlineMetricDivider} />
               <View style={styles.offlineMetric}>
                 <Text style={styles.offlineMetricValue}>
-                  {acceptanceRate !== null ? `${Math.round(acceptanceRate * 100)}%` : '--'}
+                  {formatDriverEarningsRatioPercent(acceptanceRate)}
                 </Text>
                 <Text style={styles.offlineMetricLabel}>Accept.</Text>
               </View>

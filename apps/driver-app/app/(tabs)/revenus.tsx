@@ -23,6 +23,7 @@ import {
   formatDriverEarningsAmount,
   formatDriverEarningsCount,
   formatDriverTripCompletedAt,
+  toFiniteEarningsNumber,
 } from '../../lib/driver-earnings-signal';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { useTranslation } from '../../lib/i18n';
@@ -88,7 +89,7 @@ function WeeklyEarningsChart({
     if (diffDays >= 0 && diffDays <= 6) {
       const bucketIndex = 6 - diffDays;
       if (dayBuckets[bucketIndex]) {
-        dayBuckets[bucketIndex].total += trip.payout ?? 0;
+        dayBuckets[bucketIndex].total += toFiniteEarningsNumber(trip.payout) ?? 0;
       }
     }
   }
@@ -234,7 +235,7 @@ function DriverIncentivesCard({
               {quest.isCompleted ? 'Termine - ' : ''}{quest.title}
             </Text>
             <Text style={[incentStyles.questBonus, quest.isCompleted && { color: theme.colors.teal }]}>
-              +{quest.bonusXof.toLocaleString('fr-BF')} XOF
+              +{formatDriverEarningsAmount(quest.bonusXof)}
             </Text>
           </View>
           <View style={incentStyles.progressTrack}>
@@ -254,7 +255,7 @@ function DriverIncentivesCard({
       {streakBonusXof > 0 ? (
         <View style={incentStyles.streakBonus}>
           <Text style={incentStyles.streakBonusText}>
-            Bonus régularité {streakDays} jours : +{streakBonusXof.toLocaleString('fr-BF')} XOF
+            Bonus régularité {streakDays} jours : +{formatDriverEarningsAmount(streakBonusXof)}
           </Text>
         </View>
       ) : null}

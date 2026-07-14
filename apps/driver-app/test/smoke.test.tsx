@@ -493,7 +493,7 @@ describe('driver smoke flows', () => {
     await pressByText(renderer, 'Actualiser le direct');
 
     expectText(renderer, "Aujourd'hui");
-    expectText(renderer, '12 500 XOF');
+    expect(collectText(renderer.root)).toContain('12 500');
     expectText(renderer, 'En ligne');
     expectText(renderer, '2 offres — Ouagadougou');
   });

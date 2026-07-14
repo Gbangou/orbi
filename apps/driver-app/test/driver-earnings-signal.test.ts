@@ -3,7 +3,9 @@ import {
   buildDriverEarningsDeltaLabel,
   formatDriverEarningsAmount,
   formatDriverEarningsCount,
+  formatDriverEarningsRatioPercent,
   formatDriverTripCompletedAt,
+  toFiniteEarningsNumber,
 } from '../lib/driver-earnings-signal';
 
 describe('driver earnings signal helpers', () => {
@@ -19,6 +21,17 @@ describe('driver earnings signal helpers', () => {
     );
   });
 
+  it('normalizes stringified earnings values before formatting', () => {
+    expect(toFiniteEarningsNumber('12500')).toBe(12500);
+    expect(toFiniteEarningsNumber('0,82')).toBe(0.82);
+    expect(formatDriverEarningsAmount('12500')).toContain('12 500');
+    expect(formatDriverEarningsCount('6,9')).toBe('6');
+    expect(formatDriverEarningsRatioPercent('0,82')).toBe('82%');
+    expect(buildDriverEarningsDeltaLabel('1000', '2500')).toBe(
+      `Nouveau gain comptabilise: +${formatDriverEarningsAmount(1500)} sur le jour.`,
+    );
+  });
+
   it('formats dirty trip completion dates without leaking Invalid Date', () => {
     expect(formatDriverTripCompletedAt(null)).toBe('En attente de cloture');
     expect(formatDriverTripCompletedAt('not-a-date')).toBe('Date de cloture indisponible');
@@ -28,21 +41,21 @@ describe('driver earnings signal helpers', () => {
     const summary = buildDriverEarningsTrustSummary({
       summary: {
         currency: 'XOF',
-        today: 3500,
-        week: 12000,
-        month: 44000,
-        completedTrips: 3,
-        averagePayout: 4000,
+        today: '3500',
+        week: '12000',
+        month: '44000',
+        completedTrips: '3',
+        averagePayout: '4000',
       },
       settlement: {
         currency: 'XOF',
         source: 'COMPLETED_TRIPS',
         payoutRateBps: 8200,
-        payoutRate: 0.82,
-        recentTripCount: 2,
-        recentGrossFare: 9756,
-        recentNetPayout: 8000,
-        recentPlatformFee: 1756,
+        payoutRate: '0,82',
+        recentTripCount: '2',
+        recentGrossFare: '9756',
+        recentNetPayout: '8000',
+        recentPlatformFee: '1756',
         state: 'RECONCILED',
         anomalies: [],
         calculatedAt: '2026-04-19T10:00:00.000Z',
@@ -51,18 +64,18 @@ describe('driver earnings signal helpers', () => {
         {
           id: 'trip-1',
           route: 'A vers B',
-          payout: 3500,
-          grossFare: 4268,
-          platformFee: 768,
+          payout: '3500',
+          grossFare: '4268',
+          platformFee: '768',
           status: 'COMPLETED',
           completedAt: '2026-04-19T08:40:00.000Z',
         },
         {
           id: 'trip-2',
           route: 'C vers D',
-          payout: 4500,
-          grossFare: 5488,
-          platformFee: 988,
+          payout: '4500',
+          grossFare: '5488',
+          platformFee: '988',
           status: 'COMPLETED',
           completedAt: '2026-04-19T09:40:00.000Z',
         },

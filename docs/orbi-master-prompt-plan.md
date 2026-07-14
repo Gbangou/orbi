@@ -558,6 +558,13 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   helpers `driver-profile-signal` pour accepter nombres stringifies et ratios
   d acceptation (`"0,82"` -> `82%`). Les valeurs sales degradent en fallback
   au lieu de faire tomber l ecran.
+- 14 juillet 2026: gap A ferme "montants et ratios chauffeur disperses". Les
+  surfaces accueil/revenus chauffeur avaient encore des `toLocaleString` et
+  `Math.round` directs sur gains, bonus, payout ou taux d acceptation. Les
+  helpers `driver-earnings-signal` normalisent desormais number/string avec
+  virgule, formatent les montants via `formatXof`, calculent les ratios de
+  facon bornee, et le graphe revenus ignore proprement les payouts sales.
+  Tests helpers et smoke driver complet valident les parcours visibles.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

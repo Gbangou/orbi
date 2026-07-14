@@ -1,28 +1,53 @@
 import { formatXof } from '@orbi/ui';
 import type { DriverEarningsResponse } from '@orbi/api';
 
+export function toFiniteEarningsNumber(value: unknown) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim().replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
 export function isFiniteEarningsNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
+  return toFiniteEarningsNumber(value) !== null;
 }
 
 export function formatDriverEarningsAmount(value: unknown) {
-  return isFiniteEarningsNumber(value) ? formatXof(value) : 'Montant indisponible';
+  const numeric = toFiniteEarningsNumber(value);
+  return numeric !== null ? formatXof(numeric) : 'Montant indisponible';
 }
 
 export function formatDriverEarningsCount(value: unknown) {
-  return isFiniteEarningsNumber(value) && value >= 0 ? String(Math.floor(value)) : 'ND';
+  const numeric = toFiniteEarningsNumber(value);
+  return numeric !== null && numeric >= 0 ? String(Math.floor(numeric)) : 'ND';
+}
+
+export function formatDriverEarningsRatioPercent(value: unknown, fallback = '--') {
+  const numeric = toFiniteEarningsNumber(value);
+  return numeric !== null && numeric >= 0
+    ? `${Math.round(Math.min(1, numeric) * 100)}%`
+    : fallback;
 }
 
 export function buildDriverEarningsDeltaLabel(previousToday: unknown, nextToday: unknown) {
-  if (!isFiniteEarningsNumber(previousToday) || !isFiniteEarningsNumber(nextToday)) {
+  const previous = toFiniteEarningsNumber(previousToday);
+  const next = toFiniteEarningsNumber(nextToday);
+
+  if (previous === null || next === null) {
     return null;
   }
 
-  if (nextToday <= previousToday) {
+  if (next <= previous) {
     return null;
   }
 
-  return `Nouveau gain comptabilise: +${formatDriverEarningsAmount(nextToday - previousToday)} sur le jour.`;
+  return `Nouveau gain comptabilise: +${formatDriverEarningsAmount(next - previous)} sur le jour.`;
 }
 
 export function formatDriverTripCompletedAt(completedAt: unknown) {
@@ -55,7 +80,10 @@ export function buildDriverEarningsTrustSummary(
     earnings.summary.averagePayout,
   ];
   const hasDirtySummary = summaryValues.some(
-    (value) => !isFiniteEarningsNumber(value) || value < 0,
+    (value) => {
+      const numeric = toFiniteEarningsNumber(value);
+      return numeric === null || numeric < 0;
+    },
   );
   const settlement = earnings.settlement;
   const settlementValues = [
@@ -67,23 +95,34 @@ export function buildDriverEarningsTrustSummary(
     settlement.recentPlatformFee,
   ];
   const hasDirtyTrips = earnings.recentTrips.some(
-    (trip) =>
-      !isFiniteEarningsNumber(trip.payout) ||
-      trip.payout < 0 ||
-      !isFiniteEarningsNumber(trip.grossFare) ||
-      trip.grossFare < 0 ||
-      !isFiniteEarningsNumber(trip.platformFee) ||
-      trip.platformFee < 0,
+    (trip) => {
+      const payout = toFiniteEarningsNumber(trip.payout);
+      const grossFare = toFiniteEarningsNumber(trip.grossFare);
+      const platformFee = toFiniteEarningsNumber(trip.platformFee);
+      return (
+        payout === null ||
+        payout < 0 ||
+        grossFare === null ||
+        grossFare < 0 ||
+        platformFee === null ||
+        platformFee < 0
+      );
+    },
   );
   const hasDirtySettlement = settlementValues.some(
-    (value) => !isFiniteEarningsNumber(value) || value < 0,
+    (value) => {
+      const numeric = toFiniteEarningsNumber(value);
+      return numeric === null || numeric < 0;
+    },
   );
+  const today = toFiniteEarningsNumber(earnings.summary.today);
+  const week = toFiniteEarningsNumber(earnings.summary.week);
+  const month = toFiniteEarningsNumber(earnings.summary.month);
   const hasInvertedWindow =
-    isFiniteEarningsNumber(earnings.summary.today) &&
-    isFiniteEarningsNumber(earnings.summary.week) &&
-    isFiniteEarningsNumber(earnings.summary.month) &&
-    (earnings.summary.today > earnings.summary.week ||
-      earnings.summary.week > earnings.summary.month);
+    today !== null &&
+    week !== null &&
+    month !== null &&
+    (today > week || week > month);
   const hasAnomaly =
     hasDirtySummary ||
     hasDirtyTrips ||
@@ -94,7 +133,7 @@ export function buildDriverEarningsTrustSummary(
     settlement.anomalies.length > 0;
 
   return {
-    payoutRateLabel: `${Math.round(settlement.payoutRate * 100)}% chauffeur`,
+    payoutRateLabel: `${formatDriverEarningsRatioPercent(settlement.payoutRate, 'ND%')} chauffeur`,
     recentNetPayoutLabel: formatDriverEarningsAmount(settlement.recentNetPayout),
     estimatedPlatformFeeLabel: formatDriverEarningsAmount(
       settlement.recentPlatformFee,
