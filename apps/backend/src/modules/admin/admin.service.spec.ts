@@ -4532,6 +4532,46 @@ describe('AdminService', () => {
     expect(ageHours).toBeCloseTo(24, 0);
   });
 
+  it('filters the trips audit by status and reflects it in the response window', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValue([]);
+
+    const result = await service.tripsAudit({ status: 'CANCELLED' });
+
+    expect(prisma.trip.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'CANCELLED' }),
+      }),
+    );
+    expect(result.window.status).toBe('CANCELLED');
+  });
+
+  it('uses an explicit date range instead of lookbackHours when fromDate/toDate are set', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValue([]);
+
+    const result = await service.tripsAudit({
+      lookbackHours: 24,
+      fromDate: '2026-05-01',
+      toDate: '2026-05-03',
+    });
+
+    expect(prisma.trip.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          createdAt: {
+            gte: new Date('2026-05-01'),
+            lte: new Date('2026-05-03T23:59:59.999Z'),
+          },
+        }),
+      }),
+    );
+    expect(result.window.fromDate).toBe('2026-05-01');
+    expect(result.window.toDate).toBe('2026-05-03');
+  });
+
   describe('overview', () => {
     it('computes real 24h revenue, completion rate and pickup time instead of placeholders', async () => {
       const { prisma, service } = createService();

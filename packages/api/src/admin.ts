@@ -303,6 +303,9 @@ export type AdminTripsAuditResponse = {
     lookbackHours: number;
     since: string;
     generatedAt: string;
+    status: string | null;
+    fromDate: string | null;
+    toDate: string | null;
   };
   summary: {
     totalTrips: number;
@@ -1282,7 +1285,17 @@ export async function fetchAdminLiveOps(client: OrbiApiClient) {
 
 export async function fetchAdminTripsAudit(
   client: OrbiApiClient,
-  query?: { lookbackHours?: number },
+  query?: {
+    lookbackHours?: number;
+    status?:
+      | "MATCHED"
+      | "DRIVER_ARRIVING"
+      | "IN_PROGRESS"
+      | "COMPLETED"
+      | "CANCELLED";
+    fromDate?: string;
+    toDate?: string;
+  },
 ) {
   return client.request<AdminTripsAuditResponse>(apiRoutes.admin.tripsAudit, {
     query,

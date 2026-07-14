@@ -22,9 +22,20 @@ function formatOwner(value: string) {
   return 'Engineering';
 }
 
-async function fetchTripsAudit(lookbackHours: number) {
+async function fetchTripsAudit(opts: {
+  lookbackHours?: number;
+  status?: string;
+  fromDate?: string;
+  toDate?: string;
+}) {
+  const params = new URLSearchParams();
+  if (opts.lookbackHours) params.set('lookbackHours', String(opts.lookbackHours));
+  if (opts.status) params.set('status', opts.status);
+  if (opts.fromDate) params.set('fromDate', opts.fromDate);
+  if (opts.toDate) params.set('toDate', opts.toDate);
+
   return fetchAdminJson<AdminTripsAuditResponse>(
-    `/api/admin/trips/audit?lookbackHours=${lookbackHours}`,
+    `/api/admin/trips/audit?${params.toString()}`,
   );
 }
 
@@ -55,19 +66,35 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
   const [filterSearch, setFilterSearch] = useState('');
   const [filterLimit, setFilterLimit] = useState(300);
 
-  const refreshAudit = useCallback(async (lookbackHours: number) => {
-    setIsRefreshing(true);
-    setStatusMsg('Rafraichissement audit trajets...');
-    try {
-      const response = await fetchTripsAudit(lookbackHours);
-      setAudit(response);
-      setStatusMsg('Audit trajets a jour.');
-    } catch {
-      setStatusMsg("L'audit trajets n'a pas pu etre rafraichi.");
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, []);
+  const refreshAudit = useCallback(
+    async (opts: {
+      lookbackHours?: number;
+      status?: string;
+      fromDate?: string;
+      toDate?: string;
+    }) => {
+      setIsRefreshing(true);
+      setStatusMsg('Rafraichissement audit trajets...');
+      try {
+        const response = await fetchTripsAudit(opts);
+        setAudit(response);
+        setStatusMsg('Audit trajets a jour.');
+      } catch {
+        setStatusMsg("L'audit trajets n'a pas pu etre rafraichi.");
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [],
+  );
+
+  const applyAuditFilters = useCallback(() => {
+    void refreshAudit({
+      status: filterStatus || undefined,
+      fromDate: filterFrom || undefined,
+      toDate: filterTo || undefined,
+    });
+  }, [filterFrom, filterStatus, filterTo, refreshAudit]);
 
   const exportUrl = buildExportUrl({
     status: filterStatus,
@@ -95,7 +122,7 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
                 className="ghost-button"
                 disabled={isRefreshing}
                 key={hours}
-                onClick={() => void refreshAudit(hours)}
+                onClick={() => void refreshAudit({ lookbackHours: hours })}
                 type="button"
               >
                 {hours}h
@@ -103,7 +130,11 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
             ))}
           </div>
           <span className="queue-status">
-            {statusMsg} Fenetre: {audit.window.lookbackHours}h.
+            {statusMsg}{' '}
+            {audit.window.fromDate || audit.window.toDate
+              ? `Periode: ${audit.window.fromDate ?? '...'} au ${audit.window.toDate ?? '...'}.`
+              : `Fenetre: ${audit.window.lookbackHours}h.`}
+            {audit.window.status ? ` Statut: ${audit.window.status}.` : ''}
           </span>
         </div>
       </div>
@@ -158,6 +189,15 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
           type="number"
           value={filterLimit}
         />
+
+        <button
+          className="ghost-button"
+          disabled={isRefreshing}
+          onClick={applyAuditFilters}
+          type="button"
+        >
+          Appliquer a l&apos;audit
+        </button>
 
         <a className="primary-link" download href={exportUrl}>
           Exporter

@@ -3479,16 +3479,39 @@ export class AdminService {
     };
   }
 
-  async tripsAudit(query: { lookbackHours?: number } = {}) {
+  async tripsAudit(
+    query: {
+      lookbackHours?: number;
+      status?: string;
+      fromDate?: string;
+      toDate?: string;
+    } = {},
+  ) {
     const lookbackHours = Math.min(Math.max(query.lookbackHours ?? 24, 1), 168);
-    const since = new Date(Date.now() - lookbackHours * 60 * 60 * 1000);
     const now = new Date();
+
+    const createdAtFilter: Record<string, Date> = {};
+    if (query.fromDate) {
+      createdAtFilter.gte = new Date(query.fromDate);
+    }
+    if (query.toDate) {
+      const to = new Date(query.toDate);
+      to.setUTCHours(23, 59, 59, 999);
+      createdAtFilter.lte = to;
+    }
+    const usesExplicitDateRange = Object.keys(createdAtFilter).length > 0;
+    const since = usesExplicitDateRange
+      ? (createdAtFilter.gte ?? new Date(0))
+      : new Date(Date.now() - lookbackHours * 60 * 60 * 1000);
+
+    if (!usesExplicitDateRange) {
+      createdAtFilter.gte = since;
+    }
 
     const trips = await this.prisma.trip.findMany({
       where: {
-        createdAt: {
-          gte: since,
-        },
+        createdAt: createdAtFilter,
+        ...(query.status ? { status: query.status as never } : {}),
       },
       orderBy: { createdAt: 'desc' },
       take: 300,
@@ -3646,6 +3669,9 @@ export class AdminService {
         lookbackHours,
         since: since.toISOString(),
         generatedAt: now.toISOString(),
+        status: query.status ?? null,
+        fromDate: query.fromDate ?? null,
+        toDate: query.toDate ?? null,
       },
       summary: {
         totalTrips: trips.length,

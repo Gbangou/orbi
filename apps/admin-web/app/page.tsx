@@ -181,6 +181,9 @@ const fallbackTripsAudit: AdminTripsAuditResponse = {
     lookbackHours: 24,
     since: new Date("2026-05-23T00:00:00.000Z").toISOString(),
     generatedAt: new Date("2026-05-24T00:00:00.000Z").toISOString(),
+    status: null,
+    fromDate: null,
+    toDate: null,
   },
   summary: {
     totalTrips: 0,

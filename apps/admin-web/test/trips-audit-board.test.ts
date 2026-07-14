@@ -67,4 +67,30 @@ describe('trips audit board', () => {
     expect(source).toContain('toDate: resolveIsoDate(');
     expect(source).toContain('search: resolveSearch(');
   });
+
+  it('forwards status and date-range filters to the trips audit dashboard, not just the CSV export', () => {
+    // L'audit dashboard (resume risques/argent) ne supportait que lookbackHours:
+    // les filtres statut/date collectes dans la barre existante n'affectaient
+    // que l'export CSV. Verifie que la route et le board relaient desormais
+    // ces filtres a la vue d'audit elle-meme.
+    const routeSource = readFileSync(
+      join(process.cwd(), 'app/api/admin/trips/audit/route.ts'),
+      'utf8',
+    );
+
+    expect(routeSource).toContain("searchParams.get('status')");
+    expect(routeSource).toContain("searchParams.get('fromDate')");
+    expect(routeSource).toContain("searchParams.get('toDate')");
+    expect(routeSource).toContain('status: resolveTripStatus(');
+    expect(routeSource).toContain('fromDate: resolveIsoDate(');
+    expect(routeSource).toContain('toDate: resolveIsoDate(');
+
+    const boardSource = readFileSync(
+      join(process.cwd(), 'app/trips-audit-board.tsx'),
+      'utf8',
+    );
+
+    expect(boardSource).toContain('applyAuditFilters');
+    expect(boardSource).toContain('Appliquer a l');
+  });
 });

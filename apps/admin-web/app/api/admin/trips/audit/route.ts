@@ -16,6 +16,31 @@ function resolveLookbackHours(value: string | null) {
     : 24;
 }
 
+const tripStatuses = new Set([
+  'MATCHED',
+  'DRIVER_ARRIVING',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+]);
+
+function resolveTripStatus(value: string | null) {
+  return tripStatuses.has(value ?? '')
+    ? (value as
+        | 'MATCHED'
+        | 'DRIVER_ARRIVING'
+        | 'IN_PROGRESS'
+        | 'COMPLETED'
+        | 'CANCELLED')
+    : undefined;
+}
+
+const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+function resolveIsoDate(value: string | null) {
+  return value && isoDatePattern.test(value) ? value : undefined;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const authClient = await getAdminServerAuthClient();
@@ -23,6 +48,9 @@ export async function GET(request: NextRequest) {
       lookbackHours: resolveLookbackHours(
         request.nextUrl.searchParams.get('lookbackHours'),
       ),
+      status: resolveTripStatus(request.nextUrl.searchParams.get('status')),
+      fromDate: resolveIsoDate(request.nextUrl.searchParams.get('fromDate')),
+      toDate: resolveIsoDate(request.nextUrl.searchParams.get('toDate')),
     });
 
     return NextResponse.json(response, {
