@@ -489,8 +489,31 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   concu pour `Platform.OS==='web'`, avec tests de regression cote rider et
   driver. Necessite un nouvel APK pour s appliquer; l operateur a explicitement
   demande d attendre son feu vert avant tout rebuild.
-
-## Master Prompt Operationnel
+- 14 juillet 2026: gap A ferme "audit trajets sans filtre statut/date". Seul
+  l export CSV trajets supportait `status`/`fromDate`/`toDate`; la vue d audit
+  elle-meme (risques, argent a verifier, owner queue) n acceptait que
+  `lookbackHours`, empechant les ops de fermer une journee precise ou de
+  cibler un statut sans passer par l export. `TripsAuditQueryDto`,
+  `admin.service.ts#tripsAudit`, le contrat `packages/api` et le board
+  admin-web acceptent desormais les trois filtres, avec une plage de dates
+  explicite qui prend le pas sur `lookbackHours` et les filtres appliques
+  reflechis dans `window`. Tests de regression backend et admin-web ajoutes;
+  `pnpm typecheck` et les suites admin-web/backend concernees verifies au vert.
+  Rapprochement wallet/payout et resolution auditee des anomalies (le reste de
+  la priorite DEVELOPMENT_STATUS.md) restent un gap A distinct, pas encore
+  ferme.
+- 14 juillet 2026: incident production resolu, gap A "crash instantane sur
+  Ou allez-vous". L operateur a fourni une reproduction precise (ecran
+  reservation, champ destination) permettant de confirmer la cause exacte:
+  un lieu enregistre reel avait des coordonnees renvoyees en chaine avec
+  virgule decimale; `destinationSuggestions` appelait `.toFixed(4)` dessus des
+  le premier rendu de l ecran, plantage synchrone garanti pour ce compte,
+  invisible avec un compte demo. Corrige (`toFiniteCoordinate` coerce
+  number/chaine, virgule ou point) avec test de regression exact. Audit
+  complementaire effectue sur tout le reste de l app rider (ratings, distances,
+  fares affiches via `.toFixed`) sans trouver d autre occurrence non convertie
+  cote backend. APK rider regenere en profil `field-test` apres verification
+  complete (tests + typecheck) suite a autorisation explicite de l operateur.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est
