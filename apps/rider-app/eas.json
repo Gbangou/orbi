@@ -58,6 +58,21 @@
         "EXPO_PUBLIC_PAYMENT_REDIRECT_URL": "orbi-passager://payment-return"
       }
     },
+    "debug-crash": {
+      "distribution": "internal",
+      "channel": "debug-crash",
+      "node": "22.14.0",
+      "pnpm": "10.30.0",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://orbi-field-api.onrender.com",
+        "EXPO_PUBLIC_API_VERSION": "v1",
+        "EXPO_PUBLIC_PAYMENT_REDIRECT_URL": "orbi-passager://payment-return",
+        "EXPO_PUBLIC_DEBUG_CRASH_DETAILS": "true"
+      }
+    },
     "production": {
       "channel": "production",
       "node": "22.14.0",

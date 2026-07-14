@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
   children: React.ReactNode;
@@ -10,10 +10,16 @@ type Props = {
   // remplacer tout l'ecran par un message generique.
   fallback?: React.ReactNode;
   onError?: (error: unknown, info: React.ErrorInfo) => void;
+  // Diagnostic uniquement: affiche le message et la stack reels a l'ecran au
+  // lieu du message generique. Ne jamais activer en production normale -
+  // reserve a un build de debug ponctuel pour identifier un crash terrain.
+  showDebugDetails?: boolean;
 };
 
 type State = {
   hasError: boolean;
+  debugMessage: string | null;
+  debugStack: string | null;
 };
 
 const defaultFallbackDetail =
@@ -22,10 +28,10 @@ const defaultFallbackDetail =
 export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, debugMessage: null, debugStack: null };
   }
 
-  static getDerivedStateFromError(): State {
+  static getDerivedStateFromError(): Partial<State> {
     // Le detail technique de l'erreur ne doit jamais atteindre l'ecran utilisateur
     // (fuite d'infos internes) : seul componentDidCatch le transmet au signalement.
     return { hasError: true };
@@ -36,6 +42,20 @@ export class ErrorBoundary extends React.Component<Props, State> {
       console.warn('[ErrorBoundary]', error, info.componentStack);
     }
 
+    if (this.props.showDebugDetails) {
+      const message =
+        error instanceof Error
+          ? `${error.name}: ${error.message}`
+          : String(error);
+      this.setState({
+        debugMessage: message,
+        debugStack:
+          (error instanceof Error ? error.stack : undefined) ??
+          info.componentStack ??
+          null,
+      });
+    }
+
     try {
       this.props.onError?.(error, info);
     } catch {
@@ -44,7 +64,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false });
+    this.setState({ hasError: false, debugMessage: null, debugStack: null });
   };
 
   render() {
@@ -68,6 +88,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
           >
             <Text style={styles.btnLabel}>Réessayer</Text>
           </Pressable>
+          {this.props.showDebugDetails && this.state.debugMessage ? (
+            <ScrollView style={styles.debugBox}>
+              <Text selectable style={styles.debugText}>
+                {this.state.debugMessage}
+                {'\n\n'}
+                {this.state.debugStack ?? ''}
+              </Text>
+            </ScrollView>
+          ) : null}
         </View>
       );
     }
@@ -110,5 +139,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
+  },
+  debugBox: {
+    marginTop: 16,
+    maxHeight: 280,
+    width: '100%',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 10,
+    padding: 12,
+  },
+  debugText: {
+    color: '#FF9500',
+    fontSize: 11,
+    fontFamily: 'monospace',
   },
 });
