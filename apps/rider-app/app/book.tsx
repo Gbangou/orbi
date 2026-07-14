@@ -99,21 +99,49 @@ const fallbackRiderProfile: RiderProfileResponse = {
 function toPlaceFromSavedPlace(
   place: RiderProfileResponse['profile']['savedPlaces'][number],
 ): Place {
+  const latitude = toFiniteCoordinate(place.latitude);
+  const longitude = toFiniteCoordinate(place.longitude);
+
   return {
-    id: place.id,
-    label: place.label,
-    address: place.address,
+    id: String(place.id),
+    label: sanitizePlaceText(place.label, 'Lieu enregistré'),
+    address: sanitizePlaceText(place.address, 'Adresse non précisée'),
     coordinates:
-      place.latitude !== null &&
-      place.latitude !== undefined &&
-      place.longitude !== null &&
-      place.longitude !== undefined
+      latitude !== null && longitude !== null
         ? {
-            latitude: place.latitude,
-            longitude: place.longitude,
+            latitude,
+            longitude,
           }
         : undefined,
   };
+}
+
+function toFiniteCoordinate(value: unknown) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim().replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function sanitizePlaceText(value: unknown, fallback: string) {
+  return typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : fallback;
+}
+
+function getPlaceDedupeKey(place: Place) {
+  const latitude = toFiniteCoordinate(place.coordinates?.latitude);
+  const longitude = toFiniteCoordinate(place.coordinates?.longitude);
+
+  return latitude !== null && longitude !== null
+    ? `${latitude.toFixed(4)}:${longitude.toFixed(4)}`
+    : place.id;
 }
 
 function normalizePlaceText(value: string) {
@@ -124,16 +152,16 @@ function isSamePlace(
   left: Place,
   right: RiderProfileResponse['profile']['savedPlaces'][number],
 ) {
+  const rightLatitude = toFiniteCoordinate(right.latitude);
+  const rightLongitude = toFiniteCoordinate(right.longitude);
   const sameAddress =
     normalizePlaceText(left.address) === normalizePlaceText(right.address);
   const sameCoordinates =
     left.coordinates &&
-    right.latitude !== null &&
-    right.latitude !== undefined &&
-    right.longitude !== null &&
-    right.longitude !== undefined &&
-    Math.abs(left.coordinates.latitude - right.latitude) < 0.0001 &&
-    Math.abs(left.coordinates.longitude - right.longitude) < 0.0001;
+    rightLatitude !== null &&
+    rightLongitude !== null &&
+    Math.abs(left.coordinates.latitude - rightLatitude) < 0.0001 &&
+    Math.abs(left.coordinates.longitude - rightLongitude) < 0.0001;
 
   return sameAddress || Boolean(sameCoordinates);
 }
@@ -415,10 +443,7 @@ export default function BookingScreen() {
     const uniquePlaces = new Map<string, Place>();
 
     [...savedPlaces, selectedCity.destination, ...presetPlaces].forEach((place) => {
-      const key = place.coordinates
-        ? `${place.coordinates.latitude.toFixed(4)}:${place.coordinates.longitude.toFixed(4)}`
-        : place.id;
-      uniquePlaces.set(key, place);
+      uniquePlaces.set(getPlaceDedupeKey(place), place);
     });
 
     return Array.from(uniquePlaces.values()).slice(0, 8);

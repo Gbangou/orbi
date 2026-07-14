@@ -44,8 +44,11 @@ function toPlace(result: NominatimResult): Place {
   };
 }
 
-function compactSuggestionLabel(label: string): string {
-  const normalized = label.trim();
+function compactSuggestionLabel(label: unknown): string {
+  const normalized =
+    typeof label === 'string' && label.trim().length > 0
+      ? label.trim()
+      : 'Lieu';
   const lower = normalized.toLowerCase();
 
   if (lower.includes('universite norbert zongo')) return 'Univ. N. Zongo';
@@ -85,6 +88,21 @@ export function PlaceSearch({
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const safeSuggestions = useMemo(
+    () =>
+      suggestions
+        .filter((place) => place && typeof place.id === 'string')
+        .map((place) => ({
+          ...place,
+          label: typeof place.label === 'string' && place.label.trim()
+            ? place.label.trim()
+            : 'Lieu',
+          address: typeof place.address === 'string' && place.address.trim()
+            ? place.address.trim()
+            : 'Adresse non précisée',
+        })),
+    [suggestions],
+  );
 
   const accentColor =
     tone === 'teal'
@@ -179,11 +197,11 @@ export function PlaceSearch({
         <Text style={styles.error}>{error}</Text>
       ) : null}
 
-      {results.length === 0 && suggestions.length > 0 ? (
+      {results.length === 0 && safeSuggestions.length > 0 ? (
         <View style={styles.suggestions}>
           <Text style={styles.suggestionsLabel}>{suggestionLabel}</Text>
           <View style={styles.suggestionsGrid}>
-            {suggestions.slice(0, 4).map((place) => (
+            {safeSuggestions.slice(0, 4).map((place) => (
               <Pressable
                 key={place.id}
                 onPress={() => handleSelect(place)}

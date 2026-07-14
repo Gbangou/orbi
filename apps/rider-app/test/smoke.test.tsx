@@ -708,6 +708,37 @@ describe('rider smoke flows', () => {
     expect(mockedCreateCheckoutIntentWithApi).not.toHaveBeenCalled();
   });
 
+  it('keeps booking usable when saved place coordinates arrive as strings', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(
+      buildRiderProfile({
+        savedPlaces: [
+          {
+            id: 'saved-string-coordinates',
+            label: 'Maison',
+            address: 'Patte d Oie, Ouagadougou',
+            latitude: '12,3412',
+            longitude: '-1.5601',
+          },
+        ] as never,
+      }) as never,
+    );
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Destinations rapides');
+    expectText(renderer, 'Réserver');
+  });
+
   it('uses the selected Mobile Money phone number when creating checkout', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
     mockedFetchRideOptionsPreview.mockResolvedValue({
