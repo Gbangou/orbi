@@ -14,11 +14,15 @@ import {
 } from 'react-native';
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
 import { fetchTripDetail, reportTripIncidentWithApi, type TripDetailResponse } from '@orbi/api';
-import { formatXof, type OrbiTheme } from '@orbi/ui';
+import { type OrbiTheme } from '@orbi/ui';
 import { OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
-import { formatRiderRatingLabel } from '../lib/rider-display-format';
+import {
+  calculateRiderPromoSavings,
+  formatRiderMoneyAmount,
+  formatRiderRatingLabel,
+} from '../lib/rider-display-format';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -234,7 +238,7 @@ export default function ReceiptScreen() {
           'Recu de trajet Orbi',
           `De : ${trip.pickupAddress}`,
           `Vers : ${trip.destinationAddress}`,
-          `Montant : ${formatXof(trip.actualFare)}`,
+          `Montant : ${formatRiderMoneyAmount(trip.actualFare)}`,
           `Chauffeur : ${trip.driverName}`,
           `Réf : ${trip.id.slice(0, 12).toUpperCase()}`,
         ].join('\n'),
@@ -358,7 +362,10 @@ export default function ReceiptScreen() {
   );
 
   const promoSavingsXof = trip.promoCode
-    ? Math.round(trip.actualFare * (trip.promoCode.discountBps / (10000 - trip.promoCode.discountBps)))
+    ? calculateRiderPromoSavings({
+        amount: trip.actualFare,
+        discountBps: trip.promoCode.discountBps,
+      })
     : null;
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -391,7 +398,7 @@ export default function ReceiptScreen() {
           <View style={styles.heroCheck}>
             <CheckGlyph />
           </View>
-          <Text style={styles.heroFare}>{formatXof(trip.actualFare)}</Text>
+          <Text style={styles.heroFare}>{formatRiderMoneyAmount(trip.actualFare)}</Text>
           <Text style={styles.heroLabel}>Course terminée</Text>
           {completedAt ? <Text style={styles.heroDate}>{completedAt}</Text> : null}
         </OrbiSurface>
@@ -434,16 +441,16 @@ export default function ReceiptScreen() {
         {/* Fare breakdown */}
         <OrbiSurface style={styles.card}>
           <Text style={styles.cardTitle}>Paiement</Text>
-          <Row label="Course" value={formatXof(trip.actualFare)} />
+          <Row label="Course" value={formatRiderMoneyAmount(trip.actualFare)} />
           {trip.promoCode ? (
             <Row
               label={`Promo (${trip.promoCode.code})`}
-              value={promoSavingsXof ? `− ${formatXof(promoSavingsXof)}` : `− ${trip.promoCode.discountBps / 100}%`}
+              value={promoSavingsXof ? `− ${formatRiderMoneyAmount(promoSavingsXof)}` : `− ${trip.promoCode.discountBps / 100}%`}
               accent={theme.colors.teal}
             />
           ) : null}
           <Row label="Mode de paiement" value={formatPaymentMethod(null)} />
-          <Row label="Total facturé" value={formatXof(trip.actualFare)} bold />
+          <Row label="Total facturé" value={formatRiderMoneyAmount(trip.actualFare)} bold />
           <View style={[row.wrap, { borderBottomWidth: 0 }]}>
             <Text style={[row.label, { color: theme.colors.textMuted, fontSize: 12 }]}>
               Référence

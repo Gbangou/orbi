@@ -12,11 +12,12 @@ import {
   View,
 } from 'react-native';
 import { rateTripWithApi, type TripRatingResponse } from '@orbi/api';
-import { formatXof, type OrbiTheme } from '@orbi/ui';
+import { type OrbiTheme } from '@orbi/ui';
 import { OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import { OrbiLogo } from '../lib/orbi-logo';
+import { formatRiderMoneyAmount, resolveRiderMoneyAmount } from '../lib/rider-display-format';
 
 const MAX_COMMENT = 280;
 const STAR_LABELS = ['', 'Mauvais', 'Passable', 'Correct', 'Bien', 'Excellent'];
@@ -83,7 +84,7 @@ export default function RatingScreen() {
 
   const tripId = params.tripId ?? '';
   const driverName = params.driverName ?? 'Votre chauffeur';
-  const fare = params.fare ? Number(params.fare) : null;
+  const fare = resolveRiderMoneyAmount(params.fare);
   const destination = params.destination ?? null;
 
   const [score, setScore] = useState(0);
@@ -225,7 +226,7 @@ export default function RatingScreen() {
             <Text style={styles.summaryName}>{driverName}</Text>
             <Text style={styles.summaryMeta}>Chauffeur Orbi certifie</Text>
             {fare !== null ? (
-              <Text style={styles.summaryFare}>{formatXof(fare)}</Text>
+              <Text style={styles.summaryFare}>{formatRiderMoneyAmount(fare)}</Text>
             ) : null}
           </View>
         </View>

@@ -3,7 +3,8 @@ import {
   type MyTripsResponse,
   type TripDetailResponse,
 } from "@orbi/api";
-import { formatOperationalStatus, formatXof } from "@orbi/ui";
+import { formatOperationalStatus } from "@orbi/ui";
+import { formatRiderMoneyAmount } from "./rider-display-format";
 
 function toFiniteFlowNumber(value: unknown) {
   if (typeof value === "number") {
@@ -174,7 +175,7 @@ export function buildRiderMissionSnapshot(input: {
     },
     {
       label: "Tarif",
-      value: formatXof(detail?.actualFare ?? activeTrip.amount),
+      value: formatRiderMoneyAmount(detail?.actualFare ?? activeTrip.amount),
       helper: activeTrip.currency,
     },
   ];

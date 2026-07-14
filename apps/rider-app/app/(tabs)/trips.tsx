@@ -9,11 +9,12 @@ import {
   View,
 } from 'react-native';
 import { fetchMyTrips, type MyTripsResponse } from '@orbi/api';
-import { formatXof, type OrbiTheme } from '@orbi/ui';
+import { type OrbiTheme } from '@orbi/ui';
 import { OrbiButton, OrbiMetricTile, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { restoreRiderSession } from '../../lib/auth';
 import { resolveRiderAppError } from '../../lib/session-feedback';
 import { OrbiLogo } from '../../lib/orbi-logo';
+import { formatRiderMoneyAmount, resolveRiderMoneyAmount } from '../../lib/rider-display-format';
 
 type TripItem = MyTripsResponse['recentTrips'][number];
 type RequestItem = MyTripsResponse['pendingRequests'][number];
@@ -53,6 +54,7 @@ function StatusBadge({ status }: { status: string }) {
 function TripCard({ trip, onPress }: { trip: TripItem; onPress: () => void }) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const amount = resolveRiderMoneyAmount(trip.amount);
   return (
     <Pressable
       onPress={onPress}
@@ -89,9 +91,9 @@ function TripCard({ trip, onPress }: { trip: TripItem; onPress: () => void }) {
         </View>
 
         <View style={styles.cardFooter}>
-          {trip.amount > 0 ? (
+          {amount !== null && amount > 0 ? (
             <View style={styles.cardFare}>
-              <Text style={styles.fareAmount}>{formatXof(trip.amount)}</Text>
+              <Text style={styles.fareAmount}>{formatRiderMoneyAmount(amount)}</Text>
               <Text style={styles.fareCurrency}>{trip.currency}</Text>
             </View>
           ) : (
@@ -109,6 +111,7 @@ function TripCard({ trip, onPress }: { trip: TripItem; onPress: () => void }) {
 function RequestCard({ request }: { request: RequestItem }) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const estimatedFare = resolveRiderMoneyAmount(request.estimatedFare);
   return (
     <OrbiSurface tone="sky" style={styles.card}>
       <View style={styles.cardHeader}>
@@ -135,10 +138,10 @@ function RequestCard({ request }: { request: RequestItem }) {
           Recherche chauffeur...
         </Text>
       </View>
-      {request.estimatedFare > 0 ? (
+      {estimatedFare !== null && estimatedFare > 0 ? (
         <View style={styles.cardFooter}>
           <View style={styles.cardFare}>
-            <Text style={styles.fareAmount}>{formatXof(request.estimatedFare)}</Text>
+            <Text style={styles.fareAmount}>{formatRiderMoneyAmount(estimatedFare)}</Text>
             <Text style={styles.fareCurrency}>estime</Text>
           </View>
           <Text style={styles.cardActionHint}>Suivi actif</Text>
@@ -225,7 +228,7 @@ export default function TripsScreen() {
           />
           <OrbiMetricTile
             label="Total depense"
-            value={formatXof(data.stats.totalAmount)}
+            value={formatRiderMoneyAmount(data.stats.totalAmount)}
             helper="Recu disponible"
             style={styles.statCard}
           />

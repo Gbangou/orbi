@@ -42,7 +42,6 @@ import {
 } from '@orbi/api';
 import {
   describeRealtimeConnection,
-  formatXof,
   orbiCopy,
   type OrbiTheme,
 } from '@orbi/ui';
@@ -50,6 +49,7 @@ import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, use
 import { orbiRuntimeConfig } from '@orbi/config';
 import { createRiderPublicClient, restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
+import { formatRiderMoneyAmount } from '../lib/rider-display-format';
 import { buildSavedPlacePayload } from '../lib/account-safety';
 import {
   areBookingPlacesEquivalent,
@@ -755,15 +755,15 @@ export default function BookingScreen() {
         immediateBookingUnavailable));
   const bookingCtaLabel = isSubmitting
     ? tb('confirmLoading')
-    : hasOpenFlow
-      ? tb('activeFlow')
+      : hasOpenFlow
+        ? tb('activeFlow')
       : immediateBookingUnavailable
         ? 'Aucun chauffeur proche'
-        : immediateBookingSupplyUnknown
-          ? 'Vérification chauffeur...'
-          : selectedOption && destinationPlace.coordinates
-            ? tb('confirm').replace('{{fare}}', formatXof(selectedOption.fare))
-            : tb('noServiceSelected');
+      : immediateBookingSupplyUnknown
+        ? 'Vérification chauffeur...'
+      : selectedOption && destinationPlace.coordinates
+        ? tb('confirm').replace('{{fare}}', formatRiderMoneyAmount(selectedOption.fare))
+        : tb('noServiceSelected');
 
   useEffect(() => {
     const previousFlowState = previousFlowStateRef.current;
@@ -1094,7 +1094,7 @@ export default function BookingScreen() {
           </View>
           <View style={styles.tripDecisionRow}>
             <Text style={styles.tripDecisionValue} numberOfLines={1}>
-              {selectedOption ? formatXof(selectedOption.fare) : '--'} · {tripEstimate.distanceKm} km · {tripEstimate.durationMinutes} min
+              {selectedOption ? formatRiderMoneyAmount(selectedOption.fare) : '--'} · {tripEstimate.distanceKm} km · {tripEstimate.durationMinutes} min
             </Text>
             <View style={styles.tripDecisionSignal}>
               <View
@@ -1398,11 +1398,11 @@ export default function BookingScreen() {
                 ? 'Course en cours'
                 : immediateBookingUnavailable
                   ? 'Aucun chauffeur autour du départ'
-                  : immediateBookingSupplyUnknown
-                    ? 'Scan disponibilité'
-                    : selectedOption && destinationPlace.coordinates
-                      ? `${formatXof(selectedOption.fare)} · ${selectedOption.title}`
-                      : 'Choisissez votre course'}
+                : immediateBookingSupplyUnknown
+                  ? 'Scan disponibilité'
+                  : selectedOption && destinationPlace.coordinates
+                    ? `${formatRiderMoneyAmount(selectedOption.fare)} · ${selectedOption.title}`
+                    : 'Choisissez votre course'}
             </Text>
             <Text style={styles.ctaSignalMeta} numberOfLines={1}>
               {hasOpenFlow

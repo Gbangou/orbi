@@ -1,3 +1,5 @@
+import { formatXof } from '@orbi/ui';
+
 export function toFiniteRiderDisplayNumber(value: unknown) {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : null;
@@ -40,4 +42,58 @@ export function estimateRiderPickupEtaMinutes(distanceKm: unknown) {
   return numeric !== null && numeric >= 0
     ? Math.max(1, Math.ceil(numeric * 3))
     : null;
+}
+
+export function formatRiderMoneyAmount(
+  value: unknown,
+  fallback = 'Montant indisponible',
+) {
+  const numeric = toFiniteRiderDisplayNumber(value);
+
+  if (numeric === null || numeric < 0) {
+    return fallback;
+  }
+
+  return formatXof(numeric);
+}
+
+export function resolveRiderMoneyAmount(value: unknown) {
+  const numeric = toFiniteRiderDisplayNumber(value);
+
+  return numeric !== null && numeric >= 0 ? numeric : null;
+}
+
+export function calculateRiderDiscountedFare(input: {
+  fare: unknown;
+  discountBps: unknown;
+}) {
+  const fare = resolveRiderMoneyAmount(input.fare);
+  const discountBps = toFiniteRiderDisplayNumber(input.discountBps);
+
+  if (fare === null) {
+    return null;
+  }
+
+  if (discountBps === null || discountBps <= 0) {
+    return fare;
+  }
+
+  const boundedDiscountBps = Math.min(Math.max(discountBps, 0), 10000);
+  const discountedFare = Math.round(fare * (1 - boundedDiscountBps / 10000));
+
+  return Math.max(1, discountedFare);
+}
+
+export function calculateRiderPromoSavings(input: {
+  amount: unknown;
+  discountBps: unknown;
+}) {
+  const amount = resolveRiderMoneyAmount(input.amount);
+  const discountBps = toFiniteRiderDisplayNumber(input.discountBps);
+
+  if (amount === null || discountBps === null || discountBps <= 0 || discountBps >= 10000) {
+    return null;
+  }
+
+  return Math.max(0, Math.round(amount * (discountBps / (10000 - discountBps))));
 }

@@ -565,6 +565,15 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   virgule, formatent les montants via `formatXof`, calculent les ratios de
   facon bornee, et le graphe revenus ignore proprement les payouts sales.
   Tests helpers et smoke driver complet valident les parcours visibles.
+- 14 juillet 2026: gap A ferme "argent rider fragile aux payloads imparfaits".
+  Les surfaces wallet, accueil, booking, selecteur vehicule, activite,
+  historique, recu, rating et resume de trajet actif exposaient encore des
+  montants ou remises calcules directement depuis les payloads API. Ajout d une
+  couche `rider-display-format` pour normaliser les montants number/string
+  (`"2500"`, `"2500,5"`), borner les remises promo, calculer les tarifs
+  remises et degrader en libelle indisponible au lieu de provoquer un crash.
+  Les ecrans rider critiques utilisent desormais ce helper unique. Tests helper,
+  smoke rider complet et typecheck workspace valident cette tranche.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

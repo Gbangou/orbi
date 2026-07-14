@@ -33,7 +33,6 @@ import {
   describeRealtimeEvent,
   describeRealtimeConnection,
   formatOperationalStatus,
-  formatXof,
   type OrbiTheme,
 } from "@orbi/ui";
 import {
@@ -47,7 +46,9 @@ import {
 import {
   estimateRiderPickupEtaMinutes,
   formatRiderDistanceKm,
+  formatRiderMoneyAmount,
   formatRiderRatingLabel,
+  resolveRiderMoneyAmount,
 } from "../../lib/rider-display-format";
 import { restoreRiderSession } from "../../lib/auth";
 import { useTranslation } from "../../lib/i18n";
@@ -995,7 +996,7 @@ export default function ActivityScreen() {
           />
           <OrbiMetricTile
             label="Dépensé"
-            value={formatXof(history.stats.totalAmount)}
+            value={formatRiderMoneyAmount(history.stats.totalAmount)}
             style={styles.statCard}
           />
           <OrbiMetricTile
@@ -1079,9 +1080,9 @@ export default function ActivityScreen() {
                                 : trip.status}
                     </Text>
                   </View>
-                  {trip.amount ? (
+                  {resolveRiderMoneyAmount(trip.amount) ? (
                     <Text style={styles.tripHistFare}>
-                      {formatXof(trip.amount)}
+                      {formatRiderMoneyAmount(trip.amount)}
                     </Text>
                   ) : null}
                 </View>

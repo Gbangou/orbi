@@ -46,6 +46,7 @@ import {
   buildRiderPeripheralStatusLabel,
   resolveRiderActiveFlow,
 } from '../../lib/rider-active-flow';
+import { formatRiderMoneyAmount } from '../../lib/rider-display-format';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { SavedPlacesMap } from '../../lib/saved-places-map';
 
@@ -793,7 +794,7 @@ export default function AccountScreen() {
               <Text style={walletStyles.label}>Wallet Orbi</Text>
               <Text style={walletStyles.balance}>
                 {walletBalance !== null
-                  ? `${walletBalance.balance.toLocaleString('fr-BF')} XOF`
+                  ? formatRiderMoneyAmount(walletBalance.balance, '— XOF')
                   : '— XOF'}
               </Text>
             </View>

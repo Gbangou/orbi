@@ -24,7 +24,6 @@ import {
 import {
   describeRealtimeEvent,
   describeRealtimeConnection,
-  formatXof,
   type OrbiTheme,
 } from '@orbi/ui';
 import { OfflineBanner, OrbiSurface, safeHaptics, useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
@@ -34,6 +33,7 @@ import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { useRiderRealtimeStream } from '../../lib/use-rider-realtime-stream';
 import { resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
 import { resolveRiderAppError } from '../../lib/session-feedback';
+import { formatRiderMoneyAmount } from '../../lib/rider-display-format';
 import {
   buildRiderFlowTransitionLabel,
   buildRiderHomeStatusLabel,
@@ -208,7 +208,7 @@ const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideO
           ) : null}
         </View>
         <View style={{ alignItems: 'flex-end', gap: 2 }}>
-          <Text style={styles.serviceFare}>{formatXof(option.fare)}</Text>
+          <Text style={styles.serviceFare}>{formatRiderMoneyAmount(option.fare)}</Text>
           {option.surgeActive ? (
             <Text style={styles.serviceSurge}>{option.surgeLabel}</Text>
           ) : null}
@@ -636,7 +636,7 @@ export default function RiderHomeScreen() {
                 <Text style={styles.searchPlaceholder}>{t('home.whereToGo')}</Text>
                 {options.length > 0 ? (
                   <Text style={styles.fareHint}>
-                    À partir de {formatXof(options[0].fare)} · {options[0].etaMinutes} min
+                    À partir de {formatRiderMoneyAmount(options[0].fare)} · {options[0].etaMinutes} min
                   </Text>
                 ) : null}
               </View>

@@ -14,9 +14,13 @@ import {
   Text,
   View,
 } from 'react-native';
-import { formatXof, type OrbiTheme } from '@orbi/ui';
+import { type OrbiTheme } from '@orbi/ui';
 import { useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
 import type { RideOption, PromoValidationResponse } from '@orbi/api';
+import {
+  calculateRiderDiscountedFare,
+  formatRiderMoneyAmount,
+} from '../rider-display-format';
 
 function VehicleAvatar({
   isSelected, tone, tier,
@@ -90,12 +94,10 @@ export const VehicleSelector = memo(function VehicleSelector({
           const { tone } = buildRideOptionVisual(option);
           const isSelected = option.id === (selectedOptionId || options[0]?.id);
           const accentColor = tone === 'teal' ? theme.colors.teal : tone === 'sky' ? theme.colors.sky : theme.colors.amber;
-          const discountRate = promoValidation
-            ? Math.min(Math.max(promoValidation.discountBps, 0), 10000) / 10000
-            : 0;
-          const discountedFare = promoValidation
-            ? Math.max(1, Math.round(option.fare * (1 - discountRate)))
-            : option.fare;
+          const discountedFare = calculateRiderDiscountedFare({
+            fare: option.fare,
+            discountBps: promoValidation?.discountBps,
+          });
           const title = option.category === 'motorcycle' ? 'Moto' : option.title;
 
           return (
@@ -130,7 +132,7 @@ export const VehicleSelector = memo(function VehicleSelector({
                 ) : null}
               </View>
               <Text style={[styles.fare, isSelected && { color: accentColor }]}>
-                {formatXof(discountedFare)}
+                {formatRiderMoneyAmount(discountedFare)}
               </Text>
               {option.marketplace?.etaConfidence === 'LOW' || option.marketplace?.etaSource === 'DEGRADED' ? (
                 <Text style={styles.lowConfidence}>
