@@ -104,7 +104,8 @@ describe('drivers board', () => {
       'utf8',
     );
 
-    expect(source).toContain('Math.min(');
+    expect(source).toContain('resolveStrictBoundedInteger');
+    expect(source).not.toContain('parseInt');
     expect(source).toContain('100');
     expect(source).toContain('.slice(0, 120)');
   });

@@ -15,4 +15,16 @@ describe('riders board', () => {
     expect(source).toContain('riderStatusInFlightRef.current.add(userId)');
     expect(source).toContain('riderStatusInFlightRef.current.delete(userId)');
   });
+
+  it('bounds riders list pagination and search before proxying to the backend', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/api/admin/riders/route.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain('resolveStrictBoundedInteger');
+    expect(source).not.toContain('parseInt');
+    expect(source).toContain('100');
+    expect(source).toContain('.slice(0, 120)');
+  });
 });

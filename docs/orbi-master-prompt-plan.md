@@ -639,6 +639,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   incoherentes selon la route. `admin-server-security` expose maintenant un
   parseur strict borne reutilise par job queue, exports onboarding et audit/export
   trajets, avec tests contre coercition implicite et depassement de bornes.
+- 15 juillet 2026: gap A ferme "pagination riders/drivers admin permissive".
+  Les proxies admin riders et drivers utilisaient encore `parseInt` local pour
+  `page` et `pageSize`, acceptant des pages partielles comme `12abc`. Ces routes
+  reutilisent maintenant `resolveStrictBoundedInteger`, bornent `pageSize` a 100
+  et les tests des boards empechent une regression vers `parseInt`. Le scan
+  mobile/admin ne trouve plus de `parseInt/parseFloat` direct sur ces surfaces.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

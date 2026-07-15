@@ -4,21 +4,26 @@ import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,
 } from '../../../admin-server-auth';
-import { createNoStoreAdminHeaders } from '../../../admin-server-security';
+import {
+  createNoStoreAdminHeaders,
+  resolveStrictBoundedInteger,
+} from '../../../admin-server-security';
 
 export const dynamic = 'force-dynamic';
 
 function parsePositiveInteger(value: string | null, fallback: number) {
-  const parsed = Number.parseInt(value ?? '', 10);
-
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  return resolveStrictBoundedInteger(value, {
+    min: 1,
+    max: Number.MAX_SAFE_INTEGER,
+    fallback,
+  });
 }
 
 export async function GET(request: NextRequest) {
   const page = parsePositiveInteger(request.nextUrl.searchParams.get('page'), 1);
-  const pageSize = Math.min(
-    parsePositiveInteger(request.nextUrl.searchParams.get('pageSize'), 30),
-    100,
+  const pageSize = resolveStrictBoundedInteger(
+    request.nextUrl.searchParams.get('pageSize'),
+    { min: 1, max: 100, fallback: 30, clampMax: true },
   );
   const search = request.nextUrl.searchParams.get('search')?.trim();
   const activeOnly = request.nextUrl.searchParams.get('activeOnly') === 'true';
