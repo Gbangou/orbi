@@ -9,6 +9,7 @@ const supportedFlags = [
   'driverOnboarding',
   'voice',
 ] as const;
+const canaryRolloutPattern = /^canary:(\d|[1-9]\d|100)$/;
 
 export type FeatureFlagName = (typeof supportedFlags)[number];
 
@@ -39,7 +40,7 @@ export class FeatureFlagsService {
     }
 
     if (rollout.startsWith('canary:')) {
-      const percentage = Number.parseInt(rollout.split(':')[1] ?? '0', 10);
+      const percentage = this.resolveCanaryPercentage(rollout);
 
       if (this.getAllowlist(flag).includes(actorId ?? '')) {
         return true;
@@ -75,11 +76,21 @@ export class FeatureFlagsService {
       return normalized;
     }
 
-    if (/^canary:(\d|[1-9]\d|100)$/.test(normalized)) {
+    if (canaryRolloutPattern.test(normalized)) {
       return normalized;
     }
 
     return 'off';
+  }
+
+  private resolveCanaryPercentage(rollout: string) {
+    const match = canaryRolloutPattern.exec(rollout);
+
+    if (!match) {
+      return 0;
+    }
+
+    return Number(match[1]);
   }
 
   private getAllowlist(flag: FeatureFlagName) {

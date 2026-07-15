@@ -674,6 +674,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   local. `admin-ops-kernel` expose maintenant `formatAdminMoney`, qui refuse
   `NaN`/`Infinity` et degrade en fallback clair. Tests dedies et scan argent
   valident que les affichages critiques passent par le helper partage.
+- 15 juillet 2026: gap A ferme "rollout feature flags partiellement parse".
+  Le service de feature flags validait deja le format canary mais extrayait le
+  pourcentage avec `parseInt`, une dependance permissive qui aurait pu masquer
+  une regression future comme `canary:50abc`. Le pourcentage est maintenant
+  derive du meme regex strict que la validation et un test verrouille le rejet
+  des rollouts sales avant exposition admin ou activation runtime.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

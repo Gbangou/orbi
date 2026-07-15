@@ -36,4 +36,14 @@ describe('FeatureFlagsService', () => {
 
     expect(service.isEnabled('payments', { actorId: 'user-1' })).toBe(true);
   });
+
+  it('rejects dirty canary rollout percentages instead of parsing partial numbers', () => {
+    const service = createService({
+      'featureFlags.payments': 'canary:50abc',
+      'featureFlags.paymentsAllowlist': [],
+    });
+
+    expect(service.getMode('payments')).toBe('off');
+    expect(service.isEnabled('payments', { actorId: 'user-1' })).toBe(false);
+  });
 });
