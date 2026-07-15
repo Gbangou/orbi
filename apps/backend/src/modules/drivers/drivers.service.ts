@@ -57,8 +57,8 @@ function fuzzCoordinates(
   const u2 = Math.random() || Number.EPSILON;
   const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
   return {
-    latitude: parseFloat((latitude + z * noiseDegreesLat).toFixed(6)),
-    longitude: parseFloat((longitude + z * noiseDegreesLng).toFixed(6)),
+    latitude: Number((latitude + z * noiseDegreesLat).toFixed(6)),
+    longitude: Number((longitude + z * noiseDegreesLng).toFixed(6)),
   };
 }
 

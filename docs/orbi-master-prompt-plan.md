@@ -693,6 +693,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `resolveConfigInteger` et `resolvePrismaPoolConfig`: entiers stricts,
   fallback controle et tests dedies. Le scan config/prisma ne trouve plus de
   `parseInt` direct.
+- 15 juillet 2026: gap B ferme "parseFloat interne inutile". L obfuscation des
+  coordonnees chauffeur utilisait `parseFloat` apres `toFixed`, alors qu aucune
+  entree externe n etait attendue. Conversion remplacee par `Number(...)` strict
+  sur la chaine normalisee; le scan backend ne conserve plus que les parseurs
+  legitimement lies a hash hex, UUID nibble et test pickup code.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est
