@@ -17,6 +17,18 @@ type Props = {
   initialData: OverviewData;
 };
 
+function formatLiveOverviewTime(value: Date) {
+  if (!Number.isFinite(value.getTime())) {
+    return 'heure a verifier';
+  }
+
+  return new Intl.DateTimeFormat('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(value);
+}
+
 function StatTile({
   label,
   value,
@@ -108,7 +120,7 @@ export function LiveOverviewStats({ initialData }: Props) {
     return () => window.clearInterval(interval);
   }, []);
 
-  const timeStr = lastUpdated.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const timeStr = formatLiveOverviewTime(lastUpdated);
 
   return (
     <div style={{ marginBottom: 28 }}>

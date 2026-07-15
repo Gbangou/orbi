@@ -28,11 +28,16 @@ function formatStatus(status: string): { label: string; color: string } {
 }
 
 function formatTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString('fr-BF', { hour: '2-digit', minute: '2-digit' });
-  } catch {
+  const date = new Date(iso);
+
+  if (!Number.isFinite(date.getTime())) {
     return '—';
   }
+
+  return new Intl.DateTimeFormat('fr-BF', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 }
 
 export default async function SharedTripPage({

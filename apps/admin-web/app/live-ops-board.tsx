@@ -6,6 +6,7 @@ import { describeRealtimeConnection, formatOperationalStatus } from '@orbi/ui';
 import { LiveOpsMap } from './live-ops-map';
 import {
   adminSyncHighlightDurationMs,
+  formatAdminDateTime,
   hasLiveOpsTripChanged,
   resolveCollectionDelta,
   resolveLiveOpsRouteMonitoringCopy,
@@ -403,12 +404,14 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
               <p>
                 Dernier evenement:{' '}
                 {trip.lastEvent
-                  ? `${trip.lastEvent.label} a ${new Date(
+                  ? `${trip.lastEvent.label} a ${formatAdminDateTime(
                       trip.lastEvent.createdAt,
-                    ).toLocaleTimeString('fr-FR', {
+                      'heure a verifier',
+                      {
                       hour: '2-digit',
                       minute: '2-digit',
-                    })}`
+                      },
+                    )}`
                   : 'Aucun evenement'}
               </p>
               <div className="trip-meta-grid">
@@ -659,8 +662,9 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
                 : cancel.cancelledBy === 'DRIVER'
                   ? 'Chauffeur'
                   : 'Inconnu';
-            const cancelTime = new Date(cancel.cancelledAt).toLocaleTimeString(
-              'fr-FR',
+            const cancelTime = formatAdminDateTime(
+              cancel.cancelledAt,
+              'heure a verifier',
               { hour: '2-digit', minute: '2-digit' },
             );
 

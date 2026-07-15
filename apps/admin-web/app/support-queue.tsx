@@ -8,6 +8,7 @@ import {
 import { describeRealtimeConnection, formatOperationalStatus } from '@orbi/ui';
 import {
   adminSyncHighlightDurationMs,
+  formatAdminDateTime,
   resolveCollectionDelta,
 } from './admin-ops-kernel';
 import {
@@ -408,7 +409,7 @@ export function SupportQueue({ initialTickets, initialStaffing }: SupportQueuePr
                 P{ticket.priority} - {ticket.sla.targetMinutes} min
               </strong>
               <p>
-                Echeance {new Date(ticket.sla.dueAt).toLocaleTimeString('fr-FR', {
+                Echeance {formatAdminDateTime(ticket.sla.dueAt, 'a verifier', {
                   hour: '2-digit',
                   minute: '2-digit',
                 })}

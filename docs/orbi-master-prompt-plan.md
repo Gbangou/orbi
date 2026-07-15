@@ -662,6 +662,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   produire `NaN` ou une valeur hors UX avant proxy serveur. La limite est
   maintenant un choix borne 50/100/300/500, resolu strictement sans coercition
   libre. Les tests audit verifient aussi le parseur serveur strict actuel.
+- 15 juillet 2026: gap A ferme "dates admin pouvant fuiter Invalid Date".
+  Plusieurs surfaces ops formataient encore directement les dates via
+  `new Date(...).toLocale...`: SLA support, evenements live, annulations live,
+  dates promo et suivi public partage. Ces affichages passent maintenant par
+  `formatAdminDateTime` ou un formatter local verifie; le scan admin ne trouve
+  plus de `toLocaleDateString/toLocaleTimeString` direct fragile dans l app.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

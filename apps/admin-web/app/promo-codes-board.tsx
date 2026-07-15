@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import type { PromoCodeItem } from '@orbi/api';
 import { createAdminMutationHeaders, fetchAdminJson } from './admin-client-fetch';
+import { formatAdminDateTime } from './admin-ops-kernel';
 import { resolvePromoCodeFormPayload } from './promo-code-safety';
 
 type PromoCodesBoardProps = {
@@ -14,7 +15,7 @@ function formatDiscountBps(bps: number) {
 }
 
 function formatPromoDate(iso: string) {
-  return new Date(iso).toLocaleDateString('fr-FR', {
+  return formatAdminDateTime(iso, 'Date indisponible', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
