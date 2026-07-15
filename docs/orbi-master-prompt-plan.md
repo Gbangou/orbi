@@ -710,6 +710,14 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   maintenant un montant serveur fini et positif, et un montant demande fini si
   present, avant idempotency hash ou initialisation provider. Tests dedies sur
   fare `Infinity` et amount `NaN`; suite payments complete verte.
+- 15 juillet 2026: gap A ferme "route promo admin permissive aux dates
+  normalisees". Le formulaire admin rejetait deja les dates calendrier sales,
+  mais le proxy serveur `app/api/admin/promo-codes/route.ts` utilisait encore
+  `Date.parse`, ce qui pouvait accepter un appel direct avec une date comme
+  `2026-02-31T00:00:00.000Z` normalisee par JavaScript. Le proxy valide
+  maintenant des instants UTC ISO reels, canonise les dates avant appel backend
+  et rejette les dates impossibles ou non ISO. Test de regression admin-web et
+  `pnpm typecheck` workspace verts.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

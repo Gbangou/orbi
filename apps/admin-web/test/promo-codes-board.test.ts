@@ -2,6 +2,7 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { normalizePromoCodeDate } from '../app/api/admin/promo-codes/route';
 import { resolvePromoCodeFormPayload } from '../app/promo-code-safety';
 
 describe('promo codes board', () => {
@@ -125,15 +126,26 @@ describe('promo codes board', () => {
     expect(routeSource).toContain('code.length > 32');
   });
 
-  it('validates validFrom and validTo are parseable date strings', () => {
+  it('validates promo dates as strict real UTC instants in the route handler', () => {
     const routeSource = readFileSync(
       join(process.cwd(), 'app/api/admin/promo-codes/route.ts'),
       'utf8',
     );
 
-    expect(routeSource).toContain('Date.parse(validFrom)');
-    expect(routeSource).toContain('Date.parse(validTo)');
-    expect(routeSource).toContain('Number.isNaN');
+    expect(routeSource).toContain('normalizePromoCodeDate');
+    expect(routeSource).toContain('isoUtcDateTimePattern');
+    expect(routeSource).not.toContain('Date.parse(validFrom)');
+    expect(routeSource).not.toContain('Date.parse(validTo)');
+
+    expect(normalizePromoCodeDate('2026-07-15T00:00:00.000Z')).toBe(
+      '2026-07-15T00:00:00.000Z',
+    );
+    expect(normalizePromoCodeDate('2026-07-15T08:30:15Z')).toBe(
+      '2026-07-15T08:30:15.000Z',
+    );
+    expect(normalizePromoCodeDate('2026-02-31T00:00:00.000Z')).toBeNull();
+    expect(normalizePromoCodeDate('2026-07-15')).toBeNull();
+    expect(normalizePromoCodeDate('not-a-date')).toBeNull();
   });
 
   it('rejects promo windows where validTo is not after validFrom', () => {
