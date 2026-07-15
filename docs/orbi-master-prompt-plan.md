@@ -645,6 +645,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   reutilisent maintenant `resolveStrictBoundedInteger`, bornent `pageSize` a 100
   et les tests des boards empechent une regression vers `parseInt`. Le scan
   mobile/admin ne trouve plus de `parseInt/parseFloat` direct sur ces surfaces.
+- 15 juillet 2026: gap A ferme "formulaire dispatch admin envoyant des nombres
+  coercitifs". La console dispatch convertissait directement les champs via
+  `Number(...)`, laissant l API rejeter tardivement `24h`, `1e2` ou des valeurs
+  hors bornes avec un message generique. Ajout de `dispatch-control-safety`:
+  validation stricte chiffres uniquement, bornes UX identiques au proxy serveur,
+  message avant appel reseau et tests dedies.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

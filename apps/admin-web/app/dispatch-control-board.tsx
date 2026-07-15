@@ -9,6 +9,7 @@ import {
   fetchAdminJson,
 } from './admin-client-fetch';
 import { formatAdminDateTime } from './admin-ops-kernel';
+import { resolveDispatchSettingsFormPayload } from './dispatch-control-safety';
 
 type DispatchControlBoardProps = {
   initialSettings: AdminDispatchSettingsResponse;
@@ -214,17 +215,19 @@ export function DispatchControlBoard({
       return;
     }
 
+    const formPayload = resolveDispatchSettingsFormPayload(formValues);
+
+    if (!formPayload.payload) {
+      setStatus(formPayload.error ?? 'Reglages dispatch invalides.');
+      return;
+    }
+
     dispatchMutationInFlightRef.current = true;
     setIsSubmitting(true);
     setStatus('Enregistrement des reglages dispatch persistants...');
 
     try {
-      const response = await updateDispatchSettings({
-        lookbackHours: Number(formValues.lookbackHours),
-        halfLifeHours: Number(formValues.halfLifeHours),
-        declineCooldownMinutes: Number(formValues.declineCooldownMinutes),
-        historyLimit: Number(formValues.historyLimit),
-      });
+      const response = await updateDispatchSettings(formPayload.payload);
       setLiveSettings(response);
       syncFormWithSnapshot(response);
       setStatus('Reglages dispatch persistants appliques.');
