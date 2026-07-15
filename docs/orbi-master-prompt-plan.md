@@ -698,6 +698,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   entree externe n etait attendue. Conversion remplacee par `Number(...)` strict
   sur la chaine normalisee; le scan backend ne conserve plus que les parseurs
   legitimement lies a hash hex, UUID nibble et test pickup code.
+- 15 juillet 2026: gap A ferme "idempotence booking peu explicite sur metriques
+  sales". Les comparaisons de retry booking (`distance`, `duration`,
+  coordonnees) utilisaient `Number(...)` directement. Ajout d un helper fini
+  local: toute metrique stockee non finie ou sale refuse maintenant
+  l equivalence et conserve l erreur active-request au lieu de reutiliser un
+  booking potentiellement incoherent. Test dedie sur `5.1km` / `18min`.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

@@ -331,8 +331,15 @@ export class RideRequestsService {
   // Duration comparison allows ±6 min tolerance — road conditions and ETA
   // algorithms evolve between the stored request and the retry attempt.
   private similarDurationMinutes(left: unknown, right: unknown) {
-    const l = Math.round(Number(left));
-    const r = Math.round(Number(right));
+    const leftNumber = this.toFiniteComparisonNumber(left);
+    const rightNumber = this.toFiniteComparisonNumber(right);
+
+    if (leftNumber === null || rightNumber === null) {
+      return false;
+    }
+
+    const l = Math.round(leftNumber);
+    const r = Math.round(rightNumber);
     return Math.abs(l - r) <= 6;
   }
 
@@ -352,11 +359,31 @@ export class RideRequestsService {
       return left === right;
     }
 
-    return Math.abs(Number(left) - Number(right)) < 0.0001;
+    const leftNumber = this.toFiniteComparisonNumber(left);
+    const rightNumber = this.toFiniteComparisonNumber(right);
+
+    return (
+      leftNumber !== null &&
+      rightNumber !== null &&
+      Math.abs(leftNumber - rightNumber) < 0.0001
+    );
   }
 
   private sameRoundedNumber(left: unknown, right: unknown) {
-    return Math.round(Number(left)) === Math.round(Number(right));
+    const leftNumber = this.toFiniteComparisonNumber(left);
+    const rightNumber = this.toFiniteComparisonNumber(right);
+
+    return (
+      leftNumber !== null &&
+      rightNumber !== null &&
+      Math.round(leftNumber) === Math.round(rightNumber)
+    );
+  }
+
+  private toFiniteComparisonNumber(value: unknown) {
+    const numeric = Number(value);
+
+    return Number.isFinite(numeric) ? numeric : null;
   }
 
   async findActive() {

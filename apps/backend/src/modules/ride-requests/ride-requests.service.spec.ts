@@ -368,6 +368,56 @@ describe('RideRequestsService', () => {
     expect(prisma.rideRequest.create).not.toHaveBeenCalled();
   });
 
+  it('does not treat dirty stored route metrics as an equivalent booking retry', async () => {
+    const { prisma, pricingService, service } = createService();
+
+    pricingService.quote.mockResolvedValue({
+      estimatedFare: 2150,
+    });
+    prisma.rideRequest.findFirst.mockResolvedValue({
+      id: 'request-active-1',
+      riderId: 'rider-1',
+      status: 'REQUESTED',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      pickupLatitude: 12.3714,
+      pickupLongitude: -1.5197,
+      destinationAddress: 'Ouaga 2000',
+      destinationLatitude: 12.3274,
+      destinationLongitude: -1.5339,
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      paymentMethod: 'MOBILE_MONEY',
+      pricingCity: 'OUAGADOUGOU',
+      districtProfile: 'UNIVERSITY',
+      estimatedFare: 2150,
+      estimatedDistanceKm: '5.1km',
+      estimatedDurationMinutes: '18min',
+      createdAt: new Date('2026-05-10T09:00:00.000Z'),
+    });
+    prisma.trip.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.create({
+        riderId: 'rider-1',
+        pickupAddress: ' Universite Joseph Ki-Zerbo ',
+        pickupLatitude: 12.3714,
+        pickupLongitude: -1.5197,
+        destinationAddress: ' Ouaga 2000 ',
+        destinationLatitude: 12.3274,
+        destinationLongitude: -1.5339,
+        requestedVehicleType: 'MOTORCYCLE',
+        requestedServiceTier: 'MOTO_STANDARD',
+        estimatedDistanceKm: 99,
+        estimatedDurationMinutes: 99,
+        paymentMethod: 'MOBILE_MONEY',
+        pickupAreaType: 'URBAN_CORE',
+        city: 'OUAGADOUGOU',
+        districtProfile: 'UNIVERSITY',
+      }),
+    ).rejects.toThrow('The rider already has an active ride request.');
+    expect(prisma.rideRequest.create).not.toHaveBeenCalled();
+  });
+
   it('falls back to client route estimates when coordinates are absent', async () => {
     const { prisma, pricingService, service } = createService();
 
