@@ -456,9 +456,9 @@ export default function BookingScreen() {
       suggestionLat &&
       suggestionLng
     ) {
-      const lat = parseFloat(suggestionLat);
-      const lng = parseFloat(suggestionLng);
-      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      const lat = toFiniteCoordinate(suggestionLat);
+      const lng = toFiniteCoordinate(suggestionLng);
+      if (lat !== null && lng !== null) {
         setDestinationPlace({
           id: `voice-${Date.now()}`,
           label: suggestionName,

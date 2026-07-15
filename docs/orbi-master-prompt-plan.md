@@ -604,6 +604,14 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   sans `Invalid Date`. `offer-reservation`, `driver-action-safety`,
   `driver-operational-signal`, l accueil driver et `realtime-widgets` utilisent
   desormais ce helper.
+- 15 juillet 2026: gap A ferme "coordonnees et messages carte fragiles". Les
+  cartes WebView rider/driver utilisaient encore des tests truthy (`lat && lng`)
+  et certains parsings permissifs (`parseFloat`) pouvant ignorer `0`, accepter
+  des chaines partielles ou propager `NaN`/hors-bornes vers Leaflet. Ajout de
+  helpers `map-coordinate` rider et driver, normalisation number/string avec
+  virgule, bornes GPS strictes, filtrage des marqueurs sales, messages WebView
+  bornes et rejet des payloads malformes. Les cartes home/trip/approach/saved
+  places et la recherche de lieux rider utilisent desormais ces garde-fous.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

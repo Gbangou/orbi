@@ -9,6 +9,7 @@ import {
 } from '@orbi/ui';
 import { ErrorBoundary, useOrbiTheme } from '@orbi/ui/native';
 import { enqueueDriverMapError } from './map-error-reporting';
+import { hasMapCoordinatePair, normalizeMapCoordinatePair } from './map-coordinate';
 
 const TypedWebView = WebView as any;
 
@@ -88,19 +89,19 @@ function fetchApproachRoute(dLat,dLng,pLat,pLng){
 
 function initMap(cfg){
   var bounds=[];
-  if(cfg.pickupLat&&cfg.pickupLng){
+  if(cfg.pickupLat!==null&&cfg.pickupLng!==null){
     pickupMarker=L.marker([cfg.pickupLat,cfg.pickupLng],{icon:pickupIcon(cfg.pickupAddress),zIndexOffset:100}).addTo(map);
     bounds.push([cfg.pickupLat,cfg.pickupLng]);
   }
-  if(cfg.driverLat&&cfg.driverLng){
+  if(cfg.driverLat!==null&&cfg.driverLng!==null){
     driverMarker=L.marker([cfg.driverLat,cfg.driverLng],{icon:driverIcon(),zIndexOffset:500}).addTo(map);
     bounds.push([cfg.driverLat,cfg.driverLng]);
-    if(cfg.pickupLat&&cfg.pickupLng){
+    if(cfg.pickupLat!==null&&cfg.pickupLng!==null){
       fetchApproachRoute(cfg.driverLat,cfg.driverLng,cfg.pickupLat,cfg.pickupLng);
     }
   }
   if(bounds.length){map.fitBounds(bounds,{padding:[52,52],maxZoom:16})}
-  else if(cfg.pickupLat&&cfg.pickupLng){map.setView([cfg.pickupLat,cfg.pickupLng],14)}
+  else if(cfg.pickupLat!==null&&cfg.pickupLng!==null){map.setView([cfg.pickupLat,cfg.pickupLng],14)}
   else{map.setView([12.3647,-1.5332],13)}
 }
 
@@ -113,7 +114,8 @@ function updateDriver(lat,lng){
   }
 }
 
-function onMsg(e){try{var m=JSON.parse(e.data);if(m.type==='UPDATE_DRIVER'&&m.lat&&m.lng){updateDriver(m.lat,m.lng)}}catch(x){}}
+function isCoord(v){return typeof v==='number'&&isFinite(v)}
+function onMsg(e){try{var m=JSON.parse(e.data);if(m.type==='UPDATE_DRIVER'&&isCoord(m.lat)&&isCoord(m.lng)){updateDriver(m.lat,m.lng)}}catch(x){}}
 document.addEventListener('message',onMsg);
 window.addEventListener('message',onMsg);
 initMap(CFG);
@@ -133,27 +135,35 @@ export function ApproachMapView({
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const webRef = useRef<WebView>(null);
+  const driver = useMemo(
+    () => normalizeMapCoordinatePair({ latitude: driverLat, longitude: driverLng }),
+    [driverLat, driverLng],
+  );
+  const pickup = useMemo(
+    () => normalizeMapCoordinatePair({ latitude: pickupLat, longitude: pickupLng }),
+    [pickupLat, pickupLng],
+  );
   const htmlRef = useRef<string>(
     buildApproachHtml({
-      driverLat: driverLat ?? null,
-      driverLng: driverLng ?? null,
-      pickupLat: pickupLat ?? null,
-      pickupLng: pickupLng ?? null,
+      driverLat: driver?.latitude ?? null,
+      driverLng: driver?.longitude ?? null,
+      pickupLat: pickup?.latitude ?? null,
+      pickupLng: pickup?.longitude ?? null,
       pickupAddress: pickupAddress ?? 'Prise en charge',
     }),
   );
 
   useEffect(() => {
-    if (driverLat && driverLng && webRef.current) {
+    if (driver && webRef.current) {
       webRef.current.postMessage(
-        JSON.stringify({ type: 'UPDATE_DRIVER', lat: driverLat, lng: driverLng }),
+        JSON.stringify({ type: 'UPDATE_DRIVER', lat: driver.latitude, lng: driver.longitude }),
       );
     }
-  }, [driverLat, driverLng]);
+  }, [driver]);
 
   function renderDegradedPanel() {
-    const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
-    const hasDriver = Number.isFinite(driverLat) && Number.isFinite(driverLng);
+    const hasPickup = hasMapCoordinatePair({ latitude: pickupLat, longitude: pickupLng });
+    const hasDriver = hasMapCoordinatePair({ latitude: driverLat, longitude: driverLng });
 
     return (
       <View style={[styles.container, styles.webFallback, style]}>

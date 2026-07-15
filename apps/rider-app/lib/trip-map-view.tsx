@@ -8,6 +8,11 @@ import {
 } from '@orbi/ui';
 import { ErrorBoundary, useOrbiTheme } from '@orbi/ui/native';
 import { enqueueRiderMapError } from './map-error-reporting';
+import {
+  hasMapCoordinatePair,
+  normalizeMapCoordinatePair,
+  parseMapCoordinateSelectionMessage,
+} from './map-coordinate';
 
 const TypedWebView = WebView as any;
 
@@ -98,12 +103,12 @@ function fetchOsrmRoute(lat1,lng1,lat2,lng2){
 
 function initMap(cfg){
   var bounds=[];
-  if(cfg.pickupLat&&cfg.pickupLng){pickupMarker=L.marker([cfg.pickupLat,cfg.pickupLng],{icon:pickupIcon()}).addTo(map);bounds.push([cfg.pickupLat,cfg.pickupLng])}
-  if(cfg.destLat&&cfg.destLng){destMarker=L.marker([cfg.destLat,cfg.destLng],{icon:destIcon()}).addTo(map);bounds.push([cfg.destLat,cfg.destLng])}
-  if(cfg.pickupLat&&cfg.pickupLng&&cfg.destLat&&cfg.destLng){
+  if(cfg.pickupLat!==null&&cfg.pickupLng!==null){pickupMarker=L.marker([cfg.pickupLat,cfg.pickupLng],{icon:pickupIcon()}).addTo(map);bounds.push([cfg.pickupLat,cfg.pickupLng])}
+  if(cfg.destLat!==null&&cfg.destLng!==null){destMarker=L.marker([cfg.destLat,cfg.destLng],{icon:destIcon()}).addTo(map);bounds.push([cfg.destLat,cfg.destLng])}
+  if(cfg.pickupLat!==null&&cfg.pickupLng!==null&&cfg.destLat!==null&&cfg.destLng!==null){
     fetchOsrmRoute(cfg.pickupLat,cfg.pickupLng,cfg.destLat,cfg.destLng);
   }
-  if(cfg.driverLat&&cfg.driverLng){driverMarker=L.marker([cfg.driverLat,cfg.driverLng],{icon:driverIcon()}).addTo(map);bounds.push([cfg.driverLat,cfg.driverLng])}
+  if(cfg.driverLat!==null&&cfg.driverLng!==null){driverMarker=L.marker([cfg.driverLat,cfg.driverLng],{icon:driverIcon()}).addTo(map);bounds.push([cfg.driverLat,cfg.driverLng])}
   if(bounds.length){map.fitBounds(bounds,{padding:[44,44]})}else{map.setView([12.3647,-1.5332],13)}
 }
 
@@ -113,7 +118,8 @@ function updateDriver(lat,lng){
   map.panTo([lat,lng],{animate:true,duration:.55});
 }
 
-function onMsg(e){try{var m=JSON.parse(e.data);if(m.type==='UPDATE_DRIVER'&&m.lat&&m.lng){updateDriver(m.lat,m.lng)}}catch(x){}}
+function isCoord(v){return typeof v==='number'&&isFinite(v)}
+function onMsg(e){try{var m=JSON.parse(e.data);if(m.type==='UPDATE_DRIVER'&&isCoord(m.lat)&&isCoord(m.lng)){updateDriver(m.lat,m.lng)}}catch(x){}}
 document.addEventListener('message',onMsg);
 window.addEventListener('message',onMsg);
 
@@ -149,14 +155,26 @@ export function TripMapView({
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const webRef = useRef<WebView>(null);
+  const pickup = useMemo(
+    () => normalizeMapCoordinatePair({ latitude: pickupLat, longitude: pickupLng }),
+    [pickupLat, pickupLng],
+  );
+  const destination = useMemo(
+    () => normalizeMapCoordinatePair({ latitude: destLat, longitude: destLng }),
+    [destLat, destLng],
+  );
+  const driver = useMemo(
+    () => normalizeMapCoordinatePair({ latitude: driverLat, longitude: driverLng }),
+    [driverLat, driverLng],
+  );
   const htmlRef = useRef<string>(
     buildMapHtml({
-      pickupLat: pickupLat ?? null,
-      pickupLng: pickupLng ?? null,
-      destLat: destLat ?? null,
-      destLng: destLng ?? null,
-      driverLat: driverLat ?? null,
-      driverLng: driverLng ?? null,
+      pickupLat: pickup?.latitude ?? null,
+      pickupLng: pickup?.longitude ?? null,
+      destLat: destination?.latitude ?? null,
+      destLng: destination?.longitude ?? null,
+      driverLat: driver?.latitude ?? null,
+      driverLng: driver?.longitude ?? null,
       driverVehicleType: driverVehicleType ?? null,
       driverVehicleTier: driverVehicleTier ?? null,
       selectable,
@@ -164,17 +182,17 @@ export function TripMapView({
   );
 
   useEffect(() => {
-    if (driverLat && driverLng && webRef.current) {
+    if (driver && webRef.current) {
       webRef.current.postMessage(
-        JSON.stringify({ type: 'UPDATE_DRIVER', lat: driverLat, lng: driverLng }),
+        JSON.stringify({ type: 'UPDATE_DRIVER', lat: driver.latitude, lng: driver.longitude }),
       );
     }
-  }, [driverLat, driverLng]);
+  }, [driver]);
 
   function renderDegradedPanel() {
-    const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
-    const hasDestination = Number.isFinite(destLat) && Number.isFinite(destLng);
-    const hasDriver = Number.isFinite(driverLat) && Number.isFinite(driverLng);
+    const hasPickup = hasMapCoordinatePair({ latitude: pickupLat, longitude: pickupLng });
+    const hasDestination = hasMapCoordinatePair({ latitude: destLat, longitude: destLng });
+    const hasDriver = hasMapCoordinatePair({ latitude: driverLat, longitude: driverLng });
 
     return (
       <View style={[styles.container, styles.webFallback, style]}>
@@ -234,21 +252,10 @@ export function TripMapView({
             }
 
             try {
-              const message = JSON.parse(event.nativeEvent.data) as {
-                type?: string;
-                lat?: number;
-                lng?: number;
-              };
+              const coordinates = parseMapCoordinateSelectionMessage(event.nativeEvent.data);
 
-              if (
-                message.type === 'MAP_COORDINATE_SELECTED' &&
-                Number.isFinite(message.lat) &&
-                Number.isFinite(message.lng)
-              ) {
-                onSelectCoordinate({
-                  latitude: Number(message.lat),
-                  longitude: Number(message.lng),
-                });
+              if (coordinates) {
+                onSelectCoordinate(coordinates);
               }
             } catch {
               // Ignore malformed messages from the embedded map.

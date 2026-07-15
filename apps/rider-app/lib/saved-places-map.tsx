@@ -9,6 +9,7 @@ import {
 } from '@orbi/ui';
 import { ErrorBoundary, useOrbiTheme } from '@orbi/ui/native';
 import { enqueueRiderMapError } from './map-error-reporting';
+import { normalizeMapCoordinatePair } from './map-coordinate';
 
 const TypedWebView = WebView as any;
 
@@ -22,19 +23,37 @@ export interface SavedPlacePin {
   longitude: number | null;
 }
 
+type NormalizedSavedPlacePin = {
+  id: string;
+  label: string;
+  latitude: number;
+  longitude: number;
+};
+
 export interface SavedPlacesMapProps {
   places: SavedPlacePin[];
   onPlaceSelect?: (placeId: string) => void;
   height?: number;
 }
 
-function buildSavedPlacesMapHtml(pins: SavedPlacePin[]): string {
-  const validPins = pins.filter(
-    (p) => p.latitude !== null && p.longitude !== null,
-  ).map((p) => ({
-    ...p,
-    label: escapeHtmlText(p.label),
-  }));
+function buildSavedPlacesMapHtml(pins: NormalizedSavedPlacePin[]): string {
+  const validPins = pins
+    .map((p) => {
+      const coordinates = normalizeMapCoordinatePair({
+        latitude: p.latitude,
+        longitude: p.longitude,
+      });
+
+      return coordinates
+        ? {
+            ...p,
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude,
+            label: escapeHtmlText(p.label),
+          }
+        : null;
+    })
+    .filter((p): p is NormalizedSavedPlacePin => p !== null);
   const payload = serializeHtmlScriptJson(validPins);
 
   return `<!DOCTYPE html>
@@ -95,9 +114,22 @@ export function SavedPlacesMap({
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const webViewRef = useRef<WebView>(null);
 
-  const validPlaces = places.filter(
-    (p) => p.latitude !== null && p.longitude !== null,
-  );
+  const validPlaces = places
+    .map((place) => {
+      const coordinates = normalizeMapCoordinatePair({
+        latitude: place.latitude,
+        longitude: place.longitude,
+      });
+
+      return coordinates
+        ? {
+            ...place,
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude,
+          }
+        : null;
+    })
+    .filter((place): place is NormalizedSavedPlacePin => place !== null);
 
   if (validPlaces.length === 0) {
     return null;

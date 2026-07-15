@@ -10,6 +10,7 @@ import {
 import { ErrorBoundary, useOrbiTheme } from '@orbi/ui/native';
 import { createRiderPublicClient } from './auth';
 import { enqueueRiderMapError } from './map-error-reporting';
+import { hasMapCoordinatePair, normalizeMapCoordinatePair } from './map-coordinate';
 
 const TypedWebView = WebView as any;
 
@@ -82,11 +83,11 @@ function carIcon(){return L.divIcon({html:CAR_SVG,iconSize:[40,72],iconAnchor:[2
 function riderIcon(){return L.divIcon({html:RIDER_SVG,iconSize:[22,22],iconAnchor:[11,11],className:''})}
 
 function initMap(cfg){
-  var centerLat=cfg.riderLat||12.3647;
-  var centerLng=cfg.riderLng||-1.5332;
-  var zoom=cfg.riderLat?15:13;
+  var centerLat=cfg.riderLat!==null?cfg.riderLat:12.3647;
+  var centerLng=cfg.riderLng!==null?cfg.riderLng:-1.5332;
+  var zoom=cfg.riderLat!==null?15:13;
   map.setView([centerLat,centerLng],zoom);
-  if(cfg.riderLat&&cfg.riderLng){
+  if(cfg.riderLat!==null&&cfg.riderLng!==null){
     riderMarker=L.marker([cfg.riderLat,cfg.riderLng],{icon:riderIcon(),zIndexOffset:1000}).addTo(map);
   }
   cfg.drivers.forEach(function(d){
@@ -116,11 +117,12 @@ function updateDrivers(drivers){
   });
 }
 
+function isCoord(v){return typeof v==='number'&&isFinite(v)}
 function onMsg(e){
   try{
     var m=JSON.parse(e.data);
-    if(m.type==='UPDATE_RIDER'&&m.lat&&m.lng){updateRider(m.lat,m.lng)}
-    if(m.type==='UPDATE_DRIVERS'&&m.drivers){updateDrivers(m.drivers)}
+    if(m.type==='UPDATE_RIDER'&&isCoord(m.lat)&&isCoord(m.lng)){updateRider(m.lat,m.lng)}
+    if(m.type==='UPDATE_DRIVERS'&&Array.isArray(m.drivers)){updateDrivers(m.drivers.filter(function(d){return d&&isCoord(d.latitude)&&isCoord(d.longitude)}))}
   }catch(x){}
 }
 document.addEventListener('message',onMsg);
@@ -136,10 +138,14 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const webRef = useRef<WebView>(null);
   const [drivers, setDrivers] = useState<NearbyDriverMarker[]>([]);
+  const rider = useMemo(
+    () => normalizeMapCoordinatePair({ latitude: riderLat, longitude: riderLng }),
+    [riderLat, riderLng],
+  );
   const htmlRef = useRef<string>(
     buildHomeMapHtml({
-      riderLat: riderLat ?? null,
-      riderLng: riderLng ?? null,
+      riderLat: rider?.latitude ?? null,
+      riderLng: rider?.longitude ?? null,
       drivers: [],
     }),
   );
@@ -147,10 +153,15 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
   const refreshDrivers = useCallback(async () => {
     try {
       const client = createRiderPublicClient();
-      const lat = riderLat ?? OUAGA_LAT;
-      const lng = riderLng ?? OUAGA_LNG;
+      const lat = rider?.latitude ?? OUAGA_LAT;
+      const lng = rider?.longitude ?? OUAGA_LNG;
       const response = await fetchNearbyDrivers(client, { lat, lng, radiusKm: 5 });
-      const list = response.drivers;
+      const list = response.drivers.filter((driver) =>
+        hasMapCoordinatePair({
+          latitude: driver.latitude,
+          longitude: driver.longitude,
+        }),
+      );
       setDrivers(list);
       onDriversUpdate?.(list.length);
       if (webRef.current) {
@@ -161,7 +172,7 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
     } catch (error) {
       enqueueRiderMapError(error, { surface: 'home-map', action: 'refresh-drivers' });
     }
-  }, [riderLat, riderLng, onDriversUpdate]);
+  }, [rider, onDriversUpdate]);
 
   useEffect(() => {
     void refreshDrivers();
@@ -170,15 +181,15 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
   }, [refreshDrivers]);
 
   useEffect(() => {
-    if (riderLat && riderLng && webRef.current) {
+    if (rider && webRef.current) {
       webRef.current.postMessage(
-        JSON.stringify({ type: 'UPDATE_RIDER', lat: riderLat, lng: riderLng }),
+        JSON.stringify({ type: 'UPDATE_RIDER', lat: rider.latitude, lng: rider.longitude }),
       );
     }
-  }, [riderLat, riderLng]);
+  }, [rider]);
 
   function renderDegradedPanel() {
-    const hasLocation = Number.isFinite(riderLat) && Number.isFinite(riderLng);
+    const hasLocation = hasMapCoordinatePair({ latitude: riderLat, longitude: riderLng });
 
     return (
       <View style={[styles.container, styles.webFallback, style]}>

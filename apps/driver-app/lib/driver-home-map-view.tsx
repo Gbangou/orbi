@@ -9,6 +9,7 @@ import {
 } from '@orbi/ui';
 import { ErrorBoundary, useOrbiTheme } from '@orbi/ui/native';
 import { enqueueDriverMapError } from './map-error-reporting';
+import { normalizeMapCoordinatePair } from './map-coordinate';
 
 const TypedWebView = WebView as any;
 
@@ -24,8 +25,8 @@ interface OfferMarker {
 }
 
 function buildMapHtml(cfg: {
-  driverLat: number;
-  driverLng: number;
+  driverLat: number | null;
+  driverLng: number | null;
   offerMarkers: OfferMarker[];
 }): string {
   const config = serializeHtmlScriptJson(cfg);
@@ -83,8 +84,12 @@ function motoIcon(lbl){return L.divIcon({html:'<div class="pin-wrap">'+MOTO_SVG+
 function carIcon(lbl){return L.divIcon({html:'<div class="pin-wrap">'+CAR_SVG+'<span class="pin-lbl">'+lbl+'</span></div>',iconSize:[80,87],iconAnchor:[40,36],className:''})}
 
 function initMap(cfg){
-  map.setView([cfg.driverLat,cfg.driverLng],14);
-  driverMarker=L.marker([cfg.driverLat,cfg.driverLng],{icon:driverIcon(),zIndexOffset:1000}).addTo(map);
+  var centerLat=cfg.driverLat!==null?cfg.driverLat:12.3647;
+  var centerLng=cfg.driverLng!==null?cfg.driverLng:-1.5332;
+  map.setView([centerLat,centerLng],14);
+  if(cfg.driverLat!==null&&cfg.driverLng!==null){
+    driverMarker=L.marker([cfg.driverLat,cfg.driverLng],{icon:driverIcon(),zIndexOffset:1000}).addTo(map);
+  }
   cfg.offerMarkers.forEach(function(o){
     var icon=o.isMoto?motoIcon(o.label):carIcon(o.label);
     L.marker([o.lat,o.lng],{icon:icon}).addTo(map);
@@ -103,7 +108,7 @@ function updateDriver(lat,lng){
 function onMsg(e){
   try{
     var m=JSON.parse(e.data);
-    if(m.type==='UPDATE_DRIVER'&&m.lat&&m.lng){updateDriver(m.lat,m.lng)}
+    if(m.type==='UPDATE_DRIVER'&&typeof m.lat==='number'&&isFinite(m.lat)&&typeof m.lng==='number'&&isFinite(m.lng)){updateDriver(m.lat,m.lng)}
   }catch(x){}
 }
 document.addEventListener('message',onMsg);
@@ -129,8 +134,12 @@ export function DriverHomeMapView({
 }: DriverHomeMapViewProps) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const lat = driverLat ?? OUAGA_LAT;
-  const lng = driverLng ?? OUAGA_LNG;
+  const driver = useMemo(
+    () => normalizeMapCoordinatePair({ latitude: driverLat, longitude: driverLng }),
+    [driverLat, driverLng],
+  );
+  const lat = driver?.latitude ?? OUAGA_LAT;
+  const lng = driver?.longitude ?? OUAGA_LNG;
 
   const webRef = useRef<WebView>(null);
   const htmlRef = useRef<string>(
@@ -138,12 +147,12 @@ export function DriverHomeMapView({
   );
 
   useEffect(() => {
-    if (driverLat && driverLng && webRef.current) {
+    if (driver && webRef.current) {
       webRef.current.postMessage(
-        JSON.stringify({ type: 'UPDATE_DRIVER', lat: driverLat, lng: driverLng }),
+        JSON.stringify({ type: 'UPDATE_DRIVER', lat: driver.latitude, lng: driver.longitude }),
       );
     }
-  }, [driverLat, driverLng]);
+  }, [driver]);
 
   function renderDegradedPanel() {
     return (

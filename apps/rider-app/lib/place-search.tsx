@@ -10,6 +10,7 @@ import {
 import type { OrbiTheme } from '@orbi/ui';
 import { useOrbiTheme } from '@orbi/ui/native';
 import type { Place } from '@orbi/api';
+import { normalizeMapCoordinatePair } from './map-coordinate';
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 const DEBOUNCE_MS = 600;
@@ -29,7 +30,16 @@ interface NominatimResult {
   };
 }
 
-function toPlace(result: NominatimResult): Place {
+function toPlace(result: NominatimResult): Place | null {
+  const coordinates = normalizeMapCoordinatePair({
+    latitude: result.lat,
+    longitude: result.lon,
+  });
+
+  if (!coordinates) {
+    return null;
+  }
+
   const parts = result.display_name.split(', ');
   const label = parts[0] ?? result.display_name;
   const address = parts.slice(0, 3).join(', ');
@@ -37,10 +47,7 @@ function toPlace(result: NominatimResult): Place {
     id: String(result.place_id),
     label,
     address,
-    coordinates: {
-      latitude: parseFloat(result.lat),
-      longitude: parseFloat(result.lon),
-    },
+    coordinates,
   };
 }
 
@@ -134,7 +141,7 @@ export function PlaceSearch({
       });
       if (!response.ok) throw new Error('Recherche indisponible');
       const data: NominatimResult[] = await response.json();
-      setResults(data.map(toPlace));
+      setResults(data.map(toPlace).filter((place): place is Place => place !== null));
     } catch {
       setError('Recherche indisponible. Verifiez la connexion.');
       setResults([]);
