@@ -35,6 +35,18 @@ function hasUnsafeText(value: string) {
   return unsafeTextPattern.test(value);
 }
 
+export function parseWalletTopUpAmount(value: string) {
+  const normalized = value.trim().replace(/\s+/g, '');
+
+  if (!/^[0-9]+$/.test(normalized)) {
+    return null;
+  }
+
+  const amount = Number(normalized);
+
+  return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
+}
+
 export function buildTrustedContactPayload(input: {
   phoneNumber: string;
   shareMode: TrustedContactShareMode;

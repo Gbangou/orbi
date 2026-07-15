@@ -617,6 +617,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   ce qui degradait les montants stringifies avec virgule ou sales. Le module
   reutilise maintenant `driver-earnings-signal`, accepte `12500,5`, degrade les
   valeurs invalides en `0 XOF`, et garde une copie readiness stable.
+- 15 juillet 2026: gap A ferme "recharge wallet rider permissive". Le montant de
+  recharge utilisait `parseInt`, acceptant des valeurs partielles comme
+  `500abc`. La validation est maintenant centralisee dans `account-safety`,
+  n accepte que des chiffres entiers bornes par `Number.isSafeInteger`, et les
+  tests couvrent espaces, minimum et valeurs sales.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

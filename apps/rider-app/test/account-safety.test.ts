@@ -1,6 +1,7 @@
 import {
   buildSavedPlacePayload,
   buildTrustedContactPayload,
+  parseWalletTopUpAmount,
 } from '../lib/account-safety';
 import {
   maskEmailForDisplay,
@@ -80,5 +81,13 @@ describe('rider account safety helpers', () => {
       ok: false,
       message: 'Le lieu contient des caracteres non autorises.',
     });
+  });
+
+  it('parses wallet top-up amounts without accepting partial dirty values', () => {
+    expect(parseWalletTopUpAmount('1 500')).toBe(1500);
+    expect(parseWalletTopUpAmount('0500')).toBe(500);
+    expect(parseWalletTopUpAmount('500abc')).toBeNull();
+    expect(parseWalletTopUpAmount('500,5')).toBeNull();
+    expect(parseWalletTopUpAmount('')).toBeNull();
   });
 });

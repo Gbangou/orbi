@@ -38,6 +38,7 @@ import { restoreRiderSession, signOutRiderAccount } from '../../lib/auth';
 import {
   buildSavedPlacePayload,
   buildTrustedContactPayload,
+  parseWalletTopUpAmount,
   type TrustedContactShareMode,
 } from '../../lib/account-safety';
 import { resolveRiderAppError } from '../../lib/session-feedback';
@@ -292,8 +293,8 @@ export default function AccountScreen() {
   }
 
   async function handleTopUp() {
-    const amount = parseInt(topUpAmount, 10);
-    if (!amount || amount < 500) {
+    const amount = parseWalletTopUpAmount(topUpAmount);
+    if (amount === null || amount < 500) {
       setTopUpError('Montant minimum : 500 XOF');
       return;
     }
