@@ -24,8 +24,47 @@ const documentStatuses = new Set([
   'REJECTED',
   'EXPIRED',
 ]);
+const isoUtcDateTimePattern =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/;
 
 type ReviewPayload = Parameters<typeof updateAdminDriverOnboardingReview>[2];
+
+export function normalizeDriverDocumentExpiryDate(value: unknown) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const match = isoUtcDateTimePattern.exec(value.trim());
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const millisecond = match[7] ? Number(match[7]) : 0;
+  const date = new Date(
+    Date.UTC(year, month - 1, day, hour, minute, second, millisecond),
+  );
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !== hour ||
+    date.getUTCMinutes() !== minute ||
+    date.getUTCSeconds() !== second ||
+    date.getUTCMilliseconds() !== millisecond
+  ) {
+    return null;
+  }
+
+  return date.toISOString();
+}
 
 function boundedText(value: unknown, maxLength: number) {
   if (typeof value !== 'string') {
@@ -104,11 +143,20 @@ function normalizeReviewPayload(value: unknown): ReviewPayload | null {
         return null;
       }
 
-      const expiresAt =
-        typeof documentDecision.expiresAt === 'string' &&
-        !Number.isNaN(Date.parse(documentDecision.expiresAt))
-          ? documentDecision.expiresAt
-          : undefined;
+      let expiresAt: string | undefined;
+
+      if (documentDecision.expiresAt !== undefined) {
+        const normalizedExpiry = normalizeDriverDocumentExpiryDate(
+          documentDecision.expiresAt,
+        );
+
+        if (!normalizedExpiry) {
+          return null;
+        }
+
+        expiresAt = normalizedExpiry;
+      }
+
       const rejectionReason = boundedText(
         documentDecision.rejectionReason,
         240,

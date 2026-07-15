@@ -718,6 +718,14 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   maintenant des instants UTC ISO reels, canonise les dates avant appel backend
   et rejette les dates impossibles ou non ISO. Test de regression admin-web et
   `pnpm typecheck` workspace verts.
+- 15 juillet 2026: gap A ferme "expiration document chauffeur permissive dans
+  le proxy admin". La route serveur admin de review onboarding acceptait encore
+  `Date.parse(documentDecision.expiresAt)`, pouvant ignorer ou transmettre une
+  expiration normalisee depuis une date calendrier impossible. Le proxy refuse
+  maintenant toute expiration presente qui n est pas un instant UTC ISO reel,
+  canonise la valeur avant appel backend et garde la mutation entiere en erreur
+  si la date est sale. Test de regression admin-web et `pnpm typecheck`
+  workspace verts.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est
