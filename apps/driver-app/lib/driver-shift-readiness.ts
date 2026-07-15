@@ -1,5 +1,6 @@
 import type { DriverFatigueStatus } from '@orbi/api';
 import type { DriverActiveFlowSummary } from './driver-active-flow';
+import { toFiniteEarningsNumber } from './driver-earnings-signal';
 
 type ReadinessTone = 'teal' | 'amber' | 'sky' | 'rose';
 
@@ -21,12 +22,10 @@ export type DriverShiftReadiness = {
 export function buildDriverShiftReadiness(input: {
   flow: DriverActiveFlowSummary;
   fatigue: DriverFatigueStatus | null | undefined;
-  earningsToday?: number | null;
+  earningsToday?: unknown;
 }): DriverShiftReadiness {
   const fatigue = input.fatigue;
-  const earningsToday = Number.isFinite(input.earningsToday ?? Number.NaN)
-    ? Number(input.earningsToday)
-    : 0;
+  const earningsToday = toFiniteEarningsNumber(input.earningsToday) ?? 0;
 
   if (input.flow.operationalStatus === 'SUSPENDED') {
     return {
@@ -124,7 +123,9 @@ export function buildDriverShiftReadiness(input: {
   };
 }
 
-function formatCompactXof(amount: number) {
+function formatCompactXof(value: unknown) {
+  const amount = toFiniteEarningsNumber(value) ?? 0;
+
   if (amount <= 0) {
     return '0 XOF';
   }

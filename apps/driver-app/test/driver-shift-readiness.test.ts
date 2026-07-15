@@ -48,6 +48,34 @@ describe('driver-shift-readiness', () => {
     });
   });
 
+  it('normalizes stringified daily earnings before readiness copy', () => {
+    const readiness = buildDriverShiftReadiness({
+      flow: buildFlow({ visibleOfferCount: 1 }),
+      fatigue: clearFatigue,
+      earningsToday: '12500,5',
+    });
+
+    expect(readiness.insights).toContainEqual({
+      label: 'Jour',
+      value: '12.5k XOF',
+      tone: 'sky',
+    });
+  });
+
+  it('degrades dirty daily earnings without leaking invalid copy', () => {
+    const readiness = buildDriverShiftReadiness({
+      flow: buildFlow({ availabilityStatus: 'OFFLINE', operationalStatus: 'OFFLINE' }),
+      fatigue: clearFatigue,
+      earningsToday: 'sale',
+    });
+
+    expect(readiness.insights).toContainEqual({
+      label: 'Jour',
+      value: '0 XOF',
+      tone: 'sky',
+    });
+  });
+
   it('prioritizes fatigue blocks above dispatch availability', () => {
     const readiness = buildDriverShiftReadiness({
       flow: buildFlow(),

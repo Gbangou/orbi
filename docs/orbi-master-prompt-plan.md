@@ -612,6 +612,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   virgule, bornes GPS strictes, filtrage des marqueurs sales, messages WebView
   bornes et rejet des payloads malformes. Les cartes home/trip/approach/saved
   places et la recherche de lieux rider utilisent desormais ces garde-fous.
+- 15 juillet 2026: gap A ferme "readiness chauffeur fragile aux gains sales".
+  `driver-shift-readiness` utilisait encore `Number(...)` sur les gains du jour,
+  ce qui degradait les montants stringifies avec virgule ou sales. Le module
+  reutilise maintenant `driver-earnings-signal`, accepte `12500,5`, degrade les
+  valeurs invalides en `0 XOF`, et garde une copie readiness stable.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est
