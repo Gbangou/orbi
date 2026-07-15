@@ -52,6 +52,7 @@ import { UpdateDriverOnboardingReviewDto } from './dto/update-driver-onboarding-
 import { PaymentWebhookEventsQueryDto } from './dto/payment-webhook-events-query.dto';
 import { JobQueueQueryDto } from './dto/job-queue-query.dto';
 import { UpdateDriverDocumentObjectVerificationDto } from './dto/update-driver-document-object-verification.dto';
+import { parseStrictPromoCodeDate } from './admin-promo-code-dates';
 import { CreatePromoCodeDto } from './dto/create-promo-code.dto';
 
 const reviewDecisionRoles = new Set(['ADMIN', 'OPS']);
@@ -7605,8 +7606,14 @@ export class AdminService {
 
   async createPromoCode(dto: CreatePromoCodeDto, auth: RequestAuthContext) {
     const normalizedCode = dto.code.toUpperCase().trim();
-    const validFrom = new Date(dto.validFrom);
-    const validTo = new Date(dto.validTo);
+    const validFrom = parseStrictPromoCodeDate(dto.validFrom);
+    const validTo = parseStrictPromoCodeDate(dto.validTo);
+
+    if (!validFrom || !validTo) {
+      throw new BadRequestException(
+        'validFrom and validTo must be real UTC ISO instants.',
+      );
+    }
 
     if (validTo <= validFrom) {
       throw new BadRequestException('validTo must be after validFrom.');

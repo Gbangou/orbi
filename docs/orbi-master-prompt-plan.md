@@ -726,6 +726,14 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   canonise la valeur avant appel backend et garde la mutation entiere en erreur
   si la date est sale. Test de regression admin-web et `pnpm typecheck`
   workspace verts.
+- 15 juillet 2026: gap A ferme "backend promo acceptait des fenetres calendrier
+  normalisees". Les routes admin-web etaient durcies, mais les chemins backend
+  `AdminPromoCodesService` et l ancien `AdminService.createPromoCode`
+  construisaient encore `new Date(dto.validFrom/validTo)`, laissant une API
+  directe accepter des dates impossibles normalisees par JavaScript. Ajout de
+  `parseStrictPromoCodeDate`: seuls les instants UTC ISO reels sont acceptes,
+  toute fenetre sale est rejetee avant lookup DB, creation ou audit. Suite
+  `admin.promo-codes.spec.ts` et `pnpm typecheck` workspace verts.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

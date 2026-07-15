@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { parseStrictPromoCodeDate } from './admin-promo-code-dates';
 import { AdminService } from './admin.service';
 
 function createService() {
@@ -72,6 +73,18 @@ describe('AdminService.listPromoCodes', () => {
 });
 
 describe('AdminService.createPromoCode', () => {
+  it('parse strictement les dates promo comme de vrais instants UTC ISO', () => {
+    expect(
+      parseStrictPromoCodeDate('2026-06-01T00:00:00.000Z')?.toISOString(),
+    ).toBe('2026-06-01T00:00:00.000Z');
+    expect(
+      parseStrictPromoCodeDate('2026-06-01T08:30:15Z')?.toISOString(),
+    ).toBe('2026-06-01T08:30:15.000Z');
+    expect(parseStrictPromoCodeDate('2026-02-31T00:00:00.000Z')).toBeNull();
+    expect(parseStrictPromoCodeDate('2026-06-01')).toBeNull();
+    expect(parseStrictPromoCodeDate('not-a-date')).toBeNull();
+  });
+
   it('cree un code promo et enregistre un audit log', async () => {
     const { service, prisma, auth } = createService();
     const result = await service.createPromoCode(
@@ -134,6 +147,26 @@ describe('AdminService.createPromoCode', () => {
         { user: { id: 'admin-1' } } as never,
       ),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('rejette les dates promo normalisees ou non ISO avant toute ecriture', async () => {
+    const { service, prisma } = createService();
+
+    await expect(
+      service.createPromoCode(
+        {
+          code: 'BADDATE',
+          discountBps: 1000,
+          validFrom: '2026-02-31T00:00:00.000Z',
+          validTo: '2026-12-31T23:59:59.000Z',
+        },
+        { user: { id: 'admin-1' } } as never,
+      ),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(prisma.promoCode.findUnique).not.toHaveBeenCalled();
+    expect(prisma.promoCode.create).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
   });
 
   it('lance ConflictException si le code existe deja', async () => {
