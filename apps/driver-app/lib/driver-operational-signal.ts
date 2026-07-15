@@ -6,9 +6,23 @@ type RouteTone = 'teal' | 'amber' | 'sky' | 'rose';
 type DriverRouteMonitoring = TripDetailResponse['trip']['routeMonitoring'];
 
 function formatOperationalCount(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0
-    ? String(Math.floor(value))
+  const numeric = toFiniteOperationalNumber(value);
+  return numeric !== null && numeric >= 0
+    ? String(Math.floor(numeric))
     : 'ND';
+}
+
+function toFiniteOperationalNumber(value: unknown) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim().replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
 }
 
 export function buildDriverFatigueMessage(fatigue: DriverFatigueStatus) {
@@ -88,8 +102,8 @@ export function buildDriverRouteSafetyBrief(input: {
     latestPosition.observedAt,
     input.now,
   );
-  const accuracyMeters = latestPosition.accuracyMeters;
-  const speedKph = latestPosition.speedKph;
+  const accuracyMeters = toFiniteOperationalNumber(latestPosition.accuracyMeters);
+  const speedKph = toFiniteOperationalNumber(latestPosition.speedKph);
   const isVeryStale = typeof ageSeconds === 'number' && ageSeconds > 600;
   const isStale = typeof ageSeconds === 'number' && ageSeconds > 180;
   const isVeryImprecise =
@@ -208,7 +222,9 @@ function buildRouteSafetyInsights(input: {
       label: 'Alertes',
       value: formatOperationalCount(input.routeMonitoring.alertCount),
       tone:
-        input.routeMonitoring.alertCount > 0 ? 'amber' : ('sky' as RouteTone),
+        (toFiniteOperationalNumber(input.routeMonitoring.alertCount) ?? 0) > 0
+          ? 'amber'
+          : ('sky' as RouteTone),
     },
   ];
 }

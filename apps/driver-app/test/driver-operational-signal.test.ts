@@ -21,6 +21,22 @@ describe('driver operational signal helpers', () => {
     ).toBe('Pause conseillee. ND/ND min sur NDh.');
   });
 
+  it('normalizes stringified fatigue numbers before driver-facing copy', () => {
+    expect(
+      buildDriverFatigueMessage({
+        state: 'warning',
+        completedTrips: '4',
+        drivingMinutes: '91,8',
+        windowHours: '8',
+        maxCompletedTrips: '8',
+        maxDrivingMinutes: '300',
+        restMinutes: '30',
+        restUntil: null,
+        reason: 'Pause conseillee.',
+      } as never),
+    ).toBe('Pause conseillee. 91/300 min sur 8h.');
+  });
+
   it('keeps dirty route monitoring counts out of Ride Check copy', () => {
     expect(
       buildDriverRouteMonitoringLines({
@@ -68,6 +84,43 @@ describe('driver operational signal helpers', () => {
         expect.objectContaining({ label: 'Fraicheur', value: '13 min' }),
         expect.objectContaining({ label: 'Precision', value: '380 m' }),
         expect.objectContaining({ label: 'Vitesse', value: '128 km/h' }),
+      ]),
+    );
+  });
+
+  it('normalizes stringified route safety metrics before evaluating risk', () => {
+    const brief = buildDriverRouteSafetyBrief({
+      now: Date.parse('2026-04-19T08:15:00.000Z'),
+      routeMonitoring: {
+        state: 'clear',
+        alertCount: '2',
+        lastAlertType: null,
+        lastAlertAt: null,
+        lastPositionAt: '2026-04-19T08:02:30.000Z',
+        latestPosition: {
+          latitude: '12,37',
+          longitude: '-1,52',
+          accuracyMeters: '380,4',
+          speedKph: '128,2',
+          distanceToPickupKm: '0,2',
+          distanceToDestinationKm: '6,1',
+          observedAt: '2026-04-19T08:02:30.000Z',
+          sourceRole: 'DRIVER',
+        },
+      } as never,
+    });
+
+    expect(brief).toEqual(
+      expect.objectContaining({
+        tone: 'rose',
+        blocksCompletion: true,
+      }),
+    );
+    expect(brief.insights).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Precision', value: '380 m' }),
+        expect.objectContaining({ label: 'Vitesse', value: '128 km/h' }),
+        expect.objectContaining({ label: 'Alertes', value: '2', tone: 'amber' }),
       ]),
     );
   });

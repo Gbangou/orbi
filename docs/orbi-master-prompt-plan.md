@@ -582,6 +582,13 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   active passe par `driver-earnings-signal`, et la cloture de trajet normalise
   `actualFare` avant de calculer le net. Tests offer-signal et driver-active-flow
   couvrent les montants stringifies.
+- 15 juillet 2026: gap A ferme "Ride Check chauffeur partiellement aveugle aux
+  nombres stringifies". Les signaux operationnels driver acceptaient les `NaN`
+  mais traitaient encore `accuracyMeters`, `speedKph`, `alertCount` et fatigue
+  comme invalides ou non critiques quand ils arrivaient en chaine avec virgule.
+  `driver-operational-signal` normalise desormais number/string avant les
+  comparaisons de risque, les labels precision/vitesse/alertes et le message
+  fatigue. Tests dedies valident les payloads stringifies et sales.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est
