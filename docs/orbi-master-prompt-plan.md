@@ -680,6 +680,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   une regression future comme `canary:50abc`. Le pourcentage est maintenant
   derive du meme regex strict que la validation et un test verrouille le rejet
   des rollouts sales avant exposition admin ou activation runtime.
+- 15 juillet 2026: gap A ferme "nearby drivers acceptait des coordonnees
+  partielles". L endpoint public `GET /drivers/nearby` utilisait `parseFloat`
+  sur `lat`, `lng` et `radius`, acceptant des valeurs partielles comme
+  `12abc`. Les parametres passent maintenant par `resolveNearbyQueryNumber`:
+  decimal strict, bornes GPS/rayon et fallback controle. Tests unitaires et
+  tests rate-limit nearby existants valident la non-regression.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

@@ -28,9 +28,24 @@ import { UpsertDriverOnboardingDto } from './dto/upsert-driver-onboarding.dto';
 import { DriversService } from './drivers.service';
 import { DriverIncentivesService } from './driver-incentives.service';
 
-function clampParam(value: number, min: number, max: number, fallback: number) {
-  return Number.isFinite(value)
-    ? Math.min(Math.max(value, min), max)
+const strictDecimalPattern = /^-?(?:\d+|\d+\.\d+|\.\d+)$/;
+
+export function resolveNearbyQueryNumber(
+  value: string | undefined,
+  min: number,
+  max: number,
+  fallback: number,
+) {
+  const normalized = value?.trim() ?? '';
+
+  if (!strictDecimalPattern.test(normalized)) {
+    return fallback;
+  }
+
+  const parsed = Number(normalized);
+
+  return Number.isFinite(parsed)
+    ? Math.min(Math.max(parsed, min), max)
     : fallback;
 }
 
@@ -50,9 +65,9 @@ export class DriversController {
     @Query('lng') lng: string,
     @Query('radius') radius?: string,
   ) {
-    const latNum = clampParam(parseFloat(lat ?? '12.3647'), -90, 90, 12.3647);
-    const lngNum = clampParam(parseFloat(lng ?? '-1.5332'), -180, 180, -1.5332);
-    const radiusKm = clampParam(parseFloat(radius ?? '5'), 0.1, 50, 5);
+    const latNum = resolveNearbyQueryNumber(lat, -90, 90, 12.3647);
+    const lngNum = resolveNearbyQueryNumber(lng, -180, 180, -1.5332);
+    const radiusKm = resolveNearbyQueryNumber(radius, 0.1, 50, 5);
     return this.driversService.getNearbyDrivers(latNum, lngNum, radiusKm);
   }
 
