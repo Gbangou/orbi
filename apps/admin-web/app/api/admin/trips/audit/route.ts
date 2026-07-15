@@ -4,16 +4,15 @@ import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,
 } from '../../../../admin-server-auth';
-import { createNoStoreAdminHeaders } from '../../../../admin-server-security';
+import {
+  createNoStoreAdminHeaders,
+  resolveStrictBoundedInteger,
+} from '../../../../admin-server-security';
 
 export const dynamic = 'force-dynamic';
 
 function resolveLookbackHours(value: string | null) {
-  const parsed = Number(value);
-
-  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 168
-    ? parsed
-    : 24;
+  return resolveStrictBoundedInteger(value, { min: 1, max: 168, fallback: 24 });
 }
 
 const tripStatuses = new Set([

@@ -33,6 +33,7 @@ const adminNoStoreHeaders = {
   Pragma: 'no-cache',
   Expires: '0',
 };
+const strictIntegerPattern = /^[0-9]+$/;
 
 type AdminRequestSecurityInput = Pick<NextRequest, 'headers' | 'method'> & {
   nextUrl: Pick<NextRequest['nextUrl'], 'origin'>;
@@ -108,19 +109,46 @@ export function resolveAdminJobQueueStatus(value: string | null) {
 }
 
 export function resolveAdminJobQueuePageNumber(value: string | null) {
-  const parsed = Number.parseInt(value ?? '', 10);
-
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  return resolveStrictBoundedInteger(value, {
+    min: 1,
+    max: Number.MAX_SAFE_INTEGER,
+  });
 }
 
 export function resolveAdminJobQueuePageSize(value: string | null) {
-  const parsed = Number.parseInt(value ?? '', 10);
+  return resolveStrictBoundedInteger(value, {
+    min: 1,
+    max: adminJobQueueMaxPageSize,
+    clampMax: true,
+  });
+}
 
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return undefined;
+export function resolveStrictBoundedInteger(
+  value: string | null,
+  options: {
+    min: number;
+    max: number;
+    fallback?: number;
+    clampMax?: boolean;
+  },
+) {
+  const trimmed = value?.trim() ?? '';
+
+  if (!strictIntegerPattern.test(trimmed)) {
+    return options.fallback;
   }
 
-  return Math.min(parsed, adminJobQueueMaxPageSize);
+  const parsed = Number(trimmed);
+
+  if (!Number.isSafeInteger(parsed) || parsed < options.min) {
+    return options.fallback;
+  }
+
+  if (parsed > options.max) {
+    return options.clampMax ? options.max : options.fallback;
+  }
+
+  return parsed;
 }
 
 export function createNoStoreAdminHeaders() {

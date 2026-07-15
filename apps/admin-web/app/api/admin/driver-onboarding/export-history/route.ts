@@ -4,24 +4,19 @@ import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,
 } from '../../../../admin-server-auth';
-import { createNoStoreAdminHeaders } from '../../../../admin-server-security';
+import {
+  createNoStoreAdminHeaders,
+  resolveStrictBoundedInteger,
+} from '../../../../admin-server-security';
 
 export const dynamic = 'force-dynamic';
 
 function boundedPageNumber(value: string | null, fallback: number) {
-  const parsed = Number(value);
-
-  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 100
-    ? parsed
-    : fallback;
+  return resolveStrictBoundedInteger(value, { min: 1, max: 100, fallback });
 }
 
 function boundedPageSize(value: string | null, fallback: number) {
-  const parsed = Number(value);
-
-  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 25
-    ? parsed
-    : fallback;
+  return resolveStrictBoundedInteger(value, { min: 1, max: 25, fallback });
 }
 
 export async function GET(request: NextRequest) {

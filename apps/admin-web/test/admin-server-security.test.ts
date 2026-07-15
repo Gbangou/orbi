@@ -13,6 +13,7 @@ import {
   resolveAdminJobQueueStatus,
   resolveDriverPayoutSettlementStatus,
   resolvePaymentWebhookJournalKind,
+  resolveStrictBoundedInteger,
 } from '../app/admin-server-security';
 import {
   createAdminIdempotencyKey,
@@ -204,12 +205,39 @@ describe('admin server security', () => {
 
   it('bounds admin job queue pagination before proxying to the backend', () => {
     expect(resolveAdminJobQueuePageNumber('3')).toBe(3);
+    expect(resolveAdminJobQueuePageNumber(' 4 ')).toBe(4);
     expect(resolveAdminJobQueuePageNumber('0')).toBeUndefined();
+    expect(resolveAdminJobQueuePageNumber('3abc')).toBeUndefined();
+    expect(resolveAdminJobQueuePageNumber('1.5')).toBeUndefined();
     expect(resolveAdminJobQueuePageNumber('bad')).toBeUndefined();
 
     expect(resolveAdminJobQueuePageSize('6')).toBe(6);
     expect(resolveAdminJobQueuePageSize('500')).toBe(50);
+    expect(resolveAdminJobQueuePageSize('5e1')).toBeUndefined();
     expect(resolveAdminJobQueuePageSize('-1')).toBeUndefined();
+  });
+
+  it('resolves strict bounded admin integers without implicit coercion', () => {
+    expect(
+      resolveStrictBoundedInteger('25', { min: 1, max: 100, fallback: 10 }),
+    ).toBe(25);
+    expect(
+      resolveStrictBoundedInteger('150', { min: 1, max: 100, fallback: 10 }),
+    ).toBe(10);
+    expect(
+      resolveStrictBoundedInteger('150', {
+        min: 1,
+        max: 100,
+        fallback: 10,
+        clampMax: true,
+      }),
+    ).toBe(100);
+    expect(
+      resolveStrictBoundedInteger('25abc', { min: 1, max: 100, fallback: 10 }),
+    ).toBe(10);
+    expect(
+      resolveStrictBoundedInteger('1.5', { min: 1, max: 100, fallback: 10 }),
+    ).toBe(10);
   });
 
   it('allows only safe document view URLs for admin links', () => {

@@ -4,7 +4,10 @@ import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,
 } from '../../../../admin-server-auth';
-import { createNoStoreAdminHeaders } from '../../../../admin-server-security';
+import {
+  createNoStoreAdminHeaders,
+  resolveStrictBoundedInteger,
+} from '../../../../admin-server-security';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,11 +30,7 @@ function resolveSearchQuery(value: string | null) {
 }
 
 function resolveExportLimit(value: string | null) {
-  const parsed = Number(value);
-
-  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 100
-    ? parsed
-    : 100;
+  return resolveStrictBoundedInteger(value, { min: 1, max: 100, fallback: 100 });
 }
 
 export async function GET(request: NextRequest) {

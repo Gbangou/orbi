@@ -633,6 +633,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   d autres valeurs partielles. Les entiers positifs et annees vehicule passent
   maintenant par `driver-onboarding-safety`, avec rejet strict, plage annee
   explicite et tests dedies.
+- 15 juillet 2026: gap A ferme "parametres serveur admin coercitifs". Certaines
+  routes serveur admin acceptaient encore des entiers via `parseInt` ou `Number`
+  local, autorisant des valeurs implicites comme `3abc`, `5e1` ou des bornes
+  incoherentes selon la route. `admin-server-security` expose maintenant un
+  parseur strict borne reutilise par job queue, exports onboarding et audit/export
+  trajets, avec tests contre coercition implicite et depassement de bornes.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

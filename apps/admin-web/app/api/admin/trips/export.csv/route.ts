@@ -4,7 +4,10 @@ import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,
 } from '../../../../admin-server-auth';
-import { createNoStoreAdminHeaders } from '../../../../admin-server-security';
+import {
+  createNoStoreAdminHeaders,
+  resolveStrictBoundedInteger,
+} from '../../../../admin-server-security';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,11 +31,7 @@ function resolveTripStatus(value: string | null) {
 }
 
 function resolveExportLimit(value: string | null) {
-  const parsed = Number(value);
-
-  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 500
-    ? parsed
-    : 200;
+  return resolveStrictBoundedInteger(value, { min: 1, max: 500, fallback: 200 });
 }
 
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
