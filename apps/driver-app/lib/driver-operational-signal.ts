@@ -1,5 +1,6 @@
 import { type DriverFatigueStatus, type TripDetailResponse } from '@orbi/api';
 import { formatOperationalStatus } from '@orbi/ui';
+import { toDriverDateMs } from './driver-date-format';
 
 type RouteTone = 'teal' | 'amber' | 'sky' | 'rose';
 
@@ -230,9 +231,9 @@ function buildRouteSafetyInsights(input: {
 }
 
 function resolveSignalAgeSeconds(observedAt: string, now: number) {
-  const observedAtMs = new Date(observedAt).getTime();
+  const observedAtMs = toDriverDateMs(observedAt);
 
-  if (!Number.isFinite(observedAtMs) || !Number.isFinite(now)) {
+  if (observedAtMs === null || !Number.isFinite(now)) {
     return null;
   }
 

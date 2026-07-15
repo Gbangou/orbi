@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { orbiTheme, type OrbiTheme } from '@orbi/ui';
 import { useOrbiTheme } from '@orbi/ui/native';
+import { formatDriverTimelineTime } from './driver-date-format';
 
 type Tone = 'teal' | 'amber' | 'sky' | 'rose';
 
@@ -1017,10 +1018,7 @@ export function LiveTimeline({
                 {event.label}
               </Text>
               <Text style={lt.time}>
-                {new Date(event.createdAt).toLocaleTimeString('fr-BF', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                {formatDriverTimelineTime(event.createdAt)}
               </Text>
             </View>
           </View>

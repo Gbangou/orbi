@@ -31,6 +31,10 @@ import {
   useReservationClock,
 } from '../../lib/offer-reservation';
 import {
+  formatDriverRestUntilTime,
+  getDriverTimeLeftMs,
+} from '../../lib/driver-date-format';
+import {
   buildDriverFlowTransitionLabel,
   buildDriverHomeStatusLabel,
   resolveDriverActiveFlow,
@@ -133,9 +137,8 @@ function TripRequestModal({
   const modal = useMemo(() => makeModalStyles(theme), [theme]);
   const TOTAL = (() => {
     if (offer.reservationExpiresAt) {
-      const rem = Math.round(
-        (new Date(offer.reservationExpiresAt).getTime() - Date.now()) / 1000,
-      );
+      const timeLeftMs = getDriverTimeLeftMs(offer.reservationExpiresAt, Date.now());
+      const rem = timeLeftMs !== null ? Math.round(timeLeftMs / 1000) : 0;
       if (rem > 2 && rem <= 60) return rem;
     }
     return 30;
@@ -707,10 +710,7 @@ export default function DriverHomeScreen() {
             title={driverFatigue.state === 'blocked' ? 'Pause obligatoire' : 'Pause conseillée'}
             message={
               driverFatigue.state === 'blocked' && driverFatigue.restUntil
-                ? `${shiftReadiness.note} Reprise recommandée après ${new Date(driverFatigue.restUntil).toLocaleTimeString('fr-BF', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}.`
+                ? `${shiftReadiness.note} Reprise recommandée après ${formatDriverRestUntilTime(driverFatigue.restUntil, 'heure indisponible')}.`
                 : shiftReadiness.note
             }
           />

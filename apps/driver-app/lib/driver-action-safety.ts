@@ -1,4 +1,5 @@
 import type { DriverOffer } from '@orbi/api';
+import { toDriverDateMs } from './driver-date-format';
 
 export type DriverActionValidationResult =
   | { ok: true }
@@ -66,9 +67,9 @@ function isOfferStillReserved(offer: DriverOffer, now: number) {
     return true;
   }
 
-  const expiresAtMs = new Date(offer.reservationExpiresAt).getTime();
+  const expiresAtMs = toDriverDateMs(offer.reservationExpiresAt);
 
-  if (!Number.isFinite(expiresAtMs)) {
+  if (expiresAtMs === null) {
     return false;
   }
 

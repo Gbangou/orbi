@@ -11,6 +11,9 @@ describe('driver offer reservation helpers', () => {
     expect(
       formatReservationCountdown('2026-05-15T12:02:05.000Z', now),
     ).toBe('02:05');
+    expect(
+      getReservationTimeLeftMs(new Date('2026-05-15T12:02:05.000Z') as never, now),
+    ).toBe(125_000);
   });
 
   it('treats invalid reservation dates as expired instead of rendering NaN', () => {

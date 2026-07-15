@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { DriverOffer } from '@orbi/api';
+import { getDriverTimeLeftMs, toDriverDateMs } from './driver-date-format';
 
 export function useReservationClock() {
   const [now, setNow] = useState(() => Date.now());
@@ -23,13 +24,13 @@ export function getReservationTimeLeftMs(
     return null;
   }
 
-  const expiresAtMs = new Date(reservationExpiresAt).getTime();
+  const timeLeftMs = getDriverTimeLeftMs(reservationExpiresAt, now);
 
-  if (!Number.isFinite(expiresAtMs)) {
+  if (timeLeftMs === null) {
     return 0;
   }
 
-  return expiresAtMs - now;
+  return timeLeftMs;
 }
 
 export function isOfferReservationActive(offer: DriverOffer, now: number) {
@@ -76,7 +77,7 @@ export function useReservationExpiryRefresh(
     const upcomingExpirations = offers
       .map((offer) =>
         offer.reservationExpiresAt
-          ? new Date(offer.reservationExpiresAt).getTime()
+          ? toDriverDateMs(offer.reservationExpiresAt)
           : null,
       )
       .filter((value): value is number => value !== null)

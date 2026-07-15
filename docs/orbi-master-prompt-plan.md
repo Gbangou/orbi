@@ -596,6 +596,14 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   la plateforme. `rider-display-format` centralise maintenant date longue, date
   courte, date historique, heure timeline et duree de trajet avec fallback. Les
   ecrans rider critiques et `realtime-widgets` utilisent ces helpers.
+- 15 juillet 2026: gap A ferme "dates et expirations driver dispersees". Les
+  expirations d offres, validations d action, timeline realtime et heure de
+  reprise fatigue utilisaient encore des parsings `new Date` locaux. Ajout de
+  `driver-date-format` pour normaliser les dates driver, calculer les delais
+  restants, formater les heures timeline/reprise et degrader les dates invalides
+  sans `Invalid Date`. `offer-reservation`, `driver-action-safety`,
+  `driver-operational-signal`, l accueil driver et `realtime-widgets` utilisent
+  desormais ce helper.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

@@ -57,6 +57,22 @@ describe('driver action safety helpers', () => {
     });
   });
 
+  it('blocks malformed reservation dates before dispatch mutation', () => {
+    expect(
+      validateOfferAction({
+        activeTripId: null,
+        offer: {
+          ...offer,
+          reservationExpiresAt: 'not-a-date',
+        },
+        now: Date.parse('2026-04-19T10:00:00.000Z'),
+      }),
+    ).toEqual({
+      ok: false,
+      message: 'Cette reservation a expire. Actualisez le direct avant toute action.',
+    });
+  });
+
   it('blocks trip completion when Ride Check blocks completion', () => {
     expect(
       validateTripAdvance({
