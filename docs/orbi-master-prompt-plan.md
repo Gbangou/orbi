@@ -627,6 +627,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   valeurs partielles comme `2024abc`. Ajout de `driver-onboarding-safety` pour
   accepter uniquement une annee a quatre chiffres dans une plage bornee, avec
   fallback controle et tests dedies; le smoke driver complet reste vert.
+- 15 juillet 2026: gap A ferme "profil chauffeur permissif aux entiers sales".
+  Le profil chauffeur reutilisait encore un `parseInt` local pour le rayon,
+  l annee vehicule et les places, ce qui pouvait accepter `8km`, `2024abc` ou
+  d autres valeurs partielles. Les entiers positifs et annees vehicule passent
+  maintenant par `driver-onboarding-safety`, avec rejet strict, plage annee
+  explicite et tests dedies.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

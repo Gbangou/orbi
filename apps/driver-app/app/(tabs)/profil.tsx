@@ -37,6 +37,10 @@ import {
   restoreDriverSession,
   signOutDriverAccount,
 } from '../../lib/auth';
+import {
+  parseOptionalDriverVehicleYear,
+  parseOptionalPositiveInteger,
+} from '../../lib/driver-onboarding-safety';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { resolveDriverAppError } from '../../lib/session-feedback';
 import {
@@ -219,18 +223,6 @@ function buildInitialForm(profile: DriverProfileResponse): OnboardingFormState {
 
 function formatDocumentLabel(type: DocumentType) {
   return documentDescriptors.find((document) => document.type === type)?.label ?? type;
-}
-
-function parseOptionalPositiveInteger(value: string) {
-  const normalized = value.trim();
-
-  if (!normalized) {
-    return null;
-  }
-
-  const parsed = Number.parseInt(normalized, 10);
-
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function toApiTier(
@@ -455,9 +447,9 @@ export default function ProfilScreen() {
 
     if (
       form.vehicleYear.trim() &&
-      parseOptionalPositiveInteger(form.vehicleYear) === null
+      parseOptionalDriverVehicleYear(form.vehicleYear) === null
     ) {
-      return "L'annee du vehicule doit etre numerique.";
+      return "L'annee du vehicule doit etre comprise entre 1990 et 2035.";
     }
 
     const parsedVehicleSeats = parseOptionalPositiveInteger(form.vehicleSeats);
@@ -585,7 +577,7 @@ export default function ProfilScreen() {
     const parsedServiceRadiusKm = parseOptionalPositiveInteger(
       form.serviceRadiusKm,
     );
-    const parsedVehicleYear = parseOptionalPositiveInteger(form.vehicleYear);
+    const parsedVehicleYear = parseOptionalDriverVehicleYear(form.vehicleYear);
     const parsedVehicleSeats = parseOptionalPositiveInteger(form.vehicleSeats);
 
     if (parsedServiceRadiusKm === null) {
