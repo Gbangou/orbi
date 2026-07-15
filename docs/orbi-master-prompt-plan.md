@@ -651,6 +651,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   hors bornes avec un message generique. Ajout de `dispatch-control-safety`:
   validation stricte chiffres uniquement, bornes UX identiques au proxy serveur,
   message avant appel reseau et tests dedies.
+- 15 juillet 2026: gap A ferme "creation promo admin permissive aux nombres et
+  dates implicites". Le formulaire codes promo utilisait `Number(...)` et
+  `Date.parse(...)` directement, acceptant potentiellement des notations comme
+  `1e2` ou des dates calendrier normalisees par JavaScript. Ajout de
+  `promo-code-safety`: entiers stricts, dates `YYYY-MM-DD` reelles, code borne,
+  payload ISO prepare avant appel API et tests contre valeurs sales.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

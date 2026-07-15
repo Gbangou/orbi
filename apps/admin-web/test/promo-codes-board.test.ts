@@ -2,6 +2,7 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { resolvePromoCodeFormPayload } from '../app/promo-code-safety';
 
 describe('promo codes board', () => {
   it('guards promo creation and deactivation against duplicate submits', () => {
@@ -34,11 +35,72 @@ describe('promo codes board', () => {
       'utf8',
     );
 
-    expect(source).toContain('Number.isInteger(discountBps)');
-    expect(source).toContain('discountBps > 10000');
-    expect(source).toContain('Number.isInteger(maxUses)');
-    expect(source).toContain('maxUses > 100000');
-    expect(source).toContain('validToMs <= validFromMs');
+    expect(source).toContain('resolvePromoCodeFormPayload');
+    expect(source).not.toContain('Number(form.discountBps)');
+    expect(source).not.toContain('Date.parse(form.validFrom)');
+  });
+
+  it('builds strict promo payloads from valid board form values', () => {
+    expect(
+      resolvePromoCodeFormPayload({
+        code: ' bienvenue20 ',
+        description: ' Campagne ',
+        discountBps: '2000',
+        maxUses: '100',
+        validFrom: '2026-07-15',
+        validTo: '2026-07-31',
+        firstTripOnly: true,
+      }),
+    ).toEqual({
+      payload: {
+        code: 'BIENVENUE20',
+        description: 'Campagne',
+        discountBps: 2000,
+        maxUses: 100,
+        validFrom: '2026-07-15T00:00:00.000Z',
+        validTo: '2026-07-31T00:00:00.000Z',
+        firstTripOnly: true,
+      },
+      error: null,
+    });
+  });
+
+  it('rejects dirty promo numbers and invalid calendar dates before network calls', () => {
+    expect(
+      resolvePromoCodeFormPayload({
+        code: 'WELCOME',
+        description: '',
+        discountBps: '2000abc',
+        maxUses: '',
+        validFrom: '2026-07-15',
+        validTo: '2026-07-31',
+        firstTripOnly: true,
+      }).payload,
+    ).toBeNull();
+
+    expect(
+      resolvePromoCodeFormPayload({
+        code: 'WELCOME',
+        description: '',
+        discountBps: '2000',
+        maxUses: '1e2',
+        validFrom: '2026-07-15',
+        validTo: '2026-07-31',
+        firstTripOnly: true,
+      }).payload,
+    ).toBeNull();
+
+    expect(
+      resolvePromoCodeFormPayload({
+        code: 'WELCOME',
+        description: '',
+        discountBps: '2000',
+        maxUses: '',
+        validFrom: '2026-02-31',
+        validTo: '2026-07-31',
+        firstTripOnly: true,
+      }).payload,
+    ).toBeNull();
   });
 
   it('validates discount bps is a positive integer within bounds before submitting', () => {

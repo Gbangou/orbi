@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import type { PromoCodeItem } from '@orbi/api';
 import { createAdminMutationHeaders, fetchAdminJson } from './admin-client-fetch';
+import { resolvePromoCodeFormPayload } from './promo-code-safety';
 
 type PromoCodesBoardProps = {
   initialCodes: PromoCodeItem[];
@@ -113,31 +114,10 @@ export function PromoCodesBoard({ initialCodes }: PromoCodesBoardProps) {
       return;
     }
 
-    const discountBps = Number(form.discountBps);
-    const maxUses = form.maxUses ? Number(form.maxUses) : undefined;
-    const validFromMs = Date.parse(form.validFrom);
-    const validToMs = Date.parse(form.validTo);
+    const formPayload = resolvePromoCodeFormPayload(form);
 
-    if (!form.code.trim() || !form.validFrom || !form.validTo) {
-      setStatus('Remplissez tous les champs obligatoires.');
-      return;
-    }
-
-    if (!Number.isInteger(discountBps) || discountBps < 1 || discountBps > 10000) {
-      setStatus('La remise doit etre un entier entre 1 et 10000 bps.');
-      return;
-    }
-
-    if (
-      maxUses !== undefined &&
-      (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 100000)
-    ) {
-      setStatus('Le nombre maximum d utilisations doit etre entre 1 et 100000.');
-      return;
-    }
-
-    if (Number.isNaN(validFromMs) || Number.isNaN(validToMs) || validToMs <= validFromMs) {
-      setStatus('La date de fin doit etre apres la date de debut.');
+    if (!formPayload.payload) {
+      setStatus(formPayload.error);
       return;
     }
 
@@ -145,15 +125,7 @@ export function PromoCodesBoard({ initialCodes }: PromoCodesBoardProps) {
     setSubmitting(true);
     setStatus('Creation du code promo...');
     try {
-      await createPromoCode({
-        code: form.code.trim(),
-        description: form.description?.trim() || undefined,
-        discountBps,
-        maxUses,
-        validFrom: new Date(form.validFrom).toISOString(),
-        validTo: new Date(form.validTo).toISOString(),
-        firstTripOnly: form.firstTripOnly,
-      });
+      await createPromoCode(formPayload.payload);
       await refreshCodes();
       setForm(emptyForm);
       setShowForm(false);
