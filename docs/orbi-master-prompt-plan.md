@@ -657,6 +657,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `1e2` ou des dates calendrier normalisees par JavaScript. Ajout de
   `promo-code-safety`: entiers stricts, dates `YYYY-MM-DD` reelles, code borne,
   payload ISO prepare avant appel API et tests contre valeurs sales.
+- 15 juillet 2026: gap A ferme "limite audit trajets admin coercitive". Le champ
+  libre de limite export/audit utilisait `setFilterLimit(Number(...))`, pouvant
+  produire `NaN` ou une valeur hors UX avant proxy serveur. La limite est
+  maintenant un choix borne 50/100/300/500, resolu strictement sans coercition
+  libre. Les tests audit verifient aussi le parseur serveur strict actuel.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

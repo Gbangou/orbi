@@ -10,6 +10,13 @@ type TripsAuditBoardProps = {
 };
 
 const lookbackOptions = [24, 72, 168] as const;
+const tripsAuditLimitOptions = [50, 100, 300, 500] as const;
+
+function resolveTripsAuditLimit(value: string) {
+  return (
+    tripsAuditLimitOptions.find((option) => String(option) === value) ?? 300
+  );
+}
 
 function formatMoney(value: number, currency: string) {
   return `${currency} ${Math.round(value).toLocaleString('fr-FR')}`;
@@ -227,15 +234,17 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
           value={filterTo}
         />
 
-        <input
-          className="export-filter-input export-filter-limit"
-          max={500}
-          min={1}
-          onChange={(e) => setFilterLimit(Number(e.target.value))}
-          placeholder="Limite"
-          type="number"
+        <select
+          className="export-filter-select export-filter-limit"
+          onChange={(e) => setFilterLimit(resolveTripsAuditLimit(e.target.value))}
           value={filterLimit}
-        />
+        >
+          {tripsAuditLimitOptions.map((limit) => (
+            <option key={limit} value={limit}>
+              {limit} trajets
+            </option>
+          ))}
+        </select>
 
         <button
           className="ghost-button"

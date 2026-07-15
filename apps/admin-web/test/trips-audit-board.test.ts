@@ -11,9 +11,10 @@ describe('trips audit board', () => {
     );
 
     expect(source).toContain('resolveLookbackHours');
-    expect(source).toContain('Number.isInteger(parsed)');
-    expect(source).toContain('parsed >= 1');
-    expect(source).toContain('parsed <= 168');
+    expect(source).toContain('resolveStrictBoundedInteger');
+    expect(source).toContain('min: 1');
+    expect(source).toContain('max: 168');
+    expect(source).toContain('fallback: 24');
   });
 
   it('keeps the trips audit route no-store and auth-guarded', () => {
@@ -92,6 +93,17 @@ describe('trips audit board', () => {
 
     expect(boardSource).toContain('applyAuditFilters');
     expect(boardSource).toContain('Appliquer a l');
+  });
+
+  it('uses bounded audit limit choices instead of coercing free-form input', () => {
+    const boardSource = readFileSync(
+      join(process.cwd(), 'app/trips-audit-board.tsx'),
+      'utf8',
+    );
+
+    expect(boardSource).toContain('tripsAuditLimitOptions');
+    expect(boardSource).toContain('resolveTripsAuditLimit');
+    expect(boardSource).not.toContain('setFilterLimit(Number');
   });
 
   it('keeps trip audit risk resolution guarded and no-store', () => {
