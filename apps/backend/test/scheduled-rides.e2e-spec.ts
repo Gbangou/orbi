@@ -7,7 +7,10 @@
  * - 1 seule course active par passager
  * - Annulation avec protection
  */
-import { ScheduledRidesService } from '../src/modules/scheduled-rides/scheduled-rides.service';
+import {
+  parseStrictScheduledRideDate,
+  ScheduledRidesService,
+} from '../src/modules/scheduled-rides/scheduled-rides.service';
 import type { RequestAuthContext } from '../src/modules/auth/auth.types';
 
 const mockJobQueue = {
@@ -73,6 +76,9 @@ function futureDate(minutesFromNow: number): string {
 }
 
 describe('ScheduledRidesService — validation métier', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   describe('createScheduledRide', () => {
     it('accepte une réservation 2h à l\'avance', async () => {
@@ -119,6 +125,31 @@ describe('ScheduledRidesService — validation métier', () => {
           scheduledFor: 'not-a-date',
         }),
       ).rejects.toThrow('ISO 8601');
+    });
+
+    it('rejette une date calendrier normalisee par JavaScript avant toute ecriture', async () => {
+      const { service, auth, prisma } = createService();
+
+      expect(
+        parseStrictScheduledRideDate('2026-07-15T08:30:00Z')?.toISOString(),
+      ).toBe('2026-07-15T08:30:00.000Z');
+      expect(
+        parseStrictScheduledRideDate('2026-02-31T00:00:00.000Z'),
+      ).toBeNull();
+      expect(parseStrictScheduledRideDate('2026-07-15')).toBeNull();
+
+      await expect(
+        service.createScheduledRide(auth, {
+          pickupAddress: 'Test',
+          destinationAddress: 'Destination',
+          scheduledFor: '2026-02-31T00:00:00.000Z',
+        }),
+      ).rejects.toThrow('real UTC ISO 8601 instant');
+
+      expect(prisma.scheduledRide.findFirst).not.toHaveBeenCalled();
+      expect(prisma.scheduledRide.create).not.toHaveBeenCalled();
+      expect(prisma.auditLog.create).not.toHaveBeenCalled();
+      expect(mockJobQueue.enqueue).not.toHaveBeenCalled();
     });
 
     it('bloque une 2ème réservation active', async () => {

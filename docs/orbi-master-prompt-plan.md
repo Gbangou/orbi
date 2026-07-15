@@ -734,6 +734,14 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `parseStrictPromoCodeDate`: seuls les instants UTC ISO reels sont acceptes,
   toute fenetre sale est rejetee avant lookup DB, creation ou audit. Suite
   `admin.promo-codes.spec.ts` et `pnpm typecheck` workspace verts.
+- 15 juillet 2026: gap A ferme "course programmee acceptait une date calendrier
+  normalisee". `ScheduledRidesService#createScheduledRide` construisait
+  `new Date(dto.scheduledFor)`, permettant a une date comme
+  `2026-02-31T00:00:00.000Z` d etre normalisee par JavaScript avant les garde-
+  fous 30 minutes/7 jours, creation, audit et job dispatch. Ajout de
+  `parseStrictScheduledRideDate`: la reservation exige un instant UTC ISO reel
+  et rejette toute date sale avant lookup course active, ecriture, audit ou job.
+  Suite `scheduled-rides.e2e-spec.ts` et `pnpm typecheck` workspace verts.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est
