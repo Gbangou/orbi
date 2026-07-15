@@ -704,6 +704,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   local: toute metrique stockee non finie ou sale refuse maintenant
   l equivalence et conserve l erreur active-request au lieu de reutiliser un
   booking potentiellement incoherent. Test dedie sur `5.1km` / `18min`.
+- 15 juillet 2026: gap A ferme "checkout paiement acceptait un fare non fini".
+  `resolveCheckoutAmount` verifiait le montant serveur contre zero/negatif mais
+  ne rendait pas explicite le refus de `NaN`/`Infinity`. Le checkout exige
+  maintenant un montant serveur fini et positif, et un montant demande fini si
+  present, avant idempotency hash ou initialisation provider. Tests dedies sur
+  fare `Infinity` et amount `NaN`; suite payments complete verte.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

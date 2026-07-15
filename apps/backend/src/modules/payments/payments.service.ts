@@ -1841,24 +1841,37 @@ export class PaymentsService {
     rideRequest: RideRequestPaymentOwnership,
     requestedAmount?: number,
   ) {
-    const estimatedFare = Number(rideRequest.estimatedFare ?? 0);
+    const estimatedFare = this.resolveFiniteMoneyAmount(
+      rideRequest.estimatedFare,
+    );
 
-    if (!estimatedFare || estimatedFare <= 0) {
+    if (estimatedFare === null || estimatedFare <= 0) {
       throw new BadRequestException(
         'Ride request fare is unavailable for payment initialization.',
       );
     }
 
-    if (
-      requestedAmount !== undefined &&
-      Math.round(requestedAmount) !== Math.round(estimatedFare)
-    ) {
-      throw new BadRequestException(
-        'Payment amount must match the current ride request fare.',
-      );
+    if (requestedAmount !== undefined) {
+      const normalizedRequestedAmount =
+        this.resolveFiniteMoneyAmount(requestedAmount);
+
+      if (
+        normalizedRequestedAmount === null ||
+        Math.round(normalizedRequestedAmount) !== Math.round(estimatedFare)
+      ) {
+        throw new BadRequestException(
+          'Payment amount must match the current ride request fare.',
+        );
+      }
     }
 
     return estimatedFare;
+  }
+
+  private resolveFiniteMoneyAmount(value: unknown) {
+    const amount = Number(value);
+
+    return Number.isFinite(amount) ? amount : null;
   }
 
   private resolveWebhookStatus(event: string): PaymentAttemptStatus {

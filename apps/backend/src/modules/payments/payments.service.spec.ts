@@ -305,6 +305,66 @@ describe('PaymentsService', () => {
     );
   });
 
+  it('rejects checkout when the server fare is not finite', async () => {
+    const { service, prisma } = createService();
+
+    prisma.rideRequest.findUnique.mockResolvedValue({
+      id: 'ride-request-1',
+      status: 'REQUESTED',
+      estimatedFare: Number.POSITIVE_INFINITY,
+      currency: 'XOF',
+      rider: {
+        userId: 'user-1',
+      },
+      trip: null,
+    });
+
+    await expect(
+      service.createCheckoutIntent(
+        {
+          user: {
+            id: 'user-1',
+            role: 'RIDER',
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        {
+          rideRequestId: 'ride-request-1',
+          channel: 'MOBILE_MONEY',
+        },
+      ),
+    ).rejects.toThrow(
+      'Ride request fare is unavailable for payment initialization.',
+    );
+  });
+
+  it('rejects checkout when the requested amount is not finite', async () => {
+    const { service } = createService();
+
+    await expect(
+      service.createCheckoutIntent(
+        {
+          user: {
+            id: 'user-1',
+            role: 'RIDER',
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        {
+          rideRequestId: 'ride-request-1',
+          channel: 'MOBILE_MONEY',
+          amount: Number.NaN,
+        },
+      ),
+    ).rejects.toThrow(
+      'Payment amount must match the current ride request fare.',
+    );
+  });
+
   it('rejects checkout when the ride request is no longer pending', async () => {
     const { service, prisma } = createService();
 
