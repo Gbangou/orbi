@@ -668,6 +668,12 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   dates promo et suivi public partage. Ces affichages passent maintenant par
   `formatAdminDateTime` ou un formatter local verifie; le scan admin ne trouve
   plus de `toLocaleDateString/toLocaleTimeString` direct fragile dans l app.
+- 15 juillet 2026: gap A ferme "montants admin pouvant fuiter NaN". Les
+  dashboards wallets chauffeur, finance, audit trajets et journal webhooks
+  formataient encore certains montants via `Math.round(...).toLocaleString`
+  local. `admin-ops-kernel` expose maintenant `formatAdminMoney`, qui refuse
+  `NaN`/`Infinity` et degrade en fallback clair. Tests dedies et scan argent
+  valident que les affichages critiques passent par le helper partage.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

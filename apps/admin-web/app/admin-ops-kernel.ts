@@ -40,6 +40,18 @@ export function formatAdminDateTime(
   return new Intl.DateTimeFormat('fr-FR', options).format(date);
 }
 
+export function formatAdminMoney(
+  amount: number | null | undefined,
+  currency = 'XOF',
+  fallback = `${currency} -`,
+) {
+  if (typeof amount !== 'number' || !Number.isFinite(amount)) {
+    return fallback;
+  }
+
+  return `${currency} ${Math.round(amount).toLocaleString('fr-FR')}`;
+}
+
 export function resolveLiveOpsRouteMonitoringCopy(
   routeMonitoring: LiveOpsRouteMonitoring,
   options: { now?: string | Date } = {},

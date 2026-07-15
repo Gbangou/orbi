@@ -27,6 +27,16 @@ describe('payment webhook journal board', () => {
     expect(source).toContain('!canRefundPaymentAttempt(event)');
   });
 
+  it('formats webhook payment amounts through the shared admin money helper', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/payment-webhook-journal-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('formatAdminMoney');
+    expect(source).not.toContain('Math.round(event.paymentAttempt.amount)');
+  });
+
   it('keeps the refund proxy guarded, no-store, and id-bounded', () => {
     const source = readFileSync(
       join(

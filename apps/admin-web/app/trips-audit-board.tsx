@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import type { AdminTripsAuditResponse } from '@orbi/api';
 import { formatOperationalStatus } from '@orbi/ui';
 import { fetchAdminJson, postAdminMutation } from './admin-client-fetch';
+import { formatAdminMoney } from './admin-ops-kernel';
 
 type TripsAuditBoardProps = {
   initialAudit: AdminTripsAuditResponse;
@@ -16,10 +17,6 @@ function resolveTripsAuditLimit(value: string) {
   return (
     tripsAuditLimitOptions.find((option) => String(option) === value) ?? 300
   );
-}
-
-function formatMoney(value: number, currency: string) {
-  return `${currency} ${Math.round(value).toLocaleString('fr-FR')}`;
 }
 
 function formatOwner(value: string) {
@@ -277,7 +274,7 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
         <article className="card">
           <span>Argent a verifier</span>
           <strong>
-            {formatMoney(audit.summary.moneyAtRisk, audit.summary.currency)}
+            {formatAdminMoney(audit.summary.moneyAtRisk, audit.summary.currency)}
           </strong>
           <p>{audit.summary.mobileMoneyReconciliationRate}% reconciliation MM</p>
         </article>
@@ -306,7 +303,7 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
             <h3>{owner.count} dossier(s)</h3>
             <p>
               {owner.critical} critique(s),{' '}
-              {formatMoney(owner.moneyAtRisk, audit.summary.currency)} a
+              {formatAdminMoney(owner.moneyAtRisk, audit.summary.currency)} a
               verifier.
             </p>
           </article>
@@ -334,7 +331,7 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
                 {formatOwner(trip.owner)}
               </span>
               <span className="live-trip-fare">
-                {formatMoney(trip.fare, trip.currency)}
+                {formatAdminMoney(trip.fare, trip.currency)}
               </span>
             </div>
             <h3>{trip.route}</h3>

@@ -10,7 +10,7 @@ import {
 } from '@orbi/api';
 import { createAdminIdempotencyKey } from './admin-idempotency';
 import { fetchAdminJson, postAdminMutation } from './admin-client-fetch';
-import { formatAdminDateTime } from './admin-ops-kernel';
+import { formatAdminDateTime, formatAdminMoney } from './admin-ops-kernel';
 
 type PaymentWebhookJournalBoardProps = {
   journal: AdminPaymentWebhookEventsResponse;
@@ -430,9 +430,10 @@ export function PaymentWebhookJournalBoard({
             </div>
             {event.paymentAttempt ? (
               <p>
-                Tentative: {event.paymentAttempt.currency}{' '}
-                {Math.round(event.paymentAttempt.amount).toLocaleString(
-                  'fr-FR',
+                Tentative:{' '}
+                {formatAdminMoney(
+                  event.paymentAttempt.amount,
+                  event.paymentAttempt.currency,
                 )}{' '}
                 - MAJ{' '}
                 {formatAdminDateTime(event.paymentAttempt.updatedAt)}

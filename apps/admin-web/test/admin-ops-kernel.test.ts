@@ -10,6 +10,7 @@ import type {
 import {
   canAttemptJobRequeue,
   formatAdminDateTime,
+  formatAdminMoney,
   hasLiveOpsTripChanged,
   resolveCollectionDelta,
   resolveDriverOnboardingDelta,
@@ -234,6 +235,15 @@ describe('admin-ops-kernel', () => {
         timeZone: 'UTC',
       }),
     ).toBe('15/05 08:05');
+  });
+
+  it('formats dirty admin money without leaking NaN', () => {
+    expect(formatAdminMoney(12500.4, 'XOF')).toBe('XOF 12 500');
+    expect(formatAdminMoney(Number.NaN, 'XOF')).toBe('XOF -');
+    expect(formatAdminMoney(Number.POSITIVE_INFINITY, 'XOF')).toBe('XOF -');
+    expect(formatAdminMoney(null, 'XOF', 'Montant indisponible')).toBe(
+      'Montant indisponible',
+    );
   });
 
   it('detects live ops route monitoring signal changes', () => {

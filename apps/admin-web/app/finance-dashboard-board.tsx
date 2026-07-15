@@ -1,13 +1,9 @@
 import type { AdminFinanceDashboardResponse } from "@orbi/api";
-import { formatAdminDateTime } from "./admin-ops-kernel";
+import { formatAdminDateTime, formatAdminMoney } from "./admin-ops-kernel";
 
 type FinanceDashboardBoardProps = {
   dashboard: AdminFinanceDashboardResponse;
 };
-
-function formatMoney(amount: number, currency: string) {
-  return `${currency} ${Math.round(amount).toLocaleString("fr-FR")}`;
-}
 
 function formatAge(minutes: number | null) {
   if (minutes === null) {
@@ -60,12 +56,12 @@ export function FinanceDashboardBoard({ dashboard }: FinanceDashboardBoardProps)
         </div>
         <div className="board-summary-card">
           <span>Wallet recovery</span>
-          <strong>{formatMoney(summary.walletRecoveryDue, summary.currency)}</strong>
+          <strong>{formatAdminMoney(summary.walletRecoveryDue, summary.currency)}</strong>
           <p>{summary.walletsInRecovery} wallets chauffeur a recouvrer.</p>
         </div>
         <div className="board-summary-card">
           <span>Payout backlog</span>
-          <strong>{formatMoney(summary.payoutBacklog, summary.currency)}</strong>
+          <strong>{formatAdminMoney(summary.payoutBacklog, summary.currency)}</strong>
           <p>{summary.preparedPayouts} payouts prepares.</p>
         </div>
         <div className="board-summary-card">
@@ -97,7 +93,7 @@ export function FinanceDashboardBoard({ dashboard }: FinanceDashboardBoardProps)
               {risk.value === null
                 ? "Aucun"
                 : risk.id.includes("wallet") || risk.id.includes("payout")
-                  ? formatMoney(risk.value, summary.currency)
+                  ? formatAdminMoney(risk.value, summary.currency)
                   : risk.id.includes("age")
                     ? formatAge(risk.value)
                     : risk.value.toLocaleString("fr-FR")}

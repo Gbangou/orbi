@@ -8,15 +8,11 @@ import {
 } from '@orbi/api';
 import { createAdminIdempotencyKey } from './admin-idempotency';
 import { postAdminMutation } from './admin-client-fetch';
-import { formatAdminDateTime } from './admin-ops-kernel';
+import { formatAdminDateTime, formatAdminMoney } from './admin-ops-kernel';
 
 type DriverWalletsBoardProps = {
   wallets: AdminDriverWalletsResponse;
 };
-
-function formatMoney(amount: number, currency = 'XOF') {
-  return `${currency} ${Math.round(amount).toLocaleString('fr-FR')}`;
-}
 
 export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
   const [summaryState, setSummaryState] = useState(wallets.summary);
@@ -333,19 +329,19 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
         </div>
         <div className="trip-meta-card">
           <span>Solde total</span>
-          <strong>{formatMoney(summaryState.totalBalance)}</strong>
+          <strong>{formatAdminMoney(summaryState.totalBalance)}</strong>
         </div>
         <div className="trip-meta-card">
           <span>Payouts generes</span>
-          <strong>{formatMoney(summaryState.totalPayouts)}</strong>
+          <strong>{formatAdminMoney(summaryState.totalPayouts)}</strong>
         </div>
         <div className="trip-meta-card">
           <span>Commission Orbi</span>
-          <strong>{formatMoney(summaryState.totalCommission)}</strong>
+          <strong>{formatAdminMoney(summaryState.totalCommission)}</strong>
         </div>
         <div className="trip-meta-card">
           <span>Recouvrement du</span>
-          <strong>{formatMoney(summaryState.totalRecoveryDue)}</strong>
+          <strong>{formatAdminMoney(summaryState.totalRecoveryDue)}</strong>
         </div>
       </div>
 
@@ -368,13 +364,13 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
                   {wallet.verificationStatus ?? 'verification inconnue'}
                 </span>
                 <span className="live-trip-fare">
-                  {formatMoney(wallet.balance, wallet.currency)}
+                  {formatAdminMoney(wallet.balance, wallet.currency)}
                 </span>
               </div>
               {wallet.recoveryDue > 0 ? (
                 <span className="phase-status phase-status-planned">
                   Recouvrement du{' '}
-                  {formatMoney(wallet.recoveryDue, wallet.currency)}
+                  {formatAdminMoney(wallet.recoveryDue, wallet.currency)}
                 </span>
               ) : null}
               <h3>{wallet.driverName}</h3>
@@ -386,20 +382,20 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
                 <div className="trip-meta-card">
                   <span>Payout net</span>
                   <strong>
-                    {formatMoney(wallet.payoutTotal, wallet.currency)}
+                    {formatAdminMoney(wallet.payoutTotal, wallet.currency)}
                   </strong>
                 </div>
                 <div className="trip-meta-card">
                   <span>Commission</span>
                   <strong>
-                    {formatMoney(wallet.commissionTotal, wallet.currency)}
+                    {formatAdminMoney(wallet.commissionTotal, wallet.currency)}
                   </strong>
                 </div>
               </div>
               {wallet.recentTransactions.slice(0, 3).map((transaction) => (
                 <p key={transaction.id}>
                   {transaction.type}{' '}
-                  {formatMoney(transaction.amount, wallet.currency)}
+                  {formatAdminMoney(transaction.amount, wallet.currency)}
                   {transaction.provider ? ` - ${transaction.provider}` : ''}
                   {transaction.reference ? ` - ${transaction.reference}` : ''}
                 </p>
@@ -410,7 +406,7 @@ export function DriverWalletsBoard({ wallets }: DriverWalletsBoardProps) {
               {wallet.preparedPayout ? (
                 <p>
                   Payout prepare:{' '}
-                  {formatMoney(
+                  {formatAdminMoney(
                     wallet.preparedPayout.amount,
                     wallet.preparedPayout.currency,
                   )}{' '}
