@@ -1,7 +1,21 @@
+const strictIntegerPattern = /^-?\d+$/;
+
+export function resolveConfigInteger(value: string | undefined, fallback: number) {
+  const normalized = value?.trim();
+
+  if (!normalized || !strictIntegerPattern.test(normalized)) {
+    return fallback;
+  }
+
+  const parsed = Number(normalized);
+
+  return Number.isSafeInteger(parsed) ? parsed : fallback;
+}
+
 export default () => ({
   app: {
     name: 'Orbi',
-    port: Number.parseInt(process.env.PORT ?? '3000', 10),
+    port: resolveConfigInteger(process.env.PORT, 3000),
     host: process.env.HOST ?? '0.0.0.0',
     environment: process.env.NODE_ENV ?? 'development',
     frontendOrigins: process.env.FRONTEND_ALLOWED_ORIGINS?.split(',')
@@ -24,13 +38,13 @@ export default () => ({
   },
   http: {
     requestBodyLimit: process.env.REQUEST_BODY_LIMIT ?? '256kb',
-    keepAliveTimeoutMs: Number.parseInt(
-      process.env.HTTP_KEEP_ALIVE_TIMEOUT_MS ?? '65000',
-      10,
+    keepAliveTimeoutMs: resolveConfigInteger(
+      process.env.HTTP_KEEP_ALIVE_TIMEOUT_MS,
+      65000,
     ),
-    headersTimeoutMs: Number.parseInt(
-      process.env.HTTP_HEADERS_TIMEOUT_MS ?? '66000',
-      10,
+    headersTimeoutMs: resolveConfigInteger(
+      process.env.HTTP_HEADERS_TIMEOUT_MS,
+      66000,
     ),
   },
   infrastructure: {
@@ -50,30 +64,29 @@ export default () => ({
     },
   },
   operations: {
-    gracefulShutdownTimeoutMs: Number.parseInt(
-      process.env.GRACEFUL_SHUTDOWN_TIMEOUT_MS ?? '15000',
-      10,
+    gracefulShutdownTimeoutMs: resolveConfigInteger(
+      process.env.GRACEFUL_SHUTDOWN_TIMEOUT_MS,
+      15000,
     ),
-    driverReservationExpirySweepIntervalMs: Number.parseInt(
-      process.env.DRIVER_RESERVATION_EXPIRY_SWEEP_INTERVAL_MS ?? '5000',
-      10,
+    driverReservationExpirySweepIntervalMs: resolveConfigInteger(
+      process.env.DRIVER_RESERVATION_EXPIRY_SWEEP_INTERVAL_MS,
+      5000,
     ),
-    driverReservationExpiryMaxSilenceMs: Number.parseInt(
-      process.env.DRIVER_RESERVATION_EXPIRY_MAX_SILENCE_MS ?? '30000',
-      10,
+    driverReservationExpiryMaxSilenceMs: resolveConfigInteger(
+      process.env.DRIVER_RESERVATION_EXPIRY_MAX_SILENCE_MS,
+      30000,
     ),
-    paymentAttemptReconciliationSweepIntervalMs: Number.parseInt(
-      process.env.PAYMENT_ATTEMPT_RECONCILIATION_SWEEP_INTERVAL_MS ??
-        '120000',
-      10,
+    paymentAttemptReconciliationSweepIntervalMs: resolveConfigInteger(
+      process.env.PAYMENT_ATTEMPT_RECONCILIATION_SWEEP_INTERVAL_MS,
+      120000,
     ),
-    paymentAttemptReconciliationStaleAfterMs: Number.parseInt(
-      process.env.PAYMENT_ATTEMPT_RECONCILIATION_STALE_AFTER_MS ?? '600000',
-      10,
+    paymentAttemptReconciliationStaleAfterMs: resolveConfigInteger(
+      process.env.PAYMENT_ATTEMPT_RECONCILIATION_STALE_AFTER_MS,
+      600000,
     ),
-    paymentAttemptReconciliationBatchSize: Number.parseInt(
-      process.env.PAYMENT_ATTEMPT_RECONCILIATION_BATCH_SIZE ?? '25',
-      10,
+    paymentAttemptReconciliationBatchSize: resolveConfigInteger(
+      process.env.PAYMENT_ATTEMPT_RECONCILIATION_BATCH_SIZE,
+      25,
     ),
     backupRestoreDrillAt: process.env.OPERATIONS_BACKUP_RESTORE_DRILL_AT ?? '',
     canaryReleaseDrillAt:
@@ -83,54 +96,54 @@ export default () => ({
     termsVersion: process.env.OPERATIONS_TERMS_VERSION ?? '',
     privacyVersion: process.env.OPERATIONS_PRIVACY_VERSION ?? '',
     insurancePolicyRef: process.env.OPERATIONS_INSURANCE_POLICY_REF ?? '',
-    pilotMaxConcurrentTrips: Number.parseInt(
-      process.env.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS ?? '0',
-      10,
+    pilotMaxConcurrentTrips: resolveConfigInteger(
+      process.env.OPERATIONS_PILOT_MAX_CONCURRENT_TRIPS,
+      0,
     ),
-    healthWatchdogIntervalMs: Number.parseInt(
-      process.env.HEALTH_WATCHDOG_INTERVAL_MS ?? '15000',
-      10,
+    healthWatchdogIntervalMs: resolveConfigInteger(
+      process.env.HEALTH_WATCHDOG_INTERVAL_MS,
+      15000,
     ),
-    healthWatchdogAlertCooldownMs: Number.parseInt(
-      process.env.HEALTH_WATCHDOG_ALERT_COOLDOWN_MS ?? '60000',
-      10,
+    healthWatchdogAlertCooldownMs: resolveConfigInteger(
+      process.env.HEALTH_WATCHDOG_ALERT_COOLDOWN_MS,
+      60000,
     ),
-    healthIncidentHistoryLimit: Number.parseInt(
-      process.env.HEALTH_INCIDENT_HISTORY_LIMIT ?? '12',
-      10,
+    healthIncidentHistoryLimit: resolveConfigInteger(
+      process.env.HEALTH_INCIDENT_HISTORY_LIMIT,
+      12,
     ),
     jobQueueWorkerEnabled: process.env.JOB_QUEUE_WORKER_ENABLED !== 'false',
-    jobQueueWorkerIntervalMs: Number.parseInt(
-      process.env.JOB_QUEUE_WORKER_INTERVAL_MS ?? '5000',
+    jobQueueWorkerIntervalMs: resolveConfigInteger(
+      process.env.JOB_QUEUE_WORKER_INTERVAL_MS,
+      5000,
+    ),
+    jobQueueWorkerBatchSize: resolveConfigInteger(
+      process.env.JOB_QUEUE_WORKER_BATCH_SIZE,
       10,
     ),
-    jobQueueWorkerBatchSize: Number.parseInt(
-      process.env.JOB_QUEUE_WORKER_BATCH_SIZE ?? '10',
-      10,
+    jobQueueWorkerRetryDelayMs: resolveConfigInteger(
+      process.env.JOB_QUEUE_WORKER_RETRY_DELAY_MS,
+      30000,
     ),
-    jobQueueWorkerRetryDelayMs: Number.parseInt(
-      process.env.JOB_QUEUE_WORKER_RETRY_DELAY_MS ?? '30000',
-      10,
+    jobQueueWorkerStaleAfterMs: resolveConfigInteger(
+      process.env.JOB_QUEUE_WORKER_STALE_AFTER_MS,
+      300000,
     ),
-    jobQueueWorkerStaleAfterMs: Number.parseInt(
-      process.env.JOB_QUEUE_WORKER_STALE_AFTER_MS ?? '300000',
-      10,
+    dispatchSignalLookbackHours: resolveConfigInteger(
+      process.env.DISPATCH_SIGNAL_LOOKBACK_HOURS,
+      72,
     ),
-    dispatchSignalLookbackHours: Number.parseInt(
-      process.env.DISPATCH_SIGNAL_LOOKBACK_HOURS ?? '72',
-      10,
+    dispatchSignalHalfLifeHours: resolveConfigInteger(
+      process.env.DISPATCH_SIGNAL_HALF_LIFE_HOURS,
+      18,
     ),
-    dispatchSignalHalfLifeHours: Number.parseInt(
-      process.env.DISPATCH_SIGNAL_HALF_LIFE_HOURS ?? '18',
-      10,
+    dispatchDeclineCooldownMinutes: resolveConfigInteger(
+      process.env.DISPATCH_DECLINE_COOLDOWN_MINUTES,
+      20,
     ),
-    dispatchDeclineCooldownMinutes: Number.parseInt(
-      process.env.DISPATCH_DECLINE_COOLDOWN_MINUTES ?? '20',
-      10,
-    ),
-    dispatchSignalHistoryLimit: Number.parseInt(
-      process.env.DISPATCH_SIGNAL_HISTORY_LIMIT ?? '48',
-      10,
+    dispatchSignalHistoryLimit: resolveConfigInteger(
+      process.env.DISPATCH_SIGNAL_HISTORY_LIMIT,
+      48,
     ),
   },
   featureFlags: {
@@ -189,18 +202,18 @@ export default () => ({
   },
   notifications: {
     provider: process.env.NOTIFICATIONS_PROVIDER ?? 'local',
-    providerTimeoutMs: Number.parseInt(
-      process.env.NOTIFICATIONS_PROVIDER_TIMEOUT_MS ?? '5000',
-      10,
+    providerTimeoutMs: resolveConfigInteger(
+      process.env.NOTIFICATIONS_PROVIDER_TIMEOUT_MS,
+      5000,
     ),
   },
   observability: {
     mobileErrorCollector: {
       provider: process.env.MOBILE_ERROR_COLLECTOR_PROVIDER ?? 'local',
       webhookUrl: process.env.MOBILE_ERROR_COLLECTOR_WEBHOOK_URL ?? '',
-      timeoutMs: Number.parseInt(
-        process.env.MOBILE_ERROR_COLLECTOR_TIMEOUT_MS ?? '1500',
-        10,
+      timeoutMs: resolveConfigInteger(
+        process.env.MOBILE_ERROR_COLLECTOR_TIMEOUT_MS,
+        1500,
       ),
     },
   },
@@ -217,9 +230,6 @@ export default () => ({
     objectProvider: process.env.DOCUMENT_OBJECT_PROVIDER ?? 'local-provider',
     localProviderRoot:
       process.env.DOCUMENT_LOCAL_PROVIDER_ROOT ?? '.orbi-document-store',
-    ttlSeconds: Number.parseInt(
-      process.env.DOCUMENT_LINK_TTL_SECONDS ?? '900',
-      10,
-    ),
+    ttlSeconds: resolveConfigInteger(process.env.DOCUMENT_LINK_TTL_SECONDS, 900),
   },
 });

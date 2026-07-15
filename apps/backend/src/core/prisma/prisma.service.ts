@@ -7,6 +7,25 @@ import {
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import { Pool, type PoolConfig } from 'pg';
+import { resolveConfigInteger } from '../../config/configuration';
+
+export function resolvePrismaPoolConfig(env: NodeJS.ProcessEnv): PoolConfig {
+  return {
+    connectionString:
+      env.DATABASE_URL ??
+      'postgresql://postgres:postgres@localhost:5433/orbi?schema=public',
+    max: resolveConfigInteger(env.DATABASE_POOL_MAX, 20),
+    min: resolveConfigInteger(env.DATABASE_POOL_MIN, 2),
+    idleTimeoutMillis: resolveConfigInteger(
+      env.DATABASE_POOL_IDLE_TIMEOUT_MS,
+      10000,
+    ),
+    connectionTimeoutMillis: resolveConfigInteger(
+      env.DATABASE_POOL_CONNECTION_TIMEOUT_MS,
+      5000,
+    ),
+  };
+}
 
 @Injectable()
 export class PrismaService
@@ -14,22 +33,7 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
-    const connectionString =
-      process.env.DATABASE_URL ??
-      'postgresql://postgres:postgres@localhost:5433/orbi?schema=public';
-    const poolConfig: PoolConfig = {
-      connectionString,
-      max: Number.parseInt(process.env.DATABASE_POOL_MAX ?? '20', 10),
-      min: Number.parseInt(process.env.DATABASE_POOL_MIN ?? '2', 10),
-      idleTimeoutMillis: Number.parseInt(
-        process.env.DATABASE_POOL_IDLE_TIMEOUT_MS ?? '10000',
-        10,
-      ),
-      connectionTimeoutMillis: Number.parseInt(
-        process.env.DATABASE_POOL_CONNECTION_TIMEOUT_MS ?? '5000',
-        10,
-      ),
-    };
+    const poolConfig = resolvePrismaPoolConfig(process.env);
     const pool = new Pool(poolConfig);
     const adapter = new PrismaPg(pool);
 

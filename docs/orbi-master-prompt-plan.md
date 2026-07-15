@@ -686,6 +686,13 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `12abc`. Les parametres passent maintenant par `resolveNearbyQueryNumber`:
   decimal strict, bornes GPS/rayon et fallback controle. Tests unitaires et
   tests rate-limit nearby existants valident la non-regression.
+- 15 juillet 2026: gap A ferme "configuration backend partiellement parsee".
+  Les entiers runtime (`PORT`, timeouts HTTP/ops, job queue, dispatch,
+  notifications, collector mobile, TTL documents et pool Prisma) utilisaient
+  `Number.parseInt`, acceptant silencieusement `3000abc` ou `5e1`. Ajout de
+  `resolveConfigInteger` et `resolvePrismaPoolConfig`: entiers stricts,
+  fallback controle et tests dedies. Le scan config/prisma ne trouve plus de
+  `parseInt` direct.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est
