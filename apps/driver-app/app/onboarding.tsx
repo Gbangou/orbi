@@ -16,6 +16,7 @@ import { upsertDriverOnboarding, extractApiErrorMessage } from '@orbi/api';
 import type { OrbiTheme } from '@orbi/ui';
 import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
 import { restoreDriverSession } from '../lib/auth';
+import { parseDriverVehicleYear } from '../lib/driver-onboarding-safety';
 
 // ── Constantes marché Burkina Faso ────────────────────────────────────────────
 
@@ -237,7 +238,7 @@ export default function DriverOnboardingScreen() {
             make: selectedMake || (isMoto ? 'Honda' : 'Toyota'),
             model: selectedModel || (isMoto ? 'CB125' : 'Corolla'),
             color: selectedColor,
-            year: parseInt(vehicleYear) || 2020,
+            year: parseDriverVehicleYear(vehicleYear),
             type: vehicleType,
             tier: isMoto ? 'MOTO_STANDARD' : 'CAR_STANDARD',
             seats: isMoto ? 2 : 4,

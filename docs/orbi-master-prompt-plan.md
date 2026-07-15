@@ -622,6 +622,11 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `500abc`. La validation est maintenant centralisee dans `account-safety`,
   n accepte que des chiffres entiers bornes par `Number.isSafeInteger`, et les
   tests couvrent espaces, minimum et valeurs sales.
+- 15 juillet 2026: gap A ferme "annee vehicule onboarding permissive".
+  L onboarding chauffeur utilisait `parseInt(vehicleYear)`, acceptant des
+  valeurs partielles comme `2024abc`. Ajout de `driver-onboarding-safety` pour
+  accepter uniquement une annee a quatre chiffres dans une plage bornee, avec
+  fallback controle et tests dedies; le smoke driver complet reste vert.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est
