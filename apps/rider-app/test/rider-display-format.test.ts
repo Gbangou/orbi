@@ -1,10 +1,15 @@
 import {
   calculateRiderDiscountedFare,
   calculateRiderPromoSavings,
+  calculateRiderTripDurationMinutes,
   estimateRiderPickupEtaMinutes,
+  formatRiderDateTime,
   formatRiderDistanceKm,
+  formatRiderHistoryDate,
   formatRiderMoneyAmount,
   formatRiderRatingLabel,
+  formatRiderShortDate,
+  formatRiderTimelineTime,
   resolveRiderMoneyAmount,
   toFiniteRiderDisplayNumber,
 } from '../lib/rider-display-format';
@@ -37,5 +42,28 @@ describe('rider display format helpers', () => {
     expect(calculateRiderDiscountedFare({ fare: 2500, discountBps: Number.NaN })).toBe(2500);
     expect(calculateRiderPromoSavings({ amount: '2250', discountBps: '1000' })).toBe(250);
     expect(calculateRiderPromoSavings({ amount: 2250, discountBps: 10000 })).toBeNull();
+  });
+
+  it('formats rider dates and durations without leaking invalid dates', () => {
+    expect(formatRiderDateTime('not-a-date')).toBe('Date indisponible');
+    expect(formatRiderShortDate('not-a-date')).toBe('—');
+    expect(formatRiderHistoryDate(null)).toBe('—');
+    expect(formatRiderTimelineTime(undefined)).toBe('—');
+    expect(formatRiderDateTime('2026-04-19T08:02:30.000Z')).not.toContain('Invalid');
+    expect(formatRiderShortDate('2026-04-19T08:02:30.000Z')).not.toContain('Invalid');
+    expect(formatRiderHistoryDate('2026-04-19T08:02:30.000Z')).not.toContain('Invalid');
+    expect(formatRiderTimelineTime('2026-04-19T08:02:30.000Z')).not.toContain('Invalid');
+    expect(
+      calculateRiderTripDurationMinutes({
+        startedAt: '2026-04-19T08:00:00.000Z',
+        completedAt: '2026-04-19T08:12:30.000Z',
+      }),
+    ).toBe(13);
+    expect(
+      calculateRiderTripDurationMinutes({
+        startedAt: '2026-04-19T08:12:30.000Z',
+        completedAt: '2026-04-19T08:00:00.000Z',
+      }),
+    ).toBeNull();
   });
 });

@@ -20,8 +20,11 @@ import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import {
   calculateRiderPromoSavings,
+  calculateRiderTripDurationMinutes,
+  formatRiderDateTime,
   formatRiderMoneyAmount,
   formatRiderRatingLabel,
+  formatRiderTimelineTime,
 } from '../lib/rider-display-format';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -343,18 +346,13 @@ export default function ReceiptScreen() {
   const trip = detail.trip;
 
   const completedAt = trip.completedAt
-    ? new Date(trip.completedAt).toLocaleString('fr-BF', {
-        weekday: 'long', day: '2-digit', month: 'long',
-        hour: '2-digit', minute: '2-digit',
-      })
+    ? formatRiderDateTime(trip.completedAt, '')
     : null;
 
-  const durationMin =
-    trip.startedAt && trip.completedAt
-      ? Math.round(
-          (new Date(trip.completedAt).getTime() - new Date(trip.startedAt).getTime()) / 60000,
-        )
-      : null;
+  const durationMin = calculateRiderTripDurationMinutes({
+    startedAt: trip.startedAt,
+    completedAt: trip.completedAt,
+  });
 
   const ratingLabel = formatRiderRatingLabel(
     trip.driverVerification.averageRating,
@@ -501,10 +499,7 @@ export default function ReceiptScreen() {
                 <View style={styles.timelineContent}>
                   <Text style={styles.timelineLabel}>{event.label}</Text>
                   <Text style={styles.timelineTime}>
-                    {new Date(event.createdAt).toLocaleTimeString('fr-BF', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatRiderTimelineTime(event.createdAt)}
                   </Text>
                 </View>
               </View>

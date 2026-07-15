@@ -14,21 +14,17 @@ import { OrbiButton, OrbiMetricTile, OrbiSurface, useOrbiTheme } from '@orbi/ui/
 import { restoreRiderSession } from '../../lib/auth';
 import { resolveRiderAppError } from '../../lib/session-feedback';
 import { OrbiLogo } from '../../lib/orbi-logo';
-import { formatRiderMoneyAmount, resolveRiderMoneyAmount } from '../../lib/rider-display-format';
+import {
+  formatRiderHistoryDate,
+  formatRiderMoneyAmount,
+  resolveRiderMoneyAmount,
+} from '../../lib/rider-display-format';
 
 type TripItem = MyTripsResponse['recentTrips'][number];
 type RequestItem = MyTripsResponse['pendingRequests'][number];
 
 function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatRiderHistoryDate(iso);
 }
 
 function StatusBadge({ status }: { status: string }) {

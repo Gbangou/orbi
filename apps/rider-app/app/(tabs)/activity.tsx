@@ -48,6 +48,7 @@ import {
   formatRiderDistanceKm,
   formatRiderMoneyAmount,
   formatRiderRatingLabel,
+  formatRiderShortDate,
   resolveRiderMoneyAmount,
 } from "../../lib/rider-display-format";
 import { restoreRiderSession } from "../../lib/auth";
@@ -1045,12 +1046,7 @@ export default function ActivityScreen() {
             <Text style={styles.sectionTitle}>{t('activity.recentTrips')}</Text>
             {history.recentTrips.slice(0, 10).map((trip) => {
               const dateStr = trip.completedAt ?? trip.createdAt;
-              const date = dateStr
-                ? new Date(dateStr).toLocaleDateString('fr-BF', {
-                    day: '2-digit',
-                    month: 'short',
-                  })
-                : '—';
+              const date = formatRiderShortDate(dateStr);
               const isDone = trip.status === 'COMPLETED';
               return (
                 <View key={trip.id} style={styles.tripHistRow}>

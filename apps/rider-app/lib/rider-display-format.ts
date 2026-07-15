@@ -97,3 +97,83 @@ export function calculateRiderPromoSavings(input: {
 
   return Math.max(0, Math.round(amount * (discountBps / (10000 - discountBps))));
 }
+
+function toValidRiderDate(value: unknown) {
+  if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+export function formatRiderDateTime(
+  value: unknown,
+  fallback = 'Date indisponible',
+) {
+  const date = toValidRiderDate(value);
+
+  return date
+    ? date.toLocaleString('fr-BF', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : fallback;
+}
+
+export function formatRiderShortDate(value: unknown, fallback = '—') {
+  const date = toValidRiderDate(value);
+
+  return date
+    ? date.toLocaleDateString('fr-BF', {
+        day: '2-digit',
+        month: 'short',
+      })
+    : fallback;
+}
+
+export function formatRiderHistoryDate(value: unknown, fallback = '—') {
+  const date = toValidRiderDate(value);
+
+  return date
+    ? date.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : fallback;
+}
+
+export function formatRiderTimelineTime(value: unknown, fallback = '—') {
+  const date = toValidRiderDate(value);
+
+  return date
+    ? date.toLocaleTimeString('fr-BF', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : fallback;
+}
+
+export function calculateRiderTripDurationMinutes(input: {
+  startedAt: unknown;
+  completedAt: unknown;
+}) {
+  const startedAt = toValidRiderDate(input.startedAt);
+  const completedAt = toValidRiderDate(input.completedAt);
+
+  if (!startedAt || !completedAt) {
+    return null;
+  }
+
+  const durationMinutes = Math.round(
+    (completedAt.getTime() - startedAt.getTime()) / 60000,
+  );
+
+  return durationMinutes >= 0 ? durationMinutes : null;
+}

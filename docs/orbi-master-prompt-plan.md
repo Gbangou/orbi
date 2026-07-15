@@ -589,6 +589,13 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `driver-operational-signal` normalise desormais number/string avant les
   comparaisons de risque, les labels precision/vitesse/alertes et le message
   fatigue. Tests dedies valident les payloads stringifies et sales.
+- 15 juillet 2026: gap A ferme "dates rider fragiles". Le recu, l activite,
+  l historique et la timeline realtime formataient encore certaines dates via
+  `new Date(...).toLocale...` directement dans les composants. Une date API
+  invalide pouvait donc faire fuiter `Invalid Date` ou degrader l ecran selon
+  la plateforme. `rider-display-format` centralise maintenant date longue, date
+  courte, date historique, heure timeline et duree de trajet avec fallback. Les
+  ecrans rider critiques et `realtime-widgets` utilisent ces helpers.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est
