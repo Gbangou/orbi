@@ -67,34 +67,13 @@ import { useRiderPosition } from '../lib/use-rider-position';
 import { TripMapView } from '../lib/trip-map-view';
 import { PlaceSearch } from '../lib/place-search';
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
+import {
+  fallbackRiderProfile,
+  normalizeRiderProfileResponse,
+} from '../lib/rider-profile-normalizer';
 
 const cityPresets = burkinaPricingCityPresets;
 const fieldDispatchRadiusKm = 8;
-
-const fallbackRiderProfile: RiderProfileResponse = {
-  profile: {
-    id: 'loading',
-    fullName: '',
-    email: '',
-    phoneNumber: null,
-    preferredTier: 'MOTO_STANDARD',
-    emergencyPhone: null,
-    trustedContact: {
-      phoneNumber: null,
-      shareMode: 'DISABLED',
-      status: 'MISSING',
-      safetyNote: '',
-    },
-    trustedContacts: [],
-    savedPlaces: [],
-    stats: {
-      totalRideRequests: 0,
-      totalTrips: 0,
-      completedTrips: 0,
-      savedPlaces: 0,
-    },
-  },
-};
 
 function toPlaceFromSavedPlace(
   place: RiderProfileResponse['profile']['savedPlaces'][number],
@@ -543,7 +522,7 @@ export default function BookingScreen() {
 
       setOptions(response.options);
       setHistory(historyResponse);
-      setProfile(profileResponse);
+      setProfile(normalizeRiderProfileResponse(profileResponse));
       if (options.resetPaymentPreview ?? true) {
         setPaymentPreview(null);
       }

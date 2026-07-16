@@ -50,31 +50,10 @@ import {
 import { formatRiderMoneyAmount } from '../../lib/rider-display-format';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { SavedPlacesMap } from '../../lib/saved-places-map';
-
-const fallbackProfile: RiderProfileResponse = {
-  profile: {
-    id: 'loading',
-    fullName: '',
-    email: '',
-    phoneNumber: null,
-    preferredTier: 'MOTO_STANDARD',
-    emergencyPhone: null,
-    trustedContact: {
-      phoneNumber: null,
-      shareMode: 'DISABLED',
-      status: 'MISSING',
-      safetyNote: 'Ajoutez un numéro Burkina pour accélérer le partage en cas de trajet sensible.',
-    },
-    trustedContacts: [],
-    savedPlaces: [],
-    stats: {
-      totalRideRequests: 0,
-      totalTrips: 0,
-      completedTrips: 0,
-      savedPlaces: 0,
-    },
-  },
-};
+import {
+  fallbackRiderProfile,
+  normalizeRiderProfileResponse,
+} from '../../lib/rider-profile-normalizer';
 
 function ForwardGlyph() {
   const theme = useOrbiTheme();
@@ -91,7 +70,7 @@ export default function AccountScreen() {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const walletStyles = useMemo(() => makeWalletStyles(theme), [theme]);
-  const [profile, setProfile] = useState<RiderProfileResponse>(fallbackProfile);
+  const [profile, setProfile] = useState<RiderProfileResponse>(fallbackRiderProfile);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [walletBalance, setWalletBalance] = useState<WalletBalanceResponse | null>(null);
   const [showTopUp, setShowTopUp] = useState(false);
@@ -254,15 +233,16 @@ export default function AccountScreen() {
         getMySupportTicketsWithApi(authClient).catch(() => ({ tickets: [] as SupportTicket[] })),
         fetchWalletBalanceWithApi(authClient).catch(() => null),
       ]);
+      const normalizedProfile = normalizeRiderProfileResponse(profileResponse);
       setWalletBalance(walletResp);
-      setProfile(profileResponse);
-      setTickets(ticketsResponse?.tickets ?? []);
+      setProfile(normalizedProfile);
+      setTickets(Array.isArray(ticketsResponse?.tickets) ? ticketsResponse.tickets : []);
       setTrustedContactForm({
-        phoneNumber: profileResponse.profile.trustedContact.phoneNumber ?? '',
+        phoneNumber: normalizedProfile.profile.trustedContact.phoneNumber ?? '',
         shareMode:
-          profileResponse.profile.trustedContact.shareMode === 'DISABLED'
+          normalizedProfile.profile.trustedContact.shareMode === 'DISABLED'
             ? 'MANUAL'
-            : profileResponse.profile.trustedContact.shareMode,
+            : normalizedProfile.profile.trustedContact.shareMode,
         notes: '',
       });
       setHistory(historyResponse);
@@ -272,7 +252,7 @@ export default function AccountScreen() {
           buildRiderPeripheralStatusLabel({
             flow: nextFlow,
             surface: 'account',
-            fullName: profileResponse.profile.fullName,
+            fullName: normalizedProfile.profile.fullName,
           }),
         );
       }

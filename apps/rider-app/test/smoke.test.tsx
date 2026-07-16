@@ -739,6 +739,31 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Réserver');
   });
 
+  it('keeps booking usable when a new rider profile is partially hydrated', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue({
+      profile: {
+        id: 'rider-fresh',
+        fullName: 'Nouveau Passager',
+        email: 'fresh@orbi.app',
+        phoneNumber: '+22670000009',
+      },
+    } as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Réserver');
+  });
+
   it('uses the selected Mobile Money phone number when creating checkout', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
     mockedFetchRideOptionsPreview.mockResolvedValue({
@@ -983,6 +1008,29 @@ describe('rider smoke flows', () => {
     await flushMicrotasks();
 
     expectText(renderer, 'Mon compte');
+  });
+
+  it('keeps account usable when a new rider profile is partially hydrated', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRiderProfile.mockResolvedValue({
+      profile: {
+        id: 'rider-fresh',
+        fullName: 'Nouveau Passager',
+        email: 'fresh@orbi.app',
+        phoneNumber: '+22670000009',
+        preferredTier: 'MOTO_STANDARD',
+        emergencyPhone: null,
+      },
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+
+    const renderer = await renderScreen(<AccountScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Nouveau Passager');
+    expectText(renderer, 'Mon compte');
+    expectText(renderer, 'Aucun contact actif');
+    expectText(renderer, 'Contacts suivis');
   });
 
   it('redirects to auth when the rider session is expired during profile refresh', async () => {
