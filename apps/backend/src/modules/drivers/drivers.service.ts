@@ -39,9 +39,44 @@ function toNumber(value: unknown) {
 
 const driverPayoutRateBps = 8200;
 const driverPayoutRate = driverPayoutRateBps / 10_000;
+const isoUtcDateTimePattern =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/;
 
 function normalizePlateNumber(value: string) {
   return value.trim().toUpperCase();
+}
+
+export function parseStrictDriverDocumentExpiry(value: string) {
+  const match = isoUtcDateTimePattern.exec(value.trim());
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const millisecond = match[7] ? Number(match[7]) : 0;
+  const date = new Date(
+    Date.UTC(year, month - 1, day, hour, minute, second, millisecond),
+  );
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !== hour ||
+    date.getUTCMinutes() !== minute ||
+    date.getUTCSeconds() !== second ||
+    date.getUTCMilliseconds() !== millisecond
+  ) {
+    return null;
+  }
+
+  return date;
 }
 
 // Bruit gaussien Box-Muller : ±~100 m (0.0009°) — assez pour empêcher le
@@ -371,6 +406,16 @@ export class DriversService {
             sha256: artifact.sha256,
             uploadSource: artifact.uploadSource,
           });
+        const expiresAt = artifact.expiresAt
+          ? parseStrictDriverDocumentExpiry(artifact.expiresAt)
+          : null;
+
+        if (artifact.expiresAt && !expiresAt) {
+          throw new BadRequestException(
+            'Driver document expiresAt must be a real UTC ISO instant.',
+          );
+        }
+
         const existingDocument = await this.prisma.driverDocument.findUnique({
           where: {
             storageKey: normalizedStorageKey,
@@ -395,9 +440,7 @@ export class DriversService {
               type: artifact.type as DriverDocumentType,
               fileName: validatedArtifact.fileName,
               mimeType: validatedArtifact.mimeType,
-              expiresAt: artifact.expiresAt
-                ? new Date(artifact.expiresAt)
-                : null,
+              expiresAt,
               status: DriverDocumentStatus.PENDING,
               rejectionReason: null,
               reviewedAt: null,
@@ -427,7 +470,7 @@ export class DriversService {
             fileName: validatedArtifact.fileName,
             storageKey: normalizedStorageKey,
             mimeType: validatedArtifact.mimeType,
-            expiresAt: artifact.expiresAt ? new Date(artifact.expiresAt) : null,
+            expiresAt,
             status: DriverDocumentStatus.PENDING,
             metadata: {
               uploadPolicy: validatedArtifact.constraints,

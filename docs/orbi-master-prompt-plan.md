@@ -742,6 +742,14 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `parseStrictScheduledRideDate`: la reservation exige un instant UTC ISO reel
   et rejette toute date sale avant lookup course active, ecriture, audit ou job.
   Suite `scheduled-rides.e2e-spec.ts` et `pnpm typecheck` workspace verts.
+- 16 juillet 2026: gap A ferme "expiration document chauffeur normalisee a la
+  soumission". Le flux `DriversService#upsertOnboarding` validait les artifacts
+  documentaires mais persistait encore `expiresAt` via `new Date`, permettant a
+  une date impossible comme `2027-02-31T00:00:00.000Z` d etre normalisee avant
+  statut `PENDING`, audit et job de verification document. Ajout de
+  `parseStrictDriverDocumentExpiry`: seules les expirations UTC ISO reelles sont
+  acceptees, une expiration sale bloque la persistance, l audit et le job.
+  Suite `drivers.service.spec.ts` et `pnpm typecheck` workspace verts.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

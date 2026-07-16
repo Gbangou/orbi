@@ -1,6 +1,9 @@
 import { DispatchCoordinator } from './dispatch-coordinator.service';
 import { DriverOfferProjector } from './driver-offer-projector';
-import { DriversService } from './drivers.service';
+import {
+  DriversService,
+  parseStrictDriverDocumentExpiry,
+} from './drivers.service';
 
 describe('DriversService', () => {
   function createService() {
@@ -1200,6 +1203,84 @@ describe('DriversService', () => {
       'Driver document storage key is not valid for this profile.',
     );
     expect(prisma.driverDocument.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects onboarding document artifacts with normalized invalid expiries before persistence', async () => {
+    const { prisma, service, documentLinksService, jobQueueService } =
+      createService();
+
+    expect(
+      parseStrictDriverDocumentExpiry('2027-04-18T06:30:00Z')?.toISOString(),
+    ).toBe('2027-04-18T06:30:00.000Z');
+    expect(
+      parseStrictDriverDocumentExpiry('2027-02-31T00:00:00.000Z'),
+    ).toBeNull();
+    expect(parseStrictDriverDocumentExpiry('2027-04-18')).toBeNull();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'OFFLINE',
+      user: {
+        id: 'user-1',
+        phoneNumber: '+22670000000',
+        isPhoneVerified: true,
+        fullName: 'Issa Driver',
+        email: 'driver@orbi.app',
+      },
+      vehicles: [],
+    });
+    prisma.user.update.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.vehicle.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.upsertOnboarding(
+        {
+          user: {
+            id: 'user-1',
+            driverProfile: { id: 'driver-1' },
+          },
+        } as never,
+        {
+          phoneNumber: '+22670000000',
+          licenseNumber: 'BF-12345',
+          city: 'OUAGADOUGOU',
+          serviceRadiusKm: 8,
+          documents: {
+            identityDocumentProvided: true,
+            driverLicenseProvided: true,
+            vehicleRegistrationProvided: true,
+            insuranceProofProvided: true,
+            selfieMatchProvided: true,
+          },
+          documentArtifacts: [
+            {
+              type: 'IDENTITY_DOCUMENT',
+              fileName: 'identity.pdf',
+              storageKey: 'driver-1/identity/key.pdf',
+              expiresAt: '2027-02-31T00:00:00.000Z',
+            },
+          ],
+          vehicles: [
+            {
+              plateNumber: '11 jd 9021',
+              make: 'Toyota',
+              model: 'Corolla',
+              color: 'White',
+              type: 'CAR',
+              tier: 'CAR_STANDARD',
+            },
+          ],
+        },
+      ),
+    ).rejects.toThrow('Driver document expiresAt must be a real UTC ISO instant.');
+
+    expect(documentLinksService.validateUploadedArtifact).toHaveBeenCalled();
+    expect(prisma.driverDocument.findUnique).not.toHaveBeenCalled();
+    expect(prisma.driverDocument.create).not.toHaveBeenCalled();
+    expect(prisma.driverDocument.update).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
+    expect(jobQueueService.enqueue).not.toHaveBeenCalled();
   });
 
   it('rejects onboarding document artifacts that do not match the upload policy', async () => {
