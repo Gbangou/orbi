@@ -12,7 +12,7 @@
 param(
     [ValidateSet('rider', 'driver', 'all')]
     [string]$App = 'all',
-    [string]$ApiBaseUrl = $(if ($env:ORBI_FIELD_API_BASE_URL) { $env:ORBI_FIELD_API_BASE_URL } else { "https://orbi-field-api.onrender.com" })
+    [string]$ApiBaseUrl
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,6 +35,80 @@ if (-not $env:JAVA_HOME) {
     Write-Host "  JAVA_HOME → $env:JAVA_HOME" -ForegroundColor DarkGray
 }
 $env:PATH = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\cmdline-tools\latest\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
+
+function Resolve-LanIp {
+    try {
+        $addresses = Get-NetIPAddress -AddressFamily IPv4 |
+        Where-Object {
+            $_.IPAddress -notlike '127.*' -and
+            $_.IPAddress -notlike '169.254.*' -and
+            $_.PrefixOrigin -ne 'WellKnown' -and
+            $_.InterfaceOperationalStatus -eq 'Up'
+        } |
+        Sort-Object -Property InterfaceMetric, InterfaceIndex
+
+        if ($addresses) {
+            return $addresses[0].IPAddress
+        }
+    }
+    catch {
+        Write-Host '  Get-NetIPAddress unavailable; falling back to ipconfig.' -ForegroundColor Yellow
+    }
+
+    $ipconfig = ipconfig
+    $blocks = ($ipconfig -join "`n") -split "(`r?`n){2,}"
+    foreach ($block in $blocks) {
+        $ipMatch = [regex]::Match($block, 'IPv4.*?:\s*(\d+\.\d+\.\d+\.\d+)')
+        $gatewayMatch = [regex]::Match($block, 'Passerelle.*?:\s*(\d+\.\d+\.\d+\.\d+)')
+
+        if ($ipMatch.Success -and $gatewayMatch.Success) {
+            $ip = $ipMatch.Groups[1].Value
+            if (
+                $ip -notlike '127.*' -and
+                $ip -notlike '169.254.*' -and
+                $ip -notlike '172.17.*' -and
+                $ip -notlike '172.28.*'
+            ) {
+                return $ip
+            }
+        }
+    }
+
+    $ipAddressMatches = $ipconfig | Select-String -Pattern 'IPv4.*?:\s*(\d+\.\d+\.\d+\.\d+)'
+    $candidate = $ipAddressMatches |
+    ForEach-Object { $_.Matches[0].Groups[1].Value } |
+    Where-Object {
+        $_ -notlike '127.*' -and
+        $_ -notlike '169.254.*' -and
+        $_ -notlike '172.17.*' -and
+        $_ -notlike '172.28.*'
+    } |
+    Select-Object -First 1
+
+    if ($candidate) {
+        return $candidate
+    }
+
+    throw 'Unable to find an active LAN IPv4 address. Pass one explicitly: pnpm mobile:apk:rider -- -ApiBaseUrl http://192.168.1.20:3000'
+}
+
+function Resolve-ApiBaseUrl {
+    param([string]$ExplicitApiBaseUrl)
+
+    if ($ExplicitApiBaseUrl) {
+        return $ExplicitApiBaseUrl
+    }
+
+    if ($env:ORBI_FIELD_API_BASE_URL) {
+        return $env:ORBI_FIELD_API_BASE_URL
+    }
+
+    $lanIp = Resolve-LanIp
+    return "http://${lanIp}:3000"
+}
+
+$ResolvedApiBaseUrl = Resolve-ApiBaseUrl -ExplicitApiBaseUrl $ApiBaseUrl
+Write-Host "  Mobile API base URL → $ResolvedApiBaseUrl" -ForegroundColor Cyan
 
 function Build-App {
     param([string]$AppName, [string]$AppDir, [hashtable]$EnvVars)
@@ -139,12 +213,12 @@ try { $null = & "$env:JAVA_HOME\bin\java.exe" -version 2>&1; Write-Host "  Java:
 if (-not (Test-Path "$env:ANDROID_HOME\platforms")) { Write-Host "  WARNING: ANDROID_HOME may be incomplete: $env:ANDROID_HOME" -ForegroundColor Yellow }
 
 Set-Location $Root
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --config.offline=false
 if ($LASTEXITCODE -ne 0) { throw "pnpm install failed" }
 
 # Variables d'environnement communes aux deux apps
 $CommonEnv = @{
-    EXPO_PUBLIC_API_BASE_URL         = $ApiBaseUrl
+    EXPO_PUBLIC_API_BASE_URL         = $ResolvedApiBaseUrl
     EXPO_PUBLIC_API_VERSION          = "v1"
     EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS = "true"
 }

@@ -67,7 +67,23 @@ Build local recommande depuis la racine du projet:
 pnpm mobile:apk
 ```
 
-Les APKs sont produits dans `dist/` et pointent vers Render par defaut.
+Les APKs sont produits dans `dist/`. Par defaut, le build local pointe vers
+l'API LAN du PC (`http://<ip-du-pc>:3000`) pour que le telephone, l'admin local
+et la base locale utilisent les memes donnees.
+
+Pour un APK connecte au backend Render, utiliser les scripts explicites:
+
+```powershell
+pnpm mobile:apk:rider:field
+pnpm mobile:apk:driver:field
+```
+
+Ne pas melanger les deux modes pendant un test:
+
+- APK LAN local: comptes visibles dans la base locale `localhost:5433` et dans
+  l'admin local.
+- APK Render: comptes visibles uniquement dans la base Render/Neon associee au
+  service `https://orbi-field-api.onrender.com`.
 
 Option EAS si le poste local n'est pas disponible:
 
