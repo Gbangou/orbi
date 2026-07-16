@@ -58,6 +58,10 @@ import {
   formatDriverProfileRating,
   resolveDriverProfileRatioTone,
 } from '../../lib/driver-profile-signal';
+import {
+  fallbackDriverProfile,
+  normalizeDriverProfileResponse,
+} from '../../lib/driver-profile-normalizer';
 
 const cityOptions = [
   'OUAGADOUGOU',
@@ -123,49 +127,6 @@ type OnboardingFormState = {
   documentFileNames: Record<DocumentType, string>;
 };
 
-const fallbackProfile: DriverProfileResponse = {
-  profile: {
-    id: 'loading',
-    fullName: '',
-    email: '',
-    phoneNumber: null,
-    status: 'OFFLINE',
-    verificationStatus: 'PENDING',
-    serviceRadiusKm: 8,
-    averageRating: null,
-    completedTripsCount: 0,
-    fatigue: {
-      state: 'clear',
-      completedTrips: 0,
-      drivingMinutes: 0,
-      windowHours: 8,
-      maxCompletedTrips: 8,
-      maxDrivingMinutes: 300,
-      restMinutes: 30,
-      restUntil: null,
-      reason: '',
-    },
-    onboarding: {
-      verificationStatus: 'PENDING',
-      reviewStatus: 'SUBMITTED',
-      completedItems: 0,
-      totalItems: 7,
-      readinessPercent: 0,
-      serviceRadiusKm: 8,
-      city: 'OUAGADOUGOU',
-      submittedAt: null,
-      latestReviewAt: null,
-      latestDecisionReason: null,
-      reviewActorName: null,
-      notes: '',
-      checklist: [],
-      documents: [],
-      reviewTimeline: [],
-    },
-    vehicles: [],
-  },
-};
-
 function inferMimeType(fileName: string) {
   const normalized = fileName.trim().toLowerCase();
 
@@ -227,79 +188,6 @@ function buildInitialForm(profile: DriverProfileResponse): OnboardingFormState {
   };
 }
 
-export function normalizeDriverProfileResponse(
-  response: unknown,
-): DriverProfileResponse {
-  const fallback = fallbackProfile.profile;
-  const record =
-    response && typeof response === 'object'
-      ? (response as { profile?: unknown })
-      : {};
-  const input =
-    record.profile && typeof record.profile === 'object'
-      ? (record.profile as Partial<DriverProfileResponse['profile']>)
-      : {};
-  const fallbackOnboarding = fallback.onboarding;
-  const inputOnboarding =
-    input.onboarding && typeof input.onboarding === 'object'
-      ? (input.onboarding as Partial<DriverProfileResponse['profile']['onboarding']>)
-      : {};
-
-  return {
-    profile: {
-      ...fallback,
-      ...input,
-      id: typeof input.id === 'string' ? input.id : fallback.id,
-      fullName:
-        typeof input.fullName === 'string' ? input.fullName : fallback.fullName,
-      email: typeof input.email === 'string' ? input.email : fallback.email,
-      phoneNumber:
-        typeof input.phoneNumber === 'string' || input.phoneNumber === null
-          ? input.phoneNumber
-          : fallback.phoneNumber,
-      status: typeof input.status === 'string' ? input.status : fallback.status,
-      verificationStatus:
-        typeof input.verificationStatus === 'string'
-          ? input.verificationStatus
-          : fallback.verificationStatus,
-      serviceRadiusKm:
-        typeof input.serviceRadiusKm === 'number' || input.serviceRadiusKm === null
-          ? input.serviceRadiusKm
-          : fallback.serviceRadiusKm,
-      averageRating:
-        typeof input.averageRating === 'number' || input.averageRating === null
-          ? input.averageRating
-          : fallback.averageRating,
-      completedTripsCount:
-        typeof input.completedTripsCount === 'number'
-          ? input.completedTripsCount
-          : fallback.completedTripsCount,
-      fatigue:
-        input.fatigue && typeof input.fatigue === 'object'
-          ? { ...fallback.fatigue, ...input.fatigue }
-          : fallback.fatigue,
-      onboarding: {
-        ...fallbackOnboarding,
-        ...inputOnboarding,
-        checklist: Array.isArray(inputOnboarding.checklist)
-          ? inputOnboarding.checklist
-          : fallbackOnboarding.checklist,
-        documents: Array.isArray(inputOnboarding.documents)
-          ? inputOnboarding.documents
-          : fallbackOnboarding.documents,
-        reviewTimeline: Array.isArray(inputOnboarding.reviewTimeline)
-          ? inputOnboarding.reviewTimeline
-          : fallbackOnboarding.reviewTimeline,
-      },
-      vehicles: Array.isArray(input.vehicles) ? input.vehicles : fallback.vehicles,
-      dispatchSignal:
-        input.dispatchSignal && typeof input.dispatchSignal === 'object'
-          ? input.dispatchSignal
-          : undefined,
-    },
-  };
-}
-
 function formatDocumentLabel(type: DocumentType) {
   return documentDescriptors.find((document) => document.type === type)?.label ?? type;
 }
@@ -319,10 +207,10 @@ export default function ProfilScreen() {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { t } = useTranslation();
   const td = (key: string, opts?: Record<string, unknown>): string => String(t(`driver.${key}`, opts as never));
-  const [profile, setProfile] = useState<DriverProfileResponse>(fallbackProfile);
+  const [profile, setProfile] = useState<DriverProfileResponse>(fallbackDriverProfile);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [form, setForm] = useState<OnboardingFormState>(
-    buildInitialForm(fallbackProfile),
+    buildInitialForm(fallbackDriverProfile),
   );
   const [status, setStatus] = useState('Chargement du profil chauffeur...');
   const [isRefreshing, setIsRefreshing] = useState(false);

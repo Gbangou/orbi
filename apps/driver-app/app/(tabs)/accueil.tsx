@@ -52,6 +52,7 @@ import {
   formatDriverOfferMinutes,
   toFiniteOfferNumber,
 } from '../../lib/offer-signal';
+import { normalizeDriverProfileResponse } from '../../lib/driver-profile-normalizer';
 
 const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
 
@@ -358,18 +359,19 @@ export default function DriverHomeScreen() {
         fetchDriverEarnings(authClient),
         fetchDriverProfile(authClient),
       ]);
+      const normalizedProfile = normalizeDriverProfileResponse(profileResponse);
       setOffers(offersResponse);
       setHistory(historyResponse);
       setEarnings(earningsResponse);
-      setDriverProfileStatus(profileResponse.profile.status);
-      setDriverFatigue(profileResponse.profile.fatigue);
-      setVehicleCount(profileResponse.profile.vehicles.length);
-      setAcceptanceRate(profileResponse.profile.dispatchSignal?.acceptanceRate ?? null);
+      setDriverProfileStatus(normalizedProfile.profile.status);
+      setDriverFatigue(normalizedProfile.profile.fatigue);
+      setVehicleCount(normalizedProfile.profile.vehicles.length);
+      setAcceptanceRate(normalizedProfile.profile.dispatchSignal?.acceptanceRate ?? null);
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: offersResponse,
         reservationNow: Date.now(),
-        driverProfileStatus: profileResponse.profile.status,
+        driverProfileStatus: normalizedProfile.profile.status,
       });
       if (!silent) {
         setStatusNote(buildDriverHomeStatusLabel({ flow, fullName: me.user.fullName }));

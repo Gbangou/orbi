@@ -288,6 +288,18 @@ function buildDriverProfile() {
   };
 }
 
+function buildPartialDriverProfile() {
+  return {
+    profile: {
+      id: 'driver-fresh',
+      fullName: 'Nouveau Chauffeur',
+      email: 'fresh-driver@orbi.app',
+      phoneNumber: '+22676000009',
+      status: 'ONLINE',
+    },
+  };
+}
+
 function buildDriverTripsWithStatus(status: string) {
   return {
     role: 'DRIVER' as const,
@@ -553,6 +565,20 @@ describe('driver smoke flows', () => {
     expect(collectText(renderer.root)).toContain('1.2 km');
   });
 
+  it('keeps the driver home usable when profile blocks are partially hydrated', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers.mockResolvedValue([] as never);
+    mockedFetchMyTrips.mockResolvedValue(buildDriverTrips() as never);
+    mockedFetchDriverEarnings.mockResolvedValue(buildDriverEarningsResponse() as never);
+    mockedFetchDriverProfile.mockResolvedValue(buildPartialDriverProfile() as never);
+
+    const renderer = await renderScreen(<DriverHomeScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Hors ligne');
+    expectText(renderer, 'Vous êtes hors ligne');
+  });
+
   it('loads the driver earnings cockpit with active mission context', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverEarnings.mockResolvedValue(
@@ -589,6 +615,19 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Contrôle payout');
   });
 
+  it('keeps driver earnings usable when profile blocks are partially hydrated', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverEarnings.mockResolvedValue(buildDriverEarningsResponse() as never);
+    mockedFetchMyTrips.mockResolvedValue(buildDriverTrips() as never);
+    mockedFetchDriverProfile.mockResolvedValue(buildPartialDriverProfile() as never);
+
+    const renderer = await renderScreen(<RevenusScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Revenus');
+    expect(collectText(renderer.root)).toContain('Hors ligne');
+  });
+
   it('accepts an offer from the offres screen', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverOffers.mockResolvedValue(
@@ -616,6 +655,19 @@ describe('driver smoke flows', () => {
       { token: 'driver-auth-client' },
       driverOffers[0]?.id,
     );
+  });
+
+  it('keeps driver offers usable when profile blocks are partially hydrated', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers.mockResolvedValue([] as never);
+    mockedFetchMyTrips.mockResolvedValue(buildDriverTrips() as never);
+    mockedFetchDriverProfile.mockResolvedValue(buildPartialDriverProfile() as never);
+
+    const renderer = await renderScreen(<OffersScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Missions');
+    expectText(renderer, 'Hors ligne');
   });
 
   it('absorbs double taps while accepting an offer from the offres screen', async () => {

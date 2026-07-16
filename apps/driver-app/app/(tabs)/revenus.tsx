@@ -27,6 +27,7 @@ import {
 } from '../../lib/driver-earnings-signal';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { useTranslation } from '../../lib/i18n';
+import { normalizeDriverProfileResponse } from '../../lib/driver-profile-normalizer';
 
 const fallbackEarnings: DriverEarningsResponse = {
   summary: {
@@ -410,6 +411,7 @@ export default function RevenusScreen() {
         fetchMyTrips(authClient),
         fetchDriverProfile(authClient),
       ]);
+      const normalizedProfile = normalizeDriverProfileResponse(profileResponse);
       // Charger les incentives (best-effort, jamais bloquant)
       void (async () => {
         try {
@@ -424,12 +426,12 @@ export default function RevenusScreen() {
       })();
       setEarnings(earningsResponse);
       setHistory(historyResponse);
-      setDriverProfileStatus(profileResponse.profile.status);
+      setDriverProfileStatus(normalizedProfile.profile.status);
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: [],
         reservationNow: Date.now(),
-        driverProfileStatus: profileResponse.profile.status,
+        driverProfileStatus: normalizedProfile.profile.status,
       });
       setStatus(buildDriverEarningsStatusLabel({ flow }));
     } catch (error) {

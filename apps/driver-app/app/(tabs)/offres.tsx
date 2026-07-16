@@ -68,6 +68,7 @@ import {
 import { useDriverPresence } from "../../lib/use-driver-presence";
 import { useDriverRealtimeStream } from "../../lib/use-driver-realtime-stream";
 import { TripMapView } from "../../lib/trip-map-view";
+import { normalizeDriverProfileResponse } from "../../lib/driver-profile-normalizer";
 import { ApproachMapView } from "../../lib/approach-map-view";
 import { useLiveRefresh } from "../../lib/use-live-refresh";
 import {
@@ -196,15 +197,16 @@ export default function OffersScreen() {
           withNetworkRetry(() => fetchMyTrips(authClient), { maxAttempts: 3, onRetry }),
           withNetworkRetry(() => fetchDriverProfile(authClient), { maxAttempts: 3, onRetry }),
         ]);
+      const normalizedProfile = normalizeDriverProfileResponse(profileResponse);
       setOffers(offersResponse);
       setHistory(historyResponse);
-      setDriverProfileStatus(profileResponse.profile.status);
-      setDriverFatigue(profileResponse.profile.fatigue);
+      setDriverProfileStatus(normalizedProfile.profile.status);
+      setDriverFatigue(normalizedProfile.profile.fatigue);
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: offersResponse,
         reservationNow: Date.now(),
-        driverProfileStatus: profileResponse.profile.status,
+        driverProfileStatus: normalizedProfile.profile.status,
       });
       const activeTrip = flow.activeTrip;
 
