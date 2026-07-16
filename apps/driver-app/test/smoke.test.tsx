@@ -11,8 +11,10 @@ import {
   fetchDriverProfile,
   fetchMyTrips,
   fetchTripDetail,
+  getMySupportTicketsWithApi,
   reportTripIncidentWithApi,
   triggerTripSafetySosWithApi,
+  createSupportTicketWithApi,
   requestDriverDocumentUploadLinks,
   upsertDriverOnboarding,
   updateDriverAvailabilityWithApi,
@@ -109,6 +111,8 @@ jest.mock('@orbi/api', () => {
     fetchDriverProfile: jest.fn(),
     fetchMyTrips: jest.fn(),
     fetchTripDetail: jest.fn(),
+    getMySupportTicketsWithApi: jest.fn(),
+    createSupportTicketWithApi: jest.fn(),
     acceptRideRequestWithApi: jest.fn(),
     declineDriverOfferWithApi: jest.fn(),
     requestDriverDocumentUploadLinks: jest.fn(),
@@ -129,6 +133,8 @@ const mockedFetchMyTrips = jest.mocked(fetchMyTrips);
 const mockedFetchDriverEarnings = jest.mocked(fetchDriverEarnings);
 const mockedFetchDriverProfile = jest.mocked(fetchDriverProfile);
 const mockedFetchTripDetail = jest.mocked(fetchTripDetail);
+const mockedGetMySupportTicketsWithApi = jest.mocked(getMySupportTicketsWithApi);
+const mockedCreateSupportTicketWithApi = jest.mocked(createSupportTicketWithApi);
 const mockedAcceptRideRequestWithApi = jest.mocked(acceptRideRequestWithApi);
 const mockedDeclineDriverOfferWithApi = jest.mocked(declineDriverOfferWithApi);
 const mockedReportTripIncidentWithApi = jest.mocked(reportTripIncidentWithApi);
@@ -378,6 +384,8 @@ beforeEach(() => {
   mockedFetchDriverEarnings.mockReset();
   mockedFetchDriverProfile.mockReset();
   mockedFetchTripDetail.mockReset();
+  mockedGetMySupportTicketsWithApi.mockReset();
+  mockedCreateSupportTicketWithApi.mockReset();
   mockedAcceptRideRequestWithApi.mockReset();
   mockedDeclineDriverOfferWithApi.mockReset();
   mockedReportTripIncidentWithApi.mockReset();
@@ -394,6 +402,18 @@ beforeEach(() => {
     message: 'Fallback driver error.',
     shouldClearSessionToken: false,
   });
+  mockedGetMySupportTicketsWithApi.mockResolvedValue({ tickets: [] } as never);
+  mockedCreateSupportTicketWithApi.mockResolvedValue({
+    ticket: {
+      id: 'ticket-driver-1',
+      subject: 'Support',
+      description: 'Demande recue.',
+      status: 'OPEN',
+      priority: 2,
+      adminNote: null,
+      createdAt: '2026-04-19T08:00:00.000Z',
+    },
+  } as never);
   jest.mocked(Linking.openURL).mockResolvedValue(undefined);
   mockedTriggerTripSafetySosWithApi.mockResolvedValue({
     sos: {
@@ -715,6 +735,32 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Profil local de secours affiche en attendant la connexion API.');
     expectText(renderer, 'Identite');
     expectText(renderer, 'Onboarding securise');
+  });
+
+  it('keeps a newly created driver profile usable when onboarding blocks are not hydrated yet', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverProfile.mockResolvedValue({
+      profile: {
+        id: 'driver-new',
+        fullName: 'Nouveau Chauffeur',
+        email: 'new.driver@orbi.app',
+        phoneNumber: null,
+        status: 'OFFLINE',
+        verificationStatus: 'PENDING',
+        serviceRadiusKm: null,
+        averageRating: null,
+        completedTripsCount: 0,
+      },
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildDriverTrips() as never);
+
+    const renderer = await renderScreen(<ProfilScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Nouveau Chauffeur');
+    expectText(renderer, 'Onboarding securise');
+    expectText(renderer, 'Dossier 0/7 complete a 0%');
+    expectText(renderer, 'Aucun véhicule enregistré pour le moment.');
   });
 
   it('redirects to auth when the driver session is expired during profile refresh', async () => {

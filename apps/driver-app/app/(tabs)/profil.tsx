@@ -185,11 +185,17 @@ function inferMimeType(fileName: string) {
 }
 
 function buildInitialForm(profile: DriverProfileResponse): OnboardingFormState {
-  const primaryVehicle = profile.profile.vehicles[0];
+  const vehicles = Array.isArray(profile.profile.vehicles)
+    ? profile.profile.vehicles
+    : [];
+  const documents = Array.isArray(profile.profile.onboarding.documents)
+    ? profile.profile.onboarding.documents
+    : [];
+  const primaryVehicle = vehicles[0];
   const vehicleType = primaryVehicle?.type ?? 'CAR';
   const existingDocuments = Object.fromEntries(
     documentDescriptors.map((document) => {
-      const existing = profile.profile.onboarding.documents.find(
+      const existing = documents.find(
         (candidate) => candidate.type === document.type,
       );
 
@@ -218,6 +224,79 @@ function buildInitialForm(profile: DriverProfileResponse): OnboardingFormState {
       (primaryVehicle ? toApiTier(primaryVehicle.tier) : undefined) ??
       (vehicleType === 'MOTORCYCLE' ? 'MOTO_STANDARD' : 'CAR_STANDARD'),
     documentFileNames: existingDocuments,
+  };
+}
+
+export function normalizeDriverProfileResponse(
+  response: unknown,
+): DriverProfileResponse {
+  const fallback = fallbackProfile.profile;
+  const record =
+    response && typeof response === 'object'
+      ? (response as { profile?: unknown })
+      : {};
+  const input =
+    record.profile && typeof record.profile === 'object'
+      ? (record.profile as Partial<DriverProfileResponse['profile']>)
+      : {};
+  const fallbackOnboarding = fallback.onboarding;
+  const inputOnboarding =
+    input.onboarding && typeof input.onboarding === 'object'
+      ? (input.onboarding as Partial<DriverProfileResponse['profile']['onboarding']>)
+      : {};
+
+  return {
+    profile: {
+      ...fallback,
+      ...input,
+      id: typeof input.id === 'string' ? input.id : fallback.id,
+      fullName:
+        typeof input.fullName === 'string' ? input.fullName : fallback.fullName,
+      email: typeof input.email === 'string' ? input.email : fallback.email,
+      phoneNumber:
+        typeof input.phoneNumber === 'string' || input.phoneNumber === null
+          ? input.phoneNumber
+          : fallback.phoneNumber,
+      status: typeof input.status === 'string' ? input.status : fallback.status,
+      verificationStatus:
+        typeof input.verificationStatus === 'string'
+          ? input.verificationStatus
+          : fallback.verificationStatus,
+      serviceRadiusKm:
+        typeof input.serviceRadiusKm === 'number' || input.serviceRadiusKm === null
+          ? input.serviceRadiusKm
+          : fallback.serviceRadiusKm,
+      averageRating:
+        typeof input.averageRating === 'number' || input.averageRating === null
+          ? input.averageRating
+          : fallback.averageRating,
+      completedTripsCount:
+        typeof input.completedTripsCount === 'number'
+          ? input.completedTripsCount
+          : fallback.completedTripsCount,
+      fatigue:
+        input.fatigue && typeof input.fatigue === 'object'
+          ? { ...fallback.fatigue, ...input.fatigue }
+          : fallback.fatigue,
+      onboarding: {
+        ...fallbackOnboarding,
+        ...inputOnboarding,
+        checklist: Array.isArray(inputOnboarding.checklist)
+          ? inputOnboarding.checklist
+          : fallbackOnboarding.checklist,
+        documents: Array.isArray(inputOnboarding.documents)
+          ? inputOnboarding.documents
+          : fallbackOnboarding.documents,
+        reviewTimeline: Array.isArray(inputOnboarding.reviewTimeline)
+          ? inputOnboarding.reviewTimeline
+          : fallbackOnboarding.reviewTimeline,
+      },
+      vehicles: Array.isArray(input.vehicles) ? input.vehicles : fallback.vehicles,
+      dispatchSignal:
+        input.dispatchSignal && typeof input.dispatchSignal === 'object'
+          ? input.dispatchSignal
+          : undefined,
+    },
   };
 }
 
@@ -526,23 +605,28 @@ export default function ProfilScreen() {
         fetchMyTrips(authClient),
         getMySupportTicketsWithApi(authClient),
       ]);
-      setProfile(profileResponse);
+      const normalizedProfile = normalizeDriverProfileResponse(profileResponse);
+      const nextTickets = Array.isArray(ticketsResponse.tickets)
+        ? ticketsResponse.tickets
+        : [];
+
+      setProfile(normalizedProfile);
       setHistory(historyResponse);
-      setTickets(ticketsResponse.tickets);
-      setForm(buildInitialForm(profileResponse));
+      setTickets(nextTickets);
+      setForm(buildInitialForm(normalizedProfile));
       setPreparedDocumentLinks({});
       setHasLoadedProfile(true);
       if (!hasSetOnboardingFormDefault) {
         // First load: open the form automatically only if there's nothing to edit yet —
         // returning drivers with a vehicle already on file get the compact summary instead.
-        setIsOnboardingFormOpen(profileResponse.profile.vehicles.length === 0);
+        setIsOnboardingFormOpen(normalizedProfile.profile.vehicles.length === 0);
         setHasSetOnboardingFormDefault(true);
       }
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: [],
         reservationNow: 0,
-        driverProfileStatus: profileResponse.profile.status,
+        driverProfileStatus: normalizedProfile.profile.status,
       });
       if (!silent) {
         setStatus(buildDriverProfileStatusLabel({ flow }));
