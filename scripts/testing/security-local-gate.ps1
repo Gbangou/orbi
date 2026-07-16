@@ -43,7 +43,8 @@ if (-not $SkipAudit) {
   Invoke-Gate -Name "SCA dependency audit" -Executable "pnpm" -Arguments @(
     "audit",
     "--audit-level",
-    "moderate"
+    "moderate",
+    "--ignore-registry-errors"
   )
 }
 

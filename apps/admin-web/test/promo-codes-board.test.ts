@@ -2,7 +2,10 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { normalizePromoCodeDate } from '../app/api/admin/promo-codes/route';
+import {
+  normalizePromoCodeDate,
+  normalizePromoCodePayload,
+} from '../app/api/admin/promo-codes/route';
 import { resolvePromoCodeFormPayload } from '../app/promo-code-safety';
 
 describe('promo codes board', () => {
@@ -149,12 +152,14 @@ describe('promo codes board', () => {
   });
 
   it('rejects promo windows where validTo is not after validFrom', () => {
-    const routeSource = readFileSync(
-      join(process.cwd(), 'app/api/admin/promo-codes/route.ts'),
-      'utf8',
-    );
-
-    expect(routeSource).toContain('validToMs <= validFromMs');
+    expect(
+      normalizePromoCodePayload({
+        code: 'WELCOME',
+        discountBps: 2000,
+        validFrom: '2026-07-31T00:00:00.000Z',
+        validTo: '2026-07-15T00:00:00.000Z',
+      }),
+    ).toBeNull();
   });
 
   it('keeps the promo-codes list route no-store and auth-guarded', () => {

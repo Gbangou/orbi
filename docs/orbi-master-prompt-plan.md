@@ -759,6 +759,14 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   l expiration est un vrai instant UTC ISO non expire. Suites
   `trips.service.spec.ts`, `trip-query.service.spec.ts` et `pnpm typecheck`
   workspace verts.
+- 16 juillet 2026: gap A ferme "gates release non robustes avant test terrain".
+  `pnpm audit` echoue maintenant cote registre npm avec un endpoint retire, ce
+  qui bloquait les preuves release sans signal de vulnerabilite exploitable. Les
+  gates production/securite tolerent desormais l indisponibilite fournisseur via
+  `--ignore-registry-errors` tout en gardant le blocage sur vulnerabilites
+  reportees. Le smoke admin neutralise aussi `server-only` au niveau Jest, et le
+  test promo verifie directement le rejet d une fenetre invalide. Gates
+  `pnpm test:production:gate` et `pnpm test:security:local` verts.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

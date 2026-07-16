@@ -55,7 +55,7 @@ export function normalizePromoCodeDate(value: unknown) {
   return date.toISOString();
 }
 
-function normalizePromoCodePayload(value: unknown) {
+export function normalizePromoCodePayload(value: unknown) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return null;
   }

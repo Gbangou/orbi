@@ -9,6 +9,7 @@ module.exports = {
   moduleNameMapper: {
     '^@orbi/ui$': '<rootDir>/test/orbi-ui.mock.ts',
     '^react-native$': '<rootDir>/test/react-native.mock.js',
+    '^server-only$': '<rootDir>/test/server-only.mock.js',
   },
   testMatch: ['<rootDir>/test/**/*.test.ts?(x)'],
   transform: {

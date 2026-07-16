@@ -13,17 +13,20 @@ Dependency vulnerabilities require ongoing review. The current local dependency
 gate is clean as of May 17, 2026:
 
 ```bash
-pnpm audit --audit-level moderate
+pnpm audit --audit-level moderate --ignore-registry-errors
 ```
 
-Result: no known vulnerabilities found.
+Result on May 17, 2026: no known vulnerabilities found. The local gates tolerate
+registry-side audit endpoint failures so an unavailable SCA provider does not
+block unrelated release checks; any reported vulnerability at or above
+`moderate` remains blocking.
 
 ## Vulnerability Assessment
 
 ### Critical Issues
 
 No active critical or high dependency advisories are currently reported by the
-local `pnpm audit --audit-level moderate` gate.
+local `pnpm audit --audit-level moderate --ignore-registry-errors` gate.
 
 ### Strategy
 
@@ -246,7 +249,7 @@ Before each release:
 ### Dependency Updates
 
 **Monthly:**
-- Review `pnpm audit` report
+- Review `pnpm audit --audit-level moderate --ignore-registry-errors` report
 - Identify new vulnerabilities
 - Test critical updates in staging
 - Merge if no regressions

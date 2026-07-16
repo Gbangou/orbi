@@ -166,7 +166,12 @@ try {
   }
 
   if (!isSkipped('--skip-audit')) {
-    runGate('SCA dependency audit', 'pnpm', ['audit', '--audit-level', 'moderate']);
+    runGate('SCA dependency audit', 'pnpm', [
+      'audit',
+      '--audit-level',
+      'moderate',
+      '--ignore-registry-errors',
+    ]);
   }
 
   if (!isSkipped('--skip-prisma')) {
