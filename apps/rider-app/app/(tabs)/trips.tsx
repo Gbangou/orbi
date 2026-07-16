@@ -19,6 +19,7 @@ import {
   formatRiderMoneyAmount,
   resolveRiderMoneyAmount,
 } from '../../lib/rider-display-format';
+import { normalizeRiderTripsResponse } from '../../lib/rider-trips-normalizer';
 
 type TripItem = MyTripsResponse['recentTrips'][number];
 type RequestItem = MyTripsResponse['pendingRequests'][number];
@@ -160,9 +161,10 @@ export default function TripsScreen() {
     try {
       const { authClient } = await restoreRiderSession();
       const response = await fetchMyTrips(authClient);
-      setData(response);
-      const total = response.stats.completedTrips + response.stats.cancelledTrips;
-      setStatus(`${total} course${total !== 1 ? 's' : ''} au total · ${response.stats.completedTrips} terminee${response.stats.completedTrips !== 1 ? 's' : ''}`);
+      const normalizedHistory = normalizeRiderTripsResponse(response);
+      setData(normalizedHistory);
+      const total = normalizedHistory.stats.completedTrips + normalizedHistory.stats.cancelledTrips;
+      setStatus(`${total} course${total !== 1 ? 's' : ''} au total · ${normalizedHistory.stats.completedTrips} terminee${normalizedHistory.stats.completedTrips !== 1 ? 's' : ''}`);
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         network: 'Impossible de charger l historique. Verifiez la connexion.',

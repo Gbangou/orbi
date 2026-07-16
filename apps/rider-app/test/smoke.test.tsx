@@ -32,6 +32,7 @@ import type { RiderProfileResponse } from '@orbi/api';
 import {
   restoreRiderSession,
   signInRiderAccount,
+  signUpRiderAccount,
   signOutRiderAccount,
 } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
@@ -40,6 +41,7 @@ import ActivityScreen from '../app/(tabs)/activity';
 import RiderAuthScreen from '../app/auth';
 import RiderHomeScreen from '../app/(tabs)/home';
 import BookingScreen from '../app/book';
+import TripsScreen from '../app/(tabs)/trips';
 import VoiceScreen from '../app/voice';
 import {
   collectText,
@@ -148,6 +150,7 @@ jest.mock('@orbi/api', () => {
 });
 
 const mockedSignInRiderAccount = jest.mocked(signInRiderAccount);
+const mockedSignUpRiderAccount = jest.mocked(signUpRiderAccount);
 const mockedRestoreRiderSession = jest.mocked(restoreRiderSession);
 const mockedSignOutRiderAccount = jest.mocked(signOutRiderAccount);
 const mockedCancelRideRequestWithApi = jest.mocked(cancelRideRequestWithApi);
@@ -201,6 +204,15 @@ function buildRiderTrips() {
     },
     pendingRequests: [],
     recentTrips: [],
+  };
+}
+
+function buildPartialRiderTrips() {
+  return {
+    role: 'RIDER',
+    stats: {
+      completedTrips: 0,
+    },
   };
 }
 
@@ -357,6 +369,7 @@ function buildRiderProfile(
 
 beforeEach(() => {
   mockedSignInRiderAccount.mockReset();
+  mockedSignUpRiderAccount.mockReset();
   mockedRestoreRiderSession.mockReset();
   mockedSignOutRiderAccount.mockReset();
   mockedCancelRideRequestWithApi.mockReset();
@@ -574,6 +587,24 @@ describe('rider smoke flows', () => {
     expect(router.replace).toHaveBeenCalledWith('/home');
   });
 
+  it('creates a fresh rider account and redirects to home', async () => {
+    mockedSignUpRiderAccount.mockResolvedValue(buildRiderSession() as never);
+
+    const renderer = await renderScreen(<RiderAuthScreen />);
+    await pressByText(renderer, 'Inscription');
+    await changeInputByPlaceholder(renderer, 'Ex : Aminata Traoré', ' Nouveau Passager ');
+    await changeInputByPlaceholder(renderer, 'exemple@gmail.com', ' Fresh@Orbi.App ');
+    await changeInputByPlaceholder(renderer, 'Min. 8 car. · Maj · Chiffre · Symbole', 'Orbi123!');
+    await pressByText(renderer, 'Créer mon compte');
+
+    expect(mockedSignUpRiderAccount).toHaveBeenCalledWith({
+      fullName: 'Nouveau Passager',
+      email: 'fresh@orbi.app',
+      password: 'Orbi123!',
+    });
+    expect(router.replace).toHaveBeenCalledWith('/home');
+  });
+
   it('surfaces a network-specific auth message', async () => {
     mockedSignInRiderAccount.mockRejectedValue(new TypeError('Network request failed'));
 
@@ -617,6 +648,23 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderHomeScreen />);
     // Home screen auto-loads on mount — no manual refresh button needed
+    expectText(renderer, 'Où allez-vous ?');
+  });
+
+  it('keeps home usable when a fresh rider trip history is partially hydrated', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildPartialRiderTrips() as never);
+
+    const renderer = await renderScreen(<RiderHomeScreen />);
+    await flushMicrotasks();
+
     expectText(renderer, 'Où allez-vous ?');
   });
 
@@ -757,6 +805,24 @@ describe('rider smoke flows', () => {
         phoneNumber: '+22670000009',
       },
     } as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Réserver');
+  });
+
+  it('keeps booking usable when rider trip history is partially hydrated', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildPartialRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
 
     const renderer = await renderScreen(<BookingScreen />);
     await flushMicrotasks();
@@ -1269,6 +1335,28 @@ describe('rider smoke flows', () => {
     // Voice screen shows the mic button prompt — analyzeTranscript is triggered
     // by user interaction (recording), not automatically on mount
     expectText(renderer, 'Appuyez et parlez');
+  });
+
+  it('keeps activity usable when rider trip history is partially hydrated', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchMyTrips.mockResolvedValue(buildPartialRiderTrips() as never);
+
+    const renderer = await renderScreen(<ActivityScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Activité');
+    expectText(renderer, 'Programme Fidélité');
+  });
+
+  it('keeps trips usable when rider trip history is partially hydrated', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchMyTrips.mockResolvedValue(buildPartialRiderTrips() as never);
+
+    const renderer = await renderScreen(<TripsScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Mes trajets');
+    expectText(renderer, '0 courses au total · 0 terminees');
   });
 
   it('shows live rider trip transitions in activity after a realtime update', async () => {

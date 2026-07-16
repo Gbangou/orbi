@@ -39,6 +39,7 @@ import {
   buildRiderHomeStatusLabel,
   resolveRiderActiveFlow,
 } from '../../lib/rider-active-flow';
+import { normalizeRiderTripsResponse } from '../../lib/rider-trips-normalizer';
 import { useRiderPosition } from '../../lib/use-rider-position';
 import { HomeMapView } from '../../lib/home-map-view';
 
@@ -336,16 +337,21 @@ export default function RiderHomeScreen() {
         fetchMyTrips(authClient),
       ]);
 
-      setOptions(response.options);
-      setHistory(historyResponse);
+      const normalizedHistory = normalizeRiderTripsResponse(historyResponse);
+      const safeOptions =
+        response && typeof response === 'object' && Array.isArray(response.options)
+          ? response.options
+          : [];
+      setOptions(safeOptions);
+      setHistory(normalizedHistory);
       setIsOffline(false);
 
       if (!silent) {
-        const flow = resolveRiderActiveFlow(historyResponse);
+        const flow = resolveRiderActiveFlow(normalizedHistory);
         buildRiderHomeStatusLabel({
           flow,
           fullName: me.user.fullName,
-          optionCount: response.options.length,
+          optionCount: safeOptions.length,
         });
       }
     } catch (error) {

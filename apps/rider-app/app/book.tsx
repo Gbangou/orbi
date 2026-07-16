@@ -71,6 +71,7 @@ import {
   fallbackRiderProfile,
   normalizeRiderProfileResponse,
 } from '../lib/rider-profile-normalizer';
+import { normalizeRiderTripsResponse } from '../lib/rider-trips-normalizer';
 
 const cityPresets = burkinaPricingCityPresets;
 const fieldDispatchRadiusKm = 8;
@@ -505,6 +506,7 @@ export default function BookingScreen() {
             (driver) => driver.status === 'ONLINE',
           ).length
         : null;
+      const normalizedHistory = normalizeRiderTripsResponse(historyResponse);
       setNearbyCompatibleDriverCount(compatibleDriverCount);
 
       const response = await fetchRideOptionsPreview(client, {
@@ -517,20 +519,24 @@ export default function BookingScreen() {
         districtProfile: selectedCity.districtProfile,
         isPeakHour: true,
         activeDriverCount: compatibleDriverCount ?? 0,
-        openRequestCount: historyResponse.pendingRequests.length,
+        openRequestCount: normalizedHistory.pendingRequests.length,
       });
+      const safeOptions =
+        response && typeof response === 'object' && Array.isArray(response.options)
+          ? response.options
+          : [];
 
-      setOptions(response.options);
-      setHistory(historyResponse);
+      setOptions(safeOptions);
+      setHistory(normalizedHistory);
       setProfile(normalizeRiderProfileResponse(profileResponse));
       if (options.resetPaymentPreview ?? true) {
         setPaymentPreview(null);
       }
-      const flow = resolveRiderActiveFlow(historyResponse);
+      const flow = resolveRiderActiveFlow(normalizedHistory);
 
-      const firstOption = response.options[0];
+      const firstOption = safeOptions[0];
       const nextSelectedOption =
-        response.options.find((option) => option.id === selectedOptionId) ??
+        safeOptions.find((option) => option.id === selectedOptionId) ??
         firstOption ??
         null;
 

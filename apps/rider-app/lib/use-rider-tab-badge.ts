@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Notifications from 'expo-notifications';
-import { fetchMyTrips, createOrbiApiClient } from '@orbi/api';
-import { orbiRuntimeConfig, resolveOrbiApiBaseUrlForRuntime } from '@orbi/config';
+import { fetchMyTrips } from '@orbi/api';
 import { resolveRiderActiveFlow } from './rider-active-flow';
 import { restoreRiderSession } from './auth';
+import { normalizeRiderTripsResponse } from './rider-trips-normalizer';
 
 /**
  * Polls the active flow state to drive tab bar badges.
@@ -19,7 +19,7 @@ export function useRiderTabBadge() {
     try {
       const { authClient } = await restoreRiderSession();
       const history = await fetchMyTrips(authClient);
-      const flow = resolveRiderActiveFlow(history);
+      const flow = resolveRiderActiveFlow(normalizeRiderTripsResponse(history));
       const badgeCount = flow.hasOpenFlow ? 1 : 0;
       setActivityBadge(badgeCount);
       // Sync app icon badge count (iOS only; Android uses notification channels)

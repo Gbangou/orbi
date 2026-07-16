@@ -5,6 +5,7 @@ import {
 } from "@orbi/api";
 import { formatOperationalStatus } from "@orbi/ui";
 import { formatRiderMoneyAmount } from "./rider-display-format";
+import { normalizeRiderTripsResponse } from "./rider-trips-normalizer";
 
 function toFiniteFlowNumber(value: unknown) {
   if (typeof value === "number") {
@@ -41,11 +42,12 @@ export type RiderActiveFlowSummary = {
 export function resolveRiderActiveFlow(
   history: MyTripsResponse | null | undefined,
 ): RiderActiveFlowSummary {
+  const normalizedHistory = normalizeRiderTripsResponse(history);
   const activeTrip =
-    history?.recentTrips.find((trip) =>
+    normalizedHistory.recentTrips.find((trip) =>
       isActiveTripLifecycleStatus(trip.status),
     ) ?? null;
-  const activeRequest = history?.pendingRequests[0] ?? null;
+  const activeRequest = normalizedHistory.pendingRequests[0] ?? null;
   const activeFlowState = activeTrip
     ? `TRIP:${activeTrip.status}`
     : activeRequest

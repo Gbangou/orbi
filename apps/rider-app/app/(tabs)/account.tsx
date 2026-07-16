@@ -54,6 +54,7 @@ import {
   fallbackRiderProfile,
   normalizeRiderProfileResponse,
 } from '../../lib/rider-profile-normalizer';
+import { normalizeRiderTripsResponse } from '../../lib/rider-trips-normalizer';
 
 function ForwardGlyph() {
   const theme = useOrbiTheme();
@@ -234,6 +235,7 @@ export default function AccountScreen() {
         fetchWalletBalanceWithApi(authClient).catch(() => null),
       ]);
       const normalizedProfile = normalizeRiderProfileResponse(profileResponse);
+      const normalizedHistory = normalizeRiderTripsResponse(historyResponse);
       setWalletBalance(walletResp);
       setProfile(normalizedProfile);
       setTickets(Array.isArray(ticketsResponse?.tickets) ? ticketsResponse.tickets : []);
@@ -245,9 +247,9 @@ export default function AccountScreen() {
             : normalizedProfile.profile.trustedContact.shareMode,
         notes: '',
       });
-      setHistory(historyResponse);
+      setHistory(normalizedHistory);
       if (!silent) {
-        const nextFlow = resolveRiderActiveFlow(historyResponse);
+        const nextFlow = resolveRiderActiveFlow(normalizedHistory);
         setStatus(
           buildRiderPeripheralStatusLabel({
             flow: nextFlow,

@@ -67,19 +67,10 @@ import { useRiderPosition } from "../../lib/use-rider-position";
 import { resolveRiderAppError } from "../../lib/session-feedback";
 import { TripMapView } from "../../lib/trip-map-view";
 import { resolveOrbiApiBaseUrlForRuntime } from "@orbi/config";
-
-const fallbackHistory: MyTripsResponse = {
-  role: "RIDER",
-  stats: {
-    activeTrips: 0,
-    completedTrips: 0,
-    cancelledTrips: 0,
-    totalAmount: 0,
-    currency: "XOF",
-  },
-  pendingRequests: [],
-  recentTrips: [],
-};
+import {
+  fallbackRiderTrips,
+  normalizeRiderTripsResponse,
+} from "../../lib/rider-trips-normalizer";
 
 const MILESTONES = [
   { trips: 5, badge: "Pionnier", icon: "▸" },
@@ -203,7 +194,7 @@ export default function ActivityScreen() {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { t } = useTranslation();
-  const [history, setHistory] = useState<MyTripsResponse>(fallbackHistory);
+  const [history, setHistory] = useState<MyTripsResponse>(fallbackRiderTrips);
   const [activeTripDetail, setActiveTripDetail] =
     useState<TripDetailResponse | null>(null);
   const [status, setStatus] = useState("Chargement de l historique...");
@@ -242,9 +233,10 @@ export default function ActivityScreen() {
             setStatus(`Reconnexion... (tentative ${attempt}/${max})`),
         },
       );
-      setHistory(response);
+      const normalizedHistory = normalizeRiderTripsResponse(response);
+      setHistory(normalizedHistory);
 
-      const activeTrip = response.recentTrips.find((trip) =>
+      const activeTrip = normalizedHistory.recentTrips.find((trip) =>
         isActiveTripLifecycleStatus(trip.status),
       );
 
