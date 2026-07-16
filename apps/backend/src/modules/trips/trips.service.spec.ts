@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { TripsService } from './trips.service';
 import { ACTIVE_TRIP_STATUSES } from './trips.constants';
 import { createHash } from 'crypto';
+import { parseStrictTripShareExpiry } from './trip-share-expiry';
 
 describe('TripsService', () => {
   function buildFreshDriverRouteEvent(overrides: Record<string, unknown> = {}) {
@@ -1602,6 +1603,41 @@ describe('TripsService', () => {
       createdAt: new Date('2026-05-02T10:00:00.000Z'),
       trip: {
         id: 'trip-share-expired',
+        status: 'IN_PROGRESS',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        rider: { user: { fullName: 'Awa Rider' } },
+        driver: { user: { fullName: 'Issa Driver' } },
+        vehicle: { make: 'Yamaha', model: 'Crypton' },
+        events: [],
+      },
+    });
+
+    await expect(service.getSharedTrip(token)).rejects.toThrow(
+      'Shared trip not found.',
+    );
+  });
+
+  it('rejects public share tokens with normalized invalid expiry dates', async () => {
+    const { prisma, service } = createService();
+    const token = 'share-token-invalid-expiry-1234567890';
+
+    expect(
+      parseStrictTripShareExpiry('2027-04-18T06:30:00Z')?.toISOString(),
+    ).toBe('2027-04-18T06:30:00.000Z');
+    expect(parseStrictTripShareExpiry('2027-02-31T00:00:00.000Z')).toBeNull();
+    expect(parseStrictTripShareExpiry('2027-04-18')).toBeNull();
+
+    prisma.tripEvent.findFirst.mockResolvedValue({
+      id: 'event-share-invalid-expiry',
+      eventType: 'SHARE_LINK_CREATED',
+      payload: {
+        tokenHash: createHash('sha256').update(token).digest('hex'),
+        expiresAt: '2027-02-31T00:00:00.000Z',
+      },
+      createdAt: new Date('2026-05-02T10:00:00.000Z'),
+      trip: {
+        id: 'trip-share-invalid-expiry',
         status: 'IN_PROGRESS',
         pickupAddress: 'Universite Joseph Ki-Zerbo',
         destinationAddress: 'Ouaga 2000',

@@ -40,6 +40,7 @@ import {
   driverFatigueWindowHours,
   evaluateDriverFatigue,
 } from '../drivers/driver-fatigue.policy';
+import { parseStrictTripShareExpiry } from './trip-share-expiry';
 
 const tripShareLinkTtlMinutes = 120;
 const routeMonitoringAlertCooldownMinutes = 15;
@@ -463,12 +464,9 @@ export class TripsService {
     const sharePayload = isRecord(shareEvent?.payload)
       ? shareEvent.payload
       : {};
-    const expiresAt =
-      typeof sharePayload.expiresAt === 'string'
-        ? Date.parse(sharePayload.expiresAt)
-        : NaN;
+    const expiresAt = parseStrictTripShareExpiry(sharePayload.expiresAt);
 
-    if (!shareEvent || expiresAt <= now) {
+    if (!shareEvent || !expiresAt || expiresAt.getTime() <= now) {
       throw new NotFoundException('Shared trip not found.');
     }
 
@@ -492,9 +490,7 @@ export class TripsService {
             }
           : null,
         expiresAt:
-          typeof sharePayload.expiresAt === 'string'
-            ? sharePayload.expiresAt
-            : null,
+          expiresAt.toISOString(),
         safetyNote:
           'Lien limite aux informations utiles de securite. Aucun nom reel ni numero personnel n est expose.',
       },

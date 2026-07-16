@@ -22,6 +22,7 @@ import {
   serializeTripHistoryItem,
 } from './trips.presenter';
 import { toAmount } from './trips.utils';
+import { parseStrictTripShareExpiry } from './trip-share-expiry';
 
 function hashShareToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
@@ -93,12 +94,9 @@ export class TripQueryService {
 
     const now = Date.now();
     const sharePayload = isRecord(shareEvent?.payload) ? shareEvent.payload : {};
-    const expiresAt =
-      typeof sharePayload.expiresAt === 'string'
-        ? Date.parse(sharePayload.expiresAt)
-        : NaN;
+    const expiresAt = parseStrictTripShareExpiry(sharePayload.expiresAt);
 
-    if (!shareEvent || expiresAt <= now) {
+    if (!shareEvent || !expiresAt || expiresAt.getTime() <= now) {
       throw new NotFoundException('Shared trip not found.');
     }
 
@@ -120,7 +118,7 @@ export class TripQueryService {
               createdAt: lastEvent.createdAt.toISOString(),
             }
           : null,
-        expiresAt: new Date(expiresAt).toISOString(),
+        expiresAt: expiresAt.toISOString(),
       },
     };
   }

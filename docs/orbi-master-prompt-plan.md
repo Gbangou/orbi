@@ -750,6 +750,15 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `parseStrictDriverDocumentExpiry`: seules les expirations UTC ISO reelles sont
   acceptees, une expiration sale bloque la persistance, l audit et le job.
   Suite `drivers.service.spec.ts` et `pnpm typecheck` workspace verts.
+- 16 juillet 2026: gap A ferme "lien partage trajet acceptait une expiration
+  parsee permissivement". Les lectures publiques `TripsService#getSharedTrip`
+  et `TripQueryService#getSharedTrip` utilisaient encore `Date.parse` sur
+  `payload.expiresAt`. Une date calendrier impossible pouvait donc etre
+  normalisee au lieu de rendre le lien introuvable. Ajout de
+  `parseStrictTripShareExpiry`: le lien safety/share n est servi que si
+  l expiration est un vrai instant UTC ISO non expire. Suites
+  `trips.service.spec.ts`, `trip-query.service.spec.ts` et `pnpm typecheck`
+  workspace verts.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

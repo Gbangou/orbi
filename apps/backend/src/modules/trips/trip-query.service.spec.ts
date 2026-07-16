@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { TripQueryService } from './trip-query.service';
+import { createHash } from 'crypto';
 
 describe('TripQueryService', () => {
   function makeService(prismaMock: object) {
@@ -98,6 +99,33 @@ describe('TripQueryService', () => {
       await expect(
         service.getSharedTrip('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejects share links with normalized invalid expiry dates', async () => {
+      const token = 'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
+      const prisma = {
+        tripEvent: {
+          findFirst: jest.fn().mockResolvedValue({
+            payload: {
+              tokenHash: createHash('sha256').update(token).digest('hex'),
+              expiresAt: '2027-02-31T00:00:00.000Z',
+            },
+            trip: {
+              id: 't1',
+              status: 'IN_PROGRESS',
+              pickupAddress: 'A',
+              destinationAddress: 'B',
+              vehicle: { make: 'Yamaha', model: 'Crypton' },
+              events: [],
+            },
+          }),
+        },
+      };
+      const service = makeService(prisma);
+
+      await expect(service.getSharedTrip(token)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
