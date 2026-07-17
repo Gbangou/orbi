@@ -468,7 +468,7 @@ export async function fetchSharedTripWithApi(
   shareToken: string,
 ) {
   return client.request<SharedTripResponse>(
-    `${apiRoutes.trips.shared}/${shareToken}`,
+    `${apiRoutes.trips.shared}/${encodeURIComponent(shareToken)}`,
   );
 }
 

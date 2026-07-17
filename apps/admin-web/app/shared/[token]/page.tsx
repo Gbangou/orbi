@@ -14,6 +14,11 @@ import { notFound } from "next/navigation";
  * - Le dernier événement horodaté
  */
 export const revalidate = 30; // ISR: rafraîchi toutes les 30s côté serveur
+const shareTokenPattern = /^[A-Za-z0-9_-]{16,128}$/;
+
+function isSafeShareToken(value: string) {
+  return shareTokenPattern.test(value);
+}
 
 function formatStatus(status: string): { label: string; color: string } {
   const map: Record<string, { label: string; color: string }> = {
@@ -47,6 +52,10 @@ export default async function SharedTripPage({
 }) {
   const { token } = await params;
 
+  if (!isSafeShareToken(token)) {
+    notFound();
+  }
+
   let trip: Awaited<ReturnType<typeof fetchSharedTripWithApi>>['sharedTrip'] | null = null;
 
   try {
@@ -71,7 +80,9 @@ export default async function SharedTripPage({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Suivi de course — Orbi Burkina Faso</title>
-        <meta name="description" content={`Suivi en direct: ${trip.pickupAddress} → ${trip.destinationAddress}`} />
+        <meta name="description" content="Suivi securise d'une course Orbi partagee par le passager." />
+        <meta name="robots" content="noindex,nofollow,noarchive" />
+        <meta name="referrer" content="no-referrer" />
         {isActive && <meta httpEquiv="refresh" content="30" />}
         <style>{`
           * { box-sizing: border-box; margin: 0; padding: 0; }

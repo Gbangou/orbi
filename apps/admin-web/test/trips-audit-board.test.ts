@@ -133,4 +133,23 @@ describe('trips audit board', () => {
     expect(boardSource).toContain('Cloturer le risque');
     expect(boardSource).toContain('resolvedRiskTripCount');
   });
+
+  it('keeps public shared-trip pages private from crawlers and unsafe tokens', () => {
+    const pageSource = readFileSync(
+      join(process.cwd(), 'app/shared/[token]/page.tsx'),
+      'utf8',
+    );
+    const apiSource = readFileSync(
+      join(process.cwd(), '../../packages/api/src/trips.ts'),
+      'utf8',
+    );
+
+    expect(pageSource).toContain('shareTokenPattern');
+    expect(pageSource).toContain('isSafeShareToken(token)');
+    expect(pageSource).toContain('notFound();');
+    expect(pageSource).toContain('name="robots" content="noindex,nofollow,noarchive"');
+    expect(pageSource).toContain('name="referrer" content="no-referrer"');
+    expect(pageSource).not.toContain('content={`Suivi en direct: ${trip.pickupAddress}');
+    expect(apiSource).toContain('encodeURIComponent(shareToken)');
+  });
 });
