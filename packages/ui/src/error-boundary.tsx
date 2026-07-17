@@ -25,6 +25,10 @@ type State = {
 const defaultFallbackDetail =
   "L'incident a ete signale automatiquement. Reessayez dans un instant.";
 
+function shouldShowDebugDetails(enabled: boolean | undefined) {
+  return Boolean(enabled && typeof __DEV__ !== 'undefined' && __DEV__);
+}
+
 export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -42,7 +46,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       console.warn('[ErrorBoundary]', error, info.componentStack);
     }
 
-    if (this.props.showDebugDetails) {
+    if (shouldShowDebugDetails(this.props.showDebugDetails)) {
       const message =
         error instanceof Error
           ? `${error.name}: ${error.message}`
@@ -88,7 +92,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
           >
             <Text style={styles.btnLabel}>Réessayer</Text>
           </Pressable>
-          {this.props.showDebugDetails && this.state.debugMessage ? (
+          {shouldShowDebugDetails(this.props.showDebugDetails) &&
+          this.state.debugMessage ? (
             <ScrollView style={styles.debugBox}>
               <Text selectable style={styles.debugText}>
                 {this.state.debugMessage}

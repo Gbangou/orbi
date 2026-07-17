@@ -2,9 +2,14 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const appRoot = resolve(__dirname, '..');
+const workspaceRoot = resolve(appRoot, '..', '..');
 
 function readAppFile(relativePath: string) {
   return readFileSync(resolve(appRoot, relativePath), 'utf8');
+}
+
+function readWorkspaceFile(relativePath: string) {
+  return readFileSync(resolve(workspaceRoot, relativePath), 'utf8');
 }
 
 describe('rider mobile UX guards', () => {
@@ -23,5 +28,13 @@ describe('rider mobile UX guards', () => {
     expect(source).toContain('ctaBtnLabel');
     expect(source).toContain('ctaSignalTitle} numberOfLines={1}');
     expect(source).toContain('ctaSignalMeta} numberOfLines={1}');
+  });
+
+  it('keeps crash debug details gated to development builds', () => {
+    const source = readWorkspaceFile('packages/ui/src/error-boundary.tsx');
+
+    expect(source).toContain('function shouldShowDebugDetails');
+    expect(source).toContain("typeof __DEV__ !== 'undefined' && __DEV__");
+    expect(source).not.toContain('this.props.showDebugDetails && this.state.debugMessage');
   });
 });
