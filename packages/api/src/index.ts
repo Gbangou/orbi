@@ -89,6 +89,7 @@ export {
   OrbiApiClient,
   createOrbiApiClient,
 } from "./client";
+export { resolveMobileAuthErrorMessage } from "./auth-feedback";
 
 export type {
   OrbiClientErrorSurface,
