@@ -90,8 +90,12 @@ export class PaymentsService {
     this.assertPaymentAccess(auth, rideRequest);
     const amount = this.resolveCheckoutAmount(rideRequest, payload.amount);
 
-    const providerKey = this.getConfiguredProviderKey();
-    const provider = this.resolveProvider(providerKey);
+    const providerKey: PaymentProviderKey =
+      payload.channel === 'WALLET' ? 'wallet' : this.getConfiguredProviderKey();
+    const provider: PaymentProviderCode =
+      payload.channel === 'WALLET'
+        ? 'WALLET'
+        : this.resolveProvider(providerKey);
     const currency = this.getConfiguredCurrency();
     const normalizedIdempotencyKey =
       this.normalizeIdempotencyKey(idempotencyKey);
@@ -134,6 +138,19 @@ export class PaymentsService {
       transactionRef,
       rideRequest.currency || currency,
     );
+
+    if (payload.channel === 'WALLET') {
+      return this.settleWalletCheckout(
+        auth,
+        payload,
+        amount,
+        normalizedIdempotencyKey,
+        idempotencyHash,
+        rideRequest.currency || currency,
+        transactionRef,
+        checkoutIntent,
+      );
+    }
 
     try {
       await this.prisma.paymentAttempt.create({
@@ -268,6 +285,27 @@ export class PaymentsService {
       throw new BadRequestException('Payment attempt was not found.');
     }
 
+    // Un paiement WALLET se règle de façon synchrone lors du checkout : il
+    // n'y a pas d'agrégateur externe à interroger et il ne reste jamais
+    // bloqué en INITIATED/PENDING, donc rien à vérifier côté provider.
+    if (attempt.provider === 'WALLET') {
+      return {
+        verified: true,
+        paymentAttemptId: attempt.id,
+        provider: 'wallet' as const,
+        transactionRef: attempt.transactionRef,
+        result: {
+          received: true,
+          event: 'wallet.settled',
+          transactionRef: attempt.transactionRef,
+          provider: 'wallet' as const,
+          providerReference: undefined,
+          reconciledAttemptCount: 0,
+          nextAction: 'persisted_idempotent_replay' as const,
+        },
+      };
+    }
+
     const providerKey = this.resolveProviderKey(attempt.provider);
 
     if (attempt.status === 'REFUND_PENDING') {
@@ -362,6 +400,13 @@ export class PaymentsService {
                 ? 'already_refunded'
                 : 'refund_pending',
           },
+          riderWalletRefund: {
+            applied: false,
+            reason:
+              attempt.status === 'REFUNDED'
+                ? 'already_refunded'
+                : 'refund_pending',
+          },
         };
       }
 
@@ -420,6 +465,16 @@ export class PaymentsService {
               applied: false,
               reason: 'refund_pending',
             };
+      const riderWalletRefund =
+        nextStatus === 'REFUNDED' && attempt.provider === 'WALLET'
+          ? await this.reverseRiderWalletDebitForRefund(tx, attempt, input)
+          : {
+              applied: false,
+              reason:
+                attempt.provider === 'WALLET'
+                  ? 'refund_pending'
+                  : 'not_wallet_payment',
+            };
 
       return {
         action:
@@ -429,6 +484,7 @@ export class PaymentsService {
         paymentAttempt: this.serializeRefundedPaymentAttempt(updatedAttempt),
         providerRefundReference,
         walletReversal,
+        riderWalletRefund,
       };
     });
 
@@ -872,9 +928,9 @@ export class PaymentsService {
     payload: CreateCheckoutIntentInput,
     rideRequestId: string,
   ): Promise<void> {
-    if (!this.pawaPayService) {
+    if (!this.pawaPayService?.isConfigured()) {
       this.logger.warn(
-        'PawaPayService is not injected — skipping live deposit initiation (sandbox or test mode).',
+        'PawaPay API token is not configured — leaving deposit pending for sandbox/pre-integration testing.',
       );
       return;
     }
@@ -898,6 +954,7 @@ export class PaymentsService {
       payer: { type: 'MSISDN', address: { value: phoneNumber } },
       customerTimestamp: new Date().toISOString(),
       statementDescription: `Orbi Course #${rideRequestId.slice(-8)}`,
+      clientReferenceId: rideRequestId,
       metadata: [
         { fieldName: 'rideRequestId', fieldValue: rideRequestId },
         { fieldName: 'orbiTransactionRef', fieldValue: transactionRef },
@@ -925,6 +982,7 @@ export class PaymentsService {
     currency: string,
     transactionRef: string,
     providerMetadata: Prisma.InputJsonValue,
+    status: PaymentAttemptStatus = 'INITIATED',
   ): PaymentAttemptCreateData {
     return {
       userId: auth.user.id,
@@ -933,7 +991,7 @@ export class PaymentsService {
       idempotencyHash,
       provider,
       channel: payload.channel,
-      status: 'INITIATED',
+      status,
       amount: new Prisma.Decimal(amount),
       currency,
       mobileMoneyNetwork: payload.mobileMoneyNetwork,
@@ -942,6 +1000,140 @@ export class PaymentsService {
       redirectUrl: payload.redirectUrl,
       providerMetadata,
     };
+  }
+
+  // Le canal WALLET n'est pas un agrégateur externe : le débit est appliqué
+  // de façon synchrone et atomique sur le portefeuille Orbi du rider, sans
+  // callback ni polling. On réutilise le squelette d'idempotence générique
+  // (clé -> hash -> intent existant) puis on court-circuite tout dispatch
+  // provider externe.
+  private async resolveRiderWallet(userId: string, currency: string) {
+    const existing = await this.prisma.wallet.findFirst({
+      where: { userId, currency },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    return this.prisma.wallet.create({
+      data: {
+        userId,
+        currency,
+        balance: new Prisma.Decimal(0),
+      },
+    });
+  }
+
+  private async settleWalletCheckout(
+    auth: PaymentRequestContext,
+    payload: CreateCheckoutIntentInput,
+    amount: number,
+    normalizedIdempotencyKey: string | undefined,
+    idempotencyHash: string,
+    currency: string,
+    transactionRef: string,
+    checkoutIntent: ReturnType<typeof serializeCheckoutIntent>,
+  ) {
+    const wallet = await this.resolveRiderWallet(auth.user.id, currency);
+    const debitAmount = new Prisma.Decimal(amount);
+    let createdAttemptId: string | null = null;
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const debited = await tx.wallet.updateMany({
+          where: {
+            id: wallet.id,
+            isLocked: false,
+            balance: { gte: debitAmount },
+          },
+          data: { balance: { decrement: debitAmount } },
+        });
+
+        if (debited.count === 0) {
+          const current = await tx.wallet.findUnique({
+            where: { id: wallet.id },
+            select: { isLocked: true },
+          });
+
+          throw new BadRequestException(
+            current?.isLocked
+              ? 'Le portefeuille Orbi est verrouillé. Contactez le support.'
+              : 'Solde du portefeuille Orbi insuffisant pour ce trajet.',
+          );
+        }
+
+        await tx.walletTransaction.create({
+          data: {
+            walletId: wallet.id,
+            type: 'DEBIT',
+            amount: debitAmount,
+            reference: transactionRef,
+            description: `Paiement course ${payload.rideRequestId.slice(-8)}`,
+            metadata: {
+              rideRequestId: payload.rideRequestId,
+              transactionRef,
+            } satisfies Prisma.InputJsonObject,
+          },
+        });
+
+        const createdAttempt = await tx.paymentAttempt.create({
+          data: this.buildPaymentAttemptCreateData(
+            auth,
+            payload,
+            amount,
+            normalizedIdempotencyKey ?? undefined,
+            idempotencyHash,
+            'WALLET',
+            currency,
+            transactionRef,
+            checkoutIntent.providerMetadata,
+            'SUCCEEDED',
+          ),
+          select: { id: true },
+        });
+
+        createdAttemptId = createdAttempt.id;
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      if (!isPrismaUniqueConstraintError(error) || !normalizedIdempotencyKey) {
+        throw error;
+      }
+
+      const concurrentAttempt = await this.prisma.paymentAttempt.findUnique({
+        where: {
+          userId_idempotencyKey: {
+            userId: auth.user.id,
+            idempotencyKey: normalizedIdempotencyKey,
+          },
+        },
+      });
+
+      if (
+        !concurrentAttempt ||
+        concurrentAttempt.idempotencyHash !== idempotencyHash
+      ) {
+        throw error;
+      }
+
+      return this.serializeExistingCheckoutIntent(concurrentAttempt);
+    }
+
+    // Le paiement wallet est déjà SUCCEEDED en base : on déclenche
+    // immédiatement le crédit chauffeur, sinon il resterait à jamais en
+    // attente d'un webhook qui n'arrivera jamais pour ce canal interne.
+    if (createdAttemptId) {
+      await this.recordSuccessfulPaymentLedgerIfNeeded(
+        createdAttemptId,
+        'SUCCEEDED',
+      );
+    }
+
+    return checkoutIntent;
   }
 
   private normalizeIdempotencyKey(idempotencyKey?: string) {
@@ -1079,6 +1271,7 @@ export class PaymentsService {
     if (provider === 'FLUTTERWAVE') return 'flutterwave';
     if (provider === 'CINETPAY') return 'cinetpay';
     if (provider === 'PAWAPAY') return 'pawapay';
+    if (provider === 'WALLET') return 'wallet';
     return 'cinetpay';
   }
 
@@ -1548,7 +1741,7 @@ export class PaymentsService {
   private async fetchPawaPayVerification(
     depositId: string,
   ): Promise<ProviderVerificationPayload> {
-    if (!this.pawaPayService) {
+    if (!this.pawaPayService?.isConfigured()) {
       throw new BadRequestException(
         'PawaPayService is not configured. Check PAWAPAY_API_TOKEN environment variable.',
       );
@@ -1566,8 +1759,7 @@ export class PaymentsService {
           : 'deposit.pending',
       transactionRef: depositId,
       data: {
-        providerReference:
-          deposit.payer?.address?.value ?? depositId,
+        providerReference: deposit.payer?.address?.value ?? depositId,
         status: deposit.status,
         amount: deposit.amount ? Number(deposit.amount) : undefined,
         currency: deposit.currency,
@@ -1586,7 +1778,7 @@ export class PaymentsService {
     },
     providerRefundReference: string,
   ): Promise<PaymentRefundProviderResult> {
-    if (!this.pawaPayService) {
+    if (!this.pawaPayService?.isConfigured()) {
       return {
         providerRefundReference,
         status: 'pending',
@@ -1599,13 +1791,22 @@ export class PaymentsService {
       refundId: providerRefundReference,
       depositId: attempt.transactionRef,
       amount: String(Math.round(Number(attempt.amount))),
+      currency: attempt.currency,
     });
 
     const isCompleted = response.status === 'COMPLETED';
+    const isAccepted =
+      response.status === 'ACCEPTED' || response.status === 'DUPLICATE_IGNORED';
+
+    if (!isCompleted && !isAccepted) {
+      const failCode = response.failureReason?.failureCode ?? response.status;
+      throw new BadRequestException(
+        `PawaPay refund was rejected: ${failCode}.`,
+      );
+    }
 
     return {
-      providerRefundReference:
-        response.refundId ?? providerRefundReference,
+      providerRefundReference: response.refundId ?? providerRefundReference,
       status: isCompleted ? 'processed' : 'pending',
       providerMode: 'provider_api',
       raw: response as unknown as Record<string, unknown>,
@@ -1624,6 +1825,21 @@ export class PaymentsService {
     input: PaymentRefundInput,
     providerRefundReference: string,
   ): Promise<PaymentRefundProviderResult> {
+    // Un paiement WALLET n'a jamais transité par un agrégateur externe : il
+    // n'y a donc rien à rembourser côté provider. Le crédit réel au rider est
+    // appliqué séparément par reverseRiderWalletDebitForRefund, dans la même
+    // transaction que la mise à jour du statut de l'attempt.
+    if (attempt.provider === 'WALLET') {
+      return {
+        providerRefundReference,
+        status: 'processed',
+        providerMode: 'manual_or_provider_console',
+        raw: {
+          mode: 'internal_wallet_reversal',
+        },
+      };
+    }
+
     const refundMode =
       this.configService.get<string>('payments.refunds.mode') ?? 'manual';
 
@@ -1993,9 +2209,7 @@ export class PaymentsService {
       typeof payload.correspondentIds === 'object'
     ) {
       const ids = payload.correspondentIds as Record<string, unknown>;
-      const firstId = Object.values(ids).find(
-        (v) => typeof v === 'string',
-      );
+      const firstId = Object.values(ids).find((v) => typeof v === 'string');
       if (firstId) return firstId as string;
     }
 
@@ -2503,6 +2717,94 @@ export class PaymentsService {
       applied: true,
       walletId: wallet.id,
       amount: driverPayoutAmount,
+      currency: attempt.currency,
+    };
+  }
+
+  private async reverseRiderWalletDebitForRefund(
+    tx: {
+      wallet: {
+        findFirst(args: unknown): Promise<{ id: string } | null>;
+        update(args: unknown): Promise<unknown>;
+      };
+      walletTransaction: {
+        create(args: unknown): Promise<unknown>;
+      };
+    },
+    attempt: {
+      id: string;
+      userId: string;
+      amount: Prisma.Decimal;
+      currency: string;
+      transactionRef: string;
+    },
+    input: PaymentRefundInput,
+  ) {
+    const wallet = await tx.wallet.findFirst({
+      where: {
+        userId: attempt.userId,
+        currency: attempt.currency,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!wallet) {
+      return {
+        applied: false,
+        reason: 'rider_wallet_not_found',
+      };
+    }
+
+    const refundReference = `payment:${attempt.id}:wallet-refund`;
+    const refundAmount = new Prisma.Decimal(Number(attempt.amount));
+
+    try {
+      await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: 'REFUND',
+          amount: refundAmount,
+          reference: refundReference,
+          description: `Remboursement course ${attempt.transactionRef}`,
+          metadata: {
+            paymentAttemptId: attempt.id,
+            refundedByUserId: input.actorUserId,
+            refundedByName: input.actorName ?? null,
+            reason: input.reason ?? null,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    } catch (error) {
+      if (isPrismaUniqueConstraintError(error)) {
+        return {
+          applied: false,
+          reason: 'already_reversed',
+          walletId: wallet.id,
+          amount: Number(attempt.amount),
+          currency: attempt.currency,
+        };
+      }
+
+      throw error;
+    }
+
+    await tx.wallet.update({
+      where: {
+        id: wallet.id,
+      },
+      data: {
+        balance: {
+          increment: refundAmount,
+        },
+      },
+    });
+
+    return {
+      applied: true,
+      walletId: wallet.id,
+      amount: Number(attempt.amount),
       currency: attempt.currency,
     };
   }

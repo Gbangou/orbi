@@ -39,21 +39,19 @@ describe('WalletTopUpService', () => {
     };
   }
 
-  function createService() {
-    let storedTopUp:
-      | {
-          id: string;
-          walletId: string;
-          userId: string;
-          amount: Prisma.Decimal;
-          currency: string;
-          status: string;
-          depositId: string;
-          mobileMoneyNetwork: string;
-          customerPhoneNumber: string;
-          providerMetadata: unknown;
-        }
-      | null = null;
+  function createService(options: { pawaPayConfigured?: boolean } = {}) {
+    let storedTopUp: {
+      id: string;
+      walletId: string;
+      userId: string;
+      amount: Prisma.Decimal;
+      currency: string;
+      status: string;
+      depositId: string;
+      mobileMoneyNetwork: string;
+      customerPhoneNumber: string;
+      providerMetadata: unknown;
+    } | null = null;
     const prisma = {
       wallet: {
         findFirst: jest.fn().mockResolvedValue({
@@ -66,8 +64,9 @@ describe('WalletTopUpService', () => {
         update: jest.fn(),
       },
       walletTopUp: {
-        findUnique: jest.fn(async ({ where }: { where: { depositId: string } }) =>
-          storedTopUp?.depositId === where.depositId ? storedTopUp : null,
+        findUnique: jest.fn(
+          async ({ where }: { where: { depositId: string } }) =>
+            storedTopUp?.depositId === where.depositId ? storedTopUp : null,
         ),
         create: jest.fn(async ({ data }: { data: typeof storedTopUp }) => {
           storedTopUp = {
@@ -93,6 +92,9 @@ describe('WalletTopUpService', () => {
       $transaction: jest.fn(),
     };
     const pawaPayService = {
+      isConfigured: jest
+        .fn()
+        .mockReturnValue(options.pawaPayConfigured ?? true),
       initiateDeposit: jest.fn().mockResolvedValue({ status: 'ACCEPTED' }),
     };
 
@@ -149,5 +151,21 @@ describe('WalletTopUpService', () => {
       service.initiateTopUp(authContext(), payload, 'unsafe key'),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.walletTopUp.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps a top-up pending without calling PawaPay when no sandbox token is configured', async () => {
+    const { pawaPayService, service } = createService({
+      pawaPayConfigured: false,
+    });
+
+    const result = await service.initiateTopUp(
+      authContext(),
+      payload,
+      'wallet-topup-003',
+    );
+
+    expect(result.status).toBe('PENDING');
+    expect(result.awaitingPhoneConfirmation).toBe(true);
+    expect(pawaPayService.initiateDeposit).not.toHaveBeenCalled();
   });
 });

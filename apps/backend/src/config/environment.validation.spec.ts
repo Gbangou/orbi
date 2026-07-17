@@ -9,6 +9,9 @@ describe('validateEnvironment', () => {
     PAYMENTS_DEFAULT_REDIRECT_URL: 'https://orbi.app/payments/return',
     PAYMENTS_DEFAULT_WEBHOOK_URL:
       'https://api.orbi.app/api/v1/payments/webhooks',
+    PAWAPAY_API_TOKEN: 'pawapay_prod_token',
+    PAWAPAY_WEBHOOK_SECRET: 'pawapay_prod_webhook_secret',
+    PAWAPAY_ENVIRONMENT: 'production',
     DOCUMENT_SIGNING_SECRET: 'prod_document_secret',
     DOCUMENT_UPLOAD_BASE_URL: 'https://storage.orbi.app/upload',
     DOCUMENT_VIEW_BASE_URL: 'https://storage.orbi.app/view',
@@ -181,6 +184,21 @@ describe('validateEnvironment', () => {
         PAYMENTS_REFUND_MODE: 'provider',
       },
       'FLUTTERWAVE_SECRET_KEY is required for provider refunds in production.',
+    ],
+    [
+      'invalid PawaPay environment',
+      { PAWAPAY_ENVIRONMENT: 'live' },
+      'PAWAPAY_ENVIRONMENT must be sandbox or production.',
+    ],
+    [
+      'missing PawaPay API token',
+      { PAYMENTS_PROVIDER: 'pawapay', PAWAPAY_API_TOKEN: undefined },
+      'PAWAPAY_API_TOKEN is required in production when PAYMENTS_PROVIDER=pawapay.',
+    ],
+    [
+      'missing PawaPay webhook secret',
+      { PAYMENTS_PROVIDER: 'pawapay', PAWAPAY_WEBHOOK_SECRET: undefined },
+      'PAWAPAY_WEBHOOK_SECRET is required in production when PAYMENTS_PROVIDER=pawapay.',
     ],
     [
       'local mobile error collector',

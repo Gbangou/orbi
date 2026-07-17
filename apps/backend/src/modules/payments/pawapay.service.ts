@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
 
@@ -13,6 +17,7 @@ export type PawaPayDepositStatus =
   | 'ACCEPTED'
   | 'COMPLETED'
   | 'FAILED'
+  | 'REJECTED'
   | 'DUPLICATE_IGNORED';
 
 export type PawaPayDepositRequest = {
@@ -23,6 +28,7 @@ export type PawaPayDepositRequest = {
   payer: { type: 'MSISDN'; address: { value: string } };
   customerTimestamp: string;
   statementDescription: string;
+  clientReferenceId?: string;
   preAuthorisationCode?: string;
   metadata?: Array<{ fieldName: string; fieldValue: string }>;
 };
@@ -43,12 +49,18 @@ export type PawaPayRefundRequest = {
   refundId: string;
   depositId: string;
   amount: string;
+  currency?: string;
   metadata?: Array<{ fieldName: string; fieldValue: string }>;
 };
 
 export type PawaPayRefundResponse = {
   refundId: string;
-  status: 'ACCEPTED' | 'COMPLETED' | 'FAILED' | 'DUPLICATE_IGNORED';
+  status:
+    | 'ACCEPTED'
+    | 'COMPLETED'
+    | 'FAILED'
+    | 'REJECTED'
+    | 'DUPLICATE_IGNORED';
   depositId: string;
   amount?: string;
   currency?: string;
@@ -82,6 +94,7 @@ export type PawaPayWebhookRefundEvent = {
 const PAWAPAY_SANDBOX_BASE_URL = 'https://api.sandbox.pawapay.io';
 const PAWAPAY_PROD_BASE_URL = 'https://api.pawapay.io';
 const CONNECT_TIMEOUT_MS = 8_000;
+const PAWAPAY_COUNTRY_BFA = 'BFA';
 
 @Injectable()
 export class PawaPayService {
@@ -102,7 +115,9 @@ export class PawaPayService {
     const useSandbox =
       pawaPayEnv === 'sandbox' ||
       (pawaPayEnv !== 'production' && nodeEnv !== 'production');
-    this.baseUrl = useSandbox ? PAWAPAY_SANDBOX_BASE_URL : PAWAPAY_PROD_BASE_URL;
+    this.baseUrl = useSandbox
+      ? PAWAPAY_SANDBOX_BASE_URL
+      : PAWAPAY_PROD_BASE_URL;
     this.apiToken =
       this.configService.get<string>('payments.pawapay.apiToken') ??
       this.configService.get<string>('PAWAPAY_API_TOKEN') ??
@@ -116,21 +131,73 @@ export class PawaPayService {
   async initiateDeposit(
     req: PawaPayDepositRequest,
   ): Promise<PawaPayDepositResponse> {
-    return this.post<PawaPayDepositResponse>('/v1/deposits', req);
+    const response = await this.post<PawaPayDepositResponse>(
+      '/v2/deposits',
+      this.toV2DepositRequest(req),
+    );
+
+    return {
+      ...response,
+      depositId: response.depositId ?? req.depositId,
+    };
   }
 
   async getDepositStatus(depositId: string): Promise<PawaPayDepositResponse> {
-    return this.get<PawaPayDepositResponse>(`/v1/deposits/${depositId}`);
+    const response = await this.get<
+      PawaPayStatusLookup<PawaPayDepositResponse>
+    >(`/v2/deposits/${encodeURIComponent(depositId)}`);
+
+    if (response.status === 'NOT_FOUND' || !response.data) {
+      return {
+        depositId,
+        status: 'FAILED',
+        failureReason: {
+          failureCode: 'NOT_FOUND',
+          failureMessage: 'PawaPay deposit was not found.',
+        },
+      };
+    }
+
+    return this.fromV2DepositResponse(response.data);
   }
 
   async initiateRefund(
     req: PawaPayRefundRequest,
   ): Promise<PawaPayRefundResponse> {
-    return this.post<PawaPayRefundResponse>('/v1/refunds', req);
+    const response = await this.post<PawaPayRefundResponse>(
+      '/v2/refunds',
+      this.toV2RefundRequest(req),
+    );
+
+    return {
+      ...response,
+      refundId: response.refundId ?? req.refundId,
+      depositId: response.depositId ?? req.depositId,
+    };
   }
 
   async getRefundStatus(refundId: string): Promise<PawaPayRefundResponse> {
-    return this.get<PawaPayRefundResponse>(`/v1/refunds/${refundId}`);
+    const response = await this.get<PawaPayStatusLookup<PawaPayRefundResponse>>(
+      `/v2/refunds/${encodeURIComponent(refundId)}`,
+    );
+
+    if (response.status === 'NOT_FOUND' || !response.data) {
+      return {
+        refundId,
+        depositId: '',
+        status: 'FAILED',
+        failureReason: {
+          failureCode: 'NOT_FOUND',
+          failureMessage: 'PawaPay refund was not found.',
+        },
+      };
+    }
+
+    return this.fromV2RefundResponse(response.data);
+  }
+
+  isConfigured(): boolean {
+    return Boolean(this.apiToken.trim());
   }
 
   verifyWebhookSignature(
@@ -174,12 +241,15 @@ export class PawaPayService {
     path: string,
     body?: unknown,
   ): Promise<T> {
+    if (!this.isConfigured()) {
+      throw new ServiceUnavailableException(
+        'PawaPay API token is not configured.',
+      );
+    }
+
     const url = `${this.baseUrl}${path}`;
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      CONNECT_TIMEOUT_MS,
-    );
+    const timeout = setTimeout(() => controller.abort(), CONNECT_TIMEOUT_MS);
 
     try {
       const response = await fetch(url, {
@@ -196,7 +266,7 @@ export class PawaPayService {
       if (!response.ok) {
         const errorText = await response.text().catch(() => '');
         this.logger.error(
-          `PawaPay ${method} ${path} → HTTP ${response.status}: ${errorText}`,
+          `PawaPay ${method} ${path} -> HTTP ${response.status}: ${this.redactSensitiveError(errorText)}`,
         );
         throw new Error(
           `PawaPay API error: HTTP ${response.status} at ${path}`,
@@ -208,4 +278,94 @@ export class PawaPayService {
       clearTimeout(timeout);
     }
   }
+
+  private toV2DepositRequest(req: PawaPayDepositRequest) {
+    return {
+      depositId: req.depositId,
+      payer: {
+        type: 'MMO',
+        accountDetails: {
+          phoneNumber: req.payer.address.value,
+          provider: req.correspondent,
+        },
+      },
+      amount: req.amount,
+      currency: req.currency,
+      country: PAWAPAY_COUNTRY_BFA,
+      preAuthorisationCode: req.preAuthorisationCode,
+      clientReferenceId: req.clientReferenceId ?? req.depositId,
+      customerMessage: this.normalizeCustomerMessage(req.statementDescription),
+      metadata: this.toV2Metadata(req.metadata),
+    };
+  }
+
+  private toV2RefundRequest(req: PawaPayRefundRequest) {
+    return {
+      refundId: req.refundId,
+      depositId: req.depositId,
+      amount: req.amount,
+      currency: req.currency ?? 'XOF',
+      clientReferenceId: req.refundId,
+      metadata: this.toV2Metadata(req.metadata),
+    };
+  }
+
+  private fromV2DepositResponse(
+    response: PawaPayDepositResponse,
+  ): PawaPayDepositResponse {
+    const payer = response.payer as
+      | {
+          type?: string;
+          accountDetails?: {
+            phoneNumber?: string;
+            provider?: PawaPayCorrespondent;
+          };
+          address?: { value?: string };
+        }
+      | undefined;
+
+    return {
+      ...response,
+      payer: {
+        type: payer?.type ?? 'MMO',
+        address: {
+          value:
+            payer?.address?.value ?? payer?.accountDetails?.phoneNumber ?? '',
+        },
+      },
+      correspondent: response.correspondent ?? payer?.accountDetails?.provider,
+    };
+  }
+
+  private fromV2RefundResponse(
+    response: PawaPayRefundResponse,
+  ): PawaPayRefundResponse {
+    return response;
+  }
+
+  private toV2Metadata(
+    metadata?: Array<{ fieldName: string; fieldValue: string }>,
+  ) {
+    return metadata?.slice(0, 10).map((item) => ({
+      [item.fieldName]: item.fieldValue,
+    }));
+  }
+
+  private normalizeCustomerMessage(message: string) {
+    return message.trim().slice(0, 22) || 'Orbi';
+  }
+
+  private redactSensitiveError(errorText: string) {
+    return errorText
+      .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer [redacted]')
+      .replace(
+        /"?(token|authorization|phoneNumber|address)"?\s*:\s*"[^"]*"/gi,
+        '$1:"[redacted]"',
+      );
+  }
 }
+
+type PawaPayStatusLookup<T> = {
+  status: 'FOUND' | 'NOT_FOUND';
+  data?: T;
+};

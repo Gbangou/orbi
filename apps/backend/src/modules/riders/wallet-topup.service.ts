@@ -52,10 +52,9 @@ export class WalletTopUpService {
       );
     }
 
-    const correspondent =
-      PAWAPAY_NETWORK_TO_CORRESPONDENT[mobileMoneyNetwork.toUpperCase()] as
-        | PawaPayCorrespondent
-        | undefined;
+    const correspondent = PAWAPAY_NETWORK_TO_CORRESPONDENT[
+      mobileMoneyNetwork.toUpperCase()
+    ] as PawaPayCorrespondent | undefined;
 
     if (!correspondent) {
       throw new BadRequestException(
@@ -144,7 +143,7 @@ export class WalletTopUpService {
       return this.serializeTopUp(concurrentTopUp);
     }
 
-    if (this.pawaPayService) {
+    if (this.pawaPayService?.isConfigured()) {
       try {
         const response = await this.pawaPayService.initiateDeposit({
           depositId,
@@ -154,6 +153,7 @@ export class WalletTopUpService {
           payer: { type: 'MSISDN', address: { value: phoneDigits } },
           customerTimestamp: new Date().toISOString(),
           statementDescription: `Recharge Wallet Orbi ${Math.round(amountXof)} XOF`,
+          clientReferenceId: topUp.id,
           metadata: [
             { fieldName: 'walletTopUpId', fieldValue: topUp.id },
             { fieldName: 'userId', fieldValue: auth.user.id },
@@ -186,7 +186,9 @@ export class WalletTopUpService {
         );
       }
     } else {
-      this.logger.warn('PawaPayService not configured — sandbox top-up initiated.');
+      this.logger.warn(
+        'PawaPay API token is not configured — sandbox top-up remains pending.',
+      );
       topUp = await this.prisma.walletTopUp.update({
         where: { id: topUp.id },
         data: { status: 'PENDING' },
@@ -196,7 +198,10 @@ export class WalletTopUpService {
     return this.serializeTopUp(topUp);
   }
 
-  async handlePawaPayTopUpWebhook(depositId: string, status: 'COMPLETED' | 'FAILED') {
+  async handlePawaPayTopUpWebhook(
+    depositId: string,
+    status: 'COMPLETED' | 'FAILED',
+  ) {
     const topUp = await this.prisma.walletTopUp.findUnique({
       where: { depositId },
       include: { wallet: true },
@@ -223,12 +228,19 @@ export class WalletTopUpService {
             amount: topUp.amount,
             reference: topUp.depositId ?? topUp.id,
             description: `Recharge Mobile Money ${Number(topUp.amount).toLocaleString('fr-BF')} XOF`,
-            metadata: { topUpId: topUp.id, depositId: topUp.depositId } satisfies Prisma.InputJsonObject,
+            metadata: {
+              topUpId: topUp.id,
+              depositId: topUp.depositId,
+            } satisfies Prisma.InputJsonObject,
           },
         });
       });
 
-      return { handled: true, action: 'wallet_credited', amount: Number(topUp.amount) };
+      return {
+        handled: true,
+        action: 'wallet_credited',
+        amount: Number(topUp.amount),
+      };
     }
 
     await this.prisma.walletTopUp.update({

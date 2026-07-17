@@ -38,6 +38,25 @@ export function serializeCheckoutIntent(params: {
     };
   }
 
+  if (params.provider === 'WALLET') {
+    return {
+      provider: 'WALLET' as const,
+      transactionRef: params.transactionRef,
+      checkoutMode: 'WALLET_DEBIT' as const,
+      amount: params.amount,
+      currency: params.currency,
+      channel: params.channel,
+      awaitingPhoneConfirmation: false,
+      supportedMobileMoneyNetworks: [],
+      providerMetadata: {},
+      trustNotes: {
+        providerAbstractionEnabled: false,
+        webhookVerificationRequired: false,
+        settlementModel: 'internal_wallet' as const,
+      },
+    };
+  }
+
   if (params.provider === 'PAWAPAY') {
     return {
       provider: 'PAWAPAY' as const,

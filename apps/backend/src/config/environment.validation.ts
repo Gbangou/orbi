@@ -230,8 +230,7 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   const mobileErrorCollectorWebhookUrl =
     config.MOBILE_ERROR_COLLECTOR_WEBHOOK_URL ?? '';
   const backupRestoreDrillAt = config.OPERATIONS_BACKUP_RESTORE_DRILL_AT ?? '';
-  const canaryReleaseDrillAt =
-    config.OPERATIONS_CANARY_RELEASE_DRILL_AT ?? '';
+  const canaryReleaseDrillAt = config.OPERATIONS_CANARY_RELEASE_DRILL_AT ?? '';
   const chaosDrainDrillAt = config.OPERATIONS_CHAOS_DRAIN_DRILL_AT ?? '';
   const pilotReviewAt = config.OPERATIONS_PILOT_REVIEW_AT ?? '';
   const termsVersion = config.OPERATIONS_TERMS_VERSION ?? '';
@@ -384,7 +383,9 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
   }
 
   if (!insurancePolicyRef.trim()) {
-    throw new Error('OPERATIONS_INSURANCE_POLICY_REF is required in production.');
+    throw new Error(
+      'OPERATIONS_INSURANCE_POLICY_REF is required in production.',
+    );
   }
 
   if (!isPositiveInteger(pilotMaxConcurrentTrips)) {
@@ -401,6 +402,27 @@ function assertProductionEnvironment(config: EnvironmentVariables) {
     throw new Error(
       'FLUTTERWAVE_SECRET_KEY is required for provider refunds in production.',
     );
+  }
+
+  if (
+    config.PAWAPAY_ENVIRONMENT &&
+    !isPawaPayEnvironment(config.PAWAPAY_ENVIRONMENT)
+  ) {
+    throw new Error('PAWAPAY_ENVIRONMENT must be sandbox or production.');
+  }
+
+  if ((config.PAYMENTS_PROVIDER ?? 'pawapay') === 'pawapay') {
+    if (!config.PAWAPAY_API_TOKEN) {
+      throw new Error(
+        'PAWAPAY_API_TOKEN is required in production when PAYMENTS_PROVIDER=pawapay.',
+      );
+    }
+
+    if (!config.PAWAPAY_WEBHOOK_SECRET) {
+      throw new Error(
+        'PAWAPAY_WEBHOOK_SECRET is required in production when PAYMENTS_PROVIDER=pawapay.',
+      );
+    }
   }
 }
 
@@ -434,4 +456,8 @@ function isPositiveInteger(value: string) {
 
 function isSharedPostgresAdapter(value: string | undefined) {
   return value === 'postgres' || value === 'postgresql';
+}
+
+function isPawaPayEnvironment(value: string) {
+  return value === 'sandbox' || value === 'production';
 }

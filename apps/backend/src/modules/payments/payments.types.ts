@@ -13,8 +13,16 @@ export type MobileMoneyNetwork = (typeof MOBILE_MONEY_NETWORKS)[number];
 export type SupportedFlutterwaveNetwork = (typeof FLUTTERWAVE_NETWORKS)[number];
 export type SupportedCinetPayNetwork = (typeof CINETPAY_NETWORKS)[number];
 export type SupportedPawaPayNetwork = (typeof PAWAPAY_NETWORKS)[number];
-export type PaymentProviderKey = 'flutterwave' | 'cinetpay' | 'pawapay';
-export type PaymentProviderCode = 'FLUTTERWAVE' | 'CINETPAY' | 'PAWAPAY';
+export type PaymentProviderKey =
+  | 'flutterwave'
+  | 'cinetpay'
+  | 'pawapay'
+  | 'wallet';
+export type PaymentProviderCode =
+  | 'FLUTTERWAVE'
+  | 'CINETPAY'
+  | 'PAWAPAY'
+  | 'WALLET';
 export type PaymentAttemptStatus =
   | 'INITIATED'
   | 'PENDING'

@@ -81,6 +81,18 @@ Le backend expose maintenant une fondation paiements orientee agregateur:
 - endpoints admin `driver-wallets/:walletId/payouts/prepare` et `driver-payouts/:payoutId/paid` pour preparer puis marquer paye un payout chauffeur avec audit log, signal realtime et transaction ledger `PAYOUT`
 - exports admin `driver-payouts/settlement.csv` et `driver-payouts/settlement.pdf` pour les settlements terrain signes et audites
 
+### PawaPay sandbox
+
+Pour tester proprement sans argent reel:
+
+1. laisser `PAWAPAY_ENVIRONMENT=sandbox`
+2. garder `PAYMENTS_PROVIDER=pawapay`
+3. avant d'avoir un token PawaPay, laisser `PAWAPAY_API_TOKEN=` vide: Orbi cree les tentatives en attente sans appel reseau externe, ce qui permet de tester l'app, l'admin et les parcours terrain sans crasher
+4. quand le compte sandbox PawaPay est cree, renseigner `PAWAPAY_API_TOKEN` et `PAWAPAY_WEBHOOK_SECRET`
+5. configurer dans le dashboard sandbox PawaPay l'URL publique `https://<api>/api/v1/payments/webhooks/pawapay`
+
+Le connecteur utilise l'API Merchant v2 de PawaPay (`/v2/deposits`, `/v2/refunds`, `/v2/deposits/{depositId}`) et force l'environnement sandbox tant que `PAWAPAY_ENVIRONMENT=sandbox`. En production, `PAWAPAY_API_TOKEN` et `PAWAPAY_WEBHOOK_SECRET` deviennent obligatoires quand `PAYMENTS_PROVIDER=pawapay`.
+
 Variables utiles:
 
 - `PAYMENTS_PROVIDER`

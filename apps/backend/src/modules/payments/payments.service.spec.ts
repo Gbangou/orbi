@@ -127,10 +127,19 @@ describe('PaymentsService', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: 'wallet-driver-1',
         }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'wallet-rider-1',
+        }),
+        create: jest.fn().mockResolvedValue({
+          id: 'wallet-rider-1',
+        }),
         upsert: jest.fn().mockResolvedValue({
           id: 'wallet-driver-1',
         }),
         update: jest.fn().mockResolvedValue(undefined),
+        updateMany: jest.fn().mockResolvedValue({
+          count: 1,
+        }),
       },
       walletTransaction: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -438,6 +447,153 @@ describe('PaymentsService', () => {
     expect(prisma.paymentAttempt.create).toHaveBeenCalled();
   });
 
+  it('debits the rider wallet synchronously and credits the driver ledger for a WALLET checkout', async () => {
+    const { service, prisma } = createService();
+
+    // No idempotency key is supplied, so createCheckoutIntent never looks up
+    // an existing attempt — the only findUnique call comes from
+    // recordSuccessfulPaymentLedgerIfNeeded reloading the attempt after commit.
+    prisma.paymentAttempt.findUnique.mockResolvedValueOnce({
+      id: 'payment-1',
+      amount: { toString: () => '2400', valueOf: () => 2400 },
+      currency: 'XOF',
+      provider: 'WALLET',
+      providerReference: null,
+      transactionRef: 'orbi_123_ride-request-1',
+      rideRequestId: 'ride-request-1',
+      rideRequest: {
+        trip: {
+          id: 'trip-1',
+          driver: {
+            userId: 'driver-user-1',
+          },
+        },
+      },
+    });
+    prisma.paymentAttempt.create.mockResolvedValue({ id: 'payment-1' });
+
+    const result = await service.createCheckoutIntent(
+      {
+        user: {
+          id: 'user-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      {
+        rideRequestId: 'ride-request-1',
+        channel: 'WALLET',
+        amount: 2400,
+      },
+    );
+
+    expect(result.provider).toBe('WALLET');
+    expect(result.checkoutMode).toBe('WALLET_DEBIT');
+    expect(prisma.wallet.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'wallet-rider-1',
+        isLocked: false,
+        balance: {
+          gte: expect.objectContaining({ toNumber: expect.any(Function) }),
+        },
+      },
+      data: {
+        balance: {
+          decrement: expect.objectContaining({
+            toNumber: expect.any(Function),
+          }),
+        },
+      },
+    });
+    expect(prisma.walletTransaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        walletId: 'wallet-rider-1',
+        type: 'DEBIT',
+        reference: expect.stringContaining('ride-request-1'),
+      }),
+    });
+    expect(prisma.paymentAttempt.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          provider: 'WALLET',
+          status: 'SUCCEEDED',
+        }),
+      }),
+    );
+    // The driver ledger credit relies on recordSuccessfulPaymentLedgerIfNeeded,
+    // which is only ever wired to webhook reconciliation — a WALLET checkout
+    // never receives a webhook, so it must be triggered explicitly.
+    expect(prisma.wallet.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId_currency: {
+            userId: 'driver-user-1',
+            currency: 'XOF',
+          },
+        },
+      }),
+    );
+  });
+
+  it('rejects a WALLET checkout when the rider balance is insufficient', async () => {
+    const { service, prisma } = createService();
+
+    prisma.wallet.updateMany.mockResolvedValue({ count: 0 });
+    prisma.wallet.findUnique.mockResolvedValue({ isLocked: false });
+
+    await expect(
+      service.createCheckoutIntent(
+        {
+          user: {
+            id: 'user-1',
+            role: 'RIDER',
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        {
+          rideRequestId: 'ride-request-1',
+          channel: 'WALLET',
+          amount: 2400,
+        },
+      ),
+    ).rejects.toThrow('Solde du portefeuille Orbi insuffisant pour ce trajet.');
+
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.paymentAttempt.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a WALLET checkout when the rider wallet is locked', async () => {
+    const { service, prisma } = createService();
+
+    prisma.wallet.updateMany.mockResolvedValue({ count: 0 });
+    prisma.wallet.findUnique.mockResolvedValue({ isLocked: true });
+
+    await expect(
+      service.createCheckoutIntent(
+        {
+          user: {
+            id: 'user-1',
+            role: 'RIDER',
+            riderProfile: {
+              id: 'rider-1',
+            },
+          },
+        } as never,
+        {
+          rideRequestId: 'ride-request-1',
+          channel: 'WALLET',
+          amount: 2400,
+        },
+      ),
+    ).rejects.toThrow(
+      'Le portefeuille Orbi est verrouillé. Contactez le support.',
+    );
+  });
+
   it('persists webhook reconciliation for a successful payment', async () => {
     const { service, prisma, jobQueueService } = createService();
 
@@ -620,15 +776,11 @@ describe('PaymentsService', () => {
       depositId: '7f344d0b-476e-4f94-8c99-f1e9d09d7c65',
     });
 
-    const result = await service.handlePawaPayWebhook(
-      '{}',
-      undefined,
-      {
-        event: 'deposit.completed',
-        depositId: '7f344d0b-476e-4f94-8c99-f1e9d09d7c65',
-        status: 'COMPLETED',
-      },
-    );
+    const result = await service.handlePawaPayWebhook('{}', undefined, {
+      event: 'deposit.completed',
+      depositId: '7f344d0b-476e-4f94-8c99-f1e9d09d7c65',
+      status: 'COMPLETED',
+    });
 
     expect(result.nextAction).toBe('persisted_wallet_top_up_replay');
     expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
@@ -911,6 +1063,81 @@ describe('PaymentsService', () => {
       expect.objectContaining({
         applied: true,
         amount: 1968,
+      }),
+    );
+  });
+
+  it('refunds a WALLET payment attempt by crediting back the rider wallet directly, without calling an external provider', async () => {
+    const { service, prisma } = createService();
+
+    prisma.paymentAttempt.findUnique.mockResolvedValue({
+      id: 'payment-1',
+      userId: 'user-1',
+      status: 'SUCCEEDED',
+      amount: { toString: () => '2400', valueOf: () => 2400 },
+      currency: 'XOF',
+      provider: 'WALLET',
+      providerReference: null,
+      providerMetadata: {},
+      transactionRef: 'orbi_123_ride-request-1',
+      rideRequestId: 'ride-request-1',
+      updatedAt: new Date('2026-05-01T08:00:00.000Z'),
+      rideRequest: {
+        trip: {
+          id: 'trip-1',
+          driver: {
+            userId: 'driver-user-1',
+          },
+        },
+      },
+    });
+    prisma.paymentAttempt.update.mockResolvedValue({
+      id: 'payment-1',
+      status: 'REFUNDED',
+      amount: { toString: () => '2400', valueOf: () => 2400 },
+      currency: 'XOF',
+      provider: 'WALLET',
+      providerReference: null,
+      transactionRef: 'orbi_123_ride-request-1',
+      updatedAt: new Date('2026-05-01T08:05:00.000Z'),
+    });
+    // Two findUnique calls are consumed by the existing driver-payout
+    // reversal (original credit lookup, then existing-refund lookup); the
+    // rider wallet reversal below does not pre-check and relies on the
+    // walletId+reference unique constraint instead.
+    prisma.walletTransaction.findUnique
+      .mockResolvedValueOnce({ id: 'wallet-credit-1' })
+      .mockResolvedValueOnce(null);
+
+    const result = await service.refundPaymentAttempt('payment-1', {
+      actorUserId: 'ops-1',
+      actorName: 'Ops Orbi',
+      reason: 'Rider charged after cancellation.',
+    });
+
+    expect(result.action).toBe('refunded');
+    expect(result.providerRefundReference).toBe('wallet_refund_payment-1');
+    expect(prisma.walletTransaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        walletId: 'wallet-rider-1',
+        type: 'REFUND',
+        reference: 'payment:payment-1:wallet-refund',
+      }),
+    });
+    expect(prisma.wallet.update).toHaveBeenCalledWith({
+      where: { id: 'wallet-rider-1' },
+      data: {
+        balance: {
+          increment: expect.objectContaining({
+            toNumber: expect.any(Function),
+          }),
+        },
+      },
+    });
+    expect(result.riderWalletRefund).toEqual(
+      expect.objectContaining({
+        applied: true,
+        amount: 2400,
       }),
     );
   });

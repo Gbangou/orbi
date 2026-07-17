@@ -5,8 +5,16 @@ import { apiRoutes } from "./routes";
 
 // ── Payment types ─────────────────────────────────────────────────────────────
 
-export type PaymentProviderCode = "FLUTTERWAVE" | "CINETPAY" | "PAWAPAY";
-export type PaymentProviderKey = "flutterwave" | "cinetpay" | "pawapay";
+export type PaymentProviderCode =
+  | "FLUTTERWAVE"
+  | "CINETPAY"
+  | "PAWAPAY"
+  | "WALLET";
+export type PaymentProviderKey =
+  | "flutterwave"
+  | "cinetpay"
+  | "pawapay"
+  | "wallet";
 
 export type CheckoutIntentPayload = {
   rideRequestId: string;
@@ -25,7 +33,11 @@ export type CheckoutIntentPayload = {
 export type CheckoutIntentResponse = {
   provider: PaymentProviderCode;
   transactionRef: string;
-  checkoutMode: "REDIRECT_OR_INLINE" | "REDIRECT_OR_WIDGET";
+  checkoutMode:
+    | "REDIRECT_OR_INLINE"
+    | "REDIRECT_OR_WIDGET"
+    | "PUSH_USSD"
+    | "WALLET_DEBIT";
   amount: number;
   currency: string;
   channel: "MOBILE_MONEY" | "CARD" | "WALLET";
@@ -41,7 +53,7 @@ export type CheckoutIntentResponse = {
   trustNotes: {
     providerAbstractionEnabled: boolean;
     webhookVerificationRequired: boolean;
-    settlementModel: "aggregator";
+    settlementModel: "aggregator" | "internal_wallet";
   };
 };
 
