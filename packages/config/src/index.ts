@@ -37,6 +37,10 @@ export const orbiRuntimeConfig = {
 export function resolveOrbiDemoAccessEnabled(
   env: Record<string, string | undefined> = runtimeEnvironment.process?.env ?? {},
 ) {
+  if (env.NODE_ENV === 'production') {
+    return false;
+  }
+
   const explicitValue =
     env.EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS ??
     env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS;

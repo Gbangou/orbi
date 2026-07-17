@@ -56,7 +56,27 @@ describe('Orbi runtime config', () => {
         NODE_ENV: 'production',
         EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS: 'true',
       }),
+    ).toBe(false);
+    expect(
+      resolveOrbiDemoAccessEnabled({
+        NODE_ENV: 'development',
+        EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS: 'true',
+      }),
     ).toBe(true);
+  });
+
+  it('keeps public EAS build profiles free of embedded demo credentials', () => {
+    const riderEas = readFileSync(join(process.cwd(), 'eas.json'), 'utf8');
+    const driverEas = readFileSync(
+      join(process.cwd(), '../driver-app/eas.json'),
+      'utf8',
+    );
+
+    for (const source of [riderEas, driverEas]) {
+      expect(source).not.toContain('EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS');
+      expect(source).not.toContain('EXPO_PUBLIC_ORBI_DEMO');
+      expect(source).not.toContain('TestOrbi2026!');
+    }
   });
 
   it('keeps mobile API clients and realtime streams on the runtime-resolved base URL', () => {

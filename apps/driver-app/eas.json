@@ -38,10 +38,7 @@
       },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://orbi-field-api.onrender.com",
-        "EXPO_PUBLIC_API_VERSION": "v1",
-        "EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS": "true",
-        "EXPO_PUBLIC_ORBI_DEMO_DRIVER_EMAIL": "testchauffeur@orbi.test",
-        "EXPO_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD": "TestOrbi2026!"
+        "EXPO_PUBLIC_API_VERSION": "v1"
       }
     },
     "field-test": {
