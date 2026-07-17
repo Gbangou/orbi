@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import {
   escapeHtmlText,
+  localMapWebViewOriginWhitelist,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
@@ -206,7 +207,7 @@ export function SavedPlacesMap({
           scrollEnabled={false}
           onMessage={handleMessage}
           javaScriptEnabled
-          originWhitelist={['about:blank', 'https://*']}
+          originWhitelist={localMapWebViewOriginWhitelist}
           onShouldStartLoadWithRequest={(request: { url: string }) =>
             shouldAllowLocalMapWebViewRequest(request.url)
           }

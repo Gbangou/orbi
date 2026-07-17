@@ -24,4 +24,16 @@ describe('driver map view resilience', () => {
     expect(source).toContain('fallback={renderDegradedPanel()}');
     expect(source).toContain('renderDegradedPanel()');
   });
+
+  it.each([
+    'lib/driver-home-map-view.tsx',
+    'lib/trip-map-view.tsx',
+    'lib/approach-map-view.tsx',
+  ])('uses the shared restricted map origin whitelist in %s', (relativePath) => {
+    const source = readAppFile(relativePath);
+
+    expect(source).toContain('localMapWebViewOriginWhitelist');
+    expect(source).toContain('originWhitelist={localMapWebViewOriginWhitelist}');
+    expect(source).not.toContain("originWhitelist={['about:blank', 'https://*']}");
+  });
 });

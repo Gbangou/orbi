@@ -25,4 +25,16 @@ describe('rider map view resilience', () => {
     expect(source).toContain('fallback={renderDegradedPanel()}');
     expect(source).toContain('renderDegradedPanel()');
   });
+
+  it.each([
+    'lib/home-map-view.tsx',
+    'lib/trip-map-view.tsx',
+    'lib/saved-places-map.tsx',
+  ])('uses the shared restricted map origin whitelist in %s', (relativePath) => {
+    const source = readAppFile(relativePath);
+
+    expect(source).toContain('localMapWebViewOriginWhitelist');
+    expect(source).toContain('originWhitelist={localMapWebViewOriginWhitelist}');
+    expect(source).not.toContain("originWhitelist={['about:blank', 'https://*']}");
+  });
 });

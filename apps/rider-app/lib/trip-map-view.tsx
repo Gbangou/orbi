@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
+  localMapWebViewOriginWhitelist,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
@@ -242,7 +243,7 @@ export function TripMapView({
           scrollEnabled={false}
           style={styles.webview}
           javaScriptEnabled
-          originWhitelist={['about:blank', 'https://*']}
+          originWhitelist={localMapWebViewOriginWhitelist}
           onShouldStartLoadWithRequest={(request: { url: string }) =>
             shouldAllowLocalMapWebViewRequest(request.url)
           }

@@ -3,6 +3,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type { DriverOffer } from '@orbi/api';
 import {
+  localMapWebViewOriginWhitelist,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
@@ -190,7 +191,7 @@ export function DriverHomeMapView({
           scrollEnabled={false}
           style={styles.webview}
           javaScriptEnabled
-          originWhitelist={['about:blank', 'https://*']}
+          originWhitelist={localMapWebViewOriginWhitelist}
           onShouldStartLoadWithRequest={(request: { url: string }) =>
             shouldAllowLocalMapWebViewRequest(request.url)
           }

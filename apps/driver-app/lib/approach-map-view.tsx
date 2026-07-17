@@ -3,6 +3,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
   escapeHtmlText,
+  localMapWebViewOriginWhitelist,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
@@ -201,7 +202,7 @@ export function ApproachMapView({
           scrollEnabled={false}
           style={styles.webview}
           javaScriptEnabled
-          originWhitelist={['about:blank', 'https://*']}
+          originWhitelist={localMapWebViewOriginWhitelist}
           onShouldStartLoadWithRequest={(request: { url: string }) =>
             shouldAllowLocalMapWebViewRequest(request.url)
           }

@@ -432,6 +432,22 @@ const allowedMapWebViewHosts = new Set([
   "router.project-osrm.org",
 ]);
 
+export const localMapWebViewOriginWhitelist = [
+  "about:blank",
+  "about:srcdoc",
+  "https://unpkg.com",
+  "https://tile.openstreetmap.org",
+  "https://a.tile.openstreetmap.org",
+  "https://b.tile.openstreetmap.org",
+  "https://c.tile.openstreetmap.org",
+  "https://a.basemaps.cartocdn.com",
+  "https://b.basemaps.cartocdn.com",
+  "https://c.basemaps.cartocdn.com",
+  "https://d.basemaps.cartocdn.com",
+  "https://basemaps.cartocdn.com",
+  "https://router.project-osrm.org",
+] as const;
+
 export function shouldAllowLocalMapWebViewRequest(url: string) {
   if (!url || url === "about:blank" || url === "about:srcdoc") {
     return true;

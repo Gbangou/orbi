@@ -3,6 +3,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { fetchNearbyDrivers, type NearbyDriverMarker } from '@orbi/api';
 import {
+  localMapWebViewOriginWhitelist,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
@@ -247,7 +248,7 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
           scrollEnabled={false}
           style={styles.webview}
           javaScriptEnabled
-          originWhitelist={['about:blank', 'https://*']}
+          originWhitelist={localMapWebViewOriginWhitelist}
           onShouldStartLoadWithRequest={(request: { url: string }) =>
             shouldAllowLocalMapWebViewRequest(request.url)
           }
