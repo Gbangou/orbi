@@ -18,6 +18,7 @@ import { CreateRideRequestDto } from '../modules/ride-requests/dto/create-ride-r
 import { RecordRoutePositionDto } from '../modules/trips/dto/record-route-position.dto';
 import { ReportTripSosDto } from '../modules/trips/dto/report-trip-sos.dto';
 import { VoiceLocationIntentDto } from '../modules/voice/dto/voice-location-intent.dto';
+import { RegisterPushTokenDto } from '../modules/users/dto/register-push-token.dto';
 
 async function validateDto<T extends object>(
   dtoClass: new () => T,
@@ -192,9 +193,9 @@ describe('dirty input validation', () => {
   it('bounds live route and SOS coordinates without rejecting useful emergency text', async () => {
     const validSos = await validateDto(ReportTripSosDto, {
       details: "<script>alert('copied')</script> Accident pres de Koulouba.",
-      latitude: 12.371,
-      longitude: -1.519,
-      accuracyMeters: 35,
+      latitude: '12.371',
+      longitude: '-1.519',
+      accuracyMeters: '35',
     });
     const dirtySos = await validateDto(ReportTripSosDto, {
       details: 'urgence '.repeat(1_000),
@@ -223,6 +224,26 @@ describe('dirty input validation', () => {
     expect(dirtySos.length).toBeGreaterThan(0);
     expect(validRoutePosition).toEqual([]);
     expect(dirtyRoutePosition.length).toBeGreaterThan(0);
+  });
+
+  it('accepts only bounded Expo push token values', async () => {
+    const validExpoToken = await validateDto(RegisterPushTokenDto, {
+      token: 'ExpoPushToken[abcDEF123_-xyz]',
+    });
+    const validExponentToken = await validateDto(RegisterPushTokenDto, {
+      token: 'ExponentPushToken[abcDEF123_-xyz]',
+    });
+    const dirtyToken = await validateDto(RegisterPushTokenDto, {
+      token: 'Bearer secret\n<script>alert(1)</script>',
+    });
+    const oversizedToken = await validateDto(RegisterPushTokenDto, {
+      token: `ExpoPushToken[${'A'.repeat(300)}]`,
+    });
+
+    expect(validExpoToken).toEqual([]);
+    expect(validExponentToken).toEqual([]);
+    expect(dirtyToken.length).toBeGreaterThan(0);
+    expect(oversizedToken.length).toBeGreaterThan(0);
   });
 
   it('requires pickup codes to be exactly four digits', async () => {
