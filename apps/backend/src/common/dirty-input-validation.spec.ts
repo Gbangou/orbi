@@ -17,8 +17,11 @@ import { SubmitMobileErrorReportsDto } from '../modules/mobile-observability/dto
 import { CreateRideRequestDto } from '../modules/ride-requests/dto/create-ride-request.dto';
 import { RecordRoutePositionDto } from '../modules/trips/dto/record-route-position.dto';
 import { ReportTripSosDto } from '../modules/trips/dto/report-trip-sos.dto';
+import { RateTripDto } from '../modules/trips/dto/rate-trip.dto';
+import { UpdateTripStatusDto } from '../modules/trips/dto/update-trip-status.dto';
 import { VoiceLocationIntentDto } from '../modules/voice/dto/voice-location-intent.dto';
 import { RegisterPushTokenDto } from '../modules/users/dto/register-push-token.dto';
+import { TripStatus } from '@prisma/client';
 
 async function validateDto<T extends object>(
   dtoClass: new () => T,
@@ -170,6 +173,40 @@ describe('dirty input validation', () => {
     expect(dirtyRide.length).toBeGreaterThan(0);
     expect(shortScriptRide.length).toBeGreaterThan(0);
     expect(traversalRider.length).toBeGreaterThan(0);
+  });
+
+  it('rejects unsafe trip notes, cancellation reasons and rating comments', async () => {
+    const validRating = await validateDto(RateTripDto, {
+      score: '5',
+      comment: 'Chauffeur courtois, trajet calme.',
+    });
+    const dirtyRating = await validateDto(RateTripDto, {
+      score: '5',
+      comment: '<script>alert(1)</script>',
+    });
+    const validCancellation = await validateDto(UpdateTripStatusDto, {
+      status: TripStatus.CANCELLED,
+      cancellationReason: 'Passager introuvable au point de depart.',
+    });
+    const dirtyCancellation = await validateDto(UpdateTripStatusDto, {
+      status: TripStatus.CANCELLED,
+      cancellationReason: 'Annule <img src=x onerror=alert(1)>',
+    });
+    const dirtyRideNote = await validateDto(CreateRideRequestDto, {
+      pickupAddress: 'Aeroport Ouagadougou',
+      destinationAddress: 'Koulouba',
+      requestedVehicleType: 'CAR',
+      estimatedDistanceKm: 8,
+      estimatedDurationMinutes: 20,
+      paymentMethod: 'MOBILE_MONEY',
+      notes: 'Bagage leger <script>alert(1)</script>',
+    });
+
+    expect(validRating).toEqual([]);
+    expect(validCancellation).toEqual([]);
+    expect(dirtyRating.length).toBeGreaterThan(0);
+    expect(dirtyCancellation.length).toBeGreaterThan(0);
+    expect(dirtyRideNote.length).toBeGreaterThan(0);
   });
 
   it('rejects dirty saved places while accepting realistic local labels', async () => {

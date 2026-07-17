@@ -138,6 +138,9 @@ export class CreateRideRequestDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  @Matches(safeStructuredTextPattern, {
+    message: 'Notes contain unsafe characters.',
+  })
   notes?: string;
 
   @ApiProperty({ required: false })
