@@ -241,13 +241,24 @@ describe('AdminUsersService', () => {
           phoneNumber: '+22670000000',
           isActive: true,
           createdAt: new Date('2026-05-01T08:00:00.000Z'),
+          lastLoginAt: new Date('2026-05-01T08:05:00.000Z'),
           riderProfile: {
             id: 'rider-profile-1',
             _count: { trips: 4, rideRequests: 9 },
           },
         },
+        {
+          id: 'rider-user-2',
+          fullName: 'Missing Profile',
+          email: 'missing@orbi.test',
+          phoneNumber: null,
+          isActive: true,
+          createdAt: new Date('2026-05-01T09:00:00.000Z'),
+          lastLoginAt: null,
+          riderProfile: null,
+        },
       ]);
-      prisma.user.count.mockResolvedValue(1);
+      prisma.user.count.mockResolvedValue(2);
 
       const result = await service.listRiders({
         page: 0,
@@ -280,12 +291,27 @@ describe('AdminUsersService', () => {
             phoneNumber: '+22670000000',
             isActive: true,
             createdAt: '2026-05-01T08:00:00.000Z',
+            lastLoginAt: '2026-05-01T08:05:00.000Z',
             riderId: 'rider-profile-1',
+            profileStatus: 'READY',
             completedTripsCount: 4,
             rideRequestsCount: 9,
           },
+          {
+            id: 'rider-user-2',
+            fullName: 'Missing Profile',
+            email: 'missing@orbi.test',
+            phoneNumber: null,
+            isActive: true,
+            createdAt: '2026-05-01T09:00:00.000Z',
+            lastLoginAt: null,
+            riderId: null,
+            profileStatus: 'MISSING_PROFILE',
+            completedTripsCount: 0,
+            rideRequestsCount: 0,
+          },
         ],
-        total: 1,
+        total: 2,
         page: 1,
         pageSize: 100,
       });

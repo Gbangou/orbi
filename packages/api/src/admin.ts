@@ -539,7 +539,9 @@ export type AdminRidersResponse = {
     phoneNumber: string | null;
     isActive: boolean;
     createdAt: string;
+    lastLoginAt: string | null;
     riderId: string | null;
+    profileStatus: "READY" | "MISSING_PROFILE";
     completedTripsCount: number;
     rideRequestsCount: number;
   }>;

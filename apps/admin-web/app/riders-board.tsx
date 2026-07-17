@@ -15,6 +15,22 @@ type RidersBoardProps = {
   initialRiders: AdminRidersResponse;
 };
 
+const RIDER_PROFILE_STATUS_LABELS: Record<
+  AdminRidersResponse['riders'][number]['profileStatus'],
+  string
+> = {
+  READY: 'Profil OK',
+  MISSING_PROFILE: 'Profil manquant',
+};
+
+const RIDER_PROFILE_STATUS_CSS: Record<
+  AdminRidersResponse['riders'][number]['profileStatus'],
+  string
+> = {
+  READY: 'phase-status-completed',
+  MISSING_PROFILE: 'phase-status-next',
+};
+
 async function fetchRiders(search: string) {
   const params = new URLSearchParams({
     page: '1',
@@ -47,31 +63,36 @@ async function updateRiderStatus(
 
 export function RidersBoard({ initialRiders }: RidersBoardProps) {
   const [riders, setRiders] = useState(initialRiders.riders);
+  const [totalRiders, setTotalRiders] = useState(initialRiders.total);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('Riders synchronises.');
+  const [status, setStatus] = useState('Passagers synchronises.');
   const [busyRiderId, setBusyRiderId] = useState<string | null>(null);
   const riderStatusInFlightRef = useRef(new Set<string>());
 
   const summary = useMemo(() => {
     const active = riders.filter((rider) => rider.isActive).length;
     const suspended = riders.length - active;
+    const missingProfiles = riders.filter(
+      (rider) => rider.profileStatus === 'MISSING_PROFILE',
+    ).length;
     const requests = riders.reduce(
       (total, rider) => total + rider.rideRequestsCount,
       0,
     );
 
-    return { active, suspended, requests };
+    return { active, suspended, missingProfiles, requests };
   }, [riders]);
 
   async function refreshRiders(nextSearch = search) {
-    setStatus('Actualisation riders...');
+    setStatus('Actualisation passagers...');
 
     try {
       const response = await fetchRiders(nextSearch);
       setRiders(response.riders);
-      setStatus('Riders actualises.');
+      setTotalRiders(response.total);
+      setStatus('Passagers actualises.');
     } catch {
-      setStatus("Impossible d'actualiser les riders.");
+      setStatus("Impossible d'actualiser les passagers.");
     }
   }
 
@@ -141,6 +162,11 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
 
       <div className="board-summary-grid">
         <article className="board-summary-card">
+          <span>Total</span>
+          <strong>{totalRiders}</strong>
+          <p>Passagers visibles dans la base active</p>
+        </article>
+        <article className="board-summary-card">
           <span>Actifs</span>
           <strong>{summary.active}</strong>
           <p>Comptes passagers autorises</p>
@@ -149,6 +175,11 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
           <span>Suspendus</span>
           <strong>{summary.suspended}</strong>
           <p>Comptes bloques par operations</p>
+        </article>
+        <article className="board-summary-card">
+          <span>Profils manquants</span>
+          <strong>{summary.missingProfiles}</strong>
+          <p>Comptes a reparer avant test reel</p>
         </article>
         <article className="board-summary-card">
           <span>Demandes</span>
@@ -168,6 +199,13 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
                   {rider.phoneNumber ?? 'Telephone non renseigne'} - cree le{' '}
                   {formatAdminDateTime(rider.createdAt)}
                 </p>
+                <p>
+                  Derniere connexion:{' '}
+                  {rider.lastLoginAt
+                    ? formatAdminDateTime(rider.lastLoginAt)
+                    : 'jamais vue'}
+                </p>
+                <p>ID profil: {rider.riderId ?? 'aucun profil rattache'}</p>
               </div>
               <div className="ops-row-metrics">
                 <span
@@ -178,6 +216,13 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
                   }`}
                 >
                   {rider.isActive ? 'Actif' : 'Suspendu'}
+                </span>
+                <span
+                  className={`phase-status ${
+                    RIDER_PROFILE_STATUS_CSS[rider.profileStatus]
+                  }`}
+                >
+                  {RIDER_PROFILE_STATUS_LABELS[rider.profileStatus]}
                 </span>
                 <strong>{rider.rideRequestsCount} demandes</strong>
                 <span>{rider.completedTripsCount} trajets</span>

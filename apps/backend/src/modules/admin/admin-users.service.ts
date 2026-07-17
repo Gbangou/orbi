@@ -49,7 +49,9 @@ export type AdminRiderListItem = {
   phoneNumber: string | null;
   isActive: boolean;
   createdAt: string;
+  lastLoginAt: string | null;
   riderId: string | null;
+  profileStatus: 'READY' | 'MISSING_PROFILE';
   completedTripsCount: number;
   rideRequestsCount: number;
 };
@@ -207,6 +209,7 @@ export class AdminUsersService {
           phoneNumber: true,
           isActive: true,
           createdAt: true,
+          lastLoginAt: true,
           riderProfile: {
             select: {
               id: true,
@@ -229,7 +232,9 @@ export class AdminUsersService {
         phoneNumber: u.phoneNumber ?? null,
         isActive: u.isActive,
         createdAt: u.createdAt.toISOString(),
+        lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
         riderId: u.riderProfile?.id ?? null,
+        profileStatus: u.riderProfile ? 'READY' : 'MISSING_PROFILE',
         completedTripsCount: u.riderProfile?._count.trips ?? 0,
         rideRequestsCount: u.riderProfile?._count.rideRequests ?? 0,
       })),

@@ -16,6 +16,20 @@ describe('riders board', () => {
     expect(source).toContain('riderStatusInFlightRef.current.delete(userId)');
   });
 
+  it('surfaces rider profile health for field-test triage', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/riders-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('RIDER_PROFILE_STATUS_LABELS');
+    expect(source).toContain('Profil OK');
+    expect(source).toContain('Profil manquant');
+    expect(source).toContain('Profils manquants');
+    expect(source).toContain('Derniere connexion:');
+    expect(source).toContain('ID profil:');
+  });
+
   it('bounds riders list pagination and search before proxying to the backend', () => {
     const source = readFileSync(
       join(process.cwd(), 'app/api/admin/riders/route.ts'),
