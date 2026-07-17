@@ -6,6 +6,7 @@ import {
 } from '../../../../admin-server-auth';
 import {
   createNoStoreAdminHeaders,
+  resolveStrictIsoDate,
   resolveStrictBoundedInteger,
 } from '../../../../admin-server-security';
 
@@ -34,12 +35,6 @@ function resolveExportLimit(value: string | null) {
   return resolveStrictBoundedInteger(value, { min: 1, max: 500, fallback: 200 });
 }
 
-const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
-
-function resolveIsoDate(value: string | null) {
-  return value && isoDatePattern.test(value) ? value : undefined;
-}
-
 function resolveSearch(value: string | null) {
   const trimmed = value?.trim() ?? '';
 
@@ -52,8 +47,12 @@ export async function GET(request: NextRequest) {
     const csv = await fetchAdminTripsExportCsv(authClient, {
       status: resolveTripStatus(request.nextUrl.searchParams.get('status')),
       limit: resolveExportLimit(request.nextUrl.searchParams.get('limit')),
-      fromDate: resolveIsoDate(request.nextUrl.searchParams.get('fromDate')),
-      toDate: resolveIsoDate(request.nextUrl.searchParams.get('toDate')),
+      fromDate: resolveStrictIsoDate(
+        request.nextUrl.searchParams.get('fromDate'),
+      ),
+      toDate: resolveStrictIsoDate(
+        request.nextUrl.searchParams.get('toDate'),
+      ),
       search: resolveSearch(request.nextUrl.searchParams.get('search')),
     });
 

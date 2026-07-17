@@ -15,6 +15,7 @@ import {
   resolveDriverPayoutSettlementStatus,
   resolvePaymentWebhookJournalKind,
   resolveStrictBoundedInteger,
+  resolveStrictIsoDate,
 } from '../app/admin-server-security';
 import {
   createAdminIdempotencyKey,
@@ -249,6 +250,16 @@ describe('admin server security', () => {
     expect(
       resolveStrictBoundedInteger('1.5', { min: 1, max: 100, fallback: 10 }),
     ).toBe(10);
+  });
+
+  it('resolves strict ISO calendar dates without rollover coercion', () => {
+    expect(resolveStrictIsoDate('2026-07-17')).toBe('2026-07-17');
+    expect(resolveStrictIsoDate(' 2024-02-29 ')).toBe('2024-02-29');
+    expect(resolveStrictIsoDate('2026-02-29')).toBeUndefined();
+    expect(resolveStrictIsoDate('2026-99-01')).toBeUndefined();
+    expect(resolveStrictIsoDate('2026-01-32')).toBeUndefined();
+    expect(resolveStrictIsoDate('2026-7-17')).toBeUndefined();
+    expect(resolveStrictIsoDate('2026-07-17T00:00:00.000Z')).toBeUndefined();
   });
 
   it('allows only safe document view URLs for admin links', () => {

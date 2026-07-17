@@ -6,6 +6,7 @@ import {
 } from '../../../../admin-server-auth';
 import {
   createNoStoreAdminHeaders,
+  resolveStrictIsoDate,
   resolveStrictBoundedInteger,
 } from '../../../../admin-server-security';
 
@@ -34,12 +35,6 @@ function resolveTripStatus(value: string | null) {
     : undefined;
 }
 
-const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
-
-function resolveIsoDate(value: string | null) {
-  return value && isoDatePattern.test(value) ? value : undefined;
-}
-
 export async function GET(request: NextRequest) {
   try {
     const authClient = await getAdminServerAuthClient();
@@ -48,8 +43,12 @@ export async function GET(request: NextRequest) {
         request.nextUrl.searchParams.get('lookbackHours'),
       ),
       status: resolveTripStatus(request.nextUrl.searchParams.get('status')),
-      fromDate: resolveIsoDate(request.nextUrl.searchParams.get('fromDate')),
-      toDate: resolveIsoDate(request.nextUrl.searchParams.get('toDate')),
+      fromDate: resolveStrictIsoDate(
+        request.nextUrl.searchParams.get('fromDate'),
+      ),
+      toDate: resolveStrictIsoDate(
+        request.nextUrl.searchParams.get('toDate'),
+      ),
     });
 
     return NextResponse.json(response, {

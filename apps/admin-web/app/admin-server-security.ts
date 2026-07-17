@@ -40,6 +40,7 @@ const adminNoStoreHeaders = {
   Expires: '0',
 };
 const strictIntegerPattern = /^[0-9]+$/;
+const strictIsoDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 type AdminRequestSecurityInput = Pick<NextRequest, 'headers' | 'method'> & {
   nextUrl: Pick<NextRequest['nextUrl'], 'origin'>;
@@ -165,6 +166,30 @@ export function resolveStrictBoundedInteger(
   }
 
   return parsed;
+}
+
+export function resolveStrictIsoDate(value: string | null) {
+  const trimmed = value?.trim() ?? '';
+  const match = strictIsoDatePattern.exec(trimmed);
+
+  if (!match) {
+    return undefined;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return undefined;
+  }
+
+  return trimmed;
 }
 
 export function createNoStoreAdminHeaders() {

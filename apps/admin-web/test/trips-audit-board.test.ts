@@ -64,8 +64,8 @@ describe('trips audit board', () => {
     expect(source).toContain("searchParams.get('fromDate')");
     expect(source).toContain("searchParams.get('toDate')");
     expect(source).toContain("searchParams.get('search')");
-    expect(source).toContain('fromDate: resolveIsoDate(');
-    expect(source).toContain('toDate: resolveIsoDate(');
+    expect(source).toContain('fromDate: resolveStrictIsoDate(');
+    expect(source).toContain('toDate: resolveStrictIsoDate(');
     expect(source).toContain('search: resolveSearch(');
   });
 
@@ -83,8 +83,8 @@ describe('trips audit board', () => {
     expect(routeSource).toContain("searchParams.get('fromDate')");
     expect(routeSource).toContain("searchParams.get('toDate')");
     expect(routeSource).toContain('status: resolveTripStatus(');
-    expect(routeSource).toContain('fromDate: resolveIsoDate(');
-    expect(routeSource).toContain('toDate: resolveIsoDate(');
+    expect(routeSource).toContain('fromDate: resolveStrictIsoDate(');
+    expect(routeSource).toContain('toDate: resolveStrictIsoDate(');
 
     const boardSource = readFileSync(
       join(process.cwd(), 'app/trips-audit-board.tsx'),
