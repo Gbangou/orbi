@@ -540,6 +540,9 @@ export type AdminRidersResponse = {
     isActive: boolean;
     createdAt: string;
     lastLoginAt: string | null;
+    lockedUntil: string | null;
+    failedLoginCount: number;
+    authStatus: "READY" | "LOCKED" | "FAILED_ATTEMPTS";
     riderId: string | null;
     profileStatus: "READY" | "MISSING_PROFILE";
     completedTripsCount: number;
@@ -572,8 +575,11 @@ export type AdminDriversResponse = {
     status: string;
     verificationStatus: string;
     profileStatus: "READY" | "MISSING_PROFILE";
+    authStatus: "READY" | "LOCKED" | "FAILED_ATTEMPTS";
     createdAt: string;
     lastLoginAt: string | null;
+    lockedUntil: string | null;
+    failedLoginCount: number;
     completedTripsCount: number;
     vehicle: {
       make: string;
@@ -590,6 +596,13 @@ export type AdminDriversResponse = {
 export type AdminDriverProfileRepairResponse = {
   driver: AdminDriversResponse["drivers"][number];
   repaired: boolean;
+};
+
+export type AdminUserAuthUnlockResponse = {
+  userId: string;
+  unlocked: boolean;
+  lockedUntil: string | null;
+  failedLoginCount: number;
 };
 
 export type AdminDriverWalletsResponse = {
@@ -1456,6 +1469,19 @@ export async function repairAdminRiderProfile(
 ) {
   return client.request<AdminRiderProfileRepairResponse>(
     `${apiRoutes.admin.riders}/${userId}/profile/repair`,
+    {
+      method: "PATCH",
+      body: {},
+    },
+  );
+}
+
+export async function unlockAdminUserAuth(
+  client: OrbiApiClient,
+  userId: string,
+) {
+  return client.request<AdminUserAuthUnlockResponse>(
+    `/admin/users/${userId}/auth/unlock`,
     {
       method: "PATCH",
       body: {},

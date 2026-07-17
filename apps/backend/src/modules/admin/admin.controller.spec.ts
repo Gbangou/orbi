@@ -70,6 +70,7 @@ describe('AdminController', () => {
       listRiders: jest.fn(),
       setRiderStatus: jest.fn(),
       repairRiderProfile: jest.fn(),
+      unlockUserAuth: jest.fn(),
     };
 
     return {
@@ -244,6 +245,20 @@ describe('AdminController', () => {
     await controller.repairRiderProfile('rider-user-1', auth as never);
 
     expect(adminUsersService.repairRiderProfile).toHaveBeenCalledWith(
+      'rider-user-1',
+      auth,
+    );
+  });
+
+  it('delegates user auth unlock with the current auth context', async () => {
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.unlockUserAuth('rider-user-1', auth as never);
+
+    expect(adminUsersService.unlockUserAuth).toHaveBeenCalledWith(
       'rider-user-1',
       auth,
     );

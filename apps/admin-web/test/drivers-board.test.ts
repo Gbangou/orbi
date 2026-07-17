@@ -157,6 +157,9 @@ describe('drivers board', () => {
     expect(source).toContain('Reparer profil');
     expect(source).toContain('Derniere connexion:');
     expect(source).toContain('ID profil:');
+    expect(source).toContain('DRIVER_AUTH_STATUS_LABELS');
+    expect(source).toContain('Login bloque');
+    expect(source).toContain('Debloquer login');
   });
 
   it('protects driver profile repair mutations before proxying to the backend', () => {
@@ -172,6 +175,18 @@ describe('drivers board', () => {
     expect(source).toContain('isSafeOpaqueAdminId');
     expect(source).toContain('repairAdminDriverProfile');
     expect(source).toContain('Unable to repair driver profile.');
+  });
+
+  it('protects user auth unlock mutations before proxying to the backend', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/api/admin/users/[userId]/auth/unlock/route.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain('isSafeAdminMutationRequest');
+    expect(source).toContain('isSafeOpaqueAdminId');
+    expect(source).toContain('unlockAdminUserAuth');
+    expect(source).toContain('Unable to unlock user auth.');
   });
 
   it('keeps the suspend route no-store and auth-guarded', () => {

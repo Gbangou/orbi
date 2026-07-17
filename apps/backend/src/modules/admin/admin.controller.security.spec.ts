@@ -87,6 +87,7 @@ async function buildApp(role: string | null): Promise<INestApplication<App>> {
     listRiders: jest.fn().mockResolvedValue({ riders: [] }),
     setRiderStatus: jest.fn().mockResolvedValue({}),
     repairRiderProfile: jest.fn().mockResolvedValue({}),
+    unlockUserAuth: jest.fn().mockResolvedValue({}),
     driverOnboardingQueue: jest.fn().mockResolvedValue({ drivers: [] }),
     driverWallets: jest.fn().mockResolvedValue({ wallets: [] }),
     prepareDriverWalletPayout: jest.fn().mockResolvedValue({}),
@@ -157,6 +158,7 @@ async function buildApp(role: string | null): Promise<INestApplication<App>> {
     listRiders: jest.fn().mockResolvedValue([]),
     setRiderStatus: jest.fn().mockResolvedValue({}),
     repairRiderProfile: jest.fn().mockResolvedValue({}),
+    unlockUserAuth: jest.fn().mockResolvedValue({}),
     listPromoCodes: jest.fn().mockResolvedValue([]),
     createPromoCode: jest.fn().mockResolvedValue({}),
     deactivatePromoCode: jest.fn().mockResolvedValue({}),
@@ -222,6 +224,7 @@ const adminOpsWriteEndpoints = [
   ['PATCH', '/api/v1/admin/drivers/driver-user-1/profile/repair'],
   ['PATCH', '/api/v1/admin/riders/rider-user-1/status'],
   ['PATCH', '/api/v1/admin/riders/rider-user-1/profile/repair'],
+  ['PATCH', '/api/v1/admin/users/rider-user-1/auth/unlock'],
   ['PATCH', '/api/v1/admin/dispatch-settings'],
   ['POST', '/api/v1/admin/drivers/driver-abc/suspend'],
 ] as const;

@@ -150,8 +150,11 @@ describe('AdminUsersService', () => {
             status: 'ONLINE',
             verificationStatus: 'APPROVED',
             profileStatus: 'READY',
+            authStatus: 'READY',
             createdAt: '2026-05-01T08:00:00.000Z',
             lastLoginAt: '2026-05-01T08:10:00.000Z',
+            lockedUntil: null,
+            failedLoginCount: 0,
             completedTripsCount: 12,
             vehicle: {
               make: 'Honda',
@@ -171,8 +174,11 @@ describe('AdminUsersService', () => {
             status: 'MISSING_PROFILE',
             verificationStatus: 'MISSING_PROFILE',
             profileStatus: 'MISSING_PROFILE',
+            authStatus: 'READY',
             createdAt: '2026-05-01T09:00:00.000Z',
             lastLoginAt: null,
+            lockedUntil: null,
+            failedLoginCount: 0,
             completedTripsCount: 0,
             vehicle: null,
           },
@@ -468,6 +474,9 @@ describe('AdminUsersService', () => {
             isActive: true,
             createdAt: '2026-05-01T08:00:00.000Z',
             lastLoginAt: '2026-05-01T08:05:00.000Z',
+            lockedUntil: null,
+            failedLoginCount: 0,
+            authStatus: 'READY',
             riderId: 'rider-profile-1',
             profileStatus: 'READY',
             completedTripsCount: 4,
@@ -481,6 +490,9 @@ describe('AdminUsersService', () => {
             isActive: true,
             createdAt: '2026-05-01T09:00:00.000Z',
             lastLoginAt: null,
+            lockedUntil: null,
+            failedLoginCount: 0,
+            authStatus: 'READY',
             riderId: null,
             profileStatus: 'MISSING_PROFILE',
             completedTripsCount: 0,
@@ -592,6 +604,88 @@ describe('AdminUsersService', () => {
 
       await expect(
         service.repairRiderProfile('driver-user-1', authContext()),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('unlockUserAuth', () => {
+    it('clears failed login counters and writes an audit log', async () => {
+      const { prisma, service } = createService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'rider-user-1',
+        role: 'RIDER',
+        email: 'awa@orbi.test',
+        failedLoginCount: 5,
+        lockedUntil: new Date('2026-05-01T08:30:00.000Z'),
+      });
+      prisma.user.update.mockResolvedValue(undefined);
+
+      const result = await service.unlockUserAuth(
+        'rider-user-1',
+        authContext({ id: 'ops-unlock-1' }),
+      );
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'rider-user-1' },
+        data: { failedLoginCount: 0, lockedUntil: null },
+      });
+      expect(prisma.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'ops-unlock-1',
+            action: 'USER_AUTH_UNLOCKED',
+            entityType: 'USER',
+            entityId: 'rider-user-1',
+            metadata: expect.objectContaining({
+              previousFailedLoginCount: 5,
+              previousLockedUntil: '2026-05-01T08:30:00.000Z',
+            }),
+          }),
+        }),
+      );
+      expect(result).toEqual({
+        userId: 'rider-user-1',
+        unlocked: true,
+        failedLoginCount: 0,
+        lockedUntil: null,
+      });
+    });
+
+    it('does not write when login is already clear', async () => {
+      const { prisma, service } = createService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'driver-user-1',
+        role: 'DRIVER',
+        email: 'driver@orbi.test',
+        failedLoginCount: 0,
+        lockedUntil: null,
+      });
+
+      const result = await service.unlockUserAuth(
+        'driver-user-1',
+        authContext(),
+      );
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(prisma.auditLog.create).not.toHaveBeenCalled();
+      expect(result.unlocked).toBe(false);
+    });
+
+    it('rejects unlocks for non-field accounts', async () => {
+      const { prisma, service } = createService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'admin-1',
+        role: 'ADMIN',
+        email: 'admin@orbi.test',
+        failedLoginCount: 2,
+        lockedUntil: null,
+      });
+
+      await expect(
+        service.unlockUserAuth('admin-1', authContext()),
       ).rejects.toThrow(NotFoundException);
     });
   });

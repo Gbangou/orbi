@@ -27,8 +27,11 @@ export type AdminDriverListItem = {
   status: string;
   verificationStatus: string;
   profileStatus: 'READY' | 'MISSING_PROFILE';
+  authStatus: 'READY' | 'LOCKED' | 'FAILED_ATTEMPTS';
   createdAt: string;
   lastLoginAt: string | null;
+  lockedUntil: string | null;
+  failedLoginCount: number;
   completedTripsCount: number;
   vehicle: {
     make: string;
@@ -50,6 +53,13 @@ export type AdminDriverProfileRepairResponse = {
   repaired: boolean;
 };
 
+export type AdminUserAuthUnlockResponse = {
+  userId: string;
+  unlocked: boolean;
+  lockedUntil: string | null;
+  failedLoginCount: number;
+};
+
 export type AdminRiderListItem = {
   id: string;
   fullName: string;
@@ -58,6 +68,9 @@ export type AdminRiderListItem = {
   isActive: boolean;
   createdAt: string;
   lastLoginAt: string | null;
+  lockedUntil: string | null;
+  failedLoginCount: number;
+  authStatus: 'READY' | 'LOCKED' | 'FAILED_ATTEMPTS';
   riderId: string | null;
   profileStatus: 'READY' | 'MISSING_PROFILE';
   completedTripsCount: number;
@@ -84,6 +97,8 @@ type AdminRiderUserRecord = {
   isActive: boolean;
   createdAt: Date;
   lastLoginAt: Date | null;
+  lockedUntil: Date | null;
+  failedLoginCount: number;
   riderProfile: {
     id: string;
     _count: { trips: number; rideRequests: number };
@@ -98,6 +113,8 @@ type AdminDriverUserRecord = {
   isActive: boolean;
   createdAt: Date;
   lastLoginAt: Date | null;
+  lockedUntil: Date | null;
+  failedLoginCount: number;
   driverProfile: {
     id: string;
     status: string;
@@ -151,6 +168,17 @@ const MAX_PAGE_SIZE = 100;
 export class AdminUsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private resolveAuthStatus(user: {
+    lockedUntil: Date | null;
+    failedLoginCount: number;
+  }): 'READY' | 'LOCKED' | 'FAILED_ATTEMPTS' {
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      return 'LOCKED';
+    }
+
+    return (user.failedLoginCount ?? 0) > 0 ? 'FAILED_ATTEMPTS' : 'READY';
+  }
+
   private mapAdminRider(user: AdminRiderUserRecord): AdminRiderListItem {
     return {
       id: user.id,
@@ -160,6 +188,9 @@ export class AdminUsersService {
       isActive: user.isActive,
       createdAt: user.createdAt.toISOString(),
       lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+      lockedUntil: user.lockedUntil?.toISOString() ?? null,
+      failedLoginCount: user.failedLoginCount ?? 0,
+      authStatus: this.resolveAuthStatus(user),
       riderId: user.riderProfile?.id ?? null,
       profileStatus: user.riderProfile ? 'READY' : 'MISSING_PROFILE',
       completedTripsCount: user.riderProfile?._count.trips ?? 0,
@@ -182,8 +213,11 @@ export class AdminUsersService {
       verificationStatus:
         user.driverProfile?.verificationStatus ?? 'MISSING_PROFILE',
       profileStatus: user.driverProfile ? 'READY' : 'MISSING_PROFILE',
+      authStatus: this.resolveAuthStatus(user),
       createdAt: (user.driverProfile?.createdAt ?? user.createdAt).toISOString(),
       lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+      lockedUntil: user.lockedUntil?.toISOString() ?? null,
+      failedLoginCount: user.failedLoginCount ?? 0,
       completedTripsCount: user.driverProfile?.completedTripsCount ?? 0,
       vehicle: firstVehicle
         ? {
@@ -234,6 +268,8 @@ export class AdminUsersService {
           isActive: true,
           createdAt: true,
           lastLoginAt: true,
+          lockedUntil: true,
+          failedLoginCount: true,
           driverProfile: {
             select: {
               id: true,
@@ -280,6 +316,8 @@ export class AdminUsersService {
         isActive: true,
         createdAt: true,
         lastLoginAt: true,
+        lockedUntil: true,
+        failedLoginCount: true,
         driverProfile: {
           select: {
             id: true,
@@ -386,6 +424,8 @@ export class AdminUsersService {
           isActive: true,
           createdAt: true,
           lastLoginAt: true,
+          lockedUntil: true,
+          failedLoginCount: true,
           riderProfile: {
             select: {
               id: true,
@@ -423,6 +463,8 @@ export class AdminUsersService {
         isActive: true,
         createdAt: true,
         lastLoginAt: true,
+        lockedUntil: true,
+        failedLoginCount: true,
         riderProfile: {
           select: {
             id: true,
@@ -519,5 +561,65 @@ export class AdminUsersService {
     });
 
     return { riderId: userId, isActive: payload.isActive };
+  }
+
+  async unlockUserAuth(
+    userId: string,
+    auth: RequestAuthContext,
+  ): Promise<AdminUserAuthUnlockResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        email: true,
+        failedLoginCount: true,
+        lockedUntil: true,
+      },
+    });
+
+    if (
+      !user ||
+      (user.role !== UserRole.RIDER && user.role !== UserRole.DRIVER)
+    ) {
+      throw new NotFoundException('User account not found.');
+    }
+
+    if (user.failedLoginCount === 0 && !user.lockedUntil) {
+      return {
+        userId,
+        unlocked: false,
+        failedLoginCount: 0,
+        lockedUntil: null,
+      };
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { failedLoginCount: 0, lockedUntil: null },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'USER_AUTH_UNLOCKED',
+        entityType: 'USER',
+        entityId: userId,
+        metadata: {
+          role: user.role,
+          email: user.email,
+          previousFailedLoginCount: user.failedLoginCount,
+          previousLockedUntil: user.lockedUntil?.toISOString() ?? null,
+          source: 'admin_accounts_board',
+        } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    return {
+      userId,
+      unlocked: true,
+      failedLoginCount: 0,
+      lockedUntil: null,
+    };
   }
 }

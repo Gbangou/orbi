@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import {
   type AdminDriverProfileRepairResponse,
   type AdminDriversResponse,
+  type AdminUserAuthUnlockResponse,
 } from "@orbi/api";
 import {
   createAdminMutationHeaders,
@@ -66,6 +67,16 @@ async function repairDriverProfile(userId: string) {
   );
 }
 
+async function unlockUserAuth(userId: string) {
+  return fetchAdminJson<AdminUserAuthUnlockResponse>(
+    `/api/admin/users/${userId}/auth/unlock`,
+    {
+      method: "PATCH",
+      headers: createAdminMutationHeaders(),
+    },
+  );
+}
+
 const DRIVER_STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Actif",
   PENDING: "En attente",
@@ -96,6 +107,24 @@ const DRIVER_PROFILE_STATUS_CSS: Record<
 > = {
   READY: "phase-status-completed",
   MISSING_PROFILE: "phase-status-next",
+};
+
+const DRIVER_AUTH_STATUS_LABELS: Record<
+  AdminDriversResponse["drivers"][number]["authStatus"],
+  string
+> = {
+  READY: "Login OK",
+  LOCKED: "Login bloque",
+  FAILED_ATTEMPTS: "Tentatives ratees",
+};
+
+const DRIVER_AUTH_STATUS_CSS: Record<
+  AdminDriversResponse["drivers"][number]["authStatus"],
+  string
+> = {
+  READY: "phase-status-completed",
+  LOCKED: "phase-status-next",
+  FAILED_ATTEMPTS: "phase-status-planned",
 };
 
 const STATUS_OPTIONS = [
@@ -134,9 +163,10 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
     const missingProfiles = drivers.filter(
       (d) => d.profileStatus === "MISSING_PROFILE",
     ).length;
+    const authIssues = drivers.filter((d) => d.authStatus !== "READY").length;
     const trips = drivers.reduce((t, d) => t + d.completedTripsCount, 0);
 
-    return { active, pending, suspended, missingProfiles, trips };
+    return { active, pending, suspended, missingProfiles, authIssues, trips };
   }, [drivers]);
 
   async function refreshDrivers(
@@ -247,6 +277,38 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
     }
   }
 
+  async function handleUnlockAuth(userId: string) {
+    if (inFlightRef.current.has(userId)) return;
+
+    inFlightRef.current.add(userId);
+    setBusyDriverId(userId);
+    setStatus("Deblocage login chauffeur...");
+
+    try {
+      const response = await unlockUserAuth(userId);
+      setDrivers((current) =>
+        current.map((driver) =>
+          driver.userId === response.userId
+            ? {
+                ...driver,
+                authStatus: "READY",
+                failedLoginCount: response.failedLoginCount,
+                lockedUntil: response.lockedUntil,
+              }
+            : driver,
+        ),
+      );
+      setStatus(
+        response.unlocked ? "Login chauffeur debloque." : "Login deja ouvert.",
+      );
+    } catch {
+      setStatus("Le login chauffeur n'a pas pu etre debloque.");
+    } finally {
+      inFlightRef.current.delete(userId);
+      setBusyDriverId(null);
+    }
+  }
+
   return (
     <section className="panel ops-panel">
       <div className="roadmap-heading">
@@ -312,6 +374,11 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
           <p>Comptes a reparer avant test reel</p>
         </article>
         <article className="board-summary-card">
+          <span>Logins a verifier</span>
+          <strong>{summary.authIssues}</strong>
+          <p>Comptes verrouilles ou tentatives ratees</p>
+        </article>
+        <article className="board-summary-card">
           <span>Trajets</span>
           <strong>{summary.trips}</strong>
           <p>Courses effectuees sur cette page</p>
@@ -336,6 +403,14 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
                     : "jamais vue"}
                 </p>
                 <p>ID profil: {driver.driverId ?? "aucun profil rattache"}</p>
+                <p>
+                  Login: {driver.failedLoginCount} echec(s)
+                  {driver.lockedUntil
+                    ? ` - bloque jusqu'au ${formatAdminDateTime(
+                        driver.lockedUntil,
+                      )}`
+                    : ""}
+                </p>
                 {driver.vehicle ? (
                   <p className="ops-row-sub">
                     {driver.vehicle.vehicleType === "MOTORCYCLE"
@@ -363,6 +438,13 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
                 >
                   {DRIVER_PROFILE_STATUS_LABELS[driver.profileStatus]}
                 </span>
+                <span
+                  className={`phase-status ${
+                    DRIVER_AUTH_STATUS_CSS[driver.authStatus]
+                  }`}
+                >
+                  {DRIVER_AUTH_STATUS_LABELS[driver.authStatus]}
+                </span>
                 <strong>{driver.completedTripsCount} trajets</strong>
               </div>
               <div className="ops-row-actions">
@@ -376,6 +458,18 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
                     {busyDriverId === driver.userId
                       ? "Reparation..."
                       : "Reparer profil"}
+                  </button>
+                )}
+                {driver.authStatus !== "READY" && (
+                  <button
+                    className="ghost-button"
+                    disabled={busyDriverId === driver.userId}
+                    onClick={() => void handleUnlockAuth(driver.userId)}
+                    type="button"
+                  >
+                    {busyDriverId === driver.userId
+                      ? "Deblocage..."
+                      : "Debloquer login"}
                   </button>
                 )}
                 {driver.status === "ACTIVE" && (

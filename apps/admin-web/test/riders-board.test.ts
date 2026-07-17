@@ -30,6 +30,9 @@ describe('riders board', () => {
     expect(source).toContain('ID profil:');
     expect(source).toContain('handleRepairProfile');
     expect(source).toContain('Reparer profil');
+    expect(source).toContain('RIDER_AUTH_STATUS_LABELS');
+    expect(source).toContain('Login bloque');
+    expect(source).toContain('Debloquer login');
   });
 
   it('bounds riders list pagination and search before proxying to the backend', () => {
@@ -54,5 +57,17 @@ describe('riders board', () => {
     expect(source).toContain('isSafeOpaqueAdminId');
     expect(source).toContain('repairAdminRiderProfile');
     expect(source).toContain('Unable to repair rider profile.');
+  });
+
+  it('protects user auth unlock mutations before proxying to the backend', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/api/admin/users/[userId]/auth/unlock/route.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain('isSafeAdminMutationRequest');
+    expect(source).toContain('isSafeOpaqueAdminId');
+    expect(source).toContain('unlockAdminUserAuth');
+    expect(source).toContain('Unable to unlock user auth.');
   });
 });

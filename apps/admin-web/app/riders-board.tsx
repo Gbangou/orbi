@@ -5,6 +5,7 @@ import {
   type AdminRiderProfileRepairResponse,
   type AdminRiderStatusResponse,
   type AdminRidersResponse,
+  type AdminUserAuthUnlockResponse,
 } from '@orbi/api';
 import {
   createAdminMutationHeaders,
@@ -30,6 +31,24 @@ const RIDER_PROFILE_STATUS_CSS: Record<
 > = {
   READY: 'phase-status-completed',
   MISSING_PROFILE: 'phase-status-next',
+};
+
+const RIDER_AUTH_STATUS_LABELS: Record<
+  AdminRidersResponse['riders'][number]['authStatus'],
+  string
+> = {
+  READY: 'Login OK',
+  LOCKED: 'Login bloque',
+  FAILED_ATTEMPTS: 'Tentatives ratees',
+};
+
+const RIDER_AUTH_STATUS_CSS: Record<
+  AdminRidersResponse['riders'][number]['authStatus'],
+  string
+> = {
+  READY: 'phase-status-completed',
+  LOCKED: 'phase-status-next',
+  FAILED_ATTEMPTS: 'phase-status-planned',
 };
 
 async function fetchRiders(search: string) {
@@ -72,6 +91,16 @@ async function repairRiderProfile(userId: string) {
   );
 }
 
+async function unlockUserAuth(userId: string) {
+  return fetchAdminJson<AdminUserAuthUnlockResponse>(
+    `/api/admin/users/${userId}/auth/unlock`,
+    {
+      method: 'PATCH',
+      headers: createAdminMutationHeaders(),
+    },
+  );
+}
+
 export function RidersBoard({ initialRiders }: RidersBoardProps) {
   const [riders, setRiders] = useState(initialRiders.riders);
   const [totalRiders, setTotalRiders] = useState(initialRiders.total);
@@ -86,12 +115,15 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
     const missingProfiles = riders.filter(
       (rider) => rider.profileStatus === 'MISSING_PROFILE',
     ).length;
+    const authIssues = riders.filter(
+      (rider) => rider.authStatus !== 'READY',
+    ).length;
     const requests = riders.reduce(
       (total, rider) => total + rider.rideRequestsCount,
       0,
     );
 
-    return { active, suspended, missingProfiles, requests };
+    return { active, suspended, missingProfiles, authIssues, requests };
   }, [riders]);
 
   async function refreshRiders(nextSearch = search) {
@@ -168,6 +200,40 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
     }
   }
 
+  async function handleUnlockAuth(userId: string) {
+    if (riderStatusInFlightRef.current.has(userId)) {
+      return;
+    }
+
+    riderStatusInFlightRef.current.add(userId);
+    setBusyRiderId(userId);
+    setStatus('Deblocage login passager...');
+
+    try {
+      const response = await unlockUserAuth(userId);
+      setRiders((current) =>
+        current.map((rider) =>
+          rider.id === response.userId
+            ? {
+                ...rider,
+                authStatus: 'READY',
+                failedLoginCount: response.failedLoginCount,
+                lockedUntil: response.lockedUntil,
+              }
+            : rider,
+        ),
+      );
+      setStatus(
+        response.unlocked ? 'Login passager debloque.' : 'Login deja ouvert.',
+      );
+    } catch {
+      setStatus("Le login passager n'a pas pu etre debloque.");
+    } finally {
+      riderStatusInFlightRef.current.delete(userId);
+      setBusyRiderId(null);
+    }
+  }
+
   return (
     <section className="panel ops-panel">
       <div className="roadmap-heading">
@@ -222,6 +288,11 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
           <p>Comptes a reparer avant test reel</p>
         </article>
         <article className="board-summary-card">
+          <span>Logins a verifier</span>
+          <strong>{summary.authIssues}</strong>
+          <p>Comptes verrouilles ou tentatives ratees</p>
+        </article>
+        <article className="board-summary-card">
           <span>Demandes</span>
           <strong>{summary.requests}</strong>
           <p>Reservations rattachees a cette page</p>
@@ -246,6 +317,14 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
                     : 'jamais vue'}
                 </p>
                 <p>ID profil: {rider.riderId ?? 'aucun profil rattache'}</p>
+                <p>
+                  Login: {rider.failedLoginCount} echec(s)
+                  {rider.lockedUntil
+                    ? ` - bloque jusqu'au ${formatAdminDateTime(
+                        rider.lockedUntil,
+                      )}`
+                    : ''}
+                </p>
               </div>
               <div className="ops-row-metrics">
                 <span
@@ -264,6 +343,13 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
                 >
                   {RIDER_PROFILE_STATUS_LABELS[rider.profileStatus]}
                 </span>
+                <span
+                  className={`phase-status ${
+                    RIDER_AUTH_STATUS_CSS[rider.authStatus]
+                  }`}
+                >
+                  {RIDER_AUTH_STATUS_LABELS[rider.authStatus]}
+                </span>
                 <strong>{rider.rideRequestsCount} demandes</strong>
                 <span>{rider.completedTripsCount} trajets</span>
               </div>
@@ -278,6 +364,18 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
                     {busyRiderId === rider.id
                       ? 'Reparation...'
                       : 'Reparer profil'}
+                  </button>
+                ) : null}
+                {rider.authStatus !== 'READY' ? (
+                  <button
+                    className="ghost-button"
+                    disabled={busyRiderId === rider.id}
+                    onClick={() => void handleUnlockAuth(rider.id)}
+                    type="button"
+                  >
+                    {busyRiderId === rider.id
+                      ? 'Deblocage...'
+                      : 'Debloquer login'}
                   </button>
                 ) : null}
                 <button
