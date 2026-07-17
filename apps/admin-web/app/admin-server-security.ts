@@ -27,6 +27,12 @@ const adminJobQueueStatuses = new Set([
   'SUCCEEDED',
   'DEAD_LETTER',
 ]);
+const adminDriverStatusFilters = new Set([
+  'ACTIVE',
+  'PENDING',
+  'SUSPENDED',
+  'REJECTED',
+]);
 const adminJobQueueMaxPageSize = 50;
 const adminNoStoreHeaders = {
   'Cache-Control': 'no-store, max-age=0',
@@ -103,6 +109,16 @@ export function resolveAdminJobQueueKind(value: string | null) {
 export function resolveAdminJobQueueStatus(value: string | null) {
   if (adminJobQueueStatuses.has(value ?? '')) {
     return value as 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'DEAD_LETTER';
+  }
+
+  return undefined;
+}
+
+export function resolveAdminDriverStatusFilter(value: string | null) {
+  const trimmed = value?.trim() ?? '';
+
+  if (adminDriverStatusFilters.has(trimmed)) {
+    return trimmed as 'ACTIVE' | 'PENDING' | 'SUSPENDED' | 'REJECTED';
   }
 
   return undefined;

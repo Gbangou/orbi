@@ -7,6 +7,7 @@ import {
   createNoStoreAdminHeaders,
   isSafeAdminMutationRequest,
   isSafeOpaqueAdminId,
+  resolveAdminDriverStatusFilter,
   resolveAdminJobQueueKind,
   resolveAdminJobQueuePageNumber,
   resolveAdminJobQueuePageSize,
@@ -215,6 +216,16 @@ describe('admin server security', () => {
     expect(resolveAdminJobQueuePageSize('500')).toBe(50);
     expect(resolveAdminJobQueuePageSize('5e1')).toBeUndefined();
     expect(resolveAdminJobQueuePageSize('-1')).toBeUndefined();
+  });
+
+  it('strictly resolves admin driver status filters', () => {
+    expect(resolveAdminDriverStatusFilter('ACTIVE')).toBe('ACTIVE');
+    expect(resolveAdminDriverStatusFilter(' PENDING ')).toBe('PENDING');
+    expect(resolveAdminDriverStatusFilter('SUSPENDED')).toBe('SUSPENDED');
+    expect(resolveAdminDriverStatusFilter('REJECTED')).toBe('REJECTED');
+    expect(resolveAdminDriverStatusFilter('ONLINE')).toBeUndefined();
+    expect(resolveAdminDriverStatusFilter('ACTIVE\nSUSPENDED')).toBeUndefined();
+    expect(resolveAdminDriverStatusFilter('ACTIVE<script>')).toBeUndefined();
   });
 
   it('resolves strict bounded admin integers without implicit coercion', () => {

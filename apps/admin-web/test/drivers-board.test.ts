@@ -105,7 +105,9 @@ describe('drivers board', () => {
     );
 
     expect(source).toContain('resolveStrictBoundedInteger');
+    expect(source).toContain('resolveAdminDriverStatusFilter');
     expect(source).not.toContain('parseInt');
+    expect(source).not.toContain('status: status ?? undefined');
     expect(source).toContain('100');
     expect(source).toContain('.slice(0, 120)');
   });

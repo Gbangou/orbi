@@ -6,6 +6,7 @@ import {
 } from "../../../admin-server-auth";
 import {
   createNoStoreAdminHeaders,
+  resolveAdminDriverStatusFilter,
   resolveStrictBoundedInteger,
 } from "../../../admin-server-security";
 
@@ -29,7 +30,9 @@ export async function GET(request: NextRequest) {
     { min: 1, max: 100, fallback: 30, clampMax: true },
   );
   const search = request.nextUrl.searchParams.get("search")?.trim();
-  const status = request.nextUrl.searchParams.get("status")?.trim();
+  const status = resolveAdminDriverStatusFilter(
+    request.nextUrl.searchParams.get("status"),
+  );
 
   try {
     const authClient = await getAdminServerAuthClient();
@@ -37,7 +40,7 @@ export async function GET(request: NextRequest) {
       page,
       pageSize,
       search: search ? search.slice(0, 120) : undefined,
-      status: status ?? undefined,
+      status,
     });
 
     return NextResponse.json(response, {
