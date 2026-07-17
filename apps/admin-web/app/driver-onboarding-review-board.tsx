@@ -1065,7 +1065,7 @@ export function DriverOnboardingReviewBoard({
                       <a
                         className="document-link"
                         href={documentLinks[document.id]}
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         target="_blank"
                       >
                         Ouvrir

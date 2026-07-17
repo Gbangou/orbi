@@ -55,4 +55,14 @@ describe('driver onboarding review board', () => {
     expect(normalizeDriverDocumentExpiryDate('2027-04-18')).toBeNull();
     expect(normalizeDriverDocumentExpiryDate('not-a-date')).toBeNull();
   });
+
+  it('opens signed driver documents without giving the new tab opener access', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/driver-onboarding-review-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('target="_blank"');
+    expect(source).toContain('rel="noopener noreferrer"');
+  });
 });
