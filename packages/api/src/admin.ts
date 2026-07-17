@@ -564,13 +564,16 @@ export type AdminDriversResponse = {
   drivers: Array<{
     id: string;
     userId: string;
+    driverId: string | null;
     fullName: string;
     email: string;
     phoneNumber: string | null;
     isActive: boolean;
     status: string;
     verificationStatus: string;
+    profileStatus: "READY" | "MISSING_PROFILE";
     createdAt: string;
+    lastLoginAt: string | null;
     completedTripsCount: number;
     vehicle: {
       make: string;
@@ -582,6 +585,11 @@ export type AdminDriversResponse = {
   total: number;
   page: number;
   pageSize: number;
+};
+
+export type AdminDriverProfileRepairResponse = {
+  driver: AdminDriversResponse["drivers"][number];
+  repaired: boolean;
 };
 
 export type AdminDriverWalletsResponse = {
@@ -1401,6 +1409,19 @@ export async function fetchAdminDrivers(
   return client.request<AdminDriversResponse>(apiRoutes.admin.drivers, {
     query,
   });
+}
+
+export async function repairAdminDriverProfile(
+  client: OrbiApiClient,
+  userId: string,
+) {
+  return client.request<AdminDriverProfileRepairResponse>(
+    `${apiRoutes.admin.drivers}/${userId}/profile/repair`,
+    {
+      method: "PATCH",
+      body: {},
+    },
+  );
 }
 
 export async function fetchAdminRiders(

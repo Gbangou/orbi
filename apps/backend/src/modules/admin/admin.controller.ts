@@ -210,6 +210,18 @@ export class AdminController {
     return this.adminUsersService.listDrivers(query);
   }
 
+  @Patch('drivers/:userId/profile/repair')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  repairDriverProfile(
+    @Param('userId', new OpaqueIdPipe('userId')) userId: string,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminUsersService.repairDriverProfile(userId, auth);
+  }
+
   @Get('riders')
   @Version('1')
   @ApiBearerAuth('session-token')

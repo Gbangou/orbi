@@ -143,6 +143,37 @@ describe('drivers board', () => {
     expect(source).toContain('d.verificationStatus === "PENDING"');
   });
 
+  it('surfaces and repairs missing driver profiles for field-test triage', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/drivers-board.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('DRIVER_PROFILE_STATUS_LABELS');
+    expect(source).toContain('Profil OK');
+    expect(source).toContain('Profil manquant');
+    expect(source).toContain('Profils manquants');
+    expect(source).toContain('handleRepairProfile');
+    expect(source).toContain('Reparer profil');
+    expect(source).toContain('Derniere connexion:');
+    expect(source).toContain('ID profil:');
+  });
+
+  it('protects driver profile repair mutations before proxying to the backend', () => {
+    const source = readFileSync(
+      join(
+        process.cwd(),
+        'app/api/admin/drivers/[userId]/profile/repair/route.ts',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('isSafeAdminMutationRequest');
+    expect(source).toContain('isSafeOpaqueAdminId');
+    expect(source).toContain('repairAdminDriverProfile');
+    expect(source).toContain('Unable to repair driver profile.');
+  });
+
   it('keeps the suspend route no-store and auth-guarded', () => {
     const source = readFileSync(
       join(process.cwd(), 'app/api/admin/drivers/[driverId]/suspend/route.ts'),

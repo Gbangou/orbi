@@ -45,10 +45,6 @@ describe('AdminUsersService', () => {
 
   function createService() {
     const prisma = {
-      driverProfile: {
-        findMany: jest.fn().mockResolvedValue([]),
-        count: jest.fn().mockResolvedValue(0),
-      },
       user: {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
@@ -56,6 +52,11 @@ describe('AdminUsersService', () => {
         update: jest.fn(),
       },
       riderProfile: {
+        upsert: jest.fn(),
+      },
+      driverProfile: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
         upsert: jest.fn(),
       },
       auditLog: {
@@ -73,31 +74,43 @@ describe('AdminUsersService', () => {
     it('lists driver accounts with bounded pagination and search filters', async () => {
       const { prisma, service } = createService();
 
-      prisma.driverProfile.findMany.mockResolvedValue([
+      prisma.user.findMany.mockResolvedValue([
         {
-          id: 'driver-profile-1',
-          status: 'ONLINE',
-          verificationStatus: 'APPROVED',
-          completedTripsCount: 12,
+          id: 'driver-user-1',
+          fullName: 'Moussa Traore',
+          email: 'moussa@orbi.test',
+          phoneNumber: '+22670000001',
+          isActive: true,
           createdAt: new Date('2026-05-01T08:00:00.000Z'),
-          user: {
-            id: 'driver-user-1',
-            fullName: 'Moussa Traore',
-            email: 'moussa@orbi.test',
-            phoneNumber: '+22670000001',
-            isActive: true,
+          lastLoginAt: new Date('2026-05-01T08:10:00.000Z'),
+          driverProfile: {
+            id: 'driver-profile-1',
+            status: 'ONLINE',
+            verificationStatus: 'APPROVED',
+            completedTripsCount: 12,
+            createdAt: new Date('2026-05-01T08:00:00.000Z'),
+            vehicles: [
+              {
+                make: 'Honda',
+                model: 'CB150',
+                plateNumber: '01-BF-1234',
+                type: 'MOTORCYCLE',
+              },
+            ],
           },
-          vehicles: [
-            {
-              make: 'Honda',
-              model: 'CB150',
-              plateNumber: '01-BF-1234',
-              type: 'MOTORCYCLE',
-            },
-          ],
+        },
+        {
+          id: 'driver-user-2',
+          fullName: 'Missing Driver',
+          email: 'missing-driver@orbi.test',
+          phoneNumber: null,
+          isActive: true,
+          createdAt: new Date('2026-05-01T09:00:00.000Z'),
+          lastLoginAt: null,
+          driverProfile: null,
         },
       ]);
-      prisma.driverProfile.count.mockResolvedValue(1);
+      prisma.user.count.mockResolvedValue(2);
 
       const result = await service.listDrivers({
         page: 0,
@@ -106,17 +119,18 @@ describe('AdminUsersService', () => {
         status: 'ACTIVE',
       });
 
-      expect(prisma.driverProfile.findMany).toHaveBeenCalledWith(
+      expect(prisma.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            verificationStatus: 'APPROVED',
-            status: { not: 'SUSPENDED' },
+            role: 'DRIVER',
+            driverProfile: {
+              is: expect.objectContaining({
+                verificationStatus: 'APPROVED',
+                status: { not: 'SUSPENDED' },
+              }),
+            },
             OR: expect.arrayContaining([
-              {
-                user: {
-                  fullName: { contains: 'moussa', mode: 'insensitive' },
-                },
-              },
+              { fullName: { contains: 'moussa', mode: 'insensitive' } },
             ]),
           }),
           skip: 0,
@@ -128,13 +142,16 @@ describe('AdminUsersService', () => {
           {
             id: 'driver-profile-1',
             userId: 'driver-user-1',
+            driverId: 'driver-profile-1',
             fullName: 'Moussa Traore',
             email: 'moussa@orbi.test',
             phoneNumber: '+22670000001',
             isActive: true,
             status: 'ONLINE',
             verificationStatus: 'APPROVED',
+            profileStatus: 'READY',
             createdAt: '2026-05-01T08:00:00.000Z',
+            lastLoginAt: '2026-05-01T08:10:00.000Z',
             completedTripsCount: 12,
             vehicle: {
               make: 'Honda',
@@ -143,8 +160,24 @@ describe('AdminUsersService', () => {
               vehicleType: 'MOTORCYCLE',
             },
           },
+          {
+            id: 'driver-user-2',
+            userId: 'driver-user-2',
+            driverId: null,
+            fullName: 'Missing Driver',
+            email: 'missing-driver@orbi.test',
+            phoneNumber: null,
+            isActive: true,
+            status: 'MISSING_PROFILE',
+            verificationStatus: 'MISSING_PROFILE',
+            profileStatus: 'MISSING_PROFILE',
+            createdAt: '2026-05-01T09:00:00.000Z',
+            lastLoginAt: null,
+            completedTripsCount: 0,
+            vehicle: null,
+          },
         ],
-        total: 1,
+        total: 2,
         page: 1,
         pageSize: 100,
       });
@@ -160,33 +193,49 @@ describe('AdminUsersService', () => {
       const { prisma, service } = createService();
 
       await service.listDrivers({ status: 'active' });
-      expect(prisma.driverProfile.findMany).toHaveBeenLastCalledWith(
+      expect(prisma.user.findMany).toHaveBeenLastCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            verificationStatus: 'APPROVED',
-            status: { not: 'SUSPENDED' },
+            driverProfile: {
+              is: expect.objectContaining({
+                verificationStatus: 'APPROVED',
+                status: { not: 'SUSPENDED' },
+              }),
+            },
           }),
         }),
       );
 
       await service.listDrivers({ status: 'pending' });
-      expect(prisma.driverProfile.findMany).toHaveBeenLastCalledWith(
+      expect(prisma.user.findMany).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ verificationStatus: 'PENDING' }),
+          where: expect.objectContaining({
+            driverProfile: {
+              is: expect.objectContaining({ verificationStatus: 'PENDING' }),
+            },
+          }),
         }),
       );
 
       await service.listDrivers({ status: 'rejected' });
-      expect(prisma.driverProfile.findMany).toHaveBeenLastCalledWith(
+      expect(prisma.user.findMany).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ verificationStatus: 'REJECTED' }),
+          where: expect.objectContaining({
+            driverProfile: {
+              is: expect.objectContaining({ verificationStatus: 'REJECTED' }),
+            },
+          }),
         }),
       );
 
       await service.listDrivers({ status: 'suspended' });
-      expect(prisma.driverProfile.findMany).toHaveBeenLastCalledWith(
+      expect(prisma.user.findMany).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ status: 'SUSPENDED' }),
+          where: expect.objectContaining({
+            driverProfile: {
+              is: expect.objectContaining({ status: 'SUSPENDED' }),
+            },
+          }),
         }),
       );
     });
@@ -196,9 +245,11 @@ describe('AdminUsersService', () => {
 
       await service.listDrivers({ status: 'INVALID_STATUS' });
 
-      expect(prisma.driverProfile.findMany).toHaveBeenCalledWith(
+      expect(prisma.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.not.objectContaining({ status: 'INVALID_STATUS' }),
+          where: expect.not.objectContaining({
+            driverProfile: { is: { status: 'INVALID_STATUS' } },
+          }),
         }),
       );
     });
@@ -206,29 +257,151 @@ describe('AdminUsersService', () => {
     it('returns null vehicle when driver has no active vehicle registered', async () => {
       const { prisma, service } = createService();
 
-      prisma.driverProfile.findMany.mockResolvedValue([
+      prisma.user.findMany.mockResolvedValue([
         {
-          id: 'driver-profile-2',
-          status: 'OFFLINE',
-          verificationStatus: 'PENDING',
-          completedTripsCount: 0,
+          id: 'driver-user-2',
+          fullName: 'Fatima Kone',
+          email: 'fatima@orbi.test',
+          phoneNumber: null,
+          isActive: true,
           createdAt: new Date('2026-05-10T09:00:00.000Z'),
-          user: {
-            id: 'driver-user-2',
-            fullName: 'Fatima Kone',
-            email: 'fatima@orbi.test',
-            phoneNumber: null,
-            isActive: true,
+          lastLoginAt: null,
+          driverProfile: {
+            id: 'driver-profile-2',
+            status: 'OFFLINE',
+            verificationStatus: 'PENDING',
+            completedTripsCount: 0,
+            createdAt: new Date('2026-05-10T09:00:00.000Z'),
+            vehicles: [],
           },
-          vehicles: [],
         },
       ]);
-      prisma.driverProfile.count.mockResolvedValue(1);
+      prisma.user.count.mockResolvedValue(1);
 
       const result = await service.listDrivers({});
 
       expect(result.drivers[0].vehicle).toBeNull();
       expect(result.drivers[0].phoneNumber).toBeNull();
+    });
+  });
+
+  describe('repairDriverProfile', () => {
+    it('creates a missing driver profile and writes an audit log', async () => {
+      const { prisma, service } = createService();
+      const auth = authContext({ id: 'ops-driver-repair-1' });
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'driver-user-1',
+        fullName: 'Moussa Traore',
+        email: 'moussa@orbi.test',
+        phoneNumber: '+22670000001',
+        role: 'DRIVER',
+        isActive: true,
+        createdAt: new Date('2026-05-01T08:00:00.000Z'),
+        lastLoginAt: null,
+        driverProfile: null,
+      });
+      prisma.driverProfile.upsert.mockResolvedValue({
+        id: 'driver-profile-1',
+        status: 'OFFLINE',
+        verificationStatus: 'PENDING',
+        completedTripsCount: 0,
+        createdAt: new Date('2026-05-01T08:05:00.000Z'),
+        vehicles: [],
+      });
+
+      const result = await service.repairDriverProfile('driver-user-1', auth);
+
+      expect(prisma.driverProfile.upsert).toHaveBeenCalledWith({
+        where: { userId: 'driver-user-1' },
+        update: {},
+        create: { userId: 'driver-user-1' },
+        select: {
+          id: true,
+          status: true,
+          verificationStatus: true,
+          createdAt: true,
+          completedTripsCount: true,
+          vehicles: {
+            where: { isActive: true },
+            select: { make: true, model: true, plateNumber: true, type: true },
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+      expect(prisma.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'ops-driver-repair-1',
+            action: 'DRIVER_PROFILE_REPAIRED',
+            entityType: 'DRIVER_PROFILE',
+            entityId: 'driver-profile-1',
+          }),
+        }),
+      );
+      expect(result).toEqual({
+        repaired: true,
+        driver: expect.objectContaining({
+          userId: 'driver-user-1',
+          driverId: 'driver-profile-1',
+          profileStatus: 'READY',
+          status: 'OFFLINE',
+          verificationStatus: 'PENDING',
+        }),
+      });
+    });
+
+    it('returns an existing driver profile without creating another one', async () => {
+      const { prisma, service } = createService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'driver-user-1',
+        fullName: 'Moussa Traore',
+        email: 'moussa@orbi.test',
+        phoneNumber: '+22670000001',
+        role: 'DRIVER',
+        isActive: true,
+        createdAt: new Date('2026-05-01T08:00:00.000Z'),
+        lastLoginAt: new Date('2026-05-01T08:10:00.000Z'),
+        driverProfile: {
+          id: 'driver-profile-1',
+          status: 'ONLINE',
+          verificationStatus: 'APPROVED',
+          completedTripsCount: 7,
+          createdAt: new Date('2026-05-01T08:05:00.000Z'),
+          vehicles: [],
+        },
+      });
+
+      const result = await service.repairDriverProfile(
+        'driver-user-1',
+        authContext(),
+      );
+
+      expect(prisma.driverProfile.upsert).not.toHaveBeenCalled();
+      expect(prisma.auditLog.create).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        repaired: false,
+        driver: expect.objectContaining({
+          driverId: 'driver-profile-1',
+          profileStatus: 'READY',
+          completedTripsCount: 7,
+        }),
+      });
+    });
+
+    it('rejects profile repair for non-driver accounts', async () => {
+      const { prisma, service } = createService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'rider-user-1',
+        role: 'RIDER',
+      });
+
+      await expect(
+        service.repairDriverProfile('rider-user-1', authContext()),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

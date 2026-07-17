@@ -66,6 +66,7 @@ describe('AdminController', () => {
     };
     const adminUsersService = {
       listDrivers: jest.fn(),
+      repairDriverProfile: jest.fn(),
       listRiders: jest.fn(),
       setRiderStatus: jest.fn(),
       repairRiderProfile: jest.fn(),
@@ -186,6 +187,20 @@ describe('AdminController', () => {
     await controller.driverWallets(query as never);
 
     expect(adminDriverPayoutsService.driverWallets).toHaveBeenCalledWith(query);
+  });
+
+  it('delegates driver profile repair with the current auth context', async () => {
+    const { adminService, adminSupportService, adminUsersService, adminPromoCodesService, adminDriverOnboardingService, adminDriverPayoutsService, adminPaymentWebhooksService, controller } = createController();
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.repairDriverProfile('driver-user-1', auth as never);
+
+    expect(adminUsersService.repairDriverProfile).toHaveBeenCalledWith(
+      'driver-user-1',
+      auth,
+    );
   });
 
   it('delegates rider account reads to the admin service', async () => {

@@ -19,13 +19,16 @@ import type { RequestAuthContext } from '../auth/auth.types';
 export type AdminDriverListItem = {
   id: string;
   userId: string;
+  driverId: string | null;
   fullName: string;
   email: string;
   phoneNumber: string | null;
   isActive: boolean;
   status: string;
   verificationStatus: string;
+  profileStatus: 'READY' | 'MISSING_PROFILE';
   createdAt: string;
+  lastLoginAt: string | null;
   completedTripsCount: number;
   vehicle: {
     make: string;
@@ -40,6 +43,11 @@ export type AdminDriversResponse = {
   total: number;
   page: number;
   pageSize: number;
+};
+
+export type AdminDriverProfileRepairResponse = {
+  driver: AdminDriverListItem;
+  repaired: boolean;
 };
 
 export type AdminRiderListItem = {
@@ -79,6 +87,29 @@ type AdminRiderUserRecord = {
   riderProfile: {
     id: string;
     _count: { trips: number; rideRequests: number };
+  } | null;
+};
+
+type AdminDriverUserRecord = {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  lastLoginAt: Date | null;
+  driverProfile: {
+    id: string;
+    status: string;
+    verificationStatus: string;
+    createdAt: Date;
+    completedTripsCount: number;
+    vehicles: Array<{
+      make: string;
+      model: string;
+      plateNumber: string;
+      type: string;
+    }>;
   } | null;
 };
 
@@ -136,6 +167,35 @@ export class AdminUsersService {
     };
   }
 
+  private mapAdminDriver(user: AdminDriverUserRecord): AdminDriverListItem {
+    const [firstVehicle] = user.driverProfile?.vehicles ?? [];
+
+    return {
+      id: user.driverProfile?.id ?? user.id,
+      userId: user.id,
+      driverId: user.driverProfile?.id ?? null,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber ?? null,
+      isActive: user.isActive,
+      status: user.driverProfile?.status ?? 'MISSING_PROFILE',
+      verificationStatus:
+        user.driverProfile?.verificationStatus ?? 'MISSING_PROFILE',
+      profileStatus: user.driverProfile ? 'READY' : 'MISSING_PROFILE',
+      createdAt: (user.driverProfile?.createdAt ?? user.createdAt).toISOString(),
+      lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+      completedTripsCount: user.driverProfile?.completedTripsCount ?? 0,
+      vehicle: firstVehicle
+        ? {
+            make: firstVehicle.make,
+            model: firstVehicle.model,
+            plateNumber: firstVehicle.plateNumber,
+            vehicleType: firstVehicle.type,
+          }
+        : null,
+    };
+  }
+
   async listDrivers(query: {
     page?: number;
     pageSize?: number;
@@ -146,67 +206,148 @@ export class AdminUsersService {
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, query.pageSize ?? DEFAULT_PAGE_SIZE));
     const searchTerm = query.search?.trim();
 
-    const where: Prisma.DriverProfileWhereInput = {
+    const driverProfileWhere = resolveDriverStatusFilter(query.status);
+    const where: Prisma.UserWhereInput = {
+      role: UserRole.DRIVER,
       ...(searchTerm
         ? {
             OR: [
-              { user: { fullName: { contains: searchTerm, mode: 'insensitive' } } },
-              { user: { email: { contains: searchTerm, mode: 'insensitive' } } },
-              { user: { phoneNumber: { contains: searchTerm } } },
+              { fullName: { contains: searchTerm, mode: 'insensitive' } },
+              { email: { contains: searchTerm, mode: 'insensitive' } },
+              { phoneNumber: { contains: searchTerm } },
             ],
           }
         : {}),
-      ...resolveDriverStatusFilter(query.status),
+      ...(Object.keys(driverProfileWhere).length
+        ? { driverProfile: { is: driverProfileWhere } }
+        : {}),
     };
 
-    const [driverRows, total] = await Promise.all([
-      this.prisma.driverProfile.findMany({
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
         where,
-        include: {
-          user: {
-            select: { id: true, fullName: true, email: true, phoneNumber: true, isActive: true },
-          },
-          vehicles: {
-            where: { isActive: true },
-            select: { make: true, model: true, plateNumber: true, type: true },
-            take: 1,
-            orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phoneNumber: true,
+          isActive: true,
+          createdAt: true,
+          lastLoginAt: true,
+          driverProfile: {
+            select: {
+              id: true,
+              status: true,
+              verificationStatus: true,
+              createdAt: true,
+              completedTripsCount: true,
+              vehicles: {
+                where: { isActive: true },
+                select: { make: true, model: true, plateNumber: true, type: true },
+                take: 1,
+                orderBy: { createdAt: 'desc' },
+              },
+            },
           },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      this.prisma.driverProfile.count({ where }),
+      this.prisma.user.count({ where }),
     ]);
 
     return {
-      drivers: driverRows.map((d) => {
-        const [firstVehicle] = d.vehicles;
-        return {
-          id: d.id,
-          userId: d.user.id,
-          fullName: d.user.fullName,
-          email: d.user.email,
-          phoneNumber: d.user.phoneNumber ?? null,
-          isActive: d.user.isActive,
-          status: d.status,
-          verificationStatus: d.verificationStatus,
-          createdAt: d.createdAt.toISOString(),
-          completedTripsCount: d.completedTripsCount,
-          vehicle: firstVehicle
-            ? {
-                make: firstVehicle.make,
-                model: firstVehicle.model,
-                plateNumber: firstVehicle.plateNumber,
-                vehicleType: firstVehicle.type,
-              }
-            : null,
-        };
-      }),
+      drivers: users.map((u) => this.mapAdminDriver(u)),
       total,
       page,
       pageSize,
+    };
+  }
+
+  async repairDriverProfile(
+    userId: string,
+    auth: RequestAuthContext,
+  ): Promise<AdminDriverProfileRepairResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phoneNumber: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        lastLoginAt: true,
+        driverProfile: {
+          select: {
+            id: true,
+            status: true,
+            verificationStatus: true,
+            createdAt: true,
+            completedTripsCount: true,
+            vehicles: {
+              where: { isActive: true },
+              select: { make: true, model: true, plateNumber: true, type: true },
+              take: 1,
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user || user.role !== UserRole.DRIVER) {
+      throw new NotFoundException('Driver account not found.');
+    }
+
+    if (user.driverProfile) {
+      return {
+        driver: this.mapAdminDriver(user),
+        repaired: false,
+      };
+    }
+
+    const driverProfile = await this.prisma.driverProfile.upsert({
+      where: { userId },
+      update: {},
+      create: { userId },
+      select: {
+        id: true,
+        status: true,
+        verificationStatus: true,
+        createdAt: true,
+        completedTripsCount: true,
+        vehicles: {
+          where: { isActive: true },
+          select: { make: true, model: true, plateNumber: true, type: true },
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'DRIVER_PROFILE_REPAIRED',
+        entityType: 'DRIVER_PROFILE',
+        entityId: driverProfile.id,
+        metadata: {
+          userId,
+          email: user.email,
+          source: 'admin_drivers_board',
+        } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    return {
+      driver: this.mapAdminDriver({
+        ...user,
+        driverProfile,
+      }),
+      repaired: true,
     };
   }
 

@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { type AdminDriversResponse } from "@orbi/api";
+import {
+  type AdminDriverProfileRepairResponse,
+  type AdminDriversResponse,
+} from "@orbi/api";
 import {
   createAdminMutationHeaders,
   fetchAdminJson,
@@ -53,11 +56,22 @@ async function reactivateDriver(driverId: string) {
   );
 }
 
+async function repairDriverProfile(userId: string) {
+  return fetchAdminJson<AdminDriverProfileRepairResponse>(
+    `/api/admin/drivers/${userId}/profile/repair`,
+    {
+      method: "PATCH",
+      headers: createAdminMutationHeaders(),
+    },
+  );
+}
+
 const DRIVER_STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Actif",
   PENDING: "En attente",
   SUSPENDED: "Suspendu",
   REJECTED: "Rejete",
+  MISSING_PROFILE: "Profil manquant",
 };
 
 const DRIVER_STATUS_CSS: Record<string, string> = {
@@ -65,6 +79,23 @@ const DRIVER_STATUS_CSS: Record<string, string> = {
   PENDING: "phase-status-next",
   SUSPENDED: "phase-status-next",
   REJECTED: "phase-status-blocked",
+  MISSING_PROFILE: "phase-status-next",
+};
+
+const DRIVER_PROFILE_STATUS_LABELS: Record<
+  AdminDriversResponse["drivers"][number]["profileStatus"],
+  string
+> = {
+  READY: "Profil OK",
+  MISSING_PROFILE: "Profil manquant",
+};
+
+const DRIVER_PROFILE_STATUS_CSS: Record<
+  AdminDriversResponse["drivers"][number]["profileStatus"],
+  string
+> = {
+  READY: "phase-status-completed",
+  MISSING_PROFILE: "phase-status-next",
 };
 
 const STATUS_OPTIONS = [
@@ -100,9 +131,12 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
       (d) => d.verificationStatus === "PENDING",
     ).length;
     const suspended = drivers.filter((d) => d.status === "SUSPENDED").length;
+    const missingProfiles = drivers.filter(
+      (d) => d.profileStatus === "MISSING_PROFILE",
+    ).length;
     const trips = drivers.reduce((t, d) => t + d.completedTripsCount, 0);
 
-    return { active, pending, suspended, trips };
+    return { active, pending, suspended, missingProfiles, trips };
   }, [drivers]);
 
   async function refreshDrivers(
@@ -186,6 +220,33 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
     }
   }
 
+  async function handleRepairProfile(userId: string) {
+    if (inFlightRef.current.has(userId)) return;
+
+    inFlightRef.current.add(userId);
+    setBusyDriverId(userId);
+    setStatus("Reparation profil chauffeur...");
+
+    try {
+      const response = await repairDriverProfile(userId);
+      setDrivers((current) =>
+        current.map((driver) =>
+          driver.userId === response.driver.userId ? response.driver : driver,
+        ),
+      );
+      setStatus(
+        response.repaired
+          ? "Profil chauffeur repare."
+          : "Profil chauffeur deja pret.",
+      );
+    } catch {
+      setStatus("Le profil chauffeur n'a pas pu etre repare.");
+    } finally {
+      inFlightRef.current.delete(userId);
+      setBusyDriverId(null);
+    }
+  }
+
   return (
     <section className="panel ops-panel">
       <div className="roadmap-heading">
@@ -246,6 +307,11 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
           <p>Comptes bloques par operations</p>
         </article>
         <article className="board-summary-card">
+          <span>Profils manquants</span>
+          <strong>{summary.missingProfiles}</strong>
+          <p>Comptes a reparer avant test reel</p>
+        </article>
+        <article className="board-summary-card">
           <span>Trajets</span>
           <strong>{summary.trips}</strong>
           <p>Courses effectuees sur cette page</p>
@@ -263,6 +329,13 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
                   {driver.phoneNumber ?? "Telephone non renseigne"} - cree le{" "}
                   {formatAdminDateTime(driver.createdAt)}
                 </p>
+                <p>
+                  Derniere connexion:{" "}
+                  {driver.lastLoginAt
+                    ? formatAdminDateTime(driver.lastLoginAt)
+                    : "jamais vue"}
+                </p>
+                <p>ID profil: {driver.driverId ?? "aucun profil rattache"}</p>
                 {driver.vehicle ? (
                   <p className="ops-row-sub">
                     {driver.vehicle.vehicleType === "MOTORCYCLE"
@@ -283,9 +356,28 @@ export function DriversBoard({ initialDrivers }: DriversBoardProps) {
                 >
                   {DRIVER_STATUS_LABELS[driver.status] ?? driver.status}
                 </span>
+                <span
+                  className={`phase-status ${
+                    DRIVER_PROFILE_STATUS_CSS[driver.profileStatus]
+                  }`}
+                >
+                  {DRIVER_PROFILE_STATUS_LABELS[driver.profileStatus]}
+                </span>
                 <strong>{driver.completedTripsCount} trajets</strong>
               </div>
               <div className="ops-row-actions">
+                {driver.profileStatus === "MISSING_PROFILE" && (
+                  <button
+                    className="ghost-button"
+                    disabled={busyDriverId === driver.userId}
+                    onClick={() => void handleRepairProfile(driver.userId)}
+                    type="button"
+                  >
+                    {busyDriverId === driver.userId
+                      ? "Reparation..."
+                      : "Reparer profil"}
+                  </button>
+                )}
                 {driver.status === "ACTIVE" && (
                   <>
                     {confirmingDriverId === driver.id ? (
