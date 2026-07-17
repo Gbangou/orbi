@@ -28,6 +28,8 @@ describe('riders board', () => {
     expect(source).toContain('Profils manquants');
     expect(source).toContain('Derniere connexion:');
     expect(source).toContain('ID profil:');
+    expect(source).toContain('handleRepairProfile');
+    expect(source).toContain('Reparer profil');
   });
 
   it('bounds riders list pagination and search before proxying to the backend', () => {
@@ -40,5 +42,17 @@ describe('riders board', () => {
     expect(source).not.toContain('parseInt');
     expect(source).toContain('100');
     expect(source).toContain('.slice(0, 120)');
+  });
+
+  it('protects rider profile repair mutations before proxying to the backend', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'app/api/admin/riders/[userId]/profile/repair/route.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain('isSafeAdminMutationRequest');
+    expect(source).toContain('isSafeOpaqueAdminId');
+    expect(source).toContain('repairAdminRiderProfile');
+    expect(source).toContain('Unable to repair rider profile.');
   });
 });

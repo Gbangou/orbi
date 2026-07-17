@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import {
+  type AdminRiderProfileRepairResponse,
   type AdminRiderStatusResponse,
   type AdminRidersResponse,
 } from '@orbi/api';
@@ -57,6 +58,16 @@ async function updateRiderStatus(
         ...createAdminMutationHeaders(),
       },
       body: JSON.stringify(payload),
+    },
+  );
+}
+
+async function repairRiderProfile(userId: string) {
+  return fetchAdminJson<AdminRiderProfileRepairResponse>(
+    `/api/admin/riders/${userId}/profile/repair`,
+    {
+      method: 'PATCH',
+      headers: createAdminMutationHeaders(),
     },
   );
 }
@@ -122,6 +133,35 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
       setStatus(isActive ? 'Rider reactive.' : 'Rider suspendu.');
     } catch {
       setStatus("Le statut rider n'a pas pu etre mis a jour.");
+    } finally {
+      riderStatusInFlightRef.current.delete(userId);
+      setBusyRiderId(null);
+    }
+  }
+
+  async function handleRepairProfile(userId: string) {
+    if (riderStatusInFlightRef.current.has(userId)) {
+      return;
+    }
+
+    riderStatusInFlightRef.current.add(userId);
+    setBusyRiderId(userId);
+    setStatus('Reparation profil passager...');
+
+    try {
+      const response = await repairRiderProfile(userId);
+      setRiders((current) =>
+        current.map((rider) =>
+          rider.id === response.rider.id ? response.rider : rider,
+        ),
+      );
+      setStatus(
+        response.repaired
+          ? 'Profil passager repare.'
+          : 'Profil passager deja pret.',
+      );
+    } catch {
+      setStatus("Le profil passager n'a pas pu etre repare.");
     } finally {
       riderStatusInFlightRef.current.delete(userId);
       setBusyRiderId(null);
@@ -227,18 +267,34 @@ export function RidersBoard({ initialRiders }: RidersBoardProps) {
                 <strong>{rider.rideRequestsCount} demandes</strong>
                 <span>{rider.completedTripsCount} trajets</span>
               </div>
-              <button
-                className={rider.isActive ? 'danger-button' : 'ghost-button'}
-                disabled={busyRiderId === rider.id}
-                onClick={() => void handleStatusChange(rider.id, !rider.isActive)}
-                type="button"
-              >
-                {busyRiderId === rider.id
-                  ? 'Mise a jour...'
-                  : rider.isActive
-                    ? 'Suspendre'
-                    : 'Reactiver'}
-              </button>
+              <div className="ops-row-actions">
+                {rider.profileStatus === 'MISSING_PROFILE' ? (
+                  <button
+                    className="ghost-button"
+                    disabled={busyRiderId === rider.id}
+                    onClick={() => void handleRepairProfile(rider.id)}
+                    type="button"
+                  >
+                    {busyRiderId === rider.id
+                      ? 'Reparation...'
+                      : 'Reparer profil'}
+                  </button>
+                ) : null}
+                <button
+                  className={rider.isActive ? 'danger-button' : 'ghost-button'}
+                  disabled={busyRiderId === rider.id}
+                  onClick={() =>
+                    void handleStatusChange(rider.id, !rider.isActive)
+                  }
+                  type="button"
+                >
+                  {busyRiderId === rider.id
+                    ? 'Mise a jour...'
+                    : rider.isActive
+                      ? 'Suspendre'
+                      : 'Reactiver'}
+                </button>
+              </div>
             </article>
           ))
         ) : (

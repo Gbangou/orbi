@@ -63,6 +63,25 @@ export type AdminRidersResponse = {
   pageSize: number;
 };
 
+export type AdminRiderProfileRepairResponse = {
+  rider: AdminRiderListItem;
+  repaired: boolean;
+};
+
+type AdminRiderUserRecord = {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  lastLoginAt: Date | null;
+  riderProfile: {
+    id: string;
+    _count: { trips: number; rideRequests: number };
+  } | null;
+};
+
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 // Le filtre exposé aux ops (PENDING/ACTIVE/SUSPENDED/REJECTED) décrit le cycle
@@ -100,6 +119,22 @@ const MAX_PAGE_SIZE = 100;
 @Injectable()
 export class AdminUsersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private mapAdminRider(user: AdminRiderUserRecord): AdminRiderListItem {
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber ?? null,
+      isActive: user.isActive,
+      createdAt: user.createdAt.toISOString(),
+      lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+      riderId: user.riderProfile?.id ?? null,
+      profileStatus: user.riderProfile ? 'READY' : 'MISSING_PROFILE',
+      completedTripsCount: user.riderProfile?._count.trips ?? 0,
+      rideRequestsCount: user.riderProfile?._count.rideRequests ?? 0,
+    };
+  }
 
   async listDrivers(query: {
     page?: number;
@@ -225,22 +260,78 @@ export class AdminUsersService {
     ]);
 
     return {
-      riders: users.map((u) => ({
-        id: u.id,
-        fullName: u.fullName,
-        email: u.email,
-        phoneNumber: u.phoneNumber ?? null,
-        isActive: u.isActive,
-        createdAt: u.createdAt.toISOString(),
-        lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
-        riderId: u.riderProfile?.id ?? null,
-        profileStatus: u.riderProfile ? 'READY' : 'MISSING_PROFILE',
-        completedTripsCount: u.riderProfile?._count.trips ?? 0,
-        rideRequestsCount: u.riderProfile?._count.rideRequests ?? 0,
-      })),
+      riders: users.map((u) => this.mapAdminRider(u)),
       total,
       page,
       pageSize,
+    };
+  }
+
+  async repairRiderProfile(
+    userId: string,
+    auth: RequestAuthContext,
+  ): Promise<AdminRiderProfileRepairResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phoneNumber: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        lastLoginAt: true,
+        riderProfile: {
+          select: {
+            id: true,
+            _count: { select: { trips: true, rideRequests: true } },
+          },
+        },
+      },
+    });
+
+    if (!user || user.role !== UserRole.RIDER) {
+      throw new NotFoundException('Rider account not found.');
+    }
+
+    if (user.riderProfile) {
+      return {
+        rider: this.mapAdminRider(user),
+        repaired: false,
+      };
+    }
+
+    const riderProfile = await this.prisma.riderProfile.upsert({
+      where: { userId },
+      update: {},
+      create: { userId },
+      select: {
+        id: true,
+        _count: { select: { trips: true, rideRequests: true } },
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'RIDER_PROFILE_REPAIRED',
+        entityType: 'RIDER_PROFILE',
+        entityId: riderProfile.id,
+        metadata: {
+          userId,
+          email: user.email,
+          source: 'admin_riders_board',
+        } satisfies Prisma.InputJsonObject,
+      },
+    });
+
+    return {
+      rider: this.mapAdminRider({
+        ...user,
+        riderProfile,
+      }),
+      repaired: true,
     };
   }
 

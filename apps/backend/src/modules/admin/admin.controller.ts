@@ -232,6 +232,18 @@ export class AdminController {
     return this.adminUsersService.setRiderStatus(userId, payload, auth);
   }
 
+  @Patch('riders/:userId/profile/repair')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  repairRiderProfile(
+    @Param('userId', new OpaqueIdPipe('userId')) userId: string,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminUsersService.repairRiderProfile(userId, auth);
+  }
+
   @Get('driver-onboarding-queue')
   @Version('1')
   @ApiBearerAuth('session-token')

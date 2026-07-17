@@ -55,6 +55,9 @@ describe('AdminUsersService', () => {
         findUnique: jest.fn(),
         update: jest.fn(),
       },
+      riderProfile: {
+        upsert: jest.fn(),
+      },
       auditLog: {
         create: jest.fn().mockResolvedValue(undefined),
       },
@@ -315,6 +318,108 @@ describe('AdminUsersService', () => {
         page: 1,
         pageSize: 100,
       });
+    });
+  });
+
+  describe('repairRiderProfile', () => {
+    it('creates a missing rider profile and writes an audit log', async () => {
+      const { prisma, service } = createService();
+      const auth = authContext({ id: 'ops-repair-1' });
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'rider-user-1',
+        fullName: 'Awa Ouedraogo',
+        email: 'awa@orbi.test',
+        phoneNumber: '+22670000000',
+        role: 'RIDER',
+        isActive: true,
+        createdAt: new Date('2026-05-01T08:00:00.000Z'),
+        lastLoginAt: null,
+        riderProfile: null,
+      });
+      prisma.riderProfile.upsert.mockResolvedValue({
+        id: 'rider-profile-1',
+        _count: { trips: 0, rideRequests: 0 },
+      });
+
+      const result = await service.repairRiderProfile('rider-user-1', auth);
+
+      expect(prisma.riderProfile.upsert).toHaveBeenCalledWith({
+        where: { userId: 'rider-user-1' },
+        update: {},
+        create: { userId: 'rider-user-1' },
+        select: {
+          id: true,
+          _count: { select: { trips: true, rideRequests: true } },
+        },
+      });
+      expect(prisma.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'ops-repair-1',
+            action: 'RIDER_PROFILE_REPAIRED',
+            entityType: 'RIDER_PROFILE',
+            entityId: 'rider-profile-1',
+          }),
+        }),
+      );
+      expect(result).toEqual({
+        repaired: true,
+        rider: expect.objectContaining({
+          id: 'rider-user-1',
+          riderId: 'rider-profile-1',
+          profileStatus: 'READY',
+        }),
+      });
+    });
+
+    it('returns an existing rider profile without creating another one', async () => {
+      const { prisma, service } = createService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'rider-user-1',
+        fullName: 'Awa Ouedraogo',
+        email: 'awa@orbi.test',
+        phoneNumber: '+22670000000',
+        role: 'RIDER',
+        isActive: true,
+        createdAt: new Date('2026-05-01T08:00:00.000Z'),
+        lastLoginAt: new Date('2026-05-01T08:05:00.000Z'),
+        riderProfile: {
+          id: 'rider-profile-1',
+          _count: { trips: 1, rideRequests: 2 },
+        },
+      });
+
+      const result = await service.repairRiderProfile(
+        'rider-user-1',
+        authContext(),
+      );
+
+      expect(prisma.riderProfile.upsert).not.toHaveBeenCalled();
+      expect(prisma.auditLog.create).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        repaired: false,
+        rider: expect.objectContaining({
+          riderId: 'rider-profile-1',
+          profileStatus: 'READY',
+          completedTripsCount: 1,
+          rideRequestsCount: 2,
+        }),
+      });
+    });
+
+    it('rejects profile repair for non-rider accounts', async () => {
+      const { prisma, service } = createService();
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'driver-user-1',
+        role: 'DRIVER',
+      });
+
+      await expect(
+        service.repairRiderProfile('driver-user-1', authContext()),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

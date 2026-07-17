@@ -555,6 +555,11 @@ export type AdminRiderStatusResponse = {
   isActive: boolean;
 };
 
+export type AdminRiderProfileRepairResponse = {
+  rider: AdminRidersResponse["riders"][number];
+  repaired: boolean;
+};
+
 export type AdminDriversResponse = {
   drivers: Array<{
     id: string;
@@ -1420,6 +1425,19 @@ export async function updateAdminRiderStatus(
     {
       method: "PATCH",
       body: payload,
+    },
+  );
+}
+
+export async function repairAdminRiderProfile(
+  client: OrbiApiClient,
+  userId: string,
+) {
+  return client.request<AdminRiderProfileRepairResponse>(
+    `${apiRoutes.admin.riders}/${userId}/profile/repair`,
+    {
+      method: "PATCH",
+      body: {},
     },
   );
 }
