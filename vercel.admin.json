@@ -1,0 +1,6 @@
+{
+  "framework": "nextjs",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @orbi/domain build && pnpm --filter @orbi/api build && pnpm --filter @orbi/config build && pnpm --filter @orbi/ui build && pnpm --filter @orbi/admin-web build",
+  "outputDirectory": "apps/admin-web/.next"
+}

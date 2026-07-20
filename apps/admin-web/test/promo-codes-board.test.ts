@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import {
   normalizePromoCodeDate,
   normalizePromoCodePayload,
-} from '../app/api/admin/promo-codes/route';
+} from '../app/api/admin/promo-codes/promo-code-normalizers';
 import { resolvePromoCodeFormPayload } from '../app/promo-code-safety';
 
 describe('promo codes board', () => {
@@ -108,37 +108,37 @@ describe('promo codes board', () => {
   });
 
   it('validates discount bps is a positive integer within bounds before submitting', () => {
-    const routeSource = readFileSync(
-      join(process.cwd(), 'app/api/admin/promo-codes/route.ts'),
+    const normalizerSource = readFileSync(
+      join(process.cwd(), 'app/api/admin/promo-codes/promo-code-normalizers.ts'),
       'utf8',
     );
 
-    expect(routeSource).toContain('normalizePromoCodePayload');
-    expect(routeSource).toContain('discountBps < 1');
-    expect(routeSource).toContain('discountBps > 10000');
-    expect(routeSource).toContain('Number.isInteger(input.discountBps)');
+    expect(normalizerSource).toContain('normalizePromoCodePayload');
+    expect(normalizerSource).toContain('discountBps < 1');
+    expect(normalizerSource).toContain('discountBps > 10000');
+    expect(normalizerSource).toContain('Number.isInteger(input.discountBps)');
   });
 
-  it('rejects codes shorter than 3 or longer than 32 characters in the route handler', () => {
-    const routeSource = readFileSync(
-      join(process.cwd(), 'app/api/admin/promo-codes/route.ts'),
+  it('rejects codes shorter than 3 or longer than 32 characters in the normalizer', () => {
+    const normalizerSource = readFileSync(
+      join(process.cwd(), 'app/api/admin/promo-codes/promo-code-normalizers.ts'),
       'utf8',
     );
 
-    expect(routeSource).toContain('code.length < 3');
-    expect(routeSource).toContain('code.length > 32');
+    expect(normalizerSource).toContain('code.length < 3');
+    expect(normalizerSource).toContain('code.length > 32');
   });
 
-  it('validates promo dates as strict real UTC instants in the route handler', () => {
-    const routeSource = readFileSync(
-      join(process.cwd(), 'app/api/admin/promo-codes/route.ts'),
+  it('validates promo dates as strict real UTC instants in the normalizer', () => {
+    const normalizerSource = readFileSync(
+      join(process.cwd(), 'app/api/admin/promo-codes/promo-code-normalizers.ts'),
       'utf8',
     );
 
-    expect(routeSource).toContain('normalizePromoCodeDate');
-    expect(routeSource).toContain('isoUtcDateTimePattern');
-    expect(routeSource).not.toContain('Date.parse(validFrom)');
-    expect(routeSource).not.toContain('Date.parse(validTo)');
+    expect(normalizerSource).toContain('normalizePromoCodeDate');
+    expect(normalizerSource).toContain('isoUtcDateTimePattern');
+    expect(normalizerSource).not.toContain('Date.parse(validFrom)');
+    expect(normalizerSource).not.toContain('Date.parse(validTo)');
 
     expect(normalizePromoCodeDate('2026-07-15T00:00:00.000Z')).toBe(
       '2026-07-15T00:00:00.000Z',

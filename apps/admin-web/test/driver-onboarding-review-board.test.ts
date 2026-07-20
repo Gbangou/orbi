@@ -2,7 +2,7 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { normalizeDriverDocumentExpiryDate } from '../app/api/admin/driver-onboarding/[driverId]/review/route';
+import { normalizeDriverDocumentExpiryDate } from '../app/api/admin/driver-onboarding/[driverId]/review/review-normalizers';
 
 describe('driver onboarding review board', () => {
   it('guards driver and document actions against duplicate clicks', () => {
@@ -30,18 +30,20 @@ describe('driver onboarding review board', () => {
     expect(source).toContain('exportCsvInFlightRef.current = false');
   });
 
-  it('validates driver document expiry dates as strict real UTC instants in the review route', () => {
-    const routeSource = readFileSync(
+  it('validates driver document expiry dates as strict real UTC instants in the review normalizer', () => {
+    const normalizerSource = readFileSync(
       join(
         process.cwd(),
-        'app/api/admin/driver-onboarding/[driverId]/review/route.ts',
+        'app/api/admin/driver-onboarding/[driverId]/review/review-normalizers.ts',
       ),
       'utf8',
     );
 
-    expect(routeSource).toContain('normalizeDriverDocumentExpiryDate');
-    expect(routeSource).toContain('isoUtcDateTimePattern');
-    expect(routeSource).not.toContain('Date.parse(documentDecision.expiresAt)');
+    expect(normalizerSource).toContain('normalizeDriverDocumentExpiryDate');
+    expect(normalizerSource).toContain('isoUtcDateTimePattern');
+    expect(normalizerSource).not.toContain(
+      'Date.parse(documentDecision.expiresAt)',
+    );
 
     expect(
       normalizeDriverDocumentExpiryDate('2027-04-18T00:00:00.000Z'),
