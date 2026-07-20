@@ -55,9 +55,15 @@ function isLikelyOrbiNetworkError(error: unknown) {
     return true;
   }
 
+  if (error instanceof Error && error.name === "AbortError") {
+    return true;
+  }
+
   const message = normalizeOrbiErrorMessage(error);
 
   return (
+    message.includes("aborterror") ||
+    message.includes("operation was aborted") ||
     message.includes("network request failed") ||
     message.includes("fetch failed") ||
     message.includes("load failed") ||

@@ -6,7 +6,22 @@ type MobileAuthFeedbackOptions = {
 };
 
 function normalizeAuthMessage(error: unknown) {
-  return extractApiErrorMessage(error, "").toLowerCase();
+  const extracted = extractApiErrorMessage(error, "");
+
+  if (extracted) {
+    return extracted.toLowerCase();
+  }
+
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    const name = typeof record.name === "string" ? record.name : "";
+    const message =
+      typeof record.message === "string" ? record.message : "";
+
+    return `${name} ${message}`.trim().toLowerCase();
+  }
+
+  return "";
 }
 
 export function resolveMobileAuthErrorMessage(
@@ -21,7 +36,12 @@ export function resolveMobileAuthErrorMessage(
 
   if (
     message.includes("aborted") ||
-    message.includes("aborterror") ||
+    message.includes("aborterror")
+  ) {
+    return "Connexion trop lente. Vérifiez votre réseau puis réessayez.";
+  }
+
+  if (
     message.includes("network request failed") ||
     message.includes("fetch failed") ||
     message.includes("load failed") ||

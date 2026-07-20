@@ -615,7 +615,7 @@ describe('rider smoke flows', () => {
     expect(router.replace).not.toHaveBeenCalled();
     expectText(
       renderer,
-      'Connexion impossible. Vérifiez votre réseau et réessayez.',
+      'Connexion impossible. Verifiez votre reseau mobile et reessayez.',
     );
   });
 
@@ -1325,16 +1325,15 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Le lieu contient des caracteres non autorises.');
   });
 
-  it('renders the voice screen with microphone prompt', async () => {
+  it('renders the destination intent screen with search prompt', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
     mockedFetchMyTrips.mockResolvedValue(buildRiderPendingRequestHistory('REQUESTED') as never);
 
     const renderer = await renderScreen(<VoiceScreen />);
     await flushMicrotasks();
 
-    // Voice screen shows the mic button prompt — analyzeTranscript is triggered
-    // by user interaction (recording), not automatically on mount
-    expectText(renderer, 'Appuyez et parlez');
+    // Intent search is triggered by user input, not automatically on mount.
+    expectText(renderer, 'Où allez-vous ?');
   });
 
   it('keeps activity usable when rider trip history is partially hydrated', async () => {

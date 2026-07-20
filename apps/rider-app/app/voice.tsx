@@ -1,37 +1,25 @@
 /**
- * Voice Screen — Recherche vocale en français
+ * Voice Screen — Recherche intelligente en français
  *
- * Capture l'intention vocale de l'utilisateur via le moteur de reconnaissance
- * vocale natif du téléphone (gratuit, sur-appareil), envoie le transcript au
- * NLP backend Orbi et propose des lieux correspondant à Ouagadougou.
- *
- * Flow:
- *   1. Appui bouton → Voice.start() (moteur STT natif Android/iOS)
- *   2. Release → Voice.stop() → onSpeechResults livre le transcript final
- *   3. Transcript envoyé à POST /voice/location-intent
- *   4. Suggestions retournées → naviguer vers /book avec pré-remplissage
+ * Le moteur STT natif a été retiré du build production: la librairie disponible
+ * apporte une chaîne Expo obsolète et vulnérable. On conserve le parcours
+ * destination intelligente via texte/suggestions et le backend d'intention.
  */
 import { useRouter } from 'expo-router';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
-import Voice, {
-  type SpeechErrorEvent,
-  type SpeechResultsEvent,
-} from '@react-native-voice/voice';
 import { resolveVoiceLocationIntentWithApi, type VoiceLocationIntentResponse } from '@orbi/api';
 import type { OrbiTheme } from '@orbi/ui';
 import { OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme } from '@orbi/ui/native';
 import { createRiderPublicClient } from '../lib/auth';
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
-
-const VOICE_LOCALE = 'fr-FR';
 
 // ── Exemples de phrases ───────────────────────────────────────────────────────
 
@@ -100,54 +88,32 @@ const SuggestionCard = memo(function SuggestionCard({
   );
 });
 
-// ── Mic button avec animation ─────────────────────────────────────────────────
+// ── Action button ─────────────────────────────────────────────────────────────
 
-const MicButton = memo(function MicButton({
-  isRecording,
-  onPressIn,
-  onPressOut,
+const AnalyzeButton = memo(function AnalyzeButton({
+  disabled,
+  isAnalyzing,
+  onPress,
 }: {
-  isRecording: boolean;
-  onPressIn: () => void;
-  onPressOut: () => void;
+  disabled: boolean;
+  isAnalyzing: boolean;
+  onPress: () => void;
 }) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const pulse = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (isRecording) {
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulse, { toValue: 1.15, duration: 600, useNativeDriver: false }),
-          Animated.timing(pulse, { toValue: 1, duration: 600, useNativeDriver: false }),
-        ]),
-      );
-      loop.start();
-      return () => loop.stop();
-    } else {
-      pulse.setValue(1);
-    }
-  }, [isRecording, pulse]);
 
   return (
-    <Pressable onPressIn={onPressIn} onPressOut={onPressOut}>
-      <Animated.View
+    <Pressable onPress={onPress} disabled={disabled}>
+      <View
         style={[
-          styles.micBtn,
-          isRecording && styles.micBtnActive,
-          { transform: [{ scale: pulse }] },
+          styles.analyzeBtn,
+          disabled && styles.analyzeBtnDisabled,
         ]}
       >
-        <View style={styles.micGlyph} accessibilityElementsHidden>
-          <View style={styles.micHead} />
-          <View style={styles.micStem} />
-          <View style={styles.micBase} />
-        </View>
-        {isRecording ? (
-          <View style={styles.recDot} />
-        ) : null}
-      </Animated.View>
+        <Text style={styles.analyzeBtnText}>
+          {isAnalyzing ? 'Analyse...' : 'Trouver le lieu'}
+        </Text>
+      </View>
     </Pressable>
   );
 });
@@ -158,12 +124,10 @@ export default function VoiceScreen() {
   const router = useRouter();
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [result, setResult] = useState<VoiceLocationIntentResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const hasSpokenRef = useRef(false);
 
   useEffect(() => {
     preventSensitiveScreenCapture();
@@ -187,67 +151,11 @@ export default function VoiceScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    Voice.onSpeechResults = (e: SpeechResultsEvent) => {
-      const bestGuess = e.value?.[0];
-      if (bestGuess) {
-        hasSpokenRef.current = true;
-        setTranscript(bestGuess);
-        void analyseTranscript(bestGuess);
-      }
-    };
-
-    Voice.onSpeechError = (e: SpeechErrorEvent) => {
-      setIsRecording(false);
-      setIsAnalyzing(false);
-      setErrorMsg(
-        e.error?.message
-          ?? 'Reconnaissance vocale indisponible. Utilisez les suggestions ci-dessous.',
-      );
-    };
-
-    Voice.onSpeechEnd = () => {
-      setIsRecording(false);
-      if (!hasSpokenRef.current) {
-        setErrorMsg('Aucune parole détectée. Réessayez ou utilisez les suggestions.');
-      }
-    };
-
-    return () => {
-      Voice.destroy().then(Voice.removeAllListeners).catch(() => undefined);
-    };
-  }, [analyseTranscript]);
-
-  const startRecording = useCallback(async () => {
-    hasSpokenRef.current = false;
-    setTranscript('');
-    setResult(null);
-    setErrorMsg(null);
+  const submitTranscript = useCallback(() => {
     safeHaptics.impact('medium');
-
-    try {
-      await Voice.start(VOICE_LOCALE);
-      setIsRecording(true);
-    } catch {
-      setIsRecording(false);
-      setErrorMsg('Micro indisponible. Utilisez les suggestions ci-dessous.');
-    }
-  }, []);
-
-  const stopRecording = useCallback(async () => {
-    if (!isRecording) return;
-
-    safeHaptics.impact('light');
-    setIsAnalyzing(true);
-
-    try {
-      await Voice.stop();
-    } catch {
-      setIsRecording(false);
-      setIsAnalyzing(false);
-      setErrorMsg('Analyse vocale indisponible. Utilisez les suggestions ci-dessous.');
-    }
-  }, [isRecording]);
+    setResult(null);
+    void analyseTranscript(transcript);
+  }, [analyseTranscript, transcript]);
 
   function handleSelectSuggestion(s: VoiceLocationIntentResponse['suggestions'][number]) {
     safeHaptics.notify('success');
@@ -275,32 +183,37 @@ export default function VoiceScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-        {/* Hero + mic button */}
-        <OrbiSurface tone={isRecording ? 'danger' : isAnalyzing ? 'sky' : 'teal'} style={styles.hero} elevated>
-          <MicButton
-            isRecording={isRecording}
-            onPressIn={() => void startRecording()}
-            onPressOut={() => void stopRecording()}
-          />
+        {/* Hero + intent input */}
+        <OrbiSurface tone={isAnalyzing ? 'sky' : 'teal'} style={styles.hero} elevated>
           <Text style={styles.heroTitle}>
-            {isRecording ? 'Parlez maintenant…' : isAnalyzing ? 'Analyse en cours…' : 'Appuyez et parlez'}
+            {isAnalyzing ? 'Analyse en cours...' : 'Où allez-vous ?'}
           </Text>
           <Text style={styles.heroSub}>
-            {isRecording
-              ? 'Relâchez pour analyser'
-              : 'Dites votre destination en français. Ex: "Je vais à Ouaga 2000"'}
+            Tapez une destination en français. Ex: "Je vais à Ouaga 2000"
           </Text>
-          {transcript ? (
-            <View style={styles.transcriptBubble}>
-              <Text style={styles.transcriptText}>"{transcript}"</Text>
-            </View>
-          ) : null}
+          <TextInput
+            value={transcript}
+            onChangeText={(text) => {
+              setTranscript(text);
+              setErrorMsg(null);
+            }}
+            placeholder="Ex: Université Joseph Ki-Zerbo"
+            placeholderTextColor={theme.colors.textMuted}
+            style={styles.intentInput}
+            returnKeyType="search"
+            onSubmitEditing={submitTranscript}
+          />
+          <AnalyzeButton
+            disabled={!transcript.trim() || isAnalyzing}
+            isAnalyzing={isAnalyzing}
+            onPress={submitTranscript}
+          />
         </OrbiSurface>
 
         {/* Error */}
         {errorMsg ? (
           <OrbiStatusBanner
-            title="Commande vocale indisponible"
+            title="Recherche indisponible"
             message={errorMsg}
             tone="danger"
           />
@@ -363,6 +276,36 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Hero
   hero: { alignItems: 'center', gap: 14, paddingHorizontal: 18, paddingVertical: 24 },
+  intentInput: {
+    width: '100%',
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
+    color: theme.colors.text,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  analyzeBtn: {
+    minHeight: 46,
+    width: '100%',
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.teal,
+  },
+  analyzeBtnDisabled: {
+    opacity: 0.45,
+  },
+  analyzeBtnText: {
+    color: theme.colors.background,
+    fontSize: 14,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+  },
   micBtn: { width: 96, height: 96, borderRadius: 48, backgroundColor: theme.colors.backgroundAlt, borderWidth: 2, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   micBtnActive: { backgroundColor: 'rgba(255,59,48,0.08)', borderColor: theme.colors.danger, shadowColor: theme.colors.danger, shadowOpacity: 0.3 },
   micGlyph: { width: 38, height: 44, alignItems: 'center', justifyContent: 'center' },
