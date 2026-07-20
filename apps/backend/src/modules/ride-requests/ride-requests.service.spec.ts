@@ -61,6 +61,12 @@ describe('RideRequestsService', () => {
         supplyPressureLevel: 'BALANCED',
         availabilityScore: 72,
       })),
+      calculateRealTimeDemandLevel: jest.fn().mockResolvedValue({
+        demandLevel: 'HIGH',
+        activeDriverCount: 6,
+        openRequestCount: 8,
+        isPeakHour: false,
+      }),
     };
     const realtimeService = {
       publish: jest.fn(),
@@ -74,6 +80,13 @@ describe('RideRequestsService', () => {
         dispatched: false,
         assignedDriverId: null,
         assignedUserId: null,
+      }),
+    };
+    const routingService = {
+      getRoute: jest.fn().mockResolvedValue({
+        distanceKm: 6.1,
+        durationMinutes: 17,
+        source: 'haversine_estimate',
       }),
     };
 
@@ -96,6 +109,7 @@ describe('RideRequestsService', () => {
         notificationsService as never,
         dispatchCoordinator as never,
         { isRideRequestVelocityExceeded: jest.fn().mockResolvedValue(false) } as never,
+        routingService as never,
       ),
     };
   }
@@ -230,13 +244,13 @@ describe('RideRequestsService', () => {
 
     expect(pricingService.quote).toHaveBeenCalledWith(
       expect.objectContaining({
-        distanceKm: 5.1,
+        distanceKm: 6.1,
         durationMinutes: expect.any(Number), // road detour factor makes this time-dependent
       }),
     );
     expect(prisma.rideRequest.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        estimatedDistanceKm: 5.1,
+        estimatedDistanceKm: 6.1,
         estimatedDurationMinutes: expect.any(Number), // time-dependent with peak-hour ETA
       }),
     });
@@ -288,8 +302,8 @@ describe('RideRequestsService', () => {
       pricingCity: 'OUAGADOUGOU',
       districtProfile: 'UNIVERSITY',
       estimatedFare: 2150,
-      estimatedDistanceKm: 5.1,
-      estimatedDurationMinutes: 18,
+      estimatedDistanceKm: 6.1,
+      estimatedDurationMinutes: 17,
       createdAt: new Date('2026-05-10T09:00:00.000Z'),
     });
     prisma.trip.findFirst.mockResolvedValue(null);

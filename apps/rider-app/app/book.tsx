@@ -517,9 +517,10 @@ export default function BookingScreen() {
         zone: selectedCity.zone,
         city: selectedCity.id,
         districtProfile: selectedCity.districtProfile,
-        isPeakHour: true,
-        activeDriverCount: compatibleDriverCount ?? 0,
-        openRequestCount: normalizedHistory.pendingRequests.length,
+        pickupLatitude: pickupPlace.coordinates?.latitude,
+        pickupLongitude: pickupPlace.coordinates?.longitude,
+        destinationLatitude: destinationPlace.coordinates?.latitude,
+        destinationLongitude: destinationPlace.coordinates?.longitude,
       });
       const safeOptions =
         response && typeof response === 'object' && Array.isArray(response.options)

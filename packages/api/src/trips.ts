@@ -351,6 +351,10 @@ export type PricingEstimateQuery = {
   activeDriverCount?: number;
   openRequestCount?: number;
   driverOnboardingDays?: number;
+  pickupLatitude?: number;
+  pickupLongitude?: number;
+  destinationLatitude?: number;
+  destinationLongitude?: number;
 };
 
 export type ScheduledRideStatus =

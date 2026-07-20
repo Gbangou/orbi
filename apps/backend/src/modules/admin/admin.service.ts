@@ -27,6 +27,7 @@ import {
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { RedisCacheService } from '../../core/cache/redis-cache.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { DEFAULT_PLATFORM_COMMISSION_RATE } from '../../common/economics/driver-commission';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { DocumentLinksService } from '../../common/document-links/document-links.service';
 import {
@@ -102,7 +103,7 @@ type AdminPromoCodesResponse = {
   }>;
 };
 const pricingCalibrationLookbackDays = 14;
-const platformCommissionRate = 0.18;
+const platformCommissionRate = DEFAULT_PLATFORM_COMMISSION_RATE;
 const routeCompletionMaxSignalAgeMinutes = 10;
 const routeCompletionMaxAccuracyMeters = 250;
 const routeCompletionMaxSpeedKph = 110;

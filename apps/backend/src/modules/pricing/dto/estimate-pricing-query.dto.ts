@@ -2,8 +2,11 @@ import { Type } from 'class-transformer';
 import {
   IsBooleanString,
   IsIn,
+  IsLatitude,
+  IsLongitude,
   IsNumber,
   IsOptional,
+  Max,
   Min,
 } from 'class-validator';
 import {
@@ -27,11 +30,13 @@ class BasePricingQueryDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0.1)
+  @Max(500)
   distanceKm!: number;
 
   @Type(() => Number)
   @IsNumber()
   @Min(1)
+  @Max(1440)
   durationMinutes!: number;
 
   @IsOptional()
@@ -74,39 +79,42 @@ class BasePricingQueryDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
+  @Max(100000)
   activeDriverCount?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
+  @Max(100000)
   openRequestCount?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
+  @Max(3650)
   driverOnboardingDays?: number;
 
   // Optional coordinates — enables OSRM road routing for accurate ETA/distance
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsLatitude()
   pickupLatitude?: number;
 
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsLongitude()
   pickupLongitude?: number;
 
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsLatitude()
   destinationLatitude?: number;
 
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsLongitude()
   destinationLongitude?: number;
 }
 

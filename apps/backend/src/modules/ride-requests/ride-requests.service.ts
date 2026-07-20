@@ -8,6 +8,7 @@ import { NotificationChannel, Prisma } from '@prisma/client';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
+import { RoutingService } from '../../core/routing/routing.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { PricingService } from '../pricing/pricing.service';
@@ -26,6 +27,7 @@ import {
   inferRideRequestTrafficLevel,
   resolveRideRequestPricingGeography,
   resolveRideRequestRouteMetrics,
+  resolveRideRequestRouteMetricsWithRouting,
 } from './ride-request-creation.policy';
 import { RideRequestProjector } from './ride-request.projector';
 import { FraudDetectionService } from '../../common/security/fraud-detection.service';
@@ -42,6 +44,7 @@ export class RideRequestsService {
     private readonly notificationsService: NotificationsService,
     private readonly dispatchCoordinator: DispatchCoordinator,
     private readonly fraudDetectionService: FraudDetectionService,
+    private readonly routingService: RoutingService,
   ) {}
 
   async create(payload: CreateRideRequestDto) {
@@ -56,12 +59,26 @@ export class RideRequestsService {
         'Trop de demandes en peu de temps. Veuillez patienter quelques minutes avant de réessayer.',
       );
     }
-    const routeMetrics = resolveRideRequestRouteMetrics(payload);
+    const routeMetrics = await resolveRideRequestRouteMetricsWithRouting(
+      payload,
+      this.routingService,
+    );
     const pricingGeography = resolveRideRequestPricingGeography(payload);
+    const marketplaceDemand =
+      await this.pricingService.calculateRealTimeDemandLevel(
+        pricingGeography.city,
+        {
+          vehicleType: payload.requestedVehicleType,
+          serviceTier: payload.requestedServiceTier,
+        },
+      );
     const operatingContext = this.pricingService.deriveOperatingContext({
       vehicleType: payload.requestedVehicleType,
       zone: payload.pickupAreaType,
-      isPeakHour: inferRideRequestPeakHour(),
+      isPeakHour: marketplaceDemand.isPeakHour || inferRideRequestPeakHour(),
+      demandLevel: marketplaceDemand.demandLevel,
+      activeDriverCount: marketplaceDemand.activeDriverCount,
+      openRequestCount: marketplaceDemand.openRequestCount,
       trafficLevel: inferRideRequestTrafficLevel(
         routeMetrics,
         payload.pickupAreaType,
@@ -86,7 +103,9 @@ export class RideRequestsService {
       trafficLevel: operatingContext.trafficLevel,
       weatherCondition: operatingContext.weatherCondition,
       roadCondition: operatingContext.roadCondition,
-      isPeakHour: inferRideRequestPeakHour(),
+      isPeakHour: marketplaceDemand.isPeakHour || inferRideRequestPeakHour(),
+      activeDriverCount: marketplaceDemand.activeDriverCount,
+      openRequestCount: marketplaceDemand.openRequestCount,
     });
     let applicableFare = pricing.estimatedFare;
     let resolvedPromoCodeId: string | null = null;

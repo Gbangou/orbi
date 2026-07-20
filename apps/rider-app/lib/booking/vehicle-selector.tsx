@@ -154,7 +154,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   sectionTitle: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.text, paddingHorizontal: 2 },
   scroll: { gap: 6, paddingHorizontal: 2 },
   card: {
-    width: 112, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1.5,
+    width: 128, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1.5,
     borderColor: theme.colors.border, padding: 7, alignItems: 'center', gap: 4,
     shadowColor: theme.shadows.card.shadowColor, shadowOpacity: 0.09, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 7,
   },
@@ -173,7 +173,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   svgWrap: { width: 84, height: 54, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   etaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, width: '100%' },
   signalText: {
-    maxWidth: 52,
+    maxWidth: 64,
     fontSize: 9,
     color: theme.colors.textMuted,
     fontWeight: '700',

@@ -20,6 +20,7 @@ import { FeatureFlagsService } from '../../core/runtime/feature-flags.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { DocumentLinksService } from '../../common/document-links/document-links.service';
 import { JobQueueService } from '../../common/job-queue/job-queue.service';
+import { calculateDriverEconomics } from '../../common/economics/driver-commission';
 import { RequestDriverDocumentUploadLinksDto } from './dto/request-driver-document-upload-links.dto';
 import { UpsertDriverOnboardingDto } from './dto/upsert-driver-onboarding.dto';
 import { ACTIVE_TRIP_STATUSES } from '../trips/trips.constants';
@@ -246,7 +247,7 @@ export class DriversService {
         fare,
         distanceKm: Number(request.estimatedDistanceKm ?? 0),
         etaToPickupMinutes: 3 + index,
-        driverPayout: Math.round(fare * 0.82),
+        driverPayout: calculateDriverEconomics(fare).driverPayout,
         pickupCodeRequired: true,
       };
     });

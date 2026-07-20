@@ -4,6 +4,10 @@ import { RedisCacheService } from '../../core/cache/redis-cache.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RoutingService } from '../../core/routing/routing.service';
 import {
+  calculateDriverEconomics,
+  resolveDriverCommissionRate,
+} from '../../common/economics/driver-commission';
+import {
   EstimatePricingQueryDto,
   RideOptionsPricingQueryDto,
 } from './dto/estimate-pricing-query.dto';
@@ -488,11 +492,9 @@ export class PricingService {
       weatherCondition,
       roadCondition,
     );
-    const commissionRate = this.resolveCommissionRate(
-      input.driverOnboardingDays,
-    );
-    const commissionAmount = Math.round(estimatedFare * commissionRate);
-    const driverPayout = estimatedFare - commissionAmount;
+    const driverEconomics = calculateDriverEconomics(estimatedFare, {
+      driverOnboardingDays: input.driverOnboardingDays,
+    });
 
     return {
       currency: 'XOF',
@@ -531,9 +533,9 @@ export class PricingService {
       },
       operatingContext,
       driverEconomics: {
-        commissionRate,
-        commissionAmount,
-        driverPayout,
+        commissionRate: driverEconomics.commissionRate,
+        commissionAmount: driverEconomics.commissionAmount,
+        driverPayout: driverEconomics.driverPayout,
       },
       trustAndPolicy: {
         upfrontPricing: true,
@@ -632,10 +634,7 @@ export class PricingService {
    * (80 × 1 200 XOF moyen × 18% = 17 280 XOF/jour)
    */
   private resolveCommissionRate(driverOnboardingDays?: number) {
-    if (driverOnboardingDays === undefined) return 0.18;
-    if (driverOnboardingDays <= 30) return 0.10;  // Onboarding bonus — attirer rapidement
-    if (driverOnboardingDays <= 90) return 0.15;  // Phase de croissance
-    return 0.18;                                    // Taux steady-state standard
+    return resolveDriverCommissionRate(driverOnboardingDays);
   }
 
   /**
@@ -643,7 +642,13 @@ export class PricingService {
    * - Rapport requêtes ouvertes / chauffeurs en ligne
    * - Heure de pointe Ouagadougou (7h-9h, 12h-14h, 17h-20h)
    */
-  async calculateRealTimeDemandLevel(cityHint?: string): Promise<{
+  async calculateRealTimeDemandLevel(
+    cityHint?: string,
+    filters: {
+      vehicleType?: 'MOTORCYCLE' | 'CAR';
+      serviceTier?: ServiceTier;
+    } = {},
+  ): Promise<{
     demandLevel: 'NORMAL' | 'HIGH' | 'PEAK';
     activeDriverCount: number;
     openRequestCount: number;
@@ -664,14 +669,52 @@ export class PricingService {
 
     const tenMinutesAgo = new Date(now.getTime() - 10 * 60_000);
 
+    const cityFilter =
+      cityHint &&
+      [
+        'OUAGADOUGOU',
+        'BOBO_DIOULASSO',
+        'KOUDOUGOU',
+        'BANFORA',
+        'OUAHIGOUYA',
+      ].includes(cityHint)
+        ? (cityHint as NonNullable<PricingQuoteInput['city']>)
+        : undefined;
+
     const [activeDriverCount, openRequestCount] = await Promise.all([
       this.prisma.driverProfile.count({
-        where: { status: 'ONLINE' },
+        where: {
+          status: 'ONLINE',
+          verificationStatus: 'APPROVED',
+          ...(filters.vehicleType || filters.serviceTier
+            ? {
+                vehicles: {
+                  some: {
+                    isActive: true,
+                    ...(filters.vehicleType ? { type: filters.vehicleType } : {}),
+                    ...(filters.serviceTier ? { tier: filters.serviceTier } : {}),
+                  },
+                },
+              }
+            : {}),
+        },
       }),
       this.prisma.rideRequest.count({
         where: {
           status: 'REQUESTED',
           createdAt: { gte: tenMinutesAgo },
+          ...(cityFilter ? { pricingCity: cityFilter } : {}),
+          ...(filters.vehicleType
+            ? { requestedVehicleType: filters.vehicleType }
+            : {}),
+          ...(filters.serviceTier
+            ? {
+                OR: [
+                  { requestedServiceTier: filters.serviceTier },
+                  { requestedServiceTier: null },
+                ],
+              }
+            : {}),
         },
       }),
     ]);

@@ -16,6 +16,7 @@ import {
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { DocumentLinksService } from '../../common/document-links/document-links.service';
+import { calculateDriverEconomics } from '../../common/economics/driver-commission';
 import { NotificationsService } from '../notifications/notifications.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import {
@@ -2021,7 +2022,9 @@ export class TripsService {
 
     const recentTrips = trips.map((trip) => ({
       ...serializeTripHistoryItem(trip, { viewerRole: auth.user.role }),
-      amount: Math.round(toAmount(trip.actualFare) * 0.82),
+      amount: calculateDriverEconomics(toAmount(trip.actualFare), {
+        driverCreatedAt: auth.user.driverProfile?.createdAt,
+      }).driverPayout,
       counterpartyName: trip.rider.user.fullName,
     }));
 

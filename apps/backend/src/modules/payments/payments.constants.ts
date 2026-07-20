@@ -1,6 +1,8 @@
+import { DEFAULT_PLATFORM_COMMISSION_RATE } from '../../common/economics/driver-commission';
+
 export const DEFAULT_PAYMENT_CURRENCY = 'XOF';
 export const DEFAULT_PAYMENT_PROVIDER = 'pawapay';
-export const platformCommissionRate = 0.18;
+export const platformCommissionRate = DEFAULT_PLATFORM_COMMISSION_RATE;
 
 export const PAYMENT_CHANNELS = ['MOBILE_MONEY', 'CARD', 'WALLET'] as const;
 export const MOBILE_MONEY_NETWORKS = [

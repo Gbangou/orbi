@@ -12,6 +12,7 @@ import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { FeatureFlagsService } from '../../core/runtime/feature-flags.service';
 import { JobQueueService } from '../../common/job-queue/job-queue.service';
+import { calculateDriverEconomics } from '../../common/economics/driver-commission';
 import {
   DEFAULT_PAYMENT_CURRENCY,
   DEFAULT_PAYMENT_PROVIDER,
@@ -35,8 +36,6 @@ import type {
   PaymentWebhookPayload,
   RideRequestPaymentOwnership,
 } from './payments.types';
-
-const platformCommissionRate = 0.18;
 
 function isPrismaUniqueConstraintError(error: unknown) {
   return (
@@ -364,6 +363,7 @@ export class PaymentsService {
                   driver: {
                     select: {
                       userId: true,
+                      createdAt: true,
                     },
                   },
                 },
@@ -1641,6 +1641,7 @@ export class PaymentsService {
                   driver: {
                     select: {
                       userId: true,
+                      createdAt: true,
                     },
                   },
                 },
@@ -2464,6 +2465,7 @@ export class PaymentsService {
                 driver: {
                   select: {
                     userId: true,
+                    createdAt: true,
                   },
                 },
               },
@@ -2473,15 +2475,19 @@ export class PaymentsService {
       },
     });
 
-    const driverUserId = attempt?.rideRequest.trip?.driver.userId;
+    const trip = attempt?.rideRequest.trip;
+    const driverUserId = trip?.driver.userId;
 
-    if (!attempt || !driverUserId) {
+    if (!attempt || !trip || !driverUserId) {
       return;
     }
 
     const grossAmount = Number(attempt.amount);
-    const commissionAmount = Math.round(grossAmount * platformCommissionRate);
-    const driverPayoutAmount = grossAmount - commissionAmount;
+    const driverEconomics = calculateDriverEconomics(grossAmount, {
+      driverCreatedAt: trip.driver.createdAt,
+    });
+    const commissionAmount = driverEconomics.commissionAmount;
+    const driverPayoutAmount = driverEconomics.driverPayout;
     const reference = `payment:${attempt.id}:driver-payout`;
 
     await this.prisma.$transaction(async (tx) => {
@@ -2528,13 +2534,14 @@ export class PaymentsService {
             metadata: {
               paymentAttemptId: attempt.id,
               rideRequestId: attempt.rideRequestId,
-              tripId: attempt.rideRequest.trip?.id ?? null,
+              tripId: trip.id,
               provider: attempt.provider,
               providerReference: attempt.providerReference,
               grossAmount,
-              commissionRate: platformCommissionRate,
+              commissionRate: driverEconomics.commissionRate,
               commissionAmount,
               driverPayoutAmount,
+              driverOnboardingDays: driverEconomics.driverOnboardingDays ?? null,
             } as Prisma.InputJsonValue,
           },
         });
@@ -2583,15 +2590,17 @@ export class PaymentsService {
           id: string;
           driver: {
             userId: string;
+            createdAt: Date;
           };
         } | null;
       };
     },
     input: PaymentRefundInput,
   ) {
-    const driverUserId = attempt.rideRequest.trip?.driver.userId;
+    const trip = attempt.rideRequest.trip;
+    const driverUserId = trip?.driver.userId;
 
-    if (!driverUserId) {
+    if (!trip || !driverUserId) {
       return {
         applied: false,
         reason: 'no_driver_trip',
@@ -2618,8 +2627,11 @@ export class PaymentsService {
     }
 
     const grossAmount = Number(attempt.amount);
-    const commissionAmount = Math.round(grossAmount * platformCommissionRate);
-    const driverPayoutAmount = grossAmount - commissionAmount;
+    const driverEconomics = calculateDriverEconomics(grossAmount, {
+      driverCreatedAt: trip.driver.createdAt,
+    });
+    const commissionAmount = driverEconomics.commissionAmount;
+    const driverPayoutAmount = driverEconomics.driverPayout;
     const originalCreditReference = `payment:${attempt.id}:driver-payout`;
     const refundReference = `payment:${attempt.id}:driver-payout-refund`;
     const originalCredit = await tx.walletTransaction.findUnique({
@@ -2674,14 +2686,15 @@ export class PaymentsService {
           metadata: {
             paymentAttemptId: attempt.id,
             rideRequestId: attempt.rideRequestId,
-            tripId: attempt.rideRequest.trip?.id ?? null,
+            tripId: trip.id,
             provider: attempt.provider,
             providerReference: attempt.providerReference,
             originalCreditReference,
             grossAmount,
-            commissionRate: platformCommissionRate,
+            commissionRate: driverEconomics.commissionRate,
             commissionAmount,
             driverPayoutAmount,
+            driverOnboardingDays: driverEconomics.driverOnboardingDays ?? null,
             refundedByUserId: input.actorUserId,
             refundedByName: input.actorName ?? null,
             reason: input.reason ?? null,

@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { DocumentLinksService } from '../../common/document-links/document-links.service';
+import { calculateDriverEconomics } from '../../common/economics/driver-commission';
 import type { RequestAuthContext } from '../auth/auth.types';
 import {
   ACTIVE_RIDE_REQUEST_STATUSES,
@@ -219,7 +220,9 @@ export class TripQueryService {
 
     const recentTrips = trips.map((trip) => ({
       ...serializeTripHistoryItem(trip, { viewerRole: auth.user.role }),
-      amount: Math.round(toAmount(trip.actualFare) * 0.82),
+      amount: calculateDriverEconomics(toAmount(trip.actualFare), {
+        driverCreatedAt: auth.user.driverProfile?.createdAt,
+      }).driverPayout,
       counterpartyName: trip.rider.user.fullName,
     }));
 

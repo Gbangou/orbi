@@ -6,6 +6,7 @@ import {
   hasDefinedCoordinates,
   roundDistanceKm,
 } from '../../common/geo/route-metrics';
+import { RoutingService } from '../../core/routing/routing.service';
 import { CreateRideRequestDto } from './dto/create-ride-request.dto';
 
 const SERVICE_TIERS_BY_VEHICLE_TYPE = {
@@ -16,7 +17,7 @@ const SERVICE_TIERS_BY_VEHICLE_TYPE = {
 export type RideRequestRouteMetrics = {
   distanceKm: number;
   durationMinutes: number;
-  source: 'SERVER_COORDINATES' | 'CLIENT_ESTIMATE';
+  source: 'SERVER_ROUTE' | 'SERVER_COORDINATES' | 'CLIENT_ESTIMATE';
 };
 
 export function assertRideRequestPayloadConsistency(
@@ -96,6 +97,49 @@ export function resolveRideRequestRouteMetrics(
     durationMinutes: payload.estimatedDurationMinutes,
     source: 'CLIENT_ESTIMATE',
   };
+}
+
+export async function resolveRideRequestRouteMetricsWithRouting(
+  payload: CreateRideRequestDto,
+  routingService?: RoutingService,
+): Promise<RideRequestRouteMetrics> {
+  if (
+    routingService &&
+    hasDefinedCoordinates({
+      latitude: payload.pickupLatitude,
+      longitude: payload.pickupLongitude,
+    }) &&
+    hasDefinedCoordinates({
+      latitude: payload.destinationLatitude,
+      longitude: payload.destinationLongitude,
+    })
+  ) {
+    const route = await routingService
+      .getRoute(
+        {
+          latitude: payload.pickupLatitude as number,
+          longitude: payload.pickupLongitude as number,
+        },
+        {
+          latitude: payload.destinationLatitude as number,
+          longitude: payload.destinationLongitude as number,
+        },
+      )
+      .catch(() => null);
+
+    if (route) {
+      return {
+        distanceKm: route.distanceKm,
+        durationMinutes: route.durationMinutes,
+        source:
+          route.source === 'osrm'
+            ? 'SERVER_ROUTE'
+            : 'SERVER_COORDINATES',
+      };
+    }
+  }
+
+  return resolveRideRequestRouteMetrics(payload);
 }
 
 export function inferRideRequestPeakHour(date = new Date()) {

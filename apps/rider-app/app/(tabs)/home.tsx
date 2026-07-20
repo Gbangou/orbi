@@ -330,9 +330,6 @@ export default function RiderHomeScreen() {
           vehicleType: 'MOTORCYCLE',
           paymentMethod: 'CASH',
           zone: 'URBAN_CORE',
-          isPeakHour: true,
-          activeDriverCount: 8,
-          openRequestCount: 11,
         }),
         fetchMyTrips(authClient),
       ]);

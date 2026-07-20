@@ -6,6 +6,7 @@ import {
   type DispatchBehaviorSignal,
   type FairnessSignalLabel,
 } from './dispatch-engine';
+import { calculateDriverEconomics } from '../../common/economics/driver-commission';
 
 export type DriverOfferViewModel = {
   id: string;
@@ -60,12 +61,17 @@ export type DriverOfferProjectionInput = {
   demandLevel: 'NORMAL' | 'HIGH' | 'PEAK';
   trafficLevel: 'FREE_FLOW' | 'MODERATE' | 'HEAVY' | 'GRIDLOCK';
   dispatchBehavior: DispatchBehaviorSignal;
+  driverOnboardingDays?: number;
+  driverCreatedAt?: Date | string | null;
 };
 
 @Injectable()
 export class DriverOfferProjector {
   project(input: DriverOfferProjectionInput): DriverOfferViewModel {
-    const driverPayout = Math.round(input.fare * 0.82);
+    const driverPayout = calculateDriverEconomics(input.fare, {
+      driverOnboardingDays: input.driverOnboardingDays,
+      driverCreatedAt: input.driverCreatedAt,
+    }).driverPayout;
     const fairness = calculateMarketplaceFairnessSignal({
       fare: input.fare,
       driverPayout,

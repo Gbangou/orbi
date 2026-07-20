@@ -441,6 +441,7 @@ export class DispatchCoordinator {
           demandLevel: operatingContext.demandLevel,
           trafficLevel: operatingContext.trafficLevel,
           dispatchBehavior,
+          driverCreatedAt: driverProfile.createdAt,
         });
       })
       .filter((offer): offer is NonNullable<typeof offer> => offer !== null)
