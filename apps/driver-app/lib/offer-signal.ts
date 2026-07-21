@@ -1,5 +1,6 @@
 import { type DriverOffer } from '@orbi/api';
 import { formatXof } from '@orbi/ui';
+import { roundXofForCashOperations } from '@orbi/domain';
 
 export type OfferSignalTone = 'teal' | 'amber' | 'sky' | 'rose';
 
@@ -79,12 +80,12 @@ export function formatDriverOfferMoney(
 ) {
   const primaryAmount = toFiniteOfferNumber(primary);
   if (primaryAmount !== null) {
-    return formatXof(primaryAmount);
+    return formatXof(roundXofForCashOperations(primaryAmount).amount);
   }
 
   const fallbackAmount = toFiniteOfferNumber(fallback);
   if (fallbackAmount !== null) {
-    return formatXof(fallbackAmount);
+    return formatXof(roundXofForCashOperations(fallbackAmount).amount);
   }
 
   return unavailableLabel;
@@ -92,7 +93,9 @@ export function formatDriverOfferMoney(
 
 export function formatDriverOfferFare(offer: DriverOffer) {
   const fare = toFiniteOfferNumber(offer.fare);
-  return fare !== null ? formatXof(fare) : 'Prix indisponible';
+  return fare !== null
+    ? formatXof(roundXofForCashOperations(fare).amount)
+    : 'Prix indisponible';
 }
 
 export function buildDriverOfferInsights(
@@ -158,6 +161,68 @@ export function buildDriverOfferDetailLines(offer: DriverOffer) {
   ];
 
   return lines.filter((line): line is string => Boolean(line));
+}
+
+export function buildDriverOfferDecisionSummary(offer: DriverOffer): {
+  title: string;
+  subtitle: string;
+  tone: OfferSignalTone;
+  driverSharePercent: number | null;
+  payoutPerEffortKm: number | null;
+} {
+  const fare = toFiniteOfferNumber(offer.fare);
+  const driverPayout = toFiniteOfferNumber(offer.driverPayout);
+  const tripDistanceKm = toFiniteOfferNumber(offer.distanceKm);
+  const pickupDistanceKm = toFiniteOfferNumber(offer.pickupDistanceKm) ?? 0;
+  const driverEffortKm =
+    tripDistanceKm !== null ? Math.max(0.1, tripDistanceKm + pickupDistanceKm) : null;
+  const driverSharePercent =
+    fare !== null && fare > 0 && driverPayout !== null
+      ? Math.round((driverPayout / fare) * 100)
+      : null;
+  const payoutPerEffortKm =
+    driverEffortKm !== null && driverPayout !== null
+      ? Math.round(driverPayout / driverEffortKm)
+      : null;
+  const tone: OfferSignalTone =
+    offer.fairnessLabel === 'DRIVER_PAYOUT_WATCH'
+      ? 'amber'
+      : offer.fairnessLabel === 'RIDER_ACCESSIBILITY_WATCH'
+        ? 'sky'
+        : offer.fairnessLabel === 'OPS_MARGIN_WATCH'
+          ? 'rose'
+          : 'teal';
+
+  if (driverPayout === null) {
+    return {
+      title: 'Gain a confirmer',
+      subtitle: 'Actualisez les offres avant de prendre une decision.',
+      tone: 'amber',
+      driverSharePercent,
+      payoutPerEffortKm,
+    };
+  }
+
+  const title =
+    payoutPerEffortKm !== null
+      ? `${formatDriverOfferMoney(driverPayout)} net - ${payoutPerEffortKm} XOF/km effort`
+      : `${formatDriverOfferMoney(driverPayout)} net estime`;
+  const share =
+    driverSharePercent !== null ? `${driverSharePercent}% du prix` : 'part chauffeur verifiee';
+  const subtitle =
+    tone === 'amber'
+      ? `${share}. Pickup ou distance a surveiller avant acceptation.`
+      : tone === 'rose'
+        ? `${share}. Marge ops fragile, acceptez seulement si le trajet est fluide.`
+        : `${share}. Offre lisible avec gain et effort connus.`;
+
+  return {
+    title,
+    subtitle,
+    tone,
+    driverSharePercent,
+    payoutPerEffortKm,
+  };
 }
 
 export function buildDriverOfferConfidenceExplainer(offer: DriverOffer): {

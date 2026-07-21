@@ -75,6 +75,110 @@ describe('TripQueryService', () => {
       expect(result.pendingRequests).toEqual([]);
       expect(result.recentTrips).toEqual([]);
     });
+
+    it('rounds rider pending request fares for cash-readable XOF display', async () => {
+      const now = new Date('2026-07-21T10:22:00.000Z');
+      const prisma = {
+        rideRequest: {
+          findMany: jest.fn().mockResolvedValue([
+            {
+              id: 'request-3506',
+              pickupAddress: 'Position GPS actuelle',
+              destinationAddress: 'Rue de Pissy, Ouagadougou',
+              estimatedFare: 3506,
+              status: 'REQUESTED',
+              createdAt: now,
+            },
+          ]),
+        },
+        trip: {
+          findMany: jest.fn().mockResolvedValue([]),
+          count: jest.fn().mockResolvedValue(0),
+        },
+      };
+      const service = makeService(prisma);
+      const result = await service.findMine(authAs('RIDER'));
+
+      expect(result.pendingRequests[0]?.estimatedFare).toBe(3600);
+    });
+
+    it('returns rider trip receipt context from the latest payment attempt', async () => {
+      const now = new Date('2026-05-24T10:00:00.000Z');
+      const prisma = {
+        rideRequest: {
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+        trip: {
+          findMany: jest.fn().mockResolvedValue([
+            {
+              id: 'trip-1',
+              pickupAddress: 'Koulouba',
+              destinationAddress: 'Patte d Oie',
+              status: 'COMPLETED',
+              actualFare: 1500,
+              currency: 'XOF',
+              completedAt: now,
+              createdAt: now,
+              events: [],
+              vehicle: {
+                make: 'Toyota',
+                model: 'Yaris',
+              },
+              driver: {
+                user: {
+                  fullName: 'Issa Driver',
+                },
+              },
+              rideRequest: {
+                paymentAttempts: [
+                  {
+                    id: 'payment-1',
+                    status: 'SUCCEEDED',
+                    provider: 'PAWAPAY',
+                    channel: 'MOBILE_MONEY',
+                    amount: 1500,
+                    currency: 'XOF',
+                    transactionRef: 'orbi_payment_1',
+                    updatedAt: now,
+                  },
+                ],
+              },
+            },
+          ]),
+          count: jest.fn().mockResolvedValue(1),
+        },
+      };
+      const service = makeService(prisma);
+      const result = await service.findMine(authAs('RIDER'));
+
+      expect(prisma.trip.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            rideRequest: expect.objectContaining({
+              include: expect.objectContaining({
+                paymentAttempts: expect.objectContaining({
+                  orderBy: { updatedAt: 'desc' },
+                  take: 1,
+                }),
+              }),
+            }),
+          }),
+        }),
+      );
+      expect(result.recentTrips[0]).toMatchObject({
+        id: 'trip-1',
+        receipt: {
+          paymentAttemptId: 'payment-1',
+          status: 'SUCCEEDED',
+          provider: 'PAWAPAY',
+          channel: 'MOBILE_MONEY',
+          amount: 1500,
+          currency: 'XOF',
+          transactionRef: 'orbi_payment_1',
+          updatedAt: now.toISOString(),
+        },
+      });
+    });
   });
 
   describe('getSharedTrip', () => {

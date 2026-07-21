@@ -64,14 +64,14 @@ export function buildDriverRouteSafetyBrief(input: {
       eyebrow: 'Ride Check',
       title: 'Signal route indisponible',
       description:
-        'La mission reste visible, mais la finalisation attend un detail route synchronise.',
-      tone: 'rose' as RouteTone,
+        'La mission reste visible pendant la synchronisation du detail route.',
+      tone: 'amber' as RouteTone,
       actionLabel:
-        'Actualisez le direct, gardez le telephone ouvert et contactez le support si le signal ne revient pas.',
-      blocksCompletion: true,
+        'Gardez le telephone ouvert; Orbi verifiera le dernier signal au moment de finaliser.',
+      blocksCompletion: false,
       insights: [
-        { label: 'GPS', value: 'Indisponible', tone: 'rose' as RouteTone },
-        { label: 'Etat', value: 'Bloquant', tone: 'rose' as RouteTone },
+        { label: 'GPS', value: 'Synchronisation', tone: 'amber' as RouteTone },
+        { label: 'Etat', value: 'Verification serveur', tone: 'amber' as RouteTone },
       ],
     };
   }
@@ -83,13 +83,13 @@ export function buildDriverRouteSafetyBrief(input: {
       eyebrow: 'Ride Check',
       title: 'Premier signal GPS attendu',
       description:
-        'Le cockpit attend une position chauffeur recente avant toute action de fin de course.',
-      tone: 'rose' as RouteTone,
+        'Le cockpit attend encore le premier retour GPS mission.',
+      tone: 'amber' as RouteTone,
       actionLabel:
-        'Restez dans l app, activez la localisation et attendez un signal avant finalisation.',
-      blocksCompletion: true,
+        'Gardez la localisation active; Orbi verifiera le signal recent avant de valider la fin.',
+      blocksCompletion: false,
       insights: [
-        { label: 'GPS', value: 'En attente', tone: 'rose' as RouteTone },
+        { label: 'GPS', value: 'En attente', tone: 'amber' as RouteTone },
         {
           label: 'Alertes',
           value: formatOperationalCount(routeMonitoring.alertCount),

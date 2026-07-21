@@ -11,16 +11,24 @@ import {
   orbiRuntimeConfig,
   resolveOrbiApiBaseUrlForRuntime,
 } from '@orbi/config';
-import type { AuthenticatedApiContext } from '@orbi/api';
+import type { AuthSessionResponse, AuthenticatedApiContext } from '@orbi/api';
 import { flushDriverMobileErrorReports } from './mobile-error-reporting';
 import { driverSessionStorage, driverSessionStorageKey } from './session-storage';
 
-const driverFieldRequestTimeoutMs = 90_000;
+const driverFieldRequestTimeoutMs = 25_000;
+const driverAuthRequestTimeoutMs = 18_000;
 
 export function createDriverPublicClient() {
   return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
     version: orbiRuntimeConfig.apiVersion,
     requestTimeoutMs: driverFieldRequestTimeoutMs,
+  });
+}
+
+function createDriverAuthClient() {
+  return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
+    version: orbiRuntimeConfig.apiVersion,
+    requestTimeoutMs: driverAuthRequestTimeoutMs,
   });
 }
 
@@ -30,6 +38,7 @@ export async function restoreDriverSession() {
     driverSessionStorage,
     driverSessionStorageKey,
   );
+  assertUsableDriverContext(context);
   safelyFlushDriverMobileErrorReports(context);
 
   return context;
@@ -39,7 +48,7 @@ export async function signInDriverAccount(payload: {
   email: string;
   password: string;
 }) {
-  const client = createDriverPublicClient();
+  const client = createDriverAuthClient();
   const session = await signInWithApi(client, {
     ...payload,
     expectedRole: 'DRIVER',
@@ -50,11 +59,8 @@ export async function signInDriverAccount(payload: {
     session.sessionToken,
   );
 
-  const context = await restorePersistedSession(
-    client,
-    driverSessionStorage,
-    driverSessionStorageKey,
-  );
+  const context = buildFastDriverAuthContext(client, session);
+  assertUsableDriverContext(context);
   safelyFlushDriverMobileErrorReports(context);
 
   return context;
@@ -65,7 +71,7 @@ export async function signUpDriverAccount(payload: {
   email: string;
   password: string;
 }) {
-  const client = createDriverPublicClient();
+  const client = createDriverAuthClient();
   const session = await signUpWithApi(client, {
     ...payload,
     role: 'DRIVER',
@@ -76,11 +82,8 @@ export async function signUpDriverAccount(payload: {
     session.sessionToken,
   );
 
-  const context = await restorePersistedSession(
-    client,
-    driverSessionStorage,
-    driverSessionStorageKey,
-  );
+  const context = buildFastDriverAuthContext(client, session);
+  assertUsableDriverContext(context);
   safelyFlushDriverMobileErrorReports(context);
 
   return context;
@@ -106,4 +109,40 @@ export async function clearDriverPersistedSession() {
 
 function safelyFlushDriverMobileErrorReports(context: AuthenticatedApiContext) {
   void flushDriverMobileErrorReports(context.authClient).catch(() => undefined);
+}
+
+function buildFastDriverAuthContext(
+  client: ReturnType<typeof createDriverPublicClient>,
+  session: AuthSessionResponse,
+): AuthenticatedApiContext {
+  const authClient = client.withAuthToken(session.sessionToken);
+
+  return {
+    session,
+    authClient,
+    me: {
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        fullName: session.user.fullName,
+        phoneNumber: null,
+        role: session.user.role,
+        riderProfile: null,
+        driverProfile: {
+          id: session.user.id,
+          status: 'OFFLINE',
+        },
+      },
+      session: session.session,
+    },
+  };
+}
+
+function assertUsableDriverContext(context: AuthenticatedApiContext) {
+  if (context.me.user.role !== 'DRIVER' || !context.me.user.driverProfile?.id) {
+    void clearDriverPersistedSession();
+    throw new Error(
+      "Session chauffeur incomplete. Le compte n'a pas pu etre prepare correctement.",
+    );
+  }
 }

@@ -4,9 +4,11 @@ import { Animated, Linking, Pressable, SafeAreaView, StyleSheet, Text, View } fr
 import { useTranslation } from '../../lib/i18n';
 import {
   fetchDriverEarnings,
+  fetchDriverDispatchReadiness,
   fetchDriverOffers,
   fetchDriverProfile,
   fetchMyTrips,
+  type DriverDispatchReadinessResponse,
   type DriverFatigueStatus,
   type DriverEarningsResponse,
   type DriverOffer,
@@ -45,7 +47,6 @@ import { useDriverRealtimeStream } from '../../lib/use-driver-realtime-stream';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { buildDriverShiftReadiness } from '../../lib/driver-shift-readiness';
 import { DriverHomeMapView } from '../../lib/driver-home-map-view';
-import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../../lib/privacy/screen-capture';
 import {
   formatDriverOfferDistance,
   formatDriverOfferMoney,
@@ -53,6 +54,7 @@ import {
   toFiniteOfferNumber,
 } from '../../lib/offer-signal';
 import { normalizeDriverProfileResponse } from '../../lib/driver-profile-normalizer';
+import { buildDriverDispatchReadinessNote } from '../../lib/driver-dispatch-readiness';
 
 const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
 
@@ -323,6 +325,8 @@ export default function DriverHomeScreen() {
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [earnings, setEarnings] = useState<DriverEarningsResponse | null>(null);
+  const [dispatchReadiness, setDispatchReadiness] =
+    useState<DriverDispatchReadinessResponse['readiness'] | null>(null);
   const [acceptanceRate, setAcceptanceRate] = useState<number | null>(null);
   const [statusNote, setStatusNote] = useState('Synchronisation terrain en cours...');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -331,6 +335,9 @@ export default function DriverHomeScreen() {
   const [recentlyExpiredCount, setRecentlyExpiredCount] = useState(0);
   const [activeTripTransitionLabel, setActiveTripTransitionLabel] = useState<string | null>(null);
   const [driverProfileStatus, setDriverProfileStatus] = useState<string>('OFFLINE');
+  const [driverProfileId, setDriverProfileId] = useState<string | null>(null);
+  const [driverVerificationStatus, setDriverVerificationStatus] =
+    useState<string>('PENDING');
   const [driverFatigue, setDriverFatigue] = useState<DriverFatigueStatus>(fallbackFatigue);
   const [isTogglingAvailability, setIsTogglingAvailability] = useState(false);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
@@ -340,30 +347,38 @@ export default function DriverHomeScreen() {
   const [modalOffer, setModalOffer] = useState<DriverOffer | null>(null);
   const modalShowingRef = useRef(false);
 
-  useEffect(() => {
-    preventSensitiveScreenCapture();
-    return () => {
-      restoreSensitiveScreenCapture();
-    };
-  }, []);
-
   const loadDriverHome = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);
 
     try {
       const { authClient, me, session } = await restoreDriverSession();
       setSessionToken(session.sessionToken);
-      const [offersResponse, historyResponse, earningsResponse, profileResponse] = await Promise.all([
+      const [
+        offersResponse,
+        historyResponse,
+        earningsResponse,
+        profileResponse,
+      ] = await Promise.all([
         fetchDriverOffers(authClient),
         fetchMyTrips(authClient),
         fetchDriverEarnings(authClient),
         fetchDriverProfile(authClient),
       ]);
+      let dispatchReadinessResponse: DriverDispatchReadinessResponse | null =
+        null;
+      try {
+        dispatchReadinessResponse = await fetchDriverDispatchReadiness(authClient);
+      } catch {
+        dispatchReadinessResponse = null;
+      }
       const normalizedProfile = normalizeDriverProfileResponse(profileResponse);
       setOffers(offersResponse);
       setHistory(historyResponse);
       setEarnings(earningsResponse);
+      setDispatchReadiness(dispatchReadinessResponse?.readiness ?? null);
+      setDriverProfileId(normalizedProfile.profile.id);
       setDriverProfileStatus(normalizedProfile.profile.status);
+      setDriverVerificationStatus(normalizedProfile.profile.verificationStatus);
       setDriverFatigue(normalizedProfile.profile.fatigue);
       setVehicleCount(normalizedProfile.profile.vehicles.length);
       setAcceptanceRate(normalizedProfile.profile.dispatchSignal?.acceptanceRate ?? null);
@@ -372,9 +387,14 @@ export default function DriverHomeScreen() {
         offers: offersResponse,
         reservationNow: Date.now(),
         driverProfileStatus: normalizedProfile.profile.status,
+        driverVerificationStatus: normalizedProfile.profile.verificationStatus,
       });
       if (!silent) {
-        setStatusNote(buildDriverHomeStatusLabel({ flow, fullName: me.user.fullName }));
+        setStatusNote(
+          flow.canReceiveOffers && !flow.visibleOffers.length
+            ? buildDriverDispatchReadinessNote(dispatchReadinessResponse?.readiness ?? null)
+            : buildDriverHomeStatusLabel({ flow, fullName: me.user.fullName }),
+        );
       }
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
@@ -385,7 +405,10 @@ export default function DriverHomeScreen() {
       setOffers([]);
       setHistory(null);
       setEarnings(null);
+      setDriverProfileId(null);
       setDriverProfileStatus('OFFLINE');
+      setDriverVerificationStatus('PENDING');
+      setDispatchReadiness(null);
       setVehicleCount(null);
       if (!silent) setStatusNote(feedback.message);
     } finally {
@@ -394,10 +417,11 @@ export default function DriverHomeScreen() {
     }
   }, []);
 
-  useLiveRefresh(() => loadDriverHome(true), 25000);
+  useLiveRefresh(() => loadDriverHome(true), 5000);
 
   useDriverRealtimeStream(
     sessionToken,
+    driverProfileId,
     (eventType) => {
       setIsRealtimeSyncing(true);
       setStatusNote(describeRealtimeEvent('driver', eventType));
@@ -411,7 +435,13 @@ export default function DriverHomeScreen() {
   );
 
   const reservationNow = useReservationClock();
-  const flow = resolveDriverActiveFlow({ history, offers, reservationNow, driverProfileStatus });
+  const flow = resolveDriverActiveFlow({
+    history,
+    offers,
+    reservationNow,
+    driverProfileStatus,
+    driverVerificationStatus,
+  });
   const { activeTrip, activeFlowState, visibleOffers } = flow;
 
   const shiftReadiness = buildDriverShiftReadiness({ flow, fatigue: driverFatigue, earningsToday: earnings?.summary.today });
@@ -442,6 +472,21 @@ export default function DriverHomeScreen() {
     }
     previousVisibleOfferIdsRef.current = nextVisibleOfferIds;
   }, [flow.canReceiveOffers, visibleOffers]);
+
+  useEffect(() => {
+    if (!flow.canReceiveOffers || modalShowingRef.current || modalOffer) {
+      return;
+    }
+
+    const firstOffer = visibleOffers[0] ?? null;
+    if (firstOffer) {
+      modalShowingRef.current = true;
+      setFreshOfferIds((current) =>
+        current.includes(firstOffer.id) ? current : [firstOffer.id, ...current],
+      );
+      setModalOffer(firstOffer);
+    }
+  }, [flow.canReceiveOffers, modalOffer, visibleOffers]);
 
   useEffect(() => {
     if (!freshOfferIds.length) return;
@@ -482,9 +527,12 @@ export default function DriverHomeScreen() {
       const { authClient } = await restoreDriverSession();
       const response = await updateDriverAvailabilityWithApi(authClient, nextStatus);
       setDriverProfileStatus(response.availability.status);
+      const reservedOfferCount = response.availability.reservedOfferCount ?? 0;
       setStatusNote(
         response.availability.status === 'ONLINE'
-          ? 'Vous etes maintenant visible pour les nouvelles demandes.'
+          ? reservedOfferCount > 0
+            ? `${reservedOfferCount} demande${reservedOfferCount > 1 ? 's' : ''} compatible${reservedOfferCount > 1 ? 's' : ''} reservee${reservedOfferCount > 1 ? 's' : ''}.`
+            : 'Vous etes maintenant visible pour les nouvelles demandes.'
           : 'Vous etes hors ligne et ne recevrez plus de nouvelles offres.',
       );
       await loadDriverHome(true);
@@ -527,7 +575,13 @@ export default function DriverHomeScreen() {
   // a part, le badge retombe sur "Hors ligne" alors que le chauffeur est bien
   // en ligne, juste occupe (constate en direct avec une vraie mission active).
   const isOnDuty = isOnline || Boolean(activeTrip);
-  const statusLabel = activeTrip ? 'En mission' : isOnline ? 'En ligne' : 'Hors ligne';
+  const statusLabel = activeTrip
+    ? 'En mission'
+    : isOnline && !flow.accountCanReceiveOffers
+      ? 'Dossier en revue'
+      : isOnline
+        ? 'En ligne'
+        : 'Hors ligne';
   const sheetH = activeTrip ? 244 : isOnline ? 246 : 226;
 
   return (
@@ -630,12 +684,19 @@ export default function DriverHomeScreen() {
             <View style={styles.onlineRow}>
               <View>
                 <Text style={styles.onlineTitle}>
-                  {visibleOffers.length > 0
+                  {!flow.accountCanReceiveOffers
+                    ? 'Dossier chauffeur en validation'
+                    : visibleOffers.length > 0
                     ? td(visibleOffers.length > 1 ? 'offersAvailable_plural' : 'offersAvailable', { count: visibleOffers.length })
                     : td('waitingForOffers')}
                 </Text>
+                {!flow.accountCanReceiveOffers ? (
+                  <Text style={styles.statusNoteText} numberOfLines={2}>
+                    {buildDriverDispatchReadinessNote(dispatchReadiness)}
+                  </Text>
+                ) : null}
               </View>
-              {visibleOffers.length > 0 ? (
+              {flow.accountCanReceiveOffers && visibleOffers.length > 0 ? (
                 <OrbiButton
                   onPress={() => router.push('/offres')}
                   label="Voir"

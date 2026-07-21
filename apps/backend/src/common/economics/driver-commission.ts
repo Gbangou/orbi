@@ -1,4 +1,5 @@
 export const DEFAULT_PLATFORM_COMMISSION_RATE = 0.18;
+export const DRIVER_COMMISSION_STEP_XOF = 10;
 
 export function resolveDriverOnboardingDays(
   createdAt?: Date | string | null,
@@ -21,6 +22,15 @@ export function resolveDriverCommissionRate(driverOnboardingDays?: number) {
   return DEFAULT_PLATFORM_COMMISSION_RATE;
 }
 
+export function roundCommissionForDriverSettlement(amount: number) {
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+
+  return (
+    Math.floor(Math.floor(amount) / DRIVER_COMMISSION_STEP_XOF) *
+    DRIVER_COMMISSION_STEP_XOF
+  );
+}
+
 export function calculateDriverEconomics(
   grossFare: number,
   input: {
@@ -32,12 +42,16 @@ export function calculateDriverEconomics(
     input.driverOnboardingDays ??
     resolveDriverOnboardingDays(input.driverCreatedAt);
   const commissionRate = resolveDriverCommissionRate(driverOnboardingDays);
-  const commissionAmount = Math.round(grossFare * commissionRate);
+  const rawCommissionAmount = Math.floor(grossFare * commissionRate);
+  const commissionAmount = roundCommissionForDriverSettlement(rawCommissionAmount);
 
   return {
     commissionRate,
     commissionAmount,
     driverPayout: grossFare - commissionAmount,
+    rawCommissionAmount,
+    commissionRoundingDiscount: rawCommissionAmount - commissionAmount,
+    settlementRoundingStep: DRIVER_COMMISSION_STEP_XOF,
     driverOnboardingDays,
   };
 }

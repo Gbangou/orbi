@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from "../../lib/privacy/screen-capture";
 import { useTranslation } from "../../lib/i18n";
 import {
   ActivityIndicator,
@@ -16,6 +15,7 @@ import {
 import {
   acceptRideRequestWithApi,
   declineDriverOfferWithApi,
+  fetchDriverDispatchReadiness,
   fetchDriverOffers,
   fetchDriverProfile,
   fetchMyTrips,
@@ -23,6 +23,7 @@ import {
   reportTripIncidentWithApi,
   triggerTripSafetySosWithApi,
   withNetworkRetry,
+  type DriverDispatchReadinessResponse,
   type DriverFatigueStatus,
   type DriverOffer,
   type MyTripsResponse,
@@ -53,7 +54,6 @@ import {
   buildDriverDispatchStatusLabel,
   buildDriverFlowTransitionLabel,
   buildDriverLiveRouteProgress,
-  buildDriverMissionSnapshot,
   buildDriverNextActionHint,
   buildDriverRiderTrustSnapshot,
   resolveDriverActiveFlow,
@@ -63,7 +63,6 @@ import { buildDriverShiftReadiness } from "../../lib/driver-shift-readiness";
 import {
   buildDriverFatigueMessage,
   buildDriverRouteSafetyBrief,
-  buildDriverRouteMonitoringLines,
 } from "../../lib/driver-operational-signal";
 import { useDriverPresence } from "../../lib/use-driver-presence";
 import { useDriverRealtimeStream } from "../../lib/use-driver-realtime-stream";
@@ -71,10 +70,16 @@ import { TripMapView } from "../../lib/trip-map-view";
 import { normalizeDriverProfileResponse } from "../../lib/driver-profile-normalizer";
 import { ApproachMapView } from "../../lib/approach-map-view";
 import { useLiveRefresh } from "../../lib/use-live-refresh";
+import { buildDriverDispatchReadinessNote } from "../../lib/driver-dispatch-readiness";
 import {
   formatDriverEarningsAmount,
   toFiniteEarningsNumber,
 } from "../../lib/driver-earnings-signal";
+import {
+  formatDriverOfferDistance,
+  formatDriverOfferFare,
+} from "../../lib/offer-signal";
+import { formatReservationCountdown } from "../../lib/offer-reservation";
 import {
   normalizePickupCode,
   validateOfferAction,
@@ -144,6 +149,51 @@ function CloseGlyph() {
   );
 }
 
+function resolveMissionStageCopy(status: string) {
+  if (status === "MATCHED") {
+    return {
+      eyebrow: "Aller au point de depart",
+      title: "Rejoignez le passager",
+      primary: "Arrivee au pickup",
+    };
+  }
+
+  if (status === "DRIVER_ARRIVING") {
+    return {
+      eyebrow: "Passager au point de depart",
+      title: "Confirmez puis demarrez",
+      primary: "Depart course",
+    };
+  }
+
+  if (status === "IN_PROGRESS") {
+    return {
+      eyebrow: "Trajet en cours",
+      title: "Conduisez vers la destination",
+      primary: "Arrivee destination",
+    };
+  }
+
+  return {
+    eyebrow: "Mission active",
+    title: "Suivez la course",
+    primary: "Action suivante",
+  };
+}
+
+function formatPaymentMethodLabel(paymentMethod: string | null | undefined) {
+  switch ((paymentMethod ?? "MOBILE_MONEY").toUpperCase()) {
+    case "CASH":
+      return "Especes";
+    case "WALLET":
+      return "Wallet Orbi";
+    case "MOBILE_MONEY":
+      return "Mobile Money";
+    default:
+      return "Paiement confirme";
+  }
+}
+
 export default function OffersScreen() {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -158,6 +208,7 @@ export default function OffersScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
   const [freshOfferIds, setFreshOfferIds] = useState<string[]>([]);
+  const [incomingOfferId, setIncomingOfferId] = useState<string | null>(null);
   const [recentlyExpiredCount, setRecentlyExpiredCount] = useState(0);
   const [activeTripTransitionLabel, setActiveTripTransitionLabel] = useState<
     string | null
@@ -167,15 +218,22 @@ export default function OffersScreen() {
   );
   const [driverProfileStatus, setDriverProfileStatus] =
     useState<string>("OFFLINE");
+  const [driverProfileId, setDriverProfileId] = useState<string | null>(null);
+  const [driverVerificationStatus, setDriverVerificationStatus] =
+    useState<string>("PENDING");
   const [driverFatigue, setDriverFatigue] =
     useState<DriverFatigueStatus>(fallbackFatigue);
+  const [dispatchReadiness, setDispatchReadiness] =
+    useState<DriverDispatchReadinessResponse["readiness"] | null>(null);
   const [pickupCodeInput, setPickupCodeInput] = useState("");
   const [tripDetailStatus, setTripDetailStatus] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [completionFlash, setCompletionFlash] = useState<{
     fareLabel: string;
     netLabel: string;
+    paymentLabel: string;
   } | null>(null);
+  const [showMissionTimeline, setShowMissionTimeline] = useState(false);
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
   const previousTimelineEventIdsRef = useRef<string[] | null>(null);
@@ -197,16 +255,31 @@ export default function OffersScreen() {
           withNetworkRetry(() => fetchMyTrips(authClient), { maxAttempts: 3, onRetry }),
           withNetworkRetry(() => fetchDriverProfile(authClient), { maxAttempts: 3, onRetry }),
         ]);
+      let dispatchReadinessResponse:
+        | DriverDispatchReadinessResponse
+        | null = null;
+      try {
+        dispatchReadinessResponse = await withNetworkRetry(
+          () => fetchDriverDispatchReadiness(authClient),
+          { maxAttempts: 1 },
+        );
+      } catch {
+        dispatchReadinessResponse = null;
+      }
       const normalizedProfile = normalizeDriverProfileResponse(profileResponse);
       setOffers(offersResponse);
       setHistory(historyResponse);
+      setDriverProfileId(normalizedProfile.profile.id);
       setDriverProfileStatus(normalizedProfile.profile.status);
+      setDriverVerificationStatus(normalizedProfile.profile.verificationStatus);
       setDriverFatigue(normalizedProfile.profile.fatigue);
+      setDispatchReadiness(dispatchReadinessResponse?.readiness ?? null);
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: offersResponse,
         reservationNow: Date.now(),
         driverProfileStatus: normalizedProfile.profile.status,
+        driverVerificationStatus: normalizedProfile.profile.verificationStatus,
       });
       const activeTrip = flow.activeTrip;
 
@@ -234,7 +307,11 @@ export default function OffersScreen() {
       }
 
       if (!silent) {
-        setStatus(buildDriverDispatchStatusLabel({ flow }));
+        setStatus(
+          flow.canReceiveOffers && !flow.visibleOffers.length
+            ? buildDriverDispatchReadinessNote(dispatchReadinessResponse?.readiness ?? null)
+            : buildDriverDispatchStatusLabel({ flow }),
+        );
       }
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
@@ -253,7 +330,10 @@ export default function OffersScreen() {
       setOffers([]);
       setHistory(fallbackHistory);
       setActiveTripDetail(null);
+      setDriverProfileId(null);
       setDriverProfileStatus("OFFLINE");
+      setDriverVerificationStatus("PENDING");
+      setDispatchReadiness(null);
     } finally {
       if (silent) {
         setIsRealtimeSyncing(false);
@@ -264,9 +344,10 @@ export default function OffersScreen() {
     }
   }, []);
 
-  useLiveRefresh(() => loadDriverData(true), 20000);
+  useLiveRefresh(() => loadDriverData(true), 5000);
   useDriverRealtimeStream(
     sessionToken,
+    driverProfileId,
     (eventType) => {
       setIsRealtimeSyncing(true);
       setStatus(describeRealtimeEvent("driver", eventType));
@@ -295,10 +376,15 @@ export default function OffersScreen() {
         offers,
         reservationNow,
         driverProfileStatus,
+        driverVerificationStatus,
       }),
-    [driverProfileStatus, history, offers, reservationNow],
+    [driverProfileStatus, driverVerificationStatus, history, offers, reservationNow],
   );
   const { activeTrip, activeFlowState, visibleOffers } = flow;
+  const incomingOffer = useMemo(
+    () => visibleOffers.find((offer) => offer.id === incomingOfferId) ?? null,
+    [incomingOfferId, visibleOffers],
+  );
   const driverRouteSafetyBrief = useMemo(
     () =>
       buildDriverRouteSafetyBrief({
@@ -319,17 +405,20 @@ export default function OffersScreen() {
     () => buildDriverLiveRouteProgress({ flow, tripDetail: activeTripDetail }),
     [flow, activeTripDetail],
   );
-  const driverMissionSnapshot = useMemo(
-    () => buildDriverMissionSnapshot({ flow, tripDetail: activeTripDetail }),
-    [flow, activeTripDetail],
+  const missionStageCopy = useMemo(
+    () => resolveMissionStageCopy(activeTrip?.status ?? ""),
+    [activeTrip?.status],
+  );
+  const activePaymentMethodLabel = useMemo(
+    () =>
+      formatPaymentMethodLabel(
+        activeTripDetail?.trip.paymentMethod ?? activeTrip?.paymentMethod,
+      ),
+    [activeTrip?.paymentMethod, activeTripDetail?.trip.paymentMethod],
   );
   const driverNextActionHint = useMemo(
     () => buildDriverNextActionHint(flow),
     [flow],
-  );
-  const routeMonitoringLines = useMemo(
-    () => buildDriverRouteMonitoringLines(activeTripDetail?.trip.routeMonitoring),
-    [activeTripDetail],
   );
   const { latestPosition: driverGpsPosition } = useDriverPresence(
     flow.availabilityStatus === "ONLINE" || Boolean(activeTrip),
@@ -342,17 +431,19 @@ export default function OffersScreen() {
   );
 
   useEffect(() => {
-    preventSensitiveScreenCapture();
-    return () => {
-      restoreSensitiveScreenCapture();
-    };
-  }, []);
+    setShowMissionTimeline(false);
+  }, [activeTrip?.id]);
 
   useEffect(() => {
     const previousVisibleOfferIds = previousVisibleOfferIdsRef.current;
     const nextVisibleOfferIds = visibleOffers.map((offer) => offer.id);
 
-    if (previousVisibleOfferIds && flow.canReceiveOffers) {
+    if (!flow.canReceiveOffers) {
+      setIncomingOfferId(null);
+    } else if (!previousVisibleOfferIds && nextVisibleOfferIds.length > 0) {
+      setIncomingOfferId(nextVisibleOfferIds[0]);
+      setFreshOfferIds([nextVisibleOfferIds[0]]);
+    } else if (previousVisibleOfferIds) {
       const { freshOfferIds: nextFreshOfferIds, expiredOfferIds } =
         resolveDriverReservationChangeSet(
           previousVisibleOfferIds,
@@ -361,6 +452,7 @@ export default function OffersScreen() {
 
       if (nextFreshOfferIds.length > 0) {
         setFreshOfferIds(nextFreshOfferIds);
+        setIncomingOfferId(nextFreshOfferIds[0]);
       }
 
       if (expiredOfferIds.length > 0) {
@@ -481,6 +573,7 @@ export default function OffersScreen() {
 
   async function handleAcceptOffer(rideRequestId: string) {
     safeHaptics.impact('medium');
+    setIncomingOfferId(null);
     const validation = validateOfferAction({
       activeTripId: activeTrip?.id,
       offer: visibleOffers.find((offer) => offer.id === rideRequestId),
@@ -520,6 +613,7 @@ export default function OffersScreen() {
   }
 
   async function handleDeclineOffer(rideRequestId: string) {
+    setIncomingOfferId(null);
     const validation = validateOfferAction({
       activeTripId: activeTrip?.id,
       offer: visibleOffers.find((offer) => offer.id === rideRequestId),
@@ -585,11 +679,12 @@ export default function OffersScreen() {
           `Trajet ${response.trip.id.slice(0, 8)} mis a jour: ${response.trip.status}.`,
         );
         const gross = toFiniteEarningsNumber(response.trip.actualFare);
-        if (nextStatus === "COMPLETED" && gross !== null) {
-          const net = Math.round(gross * 0.82);
+        const net = toFiniteEarningsNumber(response.trip.driverPayout);
+        if (nextStatus === "COMPLETED" && gross !== null && net !== null) {
           setCompletionFlash({
             fareLabel: formatDriverEarningsAmount(gross),
             netLabel: formatDriverEarningsAmount(net),
+            paymentLabel: formatPaymentMethodLabel(response.trip.paymentMethod),
           });
         }
         await loadDriverData();
@@ -633,9 +728,20 @@ export default function OffersScreen() {
       setStatus("Annulation de la course en cours...");
       try {
         const { authClient } = await restoreDriverSession();
-        await updateTripStatusWithApi(authClient, tripId, "CANCELLED", reason);
-        setStatus("Course annulee. Vous repassez disponible.");
+        const response = await updateTripStatusWithApi(
+          authClient,
+          tripId,
+          "CANCELLED",
+          reason,
+        );
+        const cancellationMessage =
+          response.trip.cancellationPolicy?.message ??
+          "Course annulee. Vous repassez disponible.";
+        const supportTicketMessage = response.trip.cancellationPolicy?.supportTicketId
+          ? ` Dossier support ${response.trip.cancellationPolicy.supportTicketId.slice(0, 8)} ouvert.`
+          : "";
         await loadDriverData();
+        setStatus(`${cancellationMessage}${supportTicketMessage}`);
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
           surface: "active-trip",
@@ -842,6 +948,82 @@ export default function OffersScreen() {
 
   return (
     <OrbiScreen audience="driver" style={styles.safe}>
+      {incomingOffer && !activeTrip ? (
+        <View style={styles.incomingBackdrop}>
+          <Pressable
+            accessibilityLabel="Fermer l offre"
+            style={styles.incomingScrim}
+            onPress={() => setIncomingOfferId(null)}
+          />
+          {incomingOffer ? (
+            <View style={styles.incomingSheet}>
+              <View style={styles.incomingGrabber} />
+              <View style={styles.incomingHeader}>
+                <View style={styles.incomingPulse}>
+                  <View style={styles.incomingPulseDot} />
+                </View>
+                <View style={styles.incomingTitleCol}>
+                  <Text style={styles.incomingEyebrow}>Nouvelle course</Text>
+                  <Text style={styles.incomingTitle} numberOfLines={2}>
+                    {incomingOffer.pickup}
+                  </Text>
+                </View>
+                <Text style={styles.incomingFare}>
+                  {formatDriverOfferFare(incomingOffer)}
+                </Text>
+              </View>
+              <View style={styles.incomingRoute}>
+                <Text style={styles.incomingRouteLabel}>Destination</Text>
+                <Text style={styles.incomingRouteText} numberOfLines={2}>
+                  {incomingOffer.destination}
+                </Text>
+              </View>
+              <View style={styles.incomingMetrics}>
+                <View style={styles.incomingMetric}>
+                  <Text style={styles.incomingMetricValue}>
+                    {formatDriverOfferDistance(incomingOffer.pickupDistanceKm, "-")}
+                  </Text>
+                  <Text style={styles.incomingMetricLabel}>Pickup</Text>
+                </View>
+                <View style={styles.incomingMetric}>
+                  <Text style={styles.incomingMetricValue}>
+                    {formatDriverOfferDistance(incomingOffer.distanceKm, "-")}
+                  </Text>
+                  <Text style={styles.incomingMetricLabel}>Trajet</Text>
+                </View>
+                <View style={styles.incomingMetric}>
+                  <Text style={styles.incomingMetricValue}>
+                    {incomingOffer.reservationExpiresAt
+                      ? formatReservationCountdown(
+                          incomingOffer.reservationExpiresAt,
+                          reservationNow,
+                        )
+                      : "-"}
+                  </Text>
+                  <Text style={styles.incomingMetricLabel}>Temps</Text>
+                </View>
+              </View>
+              <View style={styles.incomingActions}>
+                <OrbiButton
+                  label="Refuser"
+                  onPress={() => handleDeclineOffer(incomingOffer.id)}
+                  disabled={isSubmitting}
+                  variant="secondary"
+                  tone="danger"
+                  style={styles.incomingAction}
+                />
+                <OrbiButton
+                  label="Accepter"
+                  onPress={() => handleAcceptOffer(incomingOffer.id)}
+                  disabled={isSubmitting}
+                  tone="teal"
+                  style={styles.incomingAction}
+                />
+              </View>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
       {/* ── Header ── */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{td('missions')}</Text>
@@ -893,6 +1075,7 @@ export default function OffersScreen() {
               <Text style={styles.completionTitle}>Course terminée !</Text>
               <Text style={styles.completionFare}>Tarif : {completionFlash.fareLabel}</Text>
               <Text style={styles.completionNet}>Votre gain : {completionFlash.netLabel}</Text>
+              <Text style={styles.completionPayment}>Paiement : {completionFlash.paymentLabel}</Text>
             </View>
             <Pressable onPress={() => setCompletionFlash(null)} style={styles.completionClose} hitSlop={12}>
               <CloseGlyph />
@@ -1020,85 +1203,50 @@ export default function OffersScreen() {
               )
             ) : null}
 
-            {/* Mission details — internal operational signals kept for automated
-                tests only, never meant to be shown to real drivers: raw
-                state-machine status strings and diagnostic labels like
-                "Statut: MATCHED" or "Finalisation bloquee" leaked to production
-                UI, confirmed live while auditing a real active mission. */}
-            {process.env.NODE_ENV !== 'production' ? (
-            <View style={styles.missionSignalsPanel}>
-              <Text style={styles.missionDetailLabel}>Mission en direct</Text>
-              <View style={styles.missionSignalGrid}>
-                <View style={styles.missionSignalTile}>
-                  <Text style={styles.missionSignalLabel}>Statut</Text>
-                  <Text style={styles.missionSignalValue}>{`Statut: ${activeTrip.status}`}</Text>
+            <View style={styles.missionNavigationPanel}>
+              <Text style={styles.missionStageEyebrow}>{missionStageCopy.eyebrow}</Text>
+              <Text style={styles.missionStageTitle}>{missionStageCopy.title}</Text>
+              <Text style={styles.missionStageHint} numberOfLines={2}>
+                {driverNextActionHint}
+              </Text>
+              <View style={styles.missionMetricRow}>
+                <View style={styles.missionMetric}>
+                  <Text style={styles.missionMetricLabel}>ETA</Text>
+                  <Text style={styles.missionMetricValue}>
+                    {driverRouteProgress?.etaLabel ?? "Calcul en cours"}
+                  </Text>
                 </View>
-                {driverRouteSafetyBrief.blocksCompletion ? (
-                  <View style={[styles.missionSignalTile, styles.missionSignalTileDanger]}>
-                    <Text style={styles.missionSignalLabel}>Blocage</Text>
-                    <Text style={styles.missionBlockedLabel}>Finalisation bloquee</Text>
-                  </View>
-                ) : null}
-                {driverRouteProgress?.distanceLabel ? (
-                  <View style={styles.missionSignalTile}>
-                    <Text style={styles.missionSignalLabel}>Distance</Text>
-                    <Text style={styles.missionSignalValue}>{driverRouteProgress.distanceLabel}</Text>
-                  </View>
-                ) : null}
-                {driverRouteProgress?.accuracyLabel ? (
-                  <View style={styles.missionSignalTile}>
-                    <Text style={styles.missionSignalLabel}>GPS</Text>
-                    <Text style={styles.missionSignalValue}>{driverRouteProgress.accuracyLabel}</Text>
-                  </View>
-                ) : null}
-                {driverRouteProgress?.speedLabel ? (
-                  <View style={styles.missionSignalTile}>
-                    <Text style={styles.missionSignalLabel}>Vitesse</Text>
-                    <Text style={styles.missionSignalValue}>
-                      {activeTrip.status === "IN_PROGRESS"
-                        ? `Rider vers destination - ${driverRouteProgress.speedLabel}`
-                        : `Rider au pickup - ${driverRouteProgress.speedLabel}`}
-                    </Text>
-                  </View>
-                ) : null}
-                {driverMissionSnapshot.map((item, i) => (
-                  <View key={i} style={styles.missionSignalTile}>
-                    <Text style={styles.missionSignalLabel}>{item.label}</Text>
-                    <Text style={styles.missionSignalValue}>{item.value}</Text>
-                  </View>
-                ))}
+                <View style={styles.missionMetric}>
+                  <Text style={styles.missionMetricLabel}>Distance</Text>
+                  <Text style={styles.missionMetricValue}>
+                    {driverRouteProgress?.distanceLabel ?? "En attente GPS"}
+                  </Text>
+                </View>
               </View>
-              {driverRouteSafetyBrief.description ? (
-                <Text style={styles.missionDetailStatus}>{driverRouteSafetyBrief.description}</Text>
-              ) : null}
-              {driverRouteSafetyBrief.actionLabel ? (
-                <Text style={styles.missionDetailStatus}>{driverRouteSafetyBrief.actionLabel}</Text>
-              ) : null}
-              {driverNextActionHint ? (
-                <Text style={styles.missionDetailStatus}>{driverNextActionHint}</Text>
-              ) : null}
-              {driverRouteProgress?.title ? (
-                <Text style={styles.missionDetailStatus}>{driverRouteProgress.title}</Text>
-              ) : null}
-              {driverRouteProgress?.stateLabel ? (
-                <Text style={styles.missionDetailStatus}>{driverRouteProgress.stateLabel}</Text>
-              ) : null}
-              {driverRouteProgress?.etaLabel ? (
-                <Text style={styles.missionDetailStatus}>{driverRouteProgress.etaLabel}</Text>
-              ) : null}
-              {driverRouteProgress?.freshnessLabel ? (
-                <Text style={styles.missionDetailStatus}>{driverRouteProgress.freshnessLabel}</Text>
-              ) : null}
-              {driverRouteProgress?.coordinateLabel ? (
-                <Text style={styles.missionDetailStatus}>{driverRouteProgress.coordinateLabel}</Text>
-              ) : null}
-              <View style={styles.routeMonitoringCompact}>
-                {routeMonitoringLines.map((line, i) => (
-                  <Text key={i} style={styles.missionDetailStatus}>{line}</Text>
-                ))}
+              <View style={styles.missionMetricRow}>
+                <View style={styles.missionMetric}>
+                  <Text style={styles.missionMetricLabel}>Signal</Text>
+                  <Text style={styles.missionMetricValue}>
+                    {driverRouteProgress?.freshnessLabel ?? "Live actif"}
+                  </Text>
+                </View>
+                <View style={styles.missionMetric}>
+                  <Text style={styles.missionMetricLabel}>Prix</Text>
+                  <Text style={styles.missionMetricValue}>
+                    {riderTrustSnapshot?.fareLabel ?? formatDriverEarningsAmount(activeTrip.amount)}
+                  </Text>
+                </View>
               </View>
+              <View style={styles.missionPaymentNotice}>
+                <Text style={styles.missionPaymentLabel}>Paiement</Text>
+                <Text style={styles.missionPaymentValue}>{activePaymentMethodLabel}</Text>
+              </View>
+              {driverRouteSafetyBrief.blocksCompletion ? (
+                <Text style={styles.routeSafetyBlockNote}>
+                  GPS requis: {driverRouteSafetyBrief.actionLabel}
+                </Text>
+              ) : null}
             </View>
-            ) : null}
 
             {/* Action buttons */}
             <View style={styles.missionActions}>{renderActiveTripAction()}</View>
@@ -1138,7 +1286,22 @@ export default function OffersScreen() {
             ) : null}
 
             {activeTripDetail ? (
-              <LiveTimeline events={activeTripDetail.trip.timeline} freshEventIds={freshTimelineEventIds} />
+              <View style={styles.supportTimelineWrap}>
+                <Pressable
+                  onPress={() => setShowMissionTimeline((value) => !value)}
+                  style={styles.supportTimelineToggle}
+                >
+                  <Text style={styles.supportTimelineToggleText}>
+                    {showMissionTimeline ? "Masquer details support" : "Details support"}
+                  </Text>
+                </Pressable>
+                {showMissionTimeline ? (
+                  <LiveTimeline
+                    events={activeTripDetail.trip.timeline}
+                    freshEventIds={freshTimelineEventIds}
+                  />
+                ) : null}
+              </View>
             ) : null}
           </OrbiSurface>
         ) : null}
@@ -1188,14 +1351,14 @@ export default function OffersScreen() {
                       },
                     ]}
                   />
-                  <Text style={styles.emptySignalText}>
-                    {flow.canReceiveOffers ? "Disponible" : "Hors ligne"}
-                  </Text>
+                <Text style={styles.emptySignalText}>
+                    {flow.canReceiveOffers ? "Disponible" : "Diagnostic"}
+                </Text>
                 </View>
                 <Text style={styles.emptyTitle}>Aucune offre active</Text>
                 <Text style={styles.emptyMeta} numberOfLines={2}>
-                  {flow.canReceiveOffers
-                    ? "Restez proche des zones de demande. Les offres compatibles arrivent ici."
+                  {flow.canReceiveOffers || dispatchReadiness
+                    ? buildDriverDispatchReadinessNote(dispatchReadiness)
                     : "Passez en ligne depuis le Cockpit quand vous êtes prêt."}
                 </Text>
               </View>
@@ -1239,6 +1402,129 @@ export default function OffersScreen() {
 
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   safe: { flex: 1 },
+  incomingBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+    zIndex: 20,
+    elevation: 20,
+  },
+  incomingScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(2, 6, 23, 0.48)",
+  },
+  incomingSheet: {
+    margin: 12,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    padding: 16,
+    gap: 14,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 24,
+    elevation: 18,
+  },
+  incomingGrabber: {
+    alignSelf: "center",
+    width: 44,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.border,
+  },
+  incomingHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  incomingPulse: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(20, 184, 166, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  incomingPulseDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: theme.colors.teal,
+  },
+  incomingTitleCol: { flex: 1, gap: 3 },
+  incomingEyebrow: {
+    fontSize: 11,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.teal,
+    textTransform: "uppercase",
+  },
+  incomingTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    fontFamily: "Raleway_800ExtraBold",
+    color: theme.colors.text,
+  },
+  incomingFare: {
+    fontSize: 20,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.amber,
+  },
+  incomingRoute: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    backgroundColor: theme.colors.backgroundAlt,
+    padding: 12,
+    gap: 4,
+  },
+  incomingRouteLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.textMuted,
+    textTransform: "uppercase",
+  },
+  incomingRouteText: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
+    color: theme.colors.text,
+    lineHeight: 19,
+  },
+  incomingMetrics: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  incomingMetric: {
+    flex: 1,
+    minHeight: 62,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    justifyContent: "center",
+    gap: 2,
+  },
+  incomingMetricValue: {
+    fontSize: 14,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.text,
+  },
+  incomingMetricLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: theme.colors.textMuted,
+  },
+  incomingActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  incomingAction: { flex: 1 },
   header: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,
@@ -1259,6 +1545,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   completionTitle: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
   completionFare: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular" },
   completionNet: { fontSize: 13, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: theme.colors.teal },
+  completionPayment: { fontSize: 12, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.textSoft },
   completionClose: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.colors.backgroundDim, alignItems: "center", justifyContent: "center" },
   statusNotice: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular", paddingHorizontal: 2 },
   compactOfflineNotice: {
@@ -1285,7 +1572,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: theme.colors.textSoft,
   },
-  missionCard: { padding: 14, gap: 10 },
+  missionCard: { padding: 12, gap: 10 },
   missionStatusRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   missionStatusDot: { width: 7, height: 7, borderRadius: 4 },
@@ -1303,11 +1590,107 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   riderName: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
   riderMeta: { fontSize: 12, color: theme.colors.textSoft, fontFamily: "Inter_400Regular" },
   riderFare: { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.amber },
-  missionMap: { height: 132, borderRadius: 14, overflow: "hidden" },
+  missionMap: { height: 224, borderRadius: 14, overflow: "hidden" },
+  missionNavigationPanel: {
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  missionStageEyebrow: {
+    fontSize: 10,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.amber,
+    textTransform: "uppercase",
+  },
+  missionStageTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    fontFamily: "Raleway_800ExtraBold",
+    color: theme.colors.text,
+  },
+  missionStageHint: {
+    fontSize: 12,
+    color: theme.colors.textSoft,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 17,
+  },
+  missionMetricRow: { flexDirection: "row", gap: 8 },
+  missionMetric: {
+    flex: 1,
+    minHeight: 58,
+    borderRadius: 12,
+    backgroundColor: theme.colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    gap: 3,
+  },
+  missionMetricLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.textMuted,
+    textTransform: "uppercase",
+  },
+  missionMetricValue: {
+    fontSize: 13,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.text,
+    lineHeight: 17,
+  },
+  missionPaymentNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,201,167,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(0,201,167,0.22)",
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  missionPaymentLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.textMuted,
+    textTransform: "uppercase",
+  },
+  missionPaymentValue: {
+    flexShrink: 0,
+    fontSize: 13,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.teal,
+  },
   missionActions: { gap: 7 },
   secondaryActions: { flexDirection: "row", gap: 8 },
   secondaryBtn: { flex: 1 },
   tripDetailStatus: { fontSize: 12, color: theme.colors.textMuted, fontFamily: "Inter_400Regular" },
+  supportTimelineWrap: { gap: 8 },
+  supportTimelineToggle: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    backgroundColor: theme.colors.backgroundAlt,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  supportTimelineToggleText: {
+    fontSize: 12,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.textSoft,
+  },
   emptyState: {
     padding: 13,
     gap: 11,

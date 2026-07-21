@@ -11,8 +11,6 @@ describe('driver sensitive screen capture protection', () => {
   const protectedScreens = [
     'app/auth.tsx',
     'app/onboarding.tsx',
-    'app/(tabs)/accueil.tsx',
-    'app/(tabs)/offres.tsx',
     'app/(tabs)/profil.tsx',
     'app/(tabs)/revenus.tsx',
   ];
@@ -23,4 +21,13 @@ describe('driver sensitive screen capture protection', () => {
     expect(source).toContain('preventSensitiveScreenCapture');
     expect(source).toContain('restoreSensitiveScreenCapture');
   });
+
+  it.each(['app/(tabs)/accueil.tsx', 'app/(tabs)/offres.tsx'])(
+    '%s keeps live mission screenshots available for support',
+    (relativePath) => {
+      const source = readAppFile(relativePath);
+
+      expect(source).not.toContain('preventSensitiveScreenCapture');
+    },
+  );
 });

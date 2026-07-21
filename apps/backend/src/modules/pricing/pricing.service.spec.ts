@@ -6,6 +6,7 @@
  *            tous les ajustements contextuels, toutes les zones/villes
  */
 import { ServiceTier } from '@prisma/client';
+import { roundCommissionForDriverSettlement } from '../../common/economics/driver-commission';
 import { PricingService } from './pricing.service';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ describe('PricingService — commission tiers chauffeur', () => {
     const quote = await service.quote({ ...REFERENCE_MOTO_QUOTE, driverOnboardingDays: 1 });
     expect(quote.driverEconomics.commissionRate).toBe(0.10);
     expect(quote.driverEconomics.commissionAmount).toBe(
-      Math.round(quote.estimatedFare * 0.10),
+      roundCommissionForDriverSettlement(quote.estimatedFare * 0.10),
     );
   });
 
@@ -98,6 +99,34 @@ describe('PricingService — commission tiers chauffeur', () => {
       quote.estimatedFare - quote.driverEconomics.commissionAmount,
     );
     expect(quote.driverEconomics.driverPayout).toBeGreaterThan(0);
+  });
+
+  it('expose une repartition economique plafonnee et lisible pour les ops', async () => {
+    const { service } = createService();
+    const quote = await service.quote(REFERENCE_MOTO_QUOTE);
+
+    expect(quote.driverEconomics.driverShareRate).toBeGreaterThanOrEqual(0.82);
+    expect(quote.driverEconomics.platformTakeRate).toBeLessThanOrEqual(0.18);
+    expect(quote.driverEconomics.driverPayoutPerKm).toBeGreaterThan(0);
+    expect(quote.driverEconomics.driverPayoutPerMinute).toBeGreaterThan(0);
+    expect(quote.driverEconomics.commissionAmount % 10).toBe(0);
+    expect(quote.driverEconomics.driverPayout % 10).toBe(0);
+    expect(quote.driverEconomics.commissionAmount).toBeLessThanOrEqual(
+      quote.driverEconomics.rawCommissionAmount,
+    );
+    expect(quote.driverEconomics.wealthDistributionBand).toBe(
+      'STANDARD_FAIR_SHARE',
+    );
+  });
+
+  it('classe les nouveaux chauffeurs en boost de partage chauffeur', async () => {
+    const { service } = createService();
+    const quote = await service.quote({ ...REFERENCE_MOTO_QUOTE, driverOnboardingDays: 1 });
+
+    expect(quote.driverEconomics.driverShareRate).toBeGreaterThanOrEqual(0.9);
+    expect(quote.driverEconomics.wealthDistributionBand).toBe(
+      'DRIVER_ONBOARDING_BOOST',
+    );
   });
 });
 
@@ -163,6 +192,55 @@ describe('PricingService — tarifs fallback Burkina Faso', () => {
     });
     expect(quote.fareBreakdown.baseFare).toBe(600);
     expect(quote.serviceTier).toBe(ServiceTier.CAR_STANDARD);
+  });
+
+  it('arrondit les montants terrain vers le haut sans exagerer le prix', async () => {
+    const { service } = createService();
+    const rounding = service as unknown as {
+      roundFareForCashOperations(amount: number): {
+        amount: number;
+        roundingAmount: number;
+        step: 50 | 100;
+      };
+    };
+
+    expect(rounding.roundFareForCashOperations(1453)).toEqual({
+      amount: 1500,
+      roundingAmount: 47,
+      step: 100,
+    });
+    expect(rounding.roundFareForCashOperations(1689)).toEqual({
+      amount: 1700,
+      roundingAmount: 11,
+      step: 100,
+    });
+    expect(rounding.roundFareForCashOperations(1210)).toEqual({
+      amount: 1300,
+      roundingAmount: 90,
+      step: 100,
+    });
+  });
+
+  it('applique l arrondi CFA aux motos et aux voitures', async () => {
+    const { service } = createService();
+    const moto = await service.quote({
+      ...REFERENCE_MOTO_QUOTE,
+      vehicleType: 'MOTORCYCLE',
+      distanceKm: 5.8,
+      durationMinutes: 16,
+    });
+    const car = await service.quote({
+      ...REFERENCE_MOTO_QUOTE,
+      vehicleType: 'CAR',
+      serviceTier: ServiceTier.CAR_STANDARD,
+      distanceKm: 5.8,
+      durationMinutes: 16,
+    });
+
+    expect(moto.estimatedFare % 50).toBe(0);
+    expect(car.estimatedFare % 50).toBe(0);
+    expect(moto.fareBreakdown.commercialRoundingAmount).toBeGreaterThanOrEqual(0);
+    expect(car.fareBreakdown.commercialRoundingAmount).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -400,7 +478,15 @@ describe('PricingService — price window transparence passager', () => {
     const quote = await service.quote(REFERENCE_MOTO_QUOTE);
     const { min, max } = quote.fareBreakdown.priceWindow;
     expect(min).toBeGreaterThan(quote.estimatedFare * 0.9);
-    expect(max).toBeLessThan(quote.estimatedFare * 1.11);
+    expect(max).toBeLessThan(quote.estimatedFare * 1.11 + 50);
+  });
+
+  it('arrondit aussi la fenetre de prix en paliers terrain', async () => {
+    const { service } = createService();
+    const quote = await service.quote(REFERENCE_MOTO_QUOTE);
+    const { min, max } = quote.fareBreakdown.priceWindow;
+    expect(min % 50).toBe(0);
+    expect(max % 50).toBe(0);
   });
 });
 
@@ -492,6 +578,20 @@ describe('PricingService — estimateRideOptions catalogue Burkina', () => {
     }
   });
 
+  it('chaque option expose un prix arrondi et le detail d arrondi CFA', async () => {
+    const { service } = createService();
+    const preview = await service.estimateRideOptions({
+      distanceKm: 5.8,
+      durationMinutes: 16,
+    } as never);
+
+    for (const option of preview.options) {
+      expect(option.fare % 50).toBe(0);
+      expect(option.fareBreakdown?.commercialRoundingAmount).toBeGreaterThanOrEqual(0);
+      expect([50, 100]).toContain(option.fareBreakdown?.commercialRoundingStep);
+    }
+  });
+
   it('marketplace expose nearbyDrivers, etaConfidence et sources de signal', async () => {
     const { service } = createService();
     const preview = await service.estimateRideOptions({
@@ -510,6 +610,69 @@ describe('PricingService — estimateRideOptions catalogue Burkina', () => {
       expect(option.marketplace?.supplySource).toBe('LIVE');
       expect(option.marketplace?.signalFreshnessSeconds).toBeGreaterThan(0);
     }
+  });
+
+  it('calcule la demande live par ville, type et tier de service', async () => {
+    const { prisma, service } = createService();
+
+    await service.estimateRideOptions({
+      distanceKm: 5.8,
+      durationMinutes: 16,
+      city: 'BOBO_DIOULASSO',
+    } as never);
+
+    expect(prisma.driverProfile.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        status: 'ONLINE',
+        verificationStatus: 'APPROVED',
+        onboardingReviews: {
+          some: {
+            metadata: {
+              path: ['city'],
+              equals: 'BOBO_DIOULASSO',
+            },
+          },
+        },
+        vehicles: {
+          some: expect.objectContaining({
+            isActive: true,
+            type: 'MOTORCYCLE',
+            tier: ServiceTier.MOTO_STANDARD,
+          }),
+        },
+      }),
+    });
+    expect(prisma.driverProfile.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        vehicles: {
+          some: expect.objectContaining({
+            type: 'CAR',
+            tier: ServiceTier.CAR_STANDARD,
+          }),
+        },
+      }),
+    });
+    expect(prisma.driverProfile.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        vehicles: {
+          some: expect.objectContaining({
+            type: 'CAR',
+            tier: ServiceTier.CAR_COMFORT,
+          }),
+        },
+      }),
+    });
+    expect(prisma.rideRequest.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        status: 'REQUESTED',
+        pricingCity: 'BOBO_DIOULASSO',
+        requestedVehicleType: 'MOTORCYCLE',
+        OR: [
+          { requestedServiceTier: ServiceTier.MOTO_STANDARD },
+          { requestedServiceTier: null },
+        ],
+      }),
+    });
   });
 
   it('marque les options estimees quand aucun signal supply live n est fourni', async () => {

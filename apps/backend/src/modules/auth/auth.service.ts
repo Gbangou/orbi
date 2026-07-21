@@ -774,12 +774,49 @@ export class AuthService {
     auth: RequestAuthContext,
     payload: CreateSupportTicketDto,
   ) {
+    const paymentContext =
+      payload.category === 'payment'
+        ? await this.prisma.paymentAttempt.findFirst({
+            where: {
+              userId: auth.user.id,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            select: {
+              id: true,
+              status: true,
+              amount: true,
+              currency: true,
+              provider: true,
+              rideRequestId: true,
+              transactionRef: true,
+              createdAt: true,
+            },
+          })
+        : null;
+    const enrichedDescription = [
+      payload.description,
+      paymentContext
+        ? [
+            `PaymentAttempt: ${paymentContext.id}`,
+            `PaymentStatus: ${paymentContext.status}`,
+            `PaymentAmount: ${Number(paymentContext.amount)} ${paymentContext.currency}`,
+            `PaymentProvider: ${paymentContext.provider}`,
+            `PaymentRideRequest: ${paymentContext.rideRequestId}`,
+            `PaymentTransaction: ${paymentContext.transactionRef ?? 'absente'}`,
+          ].join('\n')
+        : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
     const ticket = await this.prisma.supportTicket.create({
       data: {
         userId: auth.user.id,
         subject: payload.subject,
-        description: payload.description,
-        priority: payload.category === 'safety' ? 3 : 1,
+        description: enrichedDescription,
+        priority: this.resolveSupportTicketPriority(payload.category),
       },
       select: {
         id: true,
@@ -803,9 +840,28 @@ export class AuthService {
     };
   }
 
+  private resolveSupportTicketPriority(category?: string) {
+    if (category === 'safety') {
+      return 3;
+    }
+
+    if (category === 'payment') {
+      return 2;
+    }
+
+    return 1;
+  }
+
   async getMySupportTickets(auth: RequestAuthContext) {
     const tickets = await this.prisma.supportTicket.findMany({
-      where: { userId: auth.user.id },
+      where: {
+        userId: auth.user.id,
+        NOT: {
+          subject: {
+            startsWith: 'Erreur mobile ',
+          },
+        },
+      },
       select: {
         id: true,
         subject: true,

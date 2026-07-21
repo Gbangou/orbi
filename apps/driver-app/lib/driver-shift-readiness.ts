@@ -45,6 +45,27 @@ export function buildDriverShiftReadiness(input: {
     };
   }
 
+  if (
+    input.flow.availabilityStatus === 'ONLINE' &&
+    !input.flow.accountCanReceiveOffers
+  ) {
+    return {
+      eyebrow: 'Readiness',
+      title: 'Validation operations requise',
+      description:
+        'Le direct peut rester visible, mais les offres sont retenues tant que le dossier chauffeur n est pas approuve.',
+      scoreLabel: '45/100',
+      tone: 'amber',
+      note: 'Priorite: faire valider le dossier et le vehicule avant les tests de dispatch.',
+      noteTone: 'amber',
+      insights: [
+        { label: 'Compte', value: 'En revue', tone: 'amber' },
+        { label: 'Offres', value: 'Bloquees', tone: 'rose' },
+        { label: 'Action', value: 'Ops', tone: 'sky' },
+      ],
+    };
+  }
+
   if (fatigue?.state === 'blocked') {
     return {
       eyebrow: 'Readiness',

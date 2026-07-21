@@ -141,6 +141,7 @@ export default function RootLayout() {
       <ErrorBoundary
         fallbackLabel="Orbi chauffeur a rencontré un problème inattendu"
         onError={(error) => reportDriverRenderCrash(error, { pathname })}
+        showDebugDetails={process.env.EXPO_PUBLIC_DEBUG_CRASH_DETAILS === 'true'}
       >
         <>
           <StatusBar style={isDark ? 'light' : 'dark'} />

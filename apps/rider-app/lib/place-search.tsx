@@ -14,7 +14,15 @@ import { normalizeMapCoordinatePair } from './map-coordinate';
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 const DEBOUNCE_MS = 600;
-const OUAGA_VIEWBOX = '-1.7,12.2,-1.3,12.5';
+const BURKINA_VIEWBOX = '-5.6,9.3,2.6,15.2';
+const CITY_VIEWBOXES: Record<string, string> = {
+  OUAGADOUGOU: '-1.7,12.2,-1.3,12.5',
+  'BOBO-DIOULASSO': '-4.5,11.0,-4.15,11.35',
+  BOBO_DIOULASSO: '-4.5,11.0,-4.15,11.35',
+  KOUDOUGOU: '-2.5,12.1,-2.25,12.35',
+  BANFORA: '-4.9,10.55,-4.65,10.75',
+  OUAHIGOUYA: '-2.55,13.45,-2.25,13.7',
+};
 
 interface NominatimResult {
   place_id: number;
@@ -64,6 +72,19 @@ function compactSuggestionLabel(label: unknown): string {
   return normalized.length > 18 ? `${normalized.slice(0, 17).trim()}…` : normalized;
 }
 
+function createTimeoutSignal(timeoutMs: number): {
+  signal: AbortSignal;
+  clear: () => void;
+} {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  return {
+    signal: controller.signal,
+    clear: () => clearTimeout(timeout),
+  };
+}
+
 function CloseGlyph({ color }: { color: string }) {
   return (
     <View style={iconStyles.closeWrap}>
@@ -79,6 +100,7 @@ export interface PlaceSearchProps {
   tone?: 'teal' | 'sky' | 'amber';
   suggestions?: Place[];
   suggestionLabel?: string;
+  cityHint?: string;
 }
 
 export function PlaceSearch({
@@ -87,6 +109,7 @@ export function PlaceSearch({
   tone = 'teal',
   suggestions = [],
   suggestionLabel = 'Suggestions',
+  cityHint = 'Burkina Faso',
 }: PlaceSearchProps) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -125,19 +148,30 @@ export function PlaceSearch({
     }
     setIsSearching(true);
     setError(null);
+    const timeout = createTimeoutSignal(8000);
     try {
+      const normalizedCityHint = cityHint.trim();
+      const cityKey = normalizedCityHint.toUpperCase().replace(/\s+/g, '_');
+      const viewbox =
+        CITY_VIEWBOXES[cityKey] ??
+        CITY_VIEWBOXES[normalizedCityHint.toUpperCase()] ??
+        BURKINA_VIEWBOX;
+      const locationHint =
+        normalizedCityHint.length > 0 && normalizedCityHint !== 'Burkina Faso'
+          ? `${normalizedCityHint}, Burkina Faso`
+          : 'Burkina Faso';
       const params = new URLSearchParams({
-        q: `${q}, Ouagadougou`,
+        q: `${q}, ${locationHint}`,
         format: 'json',
         limit: '5',
         countrycodes: 'bf',
-        viewbox: OUAGA_VIEWBOX,
+        viewbox,
         bounded: '0',
         addressdetails: '1',
       });
       const response = await fetch(`${NOMINATIM_URL}?${params.toString()}`, {
         headers: { 'Accept-Language': 'fr', 'User-Agent': 'OrbiApp/1.0' },
-        signal: AbortSignal.timeout(8000),
+        signal: timeout.signal,
       });
       if (!response.ok) throw new Error('Recherche indisponible');
       const data: NominatimResult[] = await response.json();
@@ -146,9 +180,10 @@ export function PlaceSearch({
       setError('Recherche indisponible. Verifiez la connexion.');
       setResults([]);
     } finally {
+      timeout.clear();
       setIsSearching(false);
     }
-  }, []);
+  }, [cityHint]);
 
   const handleChange = useCallback(
     (text: string) => {

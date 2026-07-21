@@ -8,8 +8,8 @@ import {
 
 describe('dispatch-engine', () => {
   it('caps assignment windows inside the configured bounds', () => {
-    expect(resolveAssignmentWindowMs(5)).toBeGreaterThanOrEqual(20_000);
-    expect(resolveAssignmentWindowMs(99)).toBeLessThanOrEqual(50_000);
+    expect(resolveAssignmentWindowMs(5)).toBeGreaterThanOrEqual(75_000);
+    expect(resolveAssignmentWindowMs(99)).toBeLessThanOrEqual(120_000);
   });
 
   it('promotes stronger offers to higher confidence labels', () => {
@@ -50,7 +50,7 @@ describe('dispatch-engine', () => {
   it('keeps marketplace fairness balanced when rider price, payout and margin are healthy', () => {
     const signal = calculateMarketplaceFairnessSignal({
       fare: 1800,
-      driverPayout: 1476,
+      driverPayout: 1500,
       estimatedTripDistanceKm: 5.8,
       pickupDistanceKm: 1.1,
       vehicleType: 'MOTORCYCLE',
@@ -66,7 +66,7 @@ describe('dispatch-engine', () => {
   it('flags driver payout fairness when pickup effort makes the offer weak', () => {
     const signal = calculateMarketplaceFairnessSignal({
       fare: 1300,
-      driverPayout: 1066,
+      driverPayout: 1050,
       estimatedTripDistanceKm: 2.2,
       pickupDistanceKm: 10.5,
       vehicleType: 'MOTORCYCLE',

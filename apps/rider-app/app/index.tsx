@@ -26,7 +26,14 @@ export default function IndexScreen() {
     let isMounted = true;
 
     async function handoff() {
-      const hasSession = await hasPersistedRiderSession();
+      let hasSession = false;
+
+      try {
+        hasSession = await hasPersistedRiderSession();
+      } catch {
+        hasSession = false;
+      }
+
       if (!isMounted) return;
       // Transition fluide — laisse l'animation se terminer
       setTimeout(() => {

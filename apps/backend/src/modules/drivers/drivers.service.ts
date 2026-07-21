@@ -14,13 +14,21 @@ import {
   ServiceTier,
   VerificationStatus,
   VehicleType,
+  WalletTransactionType,
 } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { FeatureFlagsService } from '../../core/runtime/feature-flags.service';
 import type { RequestAuthContext } from '../auth/auth.types';
 import { DocumentLinksService } from '../../common/document-links/document-links.service';
 import { JobQueueService } from '../../common/job-queue/job-queue.service';
-import { calculateDriverEconomics } from '../../common/economics/driver-commission';
+import {
+  calculateDistanceKm,
+  hasDefinedCoordinates,
+} from '../../common/geo/route-metrics';
+import {
+  calculateDriverEconomics,
+  resolveDriverOnboardingDays,
+} from '../../common/economics/driver-commission';
 import { RequestDriverDocumentUploadLinksDto } from './dto/request-driver-document-upload-links.dto';
 import { UpsertDriverOnboardingDto } from './dto/upsert-driver-onboarding.dto';
 import { ACTIVE_TRIP_STATUSES } from '../trips/trips.constants';
@@ -38,10 +46,26 @@ function toNumber(value: unknown) {
   return Number(value);
 }
 
-const driverPayoutRateBps = 8200;
-const driverPayoutRate = driverPayoutRateBps / 10_000;
 const isoUtcDateTimePattern =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/;
+const driverCancellationPauseWindowMinutes = 30;
+const driverCancellationPauseThreshold = 3;
+
+type DriverDispatchBlockerCode =
+  | 'OFFLINE'
+  | 'SUSPENDED'
+  | 'UNAPPROVED'
+  | 'NO_ACTIVE_VEHICLE'
+  | 'ACTIVE_TRIP'
+  | 'GPS_MISSING'
+  | 'FATIGUE_BLOCKED';
+
+function buildDispatchBlocker(
+  code: DriverDispatchBlockerCode,
+  message: string,
+) {
+  return { code, message };
+}
 
 function normalizePlateNumber(value: string) {
   return value.trim().toUpperCase();
@@ -570,36 +594,71 @@ export class DriversService {
   }
 
   async getEarnings(auth: RequestAuthContext) {
-    const driverProfileId = auth.user.driverProfile?.id;
+    const driverProfile = auth.user.driverProfile;
 
-    if (!driverProfileId) {
+    if (!driverProfile) {
       throw new NotFoundException(
         'No driver profile found for the authenticated user.',
       );
     }
 
-    const trips = await this.prisma.trip.findMany({
-      where: {
-        driverId: driverProfileId,
-        status: 'COMPLETED',
-      },
-      orderBy: {
-        completedAt: 'desc',
-      },
-      take: 25,
-    });
+    const driverProfileId = driverProfile.id;
+
+    const [trips, compensationTransactions] = await Promise.all([
+      this.prisma.trip.findMany({
+        where: {
+          driverId: driverProfileId,
+          status: 'COMPLETED',
+        },
+        orderBy: {
+          completedAt: 'desc',
+        },
+        take: 25,
+      }),
+      this.prisma.walletTransaction.findMany({
+        where: {
+          type: WalletTransactionType.CREDIT,
+          reference: {
+            startsWith: 'support-cancellation-compensation:',
+          },
+          wallet: {
+            userId: auth.user.id,
+            currency: 'XOF',
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 25,
+      }),
+    ]);
 
     const now = Date.now();
     const oneDayAgo = now - 1000 * 60 * 60 * 24;
     const oneWeekAgo = now - 1000 * 60 * 60 * 24 * 7;
     const oneMonthAgo = now - 1000 * 60 * 60 * 24 * 30;
 
-    const payouts = trips.map((trip) => ({
-      ...trip,
-      payout: Math.round(Number(trip.actualFare ?? 0) * driverPayoutRate),
-      grossFare: Math.round(Number(trip.actualFare ?? 0)),
-      effectiveDate: trip.completedAt ?? trip.createdAt,
-    }));
+    const driverCreatedAt = driverProfile.createdAt;
+    const payouts = trips.map((trip) => {
+      const grossFare = Math.round(Number(trip.actualFare ?? 0));
+      const effectiveDate = trip.completedAt ?? trip.createdAt;
+      const economics = calculateDriverEconomics(grossFare, {
+        driverOnboardingDays: resolveDriverOnboardingDays(
+          driverCreatedAt,
+          effectiveDate,
+        ),
+      });
+
+      return {
+        ...trip,
+        payout: economics.driverPayout,
+        grossFare,
+        platformFee: economics.commissionAmount,
+        commissionRate: economics.commissionRate,
+        payoutRate: 1 - economics.commissionRate,
+        effectiveDate,
+      };
+    });
 
     const today = payouts
       .filter((trip) => trip.effectiveDate.getTime() >= oneDayAgo)
@@ -610,6 +669,22 @@ export class DriversService {
     const month = payouts
       .filter((trip) => trip.effectiveDate.getTime() >= oneMonthAgo)
       .reduce((sum, trip) => sum + trip.payout, 0);
+    const compensationAdjustments = compensationTransactions.map((transaction) => ({
+      id: transaction.id,
+      amount: Math.round(Number(transaction.amount ?? 0)),
+      reference: transaction.reference,
+      description: transaction.description,
+      createdAt: transaction.createdAt,
+    }));
+    const compensationToday = compensationAdjustments
+      .filter((transaction) => transaction.createdAt.getTime() >= oneDayAgo)
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+    const compensationWeek = compensationAdjustments
+      .filter((transaction) => transaction.createdAt.getTime() >= oneWeekAgo)
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+    const compensationMonth = compensationAdjustments
+      .filter((transaction) => transaction.createdAt.getTime() >= oneMonthAgo)
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
     const totalPayout = payouts.reduce((sum, trip) => sum + trip.payout, 0);
     const recentTrips = payouts.slice(0, 8);
     const recentGrossFare = recentTrips.reduce(
@@ -620,7 +695,20 @@ export class DriversService {
       (sum, trip) => sum + trip.payout,
       0,
     );
-    const recentPlatformFee = Math.max(0, recentGrossFare - recentNetPayout);
+    const recentPlatformFee = recentTrips.reduce(
+      (sum, trip) => sum + trip.platformFee,
+      0,
+    );
+    const recentPayoutRates = recentTrips.map((trip) => trip.payoutRate);
+    const payoutRate =
+      recentGrossFare > 0
+        ? Number((recentNetPayout / recentGrossFare).toFixed(4))
+        : 0;
+    const payoutRateBps = Math.round(payoutRate * 10_000);
+    const payoutRateMin =
+      recentPayoutRates.length > 0 ? Math.min(...recentPayoutRates) : payoutRate;
+    const payoutRateMax =
+      recentPayoutRates.length > 0 ? Math.max(...recentPayoutRates) : payoutRate;
     const settlementAnomalies = [
       today > week ? 'today_exceeds_week' : null,
       week > month ? 'week_exceeds_month' : null,
@@ -629,9 +717,9 @@ export class DriversService {
     return {
       summary: {
         currency: 'XOF',
-        today,
-        week,
-        month,
+        today: today + compensationToday,
+        week: week + compensationWeek,
+        month: month + compensationMonth,
         completedTrips: payouts.length,
         averagePayout: payouts.length
           ? Math.round(totalPayout / payouts.length)
@@ -640,8 +728,10 @@ export class DriversService {
       settlement: {
         currency: 'XOF',
         source: 'COMPLETED_TRIPS',
-        payoutRateBps: driverPayoutRateBps,
-        payoutRate: driverPayoutRate,
+        payoutRateBps,
+        payoutRate,
+        payoutRateMin,
+        payoutRateMax,
         recentTripCount: recentTrips.length,
         recentGrossFare,
         recentNetPayout,
@@ -650,12 +740,28 @@ export class DriversService {
         anomalies: settlementAnomalies,
         calculatedAt: new Date(now).toISOString(),
       },
+      adjustments: {
+        currency: 'XOF',
+        cancellationCompensationToday: compensationToday,
+        cancellationCompensationWeek: compensationWeek,
+        cancellationCompensationMonth: compensationMonth,
+        recent: compensationAdjustments.slice(0, 8).map((transaction) => ({
+          id: transaction.id,
+          type: 'CANCELLATION_COMPENSATION',
+          amount: transaction.amount,
+          reference: transaction.reference,
+          description: transaction.description,
+          createdAt: transaction.createdAt.toISOString(),
+        })),
+      },
       recentTrips: recentTrips.map((trip) => ({
         id: trip.id,
         route: `${trip.pickupAddress} vers ${trip.destinationAddress}`,
         payout: trip.payout,
         grossFare: trip.grossFare,
-        platformFee: Math.max(0, trip.grossFare - trip.payout),
+        platformFee: trip.platformFee,
+        commissionRate: trip.commissionRate,
+        payoutRate: trip.payoutRate,
         status: trip.status,
         completedAt: trip.completedAt?.toISOString() ?? null,
       })),
@@ -664,6 +770,241 @@ export class DriversService {
 
   async getOffers(auth: RequestAuthContext) {
     return this.dispatchCoordinator.getOffers(auth);
+  }
+
+  async getDispatchReadiness(auth: RequestAuthContext) {
+    const driverProfileId = auth.user.driverProfile?.id;
+
+    if (!driverProfileId) {
+      throw new NotFoundException(
+        'No driver profile found for the authenticated user.',
+      );
+    }
+
+    await this.dispatchCoordinator.expireStaleReservations();
+
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: {
+        id: driverProfileId,
+      },
+      include: {
+        vehicles: {
+          where: {
+            isActive: true,
+          },
+          select: {
+            id: true,
+            type: true,
+            tier: true,
+            isActive: true,
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Driver profile could not be loaded.');
+    }
+
+    const activeTrip = await this.prisma.trip.findFirst({
+      where: {
+        driverId: driverProfileId,
+        status: {
+          in: ACTIVE_TRIP_STATUSES,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+    const fatigue = await this.resolveDriverFatigue(driverProfileId);
+    const activeVehicles = profile.vehicles.filter((vehicle) => vehicle.isActive);
+    const supportedTypes = [...new Set(activeVehicles.map((vehicle) => vehicle.type))];
+    const supportedTiers = [...new Set(activeVehicles.map((vehicle) => vehicle.tier))];
+    const driverLatitude = toNumber(profile.currentLatitude);
+    const driverLongitude = toNumber(profile.currentLongitude);
+    const driverHasCoordinates = hasDefinedCoordinates({
+      latitude: driverLatitude,
+      longitude: driverLongitude,
+    });
+    const serviceRadiusKm = toNumber(profile.serviceRadiusKm);
+    const now = new Date();
+    const blockers: Array<ReturnType<typeof buildDispatchBlocker>> = [];
+
+    if (profile.status === DriverStatus.SUSPENDED) {
+      blockers.push(
+        buildDispatchBlocker(
+          'SUSPENDED',
+          'Compte suspendu: le dispatch est bloque par les operations.',
+        ),
+      );
+    } else if (profile.status !== DriverStatus.ONLINE) {
+      blockers.push(
+        buildDispatchBlocker(
+          'OFFLINE',
+          'Chauffeur hors ligne: passez en direct pour recevoir les demandes.',
+        ),
+      );
+    }
+
+    if (profile.verificationStatus !== VerificationStatus.APPROVED) {
+      blockers.push(
+        buildDispatchBlocker(
+          'UNAPPROVED',
+          'Dossier non approuve: les offres restent bloquees jusqu a validation.',
+        ),
+      );
+    }
+
+    if (!activeVehicles.length) {
+      blockers.push(
+        buildDispatchBlocker(
+          'NO_ACTIVE_VEHICLE',
+          'Aucun vehicule actif: ajoutez ou reactivez un vehicule compatible.',
+        ),
+      );
+    }
+
+    if (activeTrip) {
+      blockers.push(
+        buildDispatchBlocker(
+          'ACTIVE_TRIP',
+          'Course active en cours: une seule mission peut etre acceptee a la fois.',
+        ),
+      );
+    }
+
+    if (!driverHasCoordinates) {
+      blockers.push(
+        buildDispatchBlocker(
+          'GPS_MISSING',
+          'Position GPS absente: ouvrez la localisation pour prioriser les demandes proches.',
+        ),
+      );
+    }
+
+    if (fatigue.state === 'blocked') {
+      blockers.push(
+        buildDispatchBlocker(
+          'FATIGUE_BLOCKED',
+          `Pause chauffeur requise jusqu a ${fatigue.restUntil}.`,
+        ),
+      );
+    }
+
+    const openRequests = supportedTypes.length
+      ? await this.prisma.rideRequest.findMany({
+          where: {
+            status: {
+              in: ['REQUESTED', 'MATCHED'],
+            },
+            requestedVehicleType: {
+              in: supportedTypes,
+            },
+            AND: [
+              {
+                OR: [
+                  {
+                    requestedServiceTier: null,
+                  },
+                  {
+                    requestedServiceTier: {
+                      in: supportedTiers.length
+                        ? supportedTiers
+                        : Object.values(ServiceTier),
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+          select: {
+            id: true,
+            assignedDriverId: true,
+            assignmentExpiresAt: true,
+            pickupLatitude: true,
+            pickupLongitude: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 100,
+        })
+      : [];
+
+    let reservedOfferCount = 0;
+    let compatibleOpenRequestCount = 0;
+    let nearOpenRequestCount = 0;
+    let heldByOtherDriverCount = 0;
+
+    for (const request of openRequests) {
+      const assignedToDriver = request.assignedDriverId === driverProfileId;
+      const reservationActive =
+        request.assignmentExpiresAt &&
+        request.assignmentExpiresAt.getTime() > now.getTime();
+
+      if (assignedToDriver && reservationActive) {
+        reservedOfferCount += 1;
+      }
+
+      if (request.assignedDriverId && !assignedToDriver && reservationActive) {
+        heldByOtherDriverCount += 1;
+        continue;
+      }
+
+      compatibleOpenRequestCount += 1;
+
+      const pickupLatitude = toNumber(request.pickupLatitude);
+      const pickupLongitude = toNumber(request.pickupLongitude);
+      const pickupDistanceKm =
+        driverHasCoordinates &&
+        hasDefinedCoordinates({
+          latitude: pickupLatitude,
+          longitude: pickupLongitude,
+        })
+          ? calculateDistanceKm(
+              {
+                latitude: driverLatitude as number,
+                longitude: driverLongitude as number,
+              },
+              {
+                latitude: pickupLatitude as number,
+                longitude: pickupLongitude as number,
+              },
+            )
+          : null;
+
+      if (
+        pickupDistanceKm === null ||
+        serviceRadiusKm === null ||
+        pickupDistanceKm <= serviceRadiusKm
+      ) {
+        nearOpenRequestCount += 1;
+      }
+    }
+
+    return {
+      readiness: {
+        driverId: profile.id,
+        canReceiveOffers:
+          blockers.filter((blocker) => blocker.code !== 'GPS_MISSING')
+            .length === 0,
+        status: profile.status,
+        verificationStatus: profile.verificationStatus,
+        activeVehicleCount: activeVehicles.length,
+        supportedVehicleTypes: supportedTypes,
+        supportedServiceTiers: supportedTiers,
+        hasGpsPosition: driverHasCoordinates,
+        serviceRadiusKm,
+        activeTripId: activeTrip?.id ?? null,
+        compatibleOpenRequestCount,
+        nearOpenRequestCount,
+        reservedOfferCount,
+        heldByOtherDriverCount,
+        blockers,
+        checkedAt: now.toISOString(),
+      },
+    };
   }
 
   async declineOffer(auth: RequestAuthContext, rideRequestId: string) {
@@ -812,6 +1153,38 @@ export class DriversService {
     }
 
     if (nextStatus === DriverStatus.ONLINE) {
+      const recentDriverCancellations = await this.prisma.trip.count({
+        where: {
+          driverId: driverProfileId,
+          status: 'CANCELLED',
+          cancelledBy: 'DRIVER',
+          updatedAt: {
+            gte: new Date(
+              Date.now() - driverCancellationPauseWindowMinutes * 60_000,
+            ),
+          },
+        },
+      });
+
+      if (recentDriverCancellations >= driverCancellationPauseThreshold) {
+        await this.prisma.auditLog.create({
+          data: {
+            userId: auth.user.id,
+            action: 'DRIVER_CANCELLATION_PAUSE_AVAILABILITY_BLOCKED',
+            entityType: 'DRIVER_PROFILE',
+            entityId: driverProfileId,
+            metadata: {
+              recentDriverCancellations,
+              windowMinutes: driverCancellationPauseWindowMinutes,
+            } as Prisma.InputJsonValue,
+          },
+        });
+
+        throw new BadRequestException(
+          `Pause chauffeur requise ${driverCancellationPauseWindowMinutes} minutes apres annulations repetees.`,
+        );
+      }
+
       const fatigue = await this.resolveDriverFatigue(driverProfileId);
 
       if (fatigue.state === 'blocked') {
@@ -878,11 +1251,33 @@ export class DriversService {
       },
     });
 
+    let reservedOfferCount = 0;
+    if (nextStatus === DriverStatus.ONLINE) {
+      try {
+        const reservedOffers = await this.dispatchCoordinator.getOffers(auth);
+        reservedOfferCount = reservedOffers.length;
+      } catch (error) {
+        await this.prisma.auditLog.create({
+          data: {
+            userId: auth.user.id,
+            action: 'DRIVER_AVAILABILITY_DISPATCH_SCAN_FAILED',
+            entityType: 'DRIVER_PROFILE',
+            entityId: driverProfileId,
+            metadata: {
+              message:
+                error instanceof Error ? error.message : 'unknown dispatch scan error',
+            } as Prisma.InputJsonValue,
+          },
+        });
+      }
+    }
+
     return {
       availability: {
         driverId: updatedProfile.id,
         status: updatedProfile.status,
         fatigue: await this.resolveDriverFatigue(driverProfileId),
+        reservedOfferCount,
       },
     };
   }
@@ -904,6 +1299,7 @@ export class DriversService {
     const profiles = await this.prisma.driverProfile.findMany({
       where: {
         status: DriverStatus.ONLINE,
+        verificationStatus: VerificationStatus.APPROVED,
         currentLatitude: { not: null },
         currentLongitude: { not: null },
       },

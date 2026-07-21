@@ -13,6 +13,7 @@ import {
   TripStatus,
   UserRole,
 } from '@prisma/client';
+import { roundXofForCashOperations } from '@orbi/domain';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { DocumentLinksService } from '../../common/document-links/document-links.service';
@@ -64,6 +65,19 @@ const routeCompletionMaxAccuracyMeters = 250;
 const routeCompletionMaxSpeedKph = 110;
 const trustedContactNightStartHour = 20;
 const trustedContactNightEndHour = 5;
+
+type TripCancellationPolicy = {
+  actor: 'RIDER' | 'DRIVER';
+  level: 'CLEAR' | 'REVIEW' | 'FEE_RECOMMENDED' | 'DRIVER_WARNING';
+  suggestedFeeAmount: number;
+  driverCompensationAmount: number;
+  currency: string;
+  recentCancellationCount: number;
+  driverReliabilityImpact?: 'NONE' | 'WATCH' | 'AT_RISK' | 'SUPPORT_REVIEW';
+  temporaryPauseMinutes?: number;
+  supportTicketId?: string | null;
+  message: string;
+};
 
 function hashShareToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
@@ -936,6 +950,7 @@ export class TripsService {
             },
           },
           vehicle: true,
+          rideRequest: true,
           events: true,
         },
       });
@@ -1041,6 +1056,7 @@ export class TripsService {
 
     return serializeTripLifecycle({
       ...trip,
+      rideRequest: { paymentMethod: trip.rideRequest?.paymentMethod ?? null },
       pickupCode: null,
     });
   }
@@ -1535,6 +1551,7 @@ export class TripsService {
     nextStatus: TripStatus,
     cancellationReason?: string,
   ) {
+    let cancellationPolicy: TripCancellationPolicy | null = null;
     const updatedTrip = await this.prisma.$transaction(async (tx) => {
       const trip = await tx.trip.findUnique({
         where: {
@@ -1554,6 +1571,11 @@ export class TripsService {
           driver: {
             select: {
               userId: true,
+            },
+          },
+          rideRequest: {
+            select: {
+              paymentMethod: true,
             },
           },
         },
@@ -1608,6 +1630,44 @@ export class TripsService {
         updateData.cancelledBy = resolveCancellationActor(auth.user.role);
       }
 
+      if (nextStatus === 'CANCELLED' && auth.user.role === UserRole.RIDER) {
+        const previousCancellationCount =
+          (await tx.trip.count({
+            where: {
+              riderId: trip.riderId,
+              status: 'CANCELLED',
+              cancelledBy: 'RIDER',
+              updatedAt: {
+                gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+              },
+            },
+          })) ?? 0;
+        cancellationPolicy = this.resolveRiderTripCancellationPolicy({
+          tripStatus: trip.status,
+          actualFare: toAmount(trip.actualFare),
+          currency: trip.currency,
+          previousCancellationCount,
+        });
+      }
+
+      if (nextStatus === 'CANCELLED' && auth.user.role === UserRole.DRIVER) {
+        const previousCancellationCount =
+          (await tx.trip.count({
+            where: {
+              driverId: trip.driverId,
+              status: 'CANCELLED',
+              cancelledBy: 'DRIVER',
+              updatedAt: {
+                gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+              },
+            },
+          })) ?? 0;
+        cancellationPolicy = this.resolveDriverTripCancellationPolicy({
+          currency: trip.currency,
+          previousCancellationCount,
+        });
+      }
+
       const statusEventType =
         TRIP_EVENT_BY_STATUS[nextStatus as keyof typeof TRIP_EVENT_BY_STATUS];
 
@@ -1626,6 +1686,7 @@ export class TripsService {
                 ...(nextStatus === 'CANCELLED' && cancellationReason
                   ? { cancellationReason }
                   : {}),
+                ...(cancellationPolicy ? { cancellationPolicy } : {}),
               },
             },
           },
@@ -1656,6 +1717,28 @@ export class TripsService {
             status: 'FULFILLED',
           },
         });
+
+        if (trip.rideRequest?.paymentMethod === 'CASH') {
+          await tx.trip.update({
+            where: {
+              id: tripId,
+            },
+            data: {
+              events: {
+                create: {
+                  eventType: 'CASH_PAYMENT_CONFIRMED',
+                  payload: {
+                    amount: toAmount(trip.actualFare),
+                    currency: trip.currency,
+                    collectedByDriverId: trip.driverId,
+                    confirmedByRole: auth.user.role,
+                    confirmedAt: new Date().toISOString(),
+                  },
+                },
+              },
+            },
+          });
+        }
       }
 
       if (nextStatus === 'CANCELLED') {
@@ -1669,12 +1752,48 @@ export class TripsService {
         });
       }
 
+      if (
+        nextStatus === 'CANCELLED' &&
+        auth.user.role === UserRole.RIDER &&
+        cancellationPolicy?.level === 'FEE_RECOMMENDED'
+      ) {
+        const supportTicketId =
+          await this.createRiderTripCancellationSupportTicket(tx, {
+            userId: trip.rider?.userId ?? auth.user.id,
+            tripId,
+            cancellationReason,
+            policy: cancellationPolicy,
+          });
+        cancellationPolicy = {
+          ...cancellationPolicy,
+          supportTicketId,
+        };
+      }
+
+      if (
+        nextStatus === 'CANCELLED' &&
+        auth.user.role === UserRole.DRIVER &&
+        cancellationPolicy?.driverReliabilityImpact === 'SUPPORT_REVIEW'
+      ) {
+        const supportTicketId =
+          await this.createDriverTripCancellationSupportTicket(tx, {
+            userId: trip.driver?.userId ?? auth.user.id,
+            tripId,
+            cancellationReason,
+            policy: cancellationPolicy,
+          });
+        cancellationPolicy = {
+          ...cancellationPolicy,
+          supportTicketId,
+        };
+      }
+
       if (trip.driverId) {
         await tx.driverProfile.update({
           where: {
             id: trip.driverId,
           },
-          data: this.buildDriverStatusUpdate(nextStatus),
+          data: this.buildDriverStatusUpdate(nextStatus, cancellationPolicy),
         });
       }
 
@@ -1684,6 +1803,7 @@ export class TripsService {
         driverId: trip.driverId,
         riderUserId: trip.rider?.userId ?? null,
         driverUserId: trip.driver?.userId ?? null,
+        paymentMethod: trip.rideRequest?.paymentMethod ?? null,
       };
     });
 
@@ -1696,6 +1816,7 @@ export class TripsService {
       actorRole: auth.user.role,
       payload: {
         status: nextStatus,
+        ...(cancellationPolicy ? { cancellationPolicy } : {}),
       },
     });
 
@@ -1738,7 +1859,197 @@ export class TripsService {
       }
     }
 
-    return serializeTripLifecycle(updatedTrip);
+    const grossFare = toAmount(updatedTrip.actualFare);
+    const driverEconomics =
+      grossFare > 0
+        ? calculateDriverEconomics(grossFare, {
+            driverCreatedAt: auth.user.driverProfile?.createdAt,
+          })
+        : null;
+
+    return serializeTripLifecycle({
+      ...updatedTrip,
+      rideRequest: { paymentMethod: updatedTrip.paymentMethod },
+      driverPayout: driverEconomics?.driverPayout ?? null,
+      platformFee: driverEconomics?.commissionAmount ?? null,
+      commissionRate: driverEconomics?.commissionRate ?? null,
+      cancellationPolicy,
+    });
+  }
+
+  private resolveRiderTripCancellationPolicy(input: {
+    tripStatus: TripStatus;
+    actualFare: number;
+    currency: string;
+    previousCancellationCount: number;
+  }): TripCancellationPolicy {
+    const recentCancellationCount = input.previousCancellationCount + 1;
+    const baseSuggestedFee =
+      input.tripStatus === TripStatus.DRIVER_ARRIVING
+        ? 300
+        : input.tripStatus === TripStatus.MATCHED
+          ? 200
+          : 0;
+    const repeatAdjustment = recentCancellationCount >= 3 ? 100 : 0;
+    const suggestedFeeAmount =
+      baseSuggestedFee > 0
+        ? Math.min(500, baseSuggestedFee + repeatAdjustment)
+        : 0;
+    const driverCompensationAmount =
+      suggestedFeeAmount > 0 ? Math.floor(suggestedFeeAmount * 0.8) : 0;
+
+    if (suggestedFeeAmount > 0) {
+      return {
+        actor: 'RIDER',
+        level: 'FEE_RECOMMENDED',
+        suggestedFeeAmount,
+        driverCompensationAmount,
+        currency: input.currency,
+        recentCancellationCount,
+        message:
+          `Annulation apres chauffeur mobilise. Revue support ouverte: frais suggere ${suggestedFeeAmount} XOF, ` +
+          `${driverCompensationAmount} XOF pour proteger le chauffeur si le contexte le confirme.`,
+      };
+    }
+
+    if (recentCancellationCount >= 3) {
+      return {
+        actor: 'RIDER',
+        level: 'REVIEW',
+        suggestedFeeAmount: 0,
+        driverCompensationAmount: 0,
+        currency: input.currency,
+        recentCancellationCount,
+        message:
+          'Annulations repetees detectees. Le support peut revoir les prochaines annulations apres assignation chauffeur.',
+      };
+    }
+
+    return {
+      actor: 'RIDER',
+      level: 'CLEAR',
+      suggestedFeeAmount: 0,
+      driverCompensationAmount: 0,
+      currency: input.currency,
+      recentCancellationCount,
+      message: 'Annulation prise en compte sans frais.',
+    };
+  }
+
+  private resolveDriverTripCancellationPolicy(input: {
+    currency: string;
+    previousCancellationCount: number;
+  }): TripCancellationPolicy {
+    const recentCancellationCount = input.previousCancellationCount + 1;
+
+    if (recentCancellationCount >= 3) {
+      return {
+        actor: 'DRIVER',
+        level: 'REVIEW',
+        suggestedFeeAmount: 0,
+        driverCompensationAmount: 0,
+        currency: input.currency,
+        recentCancellationCount,
+        driverReliabilityImpact: 'SUPPORT_REVIEW',
+        temporaryPauseMinutes: 30,
+        message:
+          'Annulations chauffeur repetees detectees. Revue support ouverte et pause operationnelle recommandee avant nouvelles offres.',
+      };
+    }
+
+    if (recentCancellationCount === 2) {
+      return {
+        actor: 'DRIVER',
+        level: 'DRIVER_WARNING',
+        suggestedFeeAmount: 0,
+        driverCompensationAmount: 0,
+        currency: input.currency,
+        recentCancellationCount,
+        driverReliabilityImpact: 'AT_RISK',
+        temporaryPauseMinutes: 0,
+        message:
+          'Deuxieme annulation chauffeur recente. Les prochaines annulations apres acceptation peuvent limiter temporairement les offres.',
+      };
+    }
+
+    return {
+      actor: 'DRIVER',
+      level: 'CLEAR',
+      suggestedFeeAmount: 0,
+      driverCompensationAmount: 0,
+      currency: input.currency,
+      recentCancellationCount,
+      driverReliabilityImpact: 'WATCH',
+      temporaryPauseMinutes: 0,
+      message:
+        'Annulation chauffeur enregistree. Gardez les annulations exceptionnelles pour proteger la confiance rider.',
+    };
+  }
+
+  private async createRiderTripCancellationSupportTicket(
+    tx: Pick<PrismaService, 'supportTicket'>,
+    input: {
+      userId: string;
+      tripId: string;
+      cancellationReason?: string;
+      policy: TripCancellationPolicy;
+    },
+  ) {
+    try {
+      const ticket = await tx.supportTicket.create({
+        data: {
+          userId: input.userId,
+          subject: `Revue frais annulation course ${input.tripId}`,
+          description:
+            `Annulation rider apres chauffeur mobilise. Course: ${input.tripId}. ` +
+            `Frais suggere: ${input.policy.suggestedFeeAmount} ${input.policy.currency}. ` +
+            `Compensation chauffeur suggeree: ${input.policy.driverCompensationAmount} ${input.policy.currency}. ` +
+            `Annulations rider sur 24h: ${input.policy.recentCancellationCount}. ` +
+            `Motif rider: ${input.cancellationReason ?? 'non renseigne'}.`,
+          priority: 2,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      return ticket.id;
+    } catch {
+      return null;
+    }
+  }
+
+  private async createDriverTripCancellationSupportTicket(
+    tx: Pick<PrismaService, 'supportTicket'>,
+    input: {
+      userId: string;
+      tripId: string;
+      cancellationReason?: string;
+      policy: TripCancellationPolicy;
+    },
+  ) {
+    try {
+      const ticket = await tx.supportTicket.create({
+        data: {
+          userId: input.userId,
+          subject: `Revue annulations chauffeur ${input.tripId}`,
+          description:
+            `Annulations chauffeur repetees apres acceptation. Course: ${input.tripId}. ` +
+            `Annulations chauffeur sur 24h: ${input.policy.recentCancellationCount}. ` +
+            `Impact fiabilite: ${input.policy.driverReliabilityImpact ?? 'WATCH'}. ` +
+            `Pause recommandee: ${input.policy.temporaryPauseMinutes ?? 0} minutes. ` +
+            `Motif chauffeur: ${input.cancellationReason ?? 'non renseigne'}.`,
+          priority: 2,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      return ticket.id;
+    } catch {
+      return null;
+    }
   }
 
   async rateTrip(
@@ -1816,17 +2127,78 @@ export class TripsService {
         },
       });
 
-      return newRating;
+      const qualityReviewTicket =
+        payload.score <= 2
+          ? await tx.supportTicket.create({
+              data: {
+                userId: auth.user.id,
+                subject: `Revue qualite course ${tripId}`,
+                description:
+                  `Note faible recue apres course. Course: ${tripId}. ` +
+                  `Score: ${payload.score}/5. ` +
+                  `Chauffeur: ${driverId}. ` +
+                  `Commentaire rider: ${payload.comment?.trim() || 'non renseigne'}.`,
+                priority: payload.score <= 1 ? 3 : 2,
+              },
+              select: {
+                id: true,
+                priority: true,
+              },
+            })
+          : null;
+
+      if (qualityReviewTicket) {
+        await tx.auditLog.create({
+          data: {
+            userId: auth.user.id,
+            action: 'TRIP_LOW_RATING_QUALITY_REVIEW_OPENED',
+            entityType: 'TRIP',
+            entityId: tripId,
+            metadata: {
+              ratingId: newRating.id,
+              score: payload.score,
+              driverId,
+              supportTicketId: qualityReviewTicket.id,
+              priority: qualityReviewTicket.priority,
+            },
+          },
+        });
+      }
+
+      return { rating: newRating, qualityReviewTicket };
     });
+
+    if (rating.qualityReviewTicket) {
+      this.realtimeService.publish({
+        channel: 'admin',
+        type: 'support-ticket.updated',
+        entityId: rating.qualityReviewTicket.id,
+        actorRole: auth.user.role,
+        payload: {
+          category: 'quality_review',
+          tripId,
+          score: payload.score,
+          priority: rating.qualityReviewTicket.priority,
+        },
+      });
+    }
 
     return {
       rating: {
-        id: rating.id,
-        tripId: rating.tripId,
-        score: rating.score,
-        comment: rating.comment,
-        createdAt: rating.createdAt.toISOString(),
+        id: rating.rating.id,
+        tripId: rating.rating.tripId,
+        score: rating.rating.score,
+        comment: rating.rating.comment,
+        createdAt: rating.rating.createdAt.toISOString(),
       },
+      qualityReview: rating.qualityReviewTicket
+        ? {
+            ticketId: rating.qualityReviewTicket.id,
+            priority: rating.qualityReviewTicket.priority,
+            message:
+              'Votre note a ouvert une revue qualite. Le support peut verifier ce trajet.',
+          }
+        : null,
     };
   }
 
@@ -1946,7 +2318,7 @@ export class TripsService {
           completedTrips,
           cancelledTrips,
           totalAmount: trips.reduce(
-            (sum, trip) => sum + toAmount(trip.actualFare),
+            (sum, trip) => sum + roundXofForCashOperations(toAmount(trip.actualFare)).amount,
             0,
           ),
           currency: 'XOF',
@@ -1955,7 +2327,7 @@ export class TripsService {
           id: request.id,
           pickupAddress: request.pickupAddress,
           destinationAddress: request.destinationAddress,
-          estimatedFare: toAmount(request.estimatedFare),
+          estimatedFare: roundXofForCashOperations(toAmount(request.estimatedFare)).amount,
           status: request.status,
           createdAt: request.createdAt.toISOString(),
         })),
@@ -2435,7 +2807,10 @@ export class TripsService {
     }
   }
 
-  private buildDriverStatusUpdate(nextStatus: TripStatus) {
+  private buildDriverStatusUpdate(
+    nextStatus: TripStatus,
+    cancellationPolicy: TripCancellationPolicy | null = null,
+  ) {
     if (nextStatus === 'COMPLETED') {
       return {
         status: 'ONLINE' as const,
@@ -2444,6 +2819,13 @@ export class TripsService {
     }
 
     if (nextStatus === 'CANCELLED') {
+      if (
+        cancellationPolicy?.actor === 'DRIVER' &&
+        cancellationPolicy.driverReliabilityImpact === 'SUPPORT_REVIEW'
+      ) {
+        return { status: 'OFFLINE' as const };
+      }
+
       return { status: 'ONLINE' as const };
     }
 

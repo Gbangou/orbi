@@ -18,7 +18,13 @@ export default function IndexScreen() {
     let isMounted = true;
 
     async function handoff() {
-      const hasSession = await hasPersistedDriverSession();
+      let hasSession = false;
+
+      try {
+        hasSession = await hasPersistedDriverSession();
+      } catch {
+        hasSession = false;
+      }
 
       if (!isMounted) {
         return;

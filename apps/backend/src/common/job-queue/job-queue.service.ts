@@ -356,9 +356,11 @@ export class JobQueueService {
       families: [
         'PAYMENT_WEBHOOK',
         'PAYMENT_REFUND_VERIFICATION',
+        'PAYMENT_ATTEMPT_RECONCILIATION_SWEEP',
         'DRIVER_DOCUMENT',
         'NOTIFICATION',
         'DRIVER_RESERVATION_EXPIRY',
+        'SCHEDULED_RIDE_DISPATCH',
       ] as const,
       counts: rows.map((row) => ({
         kind: row.kind,
@@ -395,9 +397,11 @@ export class JobQueueService {
       ![
         'PAYMENT_WEBHOOK',
         'PAYMENT_REFUND_VERIFICATION',
+        'PAYMENT_ATTEMPT_RECONCILIATION_SWEEP',
         'DRIVER_DOCUMENT',
         'NOTIFICATION',
         'DRIVER_RESERVATION_EXPIRY',
+        'SCHEDULED_RIDE_DISPATCH',
       ].includes(kind)
     ) {
       throw new BadRequestException(`Unsupported job kind ${kind}.`);

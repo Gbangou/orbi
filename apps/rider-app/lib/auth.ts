@@ -11,16 +11,24 @@ import {
   orbiRuntimeConfig,
   resolveOrbiApiBaseUrlForRuntime,
 } from '@orbi/config';
-import type { AuthenticatedApiContext } from '@orbi/api';
+import type { AuthSessionResponse, AuthenticatedApiContext } from '@orbi/api';
 import { flushRiderMobileErrorReports } from './mobile-error-reporting';
 import { riderSessionStorage, riderSessionStorageKey } from './session-storage';
 
-const riderFieldRequestTimeoutMs = 90_000;
+const riderFieldRequestTimeoutMs = 25_000;
+const riderAuthRequestTimeoutMs = 18_000;
 
 export function createRiderPublicClient() {
   return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
     version: orbiRuntimeConfig.apiVersion,
     requestTimeoutMs: riderFieldRequestTimeoutMs,
+  });
+}
+
+function createRiderAuthClient() {
+  return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {
+    version: orbiRuntimeConfig.apiVersion,
+    requestTimeoutMs: riderAuthRequestTimeoutMs,
   });
 }
 
@@ -30,6 +38,7 @@ export async function restoreRiderSession() {
     riderSessionStorage,
     riderSessionStorageKey,
   );
+  assertUsableRiderContext(context);
   safelyFlushRiderMobileErrorReports(context);
 
   return context;
@@ -39,7 +48,7 @@ export async function signInRiderAccount(payload: {
   email: string;
   password: string;
 }) {
-  const client = createRiderPublicClient();
+  const client = createRiderAuthClient();
   const session = await signInWithApi(client, {
     ...payload,
     expectedRole: 'RIDER',
@@ -50,11 +59,8 @@ export async function signInRiderAccount(payload: {
     session.sessionToken,
   );
 
-  const context = await restorePersistedSession(
-    client,
-    riderSessionStorage,
-    riderSessionStorageKey,
-  );
+  const context = buildFastRiderAuthContext(client, session);
+  assertUsableRiderContext(context);
   safelyFlushRiderMobileErrorReports(context);
 
   return context;
@@ -65,7 +71,7 @@ export async function signUpRiderAccount(payload: {
   email: string;
   password: string;
 }) {
-  const client = createRiderPublicClient();
+  const client = createRiderAuthClient();
   const session = await signUpWithApi(client, {
     ...payload,
     role: 'RIDER',
@@ -76,11 +82,8 @@ export async function signUpRiderAccount(payload: {
     session.sessionToken,
   );
 
-  const context = await restorePersistedSession(
-    client,
-    riderSessionStorage,
-    riderSessionStorageKey,
-  );
+  const context = buildFastRiderAuthContext(client, session);
+  assertUsableRiderContext(context);
   safelyFlushRiderMobileErrorReports(context);
 
   return context;
@@ -106,4 +109,40 @@ export async function clearRiderPersistedSession() {
 
 function safelyFlushRiderMobileErrorReports(context: AuthenticatedApiContext) {
   void flushRiderMobileErrorReports(context.authClient).catch(() => undefined);
+}
+
+function buildFastRiderAuthContext(
+  client: ReturnType<typeof createRiderPublicClient>,
+  session: AuthSessionResponse,
+): AuthenticatedApiContext {
+  const authClient = client.withAuthToken(session.sessionToken);
+
+  return {
+    session,
+    authClient,
+    me: {
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        fullName: session.user.fullName,
+        phoneNumber: null,
+        role: session.user.role,
+        riderProfile: {
+          id: session.user.id,
+          preferredTier: null,
+        },
+        driverProfile: null,
+      },
+      session: session.session,
+    },
+  };
+}
+
+function assertUsableRiderContext(context: AuthenticatedApiContext) {
+  if (context.me.user.role !== 'RIDER' || !context.me.user.riderProfile?.id) {
+    void clearRiderPersistedSession();
+    throw new Error(
+      "Session passager incomplete. Le compte n'a pas pu etre prepare correctement.",
+    );
+  }
 }

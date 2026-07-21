@@ -298,15 +298,15 @@ describe('AdminController (integration)', () => {
     adminService.driverWallets.mockResolvedValue({
       summary: {
         walletCount: 1,
-        totalBalance: 1968,
-        totalPayouts: 1968,
-        totalCommission: 432,
+        totalBalance: 2000,
+        totalPayouts: 2000,
+        totalCommission: 400,
       },
       wallets: [
         {
           id: 'wallet-1',
           driverName: 'Issa Driver',
-          balance: 1968,
+          balance: 2000,
         },
       ],
       meta: {
@@ -322,7 +322,7 @@ describe('AdminController (integration)', () => {
       .expect(200)
       .expect((response) => {
         expect(response.body.wallets[0]?.id).toBe('wallet-1');
-        expect(response.body.summary.totalCommission).toBe(432);
+        expect(response.body.summary.totalCommission).toBe(400);
       });
 
     expect(adminService.driverWallets).toHaveBeenCalledWith({
@@ -687,7 +687,7 @@ describe('AdminController (integration)', () => {
         walletReversal: {
           applied: true,
           walletId: 'wallet-driver-1',
-          amount: 1968,
+          amount: 2000,
           currency: 'XOF',
         },
       },

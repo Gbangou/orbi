@@ -11,4 +11,12 @@ describe('driver auth feedback source', () => {
     expect(source).toContain("appRoleLabel: 'chauffeur'");
     expect(source).not.toContain('extractApiErrorMessage');
   });
+
+  it('keeps sign-in and sign-up on the fast auth path', () => {
+    const source = readFileSync(join(process.cwd(), 'lib/auth.ts'), 'utf8');
+
+    expect(source).toContain('const driverAuthRequestTimeoutMs = 18_000');
+    expect(source).toContain('buildFastDriverAuthContext(client, session)');
+    expect(source).not.toContain('const driverFieldRequestTimeoutMs = 90_000');
+  });
 });

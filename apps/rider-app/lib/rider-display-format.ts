@@ -1,4 +1,5 @@
 import { formatXof } from '@orbi/ui';
+import { roundXofForCashOperations } from '@orbi/domain';
 
 export function toFiniteRiderDisplayNumber(value: unknown) {
   if (typeof value === 'number') {
@@ -54,13 +55,15 @@ export function formatRiderMoneyAmount(
     return fallback;
   }
 
-  return formatXof(numeric);
+  return formatXof(roundXofForCashOperations(numeric).amount);
 }
 
 export function resolveRiderMoneyAmount(value: unknown) {
   const numeric = toFiniteRiderDisplayNumber(value);
 
-  return numeric !== null && numeric >= 0 ? numeric : null;
+  return numeric !== null && numeric >= 0
+    ? roundXofForCashOperations(numeric).amount
+    : null;
 }
 
 export function calculateRiderDiscountedFare(input: {
@@ -79,7 +82,9 @@ export function calculateRiderDiscountedFare(input: {
   }
 
   const boundedDiscountBps = Math.min(Math.max(discountBps, 0), 10000);
-  const discountedFare = Math.round(fare * (1 - boundedDiscountBps / 10000));
+  const discountedFare = roundXofForCashOperations(
+    fare * (1 - boundedDiscountBps / 10000),
+  ).amount;
 
   return Math.max(1, discountedFare);
 }
@@ -95,7 +100,9 @@ export function calculateRiderPromoSavings(input: {
     return null;
   }
 
-  return Math.max(0, Math.round(amount * (discountBps / (10000 - discountBps))));
+  return roundXofForCashOperations(
+    Math.max(0, amount * (discountBps / (10000 - discountBps))),
+  ).amount;
 }
 
 function toValidRiderDate(value: unknown) {

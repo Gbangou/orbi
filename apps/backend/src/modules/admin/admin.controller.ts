@@ -538,6 +538,21 @@ export class AdminController {
     return this.adminSupportService.updateSupportTicket(ticketId, payload, auth);
   }
 
+  @Post('support-tickets/:ticketId/cancellation-compensation')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  approveCancellationCompensation(
+    @Param('ticketId', new OpaqueIdPipe('ticketId')) ticketId: string,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminSupportService.approveCancellationCompensation(
+      ticketId,
+      auth,
+    );
+  }
+
   @Patch('driver-onboarding/:driverId/review')
   @Version('1')
   @ApiBearerAuth('session-token')

@@ -37,4 +37,19 @@ describe('rider map view resilience', () => {
     expect(source).toContain('originWhitelist={localMapWebViewOriginWhitelist}');
     expect(source).not.toContain("originWhitelist={['about:blank', 'https://*']}");
   });
+
+  it('renders nearby and active drivers as vehicle markers instead of plain dots', () => {
+    const homeMap = readAppFile('lib/home-map-view.tsx');
+    const tripMap = readAppFile('lib/trip-map-view.tsx');
+
+    expect(homeMap).toContain('MOTO_SVG');
+    expect(homeMap).toContain('CAR_SVG');
+    expect(homeMap).toContain('FallbackMiniVehicleGlyph');
+    expect(homeMap).toContain('driverBearing');
+
+    expect(tripMap).toContain('VEHICLE_ICONS');
+    expect(tripMap).toContain('FallbackVehicleGlyph');
+    expect(tripMap).toContain('driverBearing');
+    expect(tripMap).not.toContain('driverMarkerText');
+  });
 });

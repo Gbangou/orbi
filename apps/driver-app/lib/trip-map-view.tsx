@@ -24,6 +24,31 @@ export interface TripMapViewProps {
   style?: object;
 }
 
+function resolveFallbackVehicleKind(vehicleTier?: string | null): 'moto' | 'car' {
+  return (vehicleTier ?? '').toUpperCase().includes('MOTO') ? 'moto' : 'car';
+}
+
+function FallbackVehicleGlyph({ kind }: { kind: 'moto' | 'car' }) {
+  if (kind === 'moto') {
+    return (
+      <View style={fallbackVehicleStyles.moto}>
+        <View style={[fallbackVehicleStyles.motoWheel, fallbackVehicleStyles.motoWheelFront]} />
+        <View style={fallbackVehicleStyles.motoBody} />
+        <View style={[fallbackVehicleStyles.motoWheel, fallbackVehicleStyles.motoWheelRear]} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={fallbackVehicleStyles.car}>
+      <View style={fallbackVehicleStyles.carBody} />
+      <View style={fallbackVehicleStyles.carCabin} />
+      <View style={[fallbackVehicleStyles.carWheel, fallbackVehicleStyles.carWheelLeft]} />
+      <View style={[fallbackVehicleStyles.carWheel, fallbackVehicleStyles.carWheelRight]} />
+    </View>
+  );
+}
+
 function buildMapHtml(cfg: {
   pickupLat: number | null;
   pickupLng: number | null;
@@ -47,6 +72,7 @@ html,body,#map{width:100%;height:100%;background:#eef3f1}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,199,199,.7)}70%{box-shadow:0 0 0 14px rgba(0,199,199,0)}100%{box-shadow:0 0 0 0 rgba(0,199,199,0)}}
 .vehicle-wrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;transform:translateZ(0)}
 .vehicle-halo{position:absolute;left:50%;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:999px;background:rgba(0,184,148,.18);animation:pulse 1.7s ease-in-out infinite}
+.vehicle-body{position:relative;display:block;transform:rotate(var(--bearing,0deg));transform-origin:center center}
 .vehicle-svg{position:relative;display:block;filter:drop-shadow(0 8px 10px rgba(0,0,0,.38))}
 .pickup-pin{display:flex;align-items:center;gap:4px}
 .pickup-pin-dot{width:10px;height:10px;background:#22c55e;border-radius:50%;border:2px solid #16a34a;flex-shrink:0}
@@ -70,7 +96,9 @@ var VEHICLE_ICONS={'moto-standard':'<svg class="vehicle-svg" xmlns="http://www.w
 var VEHICLE_SIZES={'moto-standard':[78,88],'car-standard':[86,92],'car-comfort':[86,92],'car-xl':[92,88]};
 var VEHICLE_ANCHORS={'moto-standard':[39,38],'car-standard':[43,42],'car-comfort':[43,42],'car-xl':[46,38]};
 function getTier(){var t=(CFG.vehicleTier||'').toUpperCase().replace(/-/g,'_');if(t.indexOf('MOTO')>=0)return 'moto-standard';if(t==='CAR_XL')return 'car-xl';if(t==='CAR_COMFORT')return 'car-comfort';if(t==='CAR_STANDARD')return 'car-standard';return 'car-standard'}
-function driverIcon(){var tier=getTier();return L.divIcon({html:'<div class="vehicle-wrap"><span class="vehicle-halo"></span>'+VEHICLE_ICONS[tier]+'<span class="you-label">Vous</span></div>',iconSize:VEHICLE_SIZES[tier],iconAnchor:VEHICLE_ANCHORS[tier],className:''})}
+function bearing(lat1,lng1,lat2,lng2){var y=Math.sin((lng2-lng1)*Math.PI/180)*Math.cos(lat2*Math.PI/180);var x=Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180)-Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos((lng2-lng1)*Math.PI/180);return((Math.atan2(y,x)*180/Math.PI)+360)%360}
+function driverBearing(lat,lng){if(CFG.pickupLat!==null&&CFG.pickupLng!==null)return bearing(lat,lng,CFG.pickupLat,CFG.pickupLng);if(CFG.destLat!==null&&CFG.destLng!==null)return bearing(lat,lng,CFG.destLat,CFG.destLng);return 0}
+function driverIcon(lat,lng){var tier=getTier();var angle=driverBearing(lat,lng).toFixed(0);return L.divIcon({html:'<div class="vehicle-wrap" style="--bearing:'+angle+'deg"><span class="vehicle-halo"></span><span class="vehicle-body">'+VEHICLE_ICONS[tier]+'</span><span class="you-label">Vous</span></div>',iconSize:VEHICLE_SIZES[tier],iconAnchor:VEHICLE_ANCHORS[tier],className:''})}
 function pickupIcon(){return L.divIcon({html:'<div class="pickup-pin"><div class="pickup-pin-dot"></div><div class="pickup-pin-label">Prise en charge</div></div>',iconSize:[110,18],iconAnchor:[5,9],className:''})}
 function destIcon(){return L.divIcon({html:'<div class="dest-pin"><div class="dest-pin-dot"></div><div class="dest-pin-label">Destination</div></div>',iconSize:[90,18],iconAnchor:[5,9],className:''})}
 
@@ -79,9 +107,16 @@ function drawFallbackLine(lat1,lng1,lat2,lng2){
   routeLine=L.polyline([[lat1,lng1],[lat2,lng2]],{color:'#00B894',weight:3,opacity:.55,dashArray:'9 6'}).addTo(map);
 }
 
+function fetchWithTimeout(url,timeoutMs){
+  var controller=typeof AbortController!=='undefined'?new AbortController():null;
+  var timer=setTimeout(function(){if(controller)controller.abort()},timeoutMs);
+  var opts=controller?{signal:controller.signal}:{};
+  return fetch(url,opts).finally(function(){clearTimeout(timer)});
+}
+
 function fetchOsrmRoute(lat1,lng1,lat2,lng2){
   var url='https://router.project-osrm.org/route/v1/driving/'+lng1+','+lat1+';'+lng2+','+lat2+'?geometries=geojson&overview=full';
-  fetch(url,{signal:AbortSignal.timeout(6000)})
+  fetchWithTimeout(url,6000)
     .then(function(r){return r.json()})
     .then(function(data){
       if(data.routes&&data.routes[0]&&data.routes[0].geometry&&data.routes[0].geometry.coordinates){
@@ -100,13 +135,13 @@ function initMap(cfg){
   if(cfg.pickupLat!==null&&cfg.pickupLng!==null&&cfg.destLat!==null&&cfg.destLng!==null){
     fetchOsrmRoute(cfg.pickupLat,cfg.pickupLng,cfg.destLat,cfg.destLng);
   }
-  if(cfg.driverLat!==null&&cfg.driverLng!==null){driverMarker=L.marker([cfg.driverLat,cfg.driverLng],{icon:driverIcon()}).addTo(map);bounds.push([cfg.driverLat,cfg.driverLng])}
+  if(cfg.driverLat!==null&&cfg.driverLng!==null){driverMarker=L.marker([cfg.driverLat,cfg.driverLng],{icon:driverIcon(cfg.driverLat,cfg.driverLng)}).addTo(map);bounds.push([cfg.driverLat,cfg.driverLng])}
   if(bounds.length){map.fitBounds(bounds,{padding:[44,44]})}else{map.setView([12.3647,-1.5332],13)}
 }
 
 function updateDriver(lat,lng){
-  if(!driverMarker){driverMarker=L.marker([lat,lng],{icon:driverIcon()}).addTo(map)}
-  else{driverMarker.setLatLng([lat,lng])}
+  if(!driverMarker){driverMarker=L.marker([lat,lng],{icon:driverIcon(lat,lng)}).addTo(map)}
+  else{driverMarker.setLatLng([lat,lng]);driverMarker.setIcon(driverIcon(lat,lng))}
   map.panTo([lat,lng],{animate:true,duration:.55});
 }
 
@@ -171,6 +206,7 @@ export function TripMapView({
       hasMapCoordinatePair({ latitude: pickupLat, longitude: pickupLng }) &&
       hasMapCoordinatePair({ latitude: destLat, longitude: destLng });
     const hasDriver = hasMapCoordinatePair({ latitude: driverLat, longitude: driverLng });
+    const vehicleKind = resolveFallbackVehicleKind(vehicleTier);
 
     return (
       <View style={[styles.container, styles.webFallback, style]}>
@@ -179,7 +215,7 @@ export function TripMapView({
         <View style={[styles.routeNode, styles.destinationNode]} />
         {hasDriver ? (
           <View style={styles.driverMarker}>
-            <Text style={styles.driverMarkerText}>V</Text>
+            <FallbackVehicleGlyph kind={vehicleKind} />
           </View>
         ) : null}
         <View style={styles.statusPanel}>
@@ -293,11 +329,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderWidth: 2,
     borderColor: theme.colors.teal,
   },
-  driverMarkerText: {
-    color: '#b8fff0',
-    fontSize: 12,
-    fontWeight: '900',
-  },
   statusPanel: {
     position: 'absolute',
     left: 12,
@@ -331,5 +362,71 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   webview: {
     flex: 1,
     backgroundColor: '#eef3f1',
+  },
+});
+
+const fallbackVehicleStyles = StyleSheet.create({
+  moto: {
+    width: 16,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  motoWheel: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#94a3b8',
+  },
+  motoWheelFront: {
+    top: 0,
+  },
+  motoWheelRear: {
+    bottom: 0,
+  },
+  motoBody: {
+    width: 10,
+    height: 15,
+    borderRadius: 6,
+    backgroundColor: '#00B894',
+    borderWidth: 1,
+    borderColor: '#071311',
+  },
+  car: {
+    width: 18,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  carBody: {
+    width: 16,
+    height: 20,
+    borderRadius: 6,
+    backgroundColor: '#e8eef6',
+    borderWidth: 1,
+    borderColor: '#94a3b8',
+    position: 'absolute',
+  },
+  carCabin: {
+    width: 12,
+    height: 8,
+    borderRadius: 3,
+    backgroundColor: '#405a74',
+  },
+  carWheel: {
+    position: 'absolute',
+    width: 4,
+    height: 16,
+    borderRadius: 2,
+    backgroundColor: '#111827',
+  },
+  carWheelLeft: {
+    left: 0,
+  },
+  carWheelRight: {
+    right: 0,
   },
 });

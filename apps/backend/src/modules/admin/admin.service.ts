@@ -2932,6 +2932,7 @@ export class AdminService {
       paymentWebhookEvents,
       recentlyCancelledTrips,
       dispatchAuditLogs,
+      recentLowRatings,
     ] = await Promise.all([
       this.prisma.trip.findMany({
         where: {
@@ -3041,6 +3042,25 @@ export class AdminService {
           user: { select: { fullName: true } },
         },
       }),
+      this.prisma.rating.findMany({
+        where: {
+          createdAt: { gte: dispatchLeaderboardSince },
+          score: { lte: 2 },
+        },
+        include: {
+          driver: {
+            include: {
+              user: {
+                select: {
+                  fullName: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
     ]);
 
     const tripsByStatus = {
@@ -3146,26 +3166,97 @@ export class AdminService {
 
     const lowConfidenceMinOffers = 5;
     const lowConfidenceThreshold = 50;
-    const lowConfidenceDrivers = Array.from(driverDispatchStats.entries())
-      .map(([driverId, stats]) => {
-        const total = stats.accepted + stats.declined + stats.expired;
-        return {
-          driverId,
-          driverName: stats.fullName ?? 'Inconnu',
-          total,
-          accepted: stats.accepted,
-          declined: stats.declined,
-          expired: stats.expired,
-          acceptanceRate: safeRate(stats.accepted, total),
-          expirationRate: safeRate(stats.expired, total),
-        };
-      })
-      .filter(
-        (d) =>
-          d.total >= lowConfidenceMinOffers &&
-          d.acceptanceRate < lowConfidenceThreshold,
+    const lowRatingStats = new Map<
+      string,
+      { driverName: string; lowRatingCount: number; scoreTotal: number }
+    >();
+    for (const rating of recentLowRatings) {
+      const entry = lowRatingStats.get(rating.driverId) ?? {
+        driverName: rating.driver.user.fullName ?? 'Inconnu',
+        lowRatingCount: 0,
+        scoreTotal: 0,
+      };
+      entry.lowRatingCount += 1;
+      entry.scoreTotal += rating.score;
+      lowRatingStats.set(rating.driverId, entry);
+    }
+    const lowConfidenceByDriverId = new Map<
+      string,
+      {
+        driverId: string;
+        driverName: string;
+        total: number;
+        accepted: number;
+        declined: number;
+        expired: number;
+        acceptanceRate: number;
+        expirationRate: number;
+        lowRatingCount: number;
+        averageLowRating: number | null;
+        confidenceReason: 'dispatch' | 'rating' | 'dispatch_and_rating';
+      }
+    >();
+    for (const [driverId, stats] of driverDispatchStats.entries()) {
+      const total = stats.accepted + stats.declined + stats.expired;
+      const lowRating = lowRatingStats.get(driverId);
+      const acceptanceRate = safeRate(stats.accepted, total);
+      const expirationRate = safeRate(stats.expired, total);
+      const dispatchRisk =
+        total >= lowConfidenceMinOffers && acceptanceRate < lowConfidenceThreshold;
+      const ratingRisk = (lowRating?.lowRatingCount ?? 0) >= 2;
+
+      if (!dispatchRisk && !ratingRisk) {
+        continue;
+      }
+
+      lowConfidenceByDriverId.set(driverId, {
+        driverId,
+        driverName: stats.fullName ?? lowRating?.driverName ?? 'Inconnu',
+        total,
+        accepted: stats.accepted,
+        declined: stats.declined,
+        expired: stats.expired,
+        acceptanceRate,
+        expirationRate,
+        lowRatingCount: lowRating?.lowRatingCount ?? 0,
+        averageLowRating: lowRating
+          ? Number((lowRating.scoreTotal / lowRating.lowRatingCount).toFixed(1))
+          : null,
+        confidenceReason:
+          dispatchRisk && ratingRisk
+            ? 'dispatch_and_rating'
+            : ratingRisk
+              ? 'rating'
+              : 'dispatch',
+      });
+    }
+    for (const [driverId, lowRating] of lowRatingStats.entries()) {
+      if (lowRating.lowRatingCount < 2 || lowConfidenceByDriverId.has(driverId)) {
+        continue;
+      }
+
+      lowConfidenceByDriverId.set(driverId, {
+        driverId,
+        driverName: lowRating.driverName,
+        total: 0,
+        accepted: 0,
+        declined: 0,
+        expired: 0,
+        acceptanceRate: 0,
+        expirationRate: 0,
+        lowRatingCount: lowRating.lowRatingCount,
+        averageLowRating: Number(
+          (lowRating.scoreTotal / lowRating.lowRatingCount).toFixed(1),
+        ),
+        confidenceReason: 'rating',
+      });
+    }
+    const lowConfidenceDrivers = Array.from(lowConfidenceByDriverId.values())
+      .sort(
+        (a, b) =>
+          b.lowRatingCount - a.lowRatingCount ||
+          a.acceptanceRate - b.acceptanceRate,
       )
-      .sort((a, b) => a.acceptanceRate - b.acceptanceRate)
       .slice(0, 10);
 
     const recentCancellations = recentlyCancelledTrips.map((trip) => {

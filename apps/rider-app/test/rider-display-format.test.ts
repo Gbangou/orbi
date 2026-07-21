@@ -21,7 +21,7 @@ describe('rider display format helpers', () => {
     expect(formatRiderRatingLabel('4.8', { prefix: '★ ' })).toBe('★ 4.8');
     expect(formatRiderDistanceKm('0,4')).toBe('0.4 km');
     expect(estimateRiderPickupEtaMinutes('0,4')).toBe(2);
-    expect(resolveRiderMoneyAmount('2500,5')).toBe(2500.5);
+    expect(resolveRiderMoneyAmount('2500,5')).toBe(2600);
     expect(formatRiderMoneyAmount('2500')).toContain('2');
   });
 
@@ -37,10 +37,10 @@ describe('rider display format helpers', () => {
   });
 
   it('calculates rider promo money without trusting dirty API values', () => {
-    expect(calculateRiderDiscountedFare({ fare: '2500', discountBps: '1000' })).toBe(2250);
+    expect(calculateRiderDiscountedFare({ fare: '2500', discountBps: '1000' })).toBe(2300);
     expect(calculateRiderDiscountedFare({ fare: 'sale', discountBps: 1000 })).toBeNull();
     expect(calculateRiderDiscountedFare({ fare: 2500, discountBps: Number.NaN })).toBe(2500);
-    expect(calculateRiderPromoSavings({ amount: '2250', discountBps: '1000' })).toBe(250);
+    expect(calculateRiderPromoSavings({ amount: '2250', discountBps: '1000' })).toBe(300);
     expect(calculateRiderPromoSavings({ amount: 2250, discountBps: 10000 })).toBeNull();
   });
 

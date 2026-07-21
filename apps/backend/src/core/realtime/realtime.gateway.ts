@@ -11,7 +11,7 @@ import {
 import { Logger } from '@nestjs/common';
 import { Server, WebSocket } from 'ws';
 import { RealtimeService } from './realtime.service';
-import type { RealtimeEventFilter } from './realtime.types';
+import { parseRealtimeEvent, type RealtimeEventFilter } from './realtime.types';
 
 type AuthenticatedSocket = WebSocket & {
   isAlive: boolean;
@@ -146,9 +146,24 @@ export class RealtimeGateway
     // Subscribe to realtime stream and forward events
     const stream$ = this.realtimeService.stream(filterOptions);
     const subscription = stream$.subscribe({
-      next: (event) => {
+      next: (messageEvent) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({ type: 'event', ...(event.data as object) }));
+          const realtimeEvent = parseRealtimeEvent(messageEvent.data);
+          if (!realtimeEvent) {
+            client.send(JSON.stringify({ type: messageEvent.type ?? 'event' }));
+            return;
+          }
+
+          client.send(
+            JSON.stringify({
+              type: 'event',
+              eventType: realtimeEvent.type,
+              channel: realtimeEvent.channel,
+              entityId: realtimeEvent.entityId,
+              actorRole: realtimeEvent.actorRole ?? null,
+              payload: realtimeEvent.payload ?? {},
+            }),
+          );
         } else {
           subscription.unsubscribe();
         }

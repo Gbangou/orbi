@@ -77,6 +77,35 @@ export function PricingStrategyBoard({
               </strong>
             </div>
             <div className="pricing-row">
+              <span>Repartition</span>
+              <strong>
+                Chauffeur{' '}
+                {Math.round(
+                  scenario.estimate.driverEconomics.driverShareRate * 100,
+                )}
+                % · Orbi{' '}
+                {Math.round(
+                  scenario.estimate.driverEconomics.platformTakeRate * 100,
+                )}
+                %
+              </strong>
+            </div>
+            <div className="pricing-row">
+              <span>Rendement chauffeur</span>
+              <strong>
+                {scenario.estimate.driverEconomics.driverPayoutPerKm} / km ·{' '}
+                {scenario.estimate.driverEconomics.driverPayoutPerMinute} / min
+              </strong>
+            </div>
+            <div className="pricing-row">
+              <span>Reglement</span>
+              <strong>
+                Orbi {scenario.estimate.currency}{' '}
+                {scenario.estimate.driverEconomics.commissionAmount} · palier{' '}
+                {scenario.estimate.driverEconomics.settlementRoundingStep}
+              </strong>
+            </div>
+            <div className="pricing-row">
               <span>Ajustement local</span>
               <strong>
                 {scenario.estimate.currency}{' '}
@@ -88,6 +117,14 @@ export function PricingStrategyBoard({
               <strong>
                 {scenario.estimate.currency}{' '}
                 {scenario.estimate.fareBreakdown.affordabilitySupportAmount}
+              </strong>
+            </div>
+            <div className="pricing-row">
+              <span>Arrondi CFA</span>
+              <strong>
+                +{scenario.estimate.fareBreakdown.commercialRoundingAmount}{' '}
+                {scenario.estimate.currency} · palier{' '}
+                {scenario.estimate.fareBreakdown.commercialRoundingStep}
               </strong>
             </div>
             <div className="pricing-row">

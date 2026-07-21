@@ -36,4 +36,13 @@ describe('driver map view resilience', () => {
     expect(source).toContain('originWhitelist={localMapWebViewOriginWhitelist}');
     expect(source).not.toContain("originWhitelist={['about:blank', 'https://*']}");
   });
+
+  it('keeps driver mission maps on vehicle markers instead of letter dots', () => {
+    const tripMap = readAppFile('lib/trip-map-view.tsx');
+
+    expect(tripMap).toContain('VEHICLE_ICONS');
+    expect(tripMap).toContain('FallbackVehicleGlyph');
+    expect(tripMap).toContain('driverBearing');
+    expect(tripMap).not.toContain('driverMarkerText');
+  });
 });

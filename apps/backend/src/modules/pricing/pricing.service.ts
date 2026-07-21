@@ -1,5 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { ServiceTier, VehicleType } from '@prisma/client';
+import { roundXofForCashOperations } from '@orbi/domain';
 import { RedisCacheService } from '../../core/cache/redis-cache.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RoutingService } from '../../core/routing/routing.service';
@@ -123,71 +124,49 @@ export class PricingService {
   }
 
   async estimateRideOptions(query: RideOptionsPricingQueryDto) {
-    // Calculer la demande en temps réel si le client ne la fournit pas
-    let resolvedDemandLevel = query.demandLevel as 'NORMAL' | 'HIGH' | 'PEAK' | undefined;
-    let resolvedActiveDriverCount = query.activeDriverCount;
-    let resolvedOpenRequestCount = query.openRequestCount;
-    let resolvedIsPeakHour = query.isPeakHour === 'true';
-    let supplySignalSource: MarketplaceSignalSource =
-      resolvedActiveDriverCount !== undefined || resolvedOpenRequestCount !== undefined
-        ? 'LIVE'
-        : 'ESTIMATED';
-    let signalFreshnessSeconds: number | null =
-      supplySignalSource === 'LIVE' ? 600 : null;
-
-    if (!resolvedDemandLevel) {
-      const realTimeDemand = await this.calculateRealTimeDemandLevel(query.city);
-      resolvedDemandLevel = realTimeDemand.demandLevel;
-      resolvedActiveDriverCount = resolvedActiveDriverCount ?? realTimeDemand.activeDriverCount;
-      resolvedOpenRequestCount = resolvedOpenRequestCount ?? realTimeDemand.openRequestCount;
-      resolvedIsPeakHour = realTimeDemand.isPeakHour;
-      supplySignalSource = 'LIVE';
-      signalFreshnessSeconds = 600;
-    }
-
     // ── Catalogue de services Orbi Burkina Faso ─────────────────────────────
     // Ordonné par prix croissant pour guider vers le choix optimal
     const vehicleConfigurations: Array<{
       vehicleType: 'MOTORCYCLE' | 'CAR';
       serviceTier: ServiceTier;
+      etaClass: 'MOTORCYCLE' | 'CAR_STANDARD' | 'CAR_COMFORT';
       title: string;
       badge: string;
       capacity: string;
       accent: string;
-      etaMinutes: number;
       paymentMethods: Array<'mobile-money' | 'cash' | 'wallet'>;
       vehicleExamples: string[];
     }> = [
       {
         vehicleType: 'MOTORCYCLE',
         serviceTier: ServiceTier.MOTO_STANDARD,
+        etaClass: 'MOTORCYCLE',
         title: 'Moto',
         badge: 'Le moins cher',
         capacity: '1 passager',
         accent: '#00C9A7',
-        etaMinutes: this.calcDynamicEta('MOTORCYCLE', resolvedActiveDriverCount, resolvedIsPeakHour, resolvedDemandLevel),
         paymentMethods: ['mobile-money', 'cash', 'wallet'],
         vehicleExamples: ['Moto underbone urbaine', 'TVS HLX', 'Bajaj Boxer'],
       },
       {
         vehicleType: 'CAR',
         serviceTier: ServiceTier.CAR_STANDARD,
+        etaClass: 'CAR_STANDARD',
         title: 'Voiture Ville',
         badge: 'Climatisée',
         capacity: '4 places',
         accent: '#FF9500',
-        etaMinutes: this.calcDynamicEta('CAR_STANDARD', resolvedActiveDriverCount, resolvedIsPeakHour, resolvedDemandLevel),
         paymentMethods: ['mobile-money', 'cash', 'wallet'],
         vehicleExamples: ['Toyota Yaris', 'Hyundai Accent', 'Suzuki Dzire'],
       },
       {
         vehicleType: 'CAR',
         serviceTier: ServiceTier.CAR_COMFORT,
+        etaClass: 'CAR_COMFORT',
         title: 'Confort Premium',
         badge: 'Haut de gamme',
         capacity: '4 places',
         accent: '#8E44AD',
-        etaMinutes: this.calcDynamicEta('CAR_COMFORT', resolvedActiveDriverCount, resolvedIsPeakHour, resolvedDemandLevel),
         paymentMethods: ['mobile-money', 'wallet'],
         vehicleExamples: ['Toyota Corolla', 'Hyundai Elantra', 'Kia Cerato'],
       },
@@ -218,6 +197,16 @@ export class PricingService {
 
     const options = await Promise.all(
       vehicleConfigurations.map(async (configuration) => {
+        const marketplaceSignal = await this.resolveRideOptionMarketplaceSignal(
+          query,
+          configuration,
+        );
+        const etaMinutes = this.calcDynamicEta(
+          configuration.etaClass,
+          marketplaceSignal.activeDriverCount,
+          marketplaceSignal.isPeakHour,
+          marketplaceSignal.demandLevel,
+        );
         const estimate = await this.quote({
           vehicleType: configuration.vehicleType,
           serviceTier: configuration.serviceTier,
@@ -229,17 +218,16 @@ export class PricingService {
           city: (query.city ?? 'OUAGADOUGOU') as PricingQuoteInput['city'],
           districtProfile: (query.districtProfile ??
             'RESIDENTIAL_STANDARD') as PricingQuoteInput['districtProfile'],
-          // Demande en temps réel — calculée en amont de la boucle
-          demandLevel: resolvedDemandLevel,
+          demandLevel: marketplaceSignal.demandLevel,
           trafficLevel: (query.trafficLevel ??
             'MODERATE') as PricingQuoteInput['trafficLevel'],
           weatherCondition: (query.weatherCondition ??
             'CLEAR') as PricingQuoteInput['weatherCondition'],
           roadCondition: (query.roadCondition ??
             'OPEN') as PricingQuoteInput['roadCondition'],
-          isPeakHour: resolvedIsPeakHour,
-          activeDriverCount: resolvedActiveDriverCount,
-          openRequestCount: resolvedOpenRequestCount,
+          isPeakHour: marketplaceSignal.isPeakHour,
+          activeDriverCount: marketplaceSignal.activeDriverCount,
+          openRequestCount: marketplaceSignal.openRequestCount,
           driverOnboardingDays: query.driverOnboardingDays,
         });
 
@@ -260,7 +248,7 @@ export class PricingService {
             | 'car-comfort'
             | 'car-xl',
           title: configuration.title,
-          etaMinutes: configuration.etaMinutes,
+          etaMinutes,
           fare: estimate.estimatedFare,
           capacity: configuration.capacity,
           accent: configuration.accent,
@@ -269,14 +257,14 @@ export class PricingService {
           safetyNote: 'Code de prise en charge et partage de trajet inclus.',
           marketplace: this.buildRideOptionMarketplace(
             configuration.vehicleType,
-            configuration.etaMinutes,
-            resolvedActiveDriverCount,
+            etaMinutes,
+            marketplaceSignal.activeDriverCount,
             estimate.operatingContext.availabilityScore,
             configuration.vehicleExamples,
             {
-              supplySignalSource,
+              supplySignalSource: marketplaceSignal.supplySignalSource,
               routeSignalSource,
-              signalFreshnessSeconds,
+              signalFreshnessSeconds: marketplaceSignal.signalFreshnessSeconds,
             },
           ),
           driverPayout: estimate.driverEconomics.driverPayout,
@@ -286,6 +274,10 @@ export class PricingService {
             baseFare: estimate.fareBreakdown.baseFare,
             bookingFee: estimate.fareBreakdown.bookingFee,
             demandMultiplier: estimate.fareBreakdown.demandMultiplier,
+            commercialRoundingAmount:
+              estimate.fareBreakdown.commercialRoundingAmount,
+            commercialRoundingStep:
+              estimate.fareBreakdown.commercialRoundingStep,
             priceWindow: estimate.fareBreakdown.priceWindow,
             reasons: estimate.fareBreakdown.reasons,
             driverPickupDistanceIncludedInFare:
@@ -371,6 +363,63 @@ export class PricingService {
       vehicleExamples,
       pricePromise:
         'Prix upfront affiche avant confirmation; approche chauffeur utilisee pour l ETA sans frais caches.',
+    };
+  }
+
+  private async resolveRideOptionMarketplaceSignal(
+    query: RideOptionsPricingQueryDto,
+    configuration: {
+      vehicleType: 'MOTORCYCLE' | 'CAR';
+      serviceTier: ServiceTier;
+    },
+  ): Promise<{
+    demandLevel: 'NORMAL' | 'HIGH' | 'PEAK';
+    activeDriverCount: number | undefined;
+    openRequestCount: number | undefined;
+    isPeakHour: boolean;
+    supplySignalSource: MarketplaceSignalSource;
+    signalFreshnessSeconds: number | null;
+  }> {
+    const explicitDemandLevel = query.demandLevel as
+      | 'NORMAL'
+      | 'HIGH'
+      | 'PEAK'
+      | undefined;
+    const hasClientSupplySignal =
+      query.activeDriverCount !== undefined ||
+      query.openRequestCount !== undefined;
+
+    if (explicitDemandLevel || hasClientSupplySignal) {
+      const activeDriverCount = query.activeDriverCount;
+      const openRequestCount = query.openRequestCount;
+      const supplySignalSource: MarketplaceSignalSource = hasClientSupplySignal
+        ? 'LIVE'
+        : 'ESTIMATED';
+      return {
+        demandLevel:
+          explicitDemandLevel ??
+          this.resolveDemandLevel(
+            openRequestCount,
+            activeDriverCount,
+            query.isPeakHour === 'true',
+          ),
+        activeDriverCount,
+        openRequestCount,
+        isPeakHour: query.isPeakHour === 'true',
+        supplySignalSource,
+        signalFreshnessSeconds: supplySignalSource === 'LIVE' ? 600 : null,
+      };
+    }
+
+    const realTimeDemand = await this.calculateRealTimeDemandLevel(query.city, {
+      vehicleType: configuration.vehicleType,
+      serviceTier: configuration.serviceTier,
+    });
+
+    return {
+      ...realTimeDemand,
+      supplySignalSource: 'LIVE',
+      signalFreshnessSeconds: 600,
     };
   }
 
@@ -472,7 +521,8 @@ export class PricingService {
       cashlessDiscount -
       affordabilitySupportAmount;
     const minimumProtectedFare = Math.max(preMinimumFare, rateCard.minimumFare);
-    const estimatedFare = Math.round(minimumProtectedFare);
+    const roundedFare = this.roundFareForCashOperations(minimumProtectedFare);
+    const estimatedFare = roundedFare.amount;
     const minimumFareApplied = preMinimumFare < rateCard.minimumFare;
     const priceWindow = this.resolvePriceWindow(
       estimatedFare,
@@ -492,9 +542,32 @@ export class PricingService {
       weatherCondition,
       roadCondition,
     );
+    if (roundedFare.roundingAmount > 0) {
+      reasons.push(
+        `Arrondi terrain +${roundedFare.roundingAmount} XOF pour eviter les montants difficiles a rendre en monnaie.`,
+      );
+    }
     const driverEconomics = calculateDriverEconomics(estimatedFare, {
       driverOnboardingDays: input.driverOnboardingDays,
     });
+    const driverShareRate = estimatedFare
+      ? Number((driverEconomics.driverPayout / estimatedFare).toFixed(4))
+      : 0;
+    const platformTakeRate = estimatedFare
+      ? Number((driverEconomics.commissionAmount / estimatedFare).toFixed(4))
+      : 0;
+    const driverPayoutPerKm = input.distanceKm
+      ? Math.round(driverEconomics.driverPayout / input.distanceKm)
+      : driverEconomics.driverPayout;
+    const driverPayoutPerMinute = input.durationMinutes
+      ? Math.round(driverEconomics.driverPayout / input.durationMinutes)
+      : driverEconomics.driverPayout;
+    const wealthDistributionBand =
+      driverEconomics.commissionRate <= 0.1
+        ? 'DRIVER_ONBOARDING_BOOST'
+        : driverEconomics.commissionRate <= 0.15
+          ? 'DRIVER_GROWTH_SUPPORT'
+          : 'STANDARD_FAIR_SHARE';
 
     return {
       currency: 'XOF',
@@ -526,6 +599,8 @@ export class PricingService {
         roadConditionAdjustmentAmount,
         availabilityAdjustmentAmount,
         affordabilitySupportAmount,
+        commercialRoundingAmount: roundedFare.roundingAmount,
+        commercialRoundingStep: roundedFare.step,
         priceWindow,
         reasons,
         surgeCapApplied,
@@ -536,6 +611,14 @@ export class PricingService {
         commissionRate: driverEconomics.commissionRate,
         commissionAmount: driverEconomics.commissionAmount,
         driverPayout: driverEconomics.driverPayout,
+        rawCommissionAmount: driverEconomics.rawCommissionAmount,
+        commissionRoundingDiscount: driverEconomics.commissionRoundingDiscount,
+        settlementRoundingStep: driverEconomics.settlementRoundingStep,
+        driverShareRate,
+        platformTakeRate,
+        driverPayoutPerKm,
+        driverPayoutPerMinute,
+        wealthDistributionBand,
       },
       trustAndPolicy: {
         upfrontPricing: true,
@@ -686,6 +769,18 @@ export class PricingService {
         where: {
           status: 'ONLINE',
           verificationStatus: 'APPROVED',
+          ...(cityFilter
+            ? {
+                onboardingReviews: {
+                  some: {
+                    metadata: {
+                      path: ['city'],
+                      equals: cityFilter,
+                    },
+                  },
+                },
+              }
+            : {}),
           ...(filters.vehicleType || filters.serviceTier
             ? {
                 vehicles: {
@@ -797,9 +892,17 @@ export class PricingService {
     }
 
     return {
-      min: Math.round(estimatedFare * (1 - variance)),
-      max: Math.round(estimatedFare * (1 + variance)),
+      min: Math.floor((estimatedFare * (1 - variance)) / 50) * 50,
+      max: Math.ceil((estimatedFare * (1 + variance)) / 50) * 50,
     };
+  }
+
+  private roundFareForCashOperations(amount: number): {
+    amount: number;
+    roundingAmount: number;
+    step: 50 | 100;
+  } {
+    return roundXofForCashOperations(amount);
   }
 
   private buildPricingReasons(

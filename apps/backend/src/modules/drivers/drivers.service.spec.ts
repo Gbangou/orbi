@@ -4,6 +4,7 @@ import {
   DriversService,
   parseStrictDriverDocumentExpiry,
 } from './drivers.service';
+import { calculateDriverEconomics } from '../../common/economics/driver-commission';
 
 describe('DriversService', () => {
   function createService() {
@@ -20,6 +21,10 @@ describe('DriversService', () => {
       },
       trip: {
         findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      walletTransaction: {
         findMany: jest.fn().mockResolvedValue([]),
       },
       user: {
@@ -236,7 +241,7 @@ describe('DriversService', () => {
         id: 'request-1',
         riderName: 'Awa Rider',
         category: 'motorcycle',
-        driverPayout: Math.round(1800 * 0.82),
+        driverPayout: calculateDriverEconomics(1800).driverPayout,
         matchedTier: 'MOTO_STANDARD',
         dispatchContextSummary: 'HIGH - HEAVY - dispo 74/100',
         dispatchScore: expect.any(Number),
@@ -419,7 +424,8 @@ describe('DriversService', () => {
   });
 
   it('updates driver availability to online when the profile is approved and has an active vehicle', async () => {
-    const { prisma, service } = createService();
+    const { dispatchCoordinator, prisma, service } = createService();
+    jest.spyOn(dispatchCoordinator, 'getOffers').mockResolvedValue([]);
 
     prisma.driverProfile.findUnique.mockResolvedValue({
       id: 'driver-1',
@@ -454,7 +460,193 @@ describe('DriversService', () => {
       data: { status: 'ONLINE' },
     });
     expect(result.availability.status).toBe('ONLINE');
+    expect(result.availability.reservedOfferCount).toBe(0);
+    expect(dispatchCoordinator.getOffers).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: expect.objectContaining({
+          driverProfile: { id: 'driver-1' },
+        }),
+      }),
+    );
     expect(result.availability.fatigue.state).toBe('clear');
+  });
+
+  it('immediately scans and reserves open requests when a driver comes online', async () => {
+    const { dispatchCoordinator, prisma, service } = createService();
+    jest.spyOn(dispatchCoordinator, 'getOffers').mockResolvedValue([
+      {
+        id: 'request-before-online',
+      },
+    ] as never);
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'OFFLINE',
+      verificationStatus: 'APPROVED',
+      vehicles: [
+        {
+          id: 'vehicle-1',
+          type: 'MOTORCYCLE',
+          tier: 'MOTO_STANDARD',
+          isActive: true,
+        },
+      ],
+    });
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.driverProfile.update.mockResolvedValue({
+      id: 'driver-1',
+      status: 'ONLINE',
+    });
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.updateAvailability(
+      {
+        user: {
+          id: 'user-1',
+          driverProfile: { id: 'driver-1' },
+        },
+      } as never,
+      'ONLINE',
+    );
+
+    expect(dispatchCoordinator.getOffers).toHaveBeenCalledTimes(1);
+    expect(result.availability.reservedOfferCount).toBe(1);
+  });
+
+  it('explains dispatch readiness and counts compatible open requests', async () => {
+    const { prisma, service } = createService();
+    const activeReservation = new Date(Date.now() + 60_000);
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'ONLINE',
+      verificationStatus: 'APPROVED',
+      currentLatitude: 12.36,
+      currentLongitude: -1.54,
+      serviceRadiusKm: 8,
+      vehicles: [
+        {
+          id: 'vehicle-1',
+          type: 'MOTORCYCLE',
+          tier: 'MOTO_STANDARD',
+          isActive: true,
+        },
+      ],
+    });
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.trip.findMany.mockResolvedValue([]);
+    prisma.rideRequest.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'request-near',
+          assignedDriverId: null,
+          assignmentExpiresAt: null,
+          pickupLatitude: 12.361,
+          pickupLongitude: -1.541,
+        },
+        {
+          id: 'request-held',
+          assignedDriverId: 'driver-2',
+          assignmentExpiresAt: activeReservation,
+          pickupLatitude: 12.362,
+          pickupLongitude: -1.542,
+        },
+      ]);
+
+    const result = await service.getDispatchReadiness({
+      user: {
+        id: 'user-1',
+        driverProfile: { id: 'driver-1' },
+      },
+    } as never);
+
+    expect(result.readiness.canReceiveOffers).toBe(true);
+    expect(result.readiness.blockers).toEqual([]);
+    expect(result.readiness.compatibleOpenRequestCount).toBe(1);
+    expect(result.readiness.nearOpenRequestCount).toBe(1);
+    expect(result.readiness.heldByOtherDriverCount).toBe(1);
+    expect(result.readiness.reservedOfferCount).toBe(0);
+    expect(prisma.rideRequest.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          requestedVehicleType: { in: ['MOTORCYCLE'] },
+        }),
+      }),
+    );
+  });
+
+  it('surfaces dispatch blockers before the driver wastes field tests', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'OFFLINE',
+      verificationStatus: 'PENDING',
+      currentLatitude: null,
+      currentLongitude: null,
+      serviceRadiusKm: 8,
+      vehicles: [],
+    });
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.trip.findMany.mockResolvedValue([]);
+    prisma.rideRequest.findMany.mockResolvedValue([]);
+
+    const result = await service.getDispatchReadiness({
+      user: {
+        id: 'user-1',
+        driverProfile: { id: 'driver-1' },
+      },
+    } as never);
+
+    expect(result.readiness.canReceiveOffers).toBe(false);
+    expect(result.readiness.blockers.map((blocker) => blocker.code)).toEqual([
+      'OFFLINE',
+      'UNAPPROVED',
+      'NO_ACTIVE_VEHICLE',
+      'GPS_MISSING',
+    ]);
+    expect(result.readiness.compatibleOpenRequestCount).toBe(0);
+    expect(prisma.rideRequest.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks going online during the repeated cancellation pause window', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'OFFLINE',
+      verificationStatus: 'APPROVED',
+      vehicles: [
+        {
+          id: 'vehicle-1',
+          isActive: true,
+        },
+      ],
+    });
+    prisma.trip.count.mockResolvedValue(3);
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    await expect(
+      service.updateAvailability(
+        {
+          user: {
+            id: 'user-1',
+            driverProfile: { id: 'driver-1' },
+          },
+        } as never,
+        'ONLINE',
+      ),
+    ).rejects.toThrow(
+      'Pause chauffeur requise 30 minutes apres annulations repetees.',
+    );
+    expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'DRIVER_CANCELLATION_PAUSE_AVAILABILITY_BLOCKED',
+        entityId: 'driver-1',
+      }),
+    });
   });
 
   it('blocks going online when driver fatigue limits require rest', async () => {
@@ -1141,6 +1333,116 @@ describe('DriversService', () => {
     });
   });
 
+  it('includes approved cancellation compensation in driver earnings totals', async () => {
+    const { prisma, service } = createService();
+    const now = Date.now();
+
+    prisma.trip.findMany.mockResolvedValue([
+      {
+        id: 'trip-1',
+        pickupAddress: 'Koulouba',
+        destinationAddress: 'Patte d Oie',
+        status: 'COMPLETED',
+        actualFare: 1500,
+        completedAt: new Date(now - 1000 * 60 * 30),
+        createdAt: new Date(now - 1000 * 60 * 40),
+      },
+    ]);
+    prisma.walletTransaction.findMany.mockResolvedValue([
+      {
+        id: 'wallet-tx-comp-1',
+        amount: 240,
+        reference:
+          'support-cancellation-compensation:ticket-1:trip-cancel-1',
+        description: 'Indemnisation annulation rider trip-cancel-1',
+        createdAt: new Date(now - 1000 * 60 * 20),
+      },
+    ]);
+
+    const result = await service.getEarnings({
+      user: {
+        id: 'driver-user-1',
+        driverProfile: {
+          id: 'driver-1',
+          createdAt: new Date(now - 1000 * 60 * 60 * 24 * 120),
+        },
+      },
+    } as never);
+
+    expect(prisma.walletTransaction.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          type: 'CREDIT',
+          reference: {
+            startsWith: 'support-cancellation-compensation:',
+          },
+          wallet: {
+            userId: 'driver-user-1',
+            currency: 'XOF',
+          },
+        }),
+      }),
+    );
+    expect(result.summary.today).toBe(1470);
+    expect(result.summary.week).toBe(1470);
+    expect(result.summary.month).toBe(1470);
+    expect(result.summary.averagePayout).toBe(1230);
+    expect(result.adjustments).toMatchObject({
+      currency: 'XOF',
+      cancellationCompensationToday: 240,
+      cancellationCompensationWeek: 240,
+      cancellationCompensationMonth: 240,
+      recent: [
+        expect.objectContaining({
+          id: 'wallet-tx-comp-1',
+          type: 'CANCELLATION_COMPENSATION',
+          amount: 240,
+        }),
+      ],
+    });
+  });
+
+  it('applies the onboarding commission tier to driver earnings', async () => {
+    const now = Date.now();
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValue([
+      {
+        id: 'trip-new-driver-1',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        status: 'COMPLETED',
+        actualFare: 5000,
+        completedAt: new Date(now - 1000 * 60 * 30),
+        createdAt: new Date(now - 1000 * 60 * 60),
+      },
+    ]);
+
+    const result = await service.getEarnings({
+      user: {
+        driverProfile: {
+          id: 'driver-1',
+          createdAt: new Date(now - 1000 * 60 * 60 * 24 * 10),
+        },
+      },
+    } as never);
+
+    expect(result.summary.today).toBe(4500);
+    expect(result.settlement).toMatchObject({
+      payoutRateBps: 9000,
+      payoutRate: 0.9,
+      payoutRateMin: 0.9,
+      payoutRateMax: 0.9,
+      recentPlatformFee: 500,
+    });
+    expect(result.recentTrips[0]).toMatchObject({
+      payout: 4500,
+      platformFee: 500,
+      commissionRate: 0.1,
+      payoutRate: 0.9,
+    });
+  });
+
   it('rejects onboarding document artifacts outside the driver storage prefix', async () => {
     const { prisma, service } = createService();
 
@@ -1405,6 +1707,92 @@ describe('DriversService', () => {
     expect(prisma.rideRequest.updateMany).not.toHaveBeenCalled();
     expect(realtimeService.publish).not.toHaveBeenCalled();
     expect(result[0]?.reservationExpiresAt).toBe(existingExpiry);
+  });
+
+  it('shows older open ride requests when a compatible driver comes online later', async () => {
+    const { prisma, realtimeService, service } = createService();
+    const requestCreatedBeforeDriverOnline = new Date(Date.now() - 8 * 60_000);
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-late-online',
+      userId: 'user-driver-late-online',
+      status: 'ONLINE',
+      verificationStatus: 'APPROVED',
+      currentLatitude: 12.36,
+      currentLongitude: -1.54,
+      serviceRadiusKm: 8,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      vehicles: [
+        {
+          id: 'vehicle-late-online',
+          type: 'MOTORCYCLE',
+          tier: 'MOTO_STANDARD',
+          isActive: true,
+        },
+      ],
+    });
+    prisma.rideRequest.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'request-before-driver-online',
+          riderId: 'rider-waiting',
+          assignedDriverId: null,
+          assignmentExpiresAt: null,
+          pickupAddress: 'Zone du Bois',
+          destinationAddress: 'Patte d Oie',
+          requestedVehicleType: 'MOTORCYCLE',
+          requestedServiceTier: 'MOTO_STANDARD',
+          pickupLatitude: 12.365,
+          pickupLongitude: -1.541,
+          estimatedFare: 1800,
+          estimatedDistanceKm: 4.2,
+          estimatedDurationMinutes: 14,
+          createdAt: requestCreatedBeforeDriverOnline,
+          rider: {
+            user: {
+              fullName: 'Awa Rider',
+            },
+          },
+        },
+      ]);
+    prisma.rideRequest.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await service.getOffers({
+      user: {
+        id: 'user-driver-late-online',
+        driverProfile: {
+          id: 'driver-late-online',
+        },
+      },
+    } as never);
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'request-before-driver-online',
+        riderName: 'Awa Rider',
+        reservationExpiresAt: expect.any(String),
+      }),
+    ]);
+    expect(prisma.rideRequest.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'request-before-driver-online',
+          OR: expect.arrayContaining([
+            {
+              assignedDriverId: null,
+            },
+          ]),
+        }),
+      }),
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'ride-request.reservation-assigned',
+        entityId: 'request-before-driver-online',
+        driverId: 'driver-late-online',
+      }),
+    );
   });
 
   it('releases reserved offers when the driver goes offline', async () => {
@@ -1889,7 +2277,7 @@ describe('DriversService', () => {
     expect(result.recentTrips).toHaveLength(0);
   });
 
-  it('aggregates earnings correctly by time window and applies 82% payout rate', async () => {
+  it('aggregates earnings correctly by time window and applies the standard payout tier', async () => {
     const now = Date.now();
     const { prisma, service } = createService();
 
@@ -1931,10 +2319,9 @@ describe('DriversService', () => {
     const auth = { user: { driverProfile: { id: 'driver-1' } } };
     const result = await service.getEarnings(auth as never);
 
-    const payoutRate = 8200 / 10_000;
-    const todayPayout = Math.round(1500 * payoutRate);
-    const weekPayout = todayPayout + Math.round(2000 * payoutRate);
-    const monthPayout = weekPayout + Math.round(1000 * payoutRate);
+    const todayPayout = calculateDriverEconomics(1500).driverPayout;
+    const weekPayout = todayPayout + calculateDriverEconomics(2000).driverPayout;
+    const monthPayout = weekPayout + calculateDriverEconomics(1000).driverPayout;
 
     expect(result.summary.today).toBe(todayPayout);
     expect(result.summary.week).toBe(weekPayout);

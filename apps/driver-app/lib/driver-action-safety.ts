@@ -55,7 +55,7 @@ export function validateTripAdvance(input: {
     return {
       ok: false,
       message:
-        'Finalisation bloquee par Ride Check. Actualisez le direct ou contactez le support.',
+        'Impossible de terminer maintenant: signal GPS incoherent. Actualisez le direct ou contactez le support.',
     };
   }
 

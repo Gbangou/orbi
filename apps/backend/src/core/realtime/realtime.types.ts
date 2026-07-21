@@ -93,7 +93,9 @@ export function canReceiveRealtimeEvent(
   event: RealtimeEvent,
   filterOptions: RealtimeEventFilter,
 ) {
-  if (adminRealtimeRoles.has(filterOptions.role)) {
+  const role = filterOptions.role.toUpperCase();
+
+  if (adminRealtimeRoles.has(role)) {
     return true;
   }
 
@@ -101,13 +103,13 @@ export function canReceiveRealtimeEvent(
     return false;
   }
 
-  if (filterOptions.role === 'RIDER') {
+  if (role === 'RIDER') {
     return Boolean(
       filterOptions.riderId && event.riderId === filterOptions.riderId,
     );
   }
 
-  if (filterOptions.role === 'DRIVER') {
+  if (role === 'DRIVER') {
     if (event.driverId) {
       return event.driverId === filterOptions.driverId;
     }

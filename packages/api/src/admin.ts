@@ -295,6 +295,9 @@ export type AdminLiveOpsResponse = {
     expired: number;
     acceptanceRate: number;
     expirationRate: number;
+    lowRatingCount: number;
+    averageLowRating: number | null;
+    confidenceReason: "dispatch" | "rating" | "dispatch_and_rating";
   }>;
 };
 
@@ -492,6 +495,19 @@ export type SupportTicketQueueResponse = {
     requesterName: string;
     requesterRole: string;
     tripId: string | null;
+    paymentAttemptId: string | null;
+    category:
+      | "safety"
+      | "payment"
+      | "refund"
+      | "fare_review"
+      | "rider_cancellation"
+      | "driver_cancellation"
+      | "quality_review"
+      | "mobile_health"
+      | "onboarding"
+      | "general";
+    actionHint: string;
     createdAt: string;
     updatedAt: string;
     sla: {
@@ -528,6 +544,20 @@ export type SupportTicketUpdateResponse = {
     priority: number;
     adminNote: string | null;
     updatedAt: string;
+  };
+};
+
+export type AdminCancellationCompensationResponse = {
+  action: "credited" | "already_credited";
+  compensation: {
+    ticketId: string;
+    tripId: string;
+    driverUserId: string;
+    walletId: string;
+    transactionId: string;
+    reference: string;
+    amount: number;
+    currency: string;
   };
 };
 
@@ -1569,6 +1599,18 @@ export async function updateAdminSupportTicket(
     {
       method: "PATCH",
       body: payload,
+    },
+  );
+}
+
+export async function approveAdminCancellationCompensation(
+  client: OrbiApiClient,
+  ticketId: string,
+) {
+  return client.request<AdminCancellationCompensationResponse>(
+    `${apiRoutes.admin.supportTickets}/${ticketId}/cancellation-compensation`,
+    {
+      method: "POST",
     },
   );
 }

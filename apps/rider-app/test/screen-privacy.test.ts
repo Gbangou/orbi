@@ -10,10 +10,8 @@ function readAppFile(relativePath: string) {
 describe('rider sensitive screen capture protection', () => {
   const protectedScreens = [
     'app/auth.tsx',
-    'app/book.tsx',
     'app/voice.tsx',
     'app/receipt.tsx',
-    'app/(tabs)/activity.tsx',
     'app/(tabs)/account.tsx',
   ];
 
@@ -23,4 +21,13 @@ describe('rider sensitive screen capture protection', () => {
     expect(source).toContain('preventSensitiveScreenCapture');
     expect(source).toContain('restoreSensitiveScreenCapture');
   });
+
+  it.each(['app/book.tsx', 'app/(tabs)/activity.tsx'])(
+    '%s keeps booking and trip screenshots available for support',
+    (relativePath) => {
+      const source = readAppFile(relativePath);
+
+      expect(source).not.toContain('preventSensitiveScreenCapture');
+    },
+  );
 });

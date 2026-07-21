@@ -25,6 +25,8 @@ function buildFlow(overrides: Partial<DriverActiveFlowSummary> = {}): DriverActi
     heroTitle: 'En ligne',
     visibleOffers: [],
     visibleOfferCount: 0,
+    accountVerificationStatus: 'APPROVED',
+    accountCanReceiveOffers: true,
     canReceiveOffers: true,
     availabilityLocked: false,
     ...overrides,

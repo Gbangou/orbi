@@ -12,6 +12,10 @@ import {
   VehicleType,
 } from '@prisma/client';
 import { Pool } from 'pg';
+import {
+  calculateDriverEconomics,
+  resolveDriverOnboardingDays,
+} from '../src/common/economics/driver-commission';
 
 const pool = new Pool({
   connectionString:
@@ -222,7 +226,12 @@ async function main() {
     });
     createdRatingIds.push(rating.id);
 
-    const payout = Math.round(plan.fare * 0.82);
+    const payout = calculateDriverEconomics(plan.fare, {
+      driverOnboardingDays: resolveDriverOnboardingDays(
+        driverUser.driverProfile.createdAt,
+        completedAt,
+      ),
+    }).driverPayout;
     walletCredit += payout;
     const walletTx = await prisma.walletTransaction.create({
       data: {

@@ -1,4 +1,5 @@
 import { ServiceTier, VehicleType } from '@prisma/client';
+import { calculateDriverEconomics } from '../../common/economics/driver-commission';
 import { DriverOfferProjector } from './driver-offer-projector';
 
 describe('DriverOfferProjector', () => {
@@ -37,7 +38,7 @@ describe('DriverOfferProjector', () => {
     expect(offer).toEqual(
       expect.objectContaining({
         category: 'motorcycle',
-        driverPayout: Math.round(1800 * 0.82),
+        driverPayout: calculateDriverEconomics(1800).driverPayout,
         pickupDistanceSource: 'DRIVER_AND_PICKUP_COORDINATES',
         dispatchContextSummary: 'HIGH - HEAVY - dispo 74/100',
         offerConfidenceLabel: 'PRIORITY',

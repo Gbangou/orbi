@@ -629,6 +629,7 @@ export class DispatchCoordinator {
 
   async proactiveDispatch(input: {
     rideRequestId: string;
+    riderId?: string | null;
     requestedVehicleType: VehicleType;
     requestedServiceTier: ServiceTier | null;
     estimatedDistanceKm: number;
@@ -827,10 +828,24 @@ export class DispatchCoordinator {
       channel: 'ride-request',
       type: 'ride-request.created',
       entityId: input.rideRequestId,
+      riderId: input.riderId ?? undefined,
       payload: {
         proactiveAssignment: true,
         assignedDriverId: best.driver.id,
         pickupAddress: input.pickupAddress,
+      },
+    });
+
+    this.realtimeService.publish({
+      channel: 'ride-request',
+      type: 'ride-request.reservation-assigned',
+      entityId: input.rideRequestId,
+      riderId: input.riderId ?? undefined,
+      driverId: best.driver.id,
+      payload: {
+        driverId: best.driver.id,
+        expiresAt: assignmentExpiresAt.toISOString(),
+        reason: 'PROACTIVE_DISPATCH',
       },
     });
 

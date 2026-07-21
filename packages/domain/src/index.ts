@@ -500,6 +500,8 @@ export type RideOption = {
     baseFare: number;
     bookingFee: number;
     demandMultiplier: number;
+    commercialRoundingAmount?: number;
+    commercialRoundingStep?: 50 | 100;
     priceWindow?: {
       min: number;
       max: number;
@@ -608,6 +610,8 @@ export type PricingEstimate = {
     roadConditionAdjustmentAmount: number;
     availabilityAdjustmentAmount: number;
     affordabilitySupportAmount: number;
+    commercialRoundingAmount: number;
+    commercialRoundingStep: 50 | 100;
     priceWindow: {
       min: number;
       max: number;
@@ -627,6 +631,17 @@ export type PricingEstimate = {
     commissionRate: number;
     commissionAmount: number;
     driverPayout: number;
+    rawCommissionAmount: number;
+    commissionRoundingDiscount: number;
+    settlementRoundingStep: 10;
+    driverShareRate: number;
+    platformTakeRate: number;
+    driverPayoutPerKm: number;
+    driverPayoutPerMinute: number;
+    wealthDistributionBand:
+      | 'DRIVER_ONBOARDING_BOOST'
+      | 'DRIVER_GROWTH_SUPPORT'
+      | 'STANDARD_FAIR_SHARE';
   };
   trustAndPolicy: {
     upfrontPricing: boolean;
@@ -709,6 +724,24 @@ export function calculateDistanceKm(
 
 export function roundDistanceKm(value: number) {
   return Math.max(0.8, Math.round(value * 10) / 10);
+}
+
+export function roundXofForCashOperations(amount: number): {
+  amount: number;
+  roundingAmount: number;
+  step: 50 | 100;
+} {
+  const normalizedAmount = Math.max(0, Math.round(amount));
+  if (normalizedAmount === 0) {
+    return { amount: 0, roundingAmount: 0, step: 50 };
+  }
+
+  const roundedToHundred = Math.ceil(normalizedAmount / 100) * 100;
+  return {
+    amount: roundedToHundred,
+    roundingAmount: roundedToHundred - normalizedAmount,
+    step: 100,
+  };
 }
 
 // Road distance factor for African urban grids — actual road distance is

@@ -7,6 +7,7 @@ import {
   cancelRideRequestWithApi,
   createCheckoutIntentWithApi,
   createRideRequestWithApi,
+  createSupportTicketWithApi,
   createSavedPlaceWithApi,
   createTrustedContactWithApi,
   createTripShareLinkWithApi,
@@ -131,6 +132,7 @@ jest.mock('@orbi/api', () => {
     triggerTripSafetySosWithApi: jest.fn(),
     resolveVoiceLocationIntentWithApi: jest.fn(),
     createRideRequestWithApi: jest.fn(),
+    createSupportTicketWithApi: jest.fn(),
   createTripShareLinkWithApi: jest.fn(),
   createTrustedContactWithApi: jest.fn(),
   createCheckoutIntentWithApi: jest.fn(),
@@ -165,6 +167,7 @@ const mockedReportTripIncidentWithApi = jest.mocked(reportTripIncidentWithApi);
 const mockedTriggerTripSafetySosWithApi = jest.mocked(triggerTripSafetySosWithApi);
 const mockedResolveVoiceLocationIntentWithApi = jest.mocked(resolveVoiceLocationIntentWithApi);
 const mockedCreateRideRequestWithApi = jest.mocked(createRideRequestWithApi);
+const mockedCreateSupportTicketWithApi = jest.mocked(createSupportTicketWithApi);
 const mockedCreateTripShareLinkWithApi = jest.mocked(createTripShareLinkWithApi);
 const mockedCreateTrustedContactWithApi = jest.mocked(createTrustedContactWithApi);
 const mockedCreateCheckoutIntentWithApi = jest.mocked(createCheckoutIntentWithApi);
@@ -386,6 +389,7 @@ beforeEach(() => {
   mockedTriggerTripSafetySosWithApi.mockReset();
   mockedResolveVoiceLocationIntentWithApi.mockReset();
   mockedCreateRideRequestWithApi.mockReset();
+  mockedCreateSupportTicketWithApi.mockReset();
   mockedCreateTripShareLinkWithApi.mockReset();
   mockedCreateTrustedContactWithApi.mockReset();
   mockedCreateCheckoutIntentWithApi.mockReset();
@@ -429,6 +433,18 @@ beforeEach(() => {
   jest.mocked(Linking.openURL).mockResolvedValue(undefined);
   jest.mocked(Share.share).mockResolvedValue({ action: 'sharedAction' });
   mockedGetMySupportTicketsWithApi.mockResolvedValue({ tickets: [] } as never);
+  mockedCreateSupportTicketWithApi.mockResolvedValue({
+    ticket: {
+      id: 'ticket-quick-1',
+      subject: 'Paiement a verifier',
+      description: 'Ticket support rapide.',
+      status: 'OPEN',
+      priority: 2,
+      adminNote: null,
+      createdAt: '2026-04-19T09:05:00.000Z',
+      updatedAt: '2026-04-19T09:05:00.000Z',
+    },
+  } as never);
   mockedFetchNearbyDrivers.mockResolvedValue({
     drivers: [
       {
@@ -1404,6 +1420,50 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Issa Driver');
   });
 
+  it('opens a contextual rider payment support ticket from activity', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchMyTrips.mockResolvedValue({
+      role: 'RIDER',
+      stats: {
+        activeTrips: 0,
+        completedTrips: 4,
+        cancelledTrips: 1,
+        totalAmount: 18500,
+        currency: 'XOF',
+      },
+      pendingRequests: [],
+      recentTrips: [
+        {
+          id: 'trip-paid-1',
+          pickupAddress: 'Patte d Oie',
+          destinationAddress: 'Ouaga 2000',
+          amount: 2200,
+          status: 'COMPLETED',
+          createdAt: '2026-04-19T09:00:00.000Z',
+          completedAt: '2026-04-19T09:25:00.000Z',
+        },
+      ],
+    } as never);
+
+    const renderer = await renderScreen(<ActivityScreen />);
+    await pressByLabel(renderer, 'activity-refresh');
+    await flushMicrotasks();
+    await pressByLabel(renderer, 'quick-support-payment');
+
+    expect(mockedCreateSupportTicketWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      expect.objectContaining({
+        subject: 'Paiement a verifier',
+        category: 'payment',
+        description: expect.stringContaining('Reference: trip-paid-1'),
+      }),
+    );
+    expectText(
+      renderer,
+      'Dossier ticket-q ouvert. Le support suit votre demande paiement.',
+    );
+  });
+
   it('cancels a pending rider request from activity', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
     mockedFetchMyTrips
@@ -1440,7 +1500,23 @@ describe('rider smoke flows', () => {
         pendingRequests: [],
         recentTrips: [],
       } as never);
-    mockedCancelRideRequestWithApi.mockResolvedValue({ cancelled: true } as never);
+    mockedCancelRideRequestWithApi.mockResolvedValue({
+      rideRequest: {
+        id: 'ride-request-pending-1',
+        status: 'CANCELLED',
+        pickupAddress: 'Patte d Oie',
+        destinationAddress: 'Ouaga 2000',
+        updatedAt: '2026-04-19T09:05:00.000Z',
+      },
+      cancellationPolicy: {
+        level: 'WATCH',
+        recentCancellationCount: 2,
+        feeRisk: false,
+        message:
+          'Annulation prise en compte. Evitez les annulations repetees pour proteger le temps des chauffeurs.',
+        supportTicketId: null,
+      },
+    } as never);
 
     const renderer = await renderScreen(<ActivityScreen />);
     await pressByLabel(renderer, 'activity-refresh');
@@ -1450,6 +1526,10 @@ describe('rider smoke flows', () => {
     expect(mockedCancelRideRequestWithApi).toHaveBeenCalledWith(
       { token: 'rider-auth-client' },
       'ride-request-pending-1',
+    );
+    expectText(
+      renderer,
+      'Annulation prise en compte. Evitez les annulations repetees pour proteger le temps des chauffeurs.',
     );
   });
 
@@ -1473,7 +1553,20 @@ describe('rider smoke flows', () => {
       buildTripDetail(['timeline-1'], ['Chauffeur assigne']) as never,
     );
     mockedUpdateTripStatusWithApi.mockResolvedValue({
-      trip: { id: 'trip-rider-1', status: 'CANCELLED' },
+      trip: {
+        id: 'trip-rider-1',
+        status: 'CANCELLED',
+        cancellationPolicy: {
+          level: 'FEE_RECOMMENDED',
+          suggestedFeeAmount: 300,
+          driverCompensationAmount: 240,
+          currency: 'XOF',
+          recentCancellationCount: 1,
+          supportTicketId: 'ticket-cancel-fee-1',
+          message:
+            'Annulation apres chauffeur mobilise. Revue support ouverte: frais suggere 300 XOF, 240 XOF pour proteger le chauffeur si le contexte le confirme.',
+        },
+      },
     } as never);
 
     const renderer = await renderScreen(<ActivityScreen />);
@@ -1493,6 +1586,10 @@ describe('rider smoke flows', () => {
       'trip-rider-1',
       'CANCELLED',
       'Chauffeur en retard',
+    );
+    expectText(
+      renderer,
+      'Annulation apres chauffeur mobilise. Revue support ouverte: frais suggere 300 XOF, 240 XOF pour proteger le chauffeur si le contexte le confirme. Dossier support ticket-c ouvert.',
     );
   });
 

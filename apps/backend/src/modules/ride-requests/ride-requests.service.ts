@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { NotificationChannel, Prisma } from '@prisma/client';
 import { UserRole } from '@prisma/client';
+import { roundXofForCashOperations } from '@orbi/domain';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { RoutingService } from '../../core/routing/routing.service';
@@ -131,9 +132,9 @@ export class RideRequestsService {
         promo.validTo > now &&
         (promo.maxUses === null || promo.usedCount < promo.maxUses)
       ) {
-        applicableFare = Math.round(
+        applicableFare = roundXofForCashOperations(
           Number(pricing.estimatedFare) * (1 - promo.discountBps / 10000),
-        );
+        ).amount;
         resolvedPromoCodeId = promo.id;
       }
     }
@@ -269,6 +270,7 @@ export class RideRequestsService {
 
       void this.dispatchAndNotify({
         rideRequestId: rideRequest.id,
+        riderId: rideRequest.riderId ?? payload.riderId,
         requestedVehicleType: payload.requestedVehicleType,
         requestedServiceTier: payload.requestedServiceTier ?? null,
         estimatedDistanceKm: routeMetrics.distanceKm ?? 0,
@@ -458,6 +460,11 @@ export class RideRequestsService {
       );
     }
 
+    const cancellationPolicy =
+      auth.user.role === UserRole.RIDER
+        ? await this.resolveRiderCancellationPolicy(rideRequest.riderId)
+        : null;
+
     const cancelledRequest = await this.prisma.rideRequest.update({
       where: {
         id: rideRequestId,
@@ -467,6 +474,16 @@ export class RideRequestsService {
       },
     });
 
+    const supportTicketId =
+      cancellationPolicy?.level === 'SUPPORT_REVIEW'
+        ? await this.createRepeatedCancellationSupportTicket({
+            userId: auth.user.id,
+            rideRequestId,
+            recentCancellationCount:
+              cancellationPolicy.recentCancellationCount,
+          })
+        : null;
+
     this.realtimeService.publish({
       channel: 'ride-request',
       type: 'ride-request.cancelled',
@@ -475,6 +492,12 @@ export class RideRequestsService {
       actorRole: auth.user.role,
       payload: {
         status: cancelledRequest.status,
+        cancellationPolicy: cancellationPolicy
+          ? {
+              ...cancellationPolicy,
+              supportTicketId,
+            }
+          : undefined,
       },
     });
 
@@ -486,11 +509,109 @@ export class RideRequestsService {
         destinationAddress: cancelledRequest.destinationAddress,
         updatedAt: cancelledRequest.updatedAt.toISOString(),
       },
+      ...(cancellationPolicy
+        ? {
+            cancellationPolicy: {
+              ...cancellationPolicy,
+              supportTicketId,
+            },
+          }
+        : {}),
     };
+  }
+
+  private async resolveRiderCancellationPolicy(
+    riderId: string,
+  ): Promise<{
+    level: 'CLEAR' | 'WATCH' | 'AT_RISK' | 'SUPPORT_REVIEW';
+    recentCancellationCount: number;
+    feeRisk: boolean;
+    message: string;
+  }> {
+    const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const previousCancellationCount = await this.prisma.rideRequest.count({
+      where: {
+        riderId,
+        status: 'CANCELLED',
+        updatedAt: {
+          gte: windowStart,
+        },
+      },
+    });
+    const recentCancellationCount = previousCancellationCount + 1;
+
+    if (recentCancellationCount >= 4) {
+      return {
+        level: 'SUPPORT_REVIEW',
+        recentCancellationCount,
+        feeRisk: true,
+        message:
+          'Annulations repetees detectees. Le support Orbi est alerte; des frais peuvent s appliquer si un chauffeur se deplace deja sur les prochaines commandes.',
+      };
+    }
+
+    if (recentCancellationCount === 3) {
+      return {
+        level: 'AT_RISK',
+        recentCancellationCount,
+        feeRisk: true,
+        message:
+          'Troisieme annulation recente. Les prochaines annulations apres assignation chauffeur pourront etre revues par le support.',
+      };
+    }
+
+    if (recentCancellationCount === 2) {
+      return {
+        level: 'WATCH',
+        recentCancellationCount,
+        feeRisk: false,
+        message:
+          'Annulation prise en compte. Evitez les annulations repetees pour proteger le temps des chauffeurs.',
+      };
+    }
+
+    return {
+      level: 'CLEAR',
+      recentCancellationCount,
+      feeRisk: false,
+      message: 'Annulation gratuite prise en compte avant affectation chauffeur.',
+    };
+  }
+
+  private async createRepeatedCancellationSupportTicket(input: {
+    userId: string;
+    rideRequestId: string;
+    recentCancellationCount: number;
+  }) {
+    try {
+      const ticket = await this.prisma.supportTicket.create({
+        data: {
+          userId: input.userId,
+          subject: `Annulations repetees rider ${input.userId}`,
+          description:
+            `Le rider a annule ${input.recentCancellationCount} demandes sur 24h. ` +
+            `Derniere demande: ${input.rideRequestId}. Verifier contexte, abus possible, paiement/refund et besoin d accompagnement.`,
+          priority: 2,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      return ticket.id;
+    } catch (error) {
+      this.logger.warn(
+        `Unable to create repeated cancellation support ticket for rider ${input.userId}: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+      return null;
+    }
   }
 
   private async dispatchAndNotify(input: {
     rideRequestId: string;
+    riderId: string;
     requestedVehicleType: string;
     requestedServiceTier: string | null;
     estimatedDistanceKm: number;
@@ -503,6 +624,7 @@ export class RideRequestsService {
     try {
       const result = await this.dispatchCoordinator.proactiveDispatch({
         rideRequestId: input.rideRequestId,
+        riderId: input.riderId,
         requestedVehicleType: input.requestedVehicleType as never,
         requestedServiceTier: input.requestedServiceTier as never,
         estimatedDistanceKm: input.estimatedDistanceKm,

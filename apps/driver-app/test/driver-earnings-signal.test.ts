@@ -91,6 +91,60 @@ describe('driver earnings signal helpers', () => {
     });
   });
 
+  it('shows a payout-rate range when recent trips span commission tiers', () => {
+    const summary = buildDriverEarningsTrustSummary({
+      summary: {
+        currency: 'XOF',
+        today: 8000,
+        week: 8000,
+        month: 8000,
+        completedTrips: 2,
+        averagePayout: 4000,
+      },
+      settlement: {
+        currency: 'XOF',
+        source: 'COMPLETED_TRIPS',
+        payoutRateBps: 8600,
+        payoutRate: 0.86,
+        payoutRateMin: 0.82,
+        payoutRateMax: 0.9,
+        recentTripCount: 2,
+        recentGrossFare: 9302,
+        recentNetPayout: 8000,
+        recentPlatformFee: 1302,
+        state: 'RECONCILED',
+        anomalies: [],
+        calculatedAt: '2026-04-19T10:00:00.000Z',
+      },
+      recentTrips: [
+        {
+          id: 'trip-1',
+          route: 'A vers B',
+          payout: 4500,
+          grossFare: 5000,
+          platformFee: 500,
+          commissionRate: 0.1,
+          payoutRate: 0.9,
+          status: 'COMPLETED',
+          completedAt: '2026-04-19T08:40:00.000Z',
+        },
+        {
+          id: 'trip-2',
+          route: 'C vers D',
+          payout: 3500,
+          grossFare: 4302,
+          platformFee: 802,
+          commissionRate: 0.18,
+          payoutRate: 0.82,
+          status: 'COMPLETED',
+          completedAt: '2026-04-19T09:40:00.000Z',
+        },
+      ],
+    });
+
+    expect(summary.payoutRateLabel).toBe('82%-90% chauffeur');
+  });
+
   it('flags inverted finance windows before they reach driver copy', () => {
     const summary = buildDriverEarningsTrustSummary({
       summary: {

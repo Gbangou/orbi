@@ -4,10 +4,11 @@
 #   .\scripts\build-apk-local.ps1 -App rider
 #   .\scripts\build-apk-local.ps1 -App driver
 #   .\scripts\build-apk-local.ps1 -App all
+#   .\scripts\build-apk-local.ps1 -App all -ApiBaseUrl http://192.168.1.20:3000
 #
 # Variables d'environnement respectees si deja definies:
-#   ANDROID_HOME  →  C:\Android\Sdk (par defaut)
-#   JAVA_HOME     →  C:\Android\jdk17\jdk-17.0.19+10 (par defaut)
+#   ANDROID_HOME  -> C:\Android\Sdk (par defaut)
+#   JAVA_HOME     -> C:\Android\jdk17\jdk-17.0.19+10 (par defaut)
 
 param(
     [ValidateSet('rider', 'driver', 'all')]
@@ -17,6 +18,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path $PSScriptRoot -Parent
+$DefaultFieldApiBaseUrl = "https://orbi-field-api.onrender.com"
 
 $env:CI = "true"
 $env:EXPO_NO_TELEMETRY = "1"
@@ -28,11 +30,11 @@ if (-not $env:GRADLE_OPTS) {
 # Valeurs par defaut Android SDK + JDK Temurin 17 portables
 if (-not $env:ANDROID_HOME) {
     $env:ANDROID_HOME = "C:\Android\Sdk"
-    Write-Host "  ANDROID_HOME → $env:ANDROID_HOME" -ForegroundColor DarkGray
+    Write-Host "  ANDROID_HOME -> $env:ANDROID_HOME" -ForegroundColor DarkGray
 }
 if (-not $env:JAVA_HOME) {
     $env:JAVA_HOME = "C:\Android\jdk17\jdk-17.0.19+10"
-    Write-Host "  JAVA_HOME → $env:JAVA_HOME" -ForegroundColor DarkGray
+    Write-Host "  JAVA_HOME -> $env:JAVA_HOME" -ForegroundColor DarkGray
 }
 $env:PATH = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\cmdline-tools\latest\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
 
@@ -43,9 +45,13 @@ function Resolve-LanIp {
             $_.IPAddress -notlike '127.*' -and
             $_.IPAddress -notlike '169.254.*' -and
             $_.PrefixOrigin -ne 'WellKnown' -and
-            $_.InterfaceOperationalStatus -eq 'Up'
+            $_.InterfaceOperationalStatus -eq 'Up' -and
+            $_.InterfaceAlias -notmatch '(?i)vEthernet|WSL|Docker|Loopback|Virtual|VPN|Bluetooth|Tailscale|ZeroTier|Hyper-V'
         } |
-        Sort-Object -Property InterfaceMetric, InterfaceIndex
+        Sort-Object `
+        @{ Expression = { if ($_.InterfaceAlias -match '(?i)Wi-Fi|Wireless|WLAN|Ethernet') { 0 } else { 1 } } },
+        InterfaceMetric,
+        InterfaceIndex
 
         if ($addresses) {
             return $addresses[0].IPAddress
@@ -103,12 +109,96 @@ function Resolve-ApiBaseUrl {
         return $env:ORBI_FIELD_API_BASE_URL
     }
 
-    $lanIp = Resolve-LanIp
-    return "http://${lanIp}:3000"
+    return $DefaultFieldApiBaseUrl
 }
 
 $ResolvedApiBaseUrl = Resolve-ApiBaseUrl -ExplicitApiBaseUrl $ApiBaseUrl
-Write-Host "  Mobile API base URL → $ResolvedApiBaseUrl" -ForegroundColor Cyan
+Write-Host "  Mobile API base URL -> $ResolvedApiBaseUrl" -ForegroundColor Cyan
+
+function Test-MobileApiBaseUrl {
+    param([string]$BaseUrl)
+
+    $readyUrl = "$BaseUrl/api/v1/health/ready"
+    Write-Host "  Checking mobile API readiness -> $readyUrl" -ForegroundColor DarkGray
+
+    try {
+        $requestArgs = @{
+            Uri             = $readyUrl
+            UseBasicParsing = $true
+            TimeoutSec      = 15
+        }
+
+        $requestArgs.NoProxy = $true
+
+        $response = Invoke-WebRequest @requestArgs
+        $body = $response.Content | ConvertFrom-Json
+
+        if ($response.StatusCode -ne 200 -or $body.status -ne 'ready') {
+            throw "HTTP $($response.StatusCode), status '$($body.status)'"
+        }
+
+        Write-Host "  Mobile API readiness: OK" -ForegroundColor Green
+    }
+    catch {
+        throw @"
+Mobile API is not reachable from the configured APK URL:
+  $readyUrl
+
+Start or deploy the backend targeted by this APK, then pass the exact URL explicitly:
+  pnpm mobile:apk -- -ApiBaseUrl http://YOUR_WIFI_IP:3000
+  pnpm mobile:apk -- -ApiBaseUrl https://orbi-field-api.onrender.com
+
+Details: $($_.Exception.Message)
+"@
+    }
+}
+
+Test-MobileApiBaseUrl -BaseUrl $ResolvedApiBaseUrl
+
+function Assert-NoReactNativeSvg {
+    param([string]$Scope, [string[]]$Paths)
+
+    $ExistingPaths = @($Paths | Where-Object { Test-Path $_ })
+    if ($ExistingPaths.Count -eq 0) {
+        return
+    }
+
+    $Pattern = 'react-native-svg|RNSVG|com\.horcrux'
+    $Matches = @()
+
+    if (Get-Command rg -ErrorAction SilentlyContinue) {
+        $Matches = @(& rg -n $Pattern @ExistingPaths 2>$null)
+        if ($LASTEXITCODE -gt 1) {
+            throw "Unable to scan $Scope for forbidden React Native SVG bindings."
+        }
+    }
+    else {
+        foreach ($Path in $ExistingPaths) {
+            if (Test-Path $Path -PathType Container) {
+                $Matches += Get-ChildItem $Path -File -Recurse |
+                Select-String -Pattern $Pattern |
+                ForEach-Object { "$($_.Path):$($_.LineNumber):$($_.Line)" }
+            }
+            else {
+                $Matches += Select-String -Path $Path -Pattern $Pattern |
+                ForEach-Object { "$($_.Path):$($_.LineNumber):$($_.Line)" }
+            }
+        }
+    }
+
+    if ($Matches.Count -gt 0) {
+        $Message = @(
+            "Forbidden native SVG dependency found while checking $Scope.",
+            "This can reintroduce the Android crash:",
+            "  View config getter callback for component 'RNSVGLinearGradient' must be a function",
+            "",
+            ($Matches -join "`n")
+        ) -join "`n"
+        throw $Message
+    }
+
+    Write-Host "  React Native SVG native guard: OK ($Scope)" -ForegroundColor DarkGray
+}
 
 function Build-App {
     param([string]$AppName, [string]$AppDir, [hashtable]$EnvVars)
@@ -125,15 +215,31 @@ function Build-App {
         [System.Environment]::SetEnvironmentVariable($kv.Key, $kv.Value, 'Process')
     }
 
+    $ExistingGradleWrapper = "$AppDir\android\gradlew.bat"
+    if (Test-Path $ExistingGradleWrapper) {
+        Write-Host "  stopping existing Gradle daemons ..." -ForegroundColor DarkGray
+        Push-Location "$AppDir\android"
+        try {
+            .\gradlew.bat --stop | Out-Null
+        }
+        catch {
+            Write-Host "  Gradle daemon stop skipped: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+        finally {
+            Pop-Location
+        }
+    }
+
     # Expo prebuild : genere le dossier android/
     Write-Host "  expo prebuild --platform android --clean ..." -ForegroundColor Yellow
     npx expo prebuild --platform android --clean
     if ($LASTEXITCODE -ne 0) { throw "expo prebuild failed for $AppName" }
+    Assert-NoReactNativeSvg -Scope "$AppName generated Android project" -Paths @("$AppDir\android")
 
     # local.properties : pointe vers le SDK Android
     $localProps = "sdk.dir=$($env:ANDROID_HOME -replace '\\', '\\\\')"
     Set-Content -Path "$AppDir\android\local.properties" -Value $localProps -Encoding UTF8
-    Write-Host "  android/local.properties → $env:ANDROID_HOME" -ForegroundColor DarkGray
+    Write-Host "  android/local.properties -> $env:ANDROID_HOME" -ForegroundColor DarkGray
 
     # Expo regenere android/ a chaque build propre. Reappliquer une marge memoire
     # suffisante evite les builds release fragiles sur Windows.
@@ -147,7 +253,7 @@ function Build-App {
         $GradleProps = "$GradleProps`n$GradleJvmArgs`n"
     }
     Set-Content -Path $GradlePropsPath -Value $GradleProps -Encoding UTF8
-    Write-Host "  android/gradle.properties → release JVM tuned" -ForegroundColor DarkGray
+    Write-Host "  android/gradle.properties -> release JVM tuned" -ForegroundColor DarkGray
 
     # Restaurer le keystore stable pour que la signature reste identique entre les builds.
     # Sans ca, expo prebuild --clean genere un nouveau keystore a chaque fois et Android
@@ -156,21 +262,21 @@ function Build-App {
     $AndroidKeystore = "$AppDir\android\app\debug.keystore"
     if (Test-Path $StableKeystore) {
         Copy-Item $StableKeystore $AndroidKeystore -Force
-        Write-Host "  android/app/debug.keystore ← signing/debug.keystore (signature stable)" -ForegroundColor DarkGray
+        Write-Host "  android/app/debug.keystore <- signing/debug.keystore (signature stable)" -ForegroundColor DarkGray
     }
     else {
-        Write-Host "  WARNING: signing/debug.keystore absent — Gradle va generer un nouveau keystore (signature instable)" -ForegroundColor Yellow
+        Write-Host "  WARNING: signing/debug.keystore absent - Gradle va generer un nouveau keystore (signature instable)" -ForegroundColor Yellow
     }
 
     # Ecrire .env dans le dossier app avant Gradle pour que Metro charge les vars EXPO_PUBLIC_*.
     # Metro (@expo/env) lit ce fichier au demarrage du bundler ; sans ca, les vars ne sont pas
     # injectees dans le bundle et le fallback 'localhost:3000' de packages/config est utilise.
-    $EnvLines = $EnvVars.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }
+    $EnvLines = $EnvVars.GetEnumerator() | ForEach-Object { '{0}={1}' -f $_.Key, $_.Value }
     $EnvFileContent = $EnvLines -join "`n"
     Set-Content -Path "$AppDir\.env" -Value $EnvFileContent -Encoding UTF8
-    Write-Host "  $AppDir\.env written ($($EnvVars.Count) vars)" -ForegroundColor DarkGray
+    Write-Host "  app .env written" -ForegroundColor DarkGray
 
-    # Gradle assembleRelease → .apk
+    # Gradle assembleRelease -> .apk
     Write-Host "  gradlew assembleRelease ..." -ForegroundColor Yellow
     Set-Location "$AppDir\android"
     .\gradlew.bat assembleRelease
@@ -203,7 +309,7 @@ function Build-App {
     $ApkDst = "$DistDir\orbi-$AppName-mvp.apk"
     Copy-Item $ApkSrc $ApkDst -Force
 
-    Write-Host "  APK → dist\orbi-$AppName-mvp.apk" -ForegroundColor Green
+    Write-Host "  APK -> dist\orbi-$AppName-mvp.apk" -ForegroundColor Green
     Set-Location $Root
 }
 
@@ -215,6 +321,12 @@ if (-not (Test-Path "$env:ANDROID_HOME\platforms")) { Write-Host "  WARNING: AND
 Set-Location $Root
 pnpm install --frozen-lockfile --config.offline=false
 if ($LASTEXITCODE -ne 0) { throw "pnpm install failed" }
+Assert-NoReactNativeSvg -Scope "workspace mobile dependencies" -Paths @(
+    "$Root\apps\rider-app\package.json",
+    "$Root\apps\driver-app\package.json",
+    "$Root\packages\ui\package.json",
+    "$Root\pnpm-lock.yaml"
+)
 
 # Variables d'environnement communes aux deux apps
 $CommonEnv = @{

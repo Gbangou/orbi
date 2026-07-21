@@ -41,8 +41,10 @@ const fallbackEarnings: DriverEarningsResponse = {
   settlement: {
     currency: 'XOF',
     source: 'COMPLETED_TRIPS',
-    payoutRateBps: 8200,
-    payoutRate: 0.82,
+    payoutRateBps: 0,
+    payoutRate: 0,
+    payoutRateMin: 0,
+    payoutRateMax: 0,
     recentTripCount: 0,
     recentGrossFare: 0,
     recentNetPayout: 0,
@@ -50,6 +52,13 @@ const fallbackEarnings: DriverEarningsResponse = {
     state: 'RECONCILED',
     anomalies: [],
     calculatedAt: new Date('2026-04-19T00:00:00.000Z').toISOString(),
+  },
+  adjustments: {
+    currency: 'XOF',
+    cancellationCompensationToday: 0,
+    cancellationCompensationWeek: 0,
+    cancellationCompensationMonth: 0,
+    recent: [],
   },
   recentTrips: [],
 };
@@ -673,6 +682,39 @@ export default function RevenusScreen() {
           ) : null}
         </View>
 
+        {earnings.adjustments?.recent.length ? (
+          <View style={styles.adjustmentsCard}>
+            <View style={styles.adjustmentsHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>Ajustements justes</Text>
+                <Text style={styles.adjustmentsMeta}>
+                  Indemnites annulation creditees par operations
+                </Text>
+              </View>
+              <Text style={styles.adjustmentsAmount}>
+                +{formatDriverEarningsAmount(
+                  earnings.adjustments.cancellationCompensationWeek,
+                )}
+              </Text>
+            </View>
+            {earnings.adjustments.recent.map((adjustment) => (
+              <View key={adjustment.id} style={styles.adjustmentRow}>
+                <View style={styles.tripLeft}>
+                  <Text style={styles.tripRoute} numberOfLines={1}>
+                    Indemnisation annulation
+                  </Text>
+                  <Text style={styles.tripDate}>
+                    {formatDriverTripCompletedAt(adjustment.createdAt)}
+                  </Text>
+                </View>
+                <Text style={styles.tripPayout}>
+                  +{formatDriverEarningsAmount(adjustment.amount)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         {/* Refresh button — accessible for tests */}
         <Pressable
           onPress={() => void loadEarnings()}
@@ -925,6 +967,41 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
     lineHeight: 18,
+  },
+
+  adjustmentsCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0,201,167,0.24)',
+    padding: 16,
+    gap: 10,
+  },
+  adjustmentsHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  adjustmentsMeta: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
+  },
+  adjustmentsAmount: {
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.teal,
+  },
+  adjustmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
 
   // Trips

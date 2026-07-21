@@ -88,7 +88,14 @@ export default function RootLayout() {
     let isMounted = true;
 
     async function resolveSession() {
-      const hasSession = await hasPersistedRiderSession();
+      let hasSession = false;
+
+      try {
+        hasSession = await hasPersistedRiderSession();
+      } catch {
+        hasSession = false;
+      }
+
       if (!isMounted) return;
 
       let targetPath: '/auth' | '/home' | null = null;

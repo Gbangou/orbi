@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  type AdminCancellationCompensationResponse,
+  type AdminPaymentAttemptProviderVerificationResponse,
+  type AdminPaymentAttemptRefundResponse,
   type SupportTicketQueueResponse,
   type SupportTicketUpdateResponse,
 } from '@orbi/api';
@@ -38,6 +41,25 @@ function getTicketSlaClass(state: SupportTicketQueueResponse['tickets'][number][
   if (state === 'breached') return 'phase-status-next';
   if (state === 'due_soon') return 'phase-status-planned';
   return 'phase-status-completed';
+}
+
+function describeTicketCategory(
+  category: SupportTicketQueueResponse['tickets'][number]['category'],
+) {
+  const labels: Record<SupportTicketQueueResponse['tickets'][number]['category'], string> = {
+    safety: 'Securite',
+    payment: 'Paiement',
+    refund: 'Remboursement',
+    fare_review: 'Prix',
+    rider_cancellation: 'Annul. rider',
+    driver_cancellation: 'Annul. chauffeur',
+    quality_review: 'Qualite',
+    mobile_health: 'Mobile',
+    onboarding: 'Onboarding',
+    general: 'General',
+  };
+
+  return labels[category] ?? 'General';
 }
 
 function describeTicketSla(ticket: SupportTicketQueueResponse['tickets'][number]) {
@@ -120,6 +142,43 @@ async function updateSupportTicket(
   );
 }
 
+async function approveCancellationCompensation(ticketId: string) {
+  return fetchAdminJson<AdminCancellationCompensationResponse>(
+    `/api/admin/support-tickets/${ticketId}/cancellation-compensation`,
+    {
+      method: 'POST',
+      headers: createAdminMutationHeaders(),
+    },
+  );
+}
+
+async function verifyTicketPaymentAttempt(paymentAttemptId: string) {
+  return fetchAdminJson<AdminPaymentAttemptProviderVerificationResponse>(
+    `/api/admin/payment-attempts/${paymentAttemptId}/verify-provider`,
+    {
+      method: 'POST',
+      headers: createAdminMutationHeaders(),
+    },
+  );
+}
+
+async function refundTicketPaymentAttempt(paymentAttemptId: string, ticketId: string) {
+  return fetchAdminJson<AdminPaymentAttemptRefundResponse>(
+    `/api/admin/payment-attempts/${paymentAttemptId}/refund`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...createAdminMutationHeaders(),
+      },
+      body: JSON.stringify({
+        reason: `Ticket support ${ticketId}`,
+        idempotencyKey: `support-refund-${ticketId}-${paymentAttemptId}`,
+      }),
+    },
+  );
+}
+
 export function SupportQueue({ initialTickets, initialStaffing }: SupportQueueProps) {
   const [tickets, setTickets] = useState(initialTickets);
   const [staffing, setStaffing] = useState(
@@ -163,8 +222,17 @@ export function SupportQueue({ initialTickets, initialStaffing }: SupportQueuePr
     const urgent = tickets.filter((ticket) => ticket.priority === 3).length;
     const breached = tickets.filter((ticket) => ticket.sla.state === 'breached').length;
     const dueSoon = tickets.filter((ticket) => ticket.sla.state === 'due_soon').length;
+    const money = tickets.filter((ticket) =>
+      ticket.category === 'payment' ||
+      ticket.category === 'refund' ||
+      ticket.category === 'fare_review',
+    ).length;
+    const cancellations = tickets.filter((ticket) =>
+      ticket.category === 'rider_cancellation' ||
+      ticket.category === 'driver_cancellation',
+    ).length;
 
-    return { open, inReview, resolved, urgent, breached, dueSoon };
+    return { open, inReview, resolved, urgent, breached, dueSoon, money, cancellations };
   }, [tickets]);
 
   useEffect(() => {
@@ -175,6 +243,10 @@ export function SupportQueue({ initialTickets, initialStaffing }: SupportQueuePr
         void refreshTickets(true, 'Signal mobile critique remonte dans la file support.'),
       'support-ticket.updated': () =>
         void refreshTickets(true, 'File support synchronisee apres mise a jour.'),
+      'ride-request.cancelled': () =>
+        void refreshTickets(true, 'Revue annulation demande synchronisee dans la file support.'),
+      'trip.updated': () =>
+        void refreshTickets(true, 'Revue course synchronisee dans la file support.'),
       heartbeat: () =>
         setStatus(describeRealtimeConnection('admin-support', 'active')),
     });
@@ -297,6 +369,82 @@ export function SupportQueue({ initialTickets, initialStaffing }: SupportQueuePr
     }
   }
 
+  async function handleApproveCancellationCompensation(ticketId: string) {
+    if (ticketUpdateInFlightRef.current.has(ticketId)) {
+      return;
+    }
+
+    ticketUpdateInFlightRef.current.add(ticketId);
+    setBusyTicketId(ticketId);
+    setStatus('Validation de l indemnisation chauffeur...');
+
+    try {
+      const response = await approveCancellationCompensation(ticketId);
+      await refreshTickets(false);
+      const amountLabel = `${response.compensation.amount} ${response.compensation.currency}`;
+      setStatus(
+        response.action === 'already_credited'
+          ? `Indemnisation deja creditee: ${amountLabel}.`
+          : `Indemnisation chauffeur creditee: ${amountLabel}.`,
+      );
+    } catch {
+      setStatus('Validation de l indemnisation impossible.');
+    } finally {
+      ticketUpdateInFlightRef.current.delete(ticketId);
+      setBusyTicketId(null);
+    }
+  }
+
+  async function handleVerifyTicketPayment(ticketId: string, paymentAttemptId: string) {
+    if (ticketUpdateInFlightRef.current.has(ticketId)) {
+      return;
+    }
+
+    ticketUpdateInFlightRef.current.add(ticketId);
+    setBusyTicketId(ticketId);
+    setStatus('Verification provider de la tentative paiement...');
+
+    try {
+      const response = await verifyTicketPaymentAttempt(paymentAttemptId);
+      await refreshTickets(false);
+      setStatus(
+        `Verification provider terminee: ${response.verification.result.nextAction}.`,
+      );
+    } catch {
+      setStatus('Verification provider impossible depuis ce ticket.');
+    } finally {
+      ticketUpdateInFlightRef.current.delete(ticketId);
+      setBusyTicketId(null);
+    }
+  }
+
+  async function handleRefundTicketPayment(ticketId: string, paymentAttemptId: string) {
+    if (ticketUpdateInFlightRef.current.has(ticketId)) {
+      return;
+    }
+
+    ticketUpdateInFlightRef.current.add(ticketId);
+    setBusyTicketId(ticketId);
+    setStatus('Demande de remboursement provider...');
+
+    try {
+      const response = await refundTicketPaymentAttempt(paymentAttemptId, ticketId);
+      await refreshTickets(false);
+      setStatus(
+        response.refund.action === 'already_refunded'
+          ? 'Remboursement deja effectue pour cette tentative.'
+          : response.refund.action === 'refund_pending'
+            ? `Remboursement demande: ${response.refund.providerRefundReference}.`
+            : `Remboursement effectue: ${response.refund.providerRefundReference}.`,
+      );
+    } catch {
+      setStatus('Remboursement impossible depuis ce ticket.');
+    } finally {
+      ticketUpdateInFlightRef.current.delete(ticketId);
+      setBusyTicketId(null);
+    }
+  }
+
   return (
     <section className="panel ops-panel">
       <div className="roadmap-heading">
@@ -352,9 +500,14 @@ export function SupportQueue({ initialTickets, initialStaffing }: SupportQueuePr
           <p>{summary.dueSoon} ticket(s) proche(s) de l echeance</p>
         </article>
         <article className="board-summary-card">
-          <span>Resolus</span>
-          <strong>{summary.resolved}</strong>
-          <p>Tickets deja fermes ou resolus</p>
+          <span>Argent</span>
+          <strong>{summary.money}</strong>
+          <p>Paiement, remboursement ou prix a verifier</p>
+        </article>
+        <article className="board-summary-card">
+          <span>Annulations</span>
+          <strong>{summary.cancellations}</strong>
+          <p>Revue rider/chauffeur apres annulation</p>
         </article>
       </div>
 
@@ -392,6 +545,9 @@ export function SupportQueue({ initialTickets, initialStaffing }: SupportQueuePr
               <span className={`phase-status ${getTicketSlaClass(ticket.sla.state)}`}>
                 {describeTicketSla(ticket)}
               </span>
+              <span className="phase-status phase-status-planned">
+                {describeTicketCategory(ticket.category)}
+              </span>
             </div>
             <h3>{ticket.subject}</h3>
             <p>
@@ -402,6 +558,9 @@ export function SupportQueue({ initialTickets, initialStaffing }: SupportQueuePr
                 ? `Trajet lie: ${ticket.tripId}`
                 : 'Trajet non identifie'}
             </p>
+            {ticket.paymentAttemptId ? (
+              <p>Tentative paiement: {ticket.paymentAttemptId}</p>
+            ) : null}
             <p>{ticket.description}</p>
             <div className="ticket-sla-panel">
               <span>Owner {ticket.sla.owner}</span>
@@ -414,6 +573,7 @@ export function SupportQueue({ initialTickets, initialStaffing }: SupportQueuePr
                   minute: '2-digit',
                 })}
               </p>
+              <p>{ticket.actionHint}</p>
             </div>
             {ticket.adminNote ? (
               <div className="ticket-admin-note">
@@ -482,6 +642,63 @@ export function SupportQueue({ initialTickets, initialStaffing }: SupportQueuePr
               >
                 {busyTicketId === ticket.id ? 'Traitement...' : 'Marquer resolu'}
               </button>
+              {ticket.category === 'rider_cancellation' ? (
+                <button
+                  className="ticket-button ticket-button-neutral"
+                  disabled={
+                    busyTicketId === ticket.id ||
+                    ticket.status === 'RESOLVED' ||
+                    ticket.status === 'CLOSED'
+                  }
+                  onClick={() =>
+                    void handleApproveCancellationCompensation(ticket.id)
+                  }
+                  type="button"
+                >
+                  {busyTicketId === ticket.id
+                    ? 'Traitement...'
+                    : 'Indemniser chauffeur'}
+                </button>
+              ) : null}
+              {ticket.paymentAttemptId &&
+              (ticket.category === 'payment' || ticket.category === 'refund') ? (
+                <button
+                  className="ticket-button ticket-button-neutral"
+                  disabled={busyTicketId === ticket.id}
+                  onClick={() =>
+                    void handleVerifyTicketPayment(
+                      ticket.id,
+                      ticket.paymentAttemptId!,
+                    )
+                  }
+                  type="button"
+                >
+                  {busyTicketId === ticket.id
+                    ? 'Traitement...'
+                    : 'Verifier provider'}
+                </button>
+              ) : null}
+              {ticket.paymentAttemptId && ticket.category === 'refund' ? (
+                <button
+                  className="ticket-button ticket-button-success"
+                  disabled={
+                    busyTicketId === ticket.id ||
+                    ticket.status === 'RESOLVED' ||
+                    ticket.status === 'CLOSED'
+                  }
+                  onClick={() =>
+                    void handleRefundTicketPayment(
+                      ticket.id,
+                      ticket.paymentAttemptId!,
+                    )
+                  }
+                  type="button"
+                >
+                  {busyTicketId === ticket.id
+                    ? 'Traitement...'
+                    : 'Rembourser'}
+                </button>
+              ) : null}
             </div>
           </article>
         ))}

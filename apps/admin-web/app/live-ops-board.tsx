@@ -573,10 +573,9 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
           </div>
           <div className="queue-meta">
             <p className="lede">
-              Chauffeurs avec au moins 5 offres et un taux d&apos;acceptation en dessous
-              de 50% sur les 7 derniers jours. Ces profils degradent le score
-              moyen de dispatch et doivent faire l&apos;objet d&apos;un suivi avant extension
-              du pilote.
+              Chauffeurs avec acceptation faible, expirations ou notes 1-2/5
+              repetees sur les 7 derniers jours. Ces profils demandent coaching
+              ou revue qualite avant extension du pilote.
             </p>
           </div>
         </div>
@@ -586,7 +585,17 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
         <div className="roadmap-grid live-ops-grid">
           {liveOps.lowConfidenceDrivers.map((driver) => {
             const rateColor =
-              driver.acceptanceRate >= 30 ? '#f59e0b' : '#ef4444';
+              driver.confidenceReason === 'rating'
+                ? '#ef4444'
+                : driver.acceptanceRate >= 30
+                  ? '#f59e0b'
+                  : '#ef4444';
+            const reasonLabel =
+              driver.confidenceReason === 'dispatch_and_rating'
+                ? 'Dispatch + qualite'
+                : driver.confidenceReason === 'rating'
+                  ? 'Notes faibles'
+                  : 'Dispatch';
 
             return (
               <article
@@ -603,7 +612,7 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
                       border: `1px solid ${rateColor}55`,
                     }}
                   >
-                    {driver.acceptanceRate}% acceptation
+                    {reasonLabel}
                   </span>
                   <span className="live-trip-fare" style={{ color: '#94a3b8' }}>
                     {driver.total} offre(s)
@@ -645,6 +654,20 @@ export function LiveOpsBoard({ initialLiveOps }: LiveOpsBoardProps) {
                   <div className="trip-meta-card">
                     <span>Expiration</span>
                     <strong>{driver.expirationRate}%</strong>
+                  </div>
+                  <div className="trip-meta-card">
+                    <span>Notes faibles</span>
+                    <strong style={{ color: driver.lowRatingCount ? '#ef4444' : '#94a3b8' }}>
+                      {driver.lowRatingCount}
+                    </strong>
+                  </div>
+                  <div className="trip-meta-card">
+                    <span>Moy. faible</span>
+                    <strong>
+                      {driver.averageLowRating !== null
+                        ? `${driver.averageLowRating}/5`
+                        : 'ND'}
+                    </strong>
                   </div>
                 </div>
               </article>

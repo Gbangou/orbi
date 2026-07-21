@@ -54,7 +54,18 @@ export type MyTripsResponse = {
     currency: string;
     counterpartyName: string | null;
     vehicleLabel: string | null;
+    paymentMethod?: "MOBILE_MONEY" | "CASH" | "WALLET" | string | null;
     pickupCode?: string | null;
+    receipt: {
+      paymentAttemptId: string;
+      status: string;
+      provider: string;
+      channel: string;
+      amount: number;
+      currency: string;
+      transactionRef: string | null;
+      updatedAt: string;
+    } | null;
     completedAt: string | null;
     createdAt: string;
   }>;
@@ -70,7 +81,23 @@ export type TripLifecycleResponse = {
     riderName?: string;
     vehicleLabel?: string;
     pickupCode?: string | null;
+    paymentMethod?: "MOBILE_MONEY" | "CASH" | "WALLET" | string | null;
     actualFare: number;
+    driverPayout?: number | null;
+    platformFee?: number | null;
+    commissionRate?: number | null;
+    cancellationPolicy?: {
+      actor: "RIDER" | "DRIVER";
+      level: "CLEAR" | "REVIEW" | "FEE_RECOMMENDED" | "DRIVER_WARNING";
+      suggestedFeeAmount: number;
+      driverCompensationAmount: number;
+      currency: string;
+      recentCancellationCount: number;
+      driverReliabilityImpact?: "NONE" | "WATCH" | "AT_RISK" | "SUPPORT_REVIEW";
+      temporaryPauseMinutes?: number;
+      supportTicketId?: string | null;
+      message: string;
+    } | null;
     currency: string;
     createdAt?: string;
     startedAt?: string | null;
@@ -125,6 +152,7 @@ export type TripDetailResponse = {
     pickupCode?: string | null;
     driverPhoneNumber: string | null;
     riderPhoneNumber: string | null;
+    paymentMethod?: "MOBILE_MONEY" | "CASH" | "WALLET" | string | null;
     actualFare: number;
     currency: string;
     pickupLatitude: number | null;
@@ -238,6 +266,11 @@ export type TripRatingResponse = {
     comment: string | null;
     createdAt: string;
   };
+  qualityReview: {
+    ticketId: string;
+    priority: number;
+    message: string;
+  } | null;
 };
 
 export type CreateRideRequestPayload = {
@@ -304,6 +337,13 @@ export type RideRequestLifecycleResponse = {
     pickupAddress: string;
     destinationAddress: string;
     updatedAt: string;
+  };
+  cancellationPolicy?: {
+    level: "CLEAR" | "WATCH" | "AT_RISK" | "SUPPORT_REVIEW";
+    recentCancellationCount: number;
+    feeRisk: boolean;
+    message: string;
+    supportTicketId?: string | null;
   };
 };
 

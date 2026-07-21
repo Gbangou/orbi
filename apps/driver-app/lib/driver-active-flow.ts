@@ -38,6 +38,8 @@ export type DriverActiveFlowSummary = {
   primaryStatusLabel: string;
   primaryRouteLabel: string | null;
   operationalStatus: DriverResolvedOperationalStatus;
+  accountVerificationStatus: string;
+  accountCanReceiveOffers: boolean;
   availabilityStatus: "ONLINE" | "OFFLINE";
   heroTitle: string;
   visibleOffers: DriverOffer[];
@@ -51,6 +53,7 @@ export function resolveDriverActiveFlow(input: {
   offers: DriverOffer[];
   reservationNow: number;
   driverProfileStatus: string | null | undefined;
+  driverVerificationStatus?: string | null | undefined;
 }): DriverActiveFlowSummary {
   const activeTrip =
     input.history?.recentTrips.find((trip) =>
@@ -59,10 +62,15 @@ export function resolveDriverActiveFlow(input: {
   const normalizedProfileStatus = normalizeDriverProfileStatus(
     input.driverProfileStatus,
   );
+  const accountVerificationStatus = normalizeDriverVerificationStatus(
+    input.driverVerificationStatus,
+  );
+  const accountCanReceiveOffers = accountVerificationStatus === "APPROVED";
   const operationalStatus = activeTrip ? "BUSY" : normalizedProfileStatus;
   const availabilityStatus =
     normalizedProfileStatus === "ONLINE" ? "ONLINE" : "OFFLINE";
-  const canReceiveOffers = availabilityStatus === "ONLINE" && !activeTrip;
+  const canReceiveOffers =
+    availabilityStatus === "ONLINE" && !activeTrip && accountCanReceiveOffers;
   const visibleOffers = canReceiveOffers
     ? input.offers.filter((offer) =>
         isOfferReservationActive(offer, input.reservationNow),
@@ -79,12 +87,16 @@ export function resolveDriverActiveFlow(input: {
       ? `${activeTrip.pickupAddress} vers ${activeTrip.destinationAddress}`
       : null,
     operationalStatus,
+    accountVerificationStatus,
+    accountCanReceiveOffers,
     availabilityStatus,
     heroTitle:
       operationalStatus === "BUSY"
         ? "Occupe"
         : operationalStatus === "ONLINE"
-          ? "En ligne"
+          ? accountCanReceiveOffers
+            ? "En ligne"
+            : "Dossier en revue"
           : operationalStatus === "SUSPENDED"
             ? "Suspendu"
             : "Hors ligne",
@@ -108,6 +120,13 @@ export function buildDriverHomeStatusLabel(input: {
     return "Compte suspendu. Contactez les operations pour reprendre le direct.";
   }
 
+  if (
+    input.flow.availabilityStatus === "ONLINE" &&
+    !input.flow.accountCanReceiveOffers
+  ) {
+    return "Compte en attente d approbation operations. Les offres restent bloquees jusqu a validation.";
+  }
+
   return `Connecte comme ${input.fullName}. Statut ${formatOperationalStatus(input.flow.availabilityStatus)}. ${input.flow.visibleOfferCount} offres disponibles et 0 course active.`;
 }
 
@@ -120,6 +139,13 @@ export function buildDriverDispatchStatusLabel(input: {
 
   if (input.flow.operationalStatus === "SUSPENDED") {
     return "Compte suspendu. Le dispatch reste bloque tant que les operations n ont pas reactive le profil.";
+  }
+
+  if (
+    input.flow.availabilityStatus === "ONLINE" &&
+    !input.flow.accountCanReceiveOffers
+  ) {
+    return "Compte chauffeur non approuve. Les offres sont bloquees jusqu a validation operations.";
   }
 
   return `${input.flow.visibleOfferCount} offres chargees. Statut chauffeur ${formatOperationalStatus(input.flow.availabilityStatus)}.`;
@@ -140,6 +166,10 @@ export function buildDriverNextActionHint(flow: DriverActiveFlowSummary) {
 
   if (flow.operationalStatus === "SUSPENDED") {
     return "Aucune action terrain: attendez la reactivation par les operations.";
+  }
+
+  if (flow.availabilityStatus === "ONLINE" && !flow.accountCanReceiveOffers) {
+    return "Finalisez ou faites approuver le dossier chauffeur pour debloquer les offres.";
   }
 
   if (flow.availabilityStatus === "ONLINE") {
@@ -499,6 +529,20 @@ function normalizeDriverProfileStatus(
   }
 
   return "OFFLINE";
+}
+
+function normalizeDriverVerificationStatus(status: string | null | undefined) {
+  const normalized = status?.toUpperCase();
+
+  if (
+    normalized === "APPROVED" ||
+    normalized === "PENDING" ||
+    normalized === "REJECTED"
+  ) {
+    return normalized;
+  }
+
+  return "APPROVED";
 }
 
 function extractStatusFromFlowState(flowState: string | null) {

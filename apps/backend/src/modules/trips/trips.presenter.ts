@@ -31,6 +31,38 @@ function toFiniteNumber(value: unknown) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function resolveCashPaymentReceipt(
+  events:
+    | Array<{ eventType: string; payload?: unknown; createdAt?: Date }>
+    | null
+    | undefined,
+) {
+  const cashEvent = [...(events ?? [])]
+    .reverse()
+    .find((event) => event.eventType === 'CASH_PAYMENT_CONFIRMED');
+  const payload = isRecord(cashEvent?.payload) ? cashEvent.payload : {};
+  const amount = toFiniteNumber(payload.amount);
+  const currency = typeof payload.currency === 'string' ? payload.currency : null;
+
+  if (!cashEvent || amount === null || !currency) {
+    return null;
+  }
+
+  return {
+    paymentAttemptId: `cash:${cashEvent.createdAt?.getTime() ?? 'confirmed'}`,
+    status: 'SUCCEEDED',
+    provider: 'CASH',
+    channel: 'CASH',
+    amount: toAmount(amount),
+    currency,
+    transactionRef: null,
+    updatedAt:
+      typeof payload.confirmedAt === 'string'
+        ? payload.confirmedAt
+        : cashEvent.createdAt?.toISOString() ?? new Date(0).toISOString(),
+  };
+}
+
 function haversineKm(
   from: { latitude: number; longitude: number },
   to: { latitude: number; longitude: number },
@@ -177,6 +209,7 @@ export function serializeTripDetail(trip: {
     pickupLongitude?: unknown;
     destinationLatitude?: unknown;
     destinationLongitude?: unknown;
+    paymentMethod?: string | null;
   } | null;
   promoCode?: { code: string; discountBps: number } | null;
   events: Array<{
@@ -272,6 +305,7 @@ export function serializeTripDetail(trip: {
         : null,
       driverPhoneNumber,
       riderPhoneNumber,
+      paymentMethod: trip.rideRequest?.paymentMethod ?? 'MOBILE_MONEY',
       actualFare: toAmount(trip.actualFare),
       currency: trip.currency,
       pickupLatitude,
@@ -298,10 +332,26 @@ export function serializeTripLifecycle(trip: {
   status: string;
   actualFare: unknown;
   currency: string;
+  driverPayout?: number | null;
+  platformFee?: number | null;
+  commissionRate?: number | null;
+  cancellationPolicy?: {
+    actor: 'RIDER' | 'DRIVER';
+    level: 'CLEAR' | 'REVIEW' | 'FEE_RECOMMENDED' | 'DRIVER_WARNING';
+    suggestedFeeAmount: number;
+    driverCompensationAmount: number;
+    currency: string;
+    recentCancellationCount: number;
+    driverReliabilityImpact?: 'NONE' | 'WATCH' | 'AT_RISK' | 'SUPPORT_REVIEW';
+    temporaryPauseMinutes?: number;
+    supportTicketId?: string | null;
+    message: string;
+  } | null;
   pickupAddress?: string;
   destinationAddress?: string;
   rider?: { user: { fullName: string } };
   vehicle?: { make: string; model: string };
+  rideRequest?: { paymentMethod?: string | null } | null;
   pickupCode?: string | null;
   createdAt?: Date;
   startedAt?: Date | null;
@@ -317,7 +367,12 @@ export function serializeTripLifecycle(trip: {
       riderName: trip.rider?.user.fullName,
       vehicleLabel: trip.vehicle ? formatVehicleLabel(trip.vehicle) : undefined,
       pickupCode: trip.pickupCode,
+      paymentMethod: trip.rideRequest?.paymentMethod ?? 'MOBILE_MONEY',
       actualFare: toAmount(trip.actualFare),
+      driverPayout: trip.driverPayout ?? null,
+      platformFee: trip.platformFee ?? null,
+      commissionRate: trip.commissionRate ?? null,
+      cancellationPolicy: trip.cancellationPolicy ?? null,
       currency: trip.currency,
       createdAt: trip.createdAt?.toISOString(),
       startedAt: trip.startedAt?.toISOString() ?? null,
@@ -335,9 +390,28 @@ export function serializeTripHistoryItem(trip: {
   currency: string;
   completedAt: Date | null;
   createdAt: Date;
-  events: Array<{ eventType: string; payload?: unknown }>;
+  events?: Array<{ eventType: string; payload?: unknown; createdAt?: Date }>;
   vehicle: { make: string; model: string };
+  rideRequest?: {
+    paymentMethod?: string | null;
+    paymentAttempts?: Array<{
+      id: string;
+      status: string;
+      provider: string;
+      channel: string;
+      amount: unknown;
+      currency: string;
+      transactionRef?: string | null;
+      updatedAt: Date;
+    }>;
+  } | null;
 }, options: { viewerRole?: string | null } = {}) {
+  const events = trip.events ?? [];
+  const latestPaymentAttempt = trip.rideRequest?.paymentAttempts?.[0] ?? null;
+  const cashReceipt = latestPaymentAttempt
+    ? null
+    : resolveCashPaymentReceipt(events);
+
   return {
     id: trip.id,
     pickupAddress: trip.pickupAddress,
@@ -346,9 +420,22 @@ export function serializeTripHistoryItem(trip: {
     amount: toAmount(trip.actualFare),
     currency: trip.currency,
     vehicleLabel: formatVehicleLabel(trip.vehicle),
+    paymentMethod: trip.rideRequest?.paymentMethod ?? 'MOBILE_MONEY',
     pickupCode: shouldExposePickupCode(trip.status, options.viewerRole)
-      ? extractPickupCode(trip.events)
+      ? extractPickupCode(events)
       : null,
+    receipt: latestPaymentAttempt
+      ? {
+          paymentAttemptId: latestPaymentAttempt.id,
+          status: latestPaymentAttempt.status,
+          provider: latestPaymentAttempt.provider,
+          channel: latestPaymentAttempt.channel,
+          amount: toAmount(latestPaymentAttempt.amount),
+          currency: latestPaymentAttempt.currency,
+          transactionRef: latestPaymentAttempt.transactionRef ?? null,
+          updatedAt: latestPaymentAttempt.updatedAt.toISOString(),
+        }
+      : cashReceipt,
     completedAt: trip.completedAt?.toISOString() ?? null,
     createdAt: trip.createdAt.toISOString(),
   };

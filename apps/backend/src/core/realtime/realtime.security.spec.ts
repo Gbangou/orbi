@@ -141,6 +141,42 @@ describe('canReceiveRealtimeEvent — DRIVER isolation (OWASP API1 BOLA)', () =>
     ).toBe(true);
   });
 
+  it('accepts lowercase mobile driver roles for WebSocket subscriptions', () => {
+    expect(
+      canReceiveRealtimeEvent(
+        makeEvent({
+          channel: 'ride-request',
+          type: 'ride-request.created',
+          riderId: 'rider-1',
+        }),
+        makeFilter({ role: 'driver', driverId: 'driver-1', riderId: null }),
+      ),
+    ).toBe(true);
+  });
+
+  it('accepts lowercase mobile rider roles without widening rider scope', () => {
+    expect(
+      canReceiveRealtimeEvent(
+        makeEvent({
+          channel: 'ride-request',
+          type: 'ride-request.created',
+          riderId: 'rider-1',
+        }),
+        makeFilter({ role: 'rider', riderId: 'rider-1' }),
+      ),
+    ).toBe(true);
+    expect(
+      canReceiveRealtimeEvent(
+        makeEvent({
+          channel: 'ride-request',
+          type: 'ride-request.created',
+          riderId: 'rider-2',
+        }),
+        makeFilter({ role: 'rider', riderId: 'rider-1' }),
+      ),
+    ).toBe(false);
+  });
+
   it('blocks a driver from receiving admin-channel events', () => {
     expect(
       canReceiveRealtimeEvent(

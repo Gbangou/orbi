@@ -116,6 +116,16 @@ export class DriversController {
     return this.driversService.getOffers(auth);
   }
 
+  @Get('dispatch-readiness')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard, ProfileAccessGuard)
+  @Roles(UserRole.DRIVER, UserRole.ADMIN, UserRole.OPS)
+  @RequireProfile('driver')
+  dispatchReadiness(@CurrentAuth() auth: RequestAuthContext) {
+    return this.driversService.getDispatchReadiness(auth);
+  }
+
   @Post('offers/:rideRequestId/decline')
   @Version('1')
   @ApiBearerAuth('session-token')

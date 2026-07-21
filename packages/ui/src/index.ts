@@ -286,7 +286,7 @@ const realtimeLabelsByAudience: Record<
     "ride-request.created": "Votre demande est bien enregistree.",
     "ride-request.cancelled": "Votre demande a ete annulee.",
     "ride-request.reservation-assigned":
-      "Un chauffeur vient d etre orbie pour votre demande.",
+      "Un chauffeur vient d etre reserve pour votre demande.",
     "ride-request.reservation-released":
       "Le systeme cherche un nouveau chauffeur pour vous.",
     "ride-request.reservation-expired":

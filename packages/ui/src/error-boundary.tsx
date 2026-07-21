@@ -26,7 +26,7 @@ const defaultFallbackDetail =
   "L'incident a ete signale automatiquement. Reessayez dans un instant.";
 
 function shouldShowDebugDetails(enabled: boolean | undefined) {
-  return Boolean(enabled && typeof __DEV__ !== 'undefined' && __DEV__);
+  return Boolean(enabled);
 }
 
 export class ErrorBoundary extends React.Component<Props, State> {

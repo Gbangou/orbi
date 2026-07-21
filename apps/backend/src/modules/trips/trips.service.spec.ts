@@ -3,6 +3,7 @@ import { TripsService } from './trips.service';
 import { ACTIVE_TRIP_STATUSES } from './trips.constants';
 import { createHash } from 'crypto';
 import { parseStrictTripShareExpiry } from './trip-share-expiry';
+import { calculateDriverEconomics } from '../../common/economics/driver-commission';
 
 describe('TripsService', () => {
   function buildFreshDriverRouteEvent(overrides: Record<string, unknown> = {}) {
@@ -33,7 +34,10 @@ describe('TripsService', () => {
         findUnique: jest.fn().mockResolvedValue(null),
       },
       supportTicket: {
-        create: jest.fn(),
+        create: jest.fn().mockResolvedValue({
+          id: 'support-ticket-1',
+          priority: 2,
+        }),
       },
       rideRequest: {
         findUnique: jest.fn(),
@@ -198,7 +202,7 @@ describe('TripsService', () => {
     expect(result.recentTrips[0]).toEqual(
       expect.objectContaining({
         counterpartyName: 'Awa Rider',
-        amount: Math.round(3000 * 0.82),
+        amount: calculateDriverEconomics(3000).driverPayout,
       }),
     );
     expect(result.stats.completedTrips).toBe(8);
@@ -440,6 +444,7 @@ describe('TripsService', () => {
           role: 'DRIVER',
           driverProfile: {
             id: 'driver-1',
+            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10),
           },
         },
       } as never,
@@ -1682,6 +1687,7 @@ describe('TripsService', () => {
           role: 'DRIVER',
           driverProfile: {
             id: 'driver-1',
+            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10),
           },
         },
       } as never,
@@ -2197,6 +2203,9 @@ describe('TripsService', () => {
       actualFare: 2200,
       currency: 'XOF',
       events: [buildFreshDriverRouteEvent()],
+      rideRequest: {
+        paymentMethod: 'MOBILE_MONEY',
+      },
     });
     prisma.trip.update.mockResolvedValue({
       id: 'trip-1',
@@ -2216,6 +2225,7 @@ describe('TripsService', () => {
           role: 'DRIVER',
           driverProfile: {
             id: 'driver-1',
+            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10),
           },
         },
       } as never,
@@ -2253,6 +2263,80 @@ describe('TripsService', () => {
       },
     });
     expect(result.trip.status).toBe('COMPLETED');
+    expect(result.trip.driverPayout).toBe(1980);
+    expect(result.trip.platformFee).toBe(220);
+    expect(result.trip.commissionRate).toBe(0.1);
+  });
+
+  it('records a cash receipt event when a cash trip is completed', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-cash-1',
+      rideRequestId: 'request-cash-1',
+      driverId: 'driver-1',
+      riderId: 'rider-1',
+      status: 'IN_PROGRESS',
+      startedAt: new Date('2026-04-17T09:00:00.000Z'),
+      completedAt: null,
+      actualFare: 1500,
+      currency: 'XOF',
+      events: [buildFreshDriverRouteEvent()],
+      rider: { userId: 'user-rider-1' },
+      driver: { userId: 'user-driver-1' },
+      rideRequest: {
+        paymentMethod: 'CASH',
+      },
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-cash-1',
+      rideRequestId: 'request-cash-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'COMPLETED',
+      startedAt: new Date('2026-04-17T09:00:00.000Z'),
+      completedAt: new Date('2026-04-17T09:30:00.000Z'),
+      actualFare: 1500,
+      currency: 'XOF',
+    });
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.rideRequest.update.mockResolvedValue(undefined);
+
+    const result = await service.updateStatus(
+      {
+        user: {
+          role: 'DRIVER',
+          driverProfile: {
+            id: 'driver-1',
+            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10),
+          },
+        },
+      } as never,
+      'trip-cash-1',
+      'COMPLETED',
+    );
+
+    expect(prisma.trip.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'trip-cash-1' },
+        data: expect.objectContaining({
+          events: {
+            create: expect.objectContaining({
+              eventType: 'CASH_PAYMENT_CONFIRMED',
+              payload: expect.objectContaining({
+                amount: 1500,
+                currency: 'XOF',
+                collectedByDriverId: 'driver-1',
+                confirmedByRole: 'DRIVER',
+              }),
+            }),
+          },
+        }),
+      }),
+    );
+    expect(result.trip.status).toBe('COMPLETED');
+    expect(result.trip.driverPayout).toBe(1350);
+    expect(result.trip.platformFee).toBe(150);
   });
 
   it('blocks driver trip completion when route monitoring is critical', async () => {
@@ -2388,18 +2472,204 @@ describe('TripsService', () => {
       where: { id: 'request-3' },
       data: { status: 'CANCELLED' },
     });
-    expect(realtimeService.publish).toHaveBeenCalledWith({
-      channel: 'trip',
-      type: 'trip.updated',
-      entityId: 'trip-3',
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'trip',
+        type: 'trip.updated',
+        entityId: 'trip-3',
+        riderId: 'rider-1',
+        driverId: 'driver-1',
+        actorRole: 'RIDER',
+        payload: expect.objectContaining({
+          status: 'CANCELLED',
+          cancellationPolicy: expect.objectContaining({
+            level: 'FEE_RECOMMENDED',
+            suggestedFeeAmount: 200,
+          }),
+        }),
+      }),
+    );
+    expect(result.trip.status).toBe('CANCELLED');
+  });
+
+  it('opens a support review with a rounded fee suggestion when rider cancels after driver is mobilized', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.count.mockResolvedValue(0);
+    prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-cancel-fee-1' });
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-3',
+      rideRequestId: 'request-3',
       riderId: 'rider-1',
       driverId: 'driver-1',
-      actorRole: 'RIDER',
-      payload: {
-        status: 'CANCELLED',
+      status: 'DRIVER_ARRIVING',
+      startedAt: null,
+      completedAt: null,
+      actualFare: 1800,
+      currency: 'XOF',
+      rider: {
+        userId: 'user-rider-1',
+      },
+      driver: {
+        userId: 'user-driver-1',
+      },
+      events: [],
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-3',
+      rideRequestId: 'request-3',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'CANCELLED',
+      startedAt: null,
+      completedAt: null,
+      actualFare: 1800,
+      currency: 'XOF',
+    });
+    prisma.rideRequest.update.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+
+    const result = await service.updateStatus(
+      {
+        user: {
+          id: 'user-rider-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      'trip-3',
+      'CANCELLED',
+      'Changement de plan',
+    );
+
+    expect(prisma.supportTicket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-rider-1',
+        subject: 'Revue frais annulation course trip-3',
+        priority: 2,
+      }),
+      select: {
+        id: true,
       },
     });
-    expect(result.trip.status).toBe('CANCELLED');
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          status: 'CANCELLED',
+          cancellationPolicy: expect.objectContaining({
+            level: 'FEE_RECOMMENDED',
+            suggestedFeeAmount: 300,
+            driverCompensationAmount: 240,
+            supportTicketId: 'ticket-cancel-fee-1',
+          }),
+        }),
+      }),
+    );
+    expect(result.trip.cancellationPolicy).toEqual(
+      expect.objectContaining({
+        level: 'FEE_RECOMMENDED',
+        suggestedFeeAmount: 300,
+        driverCompensationAmount: 240,
+        supportTicketId: 'ticket-cancel-fee-1',
+      }),
+    );
+  });
+
+  it('opens a support review when driver repeatedly cancels accepted trips', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.count.mockResolvedValue(2);
+    prisma.supportTicket.create.mockResolvedValue({ id: 'ticket-driver-cancel-1' });
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-driver-cancel-1',
+      rideRequestId: 'request-driver-cancel-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'MATCHED',
+      startedAt: null,
+      completedAt: null,
+      actualFare: 1800,
+      currency: 'XOF',
+      rider: {
+        userId: 'user-rider-1',
+      },
+      driver: {
+        userId: 'user-driver-1',
+      },
+      events: [],
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-driver-cancel-1',
+      rideRequestId: 'request-driver-cancel-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'CANCELLED',
+      startedAt: null,
+      completedAt: null,
+      actualFare: 1800,
+      currency: 'XOF',
+    });
+    prisma.rideRequest.update.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+
+    const result = await service.updateStatus(
+      {
+        user: {
+          id: 'user-driver-1',
+          role: 'DRIVER',
+          driverProfile: {
+            id: 'driver-1',
+          },
+        },
+      } as never,
+      'trip-driver-cancel-1',
+      'CANCELLED',
+      'Erreur d acceptation',
+    );
+
+    expect(prisma.supportTicket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-driver-1',
+        subject: 'Revue annulations chauffeur trip-driver-cancel-1',
+        priority: 2,
+      }),
+      select: {
+        id: true,
+      },
+    });
+    expect(prisma.driverProfile.update).toHaveBeenCalledWith({
+      where: {
+        id: 'driver-1',
+      },
+      data: {
+        status: 'OFFLINE',
+      },
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          status: 'CANCELLED',
+          cancellationPolicy: expect.objectContaining({
+            actor: 'DRIVER',
+            level: 'REVIEW',
+            driverReliabilityImpact: 'SUPPORT_REVIEW',
+            temporaryPauseMinutes: 30,
+            supportTicketId: 'ticket-driver-cancel-1',
+          }),
+        }),
+      }),
+    );
+    expect(result.trip.cancellationPolicy).toEqual(
+      expect.objectContaining({
+        actor: 'DRIVER',
+        level: 'REVIEW',
+        driverReliabilityImpact: 'SUPPORT_REVIEW',
+        temporaryPauseMinutes: 30,
+        supportTicketId: 'ticket-driver-cancel-1',
+      }),
+    );
   });
 
   it('publishes a trip update and mirrors ride-request status when the driver arrives', async () => {
@@ -2630,6 +2900,79 @@ describe('TripsService', () => {
           }),
         }),
       );
+    });
+
+    it('ouvre une revue qualite support pour une note faible', async () => {
+      const { prisma, realtimeService, service } = createService();
+      const createdAt = new Date('2026-05-20T14:00:00.000Z');
+
+      prisma.trip.findUnique.mockResolvedValue(buildCompletedTrip());
+      prisma.rating.findFirst.mockResolvedValue(null);
+      prisma.rating.create.mockResolvedValue({
+        id: 'rating-low-1',
+        tripId: 'trip-rate-1',
+        riderId: 'rider-1',
+        driverId: 'driver-profile-1',
+        score: 2,
+        comment: 'Chauffeur peu courtois.',
+        createdAt,
+      });
+      prisma.rating.aggregate.mockResolvedValue({
+        _avg: { score: 3.2 },
+        _count: { score: 9 },
+      });
+      prisma.driverProfile.update.mockResolvedValue(undefined);
+      prisma.supportTicket.create.mockResolvedValue({
+        id: 'ticket-quality-1',
+        priority: 2,
+      });
+
+      const result = await service.rateTrip(buildRiderAuth(), 'trip-rate-1', {
+        score: 2,
+        comment: 'Chauffeur peu courtois.',
+      });
+
+      expect(prisma.supportTicket.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'user-rider-1',
+          subject: 'Revue qualite course trip-rate-1',
+          description: expect.stringContaining('Score: 2/5'),
+          priority: 2,
+        }),
+        select: {
+          id: true,
+          priority: true,
+        },
+      });
+      expect(prisma.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: 'TRIP_LOW_RATING_QUALITY_REVIEW_OPENED',
+            entityId: 'trip-rate-1',
+            metadata: expect.objectContaining({
+              supportTicketId: 'ticket-quality-1',
+              score: 2,
+            }),
+          }),
+        }),
+      );
+      expect(realtimeService.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          channel: 'admin',
+          type: 'support-ticket.updated',
+          entityId: 'ticket-quality-1',
+          payload: expect.objectContaining({
+            category: 'quality_review',
+            score: 2,
+          }),
+        }),
+      );
+      expect(result.qualityReview).toEqual({
+        ticketId: 'ticket-quality-1',
+        priority: 2,
+        message:
+          'Votre note a ouvert une revue qualite. Le support peut verifier ce trajet.',
+      });
     });
 
     it('ne met pas à jour driverProfile.averageRating quand laggrégat retourne null', async () => {

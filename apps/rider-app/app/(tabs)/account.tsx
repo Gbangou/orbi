@@ -55,6 +55,20 @@ import {
   normalizeRiderProfileResponse,
 } from '../../lib/rider-profile-normalizer';
 import { normalizeRiderTripsResponse } from '../../lib/rider-trips-normalizer';
+import { filterRiderVisibleSupportTickets } from '../../lib/rider-support-tickets';
+
+function createTimeoutSignal(timeoutMs: number): {
+  signal: AbortSignal;
+  clear: () => void;
+} {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  return {
+    signal: controller.signal,
+    clear: () => clearTimeout(timeout),
+  };
+}
 
 function ForwardGlyph() {
   const theme = useOrbiTheme();
@@ -238,7 +252,11 @@ export default function AccountScreen() {
       const normalizedHistory = normalizeRiderTripsResponse(historyResponse);
       setWalletBalance(walletResp);
       setProfile(normalizedProfile);
-      setTickets(Array.isArray(ticketsResponse?.tickets) ? ticketsResponse.tickets : []);
+      setTickets(
+        filterRiderVisibleSupportTickets(
+          Array.isArray(ticketsResponse?.tickets) ? ticketsResponse.tickets : [],
+        ),
+      );
       setTrustedContactForm({
         phoneNumber: normalizedProfile.profile.trustedContact.phoneNumber ?? '',
         shareMode:
@@ -364,6 +382,7 @@ export default function AccountScreen() {
       return;
     }
     setIsGeocodingPlace(true);
+    const timeout = createTimeoutSignal(8000);
     try {
       const params = new URLSearchParams({
         q: `${address}, Burkina Faso`,
@@ -374,7 +393,10 @@ export default function AccountScreen() {
       });
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?${params.toString()}`,
-        { headers: { 'Accept-Language': 'fr', 'User-Agent': 'OrbiApp/1.0' }, signal: AbortSignal.timeout(8000) },
+        {
+          headers: { 'Accept-Language': 'fr', 'User-Agent': 'OrbiApp/1.0' },
+          signal: timeout.signal,
+        },
       );
       const data: Array<{ lat: string; lon: string; display_name: string }> = await response.json();
       if (!data.length) {
@@ -392,6 +414,7 @@ export default function AccountScreen() {
     } catch {
       setStatus('Localisation impossible. Vérifiez votre connexion internet.');
     } finally {
+      timeout.clear();
       setIsGeocodingPlace(false);
     }
   }

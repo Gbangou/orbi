@@ -125,7 +125,7 @@ describe('driver operational signal helpers', () => {
     );
   });
 
-  it('blocks completion when route detail is unavailable', () => {
+  it('keeps completion server-gated when route detail is unavailable locally', () => {
     expect(
       buildDriverRouteSafetyBrief({
         now: Date.parse('2026-04-19T08:15:00.000Z'),
@@ -133,16 +133,16 @@ describe('driver operational signal helpers', () => {
       }),
     ).toEqual(
       expect.objectContaining({
-        tone: 'rose',
-        blocksCompletion: true,
+        tone: 'amber',
+        blocksCompletion: false,
         title: 'Signal route indisponible',
         actionLabel:
-          'Actualisez le direct, gardez le telephone ouvert et contactez le support si le signal ne revient pas.',
+          'Gardez le telephone ouvert; Orbi verifiera le dernier signal au moment de finaliser.',
       }),
     );
   });
 
-  it('blocks completion while the first driver GPS signal is still missing', () => {
+  it('warns while the first driver GPS signal is still missing without trapping the driver locally', () => {
     expect(
       buildDriverRouteSafetyBrief({
         now: Date.parse('2026-04-19T08:15:00.000Z'),
@@ -157,11 +157,11 @@ describe('driver operational signal helpers', () => {
       }),
     ).toEqual(
       expect.objectContaining({
-        tone: 'rose',
-        blocksCompletion: true,
+        tone: 'amber',
+        blocksCompletion: false,
         title: 'Premier signal GPS attendu',
         actionLabel:
-          'Restez dans l app, activez la localisation et attendez un signal avant finalisation.',
+          'Gardez la localisation active; Orbi verifiera le signal recent avant de valider la fin.',
       }),
     );
   });

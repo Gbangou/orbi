@@ -35,6 +35,23 @@ export function formatDriverEarningsRatioPercent(value: unknown, fallback = '--'
     : fallback;
 }
 
+function formatDriverPayoutRateLabel(settlement: DriverEarningsResponse['settlement']) {
+  const min = toFiniteEarningsNumber(settlement.payoutRateMin);
+  const max = toFiniteEarningsNumber(settlement.payoutRateMax);
+
+  if (
+    min !== null &&
+    max !== null &&
+    min >= 0 &&
+    max >= 0 &&
+    Math.round(min * 100) !== Math.round(max * 100)
+  ) {
+    return `${formatDriverEarningsRatioPercent(min, 'ND%')}-${formatDriverEarningsRatioPercent(max, 'ND%')} chauffeur`;
+  }
+
+  return `${formatDriverEarningsRatioPercent(settlement.payoutRate, 'ND%')} chauffeur`;
+}
+
 export function buildDriverEarningsDeltaLabel(previousToday: unknown, nextToday: unknown) {
   const previous = toFiniteEarningsNumber(previousToday);
   const next = toFiniteEarningsNumber(nextToday);
@@ -131,9 +148,13 @@ export function buildDriverEarningsTrustSummary(
     earnings.summary.currency !== settlement.currency ||
     settlement.state === 'REVIEW_REQUIRED' ||
     settlement.anomalies.length > 0;
+  const compensationWeek =
+    toFiniteEarningsNumber(
+      earnings.adjustments?.cancellationCompensationWeek,
+    ) ?? 0;
 
   return {
-    payoutRateLabel: `${formatDriverEarningsRatioPercent(settlement.payoutRate, 'ND%')} chauffeur`,
+    payoutRateLabel: formatDriverPayoutRateLabel(settlement),
     recentNetPayoutLabel: formatDriverEarningsAmount(settlement.recentNetPayout),
     estimatedPlatformFeeLabel: formatDriverEarningsAmount(
       settlement.recentPlatformFee,
@@ -146,6 +167,8 @@ export function buildDriverEarningsTrustSummary(
     settlementTone: hasAnomaly ? ('amber' as const) : ('sky' as const),
     note: hasAnomaly
       ? 'Controle requis: une valeur finance semble incoherente ou hors devise attendue.'
+      : compensationWeek > 0
+        ? `Les revenus incluent ${formatDriverEarningsAmount(compensationWeek)} d indemnites annulation validees par operations cette semaine.`
       : earnings.recentTrips.length > 0
         ? 'Les montants affiches sont des gains chauffeur nets issus des courses cloturees.'
         : 'Aucun payout recent a rapprocher pour le moment.',

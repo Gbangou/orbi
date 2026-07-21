@@ -81,7 +81,7 @@ describe('driver action safety helpers', () => {
       }),
     ).toEqual({
       ok: false,
-      message: 'Finalisation bloquee par Ride Check. Actualisez le direct ou contactez le support.',
+      message: 'Impossible de terminer maintenant: signal GPS incoherent. Actualisez le direct ou contactez le support.',
     });
   });
 });

@@ -63,6 +63,7 @@ describe('AdminController', () => {
     const adminSupportService = {
       supportTickets: jest.fn(),
       updateSupportTicket: jest.fn(),
+      approveCancellationCompensation: jest.fn(),
     };
     const adminUsersService = {
       listDrivers: jest.fn(),
@@ -158,6 +159,22 @@ describe('AdminController', () => {
       payload,
       auth,
     );
+  });
+
+  it('delegates cancellation compensation approval with the current auth context', async () => {
+    const { adminSupportService, controller } = createController();
+    const auth = {
+      user: { id: 'ops-1', role: 'OPS' },
+    };
+
+    await controller.approveCancellationCompensation(
+      'ticket-1',
+      auth as never,
+    );
+
+    expect(
+      adminSupportService.approveCancellationCompensation,
+    ).toHaveBeenCalledWith('ticket-1', auth);
   });
 
   it('delegates driver onboarding queue reads with auth for role-aware privacy', async () => {
@@ -292,6 +309,7 @@ describe('AdminController', () => {
       'replayPaymentWebhookEvent',
       'verifyPaymentAttemptWithProvider',
       'refundPaymentAttempt',
+      'approveCancellationCompensation',
       'driverPayoutSettlementCsv',
       'driverPayoutSettlementPdf',
     ];

@@ -32,6 +32,8 @@ Le moteur pricing applique maintenant:
 - un ajustement par profil de quartier,
 - un ajustement trafic, meteo, etat de route et disponibilite flotte,
 - un soutien d accessibilite sur certaines courses moto peri-urbaines,
+- un arrondi CFA commercial vers le haut, priorisant les paliers de 100 XOF
+  quand l ecart reste raisonnable et les paliers de 50 XOF sinon,
 - une fenetre de prix et des raisons explicables.
 
 La distance d approche chauffeur vers le client est volontairement traitee comme
@@ -89,6 +91,30 @@ Les apps clientes peuvent envoyer explicitement `city` et `districtProfile` au m
 - Proteger les trajets peu rentables via un minimum fare.
 - Garder des ajustements positifs dans les zones a contrainte operationnelle.
 - Garder la commission lisible et stable.
+- Regler la commission par course sur des paliers de 10 XOF, sans depasser le
+  taux de commission annonce. Cela evite des montants comme 261 XOF sans
+  sacrifier trop de marge projet. Les paliers 50/100 XOF doivent etre geres au
+  moment des reglements groupes, avec reliquat conserve dans le wallet.
+- Proteger le temps des chauffeurs contre les annulations rider repetees:
+  la premiere annulation de demande reste claire et gratuite, la deuxieme avertit
+  doucement, la troisieme signale un risque de revue, et la quatrieme sur 24h
+  ouvre un ticket support. Orbi ne facture pas automatiquement une micro-penalite
+  difficile a gerer en cash; les frais eventuels doivent rester explicites,
+  audites et traites par support quand un chauffeur a deja ete mobilise.
+- Pour les courses deja matchees, Orbi suggere des frais ronds uniquement en
+  revue support: 200 XOF apres match, 300 XOF quand le chauffeur arrive, avec
+  +100 XOF si le rider multiplie les annulations recentes, cappe a 500 XOF.
+  La recommandation reserve 80% de ce frais au chauffeur et 20% au projet pour
+  couvrir support, paiement et risque operationnel. Aucun montant comme 264 XOF
+  ne doit apparaitre dans cette logique.
+- La symetrie est obligatoire: un chauffeur qui annule apres acceptation est
+  aussi suivi sur 24h. La premiere annulation est enregistree, la deuxieme met
+  le compte en risque operationnel, la troisieme ouvre une revue support avec
+  pause operationnelle de 30 minutes avant nouvelles offres: le profil repasse
+  hors ligne et le retour online est bloque dans cette fenetre. Cette regle
+  protege le passager contre les annulations opportunistes sans punir un
+  chauffeur pour une vraie urgence terrain; le support peut ensuite documenter
+  le contexte et lever le doute operationnel.
 
 ### Operateur
 
@@ -98,6 +124,8 @@ Les apps clientes peuvent envoyer explicitement `city` et `districtProfile` au m
 
 ## Sources de contexte utilisees
 
+- Benchmark local Okalm, LetsGo et taxis/app Burkina:
+  `docs/competitive-pricing-burkina-2026.md`
 - Yango met en avant prix visible d avance et tarification locale par ville:
   https://yango.com/support/taxi-all-app-yango/about.html
 - Exemple de fare detaille dans une ville ouest-africaine:

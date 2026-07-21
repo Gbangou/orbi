@@ -5,6 +5,7 @@ import { OrbiButton, OrbiSurface, useOrbiTheme, VehicleIllustration } from "@orb
 import type { DriverOffer } from "@orbi/api";
 import {
   buildDriverOfferConfidenceExplainer,
+  buildDriverOfferDecisionSummary,
   buildDriverOfferDetailLines,
   formatDriverOfferDistance,
   formatDriverOfferFare,
@@ -126,6 +127,7 @@ export const OfferCard = memo(function OfferCard({
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const initials = buildInitials(offer.riderName);
   const confidence = buildDriverOfferConfidenceExplainer(offer);
+  const decision = buildDriverOfferDecisionSummary(offer);
   const detailLines = buildDriverOfferDetailLines(offer);
   const isDisabled = isSubmitting || hasActiveTrip;
   const driverPayout = toFiniteOfferNumber(offer.driverPayout);
@@ -232,6 +234,24 @@ export const OfferCard = memo(function OfferCard({
           </>
         ) : null}
       </OrbiSurface>
+
+      <View
+        style={[
+          styles.decisionPanel,
+          decision.tone === "amber"
+            ? styles.decisionPanelAmber
+            : decision.tone === "rose"
+              ? styles.decisionPanelRose
+              : styles.decisionPanelTeal,
+        ]}
+      >
+        <Text style={styles.decisionTitle} numberOfLines={2}>
+          {decision.title}
+        </Text>
+        <Text style={styles.decisionSubtitle} numberOfLines={2}>
+          {decision.subtitle}
+        </Text>
+      </View>
 
       {/* Reservation expiry */}
       {offer.reservationExpiresAt ? (
@@ -344,6 +364,37 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   sep: { width: 1, backgroundColor: theme.colors.border, alignSelf: "stretch" },
   expiry: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: theme.colors.amber },
+  decisionPanel: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 3,
+  },
+  decisionPanelTeal: {
+    backgroundColor: "rgba(0,201,167,0.08)",
+    borderColor: "rgba(0,201,167,0.22)",
+  },
+  decisionPanelAmber: {
+    backgroundColor: "rgba(255,149,0,0.10)",
+    borderColor: "rgba(255,149,0,0.28)",
+  },
+  decisionPanelRose: {
+    backgroundColor: "rgba(255,59,48,0.08)",
+    borderColor: "rgba(255,59,48,0.22)",
+  },
+  decisionTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.text,
+  },
+  decisionSubtitle: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontFamily: "Inter_400Regular",
+    color: theme.colors.textSoft,
+  },
   actions: { flexDirection: "row", gap: 10 },
   acceptBtn: {
     flex: 1,

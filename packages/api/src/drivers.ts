@@ -108,6 +108,38 @@ export type DriverAvailabilityResponse = {
     driverId: string;
     status: "ONLINE" | "OFFLINE";
     fatigue: DriverFatigueStatus;
+    reservedOfferCount?: number;
+  };
+};
+
+export type DriverDispatchReadinessResponse = {
+  readiness: {
+    driverId: string;
+    canReceiveOffers: boolean;
+    status: string;
+    verificationStatus: string;
+    activeVehicleCount: number;
+    supportedVehicleTypes: Array<"MOTORCYCLE" | "CAR">;
+    supportedServiceTiers: ApiServiceTier[];
+    hasGpsPosition: boolean;
+    serviceRadiusKm: number | null;
+    activeTripId: string | null;
+    compatibleOpenRequestCount: number;
+    nearOpenRequestCount: number;
+    reservedOfferCount: number;
+    heldByOtherDriverCount: number;
+    blockers: Array<{
+      code:
+        | "OFFLINE"
+        | "SUSPENDED"
+        | "UNAPPROVED"
+        | "NO_ACTIVE_VEHICLE"
+        | "ACTIVE_TRIP"
+        | "GPS_MISSING"
+        | "FATIGUE_BLOCKED";
+      message: string;
+    }>;
+    checkedAt: string;
   };
 };
 
@@ -138,6 +170,8 @@ export type DriverEarningsResponse = {
     source: "COMPLETED_TRIPS";
     payoutRateBps: number;
     payoutRate: number;
+    payoutRateMin?: number;
+    payoutRateMax?: number;
     recentTripCount: number;
     recentGrossFare: number;
     recentNetPayout: number;
@@ -146,12 +180,28 @@ export type DriverEarningsResponse = {
     anomalies: string[];
     calculatedAt: string;
   };
+  adjustments?: {
+    currency: string;
+    cancellationCompensationToday: number;
+    cancellationCompensationWeek: number;
+    cancellationCompensationMonth: number;
+    recent: Array<{
+      id: string;
+      type: "CANCELLATION_COMPENSATION";
+      amount: number;
+      reference: string | null;
+      description: string | null;
+      createdAt: string;
+    }>;
+  };
   recentTrips: Array<{
     id: string;
     route: string;
     payout: number;
     grossFare: number;
     platformFee: number;
+    commissionRate?: number;
+    payoutRate?: number;
     status: string;
     completedAt: string | null;
   }>;
@@ -291,6 +341,12 @@ export async function fetchDriverEarnings(client: OrbiApiClient) {
 
 export async function fetchDriverOffers(client: OrbiApiClient) {
   return client.request<DriverOffer[]>(apiRoutes.drivers.offers);
+}
+
+export async function fetchDriverDispatchReadiness(client: OrbiApiClient) {
+  return client.request<DriverDispatchReadinessResponse>(
+    apiRoutes.drivers.dispatchReadiness,
+  );
 }
 
 export async function declineDriverOfferWithApi(

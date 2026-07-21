@@ -26,6 +26,27 @@ export interface HomeMapViewProps {
   onDriversUpdate?: (count: number) => void;
 }
 
+function FallbackMiniVehicleGlyph({ kind }: { kind: 'moto' | 'car' }) {
+  if (kind === 'moto') {
+    return (
+      <View style={fallbackMiniVehicleStyles.moto}>
+        <View style={[fallbackMiniVehicleStyles.motoWheel, fallbackMiniVehicleStyles.motoWheelFront]} />
+        <View style={fallbackMiniVehicleStyles.motoBody} />
+        <View style={[fallbackMiniVehicleStyles.motoWheel, fallbackMiniVehicleStyles.motoWheelRear]} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={fallbackMiniVehicleStyles.car}>
+      <View style={fallbackMiniVehicleStyles.carBody} />
+      <View style={fallbackMiniVehicleStyles.carCabin} />
+      <View style={[fallbackMiniVehicleStyles.carWheel, fallbackMiniVehicleStyles.carWheelLeft]} />
+      <View style={[fallbackMiniVehicleStyles.carWheel, fallbackMiniVehicleStyles.carWheelRight]} />
+    </View>
+  );
+}
+
 function buildHomeMapHtml(cfg: {
   riderLat: number | null;
   riderLng: number | null;
@@ -46,6 +67,7 @@ html,body,#map{width:100%;height:100%;background:#f4f4f0}
 @keyframes glowCar{0%,100%{filter:drop-shadow(0 2px 5px rgba(0,0,0,0.24))}50%{filter:drop-shadow(0 3px 10px rgba(0,0,0,0.38))}}
 .moto-svg{animation:glowMoto 2.2s ease-in-out infinite;display:block}
 .car-svg{animation:glowCar 2.6s ease-in-out infinite;display:block}
+.driver-bearing{display:block;transform:rotate(var(--bearing,0deg));transform-origin:center center}
 .rider-dot{animation:pulse 2.4s ease-in-out infinite}
 </style>
 </head>
@@ -79,8 +101,10 @@ var CAR_SVG='<svg class="car-svg" xmlns="http://www.w3.org/2000/svg" width="40" 
 
 var RIDER_SVG='<div class="rider-dot" style="width:22px;height:22px;border-radius:11px;background:#111111;border:3px solid #FFFFFF;box-shadow:0 2px 10px rgba(0,0,0,0.35)"></div>';
 
-function motoIcon(){return L.divIcon({html:MOTO_SVG,iconSize:[24,52],iconAnchor:[12,26],className:''})}
-function carIcon(){return L.divIcon({html:CAR_SVG,iconSize:[40,72],iconAnchor:[20,36],className:''})}
+function bearing(lat1,lng1,lat2,lng2){var y=Math.sin((lng2-lng1)*Math.PI/180)*Math.cos(lat2*Math.PI/180);var x=Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180)-Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos((lng2-lng1)*Math.PI/180);return((Math.atan2(y,x)*180/Math.PI)+360)%360}
+function driverBearing(d){return CFG.riderLat!==null&&CFG.riderLng!==null?bearing(d.latitude,d.longitude,CFG.riderLat,CFG.riderLng):0}
+function motoIcon(d){return L.divIcon({html:'<span class="driver-bearing" style="--bearing:'+driverBearing(d).toFixed(0)+'deg">'+MOTO_SVG+'</span>',iconSize:[24,52],iconAnchor:[12,26],className:''})}
+function carIcon(d){return L.divIcon({html:'<span class="driver-bearing" style="--bearing:'+driverBearing(d).toFixed(0)+'deg">'+CAR_SVG+'</span>',iconSize:[40,72],iconAnchor:[20,36],className:''})}
 function riderIcon(){return L.divIcon({html:RIDER_SVG,iconSize:[22,22],iconAnchor:[11,11],className:''})}
 
 function initMap(cfg){
@@ -92,12 +116,13 @@ function initMap(cfg){
     riderMarker=L.marker([cfg.riderLat,cfg.riderLng],{icon:riderIcon(),zIndexOffset:1000}).addTo(map);
   }
   cfg.drivers.forEach(function(d){
-    var icon=d.vehicleType==='MOTORCYCLE'||d.vehicleType==='MOTO'?motoIcon():carIcon();
+    var icon=d.vehicleType==='MOTORCYCLE'||d.vehicleType==='MOTO'?motoIcon(d):carIcon(d);
     driverMarkers[d.id]=L.marker([d.latitude,d.longitude],{icon:icon}).addTo(map);
   });
 }
 
 function updateRider(lat,lng){
+  CFG.riderLat=lat;CFG.riderLng=lng;
   if(!riderMarker){riderMarker=L.marker([lat,lng],{icon:riderIcon(),zIndexOffset:1000}).addTo(map)}
   else{riderMarker.setLatLng([lat,lng])}
   map.panTo([lat,lng],{animate:true,duration:0.6});
@@ -107,9 +132,9 @@ function updateDrivers(drivers){
   var seen={};
   drivers.forEach(function(d){
     seen[d.id]=true;
-    if(driverMarkers[d.id]){driverMarkers[d.id].setLatLng([d.latitude,d.longitude])}
+    if(driverMarkers[d.id]){driverMarkers[d.id].setLatLng([d.latitude,d.longitude]);driverMarkers[d.id].setIcon(d.vehicleType==='MOTORCYCLE'||d.vehicleType==='MOTO'?motoIcon(d):carIcon(d))}
     else{
-      var icon=d.vehicleType==='MOTORCYCLE'||d.vehicleType==='MOTO'?motoIcon():carIcon();
+      var icon=d.vehicleType==='MOTORCYCLE'||d.vehicleType==='MOTO'?motoIcon(d):carIcon(d);
       driverMarkers[d.id]=L.marker([d.latitude,d.longitude],{icon:icon}).addTo(map);
     }
   });
@@ -203,14 +228,21 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
             <View
               key={driver.id}
               style={[
-                styles.driverDot,
-                index % 2 === 0 ? styles.driverDotCar : styles.driverDotMoto,
+                styles.driverVehicleFallback,
                 {
                   left: `${24 + ((index * 17) % 52)}%`,
                   top: `${24 + ((index * 23) % 48)}%`,
                 },
               ]}
-            />
+            >
+              <FallbackMiniVehicleGlyph
+                kind={
+                  driver.vehicleType === 'MOTORCYCLE' || driver.vehicleType === 'MOTO'
+                    ? 'moto'
+                    : 'car'
+                }
+              />
+            </View>
           ))}
         </View>
         <View style={styles.fallbackPanel}>
@@ -324,19 +356,19 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
   },
-  driverDot: {
+  driverVehicleFallback: {
     position: 'absolute',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: '#ffffff',
-  },
-  driverDotCar: {
-    backgroundColor: '#f59e0b',
-  },
-  driverDotMoto: {
-    backgroundColor: theme.colors.teal,
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#071311',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
   },
   fallbackPanel: {
     position: 'absolute',
@@ -371,5 +403,67 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   webview: {
     flex: 1,
     backgroundColor: '#f4f4f0',
+  },
+});
+
+const fallbackMiniVehicleStyles = StyleSheet.create({
+  moto: {
+    width: 11,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  motoWheel: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#111827',
+  },
+  motoWheelFront: {
+    top: 0,
+  },
+  motoWheelRear: {
+    bottom: 0,
+  },
+  motoBody: {
+    width: 8,
+    height: 12,
+    borderRadius: 5,
+    backgroundColor: '#00B894',
+  },
+  car: {
+    width: 14,
+    height: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  carBody: {
+    position: 'absolute',
+    width: 13,
+    height: 18,
+    borderRadius: 5,
+    backgroundColor: '#e8eef6',
+    borderWidth: 1,
+    borderColor: '#94a3b8',
+  },
+  carCabin: {
+    width: 9,
+    height: 6,
+    borderRadius: 2,
+    backgroundColor: '#405a74',
+  },
+  carWheel: {
+    position: 'absolute',
+    width: 3,
+    height: 12,
+    borderRadius: 2,
+    backgroundColor: '#111827',
+  },
+  carWheelLeft: {
+    left: 0,
+  },
+  carWheelRight: {
+    right: 0,
   },
 });

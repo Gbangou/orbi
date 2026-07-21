@@ -74,9 +74,16 @@ function drawFallbackLine(lat1,lng1,lat2,lng2){
   routeLine=L.polyline([[lat1,lng1],[lat2,lng2]],{color:'#818cf8',weight:2.5,opacity:.45,dashArray:'9 6'}).addTo(map);
 }
 
+function fetchWithTimeout(url,timeoutMs){
+  var controller=typeof AbortController!=='undefined'?new AbortController():null;
+  var timer=setTimeout(function(){if(controller)controller.abort()},timeoutMs);
+  var opts=controller?{signal:controller.signal}:{};
+  return fetch(url,opts).finally(function(){clearTimeout(timer)});
+}
+
 function fetchApproachRoute(dLat,dLng,pLat,pLng){
   var url='https://router.project-osrm.org/route/v1/driving/'+dLng+','+dLat+';'+pLng+','+pLat+'?geometries=geojson&overview=full';
-  fetch(url,{signal:AbortSignal.timeout(6000)})
+  fetchWithTimeout(url,6000)
     .then(function(r){return r.json()})
     .then(function(data){
       if(data.routes&&data.routes[0]&&data.routes[0].geometry&&data.routes[0].geometry.coordinates){

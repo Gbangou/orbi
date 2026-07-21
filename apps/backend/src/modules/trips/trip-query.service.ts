@@ -9,6 +9,7 @@ import {
   DriverDocumentType,
   UserRole,
 } from '@prisma/client';
+import { roundXofForCashOperations } from '@orbi/domain';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { DocumentLinksService } from '../../common/document-links/document-links.service';
 import { calculateDriverEconomics } from '../../common/economics/driver-commission';
@@ -162,6 +163,14 @@ export class TripQueryService {
               driver: { include: { user: true } },
               events: { orderBy: { createdAt: 'asc' } },
               vehicle: true,
+              rideRequest: {
+                include: {
+                  paymentAttempts: {
+                    orderBy: { updatedAt: 'desc' },
+                    take: 1,
+                  },
+                },
+              },
             },
           }),
           this.prisma.trip.count({
@@ -177,14 +186,17 @@ export class TripQueryService {
           activeTrips,
           completedTrips,
           cancelledTrips,
-          totalAmount: trips.reduce((sum, trip) => sum + toAmount(trip.actualFare), 0),
+          totalAmount: trips.reduce(
+            (sum, trip) => sum + this.toCashAmount(trip.actualFare),
+            0,
+          ),
           currency: 'XOF',
         },
         pendingRequests: pendingRequests.map((request) => ({
           id: request.id,
           pickupAddress: request.pickupAddress,
           destinationAddress: request.destinationAddress,
-          estimatedFare: toAmount(request.estimatedFare),
+          estimatedFare: this.toCashAmount(request.estimatedFare),
           status: request.status,
           createdAt: request.createdAt.toISOString(),
         })),
@@ -209,6 +221,14 @@ export class TripQueryService {
           rider: { include: { user: true } },
           events: { orderBy: { createdAt: 'asc' } },
           vehicle: true,
+          rideRequest: {
+            include: {
+              paymentAttempts: {
+                orderBy: { updatedAt: 'desc' },
+                take: 1,
+              },
+            },
+          },
         },
       }),
       this.prisma.trip.count({
@@ -238,6 +258,10 @@ export class TripQueryService {
       pendingRequests: [],
       recentTrips,
     };
+  }
+
+  private toCashAmount(value: unknown) {
+    return roundXofForCashOperations(toAmount(value)).amount;
   }
 
   private async findTripWithDetail(tripId: string) {

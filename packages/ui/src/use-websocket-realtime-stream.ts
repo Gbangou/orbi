@@ -30,7 +30,7 @@ export function useWebSocketRealtimeStream(
   wsBaseUrl: string | null,
   sessionToken: string | null,
   subscribePayload: {
-    role: 'rider' | 'driver';
+    role: 'rider' | 'driver' | 'RIDER' | 'DRIVER';
     actorId?: string | null;
     riderId?: string | null;
     driverId?: string | null;
@@ -46,6 +46,10 @@ export function useWebSocketRealtimeStream(
   const callbacksRef = useRef(options.callbacks);
   const eventTypesRef = useRef(options.eventTypes);
   const coalesceWindowMs = options.coalesceWindowMs ?? 350;
+  const subscribeRole = subscribePayload.role.toUpperCase();
+  const subscribeActorId = subscribePayload.actorId ?? null;
+  const subscribeRiderId = subscribePayload.riderId ?? null;
+  const subscribeDriverId = subscribePayload.driverId ?? null;
 
   const latestEventRef = useRef<string | null>(null);
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,7 +105,10 @@ export function useWebSocketRealtimeStream(
         // Envoi de la souscription
         ws.send(JSON.stringify({
           type: 'subscribe',
-          ...subscribePayload,
+          role: subscribeRole,
+          actorId: subscribeActorId,
+          riderId: subscribeRiderId,
+          driverId: subscribeDriverId,
         }));
 
         // Heartbeat toutes les 25s pour garder la connexion vivante
@@ -126,7 +133,7 @@ export function useWebSocketRealtimeStream(
         }
 
         if (data.type === 'event') {
-          const eventType = String(data['eventType'] ?? data['type'] ?? '');
+          const eventType = String(data['eventType'] ?? '');
           if (eventType && eventTypesRef.current.includes(eventType)) {
             scheduleUpdate(eventType);
           }
@@ -135,6 +142,11 @@ export function useWebSocketRealtimeStream(
 
         if (data.type === 'subscribed') {
           return; // OK
+        }
+
+        const directEventType = String(data.type ?? '');
+        if (eventTypesRef.current.includes(directEventType)) {
+          scheduleUpdate(directEventType);
         }
       };
 
@@ -180,5 +192,13 @@ export function useWebSocketRealtimeStream(
         activeWsRef.current = null;
       }
     };
-  }, [wsBaseUrl, sessionToken, coalesceWindowMs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    wsBaseUrl,
+    sessionToken,
+    coalesceWindowMs,
+    subscribeRole,
+    subscribeActorId,
+    subscribeRiderId,
+    subscribeDriverId,
+  ]);
 }

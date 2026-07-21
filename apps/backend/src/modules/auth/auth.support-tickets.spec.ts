@@ -13,6 +13,9 @@ function createService() {
       create: jest.fn(),
       findMany: jest.fn(),
     },
+    paymentAttempt: {
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
     auditLog: { create: jest.fn().mockResolvedValue(undefined) },
     user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
     userSession: {
@@ -71,6 +74,12 @@ describe('AuthService — support tickets', () => {
       expect(result.ticket.id).toBe('ticket-1');
       expect(result.ticket.status).toBe('OPEN');
       expect(result.ticket.createdAt).toBe(now.toISOString());
+      expect(prisma.paymentAttempt.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user-1' },
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
     });
 
     it("associe le ticket à userId de l'utilisateur authentifié", async () => {
@@ -120,7 +129,75 @@ describe('AuthService — support tickets', () => {
       );
     });
 
-    it('affecte priorité 1 (normale) aux catégories non-sécurité', async () => {
+    it('affecte priorité 2 aux tickets de paiement', async () => {
+      const { prisma, service, auth } = createService();
+      prisma.supportTicket.create.mockResolvedValue({
+        id: 'ticket-payment',
+        subject: 'Paiement a verifier',
+        description: 'Mon paiement est bloque apres annulation.',
+        status: 'OPEN',
+        priority: 2,
+        createdAt: new Date(),
+      });
+
+      await service.createSupportTicket(auth as never, {
+        subject: 'Paiement a verifier',
+        description: 'Mon paiement est bloque apres annulation.',
+        category: 'payment',
+      });
+
+      expect(prisma.supportTicket.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ priority: 2 }),
+        }),
+      );
+    });
+
+    it('enrichit les tickets paiement avec la tentative paiement recente', async () => {
+      const { prisma, service, auth } = createService();
+      prisma.paymentAttempt.findFirst.mockResolvedValue({
+        id: 'payment-1',
+        status: 'SUCCEEDED',
+        amount: 1500,
+        currency: 'XOF',
+        provider: 'PAWAPAY',
+        rideRequestId: 'request-1',
+        transactionRef: 'orbi_payment_1',
+        createdAt: new Date(),
+      });
+      prisma.supportTicket.create.mockResolvedValue({
+        id: 'ticket-payment',
+        subject: 'Remboursement a suivre',
+        description:
+          'Le passager demande un suivi remboursement.\nPaymentAttempt: payment-1',
+        status: 'OPEN',
+        priority: 2,
+        createdAt: new Date(),
+      });
+
+      await service.createSupportTicket(auth as never, {
+        subject: 'Remboursement a suivre',
+        description: 'Le passager demande un suivi remboursement.',
+        category: 'payment',
+      });
+
+      expect(prisma.supportTicket.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            description: expect.stringContaining('PaymentAttempt: payment-1'),
+          }),
+        }),
+      );
+      expect(prisma.supportTicket.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            description: expect.stringContaining('PaymentAmount: 1500 XOF'),
+          }),
+        }),
+      );
+    });
+
+    it('affecte priorité 1 (normale) aux catégories sans argent ni sécurité', async () => {
       const { prisma, service, auth } = createService();
       prisma.supportTicket.create.mockResolvedValue({
         id: 'ticket-2',
@@ -177,7 +254,33 @@ describe('AuthService — support tickets', () => {
 
       expect(prisma.supportTicket.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { userId: 'user-1' },
+          where: {
+            userId: 'user-1',
+            NOT: {
+              subject: {
+                startsWith: 'Erreur mobile ',
+              },
+            },
+          },
+        }),
+      );
+    });
+
+    it('cache les tickets techniques mobiles dans la liste support utilisateur', async () => {
+      const { prisma, service, auth } = createService();
+      prisma.supportTicket.findMany.mockResolvedValue([]);
+
+      await service.getMySupportTickets(auth as never);
+
+      expect(prisma.supportTicket.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            NOT: {
+              subject: {
+                startsWith: 'Erreur mobile ',
+              },
+            },
+          }),
         }),
       );
     });

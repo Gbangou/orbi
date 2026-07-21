@@ -105,6 +105,22 @@ describe('serializeTripDetail — privacy guards', () => {
     expect(trip.riderPhoneNumber).toBe('+22670000001');
   });
 
+  it('exposes payment method on trip detail for field handoff', () => {
+    const { trip } = serializeTripDetail(
+      createBaseTrip({
+        rideRequest: {
+          paymentMethod: 'CASH',
+          pickupLatitude: 12.36,
+          pickupLongitude: -1.53,
+          destinationLatitude: 12.31,
+          destinationLongitude: -1.49,
+        },
+      }) as never,
+    );
+
+    expect(trip.paymentMethod).toBe('CASH');
+  });
+
   it('hides rider phone number on active trips when phone is not verified', () => {
     const { trip } = serializeTripDetail(
       createBaseTrip({
@@ -267,11 +283,15 @@ describe('serializeTripLifecycle', () => {
       rideRequestId: 'req-1',
       status: 'COMPLETED',
       actualFare: 1800,
+      driverPayout: 1620,
+      platformFee: 180,
+      commissionRate: 0.1,
       currency: 'XOF',
       pickupAddress: 'Universite Ki-Zerbo',
       destinationAddress: 'Ouaga 2000',
       rider: { user: { fullName: 'Awa Rider' } },
       vehicle: { make: 'Yamaha', model: 'Crypton' },
+      rideRequest: { paymentMethod: 'CASH' },
       pickupCode: null,
       createdAt: new Date('2026-05-01T08:55:00.000Z'),
       startedAt: null,
@@ -280,6 +300,10 @@ describe('serializeTripLifecycle', () => {
 
     expect(trip.id).toBe('trip-1');
     expect(trip.actualFare).toBe(1800);
+    expect(trip.driverPayout).toBe(1620);
+    expect(trip.platformFee).toBe(180);
+    expect(trip.commissionRate).toBe(0.1);
+    expect(trip.paymentMethod).toBe('CASH');
     expect(trip.vehicleLabel).toBe('Yamaha Crypton');
     expect(trip.createdAt).toBe('2026-05-01T08:55:00.000Z');
     expect(trip.startedAt).toBeNull();
@@ -346,8 +370,46 @@ describe('serializeTripHistoryItem', () => {
       createdAt: new Date(),
       events: [],
       vehicle: { make: 'Bajaj', model: 'Boxer' },
+      rideRequest: { paymentMethod: 'WALLET' },
     });
 
     expect(result.amount).toBe(2200);
+    expect(result.paymentMethod).toBe('WALLET');
+  });
+
+  it('builds a cash receipt from the cash confirmation event when no payment attempt exists', () => {
+    const result = serializeTripHistoryItem({
+      id: 'trip-cash-1',
+      pickupAddress: 'Rue de Pissy',
+      destinationAddress: 'Koulouba',
+      status: 'COMPLETED',
+      actualFare: 1500,
+      currency: 'XOF',
+      completedAt: new Date('2026-07-21T11:00:00.000Z'),
+      createdAt: new Date('2026-07-21T10:30:00.000Z'),
+      events: [
+        {
+          eventType: 'CASH_PAYMENT_CONFIRMED',
+          payload: {
+            amount: 1500,
+            currency: 'XOF',
+            confirmedAt: '2026-07-21T11:00:00.000Z',
+          },
+          createdAt: new Date('2026-07-21T11:00:00.000Z'),
+        },
+      ],
+      vehicle: { make: 'Yamaha', model: 'Crypton' },
+    });
+
+    expect(result.receipt).toEqual({
+      paymentAttemptId: 'cash:1784631600000',
+      status: 'SUCCEEDED',
+      provider: 'CASH',
+      channel: 'CASH',
+      amount: 1500,
+      currency: 'XOF',
+      transactionRef: null,
+      updatedAt: '2026-07-21T11:00:00.000Z',
+    });
   });
 });

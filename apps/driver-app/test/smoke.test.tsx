@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import type { ReactTestInstance } from 'react-test-renderer';
 import { router } from 'expo-router';
 import {
@@ -75,6 +75,7 @@ jest.mock('../lib/use-driver-realtime-stream', () => ({
   useDriverRealtimeStream: jest.fn(
     (
       _sessionToken: string | null,
+      _driverProfileId: string | null,
       onEvent: (eventType: string) => void,
       options?: {
         onHeartbeat?: () => void;
@@ -194,9 +195,11 @@ function buildDriverEarningsResponse(input: {
   const recentTrips = input.recentTrips ?? [];
   const recentNetPayout = recentTrips.reduce((sum, trip) => sum + trip.payout, 0);
   const recentGrossFare = recentTrips.reduce(
-    (sum, trip) => sum + (trip.grossFare ?? Math.round(trip.payout / 0.82)),
+    (sum, trip) => sum + (trip.grossFare ?? trip.payout),
     0,
   );
+  const payoutRate =
+    recentGrossFare > 0 ? Number((recentNetPayout / recentGrossFare).toFixed(4)) : 0;
 
   return {
     summary: {
@@ -210,8 +213,10 @@ function buildDriverEarningsResponse(input: {
     settlement: {
       currency: 'XOF',
       source: 'COMPLETED_TRIPS',
-      payoutRateBps: 8200,
-      payoutRate: 0.82,
+      payoutRateBps: Math.round(payoutRate * 10_000),
+      payoutRate,
+      payoutRateMin: payoutRate,
+      payoutRateMax: payoutRate,
       recentTripCount: recentTrips.length,
       recentGrossFare,
       recentNetPayout,
@@ -222,10 +227,8 @@ function buildDriverEarningsResponse(input: {
     },
     recentTrips: recentTrips.map((trip) => ({
       ...trip,
-      grossFare: trip.grossFare ?? Math.round(trip.payout / 0.82),
-      platformFee:
-        trip.platformFee ??
-        Math.max(0, Math.round(trip.payout / 0.82) - trip.payout),
+      grossFare: trip.grossFare ?? trip.payout,
+      platformFee: trip.platformFee ?? 0,
     })),
   };
 }
@@ -321,6 +324,7 @@ function buildDriverTripsWithStatus(status: string) {
         currency: 'XOF',
         counterpartyName: 'Awa Ouedraogo',
         vehicleLabel: 'Yamaha Crypton',
+        paymentMethod: 'CASH',
         pickupCode: '1234',
         completedAt: null,
         createdAt: '2026-04-19T08:00:00.000Z',
@@ -342,6 +346,7 @@ function buildDriverTripDetail(eventIds: string[], labels: string[]) {
       riderName: 'Awa Ouedraogo',
       driverName: 'Issa Driver',
       vehicleLabel: 'Yamaha Crypton',
+      paymentMethod: 'CASH',
       driverVerification: {
         verificationStatus: 'APPROVED',
         phoneVerified: true,
@@ -536,7 +541,7 @@ describe('driver smoke flows', () => {
       {
         ...driverOffers[0],
         fare: '1800',
-        driverPayout: '1476',
+        driverPayout: '1500',
         distanceKm: '5,8',
         pickupDistanceKm: '1,2',
         etaToPickupMinutes: '4',
@@ -667,7 +672,7 @@ describe('driver smoke flows', () => {
     await flushMicrotasks();
 
     expectText(renderer, 'Missions');
-    expectText(renderer, 'Hors ligne');
+    expectText(renderer, 'Hors ligne · activez le Cockpit pour recevoir des courses');
   });
 
   it('absorbs double taps while accepting an offer from the offres screen', async () => {
@@ -766,6 +771,8 @@ describe('driver smoke flows', () => {
 
     expectText(renderer, 'Contexte dispatch: HIGH - HEAVY - dispo 74/100');
     expectText(renderer, 'Confiance offre: PRIORITY (91/100)');
+    expectText(renderer, '1 400 F CFA net - 193 XOF/km effort');
+    expectText(renderer, '84% du prix. Offre lisible avec gain et effort connus.');
     expectText(renderer, 'Fenetre d acceptation: 45s');
     expectText(
       renderer,
@@ -1059,17 +1066,19 @@ describe('driver smoke flows', () => {
     await flushMicrotasks();
 
     expectText(renderer, 'Statut critique mis a jour: Chauffeur en route.');
-    expectText(renderer, 'Chauffeur en approche');
-    expectText(renderer, 'Mission en direct');
-    expectText(renderer, 'Mission en direct');
-    expectText(renderer, 'Precision 12 m');
-    expectText(renderer, 'Rider au pickup - 18 km/h');
-    expectText(renderer, 'Pickup');
-    expectText(renderer, '0.4 km');
+    expectText(renderer, 'Confirmez puis demarrez');
+    expectText(renderer, 'ETA');
+    expectText(renderer, 'Distance');
+    expectText(renderer, '0.4 km restant');
+    expectText(renderer, 'Paiement');
+    expectText(renderer, 'Especes');
     expectText(
       renderer,
       'Demandez le code pickup au passager avant de demarrer la course.',
     );
+    expectText(renderer, 'Details support');
+    await pressByText(renderer, 'Details support');
+    expectText(renderer, 'Chauffeur en approche');
   });
 
   it('keeps driver dispatch usable when trip detail is temporarily unavailable', async () => {
@@ -1083,7 +1092,8 @@ describe('driver smoke flows', () => {
     await pressByText(renderer, 'Actualiser le direct');
 
     expectText(renderer, 'Course active');
-    expectText(renderer, 'Mission en direct');
+    expectText(renderer, 'Confirmez puis demarrez');
+    expectText(renderer, 'Distance');
     expectText(
       renderer,
       'Detail de mission indisponible: la course principale reste active.',
@@ -1091,22 +1101,34 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Verifier le code et demarrer');
   });
 
-  it('blocks trip completion when trip detail is temporarily unavailable', async () => {
+  it('lets the server gate trip completion when trip detail is temporarily unavailable', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverOffers.mockResolvedValue([] as never);
     mockedFetchMyTrips.mockResolvedValue(buildDriverTripsWithStatus('IN_PROGRESS') as never);
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
     mockedFetchTripDetail.mockRejectedValue(new Error('Trip detail temporarily unavailable'));
+    mockedUpdateTripStatusWithApi.mockResolvedValue({
+      trip: {
+        id: 'trip-1',
+        status: 'COMPLETED',
+        actualFare: 1800,
+        driverPayout: 1620,
+      },
+    } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
 
-    expectText(renderer, 'Finalisation bloquee');
     expectText(
       renderer,
-      'Actualisez le direct, gardez le telephone ouvert et contactez le support si le signal ne revient pas.',
+      'Detail de mission indisponible: la course principale reste active.',
     );
-    expect(mockedUpdateTripStatusWithApi).not.toHaveBeenCalled();
+    await pressByText(renderer, 'Terminer la course');
+    expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
+      expect.any(Object),
+      'trip-driver-1',
+      'COMPLETED',
+    );
   });
 
   it('toggles driver availability from home', async () => {
@@ -1202,7 +1224,8 @@ describe('driver smoke flows', () => {
       'trip-driver-1',
       'DRIVER_ARRIVING',
     );
-    expectText(renderer, 'Statut: DRIVER_ARRIVING');
+    expectText(renderer, 'Confirmez puis demarrez');
+    expectText(renderer, 'Verifier le code et demarrer');
   });
 
   it('verifies pickup code and starts the trip from offers', async () => {
@@ -1240,7 +1263,8 @@ describe('driver smoke flows', () => {
       'trip-driver-1',
       '1234',
     );
-    expectText(renderer, 'Statut: IN_PROGRESS');
+    expectText(renderer, 'Conduisez vers la destination');
+    expectText(renderer, 'Terminer la course');
   });
 
   it('rejects incomplete pickup code before driver API verification', async () => {
@@ -1259,6 +1283,63 @@ describe('driver smoke flows', () => {
 
     expect(mockedVerifyPickupCodeWithApi).not.toHaveBeenCalled();
     expectText(renderer, 'Le code pickup doit contenir exactement 4 chiffres.');
+  });
+
+  it('shows reliability review when driver cancels an accepted trip repeatedly', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never);
+    mockedFetchMyTrips
+      .mockResolvedValueOnce(buildDriverTripsWithStatus('MATCHED') as never)
+      .mockResolvedValueOnce(buildDriverTrips() as never);
+    mockedFetchDriverProfile
+      .mockResolvedValueOnce(buildDriverProfile() as never)
+      .mockResolvedValueOnce(buildDriverProfile() as never);
+    mockedFetchTripDetail.mockResolvedValue(
+      buildDriverTripDetail(['driver-timeline-1'], ['Trajet cree']) as never,
+    );
+    mockedUpdateTripStatusWithApi.mockResolvedValue({
+      trip: {
+        id: 'trip-driver-1',
+        status: 'CANCELLED',
+        cancellationPolicy: {
+          actor: 'DRIVER',
+          level: 'REVIEW',
+          suggestedFeeAmount: 0,
+          driverCompensationAmount: 0,
+          currency: 'XOF',
+          recentCancellationCount: 3,
+          driverReliabilityImpact: 'SUPPORT_REVIEW',
+          temporaryPauseMinutes: 30,
+          supportTicketId: 'ticket-driver-cancel-1',
+          message:
+            'Annulations chauffeur repetees detectees. Revue support ouverte et pause operationnelle recommandee avant nouvelles offres.',
+        },
+      },
+    } as never);
+
+    const renderer = await renderScreen(<OffersScreen />);
+    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Annuler la course');
+    const cancelOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
+      | Array<{ text: string; onPress?: () => void }>
+      | undefined;
+    await invokeInAct(() => {
+      cancelOptions?.[2]?.onPress?.();
+    });
+    await flushMicrotasks();
+
+    expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
+      { token: 'driver-auth-client' },
+      'trip-driver-1',
+      'CANCELLED',
+      'Erreur d acceptation',
+    );
+    expectText(
+      renderer,
+      'Annulations chauffeur repetees detectees. Revue support ouverte et pause operationnelle recommandee avant nouvelles offres. Dossier support ticket-d ouvert.',
+    );
   });
 
   it('completes an in-progress trip from offers', async () => {
@@ -1280,7 +1361,13 @@ describe('driver smoke flows', () => {
         buildDriverTripDetail(['driver-timeline-2'], ['Course terminee']) as never,
       );
     mockedUpdateTripStatusWithApi.mockResolvedValue({
-      trip: { id: 'trip-driver-1', status: 'COMPLETED' },
+      trip: {
+        id: 'trip-driver-1',
+        status: 'COMPLETED',
+        actualFare: 3500,
+        driverPayout: 3150,
+        paymentMethod: 'CASH',
+      },
     } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
@@ -1292,6 +1379,7 @@ describe('driver smoke flows', () => {
       'trip-driver-1',
       'COMPLETED',
     );
+    expectText(renderer, 'Paiement : Especes');
     expectText(renderer, 'Aucune offre active');
   });
 
@@ -1317,11 +1405,7 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
-    expectText(renderer, 'Finalisation bloquee');
-    expectText(
-      renderer,
-      'Arretez les actions non urgentes, contactez le support ou utilisez SOS si necessaire.',
-    );
+    expectText(renderer, 'GPS requis: Arretez les actions non urgentes, contactez le support ou utilisez SOS si necessaire.');
     expect(mockedUpdateTripStatusWithApi).not.toHaveBeenCalled();
   });
 
@@ -1356,8 +1440,8 @@ describe('driver smoke flows', () => {
       }),
     );
     expectText(renderer, 'Course active');
-    expectText(renderer, 'Ride Check: Attention (1)');
-    expectText(renderer, 'Dernier signal: Long Stop');
+    expectText(renderer, 'Conduisez vers la destination');
+    expectText(renderer, 'Details support');
   });
 
   it('triggers driver SOS from offers and opens the local emergency dialer', async () => {

@@ -66,7 +66,6 @@ import {
 import { useRiderPosition } from '../lib/use-rider-position';
 import { TripMapView } from '../lib/trip-map-view';
 import { PlaceSearch } from '../lib/place-search';
-import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
 import {
   fallbackRiderProfile,
   normalizeRiderProfileResponse,
@@ -168,6 +167,83 @@ function buildCurrentPositionPlace(position: {
 
 function findCityPresetForPlace(place: Place) {
   return resolveBurkinaPricingPresetForPlace(place);
+}
+
+function PriceConfidenceCard({
+  option,
+  distanceKm,
+  durationMinutes,
+}: {
+  option: RideOption | null;
+  distanceKm: number;
+  durationMinutes: number;
+}) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
+  if (!option) return null;
+
+  const priceWindow = option.fareBreakdown?.priceWindow;
+  const roundingAmount = option.fareBreakdown?.commercialRoundingAmount ?? 0;
+  const roundingStep = option.fareBreakdown?.commercialRoundingStep ?? null;
+  const demandLabel =
+    option.surgeActive && option.surgeLabel
+      ? `Demande ${option.surgeLabel}`
+      : 'Demande normale';
+  const pricePromise =
+    option.marketplace?.pricePromise ??
+    'Prix upfront affiche sans frais de pickup caches.';
+
+  return (
+    <OrbiSurface style={styles.priceConfidenceCard}>
+      <View style={styles.priceConfidenceTop}>
+        <View style={styles.priceConfidenceCopy}>
+          <Text style={styles.priceConfidenceLabel}>Prix verrouille</Text>
+          <Text style={styles.priceConfidenceFare}>
+            {formatRiderMoneyAmount(option.fare)}
+          </Text>
+        </View>
+        <View style={styles.priceConfidenceBadge}>
+          <Text style={styles.priceConfidenceBadgeText}>
+            {option.category === 'motorcycle' ? 'Moto' : 'Voiture'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.priceMetricGrid}>
+        <View style={styles.priceMetricTile}>
+          <Text style={styles.priceMetricLabel}>Trajet</Text>
+          <Text style={styles.priceMetricValue}>
+            {distanceKm} km · {durationMinutes} min
+          </Text>
+        </View>
+        <View style={styles.priceMetricTile}>
+          <Text style={styles.priceMetricLabel}>Fenetre</Text>
+          <Text style={styles.priceMetricValue}>
+            {priceWindow
+              ? `${formatRiderMoneyAmount(priceWindow.min)} - ${formatRiderMoneyAmount(priceWindow.max)}`
+              : 'Prix fixe'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.priceSignalRow}>
+        <Text style={styles.priceSignalText} numberOfLines={2}>
+          {pricePromise}
+        </Text>
+        <Text style={styles.priceSignalPill} numberOfLines={1}>
+          {demandLabel}
+        </Text>
+      </View>
+
+      {roundingAmount > 0 ? (
+        <Text style={styles.priceRoundingText}>
+          Arrondi CFA +{roundingAmount} XOF
+          {roundingStep ? ` · palier ${roundingStep}` : ''}
+        </Text>
+      ) : null}
+    </OrbiSurface>
+  );
 }
 
 function BackGlyph() {
@@ -369,13 +445,6 @@ export default function BookingScreen() {
   const riderPosition = useRiderPosition({
     enabled: true,
   });
-
-  useEffect(() => {
-    preventSensitiveScreenCapture();
-    return () => {
-      restoreSensitiveScreenCapture();
-    };
-  }, []);
 
   const selectedOption = useMemo(
     () =>
@@ -1114,6 +1183,7 @@ export default function BookingScreen() {
             <PlaceSearch
               placeholder="Quartier, monument, adresse…"
               tone="teal"
+              cityHint={selectedCity.label}
               onSelectPlace={(place) => applyPlace('pickup', place)}
             />
           </View>
@@ -1137,6 +1207,7 @@ export default function BookingScreen() {
               tone="amber"
               suggestions={destinationSuggestions}
               suggestionLabel="Destinations rapides"
+              cityHint={selectedCity.label}
               onSelectPlace={(place) => applyPlace('destination', place)}
             />
           </View>
@@ -1253,6 +1324,12 @@ export default function BookingScreen() {
           promoValidation={promoValidation}
           isRefreshing={isRefreshing}
           onSelect={setSelectedOptionId}
+        />
+
+        <PriceConfidenceCard
+          option={selectedOption}
+          distanceKm={tripEstimate.distanceKm}
+          durationMinutes={tripEstimate.durationMinutes}
         />
 
         {/* ── Payment method ── */}
@@ -1762,6 +1839,110 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
+  },
+  priceConfidenceCard: {
+    padding: 12,
+    gap: 10,
+    borderColor: 'rgba(0,194,168,0.22)',
+  },
+  priceConfidenceTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  priceConfidenceCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  priceConfidenceLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  priceConfidenceFare: {
+    fontSize: 24,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text,
+    marginTop: 1,
+  },
+  priceConfidenceBadge: {
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,194,168,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,194,168,0.22)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  priceConfidenceBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.teal,
+  },
+  priceMetricGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  priceMetricTile: {
+    flex: 1,
+    minWidth: 0,
+    borderRadius: 12,
+    backgroundColor: theme.colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 2,
+  },
+  priceMetricLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  priceMetricValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text,
+  },
+  priceSignalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  priceSignalText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: 'Inter_400Regular',
+    color: theme.colors.textSoft,
+  },
+  priceSignalPill: {
+    maxWidth: 112,
+    borderRadius: 999,
+    backgroundColor: theme.colors.text,
+    color: theme.colors.textInverse,
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+  },
+  priceRoundingText: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.textMuted,
   },
 
 

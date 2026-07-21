@@ -873,8 +873,8 @@ describe('PaymentsService', () => {
         reference: 'payment:payment-1:driver-payout',
         metadata: expect.objectContaining({
           grossAmount: 2400,
-          commissionAmount: 432,
-          driverPayoutAmount: 1968,
+          commissionAmount: 430,
+          driverPayoutAmount: 1970,
         }),
       }),
     });
@@ -1042,7 +1042,7 @@ describe('PaymentsService', () => {
         reference: 'payment:payment-1:driver-payout-refund',
         metadata: expect.objectContaining({
           originalCreditReference: 'payment:payment-1:driver-payout',
-          driverPayoutAmount: 1968,
+          driverPayoutAmount: 1970,
         }),
       }),
     });
@@ -1062,7 +1062,7 @@ describe('PaymentsService', () => {
     expect(result.walletReversal).toEqual(
       expect.objectContaining({
         applied: true,
-        amount: 1968,
+        amount: 1970,
       }),
     );
   });

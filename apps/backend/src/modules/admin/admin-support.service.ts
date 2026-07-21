@@ -10,7 +10,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { NotificationChannel, SupportTicketStatus, UserRole } from '@prisma/client';
+import {
+  NotificationChannel,
+  Prisma,
+  SupportTicketStatus,
+  UserRole,
+  WalletTransactionType,
+} from '@prisma/client';
 import {
   PageQueryDto,
   resolvePageQuery,
@@ -33,6 +39,9 @@ export type AdminSupportTicketQueueResponse = {
     requesterName: string;
     requesterRole: UserRole;
     tripId: string | null;
+    paymentAttemptId: string | null;
+    category: SupportTicketOpsCategory;
+    actionHint: string;
     createdAt: string;
     updatedAt: string;
     sla: SupportTicketSla;
@@ -56,6 +65,18 @@ type SupportTicketSla = {
   breachedMinutes: number | null;
   owner: 'support' | 'ops';
 };
+
+type SupportTicketOpsCategory =
+  | 'safety'
+  | 'payment'
+  | 'refund'
+  | 'fare_review'
+  | 'rider_cancellation'
+  | 'driver_cancellation'
+  | 'quality_review'
+  | 'mobile_health'
+  | 'onboarding'
+  | 'general';
 
 type SupportStaffingReadiness = {
   posture: 'ready' | 'strained' | 'blocked';
@@ -82,6 +103,20 @@ export type AdminSupportTicketUpdateResponse = {
   };
 };
 
+export type AdminCancellationCompensationResponse = {
+  action: 'credited' | 'already_credited';
+  compensation: {
+    ticketId: string;
+    tripId: string;
+    driverUserId: string;
+    walletId: string;
+    transactionId: string;
+    reference: string;
+    amount: number;
+    currency: string;
+  };
+};
+
 // ── Helpers de confidentialité ────────────────────────────────────────────────
 
 const sensitiveSupportTokenPattern =
@@ -101,6 +136,121 @@ function maskRequesterName(fullName: string | null | undefined): string {
   const parts = fullName.trim().split(/\s+/);
   if (parts.length === 1) return `${parts[0]?.charAt(0) ?? '?'}.`;
   return `${parts[0]} ${parts[1]?.charAt(0) ?? '?'}.`;
+}
+
+function extractSupportTicketTripId(ticket: {
+  subject: string;
+  description: string;
+}) {
+  const match =
+    ticket.subject.match(/(?:Incident trajet|course) ([a-z0-9-]+)/i) ??
+    ticket.description.match(/(?:Course|Derniere demande|Reference): ([a-z0-9-]+)/i);
+
+  return match?.[1] ?? null;
+}
+
+function extractSupportTicketPaymentAttemptId(ticket: {
+  subject: string;
+  description: string;
+}) {
+  const match =
+    ticket.subject.match(/PaymentAttempt:\s*([A-Za-z0-9_-]+)/i) ??
+    ticket.description.match(/PaymentAttempt:\s*([A-Za-z0-9_-]+)/i) ??
+    ticket.description.match(/Tentative paiement:\s*([A-Za-z0-9_-]+)/i);
+
+  return match?.[1] ?? null;
+}
+
+function extractCancellationCompensationAmount(description: string) {
+  const match = description.match(
+    /Compensation chauffeur suggeree:\s*([0-9]{2,5})\s*XOF/i,
+  );
+  const amount = match ? Number(match[1]) : 0;
+
+  if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 1000) {
+    return null;
+  }
+
+  return amount;
+}
+
+function resolveSupportTicketOpsClassification(ticket: {
+  subject: string;
+  description: string;
+  priority: number;
+}): { category: SupportTicketOpsCategory; actionHint: string } {
+  const text = `${ticket.subject} ${ticket.description}`.toLowerCase();
+
+  if (text.includes('sos') || text.includes('safety') || text.includes('securite')) {
+    return {
+      category: 'safety',
+      actionHint: 'Traiter immediatement: verifier securite, appeler si necessaire, garder trace ops.',
+    };
+  }
+
+  if (text.includes('annulations chauffeur') || text.includes('annulation chauffeur')) {
+    return {
+      category: 'driver_cancellation',
+      actionHint: 'Verifier le motif chauffeur, le contexte terrain et appliquer pause/revue si abus confirme.',
+    };
+  }
+
+  if (text.includes('annulation rider') || text.includes('frais annulation') || text.includes('annulation a revoir')) {
+    return {
+      category: 'rider_cancellation',
+      actionHint: 'Verifier assignation chauffeur, temps perdu et frais rond avant toute decision.',
+    };
+  }
+
+  if (text.includes('revue qualite') || text.includes('note faible')) {
+    return {
+      category: 'quality_review',
+      actionHint: 'Lire la note, verifier le trajet et contacter rider/chauffeur si le signal est repetitif ou grave.',
+    };
+  }
+
+  if (text.includes('remboursement') || text.includes('refund')) {
+    return {
+      category: 'refund',
+      actionHint: 'Verifier tentative paiement, statut provider et journal webhook avant reponse client.',
+    };
+  }
+
+  if (text.includes('paiement') || text.includes('payment') || text.includes('mobile money')) {
+    return {
+      category: 'payment',
+      actionHint: 'Controler debit, reconciliation provider et ticket paiement avant escalade finance.',
+    };
+  }
+
+  if (text.includes('prix') || text.includes('fare') || text.includes('tarif')) {
+    return {
+      category: 'fare_review',
+      actionHint: 'Comparer prix affiche, prix facture, distance et arrondissement commercial.',
+    };
+  }
+
+  if (text.includes('mobile') || text.includes('crash') || text.includes('erreur app')) {
+    return {
+      category: 'mobile_health',
+      actionHint: 'Identifier version app, surface mobile et impact utilisateur avant cloture.',
+    };
+  }
+
+  if (text.includes('onboarding') || text.includes('document chauffeur')) {
+    return {
+      category: 'onboarding',
+      actionHint: 'Verifier documents, note interne et prochaine action onboarding chauffeur.',
+    };
+  }
+
+  return {
+    category: 'general',
+    actionHint:
+      ticket.priority >= 2
+        ? 'Qualifier le ticket puis router vers support, ops ou finance.'
+        : 'Lire le contexte et repondre avec une action claire.',
+  };
 }
 
 function resolveSupportSla(ticket: {
@@ -229,7 +379,9 @@ export class AdminSupportService {
     ]);
 
     const queueTickets = tickets.map((ticket) => {
-        const tripIdMatch = ticket.subject.match(/Incident trajet ([a-z0-9]+)/i);
+        const classification = resolveSupportTicketOpsClassification(ticket);
+        const tripId = extractSupportTicketTripId(ticket);
+        const paymentAttemptId = extractSupportTicketPaymentAttemptId(ticket);
         return {
           id: ticket.id,
           subject: redactSupportText(ticket.subject),
@@ -239,7 +391,10 @@ export class AdminSupportService {
           adminNote: ticket.adminNote ?? null,
           requesterName: maskRequesterName(ticket.user.fullName),
           requesterRole: ticket.user.role,
-          tripId: tripIdMatch?.[1] ?? null,
+          tripId,
+          paymentAttemptId,
+          category: classification.category,
+          actionHint: classification.actionHint,
           createdAt: ticket.createdAt.toISOString(),
           updatedAt: ticket.updatedAt.toISOString(),
           sla: resolveSupportSla(ticket),
@@ -350,6 +505,204 @@ export class AdminSupportService {
         priority: updated.priority,
         adminNote: updated.adminNote,
         updatedAt: updated.updatedAt.toISOString(),
+      },
+    };
+  }
+
+  async approveCancellationCompensation(
+    ticketId: string,
+    auth: RequestAuthContext,
+  ): Promise<AdminCancellationCompensationResponse> {
+    const ticket = await this.prisma.supportTicket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException('Support ticket not found.');
+    }
+
+    const classification = resolveSupportTicketOpsClassification(ticket);
+
+    if (classification.category !== 'rider_cancellation') {
+      throw new BadRequestException(
+        'Only rider cancellation review tickets can credit driver compensation.',
+      );
+    }
+
+    const tripId = extractSupportTicketTripId(ticket);
+    const amount = extractCancellationCompensationAmount(ticket.description);
+
+    if (!tripId || amount === null) {
+      throw new BadRequestException(
+        'Cancellation compensation ticket is missing trip or amount context.',
+      );
+    }
+
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      include: {
+        driver: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    if (!trip?.driver?.userId) {
+      throw new BadRequestException('Trip driver not found for compensation.');
+    }
+
+    const currency = trip.currency || 'XOF';
+    const driverUserId = trip.driver.userId;
+    const reference = `support-cancellation-compensation:${ticketId}:${tripId}`;
+    const adminNote = `Revue annulation traitee: indemnisation chauffeur ${amount} ${currency} validee par operations.`;
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const wallet = await tx.wallet.upsert({
+        where: {
+          userId_currency: {
+            userId: driverUserId,
+            currency,
+          },
+        },
+        create: {
+          userId: driverUserId,
+          currency,
+          balance: new Prisma.Decimal(0),
+        },
+        update: {},
+      });
+
+      if (wallet.isLocked) {
+        throw new BadRequestException('Driver wallet is locked.');
+      }
+
+      const existingTransaction = await tx.walletTransaction.findUnique({
+        where: {
+          walletId_reference: {
+            walletId: wallet.id,
+            reference,
+          },
+        },
+      });
+
+      if (existingTransaction) {
+        await tx.supportTicket.update({
+          where: { id: ticketId },
+          data: {
+            status: SupportTicketStatus.IN_REVIEW,
+            adminNote,
+          },
+        });
+
+        return {
+          action: 'already_credited' as const,
+          wallet,
+          transaction: existingTransaction,
+        };
+      }
+
+      const transaction = await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: WalletTransactionType.CREDIT,
+          amount: new Prisma.Decimal(amount),
+          reference,
+          description: `Indemnisation annulation rider ${tripId}`,
+          metadata: {
+            ticketId,
+            tripId,
+            approvedByUserId: auth.user.id,
+            source: 'support_rider_cancellation_compensation',
+          },
+        },
+      });
+
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          balance: {
+            increment: new Prisma.Decimal(amount),
+          },
+        },
+      });
+
+      await tx.supportTicket.update({
+        where: { id: ticketId },
+        data: {
+          status: SupportTicketStatus.IN_REVIEW,
+          adminNote,
+        },
+      });
+
+      return {
+        action: 'credited' as const,
+        wallet,
+        transaction,
+      };
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: auth.user.id,
+        action: 'SUPPORT_CANCELLATION_COMPENSATION_APPROVED',
+        entityType: 'SUPPORT_TICKET',
+        entityId: ticketId,
+        metadata: {
+          tripId,
+          driverUserId,
+          walletId: result.wallet.id,
+          transactionId: result.transaction.id,
+          reference,
+          amount,
+          currency,
+          action: result.action,
+        },
+      },
+    });
+
+    this.realtimeService.publish({
+      channel: 'admin',
+      type: 'support-ticket.updated',
+      entityId: ticketId,
+      actorRole: auth.user.role,
+      payload: {
+        status: SupportTicketStatus.IN_REVIEW,
+        category: 'rider_cancellation',
+        compensationAmount: amount,
+        compensationAction: result.action,
+      },
+    });
+
+    if (result.action === 'credited') {
+      void this.notificationsService.enqueue({
+        userId: driverUserId,
+        title: 'Indemnisation annulation validee',
+        body: `${amount} ${currency} ont ete credites pour le temps perdu sur une course annulee.`,
+        channel: NotificationChannel.PUSH,
+        dedupeKey: reference,
+        data: {
+          type: 'driver_cancellation_compensation',
+          ticketId,
+          tripId,
+          amount: String(amount),
+          currency,
+        },
+      });
+    }
+
+    return {
+      action: result.action,
+      compensation: {
+        ticketId,
+        tripId,
+        driverUserId,
+        walletId: result.wallet.id,
+        transactionId: result.transaction.id,
+        reference,
+        amount,
+        currency,
       },
     };
   }

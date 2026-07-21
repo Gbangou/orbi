@@ -132,6 +132,9 @@ describe('AdminService', () => {
         update: jest.fn(),
       },
       trip: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+      rating: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       supportTicket: {
         count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn().mockResolvedValue([]),
@@ -344,7 +347,7 @@ describe('AdminService', () => {
         walletReversal: {
           applied: true,
           walletId: 'wallet-driver-1',
-          amount: 1968,
+          amount: 2000,
           currency: 'XOF',
         },
       }),
@@ -1079,6 +1082,56 @@ describe('AdminService', () => {
     const result = await service.liveOps();
 
     expect(result.lowConfidenceDrivers).toEqual([]);
+  });
+
+  it('surfaces drivers with repeated low ratings in lowConfidenceDrivers', async () => {
+    const { prisma, service } = createService();
+
+    prisma.trip.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    prisma.rideRequest.count.mockResolvedValue(0);
+    prisma.auditLog.findMany.mockResolvedValue([]);
+    prisma.rating.findMany.mockResolvedValue([
+      {
+        driverId: 'driver-profile-low',
+        score: 1,
+        driver: {
+          user: {
+            fullName: 'Driver Low Rating',
+          },
+        },
+      },
+      {
+        driverId: 'driver-profile-low',
+        score: 2,
+        driver: {
+          user: {
+            fullName: 'Driver Low Rating',
+          },
+        },
+      },
+    ]);
+
+    const result = await service.liveOps();
+
+    expect(prisma.rating.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          score: { lte: 2 },
+        }),
+        include: expect.objectContaining({
+          driver: expect.any(Object),
+        }),
+      }),
+    );
+    expect(result.lowConfidenceDrivers).toEqual([
+      expect.objectContaining({
+        driverId: 'driver-profile-low',
+        driverName: 'Driver Low Rating',
+        lowRatingCount: 2,
+        averageLowRating: 1.5,
+        confidenceReason: 'rating',
+      }),
+    ]);
   });
 
   it('lists job queue entries for operations triage', async () => {
@@ -3047,7 +3100,7 @@ describe('AdminService', () => {
         id: 'wallet-1',
         userId: 'driver-user-1',
         currency: 'XOF',
-        balance: 1968,
+        balance: 2000,
         isLocked: false,
         updatedAt: new Date('2026-05-01T08:00:00.000Z'),
         user: {
@@ -3061,13 +3114,13 @@ describe('AdminService', () => {
           {
             id: 'wallet-transaction-1',
             type: 'CREDIT',
-            amount: 1968,
+            amount: 1970,
             reference: 'payment:payment-1:driver-payout',
             description: 'Payout chauffeur paiement orbi_123',
             metadata: {
               paymentAttemptId: 'payment-1',
               provider: 'FLUTTERWAVE',
-              commissionAmount: 432,
+              commissionAmount: 430,
             },
             createdAt: new Date('2026-05-01T08:05:00.000Z'),
           },
@@ -3075,7 +3128,7 @@ describe('AdminService', () => {
         driverPayouts: [
           {
             id: 'driver-payout-1',
-            amount: 1968,
+            amount: 2000,
             currency: 'XOF',
             status: 'PREPARED',
             reference: 'driver-payout:wallet-1:prepared',
@@ -3088,7 +3141,7 @@ describe('AdminService', () => {
         id: 'wallet-2',
         userId: 'driver-user-2',
         currency: 'XOF',
-        balance: -1968,
+        balance: -2000,
         isLocked: false,
         updatedAt: new Date('2026-05-01T08:20:00.000Z'),
         user: {
@@ -3102,7 +3155,7 @@ describe('AdminService', () => {
           {
             id: 'wallet-transaction-2',
             type: 'REFUND',
-            amount: 1968,
+            amount: 2000,
             reference: 'payment:payment-1:driver-payout-refund',
             description: 'Reversal payout chauffeur remboursement',
             metadata: {
@@ -3126,9 +3179,9 @@ describe('AdminService', () => {
       {
         walletId: 'wallet-1',
         type: 'CREDIT',
-        amount: 1968,
+        amount: 1970,
         metadata: {
-          commissionAmount: 432,
+          commissionAmount: 430,
         },
       },
       {
@@ -3166,29 +3219,29 @@ describe('AdminService', () => {
     expect(result.summary).toEqual({
       walletCount: 2,
       totalBalance: 1000,
-      totalPayouts: 2968,
-      totalCommission: 652,
+      totalPayouts: 2970,
+      totalCommission: 650,
       recoveryWalletCount: 1,
-      totalRecoveryDue: 1968,
+      totalRecoveryDue: 2000,
     });
     expect(result.wallets[0]).toEqual(
       expect.objectContaining({
         driverName: 'Issa Driver',
-        balance: 1968,
+        balance: 2000,
         recoveryDue: 0,
-        payoutTotal: 2968,
-        commissionTotal: 652,
+        payoutTotal: 2970,
+        commissionTotal: 650,
         preparedPayout: expect.objectContaining({
           id: 'driver-payout-1',
-          amount: 1968,
+          amount: 2000,
         }),
       }),
     );
     expect(result.wallets[1]).toEqual(
       expect.objectContaining({
         driverName: 'Recovery Driver',
-        balance: -1968,
-        recoveryDue: 1968,
+        balance: -2000,
+        recoveryDue: 2000,
       }),
     );
     expect(result.wallets[0].recentTransactions[0]).toEqual(
@@ -3206,7 +3259,7 @@ describe('AdminService', () => {
       id: 'wallet-1',
       userId: 'driver-user-1',
       currency: 'XOF',
-      balance: 1968,
+      balance: 2000,
       isLocked: false,
       user: {
         role: 'DRIVER',
@@ -3220,7 +3273,7 @@ describe('AdminService', () => {
     prisma.driverPayout.create.mockResolvedValue({
       id: 'driver-payout-1',
       walletId: 'wallet-1',
-      amount: 1968,
+      amount: 2000,
       currency: 'XOF',
       status: 'PREPARED',
       reference: 'driver-payout:wallet-1:123',
@@ -3240,7 +3293,7 @@ describe('AdminService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           walletId: 'wallet-1',
-          amount: 1968,
+          amount: 2000,
           preparedLockKey: 'wallet-1',
           preparedByUserId: 'admin-1',
         }),
@@ -3273,7 +3326,7 @@ describe('AdminService', () => {
       id: 'wallet-1',
       userId: 'driver-user-1',
       currency: 'XOF',
-      balance: 1968,
+      balance: 2000,
       isLocked: false,
       user: {
         role: 'DRIVER',
@@ -3286,7 +3339,7 @@ describe('AdminService', () => {
         {
           id: 'driver-payout-existing',
           walletId: 'wallet-1',
-          amount: 1968,
+          amount: 2000,
           currency: 'XOF',
           status: 'PREPARED',
           reference: 'driver-payout:wallet-1:existing',
@@ -3314,7 +3367,7 @@ describe('AdminService', () => {
         metadata: {
           walletId: 'wallet-1',
           driverUserId: 'driver-user-1',
-          amount: 1968,
+          amount: 2000,
           currency: 'XOF',
           reference: 'driver-payout:wallet-1:existing',
           result: 'existing_prepared_payout',
@@ -3337,7 +3390,7 @@ describe('AdminService', () => {
       id: 'wallet-1',
       userId: 'driver-user-1',
       currency: 'XOF',
-      balance: -1968,
+      balance: -2000,
       isLocked: false,
       user: {
         role: 'DRIVER',
@@ -3389,7 +3442,7 @@ describe('AdminService', () => {
           reference: 'driver-wallet-recovery:wallet-1:ops-key-1',
           metadata: expect.objectContaining({
             recovery: true,
-            recoveryDueBefore: 1968,
+            recoveryDueBefore: 2000,
             requestedAmount: 1000,
             appliedAmount: 1000,
           }),
@@ -3464,7 +3517,7 @@ describe('AdminService', () => {
     prisma.driverPayout.findUnique.mockResolvedValue({
       id: 'driver-payout-1',
       walletId: 'wallet-1',
-      amount: 1968,
+      amount: 2000,
       currency: 'XOF',
       status: 'PREPARED',
       reference: 'driver-payout:wallet-1:123',
@@ -3472,7 +3525,7 @@ describe('AdminService', () => {
       paidAt: null,
       wallet: {
         id: 'wallet-1',
-        balance: 1968,
+        balance: 2000,
         isLocked: false,
       },
     });
@@ -3480,7 +3533,7 @@ describe('AdminService', () => {
     prisma.driverPayout.update.mockResolvedValue({
       id: 'driver-payout-1',
       walletId: 'wallet-1',
-      amount: 1968,
+      amount: 2000,
       currency: 'XOF',
       status: 'PAID',
       reference: 'driver-payout:wallet-1:123',
@@ -3501,7 +3554,7 @@ describe('AdminService', () => {
         data: expect.objectContaining({
           walletId: 'wallet-1',
           type: 'PAYOUT',
-          amount: 1968,
+          amount: 2000,
           reference: 'driver-payout:driver-payout-1:paid',
         }),
       }),
@@ -3510,7 +3563,7 @@ describe('AdminService', () => {
       expect.objectContaining({
         data: {
           balance: {
-            decrement: 1968,
+            decrement: 2000,
           },
         },
       }),
@@ -3538,7 +3591,7 @@ describe('AdminService', () => {
     prisma.driverPayout.findUnique.mockResolvedValue({
       id: 'driver-payout-1',
       walletId: 'wallet-1',
-      amount: 1968,
+      amount: 2000,
       currency: 'XOF',
       status: 'PREPARED',
       reference: 'driver-payout:wallet-1:123',
@@ -3546,7 +3599,7 @@ describe('AdminService', () => {
       paidAt: null,
       wallet: {
         id: 'wallet-1',
-        balance: 1968,
+        balance: 2000,
         isLocked: false,
       },
     });
@@ -3557,7 +3610,7 @@ describe('AdminService', () => {
     prisma.driverPayout.update.mockResolvedValue({
       id: 'driver-payout-1',
       walletId: 'wallet-1',
-      amount: 1968,
+      amount: 2000,
       currency: 'XOF',
       status: 'PAID',
       reference: 'driver-payout:wallet-1:123',
@@ -3582,7 +3635,7 @@ describe('AdminService', () => {
       {
         id: 'driver-payout-1',
         walletId: 'wallet-1',
-        amount: 1968,
+        amount: 2000,
         currency: 'XOF',
         status: 'PREPARED',
         reference: 'driver-payout:wallet-1:123',
@@ -3620,7 +3673,7 @@ describe('AdminService', () => {
           metadata: expect.objectContaining({
             format: 'csv',
             payoutCount: 1,
-            totalAmount: 1968,
+            totalAmount: 2000,
             settlementBatchId: expect.stringMatching(
               /^settlement-prepared-[a-f0-9]{12}$/,
             ),
@@ -3637,7 +3690,7 @@ describe('AdminService', () => {
       {
         id: 'driver-payout-1',
         walletId: 'wallet-1',
-        amount: 1968,
+        amount: 2000,
         currency: 'XOF',
         status: 'PREPARED',
         reference: 'driver-payout:wallet-1:123',

@@ -1,6 +1,5 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from "../../lib/privacy/screen-capture";
 import {
   Alert,
   Animated,
@@ -18,14 +17,18 @@ import {
 } from "react-native";
 import {
   cancelRideRequestWithApi,
+  createSupportTicketWithApi,
   createTripShareLinkWithApi,
   fetchMyTrips,
   fetchTripDetail,
+  getMySupportTicketsWithApi,
   isActiveTripLifecycleStatus,
   reportTripIncidentWithApi,
   triggerTripSafetySosWithApi,
   withNetworkRetry,
+  type CreateSupportTicketPayload,
   type MyTripsResponse,
+  type SupportTicket,
   type TripDetailResponse,
   updateTripStatusWithApi,
 } from "@orbi/api";
@@ -57,7 +60,6 @@ import {
   buildRiderFlowTransitionLabel,
   buildRiderDriverTrustSnapshot,
   buildRiderLiveRouteProgress,
-  buildRiderMissionSnapshot,
   buildRiderNextActionHint,
   resolveRiderActiveFlow,
 } from "../../lib/rider-active-flow";
@@ -71,12 +73,56 @@ import {
   fallbackRiderTrips,
   normalizeRiderTripsResponse,
 } from "../../lib/rider-trips-normalizer";
+import { filterRiderVisibleSupportTickets } from "../../lib/rider-support-tickets";
 
 const MILESTONES = [
   { trips: 5, badge: "Pionnier", icon: "▸" },
   { trips: 20, badge: "Fidele", icon: "★" },
   { trips: 50, badge: "Ambassadeur", icon: "◆" },
 ] as const;
+
+const QUICK_SUPPORT_ACTIONS = [
+  {
+    key: "payment",
+    label: "Paiement",
+    subject: "Paiement a verifier",
+    category: "payment",
+    description:
+      "Le passager demande une verification paiement depuis l activite rider.",
+  },
+  {
+    key: "refund",
+    label: "Remboursement",
+    subject: "Remboursement a suivre",
+    category: "payment",
+    description:
+      "Le passager demande un suivi remboursement depuis l activite rider.",
+  },
+  {
+    key: "fare",
+    label: "Prix",
+    subject: "Prix de course conteste",
+    category: "trip",
+    description:
+      "Le passager demande une revue du prix affiche ou facture depuis l activite rider.",
+  },
+  {
+    key: "cancellation",
+    label: "Annulation",
+    subject: "Annulation a revoir",
+    category: "trip",
+    description:
+      "Le passager demande une revue d annulation depuis l activite rider.",
+  },
+] as const satisfies ReadonlyArray<
+  {
+    key: string;
+    label: string;
+    subject: string;
+    category: NonNullable<CreateSupportTicketPayload["category"]>;
+    description: string;
+  }
+>;
 
 function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
   const theme = useOrbiTheme();
@@ -195,6 +241,7 @@ export default function ActivityScreen() {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { t } = useTranslation();
   const [history, setHistory] = useState<MyTripsResponse>(fallbackRiderTrips);
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [activeTripDetail, setActiveTripDetail] =
     useState<TripDetailResponse | null>(null);
   const [status, setStatus] = useState("Chargement de l historique...");
@@ -235,6 +282,12 @@ export default function ActivityScreen() {
       );
       const normalizedHistory = normalizeRiderTripsResponse(response);
       setHistory(normalizedHistory);
+      const supportResponse = await getMySupportTicketsWithApi(authClient).catch(
+        () => ({ tickets: [] as SupportTicket[] }),
+      );
+      setSupportTickets(
+        filterRiderVisibleSupportTickets(supportResponse.tickets).slice(0, 3),
+      );
 
       const activeTrip = normalizedHistory.recentTrips.find((trip) =>
         isActiveTripLifecycleStatus(trip.status),
@@ -320,10 +373,6 @@ export default function ActivityScreen() {
     activeTripId: activeTrip?.id,
   });
   const riderNextActionHint = buildRiderNextActionHint(flow);
-  const riderMissionSnapshot = buildRiderMissionSnapshot({
-    flow,
-    tripDetail: activeTripDetail,
-  });
   const riderRouteProgress = buildRiderLiveRouteProgress({
     flow,
     tripDetail: activeTripDetail,
@@ -331,13 +380,6 @@ export default function ActivityScreen() {
   const driverTrustSnapshot = buildRiderDriverTrustSnapshot({
     tripDetail: activeTripDetail,
   });
-
-  useEffect(() => {
-    preventSensitiveScreenCapture();
-    return () => {
-      restoreSensitiveScreenCapture();
-    };
-  }, []);
 
   useEffect(() => {
     const previousPendingRequestIds = previousPendingRequestIdsRef.current;
@@ -450,13 +492,84 @@ export default function ActivityScreen() {
 
     try {
       const { authClient } = await restoreRiderSession();
-      await cancelRideRequestWithApi(authClient, rideRequestId);
-      setStatus("Demande annulee avec succes.");
+      const response = await cancelRideRequestWithApi(authClient, rideRequestId);
+      const cancellationMessage =
+        response.cancellationPolicy?.message ?? "Demande annulee avec succes.";
+      const supportTicketMessage = response.cancellationPolicy?.supportTicketId
+        ? ` Dossier support ${response.cancellationPolicy.supportTicketId.slice(0, 8)} ouvert.`
+        : "";
       await loadHistory();
+      setStatus(`${cancellationMessage}${supportTicketMessage}`);
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: "booking",
         fallback: "L'annulation de la demande a echoue.",
+      });
+
+      if (feedback.shouldClearSessionToken) {
+        setSessionToken(null);
+      }
+
+      setStatus(feedback.message);
+    } finally {
+      submissionLockRef.current = false;
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleCreateQuickSupportTicket(
+    action: (typeof QUICK_SUPPORT_ACTIONS)[number],
+  ) {
+    if (submissionLockRef.current) {
+      return;
+    }
+
+    const activeTripId = activeTrip?.id ?? null;
+    const latestTrip = history.recentTrips[0] ?? null;
+    const pendingRequest = history.pendingRequests[0] ?? null;
+    const routeContext =
+      activeTrip ??
+      latestTrip ??
+      pendingRequest ??
+      null;
+    const routeLabel = routeContext
+      ? `${routeContext.pickupAddress} -> ${routeContext.destinationAddress}`
+      : "Aucune course recente disponible";
+    const referenceId = activeTripId ?? latestTrip?.id ?? pendingRequest?.id ?? "none";
+    const receiptContext = latestTrip?.receipt
+      ? [
+          `PaymentAttempt: ${latestTrip.receipt.paymentAttemptId}`,
+          `PaymentStatus: ${latestTrip.receipt.status}`,
+          `PaymentAmount: ${latestTrip.receipt.amount} ${latestTrip.receipt.currency}`,
+          `PaymentProvider: ${latestTrip.receipt.provider}`,
+          `PaymentTransaction: ${latestTrip.receipt.transactionRef ?? "absente"}`,
+        ].join("\n")
+      : null;
+
+    submissionLockRef.current = true;
+    setIsSubmitting(true);
+    setStatus(`Ouverture du dossier support ${action.label.toLowerCase()}...`);
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      const response = await createSupportTicketWithApi(authClient, {
+        subject: action.subject,
+        category: action.category,
+        description:
+          `${action.description}\n` +
+          `Reference: ${referenceId}\n` +
+          `Trajet: ${routeLabel}\n` +
+          `${receiptContext ? `${receiptContext}\n` : ""}` +
+          `Statut ecran: ${status}`,
+      });
+      await loadHistory(true);
+      setStatus(
+        `Dossier ${response.ticket.id.slice(0, 8)} ouvert. Le support suit votre demande ${action.label.toLowerCase()}.`,
+      );
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        surface: action.category === "payment" ? "payments" : "active-trip",
+        fallback: "Le dossier support n'a pas pu etre ouvert.",
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -501,9 +614,20 @@ export default function ActivityScreen() {
 
     try {
       const { authClient } = await restoreRiderSession();
-      await updateTripStatusWithApi(authClient, tripId, "CANCELLED", reason);
-      setStatus("Course annulee. Vous pouvez reserver a nouveau.");
+      const response = await updateTripStatusWithApi(
+        authClient,
+        tripId,
+        "CANCELLED",
+        reason,
+      );
+      const cancellationMessage =
+        response.trip.cancellationPolicy?.message ??
+        "Course annulee. Vous pouvez reserver a nouveau.";
+      const supportTicketMessage = response.trip.cancellationPolicy?.supportTicketId
+        ? ` Dossier support ${response.trip.cancellationPolicy.supportTicketId.slice(0, 8)} ouvert.`
+        : "";
       await loadHistory();
+      setStatus(`${cancellationMessage}${supportTicketMessage}`);
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: "active-trip",
@@ -699,41 +823,16 @@ export default function ActivityScreen() {
     ];
   }
 
-  function buildRouteMonitoringLines() {
-    const routeMonitoring = activeTripDetail?.trip.routeMonitoring;
-
-    if (!routeMonitoring) {
-      return [];
-    }
-
-    if (routeMonitoring.state === "unknown") {
-      return ["Ride Check: en attente du premier signal route."];
-    }
-
-    if (routeMonitoring.state === "clear") {
-      return ["Ride Check: trajet coherent sur le dernier signal route."];
-    }
-
-    return [
-      `Ride Check: ${formatOperationalStatus(routeMonitoring.state)} (${routeMonitoring.alertCount})`,
-      routeMonitoring.lastAlertType
-        ? `Dernier signal: ${formatOperationalStatus(routeMonitoring.lastAlertType)}`
-        : "Dernier signal: anomalie route",
-    ];
-  }
-
   function getStatusColor(status: string) {
     if (status === 'MATCHED') return theme.colors.sky;
-    if (status === 'DRIVER_APPROACHING') return theme.colors.amber;
-    if (status === 'DRIVER_AT_PICKUP') return theme.colors.amber;
+    if (status === 'DRIVER_ARRIVING') return theme.colors.amber;
     if (status === 'IN_PROGRESS') return theme.colors.teal;
     return theme.colors.sky;
   }
 
   function getStatusBg(status: string) {
     if (status === 'MATCHED') return 'rgba(0,122,255,0.10)';
-    if (status === 'DRIVER_APPROACHING') return 'rgba(255,149,0,0.10)';
-    if (status === 'DRIVER_AT_PICKUP') return 'rgba(255,149,0,0.10)';
+    if (status === 'DRIVER_ARRIVING') return 'rgba(255,149,0,0.10)';
     if (status === 'IN_PROGRESS') return 'rgba(0,201,167,0.10)';
     return 'rgba(0,122,255,0.10)';
   }
@@ -751,7 +850,7 @@ export default function ActivityScreen() {
       activeTripDetail?.trip.driverVerification.vehicle.tier ?? null;
     const canCancel =
       activeTrip.status === 'MATCHED' ||
-      activeTrip.status === 'DRIVER_APPROACHING';
+      activeTrip.status === 'DRIVER_ARRIVING';
 
     return (
       <View style={styles.tripRoot}>
@@ -800,7 +899,7 @@ export default function ActivityScreen() {
           </View>
 
           {/* ETA banner — live distance & ETA when driver is approaching */}
-          {(activeTrip.status === 'MATCHED' || activeTrip.status === 'DRIVER_APPROACHING') ? (() => {
+          {(activeTrip.status === 'MATCHED' || activeTrip.status === 'DRIVER_ARRIVING') ? (() => {
             const distKm = activeTripDetail?.trip.routeMonitoring.latestPosition?.distanceToPickupKm ?? null;
             const etaMins = estimateRiderPickupEtaMinutes(distKm);
             const distanceLabel = formatRiderDistanceKm(distKm);
@@ -822,6 +921,20 @@ export default function ActivityScreen() {
               </OrbiSurface>
             );
           })() : null}
+
+          {activeTrip.status === 'IN_PROGRESS' && riderRouteProgress ? (
+            <OrbiSurface tone="teal" style={styles.etaBanner}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.etaEyebrow}>Arrivée estimée</Text>
+                <Text style={styles.etaValue}>{riderRouteProgress.etaLabel}</Text>
+              </View>
+              <View style={styles.etaDistBadge}>
+                <Text style={styles.etaDistText} numberOfLines={1}>
+                  {riderRouteProgress.distanceLabel}
+                </Text>
+              </View>
+            </OrbiSurface>
+          ) : null}
 
           {/* Driver card */}
           <OrbiSurface style={styles.driverCard}>
@@ -1003,6 +1116,61 @@ export default function ActivityScreen() {
         {/* Loyalty card */}
         <LoyaltyMilestoneCard completedTrips={history.stats.completedTrips} />
 
+        <OrbiSurface style={styles.supportCard}>
+          <View style={styles.supportHeader}>
+            <View>
+              <Text style={styles.supportEyebrow}>Support rapide</Text>
+              <Text style={styles.supportTitle}>Paiement, prix, annulation</Text>
+            </View>
+            {supportTickets.length ? (
+              <View style={styles.supportCountBadge}>
+                <Text style={styles.supportCountText}>
+                  {supportTickets.length}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={styles.supportActionGrid}>
+            {QUICK_SUPPORT_ACTIONS.map((action) => (
+              <OrbiButton
+                key={action.key}
+                onPress={() => void handleCreateQuickSupportTicket(action)}
+                disabled={isSubmitting}
+                style={styles.supportActionButton}
+                accessibilityLabel={`quick-support-${action.key}`}
+                label={action.label}
+                variant="secondary"
+                tone={action.category === "payment" ? "amber" : "teal"}
+                labelStyle={styles.supportActionLabel}
+              />
+            ))}
+          </View>
+          {supportTickets.length ? (
+            <View style={styles.supportTicketList}>
+              {supportTickets.slice(0, 2).map((ticket) => (
+                <View key={ticket.id} style={styles.supportTicketRow}>
+                  <View style={styles.supportTicketCopy}>
+                    <Text style={styles.supportTicketSubject} numberOfLines={1}>
+                      {ticket.subject}
+                    </Text>
+                    <Text style={styles.supportTicketMeta}>
+                      {formatOperationalStatus(ticket.status)} · P{ticket.priority}
+                    </Text>
+                  </View>
+                  <Text style={styles.supportTicketId}>
+                    {ticket.id.slice(0, 8)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.supportHint}>
+              Un dossier cree ici arrive dans la file operations avec le trajet
+              et le contexte utiles.
+            </Text>
+          )}
+        </OrbiSurface>
+
         {/* Pending requests */}
         {history.pendingRequests.length > 0 ? (
           <View style={styles.section}>
@@ -1067,6 +1235,14 @@ export default function ActivityScreen() {
                                 ? t('activity.matched')
                                 : trip.status}
                     </Text>
+                    {trip.receipt ? (
+                      <Text style={styles.tripHistReceipt} numberOfLines={1}>
+                        Recu {trip.receipt.status} - {trip.receipt.provider}
+                        {trip.receipt.transactionRef
+                          ? ` - ${trip.receipt.transactionRef.slice(0, 12)}`
+                          : ''}
+                      </Text>
+                    ) : null}
                   </View>
                   {resolveRiderMoneyAmount(trip.amount) ? (
                     <Text style={styles.tripHistFare}>
@@ -1302,6 +1478,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.text,
   },
   etaDistBadge: {
+    maxWidth: '42%',
+    flexShrink: 1,
     backgroundColor: 'rgba(0,122,255,0.12)',
     borderRadius: 999,
     paddingHorizontal: 12,
@@ -1375,6 +1553,104 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: theme.colors.text,
     paddingHorizontal: 2,
+  },
+
+  // Support
+  supportCard: {
+    padding: 14,
+    gap: 12,
+    borderRadius: 14,
+  },
+  supportHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+  },
+  supportEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.teal,
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  supportTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
+    color: theme.colors.text,
+    marginTop: 2,
+  },
+  supportCountBadge: {
+    minWidth: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,201,167,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  supportCountText: {
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.teal,
+  },
+  supportActionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  supportActionButton: {
+    width: '48%',
+    minHeight: 42,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+  },
+  supportActionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+  },
+  supportHint: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontFamily: 'Inter_400Regular',
+    color: theme.colors.textMuted,
+  },
+  supportTicketList: {
+    gap: 8,
+  },
+  supportTicketRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  supportTicketCopy: {
+    flex: 1,
+  },
+  supportTicketSubject: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text,
+  },
+  supportTicketMeta: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  supportTicketId: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.textSoft,
   },
 
   // Pending requests
@@ -1453,6 +1729,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     marginTop: 2,
   },
   tripHistStatusDone: { color: theme.colors.teal },
+  tripHistReceipt: {
+    fontSize: 10,
+    color: theme.colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
+  },
   tripHistFare: {
     fontSize: 14,
     fontWeight: '700',

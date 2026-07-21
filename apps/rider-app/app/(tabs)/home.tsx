@@ -64,9 +64,7 @@ function buildTripEtaLabel(status: string | undefined): string | null {
   switch (status) {
     case 'MATCHED':
       return 'Chauffeur confirmé · en route';
-    case 'DRIVER_APPROACHING':
-      return 'Votre chauffeur approche';
-    case 'DRIVER_AT_PICKUP':
+    case 'DRIVER_ARRIVING':
       return 'Votre chauffeur est arrivé';
     case 'IN_PROGRESS':
       return 'Trajet en cours';
@@ -561,14 +559,14 @@ export default function RiderHomeScreen() {
                   {activeTrip ? (() => {
                     const eta = buildTripEtaLabel(activeTrip.status);
                     if (!eta) return null;
-                    const isArrived = activeTrip.status === 'DRIVER_AT_PICKUP';
+                    const isArrived = activeTrip.status === 'DRIVER_ARRIVING';
                     return (
                       <Text style={[styles.tripCardStatus, isArrived && styles.tripCardStatusArrived]}>
                         {eta}
                       </Text>
                     );
                   })() : null}
-                  {activeTrip?.pickupCode && activeTrip.status === 'DRIVER_AT_PICKUP' ? (
+                  {activeTrip?.pickupCode && activeTrip.status === 'DRIVER_ARRIVING' ? (
                     <Text style={styles.tripCardCode}>
                       Code : <Text style={styles.tripCardCodeValue}>{activeTrip.pickupCode}</Text>
                     </Text>

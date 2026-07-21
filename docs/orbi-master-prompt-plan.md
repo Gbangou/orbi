@@ -533,7 +533,7 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   `.toFixed`, `Math.round` ou `formatXof` en supposant des nombres JS purs.
   Si un backend, cache ou proxy renvoyait `distanceKm`, `pickupDistanceKm`,
   `driverPayout`, `etaToPickupMinutes` ou scores sous forme de chaine
-  (`"5,8"`, `"1476"`) ou valeur non finie, le cockpit chauffeur pouvait
+  (`"5,8"`, `"1500"`) ou valeur non finie, le cockpit chauffeur pouvait
   planter ou afficher une information incoherente. Ajout de helpers
   `toFiniteOfferNumber`, `formatDriverOfferDistance` et
   `formatDriverOfferMinutes`, reutilises par l accueil chauffeur et les cartes

@@ -38,9 +38,17 @@ describe('RideRequestsService', () => {
       $transaction: jest.fn(),
       rideRequest: {
         create: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         findFirst: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
+      },
+      promoCode: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      supportTicket: {
+        create: jest.fn().mockResolvedValue({ id: 'ticket-cancel-1' }),
       },
       trip: {
         findFirst: jest.fn(),
@@ -254,6 +262,52 @@ describe('RideRequestsService', () => {
         estimatedDurationMinutes: expect.any(Number), // time-dependent with peak-hour ETA
       }),
     });
+  });
+
+  it('keeps promo-discounted fares rounded for XOF cash operations', async () => {
+    const { prisma, pricingService, service } = createService();
+
+    pricingService.quote.mockResolvedValue({
+      estimatedFare: 3900,
+    });
+    prisma.promoCode.findUnique.mockResolvedValue({
+      id: 'promo-1',
+      discountBps: 1000,
+      maxUses: null,
+      usedCount: 0,
+      validFrom: new Date('2026-05-01T00:00:00.000Z'),
+      validTo: new Date('2026-06-01T00:00:00.000Z'),
+      active: true,
+    });
+    prisma.rideRequest.findFirst.mockResolvedValue(null);
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.rideRequest.create.mockImplementation(
+      async ({ data }: { data: Record<string, unknown> }) => ({
+        id: 'request-promo-rounded',
+        ...data,
+      }),
+    );
+
+    const result = await service.create({
+      riderId: 'rider-1',
+      pickupAddress: 'Gounghin',
+      destinationAddress: 'Patte d Oie',
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      estimatedDistanceKm: 3.2,
+      estimatedDurationMinutes: 10,
+      paymentMethod: 'MOBILE_MONEY',
+      pickupAreaType: 'URBAN_CORE',
+      promoCode: 'ORBI10',
+    });
+
+    expect(prisma.rideRequest.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        estimatedFare: 3600,
+        promoCodeId: 'promo-1',
+      }),
+    });
+    expect(result.estimatedFare).toBe(3600);
   });
 
   it('rejects ride requests when the rider already has an active one', async () => {
@@ -538,6 +592,7 @@ describe('RideRequestsService', () => {
     const result = await service.cancel(
       {
         user: {
+          id: 'user-rider-1',
           role: 'RIDER',
           riderProfile: {
             id: 'rider-1',
@@ -559,9 +614,77 @@ describe('RideRequestsService', () => {
       actorRole: 'RIDER',
       payload: {
         status: 'CANCELLED',
+        cancellationPolicy: {
+          level: 'CLEAR',
+          recentCancellationCount: 1,
+          feeRisk: false,
+          message: 'Annulation gratuite prise en compte avant affectation chauffeur.',
+          supportTicketId: null,
+        },
       },
     });
     expect(result.rideRequest.status).toBe('CANCELLED');
+    expect(result.cancellationPolicy).toEqual({
+      level: 'CLEAR',
+      recentCancellationCount: 1,
+      feeRisk: false,
+      message: 'Annulation gratuite prise en compte avant affectation chauffeur.',
+      supportTicketId: null,
+    });
+  });
+
+  it('opens a support review ticket after repeated rider cancellations', async () => {
+    const { prisma, service } = createService();
+
+    prisma.rideRequest.count.mockResolvedValue(3);
+    prisma.rideRequest.findUnique.mockResolvedValue({
+      id: 'request-1',
+      riderId: 'rider-1',
+      status: 'REQUESTED',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      destinationAddress: 'Ouaga 2000',
+      trip: null,
+    });
+    prisma.rideRequest.update.mockResolvedValue({
+      id: 'request-1',
+      riderId: 'rider-1',
+      status: 'CANCELLED',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      destinationAddress: 'Ouaga 2000',
+      updatedAt: new Date('2026-04-17T10:00:00.000Z'),
+    });
+
+    const result = await service.cancel(
+      {
+        user: {
+          id: 'user-rider-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      'request-1',
+    );
+
+    expect(prisma.supportTicket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-rider-1',
+        subject: 'Annulations repetees rider user-rider-1',
+        priority: 2,
+      }),
+      select: {
+        id: true,
+      },
+    });
+    expect(result.cancellationPolicy).toEqual({
+      level: 'SUPPORT_REVIEW',
+      recentCancellationCount: 4,
+      feeRisk: true,
+      message:
+        'Annulations repetees detectees. Le support Orbi est alerte; des frais peuvent s appliquer si un chauffeur se deplace deja sur les prochaines commandes.',
+      supportTicketId: 'ticket-cancel-1',
+    });
   });
 
   it('does not reveal or cancel another rider ride request', async () => {
@@ -677,6 +800,7 @@ describe('RideRequestsService', () => {
     expect(dispatchCoordinator.proactiveDispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         rideRequestId: 'request-dispatch-1',
+        riderId: 'rider-1',
         requestedVehicleType: 'MOTORCYCLE',
         requestedServiceTier: 'MOTO_STANDARD',
         pickupAddress: 'Gounghin',

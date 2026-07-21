@@ -30,11 +30,58 @@ describe('rider mobile UX guards', () => {
     expect(source).toContain('ctaSignalMeta} numberOfLines={1}');
   });
 
-  it('keeps crash debug details gated to development builds', () => {
+  it('keeps booking price confidence visible and rounded for the rider', () => {
+    const source = readAppFile('app/book.tsx');
+
+    expect(source).toContain('function PriceConfidenceCard');
+    expect(source).toContain('Prix verrouille');
+    expect(source).toContain('Arrondi CFA');
+    expect(source).toContain('priceWindow.min');
+  });
+
+  it('keeps crash debug details gated to an explicit field debug flag', () => {
     const source = readWorkspaceFile('packages/ui/src/error-boundary.tsx');
 
     expect(source).toContain('function shouldShowDebugDetails');
-    expect(source).toContain("typeof __DEV__ !== 'undefined' && __DEV__");
+    expect(source).toContain('return Boolean(enabled)');
     expect(source).not.toContain('this.props.showDebugDetails && this.state.debugMessage');
+  });
+
+  it('does not use native SVG gradients in shared mobile illustrations', () => {
+    const source = readWorkspaceFile('packages/ui/src/vehicle-illustrations.tsx');
+
+    expect(source).not.toContain("from 'react-native-svg'");
+    expect(source).not.toContain('import Svg');
+    expect(source).not.toContain('LinearGradient');
+    expect(source).not.toContain('RadialGradient');
+    expect(source).not.toContain('Stop');
+    expect(source).not.toContain('Defs');
+    expect(source).not.toContain('url(#');
+  });
+
+  it('keeps native SVG out of release APK dependencies', () => {
+    const riderPackage = JSON.parse(readAppFile('package.json')) as {
+      dependencies?: Record<string, string>;
+    };
+    const driverPackage = JSON.parse(readWorkspaceFile('apps/driver-app/package.json')) as {
+      dependencies?: Record<string, string>;
+    };
+    const uiPackage = JSON.parse(readWorkspaceFile('packages/ui/package.json')) as {
+      peerDependencies?: Record<string, string>;
+    };
+
+    expect(riderPackage.dependencies).not.toHaveProperty('react-native-svg');
+    expect(driverPackage.dependencies).not.toHaveProperty('react-native-svg');
+    expect(uiPackage.peerDependencies).not.toHaveProperty('react-native-svg');
+  });
+
+  it('keeps WebSocket realtime compatible with backend event envelopes', () => {
+    const source = readWorkspaceFile('packages/ui/src/use-websocket-realtime-stream.ts');
+
+    expect(source).toContain('const subscribeRole = subscribePayload.role.toUpperCase()');
+    expect(source).toContain('role: subscribeRole');
+    expect(source).toContain("if (data.type === 'event')");
+    expect(source).toContain('const directEventType = String(data.type ??');
+    expect(source).toContain('eventTypesRef.current.includes(directEventType)');
   });
 });

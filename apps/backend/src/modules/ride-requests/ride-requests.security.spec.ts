@@ -18,11 +18,15 @@ describe('RideRequestsService — Sécurité', () => {
       $transaction: jest.fn(),
       rideRequest: {
         create: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         findFirst: jest.fn(),
         findUnique: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
         update: jest.fn(),
         updateMany: jest.fn(),
+      },
+      supportTicket: {
+        create: jest.fn().mockResolvedValue({ id: 'ticket-sec-1' }),
       },
       trip: {
         findFirst: jest.fn(),
@@ -54,6 +58,13 @@ describe('RideRequestsService — Sécurité', () => {
         assignedUserId: null,
       }),
     };
+    const routingService = {
+      getRoute: jest.fn().mockResolvedValue({
+        distanceKm: 6.1,
+        durationMinutes: 17,
+        source: 'haversine_estimate',
+      }),
+    };
 
     prisma.$transaction.mockImplementation(
       async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
@@ -69,6 +80,7 @@ describe('RideRequestsService — Sécurité', () => {
         notificationsService as never,
         dispatchCoordinator as never,
         { isRideRequestVelocityExceeded: jest.fn().mockResolvedValue(false) } as never,
+        routingService as never,
       ),
     };
   }

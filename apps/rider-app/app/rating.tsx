@@ -181,6 +181,10 @@ export default function RatingScreen() {
             <Text style={styles.doneTip}>
               Votre avis positif aide les bons chauffeurs a se distinguer dans le dispatch.
             </Text>
+          ) : ratingResult?.qualityReview ? (
+            <Text style={styles.doneTip}>
+              {ratingResult.qualityReview.message} Dossier {ratingResult.qualityReview.ticketId.slice(0, 8)}.
+            </Text>
           ) : (
             <Text style={styles.doneTip}>
               Votre retour aide les operations a maintenir un haut niveau de service.

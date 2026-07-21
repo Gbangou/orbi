@@ -96,6 +96,40 @@ describe('driver-active-flow', () => {
     );
   });
 
+  it('blocks offer exposure for online drivers until operations approval', () => {
+    const flow = resolveDriverActiveFlow({
+      history: {
+        role: 'DRIVER',
+        stats: {
+          activeTrips: 0,
+          completedTrips: 0,
+          cancelledTrips: 0,
+          totalAmount: 0,
+          currency: 'XOF',
+        },
+        pendingRequests: [],
+        recentTrips: [],
+      },
+      offers: driverOffers.map((offer) => ({
+        ...offer,
+        reservationExpiresAt: '2099-01-01T00:00:00.000Z',
+      })),
+      reservationNow: Date.parse('2026-04-19T10:00:00.000Z'),
+      driverProfileStatus: 'ONLINE',
+      driverVerificationStatus: 'PENDING',
+    });
+
+    expect(flow.accountCanReceiveOffers).toBe(false);
+    expect(flow.heroTitle).toBe('Dossier en revue');
+    expect(flow.visibleOfferCount).toBe(0);
+    expect(buildDriverHomeStatusLabel({ flow, fullName: 'Issa Driver' })).toBe(
+      'Compte en attente d approbation operations. Les offres restent bloquees jusqu a validation.',
+    );
+    expect(buildDriverNextActionHint(flow)).toBe(
+      'Finalisez ou faites approuver le dossier chauffeur pour debloquer les offres.',
+    );
+  });
+
   it('builds consistent transition and reservation delta messages', () => {
     expect(
       buildDriverFlowTransitionLabel(null, 'TRIP:MATCHED', 'home'),

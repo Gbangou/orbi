@@ -31,6 +31,7 @@ function buildWsUrl(baseUrl: string, sessionToken: string): string {
 
 export function useDriverRealtimeStream(
   sessionToken: string | null,
+  driverProfileId: string | null,
   onRealtimeUpdate: (eventType: string) => void,
   callbacks?: RealtimeStatusCallbacks,
 ) {
@@ -40,7 +41,7 @@ export function useDriverRealtimeStream(
   useWebSocketRealtimeStream(
     wsUrl,
     sessionToken,
-    { role: 'driver' },
+    { role: 'driver', driverId: driverProfileId },
     {
       eventTypes: DRIVER_REALTIME_EVENTS,
       onRealtimeUpdate,
