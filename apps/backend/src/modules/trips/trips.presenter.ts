@@ -1,4 +1,6 @@
 import { PICKUP_CODE_VISIBLE_STATUSES } from './trips.constants';
+import { calculateDriverEconomics } from '../../common/economics/driver-commission';
+import { roundXofForCashOperations } from '@orbi/domain';
 import {
   extractPickupCode,
   formatTripEventLabel,
@@ -29,6 +31,10 @@ function toFiniteNumber(value: unknown) {
   const numeric = Number(value);
 
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+function toDisplayCashAmount(value: unknown) {
+  return roundXofForCashOperations(toAmount(value)).amount;
 }
 
 function resolveCashPaymentReceipt(
@@ -184,6 +190,7 @@ export function serializeTripDetail(trip: {
     };
   };
   driver: {
+    createdAt?: Date | string | null;
     verificationStatus: string;
     averageRating: unknown;
     completedTripsCount: number;
@@ -234,6 +241,13 @@ export function serializeTripDetail(trip: {
       ? trip.rider.user.phoneNumber
       : null;
   const routeMonitoring = resolveRouteMonitoringSummary(trip.events);
+  const actualFare = toDisplayCashAmount(trip.actualFare);
+  const driverEconomics =
+    actualFare > 0
+      ? calculateDriverEconomics(actualFare, {
+          driverCreatedAt: trip.driver.createdAt,
+        })
+      : null;
   const pickupLatitude = toFiniteNumber(trip.rideRequest?.pickupLatitude);
   const pickupLongitude = toFiniteNumber(trip.rideRequest?.pickupLongitude);
   const destinationLatitude = toFiniteNumber(
@@ -306,7 +320,10 @@ export function serializeTripDetail(trip: {
       driverPhoneNumber,
       riderPhoneNumber,
       paymentMethod: trip.rideRequest?.paymentMethod ?? 'MOBILE_MONEY',
-      actualFare: toAmount(trip.actualFare),
+      actualFare,
+      driverPayout: driverEconomics?.driverPayout ?? null,
+      platformFee: driverEconomics?.commissionAmount ?? null,
+      commissionRate: driverEconomics?.commissionRate ?? null,
       currency: trip.currency,
       pickupLatitude,
       pickupLongitude,
@@ -375,7 +392,7 @@ export function serializeTripLifecycle(trip: {
       vehicleLabel: trip.vehicle ? formatVehicleLabel(trip.vehicle) : undefined,
       pickupCode: trip.pickupCode,
       paymentMethod: trip.rideRequest?.paymentMethod ?? 'MOBILE_MONEY',
-      actualFare: toAmount(trip.actualFare),
+      actualFare: toDisplayCashAmount(trip.actualFare),
       driverPayout: trip.driverPayout ?? null,
       platformFee: trip.platformFee ?? null,
       commissionRate: trip.commissionRate ?? null,
@@ -424,7 +441,7 @@ export function serializeTripHistoryItem(trip: {
     pickupAddress: trip.pickupAddress,
     destinationAddress: trip.destinationAddress,
     status: trip.status,
-    amount: toAmount(trip.actualFare),
+    amount: toDisplayCashAmount(trip.actualFare),
     currency: trip.currency,
     vehicleLabel: formatVehicleLabel(trip.vehicle),
     paymentMethod: trip.rideRequest?.paymentMethod ?? 'MOBILE_MONEY',

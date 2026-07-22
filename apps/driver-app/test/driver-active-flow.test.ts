@@ -330,8 +330,9 @@ describe('driver-active-flow', () => {
           value: 'Yamaha Crypton',
         }),
         expect.objectContaining({
-          label: 'Tarif',
+          label: 'Gain chauffeur',
           value: expect.stringContaining('3 500'),
+          helper: expect.stringContaining('Prix client'),
         }),
       ]),
     );
@@ -412,6 +413,9 @@ describe('driver-active-flow', () => {
         },
         pickupCode: '1234',
         actualFare: 3500,
+        driverPayout: 3150,
+        platformFee: 350,
+        commissionRate: 0.1,
         currency: 'XOF',
         startedAt: '2026-04-19T08:05:00.000Z',
         completedAt: null,
@@ -432,7 +436,46 @@ describe('driver-active-flow', () => {
         riderName: 'Awa Ouedraogo',
         initials: 'AO',
         fareLabel: expect.stringContaining('500'),
+        driverPayoutLabel: expect.stringContaining('150'),
       }),
+    );
+  });
+
+  it('does not duplicate the in-progress wording on earnings status', () => {
+    const flow = resolveDriverActiveFlow({
+      history: {
+        role: 'DRIVER',
+        stats: {
+          activeTrips: 1,
+          completedTrips: 1,
+          cancelledTrips: 0,
+          totalAmount: 3150,
+          currency: 'XOF',
+        },
+        pendingRequests: [],
+        recentTrips: [
+          {
+            id: 'trip-active',
+            pickupAddress: 'Kalgondin',
+            destinationAddress: 'Pissy',
+            status: 'IN_PROGRESS',
+            amount: 3150,
+            currency: 'XOF',
+            counterpartyName: 'Awa Ouedraogo',
+            vehicleLabel: 'Kia Picanto',
+            receipt: null,
+            completedAt: null,
+            createdAt: '2026-04-19T08:00:00.000Z',
+          },
+        ],
+      },
+      offers: [],
+      reservationNow: Date.parse('2026-04-19T10:00:00.000Z'),
+      driverProfileStatus: 'BUSY',
+    });
+
+    expect(buildDriverEarningsStatusLabel({ flow })).toBe(
+      'Revenus synchronises. Mission En cours.',
     );
   });
 });

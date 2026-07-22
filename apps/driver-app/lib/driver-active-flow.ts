@@ -238,9 +238,13 @@ export function buildDriverMissionSnapshot(input: {
       helper: "Profil verrouille pendant la mission",
     },
     {
-      label: "Tarif",
-      value: formatDriverEarningsAmount(detail?.actualFare ?? activeTrip.amount),
-      helper: activeTrip.currency,
+      label: "Gain chauffeur",
+      value: formatDriverEarningsAmount(
+        detail?.driverPayout ?? activeTrip.amount,
+      ),
+      helper: detail?.actualFare
+        ? `Prix client ${formatDriverEarningsAmount(detail.actualFare)}`
+        : activeTrip.currency,
     },
   ];
 }
@@ -331,6 +335,14 @@ export function buildDriverRiderTrustSnapshot(input: {
     initials: buildInitials(detail.riderName),
     routeLabel: `${detail.pickupAddress} vers ${detail.destinationAddress}`,
     fareLabel: formatDriverEarningsAmount(detail.actualFare),
+    driverPayoutLabel:
+      detail.driverPayout !== null && detail.driverPayout !== undefined
+        ? formatDriverEarningsAmount(detail.driverPayout)
+        : null,
+    platformFeeLabel:
+      detail.platformFee !== null && detail.platformFee !== undefined
+        ? formatDriverEarningsAmount(detail.platformFee)
+        : null,
     vehicleLabel: detail.vehicleLabel,
   };
 }
@@ -416,7 +428,7 @@ export function buildDriverEarningsStatusLabel(input: {
   flow: DriverActiveFlowSummary;
 }) {
   if (input.flow.activeTrip) {
-    return `Revenus synchronises. Mission ${input.flow.primaryStatusLabel} en cours.`;
+    return `Revenus synchronises. Mission ${input.flow.primaryStatusLabel}.`;
   }
 
   if (input.flow.operationalStatus === "SUSPENDED") {

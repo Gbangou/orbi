@@ -705,12 +705,14 @@ export default function OffersScreen() {
     );
     const netLabel =
       formatDriverEarningsAmount(
-        toFiniteEarningsNumber(activeTrip?.amount) ?? 0,
+        toFiniteEarningsNumber(
+          activeTripDetail?.trip.driverPayout ?? activeTrip?.amount,
+        ) ?? 0,
       );
 
     Alert.alert(
       "Terminer la course",
-      `Confirmez seulement a la destination. Prix client: ${grossLabel}. Net chauffeur estime: ${netLabel}. Paiement: ${activePaymentMethodLabel}.`,
+      `Confirmez seulement a la destination. Prix client: ${grossLabel}. Gain chauffeur: ${netLabel}. Paiement: ${activePaymentMethodLabel}.`,
       [
         { text: "Retour", style: "cancel" },
         {
@@ -891,7 +893,7 @@ export default function OffersScreen() {
           <FlowActionButton
             disabled={isSubmitting}
             label="Terminer la course"
-            sublabel={`Prix ${riderTrustSnapshot?.fareLabel ?? "visible"} · ${activePaymentMethodLabel}`}
+            sublabel={`Client ${riderTrustSnapshot?.fareLabel ?? "prix visible"} · Gain ${riderTrustSnapshot?.driverPayoutLabel ?? formatDriverEarningsAmount(activeTrip.amount)} · ${activePaymentMethodLabel}`}
             onPress={() => handleCompleteTrip(activeTrip.id)}
             tone="amber"
             emphasis="primary"
@@ -1177,11 +1179,17 @@ export default function OffersScreen() {
                   </Text>
                 </View>
                 <View style={styles.missionMetric}>
-                  <Text style={styles.missionMetricLabel}>Prix</Text>
+                  <Text style={styles.missionMetricLabel}>Prix client</Text>
                   <Text style={styles.missionMetricValue}>
                     {riderTrustSnapshot?.fareLabel ?? formatDriverEarningsAmount(activeTrip.amount)}
                   </Text>
                 </View>
+              </View>
+              <View style={styles.missionPaymentNotice}>
+                <Text style={styles.missionPaymentLabel}>Gain chauffeur</Text>
+                <Text style={styles.missionPaymentValue}>
+                  {riderTrustSnapshot?.driverPayoutLabel ?? formatDriverEarningsAmount(activeTrip.amount)}
+                </Text>
               </View>
               <View style={styles.missionPaymentNotice}>
                 <Text style={styles.missionPaymentLabel}>Paiement</Text>
@@ -1215,7 +1223,14 @@ export default function OffersScreen() {
                 style={styles.riderBadge}
               />
               {riderTrustSnapshot?.fareLabel ? (
-                <Text style={styles.riderFare}>{riderTrustSnapshot.fareLabel}</Text>
+                <View style={styles.riderFareColumn}>
+                  <Text style={styles.riderFare}>{riderTrustSnapshot.fareLabel}</Text>
+                  {riderTrustSnapshot.driverPayoutLabel ? (
+                    <Text style={styles.riderNetFare}>
+                      Gain {riderTrustSnapshot.driverPayoutLabel}
+                    </Text>
+                  ) : null}
+                </View>
               ) : null}
             </View>
 
@@ -1557,7 +1572,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   missionRouteText: { flex: 1, fontSize: 13, fontWeight: "500", fontFamily: "Inter_500Medium", color: theme.colors.text },
   riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.borderSoft, padding: 10 },
   riderBadge: { flex: 1 },
+  riderFareColumn: { alignItems: "flex-end", gap: 2 },
   riderFare: { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.amber },
+  riderNetFare: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.teal },
   navigationMapShell: {
     position: "relative",
     borderRadius: 16,

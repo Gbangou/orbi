@@ -257,6 +257,31 @@ describe('serializeTripDetail — serialization', () => {
     expect(trip.vehicleLabel).toBe('Yamaha Crypton');
   });
 
+  it('exposes a clear client fare and driver net payout breakdown', () => {
+    const { trip } = serializeTripDetail(
+      createBaseTrip({
+        actualFare: 6200,
+        driver: {
+          createdAt: new Date('2099-04-20T08:55:00.000Z'),
+          verificationStatus: 'APPROVED',
+          averageRating: 4.8,
+          completedTripsCount: 120,
+          profilePhotoUrl: null,
+          user: {
+            fullName: 'Issa Driver',
+            isPhoneVerified: true,
+            phoneNumber: '+22671000002',
+          },
+        },
+      }) as never,
+    );
+
+    expect(trip.actualFare).toBe(6200);
+    expect(trip.driverPayout).toBe(5580);
+    expect(trip.platformFee).toBe(620);
+    expect(trip.commissionRate).toBe(0.1);
+  });
+
   it('includes a timeline entry for each event', () => {
     const { trip } = serializeTripDetail(
       createBaseTrip({

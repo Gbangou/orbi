@@ -108,7 +108,7 @@ export class RideRequestsService {
       activeDriverCount: marketplaceDemand.activeDriverCount,
       openRequestCount: marketplaceDemand.openRequestCount,
     });
-    let applicableFare = pricing.estimatedFare;
+    let applicableFare = roundXofForCashOperations(pricing.estimatedFare).amount;
     let resolvedPromoCodeId: string | null = null;
 
     if (payload.promoCode) {

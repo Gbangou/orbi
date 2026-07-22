@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { roundXofForCashOperations } from '@orbi/domain';
 import type { RideRequestRouteMetrics } from './ride-request-creation.policy';
 
 type OperatingContextSnapshot = {
@@ -40,7 +41,7 @@ export class RideRequestProjector {
       status: input.rideRequest.status,
       pickupAddress: input.rideRequest.pickupAddress,
       destinationAddress: input.rideRequest.destinationAddress,
-      estimatedFare: this.toNumber(
+      estimatedFare: this.toRoundedMoneyAmount(
         input.rideRequest.estimatedFare ?? input.pricing.estimatedFare,
       ),
       estimatedDistanceKm: this.toNumber(input.rideRequest.estimatedDistanceKm),
@@ -79,5 +80,11 @@ export class RideRequestProjector {
     }
 
     return Number(value);
+  }
+
+  private toRoundedMoneyAmount(value: unknown) {
+    const amount = this.toNumber(value);
+
+    return amount === null ? null : roundXofForCashOperations(amount).amount;
   }
 }

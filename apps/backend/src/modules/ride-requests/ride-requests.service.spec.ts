@@ -177,7 +177,7 @@ describe('RideRequestsService', () => {
     expect(prisma.rideRequest.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         riderId: 'rider-1',
-        estimatedFare: 2150,
+        estimatedFare: 2200,
         pickupAddress: 'Universite Joseph Ki-Zerbo',
         pickupLatitude: 12.3714,
         pickupLongitude: -1.5197,
@@ -200,7 +200,7 @@ describe('RideRequestsService', () => {
       riderId: 'rider-1',
       payload: {
         status: 'REQUESTED',
-        estimatedFare: 2150,
+        estimatedFare: 2200,
         operatingContext: {
           demandLevel: 'HIGH',
           trafficLevel: 'HEAVY',
@@ -211,7 +211,7 @@ describe('RideRequestsService', () => {
         },
       },
     });
-    expect(result.estimatedFare).toBe(2150);
+    expect(result.estimatedFare).toBe(2200);
     expect(result.routeMetricsSource).toBe('SERVER_COORDINATES');
     expect(result.pricingContextSummary).toBe('HIGH - HEAVY - CONGESTED');
     expect(result.bookingReadinessSummary).toContain(
@@ -381,7 +381,7 @@ describe('RideRequestsService', () => {
     });
 
     expect(result.id).toBe('request-active-1');
-    expect(result.estimatedFare).toBe(2150);
+    expect(result.estimatedFare).toBe(2200);
     expect(prisma.rideRequest.create).not.toHaveBeenCalled();
     expect(realtimeService.publish).not.toHaveBeenCalled();
   });

@@ -154,6 +154,9 @@ export type TripDetailResponse = {
     riderPhoneNumber: string | null;
     paymentMethod?: "MOBILE_MONEY" | "CASH" | "WALLET" | string | null;
     actualFare: number;
+    driverPayout?: number | null;
+    platformFee?: number | null;
+    commissionRate?: number | null;
     currency: string;
     pickupLatitude: number | null;
     pickupLongitude: number | null;

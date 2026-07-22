@@ -29,7 +29,7 @@ describe('RideRequestProjector', () => {
         roadCondition: 'CONGESTED',
       },
       pricing: {
-        estimatedFare: 2150,
+        estimatedFare: 2200,
         fareBreakdown: {
           reasons: ['Pic de demande modere sur la zone.'],
         },
@@ -38,7 +38,7 @@ describe('RideRequestProjector', () => {
 
     expect(result).toEqual(
       expect.objectContaining({
-        estimatedFare: 2150,
+        estimatedFare: 2200,
         estimatedDistanceKm: 5.1,
         routeMetricsSource: 'SERVER_COORDINATES',
         pricingContextSummary: 'HIGH - HEAVY - CONGESTED',
