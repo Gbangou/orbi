@@ -1086,56 +1086,44 @@ export default function OffersScreen() {
 
             <TripStageTracker status={activeTrip.status} audience="driver" style={styles.stageTracker} />
 
-            {/* Route */}
-            <View style={styles.missionRoute}>
-              <View style={styles.missionRouteRow}>
-                <View style={[styles.missionRouteDot, { backgroundColor: theme.colors.teal }]} />
-                <Text style={styles.missionRouteText} numberOfLines={1}>{activeTrip.pickupAddress}</Text>
-              </View>
-              <View style={styles.missionRouteSep} />
-              <View style={styles.missionRouteRow}>
-                <View style={[styles.missionRouteDot, { backgroundColor: theme.colors.text }]} />
-                <Text style={styles.missionRouteText} numberOfLines={1}>{activeTrip.destinationAddress}</Text>
-              </View>
-            </View>
-
-            {/* Rider card */}
-            <View style={styles.riderCard}>
-              <PersonBadge
-                name={riderTrustSnapshot?.riderName ?? activeTrip.counterpartyName ?? "Passager assigné"}
-                subtitle={riderTrustSnapshot?.vehicleLabel}
-                style={styles.riderBadge}
-              />
-              {riderTrustSnapshot?.fareLabel ? (
-                <Text style={styles.riderFare}>{riderTrustSnapshot.fareLabel}</Text>
-              ) : null}
-            </View>
-
-            {/* Map */}
+            {/* Navigation-first map */}
             {activeTripDetail?.trip.pickupLatitude != null ? (
-              activeTrip.status === "MATCHED" || activeTrip.status === "DRIVER_ARRIVING" ? (
-                <ApproachMapView
-                  driverLat={driverGpsPosition?.latitude}
-                  driverLng={driverGpsPosition?.longitude}
-                  pickupLat={activeTripDetail.trip.pickupLatitude}
-                  pickupLng={activeTripDetail.trip.pickupLongitude}
-                  pickupAddress={activeTripDetail.trip.pickupAddress}
-                  style={styles.missionMap}
-                />
-              ) : (
-                <TripMapView
-                  pickupLat={activeTripDetail.trip.pickupLatitude}
-                  pickupLng={activeTripDetail.trip.pickupLongitude}
-                  destLat={activeTripDetail.trip.destinationLatitude}
-                  destLng={activeTripDetail.trip.destinationLongitude}
-                  driverLat={activeTripDetail.trip.routeMonitoring.latestPosition?.latitude ?? null}
-                  driverLng={activeTripDetail.trip.routeMonitoring.latestPosition?.longitude ?? null}
-                  vehicleTier={activeTripDetail.trip.driverVerification.vehicle.tier as string | null | undefined}
-                  phase="trip"
-                  style={styles.missionMap}
-                />
-              )
-            ) : null}
+              <View style={styles.navigationMapShell}>
+                {activeTrip.status === "MATCHED" || activeTrip.status === "DRIVER_ARRIVING" ? (
+                  <ApproachMapView
+                    driverLat={driverGpsPosition?.latitude}
+                    driverLng={driverGpsPosition?.longitude}
+                    pickupLat={activeTripDetail.trip.pickupLatitude}
+                    pickupLng={activeTripDetail.trip.pickupLongitude}
+                    pickupAddress={activeTripDetail.trip.pickupAddress}
+                    style={styles.missionMap}
+                  />
+                ) : (
+                  <TripMapView
+                    pickupLat={activeTripDetail.trip.pickupLatitude}
+                    pickupLng={activeTripDetail.trip.pickupLongitude}
+                    destLat={activeTripDetail.trip.destinationLatitude}
+                    destLng={activeTripDetail.trip.destinationLongitude}
+                    driverLat={activeTripDetail.trip.routeMonitoring.latestPosition?.latitude ?? null}
+                    driverLng={activeTripDetail.trip.routeMonitoring.latestPosition?.longitude ?? null}
+                    vehicleTier={activeTripDetail.trip.driverVerification.vehicle.tier as string | null | undefined}
+                    phase="trip"
+                    style={styles.missionMap}
+                  />
+                )}
+                <View style={styles.navigationMapBadge}>
+                  <Text style={styles.navigationMapBadgeText}>
+                    {activeTrip.status === "IN_PROGRESS" ? "Vers destination" : "Vers pickup"}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <OrbiStatusBanner
+                title="Carte en attente"
+                message="Le trajet s affichera des que les coordonnees pickup et destination sont confirmees."
+                tone="amber"
+              />
+            )}
 
             <View style={styles.missionNavigationPanel}>
               <Text style={styles.missionStageEyebrow}>{missionStageCopy.eyebrow}</Text>
@@ -1179,6 +1167,31 @@ export default function OffersScreen() {
                 <Text style={styles.routeSafetyBlockNote}>
                   A verifier: {driverRouteSafetyBrief.actionLabel}
                 </Text>
+              ) : null}
+            </View>
+
+            {/* Route */}
+            <View style={styles.missionRoute}>
+              <View style={styles.missionRouteRow}>
+                <View style={[styles.missionRouteDot, { backgroundColor: theme.colors.teal }]} />
+                <Text style={styles.missionRouteText} numberOfLines={1}>{activeTrip.pickupAddress}</Text>
+              </View>
+              <View style={styles.missionRouteSep} />
+              <View style={styles.missionRouteRow}>
+                <View style={[styles.missionRouteDot, { backgroundColor: theme.colors.text }]} />
+                <Text style={styles.missionRouteText} numberOfLines={1}>{activeTrip.destinationAddress}</Text>
+              </View>
+            </View>
+
+            {/* Rider card */}
+            <View style={styles.riderCard}>
+              <PersonBadge
+                name={riderTrustSnapshot?.riderName ?? activeTrip.counterpartyName ?? "Passager assigné"}
+                subtitle={riderTrustSnapshot?.vehicleLabel}
+                style={styles.riderBadge}
+              />
+              {riderTrustSnapshot?.fareLabel ? (
+                <Text style={styles.riderFare}>{riderTrustSnapshot.fareLabel}</Text>
               ) : null}
             </View>
 
@@ -1506,7 +1519,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: theme.colors.textSoft,
   },
-  missionCard: { padding: 12, gap: 10 },
+  missionCard: { padding: 10, gap: 10 },
   stageTracker: { paddingHorizontal: 2 },
   missionStatusRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
@@ -1521,7 +1534,31 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.borderSoft, padding: 10 },
   riderBadge: { flex: 1 },
   riderFare: { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.amber },
-  missionMap: { height: 336, borderRadius: 14, overflow: "hidden" },
+  navigationMapShell: {
+    position: "relative",
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(7,19,17,0.12)",
+    backgroundColor: theme.colors.backgroundDim,
+  },
+  missionMap: { height: 430, borderRadius: 16, overflow: "hidden" },
+  navigationMapBadge: {
+    position: "absolute",
+    left: 12,
+    top: 12,
+    borderRadius: 999,
+    backgroundColor: "rgba(7,19,17,0.82)",
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+  },
+  navigationMapBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: "#FFFFFF",
+    textTransform: "uppercase",
+  },
   missionNavigationPanel: {
     gap: 8,
     borderRadius: 14,

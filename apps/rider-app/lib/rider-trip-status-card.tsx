@@ -14,6 +14,7 @@ import {
 } from '@orbi/api';
 import { type OrbiTheme } from '@orbi/ui';
 import { PersonBadge, TripStageTracker, useOrbiTheme } from '@orbi/ui/native';
+import { formatRiderMoneyAmount } from './rider-display-format';
 
 type ActiveTrip = MyTripsResponse['recentTrips'][number];
 type ActiveRequest = MyTripsResponse['pendingRequests'][number];
@@ -72,6 +73,11 @@ export function RiderTripStatusCard({
   const destinationAddress = activeTrip?.destinationAddress ?? activeRequest?.destinationAddress ?? '';
   const etaLabel = activeTrip ? buildTripEtaLabel(activeTrip.status) : null;
   const isArrived = activeTrip?.status === 'DRIVER_ARRIVING';
+  const fareLabel = activeTrip
+    ? formatRiderMoneyAmount(activeTrip.amount)
+    : activeRequest
+      ? formatRiderMoneyAmount(activeRequest.estimatedFare)
+      : null;
   const canCancel =
     Boolean(activeRequest) ||
     (activeTrip ? canRiderCancelTrip(activeTrip.status) : false);
@@ -97,6 +103,12 @@ export function RiderTripStatusCard({
           ) : null}
           {flowTransitionLabel ? <Text style={styles.transitionLabel}>{flowTransitionLabel}</Text> : null}
         </View>
+        {fareLabel ? (
+          <View style={styles.farePill}>
+            <Text style={styles.farePillLabel}>Prix</Text>
+            <Text style={styles.farePillValue}>{fareLabel}</Text>
+          </View>
+        ) : null}
         <View style={styles.chevron}>
           <ForwardGlyph color={theme.colors.textInverse} />
         </View>
@@ -210,6 +222,31 @@ const makeStyles = (theme: OrbiTheme) =>
       flex: 1,
       gap: 2,
     },
+    farePill: {
+      maxWidth: 96,
+      flexShrink: 0,
+      borderRadius: 12,
+      backgroundColor: 'rgba(0,201,167,0.10)',
+      borderWidth: 1,
+      borderColor: 'rgba(0,201,167,0.24)',
+      paddingHorizontal: 9,
+      paddingVertical: 7,
+      alignItems: 'flex-end',
+    },
+    farePillLabel: {
+      fontSize: 9,
+      fontWeight: '800',
+      fontFamily: 'Inter_700Bold',
+      color: theme.colors.textMuted,
+      textTransform: 'uppercase',
+    },
+    farePillValue: {
+      marginTop: 1,
+      fontSize: 12,
+      fontWeight: '800',
+      fontFamily: 'Inter_700Bold',
+      color: theme.colors.teal,
+    },
     routeTitle: {
       fontSize: 14,
       fontWeight: '800',
@@ -263,10 +300,12 @@ const makeStyles = (theme: OrbiTheme) =>
     },
     quickActions: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 8,
     },
     quickAction: {
-      flex: 1,
+      flexGrow: 1,
+      flexBasis: '47%',
       alignItems: 'center',
       paddingVertical: 10,
       borderRadius: 12,

@@ -127,6 +127,18 @@ const QUICK_SUPPORT_ACTIONS = [
   }
 >;
 
+function formatRiderPaymentMethodLabel(paymentMethod: string | null | undefined) {
+  switch ((paymentMethod ?? "MOBILE_MONEY").toUpperCase()) {
+    case "CASH":
+      return "Cash";
+    case "WALLET":
+      return "Wallet Orbi";
+    case "MOBILE_MONEY":
+    default:
+      return "Mobile Money";
+  }
+}
+
 function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
   const theme = useOrbiTheme();
   const loyaltyStyles = useMemo(() => makeLoyaltyStyles(theme), [theme]);
@@ -907,6 +919,12 @@ export default function ActivityScreen() {
       activeTripDetail?.trip.driverVerification.vehicle.tier ?? null;
     const canCancel = canRiderCancelTrip(activeTrip.status);
     const canStop = canRiderStopTrip(activeTrip.status);
+    const activeFareLabel = formatRiderMoneyAmount(
+      activeTripDetail?.trip.actualFare ?? activeTrip.amount,
+    );
+    const activePaymentLabel = formatRiderPaymentMethodLabel(
+      activeTripDetail?.trip.paymentMethod,
+    );
 
     return (
       <View style={styles.tripRoot}>
@@ -956,6 +974,27 @@ export default function ActivityScreen() {
               <Text style={styles.realtimeDot}>live</Text>
             ) : null}
           </View>
+
+          <OrbiSurface tone={activeTrip.status === 'IN_PROGRESS' ? 'teal' : 'sky'} style={styles.tripFocusPanel}>
+            <View style={styles.tripFocusCopy}>
+              <Text style={styles.tripFocusEyebrow}>
+                {activeTrip.status === 'IN_PROGRESS' ? 'Trajet en cours' : 'Avant de monter'}
+              </Text>
+              <Text style={styles.tripFocusTitle} numberOfLines={2}>
+                {riderNextActionHint}
+              </Text>
+            </View>
+            <View style={styles.tripFocusMetrics}>
+              <View style={styles.tripFocusMetric}>
+                <Text style={styles.tripFocusMetricLabel}>Prix</Text>
+                <Text style={styles.tripFocusMetricValue}>{activeFareLabel}</Text>
+              </View>
+              <View style={styles.tripFocusMetric}>
+                <Text style={styles.tripFocusMetricLabel}>Paiement</Text>
+                <Text style={styles.tripFocusMetricValue}>{activePaymentLabel}</Text>
+              </View>
+            </View>
+          </OrbiSurface>
 
           {/* ETA banner — live distance & ETA when driver is approaching */}
           {(activeTrip.status === 'MATCHED' || activeTrip.status === 'DRIVER_ARRIVING') ? (() => {
@@ -1400,6 +1439,59 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.teal,
     textTransform: 'uppercase',
   },
+  tripFocusPanel: {
+    gap: 12,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  tripFocusCopy: {
+    gap: 4,
+  },
+  tripFocusEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.teal,
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  tripFocusTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text,
+  },
+  tripFocusMetrics: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tripFocusMetric: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    justifyContent: 'center',
+  },
+  tripFocusMetricLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  tripFocusMetricValue: {
+    marginTop: 2,
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text,
+  },
 
   // Driver card
   driverCard: {
@@ -1497,16 +1589,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Actions row
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   actionBtn: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '47%',
     minHeight: 48,
     paddingHorizontal: 6,
     borderRadius: 12,
   },
   actionBtnLabel: {
-    fontSize: 11,
+    fontSize: 12,
   },
 
   // ETA banner
