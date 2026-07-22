@@ -699,6 +699,29 @@ export default function OffersScreen() {
     });
   }
 
+  function handleCompleteTrip(tripId: string) {
+    const grossLabel = formatDriverEarningsAmount(
+      toFiniteEarningsNumber(activeTripDetail?.trip.actualFare ?? activeTrip?.amount) ?? 0,
+    );
+    const netLabel =
+      formatDriverEarningsAmount(
+        toFiniteEarningsNumber(activeTrip?.amount) ?? 0,
+      );
+
+    Alert.alert(
+      "Terminer la course",
+      `Confirmez seulement a la destination. Prix client: ${grossLabel}. Net chauffeur estime: ${netLabel}. Paiement: ${activePaymentMethodLabel}.`,
+      [
+        { text: "Retour", style: "cancel" },
+        {
+          text: "Terminer",
+          style: "destructive",
+          onPress: () => void handleAdvanceTrip(tripId, "COMPLETED"),
+        },
+      ],
+    );
+  }
+
   function handleDriverCancelTrip(tripId: string) {
     const REASONS = [
       "Passager introuvable",
@@ -868,7 +891,8 @@ export default function OffersScreen() {
           <FlowActionButton
             disabled={isSubmitting}
             label="Terminer la course"
-            onPress={() => handleAdvanceTrip(activeTrip.id, "COMPLETED")}
+            sublabel={`Prix ${riderTrustSnapshot?.fareLabel ?? "visible"} · ${activePaymentMethodLabel}`}
+            onPress={() => handleCompleteTrip(activeTrip.id)}
             tone="amber"
             emphasis="primary"
             style={isSubmitting ? styles.disabled : null}

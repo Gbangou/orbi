@@ -146,6 +146,7 @@ export function ApproachMapView({
     }),
   );
   const [routeInfo, setRouteInfo] = useState<Omit<RouteInfoMessage, 'type'> | null>(null);
+  const [routeUnavailableReason, setRouteUnavailableReason] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
@@ -159,14 +160,27 @@ export function ApproachMapView({
   const handleWebViewMessage = useCallback((event: { nativeEvent?: { data?: string } }) => {
     if (!event.nativeEvent?.data) return;
     try {
-      const message = JSON.parse(event.nativeEvent.data) as Partial<RouteInfoMessage>;
+      const message = JSON.parse(event.nativeEvent.data) as {
+        type?: string;
+        distanceMeters?: number;
+        durationSeconds?: number;
+        routeCount?: number;
+        selectedIndex?: number;
+      };
       if (message.type === 'ROUTE_INFO' && typeof message.distanceMeters === 'number') {
+        setRouteUnavailableReason(null);
         setRouteInfo({
           distanceMeters: message.distanceMeters,
           durationSeconds: message.durationSeconds ?? 0,
           routeCount: message.routeCount ?? 1,
           selectedIndex: message.selectedIndex ?? 0,
         });
+        return;
+      }
+
+      if (message.type === 'ROUTE_UNAVAILABLE') {
+        setRouteInfo(null);
+        setRouteUnavailableReason('Route vers passager indisponible');
       }
     } catch {
       // Ignore malformed messages from the embedded map.
@@ -185,16 +199,15 @@ export function ApproachMapView({
 
     return (
       <View style={[styles.container, styles.webFallback, style]}>
-        <View style={styles.darkRoute} />
         <View style={[styles.point, styles.driverPoint]} />
         <View style={[styles.point, styles.pickupPoint]} />
         <View style={styles.statusPanel}>
           <Text style={styles.eyebrow}>Approche</Text>
           <Text style={styles.title}>
-            {hasDriver && hasPickup ? 'Itineraire vers le rider' : 'Coordonnees en attente'}
+            {hasDriver && hasPickup ? 'Points GPS disponibles' : 'Coordonnees en attente'}
           </Text>
           <Text style={styles.meta} numberOfLines={2}>
-            {pickupAddress || 'Prise en charge'} - carte detaillee disponible sur mobile natif.
+            {pickupAddress || 'Prise en charge'} - itineraire reel requis avant guidage.
           </Text>
         </View>
       </View>
@@ -206,6 +219,20 @@ export function ApproachMapView({
   }
 
   function renderRouteInfoPanel() {
+    if (routeUnavailableReason) {
+      return (
+        <View style={[styles.routeInfoPanel, styles.routeWarningPanel]}>
+          <View style={styles.routeInfoTextBlock}>
+            <Text style={styles.routeInfoEyebrow}>Vers le passager</Text>
+            <Text style={styles.routeWarningTitle}>{routeUnavailableReason}</Text>
+            <Text style={styles.routeWarningText}>
+              Ouvrez une navigation GPS. Aucun raccourci n est dessine.
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
     if (!routeInfo) return null;
     return (
       <Pressable
@@ -297,7 +324,7 @@ export function ApproachMapView({
             <View style={styles.fullscreenHint}>
               <Text style={styles.fullscreenHintTitle}>Approche passager</Text>
               <Text style={styles.fullscreenHintText}>
-                Gardez le point de depart, votre position et la meilleure route bien visibles.
+                Gardez le point de depart, votre position et la route calculee bien visibles.
               </Text>
             </View>
           ) : null}
@@ -344,6 +371,23 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(129,140,248,0.25)',
     ...theme.shadows.card,
+  },
+  routeWarningPanel: {
+    maxWidth: '86%',
+    alignItems: 'flex-start',
+    backgroundColor: '#fff7ed',
+    borderColor: 'rgba(245,158,11,0.35)',
+  },
+  routeWarningTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: theme.colors.text,
+  },
+  routeWarningText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: theme.colors.textSoft,
   },
   routeInfoTextBlock: {
     gap: 2,

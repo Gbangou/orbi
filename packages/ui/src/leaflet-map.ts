@@ -145,6 +145,11 @@ export type RouteInfoMessage = {
   selectedIndex: number;
 };
 
+export type RouteUnavailableMessage = {
+  type: 'ROUTE_UNAVAILABLE';
+  reason: 'NO_ROUTE' | 'NETWORK';
+};
+
 /**
  * Snippet JS injectable dans le `mapScript` d'une carte Leaflet en WebView.
  * Récupère l'itinéraire OSRM (avec alternatives), le trace, et poste la
@@ -160,6 +165,16 @@ export function buildTripRouteScript(opts: { routeColor: string; altColor?: stri
 var __orbiRouteLines=[];
 var __orbiRoutes=[];
 function __orbiClearRoutes(){__orbiRouteLines.forEach(function(l){map.removeLayer(l)});__orbiRouteLines=[];}
+function __orbiPostRouteUnavailable(reason){
+  __orbiClearRoutes();
+  __orbiRoutes=[];
+  if(window.ReactNativeWebView){
+    window.ReactNativeWebView.postMessage(JSON.stringify({
+      type:'ROUTE_UNAVAILABLE',
+      reason:reason
+    }));
+  }
+}
 function __orbiPostRouteInfo(index){
   if(window.ReactNativeWebView&&__orbiRoutes[index]){
     window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -170,12 +185,6 @@ function __orbiPostRouteInfo(index){
       selectedIndex:index
     }));
   }
-}
-function __orbiDrawFallbackRoute(lat1,lng1,lat2,lng2){
-  __orbiClearRoutes();
-  __orbiRoutes=[];
-  var line=L.polyline([[lat1,lng1],[lat2,lng2]],{color:'${opts.routeColor}',weight:4,opacity:.55,dashArray:'9 6'}).addTo(map);
-  __orbiRouteLines.push(line);
 }
 function __orbiSelectRoute(index){
   if(!__orbiRoutes.length)return;
@@ -214,9 +223,9 @@ function __orbiFetchTripRoute(lat1,lng1,lat2,lng2){
           };
         });
         __orbiSelectRoute(0);
-      }else{__orbiDrawFallbackRoute(lat1,lng1,lat2,lng2)}
+      }else{__orbiPostRouteUnavailable('NO_ROUTE')}
     })
-    .catch(function(){__orbiDrawFallbackRoute(lat1,lng1,lat2,lng2)});
+    .catch(function(){__orbiPostRouteUnavailable('NETWORK')});
 }
 document.addEventListener('message',__orbiOnRouteMessage);
 window.addEventListener('message',__orbiOnRouteMessage);

@@ -204,6 +204,7 @@ export function TripMapView({
   );
 
   const [routeInfo, setRouteInfo] = useState<Omit<RouteInfoMessage, 'type'> | null>(null);
+  const [routeUnavailableReason, setRouteUnavailableReason] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
@@ -219,17 +220,28 @@ export function TripMapView({
       if (!event.nativeEvent?.data) return;
 
       try {
-        const message = JSON.parse(event.nativeEvent.data) as Partial<RouteInfoMessage> & {
+        const message = JSON.parse(event.nativeEvent.data) as {
           type?: string;
+          distanceMeters?: number;
+          durationSeconds?: number;
+          routeCount?: number;
+          selectedIndex?: number;
         };
 
         if (message.type === 'ROUTE_INFO' && typeof message.distanceMeters === 'number') {
+          setRouteUnavailableReason(null);
           setRouteInfo({
             distanceMeters: message.distanceMeters,
             durationSeconds: message.durationSeconds ?? 0,
             routeCount: message.routeCount ?? 1,
             selectedIndex: message.selectedIndex ?? 0,
           });
+          return;
+        }
+
+        if (message.type === 'ROUTE_UNAVAILABLE') {
+          setRouteInfo(null);
+          setRouteUnavailableReason('Itineraire route non calcule');
           return;
         }
 
@@ -293,6 +305,19 @@ export function TripMapView({
   }
 
   function renderRouteInfoPanel() {
+    if (routeUnavailableReason) {
+      return (
+        <View style={[styles.routeInfoPanel, styles.routeWarningPanel]}>
+          <View>
+            <Text style={styles.routeWarningTitle}>{routeUnavailableReason}</Text>
+            <Text style={styles.routeWarningText}>
+              Orbi ne trace pas de raccourci imaginaire.
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
     if (!routeInfo) return null;
     return (
       <Pressable
@@ -408,6 +433,24 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
     ...theme.shadows.card,
+  },
+  routeWarningPanel: {
+    maxWidth: '86%',
+    alignItems: 'flex-start',
+    backgroundColor: '#fff7ed',
+    borderColor: 'rgba(245,158,11,0.35)',
+  },
+  routeWarningTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: theme.colors.text,
+  },
+  routeWarningText: {
+    marginTop: 2,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: theme.colors.textSoft,
   },
   routeInfoDistance: {
     fontSize: 13,

@@ -1148,6 +1148,13 @@ describe('driver smoke flows', () => {
       'Detail de mission indisponible: la course principale reste active.',
     );
     await pressByText(renderer, 'Terminer la course');
+    const completeOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
+      | Array<{ text?: string; onPress?: () => void }>
+      | undefined;
+    await invokeInAct(async () => {
+      completeOptions?.find((option) => option.text === 'Terminer')?.onPress?.();
+      await flushMicrotasks();
+    });
     expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
       expect.any(Object),
       'trip-driver-1',
@@ -1397,6 +1404,13 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
     await pressByText(renderer, 'Terminer la course');
+    const completeOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
+      | Array<{ text?: string; onPress?: () => void }>
+      | undefined;
+    await invokeInAct(async () => {
+      completeOptions?.find((option) => option.text === 'Terminer')?.onPress?.();
+      await flushMicrotasks();
+    });
 
     expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
       { token: 'driver-auth-client' },
@@ -1440,6 +1454,13 @@ describe('driver smoke flows', () => {
     await pressByText(renderer, 'Actualiser le direct');
     expectText(renderer, 'A verifier: Arretez les actions non urgentes, contactez le support ou utilisez SOS si necessaire.');
     await pressByText(renderer, 'Terminer la course');
+    const completeOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
+      | Array<{ text?: string; onPress?: () => void }>
+      | undefined;
+    await invokeInAct(async () => {
+      completeOptions?.find((option) => option.text === 'Terminer')?.onPress?.();
+      await flushMicrotasks();
+    });
     expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
       { token: 'driver-auth-client' },
       'trip-driver-1',

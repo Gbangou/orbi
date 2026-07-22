@@ -599,6 +599,7 @@ export default function ActivityScreen() {
   }
 
   function handleCancelActiveTrip(tripId: string) {
+    safeHaptics.impact('medium');
     const REASONS = [
       "Chauffeur en retard",
       "Chauffeur ne repond pas",
@@ -606,8 +607,8 @@ export default function ActivityScreen() {
     ];
 
     Alert.alert(
-      "Annuler la course",
-      "Pourquoi souhaitez-vous annuler ?",
+      "Annuler avant depart",
+      "Vous pouvez annuler tant que vous n etes pas monte et que la course n a pas demarre.",
       [
         ...REASONS.map((reason) => ({
           text: reason,
@@ -619,12 +620,16 @@ export default function ActivityScreen() {
   }
 
   function handleStopInProgressTrip(tripId: string) {
+    safeHaptics.impact('medium');
+    const fareLabel = formatRiderMoneyAmount(
+      activeTripDetail?.trip.actualFare ?? activeTrip?.amount,
+    );
     Alert.alert(
-      "Arreter la course",
-      "Confirmez uniquement si vous souhaitez descendre maintenant. Le montant sera ajuste selon le trajet deja parcouru quand le signal route le permet.",
+      "Arreter maintenant",
+      `Confirmez seulement si vous descendez maintenant. Prix actuel: ${fareLabel}. Le montant peut etre ajuste selon le trajet reel disponible.`,
       [
         {
-          text: "Arreter maintenant",
+          text: "Confirmer l arret",
           style: "destructive" as const,
           onPress: () =>
             void doStopInProgressTrip(tripId, "Arret demande par le passager"),
@@ -1135,7 +1140,7 @@ export default function ActivityScreen() {
                 onPress={() => handleCancelActiveTrip(activeTrip.id)}
                 disabled={isSubmitting}
                 style={styles.actionBtn}
-                label="Annuler"
+                label="Annuler avant depart"
                 variant="danger"
                 tone="danger"
                 labelStyle={styles.actionBtnLabel}
@@ -1146,7 +1151,7 @@ export default function ActivityScreen() {
                 onPress={() => handleStopInProgressTrip(activeTrip.id)}
                 disabled={isSubmitting}
                 style={styles.actionBtn}
-                label="Arreter"
+                label="Arreter maintenant"
                 variant="danger"
                 tone="danger"
                 labelStyle={styles.actionBtnLabel}
