@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, SafeAreaView, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, RefreshControl, SafeAreaView, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../../lib/privacy/screen-capture';
 import {
   fetchDriverEarnings,
@@ -9,7 +9,13 @@ import {
   type MyTripsResponse,
 } from '@orbi/api';
 import { formatOperationalStatus, type OrbiTheme } from '@orbi/ui';
-import { useOrbiTheme } from '@orbi/ui/native';
+import {
+  OrbiButton,
+  OrbiMetricTile,
+  OrbiStatusBanner,
+  OrbiSurface,
+  useOrbiTheme,
+} from '@orbi/ui/native';
 import { restoreDriverSession } from '../../lib/auth';
 import { resolveDriverAppError } from '../../lib/session-feedback';
 import { OrbiLogo } from '../../lib/orbi-logo';
@@ -62,8 +68,6 @@ const fallbackEarnings: DriverEarningsResponse = {
   },
   recentTrips: [],
 };
-
-const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
 
 // ── Graphique hebdomadaire — gains par jour ───────────────────────────────────
 
@@ -580,49 +584,39 @@ export default function RevenusScreen() {
               <Text style={styles.transitionBadgeText}>{earningsTransitionLabel}</Text>
             </View>
           ) : null}
-          {flow.operationalStatus === 'SUSPENDED' ? (
-            <View style={[styles.transitionBadge, styles.transitionBadgeDanger]}>
-              <Text style={styles.transitionBadgeDangerText}>
-                Compte suspendu — historique consultable
-              </Text>
-            </View>
-          ) : null}
         </View>
+
+        {flow.operationalStatus === 'SUSPENDED' ? (
+          <OrbiStatusBanner
+            title="Compte suspendu"
+            message="Historique et revenus restent consultables pendant la revue."
+            tone="danger"
+          />
+        ) : null}
 
         {/* Metrics row */}
         <View style={styles.metricsRow}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>{td('earningsWeek')}</Text>
-            <Text
-              style={styles.metricValue}
-              numberOfLines={1}
-            >
-              {formatDriverEarningsAmount(earnings.summary.week)}
-            </Text>
-            <Text style={styles.metricMeta}>
-              {formatDriverEarningsCount(earnings.summary.completedTrips)} courses
-            </Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>{td('earningsMonth')}</Text>
-            <Text
-              style={styles.metricValue}
-              numberOfLines={1}
-            >
-              {formatDriverEarningsAmount(earnings.summary.month)}
-            </Text>
-            <Text style={styles.metricMeta}>vision long terme</Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>{td('earningsAverage')}</Text>
-            <Text
-              style={styles.metricValue}
-              numberOfLines={1}
-            >
-              {formatDriverEarningsAmount(earnings.summary.averagePayout)}
-            </Text>
-            <Text style={styles.metricMeta}>par course</Text>
-          </View>
+          <OrbiMetricTile
+            style={styles.metricTile}
+            tone="amber"
+            label={td('earningsWeek')}
+            value={formatDriverEarningsAmount(earnings.summary.week)}
+            helper={`${formatDriverEarningsCount(earnings.summary.completedTrips)} courses`}
+          />
+          <OrbiMetricTile
+            style={styles.metricTile}
+            tone="amber"
+            label={td('earningsMonth')}
+            value={formatDriverEarningsAmount(earnings.summary.month)}
+            helper="vision long terme"
+          />
+          <OrbiMetricTile
+            style={styles.metricTile}
+            tone="amber"
+            label={td('earningsAverage')}
+            value={formatDriverEarningsAmount(earnings.summary.averagePayout)}
+            helper="par course"
+          />
         </View>
 
         {/* Graphique hebdomadaire — gains par jour (7 derniers jours) */}
@@ -641,7 +635,7 @@ export default function RevenusScreen() {
         <DriverMilestoneCard completedTrips={earnings.summary.completedTrips} />
 
         {/* Settlement */}
-        <View style={styles.settlementCard}>
+        <OrbiSurface style={styles.settlementCard}>
           <Text style={styles.sectionTitle}>{td("payoutControl")}</Text>
 
           {/* Payout date — Bolt-style */}
@@ -680,10 +674,10 @@ export default function RevenusScreen() {
           {earningsTrustSummary.note ? (
             <Text style={styles.settlementNote}>{earningsTrustSummary.note}</Text>
           ) : null}
-        </View>
+        </OrbiSurface>
 
         {earnings.adjustments?.recent.length ? (
-          <View style={styles.adjustmentsCard}>
+          <OrbiSurface tone="teal" style={styles.adjustmentsCard}>
             <View style={styles.adjustmentsHeader}>
               <View>
                 <Text style={styles.sectionTitle}>Ajustements justes</Text>
@@ -712,30 +706,30 @@ export default function RevenusScreen() {
                 </Text>
               </View>
             ))}
-          </View>
+          </OrbiSurface>
         ) : null}
 
         {/* Refresh button — accessible for tests */}
-        <Pressable
+        <OrbiButton
+          label={isRefreshing ? td('refreshing') : td('refresh')}
           onPress={() => void loadEarnings()}
           disabled={isRefreshing}
-          style={[styles.refreshBtn, isRefreshing && styles.refreshBtnDisabled]}
-        >
-          <Text style={styles.refreshBtnLabel}>
-            {isRefreshing ? td('refreshing') : td('refresh')}
-          </Text>
-        </Pressable>
+          loading={isRefreshing}
+          variant="secondary"
+          tone="amber"
+          style={styles.refreshBtn}
+        />
 
         {/* Recent trips */}
         <View style={styles.tripsSection}>
           <Text style={styles.sectionTitle}>{td('recentTrips')}</Text>
           {earnings.recentTrips.length === 0 ? (
-            <View style={styles.emptyCard}>
+            <OrbiSurface style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>Aucune course comptabilisée</Text>
               <Text style={styles.emptyMeta}>
                 Passez en ligne et acceptez vos premières offres.
               </Text>
-            </View>
+            </OrbiSurface>
           ) : (
             earnings.recentTrips.map((trip) => (
               <View
@@ -845,44 +839,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     color: theme.colors.sky,
   },
-  transitionBadgeDanger: { backgroundColor: 'rgba(255,59,48,0.08)' },
-  transitionBadgeDangerText: {
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.danger,
-  },
-
   // Metrics
   metricsRow: { flexDirection: 'row', gap: 10 },
-  metricCard: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 14,
-    gap: 2,
-  },
-  metricLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0,
-  },
-  metricValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    color: theme.colors.amber,
-  },
-  metricMeta: {
-    fontSize: 10,
-    color: theme.colors.textMuted,
-    fontFamily: 'Inter_400Regular',
-  },
+  metricTile: { flex: 1 },
 
   // Payout date banner — Bolt-style
   payoutDateBanner: {
@@ -1073,18 +1032,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Refresh button
   refreshBtn: {
     alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: theme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  refreshBtnDisabled: { opacity: 0.65 },
-  refreshBtnLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.text,
+    paddingHorizontal: 18,
   },
 });
