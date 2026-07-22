@@ -21,7 +21,14 @@ import {
   orbiCopy,
   type OrbiTheme,
 } from '@orbi/ui';
-import { OrbiButton, OrbiStatusBanner, safeHaptics, useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
+import {
+  OrbiButton,
+  OrbiStatusBanner,
+  PersonBadge,
+  safeHaptics,
+  useOrbiTheme,
+  VehicleIllustration,
+} from '@orbi/ui/native';
 import { restoreDriverSession } from '../../lib/auth';
 import {
   formatDriverEarningsAmount,
@@ -204,7 +211,7 @@ function TripRequestModal({
           {/* Header */}
           <View style={modal.headerRow}>
             <View style={modal.headerVehicle}>
-              <VehicleIllustration tier={isMoto ? 'moto-standard' : 'car-standard'} width={54} height={40} />
+              <VehicleIllustration tier={isMoto ? 'moto-standard' : 'car-standard'} width={66} height={48} />
             </View>
             <View style={modal.headerCopy}>
               <View style={[modal.categoryTag, { backgroundColor: accent + '20', borderColor: accent + '50' }]}>
@@ -224,15 +231,7 @@ function TripRequestModal({
           </View>
 
           {/* Rider */}
-          <View style={modal.riderRow}>
-            <View style={[modal.avatar, { backgroundColor: accent + '20' }]}>
-              <Text style={[modal.avatarText, { color: accent }]}>{buildInitials(offer.riderName)}</Text>
-            </View>
-            <View style={modal.riderMeta}>
-              <Text style={modal.riderName}>{offer.riderName}</Text>
-              <Text style={modal.riderSub}>Passager Orbi</Text>
-            </View>
-          </View>
+          <PersonBadge name={offer.riderName} subtitle="Passager Orbi" size={44} style={modal.riderRow} />
 
           {/* Route */}
           <View style={modal.routeCard}>
@@ -1174,29 +1173,6 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 12,
     paddingHorizontal: 16,
     paddingBottom: 12,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  riderMeta: { flex: 1 },
-  riderName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#F0FFF8',
-    marginBottom: 2,
-  },
-  riderSub: {
-    fontSize: 12,
-    color: '#4E7B69',
   },
   routeCard: {
     marginHorizontal: 16,

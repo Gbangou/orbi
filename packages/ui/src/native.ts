@@ -10,6 +10,7 @@ export {
   OrbiScreen,
   OrbiStatusBanner,
   OrbiSurface,
+  PersonBadge,
   type OrbiButtonVariant,
   type OrbiMobileRole,
   type OrbiMobileTone,
@@ -18,3 +19,9 @@ export { safeHaptics, type OrbiImpactStyle, type OrbiNotificationType } from './
 export { OrbiAuthIcon, type OrbiAuthIconName } from './auth-icons';
 export { OrbiThemeProvider, useOrbiTheme } from './theme-context';
 export { VehicleIllustration, normalizeVehicleTier } from './vehicle-illustrations';
+export {
+  TripStageTracker,
+  resolveTripStageKey,
+  type TripStageKey,
+  type TripStageTrackerProps,
+} from './trip-stage-tracker';

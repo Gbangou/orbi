@@ -1930,15 +1930,15 @@ function summarizeLaunchReadinessActions(
 function resolveLaunchSafetyBenchmark() {
   const capabilities: LaunchSafetyBenchmarkCapability[] = [
     {
-      id: 'pickup-code',
-      label: 'Code pickup anti-erreur',
+      id: 'pickup-verification',
+      label: 'Verification pickup simple',
       status: 'active',
       priority: 'critical',
       orbiSignal:
-        'Code de prise en charge emis, visible et verifiable avant depart.',
-      competitorSignal: 'Uber Verify your ride, Bolt pickup codes.',
+        'Nom, vehicule, plaque et partage trajet visibles avant depart.',
+      competitorSignal: 'Uber/Yango: identification chauffeur et vehicule avant depart.',
       nextStep:
-        'Garder le code obligatoire sur tous les trajets pilotes et auditer les echecs de verification.',
+        'Garder le depart sans code par defaut; reserver le PIN aux cas operations a risque.',
     },
     {
       id: 'driver-document-verification',

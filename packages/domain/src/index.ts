@@ -206,10 +206,7 @@ export const activeTripLifecycleStatuses = [
 export type ActiveTripLifecycleStatus =
   (typeof activeTripLifecycleStatuses)[number];
 
-export const pickupCodeVisibleTripLifecycleStatuses = [
-  'MATCHED',
-  'DRIVER_ARRIVING',
-] as const;
+export const pickupCodeVisibleTripLifecycleStatuses = [] as const;
 
 export const allowedTripLifecycleTransitions: Record<
   TripLifecycleStatus,

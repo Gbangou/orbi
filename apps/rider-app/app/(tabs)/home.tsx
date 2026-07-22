@@ -14,10 +14,12 @@ import {
   View,
 } from 'react-native';
 import {
+  cancelRideRequestWithApi,
   createTripShareLinkWithApi,
   fetchMyTrips,
   fetchRideOptionsPreview,
   triggerTripSafetySosWithApi,
+  updateTripStatusWithApi,
   type MyTripsResponse,
   type RideOption,
 } from '@orbi/api';
@@ -42,6 +44,7 @@ import {
 import { normalizeRiderTripsResponse } from '../../lib/rider-trips-normalizer';
 import { useRiderPosition } from '../../lib/use-rider-position';
 import { HomeMapView } from '../../lib/home-map-view';
+import { RiderTripStatusCard } from '../../lib/rider-trip-status-card';
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
 
@@ -56,21 +59,6 @@ function ForwardGlyph({ color }: { color: string }) {
       <View style={[homeIcon.forwardLine, homeIcon.forwardLineBottom, { backgroundColor: color }]} />
     </View>
   );
-}
-
-// ── Smart ETA label based on trip lifecycle status ────────────────────────────
-
-function buildTripEtaLabel(status: string | undefined): string | null {
-  switch (status) {
-    case 'MATCHED':
-      return 'Chauffeur confirmé · en route';
-    case 'DRIVER_ARRIVING':
-      return 'Votre chauffeur est arrivé';
-    case 'IN_PROGRESS':
-      return 'Trajet en cours';
-    default:
-      return null;
-  }
 }
 
 // ── Dot indicator for real-time status ───────────────────────────────────────
@@ -234,6 +222,7 @@ export default function RiderHomeScreen() {
   const [isOffline, setIsOffline] = useState(false);
   const [isSosBusy, setIsSosBusy] = useState(false);
   const [isShareBusy, setIsShareBusy] = useState(false);
+  const [isFlowActionBusy, setIsFlowActionBusy] = useState(false);
   const [matchedAnim] = useState(() => new Animated.Value(0));
   const [showMatchCard, setShowMatchCard] = useState(false);
   const previousFlowStateRef = useRef<string | null>(null);
@@ -369,6 +358,126 @@ export default function RiderHomeScreen() {
       if (silent) setIsRealtimeSyncing(false);
     }
   }, []);
+
+  const cancelPendingRequest = useCallback(async (rideRequestId: string) => {
+    if (isFlowActionBusy) return;
+    setIsFlowActionBusy(true);
+    try {
+      const { authClient } = await restoreRiderSession();
+      await cancelRideRequestWithApi(authClient, rideRequestId);
+      await loadHomeContext(true);
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        surface: 'booking',
+        fallback: "L'annulation de la demande a echoue.",
+      });
+      Alert.alert('Annulation indisponible', feedback.message);
+    } finally {
+      setIsFlowActionBusy(false);
+    }
+  }, [isFlowActionBusy, loadHomeContext]);
+
+  const cancelTripBeforeDeparture = useCallback(async (tripId: string) => {
+    if (isFlowActionBusy) return;
+    setIsFlowActionBusy(true);
+    try {
+      const { authClient } = await restoreRiderSession();
+      await updateTripStatusWithApi(
+        authClient,
+        tripId,
+        'CANCELLED',
+        'Annulation demandee depuis accueil passager',
+      );
+      await loadHomeContext(true);
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        surface: 'active-trip',
+        fallback: "L'annulation de la course a echoue.",
+      });
+      Alert.alert('Annulation indisponible', feedback.message);
+    } finally {
+      setIsFlowActionBusy(false);
+    }
+  }, [isFlowActionBusy, loadHomeContext]);
+
+  const stopTripInProgress = useCallback(async (tripId: string) => {
+    if (isFlowActionBusy) return;
+    setIsFlowActionBusy(true);
+    try {
+      const { authClient } = await restoreRiderSession();
+      await updateTripStatusWithApi(
+        authClient,
+        tripId,
+        'COMPLETED',
+        'Arret demande depuis accueil passager',
+      );
+      await loadHomeContext(true);
+      router.push('/activity');
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        surface: 'active-trip',
+        fallback: "L'arret de la course a echoue.",
+      });
+      Alert.alert('Arret indisponible', feedback.message);
+    } finally {
+      setIsFlowActionBusy(false);
+    }
+  }, [isFlowActionBusy, loadHomeContext, router]);
+
+  const handleCancelActiveFlow = useCallback(() => {
+    const flow = resolveRiderActiveFlow(history);
+    if (flow.activeRequest) {
+      Alert.alert(
+        'Annuler la demande',
+        'Annuler cette recherche de chauffeur ?',
+        [
+          { text: 'Garder la demande', style: 'cancel' },
+          {
+            text: 'Annuler',
+            style: 'destructive',
+            onPress: () => void cancelPendingRequest(flow.activeRequest!.id),
+          },
+        ],
+      );
+      return;
+    }
+
+    if (
+      flow.activeTrip?.status === 'MATCHED' ||
+      flow.activeTrip?.status === 'DRIVER_ARRIVING'
+    ) {
+      Alert.alert(
+        'Annuler la course',
+        'Annuler avant de monter ? Si le chauffeur est deja mobilise, Orbi peut ouvrir une revue pour proteger son temps.',
+        [
+          { text: 'Ne pas annuler', style: 'cancel' },
+          {
+            text: 'Annuler',
+            style: 'destructive',
+            onPress: () => void cancelTripBeforeDeparture(flow.activeTrip!.id),
+          },
+        ],
+      );
+    }
+  }, [cancelPendingRequest, cancelTripBeforeDeparture, history]);
+
+  const handleStopActiveTrip = useCallback(() => {
+    const flow = resolveRiderActiveFlow(history);
+    if (flow.activeTrip?.status !== 'IN_PROGRESS') return;
+
+    Alert.alert(
+      'Arreter la course',
+      'Confirmez si vous souhaitez descendre maintenant. Le prix sera ajuste selon le trajet deja parcouru quand le signal route le permet.',
+      [
+        { text: 'Continuer', style: 'cancel' },
+        {
+          text: 'Arreter',
+          style: 'destructive',
+          onPress: () => void stopTripInProgress(flow.activeTrip!.id),
+        },
+      ],
+    );
+  }, [history, stopTripInProgress]);
 
   useLiveRefresh(() => loadHomeContext(true), 25000);
 
@@ -539,82 +648,18 @@ export default function RiderHomeScreen() {
 
         {hasActiveFlow ? (
           /* ── Active trip state ── */
-          <>
-            <Pressable
-              style={styles.tripCard}
-              onPress={() => router.push('/activity')}
-            >
-              <View style={styles.tripCardLeft}>
-                <View style={styles.tripStatusDot} />
-                <View style={styles.tripCardText}>
-                  <Text style={styles.tripCardTitle}>
-                    {activeTrip ? 'Course en cours' : 'Demande active'}
-                  </Text>
-                  <Text style={styles.tripCardSub} numberOfLines={1}>
-                    {activeTrip
-                      ? `${activeTrip.pickupAddress} → ${activeTrip.destinationAddress}`
-                      : `${activeRequest?.pickupAddress} → ${activeRequest?.destinationAddress}`}
-                  </Text>
-                  {/* Smart ETA label */}
-                  {activeTrip ? (() => {
-                    const eta = buildTripEtaLabel(activeTrip.status);
-                    if (!eta) return null;
-                    const isArrived = activeTrip.status === 'DRIVER_ARRIVING';
-                    return (
-                      <Text style={[styles.tripCardStatus, isArrived && styles.tripCardStatusArrived]}>
-                        {eta}
-                      </Text>
-                    );
-                  })() : null}
-                  {activeTrip?.pickupCode && activeTrip.status === 'DRIVER_ARRIVING' ? (
-                    <Text style={styles.tripCardCode}>
-                      Code : <Text style={styles.tripCardCodeValue}>{activeTrip.pickupCode}</Text>
-                    </Text>
-                  ) : null}
-                  {flowTransitionLabel ? (
-                    <Text style={styles.tripTransition}>{flowTransitionLabel}</Text>
-                  ) : null}
-                </View>
-              </View>
-              <View style={styles.tripCardArrow}>
-                <ForwardGlyph color={theme.colors.textInverse} />
-              </View>
-            </Pressable>
-
-            {activeTrip ? (
-              <View style={styles.tripQuickActions}>
-                <Pressable
-                  accessibilityLabel="home-share-trip"
-                  disabled={isShareBusy}
-                  onPress={() => void handleShareTrip(activeTrip.id)}
-                  style={({ pressed }) => [
-                    styles.tripQuickAction,
-                    pressed ? styles.tripQuickActionPressed : null,
-                    isShareBusy ? styles.tripQuickActionDisabled : null,
-                  ]}
-                >
-                  <Text style={styles.tripQuickActionLabel}>
-                    {isShareBusy ? 'Creation...' : 'Partager'}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  accessibilityLabel="home-sos-trip"
-                  disabled={isSosBusy}
-                  onPress={() => handleSos(activeTrip.id)}
-                  style={({ pressed }) => [
-                    styles.tripQuickAction,
-                    styles.tripQuickActionDanger,
-                    pressed ? styles.tripQuickActionPressed : null,
-                    isSosBusy ? styles.tripQuickActionDisabled : null,
-                  ]}
-                >
-                  <Text style={[styles.tripQuickActionLabel, styles.tripQuickActionDangerLabel]}>
-                    {isSosBusy ? 'SOS...' : 'SOS securite'}
-                  </Text>
-                </Pressable>
-              </View>
-            ) : null}
-          </>
+          <RiderTripStatusCard
+            activeTrip={activeTrip}
+            activeRequest={activeRequest}
+            flowTransitionLabel={flowTransitionLabel}
+            isShareBusy={isShareBusy}
+            isSosBusy={isSosBusy}
+            onOpenActivity={navigateToActivity}
+            onShare={() => activeTrip && void handleShareTrip(activeTrip.id)}
+            onSos={() => activeTrip && handleSos(activeTrip.id)}
+            onCancel={handleCancelActiveFlow}
+            onStop={handleStopActiveTrip}
+          />
         ) : (
           /* ── Default: search bar + services ── */
           <>
@@ -936,118 +981,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   servicesPlaceholderText: {
     fontSize: 13,
     color: theme.colors.textMuted,
-  },
-
-  // Active trip card
-  tripCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 16,
-    padding: 14,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  tripCardLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  tripStatusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: theme.colors.teal,
-    marginTop: 4,
-    flexShrink: 0,
-  },
-  tripCardText: {
-    flex: 1,
-    gap: 3,
-  },
-  tripCardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: theme.colors.text,
-  },
-  tripCardSub: {
-    fontSize: 13,
-    color: theme.colors.textSoft,
-  },
-  tripCardStatus: {
-    fontSize: 12,
-    color: theme.colors.teal,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-  },
-  tripCardStatusArrived: {
-    color: theme.colors.amber,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-  },
-  tripCardCode: {
-    fontSize: 13,
-    color: theme.colors.textSoft,
-    marginTop: 2,
-  },
-  tripCardCodeValue: {
-    color: theme.colors.text,
-    fontWeight: '800',
-    letterSpacing: 0,
-  },
-  tripTransition: {
-    fontSize: 12,
-    color: theme.colors.sky,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  tripCardArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.text,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  tripQuickActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
-  },
-  tripQuickAction: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.backgroundAlt,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: 10,
-  },
-  tripQuickActionDanger: {
-    backgroundColor: '#E53935',
-    borderColor: '#E53935',
-  },
-  tripQuickActionPressed: {
-    opacity: 0.82,
-    transform: [{ scale: 0.988 }],
-  },
-  tripQuickActionDisabled: {
-    opacity: 0.58,
-  },
-  tripQuickActionLabel: {
-    fontSize: 13,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
-    textAlign: 'center',
-  },
-  tripQuickActionDangerLabel: {
-    color: '#FFFFFF',
   },
 
   // ── Surge badge ───────────────────────────────────────────────────────────

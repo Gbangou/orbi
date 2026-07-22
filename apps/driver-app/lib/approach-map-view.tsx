@@ -1,18 +1,26 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
+  buildTripRouteScript,
   escapeHtmlText,
+  formatTripRouteDistance,
+  formatTripRouteDuration,
   localMapWebViewOriginWhitelist,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
+  type RouteInfoMessage,
 } from '@orbi/ui';
 import { ErrorBoundary, useOrbiTheme } from '@orbi/ui/native';
 import { enqueueDriverMapError } from './map-error-reporting';
 import { hasMapCoordinatePair, normalizeMapCoordinatePair } from './map-coordinate';
 
 const TypedWebView = WebView as any;
+const APPROACH_ROUTE_SCRIPT = buildTripRouteScript({
+  routeColor: '#818cf8',
+  altColor: '#64748b',
+});
 
 export interface ApproachMapViewProps {
   driverLat: number | null | undefined;
@@ -61,7 +69,7 @@ html,body,#map{width:100%;height:100%;background:#0a0c0e}
 var CFG=${config};
 var map=L.map('map',{zoomControl:false,attributionControl:false});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,subdomains:['a','b','c']}).addTo(map);
-var driverMarker=null,pickupMarker=null,routeLine=null;
+var driverMarker=null,pickupMarker=null;
 
 var DRIVER_SVG='<svg class="driver-svg" xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="11.5" fill="rgba(99,102,241,0.18)" stroke="rgba(129,140,248,0.45)" stroke-width="1.5"/><circle cx="13" cy="13" r="6.5" fill="rgba(99,102,241,0.5)" stroke="#818cf8" stroke-width="1.8"/><path d="M13 7 L16.5 16 L13 13.5 L9.5 16 Z" fill="white" opacity="0.95"/></svg>';
 var RIDER_SVG='<svg class="rider-svg" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="8" r="5" fill="rgba(34,197,94,0.25)" stroke="#22c55e" stroke-width="1.8"/><path d="M4 26 Q4 18 14 18 Q24 18 24 26" fill="rgba(34,197,94,0.25)" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round"/><circle cx="14" cy="8" r="3" fill="#22c55e"/></svg>';
@@ -69,31 +77,7 @@ var RIDER_SVG='<svg class="rider-svg" xmlns="http://www.w3.org/2000/svg" width="
 function driverIcon(){return L.divIcon({html:'<div class="driver-wrap">'+DRIVER_SVG+'<span class="driver-lbl">Vous</span></div>',iconSize:[60,46],iconAnchor:[13,13],className:''})}
 function pickupIcon(addr){return L.divIcon({html:'<div class="pickup-wrap">'+RIDER_SVG+'<span class="pickup-lbl">'+addr+'</span></div>',iconSize:[140,50],iconAnchor:[14,14],className:''})}
 
-function drawFallbackLine(lat1,lng1,lat2,lng2){
-  if(routeLine){map.removeLayer(routeLine)}
-  routeLine=L.polyline([[lat1,lng1],[lat2,lng2]],{color:'#818cf8',weight:2.5,opacity:.45,dashArray:'9 6'}).addTo(map);
-}
-
-function fetchWithTimeout(url,timeoutMs){
-  var controller=typeof AbortController!=='undefined'?new AbortController():null;
-  var timer=setTimeout(function(){if(controller)controller.abort()},timeoutMs);
-  var opts=controller?{signal:controller.signal}:{};
-  return fetch(url,opts).finally(function(){clearTimeout(timer)});
-}
-
-function fetchApproachRoute(dLat,dLng,pLat,pLng){
-  var url='https://router.project-osrm.org/route/v1/driving/'+dLng+','+dLat+';'+pLng+','+pLat+'?geometries=geojson&overview=full';
-  fetchWithTimeout(url,6000)
-    .then(function(r){return r.json()})
-    .then(function(data){
-      if(data.routes&&data.routes[0]&&data.routes[0].geometry&&data.routes[0].geometry.coordinates){
-        var coords=data.routes[0].geometry.coordinates.map(function(c){return[c[1],c[0]]});
-        if(routeLine){map.removeLayer(routeLine)}
-        routeLine=L.polyline(coords,{color:'#818cf8',weight:3.5,opacity:.85}).addTo(map);
-      }else{drawFallbackLine(dLat,dLng,pLat,pLng)}
-    })
-    .catch(function(){drawFallbackLine(dLat,dLng,pLat,pLng)});
-}
+${APPROACH_ROUTE_SCRIPT}
 
 function initMap(cfg){
   var bounds=[];
@@ -105,7 +89,7 @@ function initMap(cfg){
     driverMarker=L.marker([cfg.driverLat,cfg.driverLng],{icon:driverIcon(),zIndexOffset:500}).addTo(map);
     bounds.push([cfg.driverLat,cfg.driverLng]);
     if(cfg.pickupLat!==null&&cfg.pickupLng!==null){
-      fetchApproachRoute(cfg.driverLat,cfg.driverLng,cfg.pickupLat,cfg.pickupLng);
+      __orbiFetchTripRoute(cfg.driverLat,cfg.driverLng,cfg.pickupLat,cfg.pickupLng);
     }
   }
   if(bounds.length){map.fitBounds(bounds,{padding:[52,52],maxZoom:16})}
@@ -118,7 +102,8 @@ function updateDriver(lat,lng){
   else{driverMarker.setLatLng([lat,lng])}
   if(pickupMarker){
     var pll=pickupMarker.getLatLng();
-    fetchApproachRoute(lat,lng,pll.lat,pll.lng);
+    __orbiFetchTripRoute(lat,lng,pll.lat,pll.lng);
+    map.fitBounds([[lat,lng],[pll.lat,pll.lng]],{padding:[58,58],maxZoom:16});
   }
 }
 
@@ -160,6 +145,8 @@ export function ApproachMapView({
       pickupAddress: pickupAddress ?? 'Prise en charge',
     }),
   );
+  const [routeInfo, setRouteInfo] = useState<Omit<RouteInfoMessage, 'type'> | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     if (driver && webRef.current) {
@@ -168,6 +155,29 @@ export function ApproachMapView({
       );
     }
   }, [driver]);
+
+  const handleWebViewMessage = useCallback((event: { nativeEvent?: { data?: string } }) => {
+    if (!event.nativeEvent?.data) return;
+    try {
+      const message = JSON.parse(event.nativeEvent.data) as Partial<RouteInfoMessage>;
+      if (message.type === 'ROUTE_INFO' && typeof message.distanceMeters === 'number') {
+        setRouteInfo({
+          distanceMeters: message.distanceMeters,
+          durationSeconds: message.durationSeconds ?? 0,
+          routeCount: message.routeCount ?? 1,
+          selectedIndex: message.selectedIndex ?? 0,
+        });
+      }
+    } catch {
+      // Ignore malformed messages from the embedded map.
+    }
+  }, []);
+
+  const cycleRoute = useCallback(() => {
+    if (!routeInfo || routeInfo.routeCount <= 1) return;
+    const nextIndex = (routeInfo.selectedIndex + 1) % routeInfo.routeCount;
+    webRef.current?.postMessage(JSON.stringify({ type: 'SELECT_ROUTE', index: nextIndex }));
+  }, [routeInfo]);
 
   function renderDegradedPanel() {
     const hasPickup = hasMapCoordinatePair({ latitude: pickupLat, longitude: pickupLng });
@@ -195,49 +205,114 @@ export function ApproachMapView({
     return renderDegradedPanel();
   }
 
+  function renderRouteInfoPanel() {
+    if (!routeInfo) return null;
+    return (
+      <Pressable
+        style={styles.routeInfoPanel}
+        onPress={cycleRoute}
+        disabled={routeInfo.routeCount <= 1}
+        accessibilityLabel="driver-approach-route-info"
+      >
+        <View style={styles.routeInfoTextBlock}>
+          <Text style={styles.routeInfoEyebrow}>Vers le passager</Text>
+          <View style={styles.routeInfoMainRow}>
+            <Text style={styles.routeInfoDistance}>
+              {formatTripRouteDistance(routeInfo.distanceMeters)}
+            </Text>
+            <View style={styles.routeInfoDivider} />
+            <Text style={styles.routeInfoDuration}>
+              {formatTripRouteDuration(routeInfo.durationSeconds)}
+            </Text>
+          </View>
+        </View>
+        <View
+          style={[
+            styles.routeInfoAltBadge,
+            routeInfo.routeCount > 1 ? styles.routeInfoAltBadgeActive : null,
+          ]}
+        >
+          <Text style={styles.routeInfoAltText}>
+            {routeInfo.routeCount > 1
+              ? `Route ${routeInfo.selectedIndex + 1}/${routeInfo.routeCount}`
+              : 'Route rapide'}
+          </Text>
+        </View>
+      </Pressable>
+    );
+  }
+
+  function renderMapSurface(fullscreen: boolean) {
+    return (
+      <ErrorBoundary
+        fallback={renderDegradedPanel()}
+        onError={(error) =>
+          enqueueDriverMapError(error, { surface: 'approach-map', action: 'render-crash' })
+        }
+      >
+        <View style={[styles.container, fullscreen ? styles.containerFullscreen : style]}>
+          <TypedWebView
+            ref={webRef}
+            source={{ html: htmlRef.current }}
+            scrollEnabled={false}
+            style={styles.webview}
+            javaScriptEnabled
+            originWhitelist={localMapWebViewOriginWhitelist}
+            onShouldStartLoadWithRequest={(request: { url: string }) =>
+              shouldAllowLocalMapWebViewRequest(request.url)
+            }
+            onMessage={handleWebViewMessage}
+            onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
+              enqueueDriverMapError(
+                new Error(event.nativeEvent?.description ?? 'Approach map WebView error'),
+                {
+                  surface: 'approach-map',
+                  code: event.nativeEvent?.code ?? null,
+                },
+              );
+            }}
+            onHttpError={(event: {
+              nativeEvent?: { statusCode?: number; description?: string; url?: string };
+            }) => {
+              enqueueDriverMapError(
+                new Error(event.nativeEvent?.description ?? 'Approach map HTTP error'),
+                {
+                  surface: 'approach-map',
+                  statusCode: event.nativeEvent?.statusCode ?? null,
+                  url: event.nativeEvent?.url ?? null,
+                },
+              );
+            }}
+            allowsInlineMediaPlayback
+          />
+          {renderRouteInfoPanel()}
+          <Pressable
+            style={styles.expandButton}
+            onPress={() => setIsExpanded(!fullscreen)}
+            accessibilityLabel={fullscreen ? 'Réduire la carte' : 'Agrandir la carte'}
+          >
+            <Text style={styles.expandButtonLabel}>{fullscreen ? 'Réduire' : 'Agrandir'}</Text>
+          </Pressable>
+          {fullscreen ? (
+            <View style={styles.fullscreenHint}>
+              <Text style={styles.fullscreenHintTitle}>Approche passager</Text>
+              <Text style={styles.fullscreenHintText}>
+                Gardez le point de depart, votre position et la meilleure route bien visibles.
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </ErrorBoundary>
+    );
+  }
+
   return (
-    <ErrorBoundary
-      fallback={renderDegradedPanel()}
-      onError={(error) =>
-        enqueueDriverMapError(error, { surface: 'approach-map', action: 'render-crash' })
-      }
-    >
-      <View style={[styles.container, style]}>
-        <TypedWebView
-          ref={webRef}
-          source={{ html: htmlRef.current }}
-          scrollEnabled={false}
-          style={styles.webview}
-          javaScriptEnabled
-          originWhitelist={localMapWebViewOriginWhitelist}
-          onShouldStartLoadWithRequest={(request: { url: string }) =>
-            shouldAllowLocalMapWebViewRequest(request.url)
-          }
-          onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
-            enqueueDriverMapError(
-              new Error(event.nativeEvent?.description ?? 'Approach map WebView error'),
-              {
-                surface: 'approach-map',
-                code: event.nativeEvent?.code ?? null,
-              },
-            );
-          }}
-          onHttpError={(event: {
-            nativeEvent?: { statusCode?: number; description?: string; url?: string };
-          }) => {
-            enqueueDriverMapError(
-              new Error(event.nativeEvent?.description ?? 'Approach map HTTP error'),
-              {
-                surface: 'approach-map',
-                statusCode: event.nativeEvent?.statusCode ?? null,
-                url: event.nativeEvent?.url ?? null,
-              },
-            );
-          }}
-          allowsInlineMediaPlayback
-        />
-      </View>
-    </ErrorBoundary>
+    <>
+      {renderMapSurface(false)}
+      <Modal visible={isExpanded} animationType="slide" onRequestClose={() => setIsExpanded(false)}>
+        <View style={styles.fullscreenRoot}>{renderMapSurface(true)}</View>
+      </Modal>
+    </>
   );
 }
 
@@ -245,6 +320,112 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   container: {
     overflow: 'hidden',
     borderRadius: 14,
+  },
+  containerFullscreen: {
+    flex: 1,
+    borderRadius: 0,
+  },
+  fullscreenRoot: {
+    flex: 1,
+    backgroundColor: '#0a0c0e',
+  },
+  routeInfoPanel: {
+    position: 'absolute',
+    left: 12,
+    bottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    maxWidth: '78%',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(129,140,248,0.25)',
+    ...theme.shadows.card,
+  },
+  routeInfoTextBlock: {
+    gap: 2,
+    flexShrink: 1,
+  },
+  routeInfoEyebrow: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  routeInfoMainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  routeInfoDistance: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: theme.colors.text,
+  },
+  routeInfoDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: theme.colors.border,
+  },
+  routeInfoDuration: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#6366f1',
+  },
+  routeInfoAltBadge: {
+    marginLeft: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  routeInfoAltBadgeActive: {
+    backgroundColor: 'rgba(129,140,248,0.18)',
+  },
+  routeInfoAltText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#3730a3',
+  },
+  expandButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(7,19,17,0.82)',
+  },
+  expandButtonLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  fullscreenHint: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    top: 56,
+    gap: 2,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(7,19,17,0.86)',
+  },
+  fullscreenHintTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  fullscreenHintText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.78)',
   },
   webFallback: {
     minHeight: 180,

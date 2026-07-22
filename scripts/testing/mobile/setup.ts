@@ -161,6 +161,7 @@ jest.mock(
       Text: "Text",
       Image: "Image",
       Pressable: "Pressable",
+      Modal: "Modal",
       TextInput: "TextInput",
       Dimensions: {
         get: jest.fn(() => ({ width: 390, height: 844, scale: 2, fontScale: 1 })),

@@ -94,9 +94,7 @@ export function buildRiderNextActionHint(flow: RiderActiveFlowSummary) {
   }
 
   if (flow.activeTrip?.status === "DRIVER_ARRIVING") {
-    return flow.activeTrip.pickupCode
-      ? "Gardez le code pickup pret et ne le donnez qu au bon chauffeur."
-      : "Attendez le chauffeur au point de depart confirme.";
+    return "Confirmez le nom du chauffeur et la plaque avant de monter.";
   }
 
   if (flow.activeTrip?.status === "IN_PROGRESS") {
@@ -128,7 +126,6 @@ export function buildRiderMissionSnapshot(input: {
   const verification = detail?.driverVerification ?? null;
   const routeMonitoring = detail?.routeMonitoring ?? null;
   const latestPosition = routeMonitoring?.latestPosition ?? null;
-  const pickupCode = detail?.pickupCode ?? activeTrip.pickupCode ?? null;
   const approachDistance =
     activeTrip.status === "IN_PROGRESS"
       ? latestPosition?.distanceToDestinationKm
@@ -169,11 +166,9 @@ export function buildRiderMissionSnapshot(input: {
             : "En attente du premier signal route",
     },
     {
-      label: "Code",
-      value: pickupCode ? pickupCode : "Attente",
-      helper: pickupCode
-        ? "A communiquer uniquement au bon chauffeur"
-        : "Code visible quand le chauffeur arrive",
+      label: "Depart",
+      value: activeTrip.status === "DRIVER_ARRIVING" ? "Chauffeur arrive" : "En route",
+      helper: "Montez seulement dans le vehicule confirme",
     },
     {
       label: "Tarif",

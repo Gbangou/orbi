@@ -223,10 +223,9 @@ if (!$rideRequest.id) {
 Write-Step "Accepting the request as driver@orbi.app"
 $accepted = Invoke-Json -Method "POST" -Path "/trips/accept/$($rideRequest.id)" -Token $driverToken
 $tripId = $accepted.trip.id
-$pickupCode = $accepted.trip.pickupCode
 
-if (!$tripId -or !$pickupCode) {
-  Stop-DemoLiveSession "accept response did not include trip id and pickup code"
+if (!$tripId) {
+  Stop-DemoLiveSession "accept response did not include trip id"
 }
 
 Invoke-Json -Method "PATCH" -Path "/trips/$tripId/status" -Token $driverToken -Body @{
@@ -250,9 +249,9 @@ if ($riderDetail.trip.routeMonitoring.latestPosition.sourceRole -ne "DRIVER") {
 }
 
 if ($StartTrip) {
-  Write-Step "Verifying pickup code and moving the demo trip toward destination"
-  Invoke-Json -Method "POST" -Path "/trips/$tripId/verify-pickup-code" -Token $driverToken -Body @{
-    pickupCode = $pickupCode
+  Write-Step "Starting the demo trip after driver arrival and moving toward destination"
+  Invoke-Json -Method "PATCH" -Path "/trips/$tripId/status" -Token $driverToken -Body @{
+    status = "IN_PROGRESS"
   } | Out-Null
 
   $destinationPositions = @(
@@ -274,7 +273,6 @@ if ($liveOps.summary.activeTrips -lt 1) {
 Write-Host ""
 Write-Host "Local demo live session is ready." -ForegroundColor Green
 Write-Host "Trip:       $tripId"
-Write-Host "PickupCode: $pickupCode"
 Write-Host "Status:     $(if ($StartTrip) { 'IN_PROGRESS' } else { 'DRIVER_ARRIVING' })"
 Write-Host ""
 Write-Host "Open these apps and sign in with real seeded credentials:" -ForegroundColor White

@@ -15,7 +15,14 @@ import {
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
 import { fetchTripDetail, reportTripIncidentWithApi, type TripDetailResponse } from '@orbi/api';
 import { type OrbiTheme } from '@orbi/ui';
-import { OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
+import {
+  OrbiButton,
+  OrbiStatusBanner,
+  OrbiSurface,
+  PersonBadge,
+  TripStageTracker,
+  useOrbiTheme,
+} from '@orbi/ui/native';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import {
@@ -23,8 +30,6 @@ import {
   calculateRiderTripDurationMinutes,
   formatRiderDateTime,
   formatRiderMoneyAmount,
-  formatRiderRatingLabel,
-  formatRiderTimelineTime,
 } from '../lib/rider-display-format';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -72,15 +77,6 @@ const makeGlyphStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: '65%',
   },
 });
-
-function buildInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('') || 'OR';
-}
 
 function formatPaymentMethod(method: string | null | undefined) {
   if (!method) return 'Espèces';
@@ -354,11 +350,6 @@ export default function ReceiptScreen() {
     completedAt: trip.completedAt,
   });
 
-  const ratingLabel = formatRiderRatingLabel(
-    trip.driverVerification.averageRating,
-    { prefix: '★ ' },
-  );
-
   const promoSavingsXof = trip.promoCode
     ? calculateRiderPromoSavings({
         amount: trip.actualFare,
@@ -391,6 +382,8 @@ export default function ReceiptScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
+        <TripStageTracker status="COMPLETED" audience="rider" style={styles.stageTracker} />
+
         {/* Hero — fare + status */}
         <OrbiSurface tone="teal" style={styles.hero} elevated>
           <View style={styles.heroCheck}>
@@ -402,8 +395,8 @@ export default function ReceiptScreen() {
         </OrbiSurface>
 
         <OrbiStatusBanner
-          title="Recu securise"
-          message="Capture protegee sur cet ecran. Reference et paiement disponibles pour support."
+          title="Recu professionnel"
+          message="Reference, paiement et details chauffeur disponibles. Vous pouvez l envoyer par SMS, WhatsApp ou email."
           tone="sky"
         />
 
@@ -447,7 +440,7 @@ export default function ReceiptScreen() {
               accent={theme.colors.teal}
             />
           ) : null}
-          <Row label="Mode de paiement" value={formatPaymentMethod(null)} />
+          <Row label="Mode de paiement" value={formatPaymentMethod(trip.paymentMethod)} />
           <Row label="Total facturé" value={formatRiderMoneyAmount(trip.actualFare)} bold />
           <View style={[row.wrap, { borderBottomWidth: 0 }]}>
             <Text style={[row.label, { color: theme.colors.textMuted, fontSize: 12 }]}>
@@ -462,53 +455,30 @@ export default function ReceiptScreen() {
         {/* Driver */}
         <OrbiSurface style={styles.card}>
           <Text style={styles.cardTitle}>Votre chauffeur</Text>
-          <View style={styles.driverRow}>
-            <View style={styles.driverAvatar}>
-              <Text style={styles.driverInitials}>{buildInitials(trip.driverName)}</Text>
-            </View>
-            <View style={styles.driverInfo}>
-              <Text style={styles.driverName}>{trip.driverName}</Text>
-              <Text style={styles.driverMeta}>
-                {[
-                  ratingLabel,
-                  `${trip.driverVerification.completedTripsCount} courses`,
-                ].filter(Boolean).join(' · ')}
-              </Text>
-              {trip.vehicleLabel ? (
-                <Text style={styles.driverVehicle}>{trip.vehicleLabel}</Text>
-              ) : null}
-              {trip.driverVerification.vehicle.plateNumber ? (
-                <Text style={styles.driverPlate}>
-                  {trip.driverVerification.vehicle.color} · {trip.driverVerification.vehicle.plateNumber}
-                </Text>
-              ) : null}
-            </View>
-          </View>
+          <PersonBadge
+            name={trip.driverName}
+            subtitle={[`${trip.driverVerification.completedTripsCount} courses`, trip.vehicleLabel]
+              .filter(Boolean)
+              .join(' · ')}
+            rating={trip.driverVerification.averageRating ?? undefined}
+            plate={
+              trip.driverVerification.vehicle.plateNumber
+                ? `${trip.driverVerification.vehicle.color} · ${trip.driverVerification.vehicle.plateNumber}`
+                : null
+            }
+            size={56}
+          />
         </OrbiSurface>
-
-        {/* Timeline */}
-        {trip.timeline.length > 0 ? (
-          <OrbiSurface style={styles.card}>
-            <Text style={styles.cardTitle}>Chronologie</Text>
-            {trip.timeline.map((event, idx) => (
-              <View key={event.id} style={[styles.timelineRow, idx === trip.timeline.length - 1 && { borderBottomWidth: 0 }]}>
-                <View style={styles.timelineLeft}>
-                  <View style={styles.timelineDot} />
-                  {idx < trip.timeline.length - 1 ? <View style={styles.timelineLine} /> : null}
-                </View>
-                <View style={styles.timelineContent}>
-                  <Text style={styles.timelineLabel}>{event.label}</Text>
-                  <Text style={styles.timelineTime}>
-                    {formatRiderTimelineTime(event.createdAt)}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </OrbiSurface>
-        ) : null}
 
         {/* Actions */}
         <View style={styles.actions}>
+          <OrbiButton
+            label="Envoyer le recu"
+            helper="SMS, WhatsApp ou email"
+            onPress={() => void handleShare()}
+            tone="teal"
+          />
+
           <OrbiButton
             label="Evaluer ce trajet"
             helper="Aide a maintenir la qualite chauffeur"
@@ -639,6 +609,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     minWidth: 200,
   },
 
+  stageTracker: {
+    marginTop: -4,
+    marginBottom: 4,
+  },
+
   // Hero
   hero: {
     alignItems: 'center',
@@ -745,49 +720,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textMuted,
     fontWeight: '500',
-  },
-
-  // Driver section
-  driverRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingBottom: 14,
-  },
-  driverAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: theme.colors.accentDark,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  driverInitials: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  driverInfo: { flex: 1, gap: 3 },
-  driverName: {
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
-  },
-  driverMeta: {
-    fontSize: 13,
-    color: theme.colors.textSoft,
-  },
-  driverVehicle: {
-    fontSize: 13,
-    color: theme.colors.textMuted,
-  },
-  driverPlate: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.teal,
-    letterSpacing: 0,
   },
 
   // Timeline

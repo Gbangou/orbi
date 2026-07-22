@@ -70,7 +70,7 @@ $items = @(
   "Rider signs in and creates a MOBILE_MONEY motorcycle ride request.",
   "Driver signs in, goes ONLINE, updates presence, receives or fetches the offer.",
   "Driver accepts the ride request; admin live ops shows the matched trip.",
-  "Trip advances through DRIVER_ARRIVING, pickup code verification, IN_PROGRESS and COMPLETED.",
+  "Trip advances through DRIVER_ARRIVING, driver start, IN_PROGRESS and COMPLETED.",
   "Rider creates a checkout intent; capture the transactionRef and amount.",
   "Post a local payment webhook with x-orbi-webhook-secret=orbi_dev_webhook_secret.",
   "Admin journal shows reconciled webhook, linked payment attempt and provider reference.",

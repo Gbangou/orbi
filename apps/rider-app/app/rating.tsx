@@ -13,7 +13,14 @@ import {
 } from 'react-native';
 import { rateTripWithApi, type TripRatingResponse } from '@orbi/api';
 import { type OrbiTheme } from '@orbi/ui';
-import { OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
+import {
+  OrbiButton,
+  OrbiStatusBanner,
+  OrbiSurface,
+  PersonBadge,
+  TripStageTracker,
+  useOrbiTheme,
+} from '@orbi/ui/native';
 import { restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
 import { OrbiLogo } from '../lib/orbi-logo';
@@ -215,25 +222,13 @@ export default function RatingScreen() {
         ) : null}
       </View>
 
+      <TripStageTracker status="COMPLETED" audience="rider" style={styles.stageTracker} />
+
       <OrbiSurface style={styles.summaryCard} elevated>
-        <View style={styles.summaryTop}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarInitials}>
-              {driverName
-                .split(' ')
-                .slice(0, 2)
-                .map((n) => n.charAt(0).toUpperCase())
-                .join('')}
-            </Text>
-          </View>
-          <View style={styles.summaryCopy}>
-            <Text style={styles.summaryName}>{driverName}</Text>
-            <Text style={styles.summaryMeta}>Chauffeur Orbi certifie</Text>
-            {fare !== null ? (
-              <Text style={styles.summaryFare}>{formatRiderMoneyAmount(fare)}</Text>
-            ) : null}
-          </View>
-        </View>
+        <PersonBadge name={driverName} subtitle="Chauffeur Orbi certifié" size={56} />
+        {fare !== null ? (
+          <Text style={styles.summaryFare}>{formatRiderMoneyAmount(fare)}</Text>
+        ) : null}
       </OrbiSurface>
 
       <OrbiSurface tone={score >= 4 ? 'teal' : score > 0 ? 'amber' : 'neutral'} style={styles.ratingBlock}>
@@ -335,46 +330,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.muted,
     lineHeight: 20,
   },
+  stageTracker: {
+    marginTop: -4,
+  },
   summaryCard: {
     padding: 18,
-  },
-  summaryTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  avatarCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.colors.accentDark,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitials: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  summaryCopy: {
-    flex: 1,
-    gap: 3,
-  },
-  summaryName: {
-    color: theme.colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
-  },
-  summaryMeta: {
-    color: theme.colors.muted,
-    fontSize: 13,
+    gap: 10,
   },
   summaryFare: {
     color: theme.colors.teal,
     fontWeight: '700',
     fontSize: 15,
-    marginTop: 2,
   },
   ratingBlock: {
     alignItems: 'center',

@@ -254,7 +254,7 @@ export class PricingService {
           accent: configuration.accent,
           badge: surgeActive ? `${configuration.badge} · Forte demande` : configuration.badge,
           paymentMethods: configuration.paymentMethods,
-          safetyNote: 'Code de prise en charge et partage de trajet inclus.',
+          safetyNote: 'Verification nom, plaque et partage de trajet inclus.',
           marketplace: this.buildRideOptionMarketplace(
             configuration.vehicleType,
             etaMinutes,
@@ -622,7 +622,7 @@ export class PricingService {
       },
       trustAndPolicy: {
         upfrontPricing: true,
-        pickupCodeRequired: true,
+        pickupCodeRequired: false,
         liveTripSharingEnabled: true,
         cashEnabled: true,
         burkinaLocalizedPricing: true,

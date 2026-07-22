@@ -166,7 +166,7 @@ describe('Pricing API (e2e)', () => {
       expect(res.body.estimatedFare).toBeGreaterThan(0);
       expect(res.body.driverEconomics.driverPayout).toBeGreaterThan(0);
       expect(res.body.fareBreakdown).toBeDefined();
-      expect(res.body.trustAndPolicy.pickupCodeRequired).toBe(true);
+      expect(res.body.trustAndPolicy.pickupCodeRequired).toBe(false);
     });
 
     it('CAR renvoie un tarif supérieur à MOTORCYCLE sur le même trajet', async () => {

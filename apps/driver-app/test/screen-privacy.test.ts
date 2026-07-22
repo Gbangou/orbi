@@ -7,15 +7,23 @@ function readAppFile(relativePath: string) {
   return readFileSync(resolve(appRoot, relativePath), 'utf8');
 }
 
-describe('driver sensitive screen capture protection', () => {
-  const protectedScreens = [
+describe('driver screenshot policy', () => {
+  const formerlySensitiveScreens = [
     'app/auth.tsx',
     'app/onboarding.tsx',
     'app/(tabs)/profil.tsx',
     'app/(tabs)/revenus.tsx',
   ];
 
-  it.each(protectedScreens)('%s prevents and restores screen capture', (relativePath) => {
+  it('keeps the shared privacy hook screenshot-friendly for field support', () => {
+    const source = readAppFile('lib/privacy/screen-capture.ts');
+
+    expect(source).toContain('Screenshots are allowed by default');
+    expect(source).not.toContain('preventScreenCaptureAsync');
+    expect(source).not.toContain('allowScreenCaptureAsync');
+  });
+
+  it.each(formerlySensitiveScreens)('%s uses the central screenshot policy', (relativePath) => {
     const source = readAppFile(relativePath);
 
     expect(source).toContain('preventSensitiveScreenCapture');

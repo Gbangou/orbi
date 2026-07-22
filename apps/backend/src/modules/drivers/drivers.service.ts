@@ -272,7 +272,7 @@ export class DriversService {
         distanceKm: Number(request.estimatedDistanceKm ?? 0),
         etaToPickupMinutes: 3 + index,
         driverPayout: calculateDriverEconomics(fare).driverPayout,
-        pickupCodeRequired: true,
+        pickupCodeRequired: false,
       };
     });
   }

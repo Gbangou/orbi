@@ -315,12 +315,19 @@ export function serializeTripDetail(trip: {
       startedAt: trip.startedAt?.toISOString() ?? null,
       completedAt: trip.completedAt?.toISOString() ?? null,
       createdAt: trip.createdAt.toISOString(),
-      timeline: trip.events.map((event) => ({
-        id: event.id,
-        eventType: event.eventType,
-        label: formatTripEventLabel(event.eventType),
-        createdAt: event.createdAt.toISOString(),
-      })),
+      timeline: trip.events
+        .filter(
+          (event) =>
+            !['PICKUP_CODE_ISSUED', 'PICKUP_CODE_VERIFIED'].includes(
+              event.eventType,
+            ),
+        )
+        .map((event) => ({
+          id: event.id,
+          eventType: event.eventType,
+          label: formatTripEventLabel(event.eventType),
+          createdAt: event.createdAt.toISOString(),
+        })),
       promoCode: trip.promoCode ?? null,
     },
   };

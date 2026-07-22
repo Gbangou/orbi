@@ -494,5 +494,9 @@ export {
   VEHICLE_SVG_DEFS,
   buildLeafletMapHtml,
   buildLeafletInitScript,
+  buildTripRouteScript,
+  formatTripRouteDistance,
+  formatTripRouteDuration,
   type MapHtmlOptions,
+  type RouteInfoMessage,
 } from './leaflet-map';

@@ -41,8 +41,14 @@ function VehicleAvatar({
     ]}>
       <View style={[styles.vehicleAura, { backgroundColor: accent + '18' }]} />
       <View style={styles.svgWrap}>
-        <VehicleIllustration tier={tier} />
+        <VehicleIllustration tier={tier} width={92} height={64} />
       </View>
+      {isSelected ? (
+        <View style={[styles.checkBadge, { backgroundColor: accent }]}>
+          <View style={styles.checkMarkShort} />
+          <View style={styles.checkMarkLong} />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -154,23 +160,35 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   sectionTitle: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.text, paddingHorizontal: 2 },
   scroll: { gap: 6, paddingHorizontal: 2 },
   card: {
-    width: 128, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1.5,
-    borderColor: theme.colors.border, padding: 7, alignItems: 'center', gap: 4,
+    width: 140, backgroundColor: theme.colors.surface, borderRadius: 16, borderWidth: 1.5,
+    borderColor: theme.colors.border, padding: 8, alignItems: 'center', gap: 4,
     shadowColor: theme.shadows.card.shadowColor, shadowOpacity: 0.09, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 7,
   },
   surgeBadge: { alignSelf: 'center', backgroundColor: 'rgba(255,149,0,0.90)', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 },
   surgeText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
   vehicleAvatar: {
-    width: 82, height: 56, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
+    width: 96, height: 66, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.backgroundAlt, overflow: 'hidden',
+  },
+  checkBadge: {
+    position: 'absolute', top: 4, left: 4, width: 18, height: 18, borderRadius: 9,
+    borderWidth: 1.5, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
+  },
+  checkMarkShort: {
+    position: 'absolute', width: 6, height: 2, borderRadius: 1, backgroundColor: '#FFFFFF',
+    left: 4, top: 9, transform: [{ rotate: '45deg' }],
+  },
+  checkMarkLong: {
+    position: 'absolute', width: 10, height: 2, borderRadius: 1, backgroundColor: '#FFFFFF',
+    left: 7, top: 8, transform: [{ rotate: '-45deg' }],
   },
   name: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.textSoft, textAlign: 'center', minHeight: 18 },
   eta: { fontSize: 11, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
-  fare: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.textSoft, textAlign: 'center' },
+  fare: { fontSize: 13, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.textSoft, textAlign: 'center' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
   loadingText: { fontSize: 14, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular' },
-  vehicleAura: { position: 'absolute', width: 70, height: 40, borderRadius: 22, top: 7 },
-  svgWrap: { width: 84, height: 54, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  vehicleAura: { position: 'absolute', width: 80, height: 46, borderRadius: 24, top: 9 },
+  svgWrap: { width: 92, height: 64, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   etaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, width: '100%' },
   signalText: {
     maxWidth: 64,

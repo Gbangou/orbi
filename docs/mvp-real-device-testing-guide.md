@@ -210,21 +210,21 @@ suivre les etapes d'onboarding (automatiquement approuve).
 1. Sur le telephone chauffeur:
    - Appuyer sur `Je suis arrive` (DRIVER_ARRIVING).
 2. Sur le telephone passager:
-   - L'ecran Activite affiche: **"Code a donner au chauffeur: XXXX"** (code
-     a 4 chiffres).
-   - Communiquer ce code au chauffeur.
+   - L'ecran Activite affiche que le chauffeur est arrive.
+   - Verifier le nom du chauffeur, le vehicule et la plaque avant de monter.
 
 ### Etape 6 — Demarrage de la course
 
 1. Sur le telephone chauffeur:
-   - Saisir le code a 4 chiffres reçu du passager.
-   - Appuyer sur `Verifier le code et demarrer` (IN_PROGRESS).
+   - Demarrer seulement quand le passager est dans le vehicule ou sur la moto.
+   - Appuyer sur `Demarrer la course` (IN_PROGRESS).
 2. La course est maintenant en cours.
 
-Le chauffeur ne voit pas le code dans son application. Le demarrage direct sans
-verification est bloque par le backend; seul le code affiche cote passager peut
-ouvrir le trajet. Si l'API est indisponible, les apps doivent afficher un etat
-vide ou une erreur reseau, pas des offres ou options fictives.
+Avant le demarrage, le passager peut encore annuler. Apres demarrage, il peut
+arreter la course, mais le montant est calcule selon le trajet deja effectue
+quand les signaux route permettent de l'estimer. Si l'API est indisponible, les
+apps doivent afficher un etat vide ou une erreur reseau, pas des offres ou
+options fictives.
 
 ### Etape 7 — Fin de course
 

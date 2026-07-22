@@ -73,15 +73,12 @@ describe('driver action safety helpers', () => {
     });
   });
 
-  it('blocks trip completion when Ride Check blocks completion', () => {
+  it('lets trip completion reach the server even when Ride Check warns locally', () => {
     expect(
       validateTripAdvance({
         blocksCompletion: true,
         nextStatus: 'COMPLETED',
       }),
-    ).toEqual({
-      ok: false,
-      message: 'Impossible de terminer maintenant: signal GPS incoherent. Actualisez le direct ou contactez le support.',
-    });
+    ).toEqual({ ok: true });
   });
 });

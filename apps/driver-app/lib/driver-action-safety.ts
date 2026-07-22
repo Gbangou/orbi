@@ -51,14 +51,7 @@ export function validateTripAdvance(input: {
   blocksCompletion: boolean;
   nextStatus: 'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED';
 }): DriverActionValidationResult {
-  if (input.nextStatus === 'COMPLETED' && input.blocksCompletion) {
-    return {
-      ok: false,
-      message:
-        'Impossible de terminer maintenant: signal GPS incoherent. Actualisez le direct ou contactez le support.',
-    };
-  }
-
+  void input;
   return { ok: true };
 }
 

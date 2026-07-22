@@ -99,7 +99,7 @@ export class DriverOfferProjector {
         input.ageMinutes,
       ),
       driverPayout,
-      pickupCodeRequired: true,
+      pickupCodeRequired: false,
       pickupDistanceKm: input.pickupDistanceKm,
       pickupDistanceSource:
         input.pickupDistanceKm === null

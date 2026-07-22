@@ -282,6 +282,105 @@ export function OrbiMetricTile({
   );
 }
 
+export function PersonBadge({
+  name,
+  subtitle,
+  rating,
+  plate,
+  size = 44,
+  style,
+}: {
+  name: string;
+  subtitle?: string | null;
+  rating?: number | null;
+  plate?: string | null;
+  size?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const theme = useOrbiTheme();
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || '?';
+
+  return (
+    <View style={[mobilePerson.row, style]}>
+      <View
+        style={[
+          mobilePerson.avatar,
+          { width: size, height: size, borderRadius: size / 2, backgroundColor: theme.colors.accentLight },
+        ]}
+      >
+        <Text style={[mobilePerson.initials, { fontFamily: orbiTheme.typography.fontFamily.bold, color: theme.colors.accentDark, fontSize: size * 0.38 }]}>
+          {initials}
+        </Text>
+      </View>
+      <View style={mobilePerson.copy}>
+        <View style={mobilePerson.nameRow}>
+          <Text numberOfLines={1} style={[mobilePerson.name, { fontFamily: orbiTheme.typography.fontFamily.bold, color: theme.colors.text }]}>
+            {name}
+          </Text>
+          {rating != null ? (
+            <View style={mobilePerson.ratingChip}>
+              <Text style={[mobilePerson.ratingText, { fontFamily: orbiTheme.typography.fontFamily.bold, color: theme.colors.amber }]}>
+                ★ {rating.toFixed(1)}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        {subtitle || plate ? (
+          <Text numberOfLines={1} style={[mobilePerson.subtitle, { fontFamily: orbiTheme.typography.fontFamily.regular, color: theme.colors.textMuted }]}>
+            {[subtitle, plate].filter(Boolean).join(' · ')}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+const mobilePerson = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  avatar: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  initials: {
+    letterSpacing: 0,
+  },
+  copy: {
+    flex: 1,
+    gap: 2,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  name: {
+    fontSize: 15,
+    flexShrink: 1,
+  },
+  ratingChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 176, 32, 0.14)',
+  },
+  ratingText: {
+    fontSize: 11,
+  },
+  subtitle: {
+    fontSize: 12,
+  },
+});
+
 const mobileSurface = StyleSheet.create({
   surface: {
     borderRadius: 16,

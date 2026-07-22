@@ -1,7 +1,13 @@
 import { memo, useEffect, useMemo, useRef } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import { type OrbiTheme } from "@orbi/ui";
-import { OrbiButton, OrbiSurface, useOrbiTheme, VehicleIllustration } from "@orbi/ui/native";
+import {
+  OrbiButton,
+  OrbiSurface,
+  PersonBadge,
+  useOrbiTheme,
+  VehicleIllustration,
+} from "@orbi/ui/native";
 import type { DriverOffer } from "@orbi/api";
 import {
   buildDriverOfferConfidenceExplainer,
@@ -15,22 +21,11 @@ import {
 } from "./offer-signal";
 import { formatReservationCountdown } from "./offer-reservation";
 
-function buildInitials(name: string): string {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w.charAt(0).toUpperCase())
-      .join("") || "OR"
-  );
-}
-
 // ── Vehicle icon — premium isometric SVG illustration ────────────────────────
 
 function VehicleIcon({ category }: { category: DriverOffer["category"] }) {
   const tier = category === "motorcycle" ? "moto-standard" : "car-standard";
-  return <VehicleIllustration tier={tier} width={56} height={40} />;
+  return <VehicleIllustration tier={tier} width={64} height={46} />;
 }
 
 // ── Confidence bar ────────────────────────────────────────────────────────────
@@ -125,7 +120,6 @@ export const OfferCard = memo(function OfferCard({
 }: OfferCardProps) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const initials = buildInitials(offer.riderName);
   const confidence = buildDriverOfferConfidenceExplainer(offer);
   const decision = buildDriverOfferDecisionSummary(offer);
   const detailLines = buildDriverOfferDetailLines(offer);
@@ -183,17 +177,14 @@ export const OfferCard = memo(function OfferCard({
         </View>
       ) : null}
 
-      {/* Header: rider avatar · info · fare + vehicle */}
+      {/* Header: rider info · fare + vehicle */}
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
-        <View style={styles.info}>
-          <Text style={styles.riderName}>{offer.riderName}</Text>
-          <Text style={styles.route} numberOfLines={1}>
-            {offer.pickup} → {offer.destination}
-          </Text>
-        </View>
+        <PersonBadge
+          name={offer.riderName}
+          subtitle={`${offer.pickup} → ${offer.destination}`}
+          size={42}
+          style={styles.personBadge}
+        />
         <View style={styles.fareCol}>
           <Text style={styles.fare}>{formatDriverOfferFare(offer)}</Text>
           <VehicleIcon category={offer.category} />
@@ -334,18 +325,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.teal,
   },
   header: { flexDirection: "row", alignItems: "center", gap: 10 },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: theme.colors.accentDark,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: "#FFFFFF" },
-  info: { flex: 1, gap: 2 },
-  riderName: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
-  route: { fontSize: 12, color: theme.colors.textSoft, fontFamily: "Inter_400Regular" },
+  personBadge: { flex: 1 },
   fareCol: { alignItems: "flex-end", gap: 4 },
   fare: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold", color: theme.colors.text },
   metrics: {

@@ -44,6 +44,7 @@ import {
   OrbiStatusBanner,
   OrbiSurface,
   safeHaptics,
+  TripStageTracker,
   useOrbiTheme,
 } from "@orbi/ui/native";
 import {
@@ -603,6 +604,60 @@ export default function ActivityScreen() {
     );
   }
 
+  function handleStopInProgressTrip(tripId: string) {
+    Alert.alert(
+      "Arreter la course",
+      "Confirmez uniquement si vous souhaitez descendre maintenant. Le montant sera ajuste selon le trajet deja parcouru quand le signal route le permet.",
+      [
+        {
+          text: "Arreter maintenant",
+          style: "destructive" as const,
+          onPress: () =>
+            void doStopInProgressTrip(tripId, "Arret demande par le passager"),
+        },
+        { text: "Continuer", style: "cancel" as const },
+      ],
+    );
+  }
+
+  async function doStopInProgressTrip(tripId: string, reason: string) {
+    if (submissionLockRef.current) {
+      return;
+    }
+
+    submissionLockRef.current = true;
+    setIsSubmitting(true);
+    setStatus("Arret de la course en cours...");
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      const response = await updateTripStatusWithApi(
+        authClient,
+        tripId,
+        "COMPLETED",
+        reason,
+      );
+      await loadHistory();
+      setStatus(
+        `Course arretee. Montant a payer: ${formatRiderMoneyAmount(response.trip.actualFare)}.`,
+      );
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        surface: "active-trip",
+        fallback: "L'arret de la course a echoue.",
+      });
+
+      if (feedback.shouldClearSessionToken) {
+        setSessionToken(null);
+      }
+
+      setStatus(feedback.message);
+    } finally {
+      submissionLockRef.current = false;
+      setIsSubmitting(false);
+    }
+  }
+
   async function doCancelActiveTrip(tripId: string, reason: string) {
     if (submissionLockRef.current) {
       return;
@@ -851,6 +906,7 @@ export default function ActivityScreen() {
     const canCancel =
       activeTrip.status === 'MATCHED' ||
       activeTrip.status === 'DRIVER_ARRIVING';
+    const canStop = activeTrip.status === 'IN_PROGRESS';
 
     return (
       <View style={styles.tripRoot}>
@@ -884,6 +940,9 @@ export default function ActivityScreen() {
         <View style={styles.tripSheet}>
           {/* Handle */}
           <View style={styles.sheetHandle} />
+
+          {/* Étapes de la course */}
+          <TripStageTracker status={activeTrip.status} audience="rider" style={styles.stageTracker} />
 
           {/* Status pill */}
           <View style={styles.statusRow}>
@@ -976,13 +1035,11 @@ export default function ActivityScreen() {
             ) : null}
           </OrbiSurface>
 
-          {/* Pickup code */}
-          {activeTrip.pickupCode && canCancel ? (
+          {activeTrip.status === 'DRIVER_ARRIVING' && canCancel ? (
             <OrbiSurface tone="teal" style={styles.pickupCodeCard}>
-              <Text style={styles.pickupCodeEyebrow}>Code de départ</Text>
-              <Text style={styles.pickupCodeValue}>{activeTrip.pickupCode}</Text>
+              <Text style={styles.pickupCodeEyebrow}>Chauffeur arrive</Text>
               <Text style={styles.pickupCodeHint}>
-                Communiquez ce code à votre chauffeur
+                Confirmez le nom, le vehicule et la plaque avant de monter.
               </Text>
             </OrbiSurface>
           ) : null}
@@ -1040,6 +1097,17 @@ export default function ActivityScreen() {
                 disabled={isSubmitting}
                 style={styles.actionBtn}
                 label="Annuler"
+                variant="danger"
+                tone="danger"
+                labelStyle={styles.actionBtnLabel}
+              />
+            ) : null}
+            {canStop ? (
+              <OrbiButton
+                onPress={() => handleStopInProgressTrip(activeTrip.id)}
+                disabled={isSubmitting}
+                style={styles.actionBtn}
+                label="Arreter"
                 variant="danger"
                 tone="danger"
                 labelStyle={styles.actionBtnLabel}
@@ -1146,22 +1214,15 @@ export default function ActivityScreen() {
             ))}
           </View>
           {supportTickets.length ? (
-            <View style={styles.supportTicketList}>
-              {supportTickets.slice(0, 2).map((ticket) => (
-                <View key={ticket.id} style={styles.supportTicketRow}>
-                  <View style={styles.supportTicketCopy}>
-                    <Text style={styles.supportTicketSubject} numberOfLines={1}>
-                      {ticket.subject}
-                    </Text>
-                    <Text style={styles.supportTicketMeta}>
-                      {formatOperationalStatus(ticket.status)} · P{ticket.priority}
-                    </Text>
-                  </View>
-                  <Text style={styles.supportTicketId}>
-                    {ticket.id.slice(0, 8)}
-                  </Text>
-                </View>
-              ))}
+            <View style={styles.supportFollowUp}>
+              <Text style={styles.supportFollowUpTitle}>
+                Suivi support actif
+              </Text>
+              <Text style={styles.supportHint}>
+                {supportTickets.length} dossier(s) en cours. L equipe garde les
+                details de course et vous recontacte si une action est
+                necessaire.
+              </Text>
             </View>
           ) : (
             <Text style={styles.supportHint}>
@@ -1315,6 +1376,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 4,
   },
+  stageTracker: { marginBottom: 2 },
   statusRow: { flexDirection: 'row', alignItems: 'center' },
   statusPill: {
     flexDirection: 'row',
@@ -1619,38 +1681,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: theme.colors.textMuted,
   },
-  supportTicketList: {
-    gap: 8,
-  },
-  supportTicketRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingTop: 8,
+  supportFollowUp: {
+    gap: 4,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
-  supportTicketCopy: {
-    flex: 1,
-  },
-  supportTicketSubject: {
+  supportFollowUpTitle: {
     fontSize: 13,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
-  },
-  supportTicketMeta: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  supportTicketId: {
-    fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.textSoft,
+    color: theme.colors.text,
   },
 
   // Pending requests

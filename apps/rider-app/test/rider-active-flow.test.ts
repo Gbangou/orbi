@@ -55,7 +55,7 @@ describe('rider-active-flow', () => {
     );
     expect(flow.activeFlowState).toBe('TRIP:DRIVER_ARRIVING');
     expect(buildRiderNextActionHint(flow)).toBe(
-      'Gardez le code pickup pret et ne le donnez qu au bon chauffeur.',
+      'Confirmez le nom du chauffeur et la plaque avant de monter.',
     );
   });
 
@@ -266,8 +266,9 @@ describe('rider-active-flow', () => {
           value: '0.4 km',
         }),
         expect.objectContaining({
-          label: 'Code',
-          value: '1234',
+          label: 'Depart',
+          value: 'Chauffeur arrive',
+          helper: 'Montez seulement dans le vehicule confirme',
         }),
       ]),
     );

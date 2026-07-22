@@ -9,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import {
@@ -29,7 +28,6 @@ import {
   type MyTripsResponse,
   type TripDetailResponse,
   updateTripStatusWithApi,
-  verifyPickupCodeWithApi,
 } from "@orbi/api";
 import {
   describeRealtimeEvent,
@@ -42,7 +40,16 @@ import {
   LiveTimeline,
   TransitionNoticeCard,
 } from "../../lib/realtime-widgets";
-import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme } from "@orbi/ui/native";
+import {
+  OrbiButton,
+  OrbiScreen,
+  OrbiStatusBanner,
+  OrbiSurface,
+  PersonBadge,
+  safeHaptics,
+  TripStageTracker,
+  useOrbiTheme,
+} from "@orbi/ui/native";
 import { OfferCard } from "../../lib/offer-card";
 import { restoreDriverSession } from "../../lib/auth";
 import { resolveDriverAppError } from "../../lib/session-feedback";
@@ -81,9 +88,7 @@ import {
 } from "../../lib/offer-signal";
 import { formatReservationCountdown } from "../../lib/offer-reservation";
 import {
-  normalizePickupCode,
   validateOfferAction,
-  validatePickupCode,
   validateTripAdvance,
 } from "../../lib/driver-action-safety";
 
@@ -111,17 +116,6 @@ const fallbackFatigue: DriverFatigueStatus = {
   restUntil: null,
   reason: "Aucun signal fatigue bloquant sur la fenetre recente.",
 };
-
-function buildInitials(name: string) {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join("") || "OR"
-  );
-}
 
 function RefreshGlyph({ loading }: { loading: boolean }) {
   const theme = useOrbiTheme();
@@ -225,7 +219,6 @@ export default function OffersScreen() {
     useState<DriverFatigueStatus>(fallbackFatigue);
   const [dispatchReadiness, setDispatchReadiness] =
     useState<DriverDispatchReadinessResponse["readiness"] | null>(null);
-  const [pickupCodeInput, setPickupCodeInput] = useState("");
   const [tripDetailStatus, setTripDetailStatus] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [completionFlash, setCompletionFlash] = useState<{
@@ -755,48 +748,6 @@ export default function OffersScreen() {
     });
   }
 
-  async function handleVerifyPickupCode(tripId: string, pickupCode: string) {
-    const normalizedPickupCode = normalizePickupCode(pickupCode);
-    const validation = validatePickupCode(normalizedPickupCode);
-    if (!validation.ok) {
-      setStatus(validation.message);
-      return;
-    }
-
-    await runExclusiveDriverAction(async () => {
-      setStatus("Verification du code de prise en charge...");
-
-      try {
-        const { authClient } = await restoreDriverSession();
-        const response = await verifyPickupCodeWithApi(
-          authClient,
-          tripId,
-          normalizedPickupCode,
-        );
-        setPickupCodeInput("");
-        setStatus(
-          `Code valide. Trajet ${response.trip.id.slice(0, 8)} demarre.`,
-        );
-        await loadDriverData();
-      } catch (error) {
-        const feedback = await resolveDriverAppError(error, {
-          surface: "active-trip",
-          fallback: "Code incorrect ou verification impossible.",
-        });
-
-        if (feedback.shouldClearSessionToken) {
-          setSessionToken(null);
-        }
-
-        setStatus(feedback.message);
-      }
-    });
-  }
-
-  function handlePickupCodeChange(value: string) {
-    setPickupCodeInput(normalizePickupCode(value));
-  }
-
   async function handleReportIncident(tripId: string) {
     await runExclusiveDriverAction(async () => {
       setStatus("Signalement de l incident a l equipe operations...");
@@ -887,30 +838,15 @@ export default function OffersScreen() {
       return (
         <View style={styles.codeBlock}>
           <Text style={styles.meta}>
-            Saisir le code donne par le passager avant de demarrer.
+            Demarrez seulement quand le passager est avec vous et pret a partir.
           </Text>
-          <TextInput
-            value={pickupCodeInput}
-            onChangeText={handlePickupCodeChange}
-            placeholder="Code a 4 chiffres"
-            placeholderTextColor={theme.colors.muted}
-            keyboardType="number-pad"
-            maxLength={4}
-            style={styles.codeInput}
-          />
           <FlowActionButton
-            disabled={isSubmitting || pickupCodeInput.length !== 4}
-            label="Verifier le code et demarrer"
-            onPress={() =>
-              handleVerifyPickupCode(activeTrip.id, pickupCodeInput)
-            }
+            disabled={isSubmitting}
+            label="Demarrer la course"
+            onPress={() => handleAdvanceTrip(activeTrip.id, "IN_PROGRESS")}
             tone="amber"
             emphasis="primary"
-            style={
-              isSubmitting || pickupCodeInput.length !== 4
-                ? styles.disabled
-                : null
-            }
+            style={isSubmitting ? styles.disabled : null}
           />
           <FlowActionButton
             disabled={isSubmitting}
@@ -936,7 +872,7 @@ export default function OffersScreen() {
           />
           {driverRouteSafetyBrief.blocksCompletion ? (
             <Text style={styles.routeSafetyBlockNote}>
-              GPS requis: {driverRouteSafetyBrief.actionLabel}
+              A verifier: {driverRouteSafetyBrief.actionLabel}
             </Text>
           ) : null}
         </View>
@@ -1145,6 +1081,8 @@ export default function OffersScreen() {
               ) : null}
             </View>
 
+            <TripStageTracker status={activeTrip.status} audience="driver" style={styles.stageTracker} />
+
             {/* Route */}
             <View style={styles.missionRoute}>
               <View style={styles.missionRouteRow}>
@@ -1160,19 +1098,11 @@ export default function OffersScreen() {
 
             {/* Rider card */}
             <View style={styles.riderCard}>
-              <View style={styles.riderAvatar}>
-                <Text style={styles.riderInitials}>
-                  {buildInitials(riderTrustSnapshot?.riderName ?? activeTrip.counterpartyName ?? "Passager")}
-                </Text>
-              </View>
-              <View style={styles.riderInfo}>
-                <Text style={styles.riderName}>
-                  {riderTrustSnapshot?.riderName ?? activeTrip.counterpartyName ?? "Passager assigné"}
-                </Text>
-                {riderTrustSnapshot?.vehicleLabel ? (
-                  <Text style={styles.riderMeta}>{riderTrustSnapshot.vehicleLabel}</Text>
-                ) : null}
-              </View>
+              <PersonBadge
+                name={riderTrustSnapshot?.riderName ?? activeTrip.counterpartyName ?? "Passager assigné"}
+                subtitle={riderTrustSnapshot?.vehicleLabel}
+                style={styles.riderBadge}
+              />
               {riderTrustSnapshot?.fareLabel ? (
                 <Text style={styles.riderFare}>{riderTrustSnapshot.fareLabel}</Text>
               ) : null}
@@ -1198,6 +1128,7 @@ export default function OffersScreen() {
                   driverLat={activeTripDetail.trip.routeMonitoring.latestPosition?.latitude ?? null}
                   driverLng={activeTripDetail.trip.routeMonitoring.latestPosition?.longitude ?? null}
                   vehicleTier={activeTripDetail.trip.driverVerification.vehicle.tier as string | null | undefined}
+                  phase="trip"
                   style={styles.missionMap}
                 />
               )
@@ -1243,7 +1174,7 @@ export default function OffersScreen() {
               </View>
               {driverRouteSafetyBrief.blocksCompletion ? (
                 <Text style={styles.routeSafetyBlockNote}>
-                  GPS requis: {driverRouteSafetyBrief.actionLabel}
+                  A verifier: {driverRouteSafetyBrief.actionLabel}
                 </Text>
               ) : null}
             </View>
@@ -1573,6 +1504,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.textSoft,
   },
   missionCard: { padding: 12, gap: 10 },
+  stageTracker: { paddingHorizontal: 2 },
   missionStatusRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   missionStatusDot: { width: 7, height: 7, borderRadius: 4 },
@@ -1584,13 +1516,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   missionRouteSep: { height: 1, backgroundColor: theme.colors.border, marginLeft: 18 },
   missionRouteText: { flex: 1, fontSize: 13, fontWeight: "500", fontFamily: "Inter_500Medium", color: theme.colors.text },
   riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.borderSoft, padding: 10 },
-  riderAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.accentDark, alignItems: "center", justifyContent: "center" },
-  riderInitials: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", color: "#FFFFFF" },
-  riderInfo: { flex: 1, gap: 2 },
-  riderName: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
-  riderMeta: { fontSize: 12, color: theme.colors.textSoft, fontFamily: "Inter_400Regular" },
+  riderBadge: { flex: 1 },
   riderFare: { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.amber },
-  missionMap: { height: 224, borderRadius: 14, overflow: "hidden" },
+  missionMap: { height: 336, borderRadius: 14, overflow: "hidden" },
   missionNavigationPanel: {
     gap: 8,
     borderRadius: 14,
@@ -1789,8 +1717,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   disabled: { opacity: 0.38 },
   codeBlock: { gap: 10 },
   meta: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular", lineHeight: 18 },
-  codeInput: { backgroundColor: theme.colors.backgroundAlt, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 16, paddingVertical: 14, fontSize: 22, fontWeight: "800", letterSpacing: 0, color: theme.colors.text, textAlign: "center", fontFamily: "Raleway_800ExtraBold" },
-  routeSafetyBlockNote: { fontSize: 12, color: theme.colors.danger, fontFamily: "Inter_400Regular", lineHeight: 17 },
+  routeSafetyBlockNote: { fontSize: 12, color: theme.colors.amberDark, fontFamily: "Inter_400Regular", lineHeight: 17 },
   // Mission labels
   missionSectionLabel: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.amber, textTransform: "uppercase", letterSpacing: 0 },
   missionSignalsPanel: { gap: 7 },

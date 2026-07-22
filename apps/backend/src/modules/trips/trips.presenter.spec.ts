@@ -156,7 +156,7 @@ describe('serializeTripDetail — privacy guards', () => {
     expect(trip.pickupCode).toBeNull();
   });
 
-  it('exposes pickup code when trip is MATCHED', () => {
+  it('hides pickup code in the standard simple pickup flow', () => {
     const { trip } = serializeTripDetail(
       createBaseTrip({
         status: 'MATCHED',
@@ -171,7 +171,7 @@ describe('serializeTripDetail — privacy guards', () => {
       }) as never,
     );
 
-    expect(trip.pickupCode).toBe('4821');
+    expect(trip.pickupCode).toBeNull();
   });
 
   it('hides pickup code from driver detail even before departure', () => {

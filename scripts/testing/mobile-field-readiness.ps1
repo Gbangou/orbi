@@ -116,6 +116,6 @@ if (Test-IsLocalApiUrl -Url $riderApiBaseUrl) {
 } else {
   Write-Host "1. Keep rider and driver apps on the same API URL shown above."
   Write-Host "2. Use field accounts connected to the public backend."
-  Write-Host "3. Confirm pickup-code handoff on two real phones before APK generation."
+  Write-Host "3. Confirm driver identity, plate check, cancel-before-departure and start/finish on two real phones."
   Write-Host "4. Complete the MVP checklist in docs/mvp-real-device-testing-guide.md."
 }

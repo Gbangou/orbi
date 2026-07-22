@@ -493,10 +493,10 @@ describe('PricingService — price window transparence passager', () => {
 // ── Trust & policy ────────────────────────────────────────────────────────────
 
 describe('PricingService — trust & policy Orbi Burkina', () => {
-  it('code de prise en charge toujours requis', async () => {
+  it('code de prise en charge desactive par defaut pour simplifier le terrain', async () => {
     const { service } = createService();
     const quote = await service.quote(REFERENCE_MOTO_QUOTE);
-    expect(quote.trustAndPolicy.pickupCodeRequired).toBe(true);
+    expect(quote.trustAndPolicy.pickupCodeRequired).toBe(false);
   });
 
   it('tarification locale Burkina active', async () => {

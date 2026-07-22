@@ -1105,6 +1105,19 @@ describe('rider smoke flows', () => {
       },
     } as never);
     mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedGetMySupportTicketsWithApi.mockResolvedValue({
+      tickets: [
+        {
+          id: 'ticket-sensitive-rider-1',
+          subject: 'Prix de course conteste',
+          description: 'Le prix affiche apres course doit etre revu.',
+          status: 'OPEN',
+          priority: 2,
+          adminNote: null,
+          createdAt: '2026-04-19T08:00:00.000Z',
+        },
+      ],
+    } as never);
 
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
@@ -1113,6 +1126,12 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Mon compte');
     expectText(renderer, 'Aucun contact actif');
     expectText(renderer, 'Contacts suivis');
+    expectText(renderer, 'Dossiers suivis');
+    expectText(
+      renderer,
+      '1 dossier(s) ouvert(s) ou recemment mis a jour. Les details de course restent dans Activite.',
+    );
+    expect(collectText(renderer.root)).not.toContain('Prix de course conteste');
   });
 
   it('redirects to auth when the rider session is expired during profile refresh', async () => {
@@ -1352,15 +1371,36 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Où allez-vous ?');
   });
 
-  it('keeps activity usable when rider trip history is partially hydrated', async () => {
+  it('keeps rider support follow-up discreet inside activity', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
-    mockedFetchMyTrips.mockResolvedValue(buildPartialRiderTrips() as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedGetMySupportTicketsWithApi.mockResolvedValue({
+      tickets: [
+        {
+          id: 'ticket-sensitive-activity-1',
+          subject: 'SOS trajet',
+          description: 'Signalement prioritaire ouvert pendant le trajet.',
+          status: 'OPEN',
+          priority: 3,
+          adminNote: null,
+          createdAt: '2026-04-19T08:00:00.000Z',
+        },
+      ],
+    } as never);
 
     const renderer = await renderScreen(<ActivityScreen />);
+    await pressByLabel(renderer, 'activity-refresh');
+    await flushMicrotasks();
     await flushMicrotasks();
 
     expectText(renderer, 'Activité');
     expectText(renderer, 'Programme Fidélité');
+    expectText(renderer, 'Suivi support actif');
+    expectText(
+      renderer,
+      '1 dossier(s) en cours. L equipe garde les details de course et vous recontacte si une action est necessaire.',
+    );
+    expect(collectText(renderer.root)).not.toContain('SOS trajet');
   });
 
   it('keeps trips usable when rider trip history is partially hydrated', async () => {

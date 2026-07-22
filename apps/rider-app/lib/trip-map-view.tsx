@@ -1,11 +1,15 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
+  buildTripRouteScript,
+  formatTripRouteDistance,
+  formatTripRouteDuration,
   localMapWebViewOriginWhitelist,
   serializeHtmlScriptJson,
   shouldAllowLocalMapWebViewRequest,
   type OrbiTheme,
+  type RouteInfoMessage,
 } from '@orbi/ui';
 import { ErrorBoundary, useOrbiTheme } from '@orbi/ui/native';
 import { enqueueRiderMapError } from './map-error-reporting';
@@ -16,6 +20,7 @@ import {
 } from './map-coordinate';
 
 const TypedWebView = WebView as any;
+const TRIP_ROUTE_SCRIPT = buildTripRouteScript({ routeColor: '#00B894' });
 
 export interface TripMapViewProps {
   pickupLat: number | null | undefined;
@@ -104,7 +109,7 @@ html,body,#map{width:100%;height:100%;background:#eef3f1}
 var CFG=${config};
 var map=L.map('map',{zoomControl:false,attributionControl:false});
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:['a','b','c','d']}).addTo(map);
-var driverMarker=null,pickupMarker=null,destMarker=null,routeLine=null;
+var driverMarker=null,pickupMarker=null,destMarker=null;
 
 var VEHICLE_ICONS={'moto-standard':'<svg class="vehicle-svg" xmlns="http://www.w3.org/2000/svg" width="26" height="58" viewBox="0 0 26 58"><defs><linearGradient id="msB" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0f172a"/><stop offset="52%" stop-color="#00B894"/><stop offset="100%" stop-color="#111827"/></linearGradient><radialGradient id="msW" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#56606d"/><stop offset="100%" stop-color="#05070a"/></radialGradient></defs><ellipse cx="13" cy="54" rx="10" ry="3.5" fill="#000" opacity=".24"/><ellipse cx="13" cy="8" rx="7.5" ry="6.5" fill="url(#msW)"/><ellipse cx="13" cy="49" rx="7.5" ry="6.5" fill="url(#msW)"/><path d="M9 15q-2 4-2 10l1 8q1 4 3 5h4q3-1 3-5l1-8q0-6-2-10z" fill="url(#msB)"/><ellipse cx="13" cy="21" rx="5" ry="6.5" fill="#172033"/><path d="M11 37q2 2.5 4 0v8q-2 2-4 0z" fill="#070b12"/><rect x="5" y="16" width="16" height="4" rx="2" fill="#00B894"/><ellipse cx="13" cy="12" rx="3.5" ry="2" fill="#fff7c2"/><rect x="10" y="51" width="6" height="2" rx="1" fill="#ff3b30"/></svg>','car-standard':'<svg class="vehicle-svg" xmlns="http://www.w3.org/2000/svg" width="42" height="74" viewBox="0 0 42 74"><defs><linearGradient id="csB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F2F5F8"/><stop offset="45%" stop-color="#E0E4EC"/><stop offset="100%" stop-color="#C8CDD8"/></linearGradient><linearGradient id="csG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#405a74"/><stop offset="100%" stop-color="#0b1622"/></linearGradient><radialGradient id="csW" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#6c7480"/><stop offset="100%" stop-color="#07090d"/></radialGradient></defs><ellipse cx="21" cy="68" rx="18" ry="5" fill="#000" opacity=".26"/><rect x="1" y="7" width="8" height="14" rx="4" fill="url(#csW)"/><rect x="33" y="7" width="8" height="14" rx="4" fill="url(#csW)"/><rect x="1" y="52" width="8" height="14" rx="4" fill="url(#csW)"/><rect x="33" y="52" width="8" height="14" rx="4" fill="url(#csW)"/><path d="M8 7Q21 2 34 7v55Q21 70 8 62z" fill="url(#csB)"/><path d="M10 7Q21 3 32 7v12Q21 9 10 11z" fill="#FFFFFF" opacity=".7"/><rect x="11" y="14" width="20" height="13" rx="4" fill="url(#csG)"/><rect x="9" y="29" width="5" height="14" rx="2.5" fill="#9098A8" opacity=".8"/><rect x="28" y="29" width="5" height="14" rx="2.5" fill="#9098A8" opacity=".8"/><rect x="13" y="28" width="16" height="18" rx="4" fill="#C8CDD8"/><rect x="11" y="46" width="20" height="12" rx="4" fill="url(#csG)"/><rect x="10" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="25" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="10" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/><rect x="25" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/></svg>','car-comfort':'<svg class="vehicle-svg" xmlns="http://www.w3.org/2000/svg" width="42" height="74" viewBox="0 0 42 74"><defs><linearGradient id="ccB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4A5068"/><stop offset="45%" stop-color="#22242E"/><stop offset="100%" stop-color="#0C0E18"/></linearGradient><linearGradient id="ccG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#405a74"/><stop offset="100%" stop-color="#0b1622"/></linearGradient><radialGradient id="ccW" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#6c7480"/><stop offset="100%" stop-color="#07090d"/></radialGradient></defs><ellipse cx="21" cy="68" rx="18" ry="5" fill="#000" opacity=".26"/><rect x="1" y="7" width="8" height="14" rx="4" fill="url(#ccW)"/><rect x="33" y="7" width="8" height="14" rx="4" fill="url(#ccW)"/><rect x="1" y="52" width="8" height="14" rx="4" fill="url(#ccW)"/><rect x="33" y="52" width="8" height="14" rx="4" fill="url(#ccW)"/><path d="M8 7Q21 2 34 7v55Q21 70 8 62z" fill="url(#ccB)"/><path d="M10 7Q21 3 32 7v12Q21 9 10 11z" fill="#7080C8" opacity=".4"/><rect x="11" y="14" width="20" height="13" rx="4" fill="url(#ccG)"/><rect x="9" y="29" width="5" height="14" rx="2.5" fill="#141620" opacity=".9"/><rect x="28" y="29" width="5" height="14" rx="2.5" fill="#141620" opacity=".9"/><rect x="13" y="28" width="16" height="18" rx="4" fill="#1A1E2C"/><rect x="11" y="46" width="20" height="12" rx="4" fill="url(#ccG)"/><rect x="10" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="25" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="10" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/><rect x="25" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/></svg>','car-xl':'<svg class="vehicle-svg" xmlns="http://www.w3.org/2000/svg" width="46" height="74" viewBox="0 0 46 74"><defs><linearGradient id="xlB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F8F7F4"/><stop offset="45%" stop-color="#E6E4DE"/><stop offset="100%" stop-color="#CCCAC4"/></linearGradient><linearGradient id="xlG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#405a74"/><stop offset="100%" stop-color="#0b1622"/></linearGradient><radialGradient id="xlW" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#6c7480"/><stop offset="100%" stop-color="#07090d"/></radialGradient></defs><ellipse cx="23" cy="68" rx="20" ry="5" fill="#000" opacity=".28"/><rect x="0" y="7" width="8" height="14" rx="4" fill="url(#xlW)"/><rect x="38" y="7" width="8" height="14" rx="4" fill="url(#xlW)"/><rect x="0" y="52" width="8" height="14" rx="4" fill="url(#xlW)"/><rect x="38" y="52" width="8" height="14" rx="4" fill="url(#xlW)"/><path d="M8 7Q23 2 38 7v55Q23 70 8 62z" fill="url(#xlB)"/><path d="M10 7Q23 3 36 7v12Q23 9 10 11z" fill="#F0C860" opacity=".55"/><rect x="11" y="14" width="24" height="13" rx="4" fill="url(#xlG)"/><rect x="9" y="29" width="5" height="14" rx="2.5" fill="#9A9890" opacity=".85"/><rect x="32" y="29" width="5" height="14" rx="2.5" fill="#9A9890" opacity=".85"/><rect x="13" y="28" width="20" height="18" rx="4" fill="#C8C6C0"/><rect x="11" y="46" width="24" height="12" rx="4" fill="url(#xlG)"/><rect x="8" y="16" width="2" height="38" rx="1" fill="#94A3B8" opacity=".7"/><rect x="36" y="16" width="2" height="38" rx="1" fill="#94A3B8" opacity=".7"/><rect x="11" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="28" y="4" width="7" height="3" rx="1.5" fill="#FFFDE7"/><rect x="11" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/><rect x="28" y="64" width="7" height="3" rx="1.5" fill="#ff3b30"/></svg>'};
 var VEHICLE_SIZES={'moto-standard':[78,88],'car-standard':[86,92],'car-comfort':[86,92],'car-xl':[92,88]};
@@ -116,38 +121,14 @@ function driverIcon(lat,lng){var tier=getTier();var angle=driverBearing(lat,lng)
 function pickupIcon(){return L.divIcon({html:'<div class="pickup-pin"><div class="pickup-pin-dot"></div><div class="pickup-pin-label">Depart</div></div>',iconSize:[72,18],iconAnchor:[5,9],className:''})}
 function destIcon(){return L.divIcon({html:'<div class="dest-pin"><div class="dest-pin-dot"></div><div class="dest-pin-label">Arrivee</div></div>',iconSize:[72,18],iconAnchor:[5,9],className:''})}
 
-function drawFallbackLine(lat1,lng1,lat2,lng2){
-  if(routeLine){map.removeLayer(routeLine)}
-  routeLine=L.polyline([[lat1,lng1],[lat2,lng2]],{color:'#00B894',weight:3,opacity:.55,dashArray:'8 6'}).addTo(map);
-}
-
-function fetchWithTimeout(url,timeoutMs){
-  var controller=typeof AbortController!=='undefined'?new AbortController():null;
-  var timer=setTimeout(function(){if(controller)controller.abort()},timeoutMs);
-  var opts=controller?{signal:controller.signal}:{};
-  return fetch(url,opts).finally(function(){clearTimeout(timer)});
-}
-
-function fetchOsrmRoute(lat1,lng1,lat2,lng2){
-  var url='https://router.project-osrm.org/route/v1/driving/'+lng1+','+lat1+';'+lng2+','+lat2+'?geometries=geojson&overview=full';
-  fetchWithTimeout(url,6000)
-    .then(function(r){return r.json()})
-    .then(function(data){
-      if(data.routes&&data.routes[0]&&data.routes[0].geometry&&data.routes[0].geometry.coordinates){
-        var coords=data.routes[0].geometry.coordinates.map(function(c){return[c[1],c[0]]});
-        if(routeLine){map.removeLayer(routeLine)}
-        routeLine=L.polyline(coords,{color:'#00B894',weight:4,opacity:.88}).addTo(map);
-      }else{drawFallbackLine(lat1,lng1,lat2,lng2)}
-    })
-    .catch(function(){drawFallbackLine(lat1,lng1,lat2,lng2)});
-}
+${TRIP_ROUTE_SCRIPT}
 
 function initMap(cfg){
   var bounds=[];
   if(cfg.pickupLat!==null&&cfg.pickupLng!==null){pickupMarker=L.marker([cfg.pickupLat,cfg.pickupLng],{icon:pickupIcon()}).addTo(map);bounds.push([cfg.pickupLat,cfg.pickupLng])}
   if(cfg.destLat!==null&&cfg.destLng!==null){destMarker=L.marker([cfg.destLat,cfg.destLng],{icon:destIcon()}).addTo(map);bounds.push([cfg.destLat,cfg.destLng])}
   if(cfg.pickupLat!==null&&cfg.pickupLng!==null&&cfg.destLat!==null&&cfg.destLng!==null){
-    fetchOsrmRoute(cfg.pickupLat,cfg.pickupLng,cfg.destLat,cfg.destLng);
+    __orbiFetchTripRoute(cfg.pickupLat,cfg.pickupLng,cfg.destLat,cfg.destLng);
   }
   if(cfg.driverLat!==null&&cfg.driverLng!==null){driverMarker=L.marker([cfg.driverLat,cfg.driverLng],{icon:driverIcon(cfg.driverLat,cfg.driverLng)}).addTo(map);bounds.push([cfg.driverLat,cfg.driverLng])}
   if(bounds.length){map.fitBounds(bounds,{padding:[44,44]})}else{map.setView([12.3647,-1.5332],13)}
@@ -222,6 +203,9 @@ export function TripMapView({
     }),
   );
 
+  const [routeInfo, setRouteInfo] = useState<Omit<RouteInfoMessage, 'type'> | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+
   useEffect(() => {
     if (driver && webRef.current) {
       webRef.current.postMessage(
@@ -229,6 +213,44 @@ export function TripMapView({
       );
     }
   }, [driver]);
+
+  const handleWebViewMessage = useCallback(
+    (event: { nativeEvent?: { data?: string } }) => {
+      if (!event.nativeEvent?.data) return;
+
+      try {
+        const message = JSON.parse(event.nativeEvent.data) as Partial<RouteInfoMessage> & {
+          type?: string;
+        };
+
+        if (message.type === 'ROUTE_INFO' && typeof message.distanceMeters === 'number') {
+          setRouteInfo({
+            distanceMeters: message.distanceMeters,
+            durationSeconds: message.durationSeconds ?? 0,
+            routeCount: message.routeCount ?? 1,
+            selectedIndex: message.selectedIndex ?? 0,
+          });
+          return;
+        }
+
+        if (onSelectCoordinate) {
+          const coordinates = parseMapCoordinateSelectionMessage(event.nativeEvent.data);
+          if (coordinates) {
+            onSelectCoordinate(coordinates);
+          }
+        }
+      } catch {
+        // Ignore malformed messages from the embedded map.
+      }
+    },
+    [onSelectCoordinate],
+  );
+
+  const cycleRoute = useCallback(() => {
+    if (!routeInfo || routeInfo.routeCount <= 1) return;
+    const nextIndex = (routeInfo.selectedIndex + 1) % routeInfo.routeCount;
+    webRef.current?.postMessage(JSON.stringify({ type: 'SELECT_ROUTE', index: nextIndex }));
+  }, [routeInfo]);
 
   function renderDegradedPanel() {
     const hasPickup = hasMapCoordinatePair({ latitude: pickupLat, longitude: pickupLng });
@@ -270,62 +292,92 @@ export function TripMapView({
     return renderDegradedPanel();
   }
 
+  function renderRouteInfoPanel() {
+    if (!routeInfo) return null;
+    return (
+      <Pressable
+        style={styles.routeInfoPanel}
+        onPress={cycleRoute}
+        disabled={routeInfo.routeCount <= 1}
+        accessibilityLabel="rider-trip-route-info"
+      >
+        <Text style={styles.routeInfoDistance}>{formatTripRouteDistance(routeInfo.distanceMeters)}</Text>
+        <View style={styles.routeInfoDivider} />
+        <Text style={styles.routeInfoDuration}>{formatTripRouteDuration(routeInfo.durationSeconds)}</Text>
+        {routeInfo.routeCount > 1 ? (
+          <View style={styles.routeInfoAltBadge}>
+            <Text style={styles.routeInfoAltText}>
+              {routeInfo.selectedIndex + 1}/{routeInfo.routeCount}
+            </Text>
+          </View>
+        ) : null}
+      </Pressable>
+    );
+  }
+
+  function renderMapSurface(fullscreen: boolean) {
+    return (
+      <ErrorBoundary
+        fallback={renderDegradedPanel()}
+        onError={(error) =>
+          enqueueRiderMapError(error, { surface: 'trip-map', action: 'render-crash' })
+        }
+      >
+        <View style={[styles.container, fullscreen ? styles.containerFullscreen : style]}>
+          <TypedWebView
+            ref={webRef}
+            source={{ html: htmlRef.current }}
+            scrollEnabled={false}
+            style={styles.webview}
+            javaScriptEnabled
+            originWhitelist={localMapWebViewOriginWhitelist}
+            onShouldStartLoadWithRequest={(request: { url: string }) =>
+              shouldAllowLocalMapWebViewRequest(request.url)
+            }
+            onMessage={handleWebViewMessage}
+            onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
+              enqueueRiderMapError(
+                new Error(event.nativeEvent?.description ?? 'Trip map WebView error'),
+                {
+                  surface: 'trip-map',
+                  code: event.nativeEvent?.code ?? null,
+                },
+              );
+            }}
+            onHttpError={(event: { nativeEvent?: { statusCode?: number; description?: string; url?: string } }) => {
+              enqueueRiderMapError(
+                new Error(event.nativeEvent?.description ?? 'Trip map HTTP error'),
+                {
+                  surface: 'trip-map',
+                  statusCode: event.nativeEvent?.statusCode ?? null,
+                  url: event.nativeEvent?.url ?? null,
+                },
+              );
+            }}
+            allowsInlineMediaPlayback
+          />
+          {renderRouteInfoPanel()}
+          {!selectable ? (
+            <Pressable
+              style={styles.expandButton}
+              onPress={() => setIsExpanded(!fullscreen)}
+              accessibilityLabel={fullscreen ? 'Réduire la carte' : 'Agrandir la carte'}
+            >
+              <Text style={styles.expandButtonLabel}>{fullscreen ? 'Réduire' : 'Agrandir'}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </ErrorBoundary>
+    );
+  }
+
   return (
-    <ErrorBoundary
-      fallback={renderDegradedPanel()}
-      onError={(error) =>
-        enqueueRiderMapError(error, { surface: 'trip-map', action: 'render-crash' })
-      }
-    >
-      <View style={[styles.container, style]}>
-        <TypedWebView
-          ref={webRef}
-          source={{ html: htmlRef.current }}
-          scrollEnabled={false}
-          style={styles.webview}
-          javaScriptEnabled
-          originWhitelist={localMapWebViewOriginWhitelist}
-          onShouldStartLoadWithRequest={(request: { url: string }) =>
-            shouldAllowLocalMapWebViewRequest(request.url)
-          }
-          onMessage={(event: { nativeEvent?: { data?: string } }) => {
-            if (!onSelectCoordinate || !event.nativeEvent?.data) {
-              return;
-            }
-
-            try {
-              const coordinates = parseMapCoordinateSelectionMessage(event.nativeEvent.data);
-
-              if (coordinates) {
-                onSelectCoordinate(coordinates);
-              }
-            } catch {
-              // Ignore malformed messages from the embedded map.
-            }
-          }}
-          onError={(event: { nativeEvent?: { description?: string; code?: number } }) => {
-            enqueueRiderMapError(
-              new Error(event.nativeEvent?.description ?? 'Trip map WebView error'),
-              {
-                surface: 'trip-map',
-                code: event.nativeEvent?.code ?? null,
-              },
-            );
-          }}
-          onHttpError={(event: { nativeEvent?: { statusCode?: number; description?: string; url?: string } }) => {
-            enqueueRiderMapError(
-              new Error(event.nativeEvent?.description ?? 'Trip map HTTP error'),
-              {
-                surface: 'trip-map',
-                statusCode: event.nativeEvent?.statusCode ?? null,
-                url: event.nativeEvent?.url ?? null,
-              },
-            );
-          }}
-          allowsInlineMediaPlayback
-        />
-      </View>
-    </ErrorBoundary>
+    <>
+      {renderMapSurface(false)}
+      <Modal visible={isExpanded} animationType="slide" onRequestClose={() => setIsExpanded(false)}>
+        <View style={styles.fullscreenRoot}>{renderMapSurface(true)}</View>
+      </Modal>
+    </>
   );
 }
 
@@ -333,6 +385,70 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   container: {
     overflow: 'hidden',
     borderRadius: 14,
+  },
+  containerFullscreen: {
+    flex: 1,
+    borderRadius: 0,
+  },
+  fullscreenRoot: {
+    flex: 1,
+    backgroundColor: '#eaf2ef',
+  },
+  routeInfoPanel: {
+    position: 'absolute',
+    left: 12,
+    bottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    ...theme.shadows.card,
+  },
+  routeInfoDistance: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: theme.colors.text,
+  },
+  routeInfoDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: theme.colors.border,
+  },
+  routeInfoDuration: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: theme.colors.teal,
+  },
+  routeInfoAltBadge: {
+    marginLeft: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: theme.colors.accentLight,
+  },
+  routeInfoAltText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: theme.colors.accentDark,
+  },
+  expandButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(7,19,17,0.82)',
+  },
+  expandButtonLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   webFallback: {
     minHeight: 180,

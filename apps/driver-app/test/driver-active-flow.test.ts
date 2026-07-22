@@ -55,7 +55,7 @@ describe('driver-active-flow', () => {
     expect(flow.visibleOfferCount).toBe(0);
     expect(flow.availabilityLocked).toBe(true);
     expect(buildDriverNextActionHint(flow)).toBe(
-      'Demandez le code pickup au passager avant de demarrer la course.',
+      'Demarrez seulement quand le passager est avec vous et pret a partir.',
     );
   });
 
@@ -319,7 +319,7 @@ describe('driver-active-flow', () => {
         expect.objectContaining({
           label: 'Passager',
           value: 'Awa Ouedraogo',
-          helper: 'Saisir le code donne par le passager',
+          helper: 'Confirmez oralement le nom et le point de depart',
         }),
         expect.objectContaining({
           label: 'Pickup',

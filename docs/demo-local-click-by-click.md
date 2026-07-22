@@ -288,7 +288,7 @@ Sur **l'app chauffeur** :
 Sur **l'app passager** :
 
 1. Un message s'affiche : "Votre chauffeur est arrivé"
-2. Tu vois un **code à 4 chiffres** — note-le (exemple : `4827`)
+2. Verifie le nom du chauffeur, le vehicule et la plaque avant de monter
 
 ---
 
@@ -296,9 +296,8 @@ Sur **l'app passager** :
 
 Sur **l'app chauffeur** :
 
-1. Un champ apparaît pour entrer le code du passager
-2. Tape le code que le passager vient de voir (exemple : `4827`)
-3. Appuie sur **"Démarrer la course"**
+1. Confirme que le passager est bien dans le vehicule ou sur la moto
+2. Appuie sur **"Démarrer la course"**
 
 La course est maintenant **en cours**. Les deux apps affichent la route vers la destination.
 

@@ -1227,35 +1227,21 @@ export default function ProfilScreen() {
           Probleme de paiement, course litigieuse, vehicule ou compte ? Notre equipe repond sous 24h.
         </Text>
 
-        {tickets.map((ticket) => (
-          <View key={ticket.id} style={styles.ticketRow}>
-            <View style={styles.ticketHeader}>
-              <Text style={styles.ticketSubject} numberOfLines={1}>{ticket.subject}</Text>
-              <View style={[
-                styles.ticketBadge,
-                ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'
-                  ? styles.ticketBadgeClosed
-                  : ticket.status === 'IN_REVIEW'
-                    ? styles.ticketBadgeReview
-                    : styles.ticketBadgeOpen,
-              ]}>
-                <Text style={styles.ticketBadgeLabel}>
-                  {ticket.status === 'OPEN' ? 'Ouvert'
-                    : ticket.status === 'IN_REVIEW' ? 'En cours'
-                    : ticket.status === 'RESOLVED' ? 'Resolu'
-                    : 'Ferme'}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.meta} numberOfLines={2}>{ticket.description}</Text>
-            {ticket.adminNote ? (
-              <View style={styles.adminNoteBox}>
-                <Text style={styles.adminNoteLabel}>Reponse du support</Text>
-                <Text style={styles.adminNoteText}>{ticket.adminNote}</Text>
-              </View>
-            ) : null}
+        <View style={styles.supportSummary}>
+          <View style={styles.supportSummaryText}>
+            <Text style={styles.supportSummaryTitle}>Dossiers suivis</Text>
+            <Text style={styles.meta}>
+              {tickets.length > 0
+                ? `${tickets.length} dossier(s) ouvert(s) ou recemment mis a jour. Les details de mission restent dans Missions.`
+                : 'Aucun dossier support actif sur ce profil.'}
+            </Text>
           </View>
-        ))}
+          {tickets.length > 0 ? (
+            <View style={styles.supportSummaryBadge}>
+              <Text style={styles.supportSummaryBadgeText}>{tickets.length}</Text>
+            </View>
+          ) : null}
+        </View>
 
         {isTicketFormOpen ? (
           <>
@@ -1811,67 +1797,42 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   chipLabelActive: {
     color: theme.colors.text,
   },
-  ticketRow: {
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    gap: 4,
-  },
-  ticketHeader: {
+  supportSummary: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
   },
-  ticketSubject: {
+  supportSummaryText: {
     flex: 1,
+    gap: 2,
+  },
+  supportSummaryTitle: {
     color: theme.colors.text,
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 14,
   },
-  ticketBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+  supportSummaryBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.26)',
   },
-  ticketBadgeOpen: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-  },
-  ticketBadgeReview: {
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
-  },
-  ticketBadgeClosed: {
-    backgroundColor: 'rgba(100, 116, 139, 0.15)',
-  },
-  ticketBadgeLabel: {
-    color: theme.colors.muted,
-    fontWeight: '700',
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 0,
+  supportSummaryBadgeText: {
+    color: theme.colors.amber,
+    fontWeight: '900',
+    fontSize: 13,
   },
   ticketDescInput: {
     minHeight: 90,
     textAlignVertical: 'top',
-  },
-  adminNoteBox: {
-    marginTop: 8,
-    padding: 10,
-    backgroundColor: 'rgba(251, 191, 36, 0.07)',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.2)',
-  },
-  adminNoteLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0,
-    color: theme.colors.amber,
-    marginBottom: 4,
-  },
-  adminNoteText: {
-    fontSize: 13,
-    color: theme.colors.text,
-    lineHeight: 18,
   },
 });

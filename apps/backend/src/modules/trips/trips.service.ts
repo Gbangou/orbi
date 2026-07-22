@@ -37,7 +37,7 @@ import {
   evaluateRideRequestAcceptanceDecision,
   selectCompatibleVehicle,
 } from './trip-acceptance.policy';
-import { extractPickupCode, generatePickupCode, toAmount } from './trips.utils';
+import { extractPickupCode, toAmount } from './trips.utils';
 import {
   driverFatigueWindowHours,
   evaluateDriverFatigue,
@@ -718,7 +718,7 @@ export class TripsService {
 
     const now = new Date();
     await this.assertDriverFatigueAllowsNewTrip(auth, driverProfileId, now);
-    const { trip, pickupCode } = await this.prisma.$transaction(async (tx) => {
+    const trip = await this.prisma.$transaction(async (tx) => {
       const driverProfile = await tx.driverProfile.findUnique({
         where: {
           id: driverProfileId,
@@ -853,7 +853,6 @@ export class TripsService {
         );
       }
 
-      const pickupCode = generatePickupCode();
       const trustedContact = await tx.riderProfile.findUnique({
         where: {
           id: rideRequest.riderId,
@@ -915,12 +914,6 @@ export class TripsService {
                 eventType: 'TRIP_ACCEPTED',
                 payload: {
                   driverId: driverProfileId,
-                },
-              },
-              {
-                eventType: 'PICKUP_CODE_ISSUED',
-                payload: {
-                  pickupCode,
                 },
               },
               ...(autoShareTokenHash && autoShareExpiresAt
@@ -997,10 +990,7 @@ export class TripsService {
         },
       });
 
-      return {
-        trip,
-        pickupCode,
-      };
+      return trip;
     });
 
     this.realtimeService.publish({
@@ -1587,15 +1577,18 @@ export class TripsService {
 
       this.assertTripAccess(auth, trip);
 
-      if (auth.user.role === UserRole.RIDER && nextStatus !== 'CANCELLED') {
-        throw new BadRequestException(
-          'Riders can only cancel a trip from the app.',
-        );
-      }
+      const isRiderEarlyStop =
+        auth.user.role === UserRole.RIDER &&
+        trip.status === 'IN_PROGRESS' &&
+        nextStatus === 'COMPLETED';
 
-      if (auth.user.role === UserRole.DRIVER && nextStatus === 'IN_PROGRESS') {
+      if (
+        auth.user.role === UserRole.RIDER &&
+        nextStatus !== 'CANCELLED' &&
+        !isRiderEarlyStop
+      ) {
         throw new BadRequestException(
-          'Pickup code verification is required before starting the trip.',
+          'Riders can only cancel before departure or stop an in-progress trip.',
         );
       }
 
@@ -1605,15 +1598,18 @@ export class TripsService {
         );
       }
 
-      if (nextStatus === 'COMPLETED' && auth.user.role === UserRole.DRIVER) {
-        this.assertDriverRouteAllowsCompletion(trip.events, new Date());
-      }
+      const routeCompletionReview =
+        nextStatus === 'COMPLETED' && auth.user.role === UserRole.DRIVER
+          ? this.resolveDriverRouteCompletionReview(trip.events, new Date())
+          : null;
 
       const updateData: {
         status: TripStatus;
         startedAt?: Date;
         completedAt?: Date;
         cancelledBy?: 'RIDER' | 'DRIVER' | 'ADMIN' | 'SYSTEM';
+        actualFare?: number;
+        distanceKm?: number;
       } = {
         status: nextStatus,
       };
@@ -1624,6 +1620,16 @@ export class TripsService {
 
       if (nextStatus === 'COMPLETED') {
         updateData.completedAt = new Date();
+      }
+
+      const earlyStopFare =
+        isRiderEarlyStop ? this.resolveRiderEarlyStopFare(trip) : null;
+
+      if (earlyStopFare) {
+        updateData.actualFare = earlyStopFare.adjustedFare;
+        if (earlyStopFare.completedDistanceKm !== null) {
+          updateData.distanceKm = earlyStopFare.completedDistanceKm;
+        }
       }
 
       if (nextStatus === 'CANCELLED') {
@@ -1687,6 +1693,20 @@ export class TripsService {
                   ? { cancellationReason }
                   : {}),
                 ...(cancellationPolicy ? { cancellationPolicy } : {}),
+                ...(routeCompletionReview ? { routeCompletionReview } : {}),
+                ...(earlyStopFare
+                  ? {
+                      earlyStop: {
+                        requestedByRole: auth.user.role,
+                        reason: cancellationReason ?? 'RIDER_REQUESTED_STOP',
+                        originalFare: earlyStopFare.originalFare,
+                        adjustedFare: earlyStopFare.adjustedFare,
+                        progressRatio: earlyStopFare.progressRatio,
+                        completedDistanceKm: earlyStopFare.completedDistanceKm,
+                        remainingDistanceKm: earlyStopFare.remainingDistanceKm,
+                      },
+                    }
+                  : {}),
               },
             },
           },
@@ -1728,7 +1748,7 @@ export class TripsService {
                 create: {
                   eventType: 'CASH_PAYMENT_CONFIRMED',
                   payload: {
-                    amount: toAmount(trip.actualFare),
+                    amount: earlyStopFare?.adjustedFare ?? toAmount(trip.actualFare),
                     currency: trip.currency,
                     collectedByDriverId: trip.driverId,
                     confirmedByRole: auth.user.role,
@@ -2757,7 +2777,7 @@ export class TripsService {
     }
   }
 
-  private assertDriverRouteAllowsCompletion(
+  private resolveDriverRouteCompletionReview(
     events: Array<{
       eventType: string;
       payload?: unknown;
@@ -2768,43 +2788,103 @@ export class TripsService {
     const latestPosition = resolveLatestDriverRoutePosition(events);
 
     if (!latestPosition) {
-      throw new BadRequestException(
-        'Trip completion requires a recent driver route signal.',
-      );
+      return {
+        level: 'GPS_SIGNAL_MISSING',
+        message: 'Course terminee sans signal GPS chauffeur recent.',
+      };
     }
 
     const signalAgeMinutes =
       (now.getTime() - latestPosition.createdAt.getTime()) / 60000;
 
     if (signalAgeMinutes > routeCompletionMaxSignalAgeMinutes) {
-      throw new BadRequestException(
-        'Trip completion is blocked until the driver route signal refreshes.',
-      );
+      return {
+        level: 'GPS_SIGNAL_STALE',
+        ageMinutes: Math.round(signalAgeMinutes),
+        message: 'Course terminee avec signal GPS chauffeur ancien.',
+      };
     }
 
     if (
       typeof latestPosition.accuracyMeters === 'number' &&
       latestPosition.accuracyMeters > routeCompletionMaxAccuracyMeters
     ) {
-      throw new BadRequestException(
-        'Trip completion is blocked because the last GPS signal is too imprecise.',
-      );
+      return {
+        level: 'GPS_ACCURACY_LOW',
+        accuracyMeters: Math.round(latestPosition.accuracyMeters),
+        message: 'Course terminee avec precision GPS faible.',
+      };
     }
 
     if (
       typeof latestPosition.speedKph === 'number' &&
       latestPosition.speedKph > routeCompletionMaxSpeedKph
     ) {
-      throw new BadRequestException(
-        'Trip completion is blocked because the last route speed is impossible.',
-      );
+      return {
+        level: 'GPS_SPEED_ANOMALY',
+        speedKph: Math.round(latestPosition.speedKph),
+        message: 'Course terminee avec anomalie de vitesse GPS.',
+      };
     }
 
     if (hasCriticalRouteMonitoringAlert(events)) {
-      throw new BadRequestException(
-        'Trip completion is blocked by a critical route monitoring alert.',
-      );
+      return {
+        level: 'ROUTE_MONITORING_CRITICAL',
+        message: 'Course terminee avec alerte route critique existante.',
+      };
     }
+
+    return null;
+  }
+
+  private resolveRiderEarlyStopFare(trip: {
+    actualFare: unknown;
+    distanceKm: unknown;
+    events: Array<{
+      eventType: string;
+      payload?: unknown;
+      createdAt: Date;
+    }>;
+  }) {
+    const originalFare = toAmount(trip.actualFare);
+    const plannedDistanceKm = toAmount(trip.distanceKm);
+    const latestPosition = resolveLatestDriverRoutePosition(trip.events);
+    const remainingDistanceKm =
+      typeof latestPosition?.distanceToDestinationKm === 'number' &&
+      Number.isFinite(latestPosition.distanceToDestinationKm)
+        ? Math.max(0, latestPosition.distanceToDestinationKm)
+        : null;
+
+    if (originalFare <= 0 || plannedDistanceKm <= 0 || remainingDistanceKm === null) {
+      return {
+        originalFare,
+        adjustedFare: originalFare,
+        progressRatio: 1,
+        completedDistanceKm: null,
+        remainingDistanceKm,
+      };
+    }
+
+    const completedDistanceKm = Math.max(
+      0,
+      plannedDistanceKm - Math.min(plannedDistanceKm, remainingDistanceKm),
+    );
+    const progressRatio = Math.min(
+      1,
+      Math.max(0.35, completedDistanceKm / plannedDistanceKm),
+    );
+    const adjustedFare = Math.min(
+      originalFare,
+      roundXofForCashOperations(originalFare * progressRatio).amount,
+    );
+
+    return {
+      originalFare,
+      adjustedFare,
+      progressRatio: Number(progressRatio.toFixed(3)),
+      completedDistanceKm: Number(Math.max(0.1, completedDistanceKm).toFixed(2)),
+      remainingDistanceKm: Number(remainingDistanceKm.toFixed(2)),
+    };
   }
 
   private buildDriverStatusUpdate(

@@ -157,7 +157,7 @@ export function buildDriverNextActionHint(flow: DriverActiveFlowSummary) {
   }
 
   if (flow.activeTrip?.status === "DRIVER_ARRIVING") {
-    return "Demandez le code pickup au passager avant de demarrer la course.";
+    return "Demarrez seulement quand le passager est avec vous et pret a partir.";
   }
 
   if (flow.activeTrip?.status === "IN_PROGRESS") {
@@ -215,7 +215,7 @@ export function buildDriverMissionSnapshot(input: {
       value: activeTrip.counterpartyName ?? detail?.riderName ?? "Assigne",
       helper:
         activeTrip.status === "DRIVER_ARRIVING"
-          ? "Saisir le code donne par le passager"
+          ? "Confirmez oralement le nom et le point de depart"
           : "Verifier le passager avant depart",
     },
     {

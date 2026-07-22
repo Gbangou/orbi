@@ -193,10 +193,9 @@ if (!$rideRequest.id) {
 Write-Step "Accepting ride request as driver"
 $accepted = Invoke-Json -Method "POST" -Path "/trips/accept/$($rideRequest.id)" -Token $driverToken
 $tripId = $accepted.trip.id
-$pickupCode = $accepted.trip.pickupCode
 
-if (!$tripId -or !$pickupCode) {
-  Stop-LocalApiE2E "accept response did not include trip id and pickup code"
+if (!$tripId) {
+  Stop-LocalApiE2E "accept response did not include trip id"
 }
 
 Test-ExpectedValue -Actual $accepted.trip.status -Expected "MATCHED" -Message "trip should be matched after accept"
@@ -259,10 +258,10 @@ Test-NumberLessThan `
   -ExpectedUpperBound 0.3 `
   -Message "rider should see the driver close to pickup"
 
-$verified = Invoke-Json -Method "POST" -Path "/trips/$tripId/verify-pickup-code" -Token $driverToken -Body @{
-  pickupCode = $pickupCode
+$started = Invoke-Json -Method "PATCH" -Path "/trips/$tripId/status" -Token $driverToken -Body @{
+  status = "IN_PROGRESS"
 }
-Test-ExpectedValue -Actual $verified.trip.status -Expected "IN_PROGRESS" -Message "pickup code should start trip"
+Test-ExpectedValue -Actual $started.trip.status -Expected "IN_PROGRESS" -Message "driver should start trip after arriving"
 
 Write-Step "Recording in-progress destination movement"
 $destinationSignal = Invoke-Json -Method "POST" -Path "/trips/$tripId/route-position" -Token $driverToken -Body @{

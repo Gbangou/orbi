@@ -57,6 +57,8 @@ describe('rider mobile UX guards', () => {
     expect(source).not.toContain('Stop');
     expect(source).not.toContain('Defs');
     expect(source).not.toContain('url(#');
+    expect(source).not.toContain('import { Image');
+    expect(source).not.toContain("require('../assets/vehicles/");
   });
 
   it('keeps native SVG out of release APK dependencies', () => {
