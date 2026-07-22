@@ -145,7 +145,7 @@ Points deja credibles:
 - detail de course rider avec preuve chauffeur/vehicule structuree: statut de
   verification, telephone verifie, note, courses terminees, plaque, couleur,
   marque et modele. C est un standard Uber/Lyft avant montee a bord, relie au
-  pickup code et au support.
+  suivi trajet et au support.
 
 Ecarts encore majeurs avant niveau world-class:
 
@@ -184,7 +184,9 @@ Ecarts encore majeurs avant niveau world-class:
 
 ### 2. Gagner par la securite active
 
-- Pickup code obligatoire sur toute course sensible et par defaut sur les nouvelles courses.
+- Verification pickup sans friction dans le flux standard: arrivee chauffeur,
+  preuve chauffeur/vehicule visible, depart confirme quand le passager est a
+  bord, et verification renforcee seulement pour cas sensibles definis par ops.
 - Trusted contacts simples avec modes manuel, nuit ou tous trajets.
 - Bouton SOS visible mais sobre.
 - Detection de deviation, arret anormal et absence de progression deja amorcee;

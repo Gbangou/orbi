@@ -23,9 +23,9 @@ import type { RequestAuthContext } from '../auth/auth.types';
 import {
   ACTIVE_RIDE_REQUEST_STATUSES,
   ACTIVE_TRIP_STATUSES,
-  ALLOWED_TRIP_TRANSITIONS,
   TRIP_EVENT_BY_STATUS,
   TRIP_EVENT_LABELS,
+  canUpdateTripStatus,
   resolveCancellationActor,
 } from './trips.constants';
 import {
@@ -1592,7 +1592,7 @@ export class TripsService {
         );
       }
 
-      if (!ALLOWED_TRIP_TRANSITIONS[trip.status].includes(nextStatus)) {
+      if (!canUpdateTripStatus(trip.status, nextStatus)) {
         throw new BadRequestException(
           `Trip cannot move from ${trip.status} to ${nextStatus}.`,
         );

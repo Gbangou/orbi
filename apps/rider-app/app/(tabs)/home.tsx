@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import {
   cancelRideRequestWithApi,
+  canRiderCancelTrip,
+  canRiderStopTrip,
   createTripShareLinkWithApi,
   fetchMyTrips,
   fetchRideOptionsPreview,
@@ -442,10 +444,7 @@ export default function RiderHomeScreen() {
       return;
     }
 
-    if (
-      flow.activeTrip?.status === 'MATCHED' ||
-      flow.activeTrip?.status === 'DRIVER_ARRIVING'
-    ) {
+    if (flow.activeTrip && canRiderCancelTrip(flow.activeTrip.status)) {
       Alert.alert(
         'Annuler la course',
         'Annuler avant de monter ? Si le chauffeur est deja mobilise, Orbi peut ouvrir une revue pour proteger son temps.',
@@ -463,7 +462,7 @@ export default function RiderHomeScreen() {
 
   const handleStopActiveTrip = useCallback(() => {
     const flow = resolveRiderActiveFlow(history);
-    if (flow.activeTrip?.status !== 'IN_PROGRESS') return;
+    if (!flow.activeTrip || !canRiderStopTrip(flow.activeTrip.status)) return;
 
     Alert.alert(
       'Arreter la course',

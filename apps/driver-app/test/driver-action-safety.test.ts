@@ -1,7 +1,5 @@
 import {
-  normalizePickupCode,
   validateOfferAction,
-  validatePickupCode,
   validateTripAdvance,
 } from '../lib/driver-action-safety';
 
@@ -20,17 +18,6 @@ const offer = {
 } as never;
 
 describe('driver action safety helpers', () => {
-  it('normalizes pickup code input to four digits', () => {
-    expect(normalizePickupCode('12a3-4<script>')).toBe('1234');
-  });
-
-  it('rejects incomplete pickup codes before API verification', () => {
-    expect(validatePickupCode('123')).toEqual({
-      ok: false,
-      message: 'Le code pickup doit contenir exactement 4 chiffres.',
-    });
-  });
-
   it('blocks offer actions when another trip is active', () => {
     expect(
       validateOfferAction({

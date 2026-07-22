@@ -679,6 +679,12 @@ export function isActiveTripLifecycleStatus(
   return activeTripLifecycleStatuses.includes(status as ActiveTripLifecycleStatus);
 }
 
+export function isTripLifecycleStatus(
+  status: string,
+): status is TripLifecycleStatus {
+  return tripLifecycleStatuses.includes(status as TripLifecycleStatus);
+}
+
 export function isPickupCodeVisibleTripLifecycleStatus(
   status: string,
 ): status is (typeof pickupCodeVisibleTripLifecycleStatuses)[number] {
@@ -692,6 +698,40 @@ export function canTransitionTripLifecycleStatus(
   nextStatus: TripLifecycleStatus,
 ) {
   return allowedTripLifecycleTransitions[currentStatus].includes(nextStatus);
+}
+
+export function isTerminalTripLifecycleStatus(status: string) {
+  return status === 'COMPLETED' || status === 'CANCELLED';
+}
+
+export function isPreDepartureTripLifecycleStatus(status: string) {
+  return status === 'MATCHED' || status === 'DRIVER_ARRIVING';
+}
+
+export function canRiderCancelTrip(status: string) {
+  return isPreDepartureTripLifecycleStatus(status);
+}
+
+export function canRiderStopTrip(status: string) {
+  return status === 'IN_PROGRESS';
+}
+
+export function canDriverMarkArrived(status: string) {
+  return isTripLifecycleStatus(status)
+    ? canTransitionTripLifecycleStatus(status, 'DRIVER_ARRIVING')
+    : false;
+}
+
+export function canDriverStartTrip(status: string) {
+  return isTripLifecycleStatus(status)
+    ? canTransitionTripLifecycleStatus(status, 'IN_PROGRESS')
+    : false;
+}
+
+export function canDriverCompleteTrip(status: string) {
+  return isTripLifecycleStatus(status)
+    ? canTransitionTripLifecycleStatus(status, 'COMPLETED')
+    : false;
 }
 
 function toRadians(value: number) {

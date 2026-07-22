@@ -23,7 +23,7 @@ decisive and calm:
 
 - rider home: destination entry, upfront fare, nearby supply and SOS
 - rider booking: route, service choice, payment, confirmation
-- rider active trip: driver proof, pickup code, ETA, share/SOS
+- rider active trip: driver proof, vehicle proof, ETA, share/SOS
 - driver cockpit: online state, earnings, active offer, fatigue
 - driver offer: payout, pickup effort, trip effort, accept/decline
 
@@ -52,10 +52,10 @@ decisive and calm:
 - Rider booking now uses shared surfaces, alert banners and CTA primitives for
   route summary, supply state, payment state, realtime sync and promo actions.
 - Rider activity now uses shared metric tiles, status banners, surfaces and
-  action buttons for trip tracking, driver identity, pickup code, route, share,
+  action buttons for trip tracking, driver identity, vehicle proof, route, share,
   incident, SOS and cancellation actions.
 - Rider activity now blocks screen capture around active route, driver proof,
-  pickup code, incident and SOS surfaces while preserving the explicit trip
+  incident and SOS surfaces while preserving the explicit trip
   share action for intentional sharing.
 - Rider account now uses shared surfaces, metric tiles, account status banners,
   wallet recharge controls and support submission buttons.
@@ -101,7 +101,7 @@ decisive and calm:
   and CTA buttons for completion feedback, fatigue warnings, mission container,
   secondary rider actions, offline/suspended states and live refresh.
 - Driver offers and active-mission flow now block screen capture around rider
-  identity, pickup-code verification, route monitoring, incident and SOS
+  identity checks, route monitoring, incident and SOS
   controls.
 - Driver profile now uses shared native surfaces, metric tiles and status
   banners for identity, verification, readiness, mission, suspension and
@@ -271,7 +271,7 @@ progress (shipping code that "looks closed" but changes nothing measurable).
 **First live authenticated-screen audit with real seeded data, done 2026-07-11.**
 Previous rounds (see [[dev-status]] rounds 1-3) only ever measured empty-state
 screens — the demo rider/driver accounts had zero completed trips. This round
-scripted a full booking→accept→pickup-code→complete→rate cycle three times
+scripted a full booking→accept→driver start→complete→rate cycle three times
 through the real local API to seed genuine trip/earnings/rating history, then
 measured `scrollHeight` on every main tab of both apps with that real data:
 

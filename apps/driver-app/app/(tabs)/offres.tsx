@@ -13,6 +13,9 @@ import {
 } from "react-native";
 import {
   acceptRideRequestWithApi,
+  canDriverCompleteTrip,
+  canDriverMarkArrived,
+  canDriverStartTrip,
   declineDriverOfferWithApi,
   fetchDriverDispatchReadiness,
   fetchDriverOffers,
@@ -812,7 +815,7 @@ export default function OffersScreen() {
       return null;
     }
 
-    if (activeTrip.status === "MATCHED") {
+    if (canDriverMarkArrived(activeTrip.status)) {
       return (
         <>
           <FlowActionButton
@@ -834,7 +837,7 @@ export default function OffersScreen() {
       );
     }
 
-    if (activeTrip.status === "DRIVER_ARRIVING") {
+    if (canDriverStartTrip(activeTrip.status)) {
       return (
         <View style={styles.codeBlock}>
           <Text style={styles.meta}>
@@ -859,7 +862,7 @@ export default function OffersScreen() {
       );
     }
 
-    if (activeTrip.status === "IN_PROGRESS") {
+    if (canDriverCompleteTrip(activeTrip.status)) {
       return (
         <View style={styles.codeBlock}>
           <FlowActionButton

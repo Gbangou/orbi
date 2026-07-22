@@ -5,19 +5,6 @@ export type DriverActionValidationResult =
   | { ok: true }
   | { ok: false; message: string };
 
-export function normalizePickupCode(value: string) {
-  return value.replace(/\D/g, '').slice(0, 4);
-}
-
-export function validatePickupCode(value: string): DriverActionValidationResult {
-  return normalizePickupCode(value).length === 4
-    ? { ok: true }
-    : {
-        ok: false,
-        message: 'Le code pickup doit contenir exactement 4 chiffres.',
-      };
-}
-
 export function validateOfferAction(input: {
   activeTripId?: string | null;
   offer: DriverOffer | undefined;

@@ -3,7 +3,9 @@ import {
   activeRideRequestLifecycleStatuses,
   activeTripLifecycleStatuses,
   allowedTripLifecycleTransitions,
+  canTransitionTripLifecycleStatus,
   pickupCodeVisibleTripLifecycleStatuses,
+  type TripLifecycleStatus,
 } from '@orbi/domain';
 
 export const ACTIVE_TRIP_STATUSES: TripStatus[] = [
@@ -31,6 +33,16 @@ export const TRIP_EVENT_LABELS: Record<string, string> = {
 };
 
 export const ALLOWED_TRIP_TRANSITIONS = allowedTripLifecycleTransitions;
+
+export function canUpdateTripStatus(
+  currentStatus: TripStatus,
+  nextStatus: TripStatus,
+) {
+  return canTransitionTripLifecycleStatus(
+    currentStatus as TripLifecycleStatus,
+    nextStatus as TripLifecycleStatus,
+  );
+}
 
 export const TRIP_EVENT_BY_STATUS: Record<
   'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED',

@@ -39,7 +39,7 @@ maestro test .maestro/
 | `01_rider_signup.yaml` | Rider | Inscription → écran d'accueil |
 | `02_rider_book_trip.yaml` | Rider | Réservation d'une course avec recherche d'adresse |
 | `03_driver_accept_offer.yaml` | Driver | Accepter une offre → carte d'approche |
-| `04_driver_complete_trip.yaml` | Driver | Pickup code → IN_PROGRESS → COMPLETED |
+| `04_driver_complete_trip.yaml` | Driver | Arrivee pickup → demarrage chauffeur → COMPLETED |
 | `05_rider_rate_and_receipt.yaml` | Rider | Note chauffeur + reçu de course |
 | `06_rider_trips_history.yaml` | Rider | Onglet Trajets — stats + pull-to-refresh |
 

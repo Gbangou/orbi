@@ -8,7 +8,7 @@ Prove that one full ride can survive the critical path:
 
 1. rider booking
 2. driver acceptance
-3. pickup code and trip lifecycle
+3. pickup arrival, driver start and trip lifecycle
 4. live driver movement toward pickup and destination
 5. mobile money checkout and webhook reconciliation
 6. admin live ops visibility
@@ -90,7 +90,7 @@ pnpm demo:local-live-session
 ```
 
 Run it while the apps are open to post fresh driver GPS signals. Add
-`-- -StartTrip` to verify movement toward destination after pickup-code
+`-- -StartTrip` to verify movement toward destination after driver start
 verification.
 
 For provider webhook fixture regression, especially before a payment/refund
@@ -144,8 +144,8 @@ pnpm --filter backend start
   signal moving closer to pickup.
 - Confirm Live Ops shows the driver route progress as pickup/destination
   distances, and does not expose raw coordinates.
-- Verify pickup code.
-- Start the trip.
+- Mark pickup arrival.
+- Start the trip only once the passenger is in the vehicle or on the motorcycle.
 - Record another driver route position during the ride.
 - Confirm the route-position response and trip detail expose remaining
   destination distance.

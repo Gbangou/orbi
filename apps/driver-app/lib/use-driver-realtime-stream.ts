@@ -7,7 +7,6 @@ import {
 const DRIVER_REALTIME_EVENTS = [
   'trip.created',
   'trip.updated',
-  'trip.pickup-code-verified',
   'trip.incident-reported',
   'trip.route-monitor-alert',
   'ride-request.created',

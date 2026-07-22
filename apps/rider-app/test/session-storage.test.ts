@@ -6,6 +6,7 @@ import {
 } from '../lib/session-storage';
 
 jest.mock('expo-secure-store', () => ({
+  AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 'AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY',
   deleteItemAsync: jest.fn(),
   getItemAsync: jest.fn(),
   setItemAsync: jest.fn(),
@@ -146,9 +147,15 @@ describe('riderSessionStorage', () => {
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
       riderSessionStorageKey,
       'rider-token',
+      {
+        keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+      },
     );
     expect(SecureStore.getItemAsync).toHaveBeenCalledWith(
       riderSessionStorageKey,
+      {
+        keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+      },
     );
     expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(
       riderSessionStorageKey,

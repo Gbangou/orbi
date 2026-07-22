@@ -17,6 +17,8 @@ import {
 } from "react-native";
 import {
   cancelRideRequestWithApi,
+  canRiderCancelTrip,
+  canRiderStopTrip,
   createSupportTicketWithApi,
   createTripShareLinkWithApi,
   fetchMyTrips,
@@ -903,10 +905,8 @@ export default function ActivityScreen() {
       activeTripDetail?.trip.driverVerification.vehicle.type ?? null;
     const driverVehicleTier =
       activeTripDetail?.trip.driverVerification.vehicle.tier ?? null;
-    const canCancel =
-      activeTrip.status === 'MATCHED' ||
-      activeTrip.status === 'DRIVER_ARRIVING';
-    const canStop = activeTrip.status === 'IN_PROGRESS';
+    const canCancel = canRiderCancelTrip(activeTrip.status);
+    const canStop = canRiderStopTrip(activeTrip.status);
 
     return (
       <View style={styles.tripRoot}>
@@ -1036,9 +1036,9 @@ export default function ActivityScreen() {
           </OrbiSurface>
 
           {activeTrip.status === 'DRIVER_ARRIVING' && canCancel ? (
-            <OrbiSurface tone="teal" style={styles.pickupCodeCard}>
-              <Text style={styles.pickupCodeEyebrow}>Chauffeur arrive</Text>
-              <Text style={styles.pickupCodeHint}>
+            <OrbiSurface tone="teal" style={styles.pickupCheckCard}>
+              <Text style={styles.pickupCheckEyebrow}>Chauffeur arrive</Text>
+              <Text style={styles.pickupCheckHint}>
                 Confirmez le nom, le vehicule et la plaque avant de monter.
               </Text>
             </OrbiSurface>
@@ -1445,14 +1445,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
 
-  // Pickup code
-  pickupCodeCard: {
+  // Pickup verification
+  pickupCheckCard: {
     borderRadius: 14,
     padding: 14,
     alignItems: 'center',
     gap: 4,
   },
-  pickupCodeEyebrow: {
+  pickupCheckEyebrow: {
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
@@ -1460,17 +1460,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
-  pickupCodeValue: {
-    fontSize: 36,
-    fontWeight: '800',
-    fontFamily: 'Raleway_800ExtraBold',
-    color: theme.colors.text,
-    letterSpacing: 0,
-  },
-  pickupCodeHint: {
+  pickupCheckHint: {
     fontSize: 12,
     color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
   },
 
   // Route card

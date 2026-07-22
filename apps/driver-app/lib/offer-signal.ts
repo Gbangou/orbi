@@ -271,7 +271,7 @@ export function buildDriverOfferConfidenceExplainer(offer: DriverOffer): {
 export function buildDriverOfferNote(offer: DriverOffer) {
   if (offer.pickupCodeRequired) {
     return {
-      text: 'Depart protege par code de verification.',
+      text: 'Verification depart renforcee par les operations.',
       tone: 'amber' as const,
     };
   }

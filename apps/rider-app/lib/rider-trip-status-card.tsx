@@ -7,7 +7,11 @@
  */
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { MyTripsResponse } from '@orbi/api';
+import {
+  canRiderCancelTrip,
+  canRiderStopTrip,
+  type MyTripsResponse,
+} from '@orbi/api';
 import { type OrbiTheme } from '@orbi/ui';
 import { PersonBadge, TripStageTracker, useOrbiTheme } from '@orbi/ui/native';
 
@@ -70,9 +74,8 @@ export function RiderTripStatusCard({
   const isArrived = activeTrip?.status === 'DRIVER_ARRIVING';
   const canCancel =
     Boolean(activeRequest) ||
-    activeTrip?.status === 'MATCHED' ||
-    activeTrip?.status === 'DRIVER_ARRIVING';
-  const canStop = activeTrip?.status === 'IN_PROGRESS';
+    (activeTrip ? canRiderCancelTrip(activeTrip.status) : false);
+  const canStop = activeTrip ? canRiderStopTrip(activeTrip.status) : false;
 
   return (
     <View style={styles.card}>

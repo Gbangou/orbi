@@ -14,6 +14,11 @@ import {
   apiPricingCities,
   apiServiceTiers,
   apiVehicleTypes,
+  canDriverCompleteTrip,
+  canDriverMarkArrived,
+  canDriverStartTrip,
+  canRiderCancelTrip,
+  canRiderStopTrip,
 } from '@orbi/domain';
 
 function expectSameValues(
@@ -64,5 +69,19 @@ describe('domain and Prisma contracts', () => {
         expect(prismaTripStatuses).toContain(nextStatus);
       }
     }
+  });
+
+  it('keeps rider and driver trip action policy aligned with the field flow', () => {
+    expect(canRiderCancelTrip(TripStatus.MATCHED)).toBe(true);
+    expect(canRiderCancelTrip(TripStatus.DRIVER_ARRIVING)).toBe(true);
+    expect(canRiderCancelTrip(TripStatus.IN_PROGRESS)).toBe(false);
+    expect(canRiderStopTrip(TripStatus.IN_PROGRESS)).toBe(true);
+    expect(canRiderStopTrip(TripStatus.COMPLETED)).toBe(false);
+
+    expect(canDriverMarkArrived(TripStatus.MATCHED)).toBe(true);
+    expect(canDriverStartTrip(TripStatus.DRIVER_ARRIVING)).toBe(true);
+    expect(canDriverStartTrip(TripStatus.MATCHED)).toBe(false);
+    expect(canDriverCompleteTrip(TripStatus.IN_PROGRESS)).toBe(true);
+    expect(canDriverCompleteTrip(TripStatus.DRIVER_ARRIVING)).toBe(false);
   });
 });
