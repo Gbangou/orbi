@@ -48,6 +48,10 @@ if (-not $SkipAudit) {
   )
 }
 
+Invoke-Gate -Name "Security/privacy source audit" -Executable "pnpm" -Arguments @(
+  "test:security:source"
+)
+
 Invoke-Gate -Name "Prisma schema validation" -Executable "pnpm" -Arguments @(
   "--filter",
   "backend",

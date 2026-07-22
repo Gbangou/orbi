@@ -23,6 +23,10 @@ export const BACKGROUND_LOCATION_TASK = 'orbi-driver-background-location';
 // en mémoire perdrait le rattachement course active à chaque relance.
 const ACTIVE_TRIP_STORAGE_KEY = 'orbi.driver.background-active-trip-id';
 
+const secureStoreOptions: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+};
+
 type BackgroundLocationData = {
   locations: Location.LocationObject[];
 };
@@ -31,7 +35,6 @@ TaskManager.defineTask(
   BACKGROUND_LOCATION_TASK,
   async ({ data, error }: TaskManager.TaskManagerTaskBody<BackgroundLocationData>) => {
     if (error) {
-      console.warn('[BG-GPS] Erreur tâche background:', error.message);
       return;
     }
 
@@ -68,7 +71,11 @@ TaskManager.defineTask(
 export async function setBackgroundActiveTripId(tripId: string | null) {
   try {
     if (tripId) {
-      await SecureStore.setItemAsync(ACTIVE_TRIP_STORAGE_KEY, tripId);
+      await SecureStore.setItemAsync(
+        ACTIVE_TRIP_STORAGE_KEY,
+        tripId,
+        secureStoreOptions,
+      );
     } else {
       await SecureStore.deleteItemAsync(ACTIVE_TRIP_STORAGE_KEY);
     }
@@ -79,7 +86,10 @@ export async function setBackgroundActiveTripId(tripId: string | null) {
 
 async function getStoredActiveTripId(): Promise<string | null> {
   try {
-    return await SecureStore.getItemAsync(ACTIVE_TRIP_STORAGE_KEY);
+    return await SecureStore.getItemAsync(
+      ACTIVE_TRIP_STORAGE_KEY,
+      secureStoreOptions,
+    );
   } catch {
     return null;
   }

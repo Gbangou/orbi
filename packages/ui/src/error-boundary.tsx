@@ -42,10 +42,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.warn('[ErrorBoundary]', error, info.componentStack);
-    }
-
     if (shouldShowDebugDetails(this.props.showDebugDetails)) {
       const message =
         error instanceof Error

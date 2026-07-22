@@ -5,8 +5,9 @@ try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const EventSource = require('react-native-sse').default;
   if (EventSource) {
-    // @ts-ignore
-    global.EventSource = EventSource;
+    const globalWithEventSource = globalThis as unknown as Record<string, unknown>;
+
+    globalWithEventSource.EventSource = EventSource;
   }
 } catch {
   // EventSource non disponible — les connexions SSE seront ignorées.

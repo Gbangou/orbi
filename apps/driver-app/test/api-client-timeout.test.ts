@@ -136,4 +136,35 @@ describe('OrbiApiClient — timeout des requêtes', () => {
     // Le signal ne doit pas être annulé immédiatement (le timeout de 30s n'a pas expiré)
     expect(capturedSignal!.aborted).toBe(false);
   });
+
+  it('applique aussi le timeout aux réponses texte', async () => {
+    const { fetcher } = buildHangingFetcher();
+
+    const client = createOrbiApiClient('http://localhost:3000', {
+      requestTimeoutMs: 50,
+      fetcher: fetcher as never,
+    });
+
+    await expect(client.requestText('/text-endpoint')).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+  });
+
+  it('conserve le timeout configurable après ajout du token auth', async () => {
+    const { fetcher } = buildHangingFetcher();
+
+    const client = createOrbiApiClient('http://localhost:3000', {
+      requestTimeoutMs: 50,
+      fetcher: fetcher as never,
+    }).withAuthToken('driver-session-token');
+
+    await expect(client.request('/secure-endpoint')).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+
+    const [, init] = fetcher.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).toMatchObject({
+      Authorization: 'Bearer driver-session-token',
+    });
+  });
 });
