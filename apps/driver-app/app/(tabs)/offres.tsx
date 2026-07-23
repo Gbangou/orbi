@@ -90,10 +90,7 @@ import {
   resolveDriverOfferMoneyDisplay,
 } from "../../lib/offer-signal";
 import { formatReservationCountdown } from "../../lib/offer-reservation";
-import {
-  validateOfferAction,
-  validateTripAdvance,
-} from "../../lib/driver-action-safety";
+import { validateOfferAction } from "../../lib/driver-action-safety";
 
 const fallbackHistory: MyTripsResponse = {
   role: "DRIVER",
@@ -652,19 +649,14 @@ export default function OffersScreen() {
     });
   }
 
+  // Ride Check (driverRouteSafetyBrief) is advisory only — surfaced in the
+  // handleCompleteTrip confirmation below, never a client-side block. A driver
+  // must always be able to reach the server for a real completion decision;
+  // a GPS/route warning is not proof of fraud.
   async function handleAdvanceTrip(
     tripId: string,
     nextStatus: "DRIVER_ARRIVING" | "IN_PROGRESS" | "COMPLETED",
   ) {
-    const validation = validateTripAdvance({
-      blocksCompletion: driverRouteSafetyBrief.blocksCompletion,
-      nextStatus,
-    });
-    if (!validation.ok) {
-      setStatus(validation.message);
-      return;
-    }
-
     await runExclusiveDriverAction(async () => {
       setStatus(`Mise a jour du trajet vers ${nextStatus}...`);
 
@@ -699,6 +691,10 @@ export default function OffersScreen() {
         }
 
         setStatus(feedback.message);
+        Alert.alert(
+          nextStatus === "COMPLETED" ? "Course non terminee" : "Mise a jour echouee",
+          feedback.message,
+        );
       }
     });
   }
@@ -714,9 +710,13 @@ export default function OffersScreen() {
         ) ?? 0,
       );
 
+    const safetyNote = driverRouteSafetyBrief.blocksCompletion
+      ? `\n\nAttention: ${driverRouteSafetyBrief.actionLabel}`
+      : "";
+
     Alert.alert(
       "Terminer la course",
-      `Confirmez seulement a la destination. Prix client: ${grossLabel}. Gain chauffeur: ${netLabel}. Paiement: ${activePaymentMethodLabel}.`,
+      `Confirmez seulement a la destination. Prix client: ${grossLabel}. Gain chauffeur: ${netLabel}. Paiement: ${activePaymentMethodLabel}.${safetyNote}`,
       [
         { text: "Retour", style: "cancel" },
         {

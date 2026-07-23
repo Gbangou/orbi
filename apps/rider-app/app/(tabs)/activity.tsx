@@ -526,6 +526,7 @@ export default function ActivityScreen() {
       }
 
       setStatus(feedback.message);
+      Alert.alert("Annulation non prise en compte", feedback.message);
     } finally {
       submissionLockRef.current = false;
       setIsSubmitting(false);
@@ -671,6 +672,7 @@ export default function ActivityScreen() {
       }
 
       setStatus(feedback.message);
+      Alert.alert("Arret non pris en compte", feedback.message);
     } finally {
       submissionLockRef.current = false;
       setIsSubmitting(false);
@@ -713,6 +715,7 @@ export default function ActivityScreen() {
       }
 
       setStatus(feedback.message);
+      Alert.alert("Annulation non prise en compte", feedback.message);
     } finally {
       submissionLockRef.current = false;
       setIsSubmitting(false);

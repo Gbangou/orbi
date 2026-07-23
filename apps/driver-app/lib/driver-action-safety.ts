@@ -34,14 +34,6 @@ export function validateOfferAction(input: {
   return { ok: true };
 }
 
-export function validateTripAdvance(input: {
-  blocksCompletion: boolean;
-  nextStatus: 'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED';
-}): DriverActionValidationResult {
-  void input;
-  return { ok: true };
-}
-
 function isOfferStillReserved(offer: DriverOffer, now: number) {
   if (!offer.reservationExpiresAt) {
     return true;

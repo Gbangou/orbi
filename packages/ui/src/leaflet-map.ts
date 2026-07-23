@@ -209,19 +209,45 @@ function __orbiFetchWithTimeoutRoute(url,timeoutMs){
   var fetchOpts=controller?{signal:controller.signal}:{};
   return fetch(url,fetchOpts).finally(function(){clearTimeout(timer)});
 }
+function __orbiHaversineMeters(lat1,lng1,lat2,lng2){
+  var R=6371000;
+  var toRad=function(d){return d*Math.PI/180};
+  var dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1);
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function __orbiIsRouteTrustworthy(rt,straightLineMeters){
+  // A real road route almost never tracks the straight line between two points
+  // for any meaningful distance — it bends around blocks, compounds, rivers.
+  // A route that is both nearly as short as the straight line AND made of very
+  // few points is a strong signal of a bad OSRM snap on sparsely-mapped roads
+  // (common on Ouagadougou's outskirts), not a real drivable path. Showing it
+  // with normal confidence risks a driver "following" a line that cuts through
+  // blocked areas or private compounds.
+  if(straightLineMeters<250)return true;
+  var pointCount=rt.coords.length;
+  var ratio=rt.distance/straightLineMeters;
+  return !(pointCount<4&&ratio<1.08);
+}
 function __orbiFetchTripRoute(lat1,lng1,lat2,lng2){
   var url='https://router.project-osrm.org/route/v1/driving/'+lng1+','+lat1+';'+lng2+','+lat2+'?geometries=geojson&overview=full&alternatives=true';
+  var straightLineMeters=__orbiHaversineMeters(lat1,lng1,lat2,lng2);
   __orbiFetchWithTimeoutRoute(url,6000)
     .then(function(r){return r.json()})
     .then(function(data){
       if(data.routes&&data.routes.length&&data.routes[0].geometry&&data.routes[0].geometry.coordinates){
-        __orbiRoutes=data.routes.slice(0,3).map(function(rt){
+        var routes=data.routes.slice(0,3).map(function(rt){
           return {
             coords:rt.geometry.coordinates.map(function(c){return[c[1],c[0]]}),
             distance:rt.distance,
             duration:rt.duration
           };
         });
+        if(!__orbiIsRouteTrustworthy(routes[0],straightLineMeters)){
+          __orbiPostRouteUnavailable('NO_ROUTE');
+          return;
+        }
+        __orbiRoutes=routes;
         __orbiSelectRoute(0);
       }else{__orbiPostRouteUnavailable('NO_ROUTE')}
     })

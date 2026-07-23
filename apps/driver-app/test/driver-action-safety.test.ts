@@ -1,7 +1,4 @@
-import {
-  validateOfferAction,
-  validateTripAdvance,
-} from '../lib/driver-action-safety';
+import { validateOfferAction } from '../lib/driver-action-safety';
 
 const offer = {
   id: 'ride-request-1',
@@ -58,14 +55,5 @@ describe('driver action safety helpers', () => {
       ok: false,
       message: 'Cette reservation a expire. Actualisez le direct avant toute action.',
     });
-  });
-
-  it('lets trip completion reach the server even when Ride Check warns locally', () => {
-    expect(
-      validateTripAdvance({
-        blocksCompletion: true,
-        nextStatus: 'COMPLETED',
-      }),
-    ).toEqual({ ok: true });
   });
 });
