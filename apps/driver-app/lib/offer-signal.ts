@@ -98,6 +98,31 @@ export function formatDriverOfferFare(offer: DriverOffer) {
     : 'Prix indisponible';
 }
 
+export function resolveDriverOfferMoneyDisplay(offer: DriverOffer): {
+  amountLabel: string;
+  label: string;
+  helper: string;
+  isNet: boolean;
+} {
+  const driverPayout = toFiniteOfferNumber(offer.driverPayout);
+
+  if (driverPayout !== null) {
+    return {
+      amountLabel: formatDriverOfferMoney(driverPayout),
+      label: 'Gain net',
+      helper: 'Votre part chauffeur estimee',
+      isNet: true,
+    };
+  }
+
+  return {
+    amountLabel: formatDriverOfferFare(offer),
+    label: 'Prix client',
+    helper: 'Gain chauffeur a confirmer',
+    isNet: false,
+  };
+}
+
 export function buildDriverOfferInsights(
   offer: DriverOffer,
 ): Array<{

@@ -87,7 +87,7 @@ import {
 } from "../../lib/driver-earnings-signal";
 import {
   formatDriverOfferDistance,
-  formatDriverOfferFare,
+  resolveDriverOfferMoneyDisplay,
 } from "../../lib/offer-signal";
 import { formatReservationCountdown } from "../../lib/offer-reservation";
 import {
@@ -380,6 +380,10 @@ export default function OffersScreen() {
   const incomingOffer = useMemo(
     () => visibleOffers.find((offer) => offer.id === incomingOfferId) ?? null,
     [incomingOfferId, visibleOffers],
+  );
+  const incomingMoneyDisplay = useMemo(
+    () => (incomingOffer ? resolveDriverOfferMoneyDisplay(incomingOffer) : null),
+    [incomingOffer],
   );
   const driverRouteSafetyBrief = useMemo(
     () =>
@@ -933,9 +937,10 @@ export default function OffersScreen() {
                     {incomingOffer.pickup}
                   </Text>
                 </View>
-                <Text style={styles.incomingFare}>
-                  {formatDriverOfferFare(incomingOffer)}
-                </Text>
+                <View style={styles.incomingMoney}>
+                  <Text style={styles.incomingMoneyLabel}>{incomingMoneyDisplay?.label}</Text>
+                  <Text style={styles.incomingFare}>{incomingMoneyDisplay?.amountLabel}</Text>
+                </View>
               </View>
               <View style={styles.incomingRoute}>
                 <Text style={styles.incomingRouteLabel}>Destination</Text>
@@ -1038,7 +1043,7 @@ export default function OffersScreen() {
             </View>
             <View style={styles.completionCopy}>
               <Text style={styles.completionTitle}>Course terminée !</Text>
-              <Text style={styles.completionFare}>Tarif : {completionFlash.fareLabel}</Text>
+              <Text style={styles.completionFare}>Prix client : {completionFlash.fareLabel}</Text>
               <Text style={styles.completionNet}>Votre gain : {completionFlash.netLabel}</Text>
               <Text style={styles.completionPayment}>Paiement : {completionFlash.paymentLabel}</Text>
             </View>
@@ -1452,11 +1457,24 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: "Raleway_800ExtraBold",
     color: theme.colors.text,
   },
+  incomingMoney: {
+    alignItems: "flex-end",
+    maxWidth: 128,
+    gap: 2,
+  },
+  incomingMoneyLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.textMuted,
+    textTransform: "uppercase",
+  },
   incomingFare: {
     fontSize: 20,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
     color: theme.colors.amber,
+    textAlign: "right",
   },
   incomingRoute: {
     borderRadius: 12,

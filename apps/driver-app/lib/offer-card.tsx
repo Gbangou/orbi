@@ -14,9 +14,9 @@ import {
   buildDriverOfferDecisionSummary,
   buildDriverOfferDetailLines,
   formatDriverOfferDistance,
-  formatDriverOfferFare,
   formatDriverOfferMoney,
   formatDriverOfferMinutes,
+  resolveDriverOfferMoneyDisplay,
   toFiniteOfferNumber,
 } from "./offer-signal";
 import { formatReservationCountdown } from "./offer-reservation";
@@ -125,6 +125,7 @@ export const OfferCard = memo(function OfferCard({
   const detailLines = buildDriverOfferDetailLines(offer);
   const isDisabled = isSubmitting || hasActiveTrip;
   const driverPayout = toFiniteOfferNumber(offer.driverPayout);
+  const moneyDisplay = resolveDriverOfferMoneyDisplay(offer);
 
   // Spring slide-in animation — staggered by index
   const slideY = useRef(new Animated.Value(32)).current;
@@ -186,7 +187,8 @@ export const OfferCard = memo(function OfferCard({
           style={styles.personBadge}
         />
         <View style={styles.fareCol}>
-          <Text style={styles.fare}>{formatDriverOfferFare(offer)}</Text>
+          <Text style={styles.fareLabel}>{moneyDisplay.label}</Text>
+          <Text style={styles.fare}>{moneyDisplay.amountLabel}</Text>
           <VehicleIcon category={offer.category} />
         </View>
       </View>
@@ -220,7 +222,7 @@ export const OfferCard = memo(function OfferCard({
               <Text style={[styles.metricVal, styles.metricValNet]}>
                 {formatDriverOfferMoney(driverPayout)}
               </Text>
-              <Text style={styles.metricLbl}>Net</Text>
+              <Text style={styles.metricLbl}>Gain net</Text>
             </View>
           </>
         ) : null}
@@ -327,6 +329,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", gap: 10 },
   personBadge: { flex: 1 },
   fareCol: { alignItems: "flex-end", gap: 4 },
+  fareLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.textMuted,
+    textTransform: "uppercase",
+  },
   fare: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold", color: theme.colors.text },
   metrics: {
     flexDirection: "row",

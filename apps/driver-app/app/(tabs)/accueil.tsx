@@ -56,9 +56,8 @@ import { buildDriverShiftReadiness } from '../../lib/driver-shift-readiness';
 import { DriverHomeMapView } from '../../lib/driver-home-map-view';
 import {
   formatDriverOfferDistance,
-  formatDriverOfferMoney,
   formatDriverOfferMinutes,
-  toFiniteOfferNumber,
+  resolveDriverOfferMoneyDisplay,
 } from '../../lib/offer-signal';
 import { normalizeDriverProfileResponse } from '../../lib/driver-profile-normalizer';
 import { buildDriverDispatchReadinessNote } from '../../lib/driver-dispatch-readiness';
@@ -101,6 +100,7 @@ function buildInitials(name: string) {
 function OfferChip({ offer }: { offer: DriverOffer }) {
   const theme = useOrbiTheme();
   const chip = useMemo(() => makeChipStyles(theme), [theme]);
+  const moneyDisplay = resolveDriverOfferMoneyDisplay(offer);
   const isMoto = offer.category === 'motorcycle';
   const pickupDistance = formatDriverOfferDistance(
     offer.pickupDistanceKm,
@@ -111,7 +111,10 @@ function OfferChip({ offer }: { offer: DriverOffer }) {
       <VehicleIllustration tier={isMoto ? 'moto-standard' : 'car-standard'} width={30} height={22} />
       <Text style={chip.name}>{buildInitials(offer.riderName)}</Text>
       <Text style={chip.dist}>{pickupDistance}</Text>
-      <Text style={chip.fare}>{formatDriverEarningsAmount(offer.driverPayout ?? offer.fare)}</Text>
+      <View style={chip.money}>
+        <Text style={chip.fare}>{moneyDisplay.amountLabel}</Text>
+        <Text style={chip.moneyLabel}>{moneyDisplay.label}</Text>
+      </View>
     </View>
   );
 }
@@ -130,7 +133,14 @@ const makeChipStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   name: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
   dist: { fontSize: 12, color: theme.colors.textMuted, flex: 1 },
+  money: { alignItems: 'flex-end', gap: 1 },
   fare: { fontSize: 13, fontWeight: '800', color: theme.colors.text },
+  moneyLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+  },
 });
 
 // ── Trip Request Modal — Bolt-style countdown overlay ─────────────────────────
@@ -189,8 +199,7 @@ function TripRequestModal({
     offer.pickupDistanceKm,
     formatDriverOfferMinutes(offer.etaToPickupMinutes, 'Pickup indisponible'),
   );
-  const fareAmt = toFiniteOfferNumber(offer.driverPayout)
-    ?? toFiniteOfferNumber(offer.fare);
+  const moneyDisplay = resolveDriverOfferMoneyDisplay(offer);
 
   return (
     <View style={modal.backdrop} pointerEvents="box-none">
@@ -271,11 +280,13 @@ function TripRequestModal({
           {/* Fare */}
           <View style={[modal.fareBlock, { backgroundColor: accent + '12', borderColor: accent + '40' }]}>
             <View>
-              <Text style={modal.fareLabel}>Votre gain estimé</Text>
-              <Text style={modal.fareSub}>Prix visible avant acceptation</Text>
+              <Text style={modal.fareLabel}>
+                {moneyDisplay.isNet ? 'Votre gain net estime' : 'Prix client'}
+              </Text>
+              <Text style={modal.fareSub}>{moneyDisplay.helper}</Text>
             </View>
             <Text style={[modal.fareAmt, { color: accent }]}>
-              {formatDriverOfferMoney(fareAmt)}
+              {moneyDisplay.amountLabel}
             </Text>
           </View>
 

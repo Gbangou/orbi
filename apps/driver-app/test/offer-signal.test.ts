@@ -7,6 +7,7 @@ import {
   formatDriverOfferFare,
   formatDriverOfferMoney,
   formatDriverOfferMinutes,
+  resolveDriverOfferMoneyDisplay,
   toFiniteOfferNumber,
 } from '../lib/offer-signal';
 
@@ -104,6 +105,44 @@ describe('driver offer signal helpers', () => {
     expect(buildDriverOfferNote(offer)).toEqual({
       text: expect.stringContaining('Gain net estime: 1 500'),
       tone: 'sky',
+    });
+  });
+
+  it('shows driver net payout first when the offer includes payout economics', () => {
+    const offer = {
+      id: 'offer-net-money',
+      riderName: 'Awa',
+      pickup: 'Patte d Oie',
+      destination: 'Koulouba',
+      category: 'motorcycle',
+      fare: 1800,
+      driverPayout: 1500,
+    } as never;
+
+    expect(resolveDriverOfferMoneyDisplay(offer)).toEqual({
+      amountLabel: expect.stringContaining('1 500'),
+      label: 'Gain net',
+      helper: 'Votre part chauffeur estimee',
+      isNet: true,
+    });
+  });
+
+  it('falls back to explicit client price when driver payout is not available', () => {
+    const offer = {
+      id: 'offer-client-price',
+      riderName: 'Awa',
+      pickup: 'Patte d Oie',
+      destination: 'Koulouba',
+      category: 'motorcycle',
+      fare: 1800,
+      driverPayout: null,
+    } as never;
+
+    expect(resolveDriverOfferMoneyDisplay(offer)).toEqual({
+      amountLabel: expect.stringContaining('1 800'),
+      label: 'Prix client',
+      helper: 'Gain chauffeur a confirmer',
+      isNet: false,
     });
   });
 
