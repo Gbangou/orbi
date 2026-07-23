@@ -353,6 +353,272 @@ describe('TripsService', () => {
     );
   });
 
+  it('covers the field flow: driver accepts, arrives, starts, completes, and cash receipt is auditable', async () => {
+    const { prisma, realtimeService, service } = createService();
+    const driverCreatedAt = new Date('2026-04-01T08:00:00.000Z');
+    const expectedEconomics = calculateDriverEconomics(6200, {
+      driverCreatedAt,
+    });
+    const driverAuth = {
+      user: {
+        id: 'user-driver-1',
+        role: 'DRIVER',
+        driverProfile: {
+          id: 'driver-1',
+          createdAt: driverCreatedAt,
+        },
+      },
+    } as never;
+    const riderId = 'rider-1';
+    const tripId = 'trip-field-1';
+    const rideRequestId = 'request-field-1';
+    const routeEvent = buildFreshDriverRouteEvent({
+      distanceToDestinationKm: 0.1,
+    });
+    const baseTrip = {
+      id: tripId,
+      rideRequestId,
+      riderId,
+      driverId: 'driver-1',
+      pickupAddress: 'Marche Katr yaar, Ouagadougou',
+      destinationAddress: 'Plateau omnisports de Pissy',
+      actualFare: 6200,
+      distanceKm: 9.3,
+      durationMinutes: 11,
+      currency: 'XOF',
+      createdAt: new Date('2026-07-22T11:56:00.000Z'),
+      rider: { userId: 'user-rider-1' },
+      driver: { userId: 'user-driver-1' },
+      rideRequest: { paymentMethod: 'CASH' },
+    };
+    const { rider: _rider, driver: _driver, ...tripUpdateBase } = baseTrip;
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'ONLINE',
+      verificationStatus: 'APPROVED',
+      vehicles: [
+        {
+          id: 'vehicle-1',
+          type: 'MOTORCYCLE',
+          tier: 'MOTO_STANDARD',
+          isActive: true,
+        },
+      ],
+    });
+    prisma.trip.findFirst.mockResolvedValue(null);
+    prisma.rideRequest.findUnique.mockResolvedValue({
+      id: rideRequestId,
+      riderId,
+      status: 'REQUESTED',
+      assignedDriverId: 'driver-1',
+      assignmentExpiresAt: new Date(Date.now() + 30_000),
+      requestedVehicleType: 'MOTORCYCLE',
+      requestedServiceTier: 'MOTO_STANDARD',
+      pickupAddress: baseTrip.pickupAddress,
+      destinationAddress: baseTrip.destinationAddress,
+      estimatedFare: 6200,
+      estimatedDistanceKm: 9.3,
+      estimatedDurationMinutes: 11,
+      currency: 'XOF',
+    });
+    prisma.rideRequest.updateMany.mockResolvedValue({ count: 1 });
+    prisma.riderProfile.findUnique.mockResolvedValue(null);
+    prisma.trip.create.mockResolvedValue({
+      ...baseTrip,
+      status: 'MATCHED',
+      startedAt: null,
+      completedAt: null,
+      rider: { user: { fullName: 'Awa Rider' } },
+      vehicle: { make: 'Yamaha', model: 'Crypton' },
+      events: [{ eventType: 'TRIP_ACCEPTED', payload: { driverId: 'driver-1' } }],
+    });
+    prisma.trip.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        ...baseTrip,
+        status: 'MATCHED',
+        startedAt: null,
+        completedAt: null,
+        events: [],
+      })
+      .mockResolvedValueOnce({
+        ...baseTrip,
+        status: 'DRIVER_ARRIVING',
+        startedAt: null,
+        completedAt: null,
+        events: [],
+      })
+      .mockResolvedValueOnce({
+        ...baseTrip,
+        status: 'IN_PROGRESS',
+        startedAt: new Date('2026-07-22T11:58:00.000Z'),
+        completedAt: null,
+        events: [routeEvent],
+      });
+    prisma.trip.update.mockImplementation(
+      async ({ data }: { data: Record<string, unknown> }) => {
+        if (!('status' in data)) {
+          return {
+            ...tripUpdateBase,
+            status: 'COMPLETED',
+            startedAt: new Date('2026-07-22T11:58:00.000Z'),
+            completedAt: new Date('2026-07-22T12:09:00.000Z'),
+          };
+        }
+
+        return {
+          ...tripUpdateBase,
+          status: data.status,
+          startedAt:
+            data.status === 'IN_PROGRESS' || data.status === 'COMPLETED'
+              ? ((data.startedAt as Date | undefined) ??
+                new Date('2026-07-22T11:58:00.000Z'))
+              : null,
+          completedAt:
+            data.status === 'COMPLETED'
+              ? ((data.completedAt as Date | undefined) ??
+                new Date('2026-07-22T12:09:00.000Z'))
+              : null,
+        };
+      },
+    );
+    prisma.rideRequest.update.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const accepted = await service.acceptRideRequest(driverAuth, rideRequestId);
+    const arriving = await service.updateStatus(
+      driverAuth,
+      tripId,
+      'DRIVER_ARRIVING',
+    );
+    const started = await service.updateStatus(driverAuth, tripId, 'IN_PROGRESS');
+    const completed = await service.updateStatus(driverAuth, tripId, 'COMPLETED');
+
+    expect(accepted.trip.status).toBe('MATCHED');
+    expect(arriving.trip.status).toBe('DRIVER_ARRIVING');
+    expect(started.trip.status).toBe('IN_PROGRESS');
+    expect(completed.trip.status).toBe('COMPLETED');
+    expect(completed.trip.actualFare).toBe(6200);
+    expect(completed.trip.paymentMethod).toBe('CASH');
+    expect(completed.trip.driverPayout).toBe(expectedEconomics.driverPayout);
+    expect(completed.trip.platformFee).toBe(expectedEconomics.commissionAmount);
+    expect(completed.trip.commissionRate).toBe(expectedEconomics.commissionRate);
+
+    expect(prisma.rideRequest.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: rideRequestId,
+          status: { in: ['REQUESTED', 'MATCHED'] },
+        }),
+        data: expect.objectContaining({
+          status: 'MATCHED',
+          assignedDriverId: 'driver-1',
+        }),
+      }),
+    );
+    expect(prisma.rideRequest.update).toHaveBeenCalledWith({
+      where: { id: rideRequestId },
+      data: { status: 'DRIVER_ARRIVING' },
+    });
+    expect(prisma.rideRequest.update).toHaveBeenCalledWith({
+      where: { id: rideRequestId },
+      data: { status: 'FULFILLED' },
+    });
+    expect(prisma.driverProfile.update).toHaveBeenCalledWith({
+      where: { id: 'driver-1' },
+      data: { status: 'BUSY' },
+    });
+    expect(prisma.driverProfile.update).toHaveBeenCalledWith({
+      where: { id: 'driver-1' },
+      data: { status: 'ONLINE', completedTripsCount: { increment: 1 } },
+    });
+    expect(prisma.trip.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'DRIVER_ARRIVING',
+          events: {
+            create: expect.objectContaining({
+              eventType: 'DRIVER_ARRIVING',
+            }),
+          },
+        }),
+      }),
+    );
+    expect(prisma.trip.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'IN_PROGRESS',
+          events: {
+            create: expect.objectContaining({
+              eventType: 'TRIP_STARTED',
+            }),
+          },
+        }),
+      }),
+    );
+    expect(prisma.trip.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'COMPLETED',
+          events: {
+            create: expect.objectContaining({
+              eventType: 'TRIP_COMPLETED',
+            }),
+          },
+        }),
+      }),
+    );
+    expect(prisma.trip.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          events: {
+            create: expect.objectContaining({
+              eventType: 'CASH_PAYMENT_CONFIRMED',
+              payload: expect.objectContaining({
+                amount: 6200,
+                currency: 'XOF',
+                collectedByDriverId: 'driver-1',
+                confirmedByRole: 'DRIVER',
+              }),
+            }),
+          },
+        }),
+      }),
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.created',
+        entityId: tripId,
+        riderId,
+        driverId: 'driver-1',
+        payload: expect.objectContaining({ status: 'MATCHED' }),
+      }),
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.updated',
+        entityId: tripId,
+        payload: { status: 'DRIVER_ARRIVING' },
+      }),
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.updated',
+        entityId: tripId,
+        payload: { status: 'IN_PROGRESS' },
+      }),
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.updated',
+        entityId: tripId,
+        payload: { status: 'COMPLETED' },
+      }),
+    );
+  });
+
   it('prepares a trusted-contact share link when the rider enables all-trip sharing', async () => {
     const { prisma, realtimeService, service } = createService();
 
