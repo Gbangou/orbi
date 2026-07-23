@@ -1,6 +1,8 @@
 {
   "name": "@orbi/i18n",
   "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
   "description": "Shared i18n translations and setup for Orbi apps",
   "main": "src/index.ts",
   "dependencies": {

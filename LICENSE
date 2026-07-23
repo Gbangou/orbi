@@ -1,0 +1,79 @@
+Licence propriétaire — Tous droits réservés
+
+Copyright (c) 2026 Pascal Gbangou. Tous droits réservés.
+
+Ce dépôt et l'ensemble de son contenu (code source, architecture, documentation,
+scripts, ressources graphiques, marques, noms de produits, algorithmes, schémas
+de base de données et tout autre élément qu'il contient, ci-après désignés
+« le Logiciel ») constituent la propriété exclusive de Pascal Gbangou
+(ci-après « le Titulaire »), qu'il agisse en son nom propre ou pour le compte
+de la société ou entité exploitant le produit Orbi.
+
+Le Logiciel n'est PAS distribué sous licence open source. Aucun droit n'est
+accordé sur le Logiciel si ce n'est ceux explicitement décrits ci-dessous.
+
+1. Absence de licence implicite
+   L'accès à ce dépôt (à des fins de consultation, d'audit, de collaboration
+   ponctuelle ou autre) ne confère aucun droit d'utilisation, de reproduction,
+   de modification ou de distribution du Logiciel. Toute personne ayant accès
+   au dépôt n'y est autorisée que dans la stricte mesure définie par un accord
+   écrit séparé (contrat de travail, contrat de prestation, accord de
+   confidentialité, ou autorisation explicite du Titulaire).
+
+2. Interdictions
+   Sauf autorisation écrite préalable du Titulaire, il est interdit de :
+   a) copier, reproduire ou dupliquer le Logiciel, en tout ou partie ;
+   b) modifier, adapter, traduire ou créer une œuvre dérivée du Logiciel ;
+   c) distribuer, publier, sous-licencier, louer, prêter ou vendre le Logiciel,
+      ou en concéder l'usage à un tiers, à titre gratuit ou onéreux ;
+   d) désassembler, décompiler ou tenter de toute autre manière d'extraire le
+      code source à partir des applications compilées (APK, bundles, binaires)
+      dérivées du Logiciel, sauf dans les limites où une telle restriction
+      serait rendue inopposable par une disposition légale impérative ;
+   e) supprimer, masquer ou altérer les mentions de copyright, de propriété ou
+      les marques figurant dans le Logiciel ;
+   f) utiliser le nom « Orbi », ses logos, sa charte visuelle ou tout signe
+      distinctif associé, en dehors du cadre du produit lui-même, sans
+      autorisation écrite préalable.
+
+3. Confidentialité
+   Le Logiciel contient des informations confidentielles relatives à
+   l'architecture technique, aux algorithmes de tarification et de répartition
+   des courses (dispatch), aux modèles économiques et aux secrets d'affaires
+   d'Orbi. Toute personne ayant un accès autorisé au Logiciel s'engage à en
+   préserver la confidentialité et à ne pas le divulguer à des tiers non
+   autorisés, y compris après la cessation de sa collaboration avec le
+   Titulaire.
+
+4. Propriété intellectuelle des contributions
+   Toute contribution apportée au Logiciel (code, documentation, design ou
+   autre) par un employé, contractuel, prestataire ou collaborateur est
+   réputée être une œuvre réalisée pour le compte du Titulaire et lui est
+   automatiquement et intégralement cédée, dans la mesure permise par le
+   droit applicable, sauf accord écrit contraire.
+
+5. Absence de garantie
+   LE LOGICIEL EST FOURNI « EN L'ÉTAT », SANS GARANTIE D'AUCUNE SORTE,
+   EXPRESSE OU IMPLICITE, Y COMPRIS SANS S'Y LIMITER LES GARANTIES DE
+   QUALITÉ MARCHANDE, D'ADÉQUATION À UN USAGE PARTICULIER ET D'ABSENCE DE
+   CONTREFAÇON. EN AUCUN CAS LE TITULAIRE NE POURRA ÊTRE TENU RESPONSABLE DE
+   TOUT DOMMAGE DIRECT OU INDIRECT RÉSULTANT DE L'UTILISATION OU DE
+   L'IMPOSSIBILITÉ D'UTILISER LE LOGICIEL.
+
+6. Résiliation
+   Toute autorisation d'accès ou d'utilisation accordée en dehors du présent
+   document peut être révoquée à tout moment par le Titulaire. La violation de
+   l'une des dispositions ci-dessus met fin immédiatement et de plein droit à
+   toute autorisation d'accès.
+
+7. Droit applicable
+   La présente licence est régie par le droit en vigueur au Burkina Faso.
+   Tout litige relatif à son interprétation ou à son exécution relève de la
+   compétence exclusive des juridictions burkinabè, sauf disposition
+   impérative contraire.
+
+8. Contact
+   Toute demande de licence, de partenariat ou d'utilisation du Logiciel doit
+   être adressée par écrit au Titulaire.
+
+Fin de la licence.

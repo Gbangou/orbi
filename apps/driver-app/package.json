@@ -2,6 +2,7 @@
   "name": "@orbi/driver-app",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start --port 8082",
