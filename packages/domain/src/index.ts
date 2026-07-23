@@ -219,6 +219,75 @@ export const allowedTripLifecycleTransitions: Record<
   CANCELLED: [],
 };
 
+export type TripLifecycleActorRole = 'RIDER' | 'DRIVER' | 'ADMIN' | 'SYSTEM';
+
+export type TripLifecycleTransitionEventType =
+  | 'DRIVER_ARRIVING'
+  | 'TRIP_STARTED'
+  | 'TRIP_COMPLETED'
+  | 'TRIP_CANCELLED';
+
+export const tripLifecycleEventByStatus: Record<
+  'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED',
+  TripLifecycleTransitionEventType
+> = {
+  DRIVER_ARRIVING: 'DRIVER_ARRIVING',
+  IN_PROGRESS: 'TRIP_STARTED',
+  COMPLETED: 'TRIP_COMPLETED',
+  CANCELLED: 'TRIP_CANCELLED',
+};
+
+export type TripLifecycleTransitionRejectionReason =
+  | 'INVALID_STATUS'
+  | 'INVALID_SEQUENCE'
+  | 'ACTOR_NOT_ALLOWED';
+
+export type TripLifecycleTransitionDecision =
+  | {
+      allowed: true;
+      eventType: TripLifecycleTransitionEventType;
+      reason: null;
+    }
+  | {
+      allowed: false;
+      eventType: null;
+      reason: TripLifecycleTransitionRejectionReason;
+    };
+
+const tripLifecycleActorPolicy: Record<
+  TripLifecycleActorRole,
+  Record<TripLifecycleStatus, readonly TripLifecycleStatus[]>
+> = {
+  RIDER: {
+    MATCHED: ['CANCELLED'],
+    DRIVER_ARRIVING: ['CANCELLED'],
+    IN_PROGRESS: ['COMPLETED'],
+    COMPLETED: [],
+    CANCELLED: [],
+  },
+  DRIVER: {
+    MATCHED: ['DRIVER_ARRIVING', 'CANCELLED'],
+    DRIVER_ARRIVING: ['IN_PROGRESS', 'CANCELLED'],
+    IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
+    COMPLETED: [],
+    CANCELLED: [],
+  },
+  ADMIN: {
+    MATCHED: ['DRIVER_ARRIVING', 'CANCELLED'],
+    DRIVER_ARRIVING: ['IN_PROGRESS', 'CANCELLED'],
+    IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
+    COMPLETED: [],
+    CANCELLED: [],
+  },
+  SYSTEM: {
+    MATCHED: ['CANCELLED'],
+    DRIVER_ARRIVING: ['CANCELLED'],
+    IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
+    COMPLETED: [],
+    CANCELLED: [],
+  },
+};
+
 export const userRoles = ['rider', 'driver', 'admin', 'support', 'ops'] as const;
 export type UserRole = (typeof userRoles)[number];
 export type ApiUserRole = 'RIDER' | 'DRIVER' | 'ADMIN' | 'SUPPORT' | 'OPS';
@@ -698,6 +767,52 @@ export function canTransitionTripLifecycleStatus(
   nextStatus: TripLifecycleStatus,
 ) {
   return allowedTripLifecycleTransitions[currentStatus].includes(nextStatus);
+}
+
+export function resolveTripLifecycleTransitionDecision(input: {
+  currentStatus: string;
+  nextStatus: string;
+  actorRole: TripLifecycleActorRole;
+}): TripLifecycleTransitionDecision {
+  if (
+    !isTripLifecycleStatus(input.currentStatus) ||
+    !isTripLifecycleStatus(input.nextStatus)
+  ) {
+    return {
+      allowed: false,
+      eventType: null,
+      reason: 'INVALID_STATUS',
+    };
+  }
+
+  if (
+    !canTransitionTripLifecycleStatus(input.currentStatus, input.nextStatus)
+  ) {
+    return {
+      allowed: false,
+      eventType: null,
+      reason: 'INVALID_SEQUENCE',
+    };
+  }
+
+  const actorAllowedNextStatuses =
+    tripLifecycleActorPolicy[input.actorRole][input.currentStatus];
+  if (!actorAllowedNextStatuses.includes(input.nextStatus)) {
+    return {
+      allowed: false,
+      eventType: null,
+      reason: 'ACTOR_NOT_ALLOWED',
+    };
+  }
+
+  return {
+    allowed: true,
+    eventType:
+      tripLifecycleEventByStatus[
+        input.nextStatus as keyof typeof tripLifecycleEventByStatus
+      ],
+    reason: null,
+  };
 }
 
 export function isTerminalTripLifecycleStatus(status: string) {

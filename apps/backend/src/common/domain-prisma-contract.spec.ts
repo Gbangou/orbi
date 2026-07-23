@@ -19,6 +19,8 @@ import {
   canDriverStartTrip,
   canRiderCancelTrip,
   canRiderStopTrip,
+  resolveTripLifecycleTransitionDecision,
+  tripLifecycleEventByStatus,
 } from '@orbi/domain';
 
 function expectSameValues(
@@ -69,6 +71,11 @@ describe('domain and Prisma contracts', () => {
         expect(prismaTripStatuses).toContain(nextStatus);
       }
     }
+
+    expect(tripLifecycleEventByStatus.DRIVER_ARRIVING).toBe('DRIVER_ARRIVING');
+    expect(tripLifecycleEventByStatus.IN_PROGRESS).toBe('TRIP_STARTED');
+    expect(tripLifecycleEventByStatus.COMPLETED).toBe('TRIP_COMPLETED');
+    expect(tripLifecycleEventByStatus.CANCELLED).toBe('TRIP_CANCELLED');
   });
 
   it('keeps rider and driver trip action policy aligned with the field flow', () => {
@@ -83,5 +90,67 @@ describe('domain and Prisma contracts', () => {
     expect(canDriverStartTrip(TripStatus.MATCHED)).toBe(false);
     expect(canDriverCompleteTrip(TripStatus.IN_PROGRESS)).toBe(true);
     expect(canDriverCompleteTrip(TripStatus.DRIVER_ARRIVING)).toBe(false);
+  });
+
+  it('enforces actor-aware trip lifecycle decisions', () => {
+    expect(
+      resolveTripLifecycleTransitionDecision({
+        currentStatus: TripStatus.MATCHED,
+        nextStatus: TripStatus.CANCELLED,
+        actorRole: 'RIDER',
+      }),
+    ).toEqual({
+      allowed: true,
+      eventType: 'TRIP_CANCELLED',
+      reason: null,
+    });
+
+    expect(
+      resolveTripLifecycleTransitionDecision({
+        currentStatus: TripStatus.MATCHED,
+        nextStatus: TripStatus.DRIVER_ARRIVING,
+        actorRole: 'RIDER',
+      }),
+    ).toEqual({
+      allowed: false,
+      eventType: null,
+      reason: 'ACTOR_NOT_ALLOWED',
+    });
+
+    expect(
+      resolveTripLifecycleTransitionDecision({
+        currentStatus: TripStatus.DRIVER_ARRIVING,
+        nextStatus: TripStatus.IN_PROGRESS,
+        actorRole: 'DRIVER',
+      }),
+    ).toEqual({
+      allowed: true,
+      eventType: 'TRIP_STARTED',
+      reason: null,
+    });
+
+    expect(
+      resolveTripLifecycleTransitionDecision({
+        currentStatus: TripStatus.IN_PROGRESS,
+        nextStatus: TripStatus.COMPLETED,
+        actorRole: 'RIDER',
+      }),
+    ).toEqual({
+      allowed: true,
+      eventType: 'TRIP_COMPLETED',
+      reason: null,
+    });
+
+    expect(
+      resolveTripLifecycleTransitionDecision({
+        currentStatus: TripStatus.COMPLETED,
+        nextStatus: TripStatus.CANCELLED,
+        actorRole: 'DRIVER',
+      }),
+    ).toEqual({
+      allowed: false,
+      eventType: null,
+      reason: 'INVALID_SEQUENCE',
+    });
   });
 });

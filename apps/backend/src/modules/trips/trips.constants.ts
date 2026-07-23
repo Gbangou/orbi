@@ -5,6 +5,9 @@ import {
   allowedTripLifecycleTransitions,
   canTransitionTripLifecycleStatus,
   pickupCodeVisibleTripLifecycleStatuses,
+  resolveTripLifecycleTransitionDecision,
+  tripLifecycleEventByStatus,
+  type TripLifecycleActorRole,
   type TripLifecycleStatus,
 } from '@orbi/domain';
 
@@ -44,15 +47,31 @@ export function canUpdateTripStatus(
   );
 }
 
-export const TRIP_EVENT_BY_STATUS: Record<
-  'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED',
-  string
-> = {
-  DRIVER_ARRIVING: 'DRIVER_ARRIVING',
-  IN_PROGRESS: 'TRIP_STARTED',
-  COMPLETED: 'TRIP_COMPLETED',
-  CANCELLED: 'TRIP_CANCELLED',
-};
+export const TRIP_EVENT_BY_STATUS = tripLifecycleEventByStatus;
+
+export function resolveTripTransitionActor(role: UserRole): TripLifecycleActorRole {
+  if (role === 'RIDER') {
+    return 'RIDER';
+  }
+
+  if (role === 'DRIVER') {
+    return 'DRIVER';
+  }
+
+  return 'ADMIN';
+}
+
+export function resolveTripStatusTransitionDecision(
+  currentStatus: TripStatus,
+  nextStatus: TripStatus,
+  role: UserRole,
+) {
+  return resolveTripLifecycleTransitionDecision({
+    currentStatus,
+    nextStatus,
+    actorRole: resolveTripTransitionActor(role),
+  });
+}
 
 export function resolveCancellationActor(role: UserRole) {
   if (role === 'DRIVER') {

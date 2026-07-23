@@ -23,10 +23,9 @@ import type { RequestAuthContext } from '../auth/auth.types';
 import {
   ACTIVE_RIDE_REQUEST_STATUSES,
   ACTIVE_TRIP_STATUSES,
-  TRIP_EVENT_BY_STATUS,
   TRIP_EVENT_LABELS,
-  canUpdateTripStatus,
   resolveCancellationActor,
+  resolveTripStatusTransitionDecision,
 } from './trips.constants';
 import {
   serializeTripDetail,
@@ -1592,9 +1591,15 @@ export class TripsService {
         );
       }
 
-      if (!canUpdateTripStatus(trip.status, nextStatus)) {
+      const transitionDecision = resolveTripStatusTransitionDecision(
+        trip.status,
+        nextStatus,
+        auth.user.role,
+      );
+
+      if (!transitionDecision.allowed) {
         throw new BadRequestException(
-          `Trip cannot move from ${trip.status} to ${nextStatus}.`,
+          `Trip cannot move from ${trip.status} to ${nextStatus}: ${transitionDecision.reason}.`,
         );
       }
 
@@ -1674,9 +1679,6 @@ export class TripsService {
         });
       }
 
-      const statusEventType =
-        TRIP_EVENT_BY_STATUS[nextStatus as keyof typeof TRIP_EVENT_BY_STATUS];
-
       const updatedTrip = await tx.trip.update({
         where: {
           id: tripId,
@@ -1685,7 +1687,7 @@ export class TripsService {
           ...updateData,
           events: {
             create: {
-              eventType: statusEventType,
+              eventType: transitionDecision.eventType,
               payload: {
                 status: nextStatus,
                 actorRole: auth.user.role,
