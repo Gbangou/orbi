@@ -63,6 +63,22 @@ describe('rider mobile UX guards', () => {
     expect(source).not.toContain("require('../assets/vehicles/");
   });
 
+  it('uses shared premium map vehicle markers for rider and driver maps', () => {
+    const sharedSource = readWorkspaceFile('packages/ui/src/map-vehicle-icons.ts');
+    const riderMapSource = readWorkspaceFile('apps/rider-app/lib/trip-map-view.tsx');
+    const driverMapSource = readWorkspaceFile('apps/driver-app/lib/trip-map-view.tsx');
+
+    expect(sharedSource).toContain('ORBI_MAP_VEHICLE_CSS');
+    expect(sharedSource).toContain('ORBI_MAP_VEHICLE_SCRIPT');
+    expect(sharedSource).toContain('car-standard');
+    expect(sharedSource).toContain('moto-standard');
+    expect(sharedSource).toContain('vehiclePulse');
+    expect(riderMapSource).toContain('${ORBI_MAP_VEHICLE_SCRIPT}');
+    expect(driverMapSource).toContain('${ORBI_MAP_VEHICLE_SCRIPT}');
+    expect(riderMapSource).not.toContain("width=\"26\" height=\"58\"");
+    expect(driverMapSource).not.toContain("width=\"26\" height=\"58\"");
+  });
+
   it('keeps native SVG out of release APK dependencies', () => {
     const riderPackage = JSON.parse(readAppFile('package.json')) as {
       dependencies?: Record<string, string>;

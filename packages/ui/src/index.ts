@@ -500,3 +500,5 @@ export {
   type MapHtmlOptions,
   type RouteInfoMessage,
 } from './leaflet-map';
+
+export { ORBI_MAP_VEHICLE_CSS, ORBI_MAP_VEHICLE_SCRIPT } from './map-vehicle-icons';
