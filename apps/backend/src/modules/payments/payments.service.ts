@@ -75,12 +75,12 @@ export class PaymentsService {
       })
     ) {
       throw new BadRequestException(
-        'Payments are temporarily unavailable for this actor while rollout controls are active.',
+        'Paiements temporairement indisponibles pour ce compte pendant le deploiement progressif.',
       );
     }
 
     if (auth.user.role === UserRole.RIDER && !auth.user.riderProfile?.id) {
-      throw new BadRequestException('Authenticated rider profile is missing.');
+      throw new BadRequestException('Profil passager authentifie introuvable.');
     }
 
     const rideRequest = await this.findRideRequestOwnership(
@@ -281,7 +281,7 @@ export class PaymentsService {
     });
 
     if (!attempt) {
-      throw new BadRequestException('Payment attempt was not found.');
+      throw new BadRequestException('Tentative de paiement introuvable.');
     }
 
     // Un paiement WALLET se règle de façon synchrone lors du checkout : il
@@ -812,7 +812,7 @@ export class PaymentsService {
     });
 
     if (!rideRequest) {
-      throw new BadRequestException('Ride request was not found.');
+      throw new BadRequestException('Demande de course introuvable.');
     }
 
     return rideRequest;
@@ -1437,11 +1437,11 @@ export class PaymentsService {
     try {
       parsedRedirectUrl = new URL(redirectUrl);
     } catch {
-      throw new BadRequestException('Payment redirect URL is invalid.');
+      throw new BadRequestException('URL de redirection de paiement invalide.');
     }
 
     if (!['http:', 'https:'].includes(parsedRedirectUrl.protocol)) {
-      throw new BadRequestException('Payment redirect URL is invalid.');
+      throw new BadRequestException('URL de redirection de paiement invalide.');
     }
 
     const allowedOrigins = this.getAllowedPaymentRedirectOrigins();

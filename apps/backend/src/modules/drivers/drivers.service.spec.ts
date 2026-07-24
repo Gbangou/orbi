@@ -757,7 +757,7 @@ describe('DriversService', () => {
         } as never,
         'ONLINE',
       ),
-    ).rejects.toThrow('Only approved drivers can go online.');
+    ).rejects.toThrow('Seuls les chauffeurs approuves peuvent passer en ligne.');
   });
 
   it('updates driver presence coordinates for later dispatch scoring', async () => {

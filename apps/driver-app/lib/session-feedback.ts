@@ -1,6 +1,5 @@
 import {
   classifyOrbiClientError,
-  extractApiErrorMessage,
   type OrbiClientErrorSurface,
 } from '@orbi/api';
 import { orbiCopy } from '@orbi/ui';
@@ -76,10 +75,7 @@ export async function resolveDriverAppError(
   }
 
   return {
-    message:
-      classification.code === 'MOB-GENERIC-API'
-        ? extractApiErrorMessage(error, messages.fallback)
-        : classification.userMessage,
+    message: classification.userMessage,
     code: classification.code,
     surface: classification.surface,
     severity: classification.severity,

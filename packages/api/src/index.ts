@@ -93,6 +93,8 @@ export {
   OrbiApiError,
   isOrbiApiError,
   extractApiErrorMessage,
+  resolveDisplayableApiErrorMessage,
+  looksLikeUnvettedEnglishMessage,
   withNetworkRetry,
   OrbiApiClient,
   createOrbiApiClient,

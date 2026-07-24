@@ -5,6 +5,7 @@ import {
   extractApiErrorMessage,
   isLikelyOrbiNetworkError,
   normalizeOrbiErrorMessage,
+  resolveDisplayableApiErrorMessage,
 } from "./client";
 
 export type OrbiClientErrorSurface =
@@ -195,7 +196,7 @@ export function classifyOrbiClientError(
       severity: "low",
       owner: surface === "payments" ? "finance" : "ops",
       retryPolicy: "fix-input-before-retry",
-      userMessage: extractApiErrorMessage(
+      userMessage: resolveDisplayableApiErrorMessage(
         error,
         input.fallbackMessage ??
           "Certaines informations doivent etre corrigees.",
@@ -276,7 +277,7 @@ export function classifyOrbiClientError(
     severity: "medium",
     owner: "engineering",
     retryPolicy: "manual-refresh",
-    userMessage: extractApiErrorMessage(
+    userMessage: resolveDisplayableApiErrorMessage(
       error,
       input.fallbackMessage ?? "Une erreur reseau ou serveur est survenue.",
     ),

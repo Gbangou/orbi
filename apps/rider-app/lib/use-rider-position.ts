@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import * as Location from "expo-location";
 import {
-  extractApiErrorMessage,
+  resolveDisplayableApiErrorMessage,
   recordTripRoutePositionWithApi,
 } from "@orbi/api";
 import { restoreRiderSession } from "./auth";
@@ -142,7 +142,7 @@ export function useRiderPosition(input: {
 
             setPositionStatus("error");
             setPositionNote(
-              extractApiErrorMessage(
+              resolveDisplayableApiErrorMessage(
                 error,
                 "Synchronisation position passager impossible pour le moment.",
               ),
@@ -179,7 +179,7 @@ export function useRiderPosition(input: {
 
         setPositionStatus("error");
         setPositionNote(
-          extractApiErrorMessage(
+          resolveDisplayableApiErrorMessage(
             error,
             "La localisation passager ne peut pas etre demarree.",
           ),

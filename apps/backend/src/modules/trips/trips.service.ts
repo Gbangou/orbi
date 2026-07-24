@@ -1083,7 +1083,7 @@ export class TripsService {
     const expectedPickupCode = extractPickupCode(trip.events);
 
     if (!expectedPickupCode || expectedPickupCode !== pickupCode) {
-      throw new BadRequestException('Pickup code is invalid.');
+      throw new BadRequestException('Code de prise en charge invalide.');
     }
 
     const updatedTrip = await this.prisma.$transaction(async (tx) => {
@@ -2091,7 +2091,7 @@ export class TripsService {
     this.assertTripAccess(auth, trip);
 
     if (trip.status !== TripStatus.COMPLETED) {
-      throw new BadRequestException('Only completed trips can be rated.');
+      throw new BadRequestException('Seules les courses terminees peuvent etre notees.');
     }
 
     const riderId = trip.riderId;
@@ -2105,7 +2105,7 @@ export class TripsService {
     });
 
     if (existing) {
-      throw new BadRequestException('This trip has already been rated.');
+      throw new BadRequestException('Cette course a deja ete notee.');
     }
 
     const rating = await this.prisma.$transaction(async (tx) => {

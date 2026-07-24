@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
 import {
-  extractApiErrorMessage,
+  resolveDisplayableApiErrorMessage,
   recordTripRoutePositionWithApi,
   updateDriverPresenceWithApi,
 } from '@orbi/api';
@@ -158,7 +158,7 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
 
             setPresenceStatus('error');
             setPresenceNote(
-              extractApiErrorMessage(
+              resolveDisplayableApiErrorMessage(
                 error,
                 'Synchronisation GPS impossible pour le moment.',
               ),
@@ -190,7 +190,7 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
 
         setPresenceStatus('error');
         setPresenceNote(
-          extractApiErrorMessage(
+          resolveDisplayableApiErrorMessage(
             error,
             'La localisation chauffeur ne peut pas etre demarree.',
           ),

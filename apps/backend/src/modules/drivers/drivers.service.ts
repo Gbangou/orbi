@@ -1110,7 +1110,7 @@ export class DriversService {
       nextStatus === DriverStatus.ONLINE &&
       profile.verificationStatus !== VerificationStatus.APPROVED
     ) {
-      throw new BadRequestException('Only approved drivers can go online.');
+      throw new BadRequestException('Seuls les chauffeurs approuves peuvent passer en ligne.');
     }
 
     if (

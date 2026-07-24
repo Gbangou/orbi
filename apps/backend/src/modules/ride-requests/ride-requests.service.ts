@@ -248,7 +248,7 @@ export class RideRequestsService {
     }
 
     if (!result) {
-      throw new BadRequestException('Ride request could not be created.');
+      throw new BadRequestException('La demande de course n a pas pu etre creee.');
     }
 
     const rideRequest = result.rideRequest;

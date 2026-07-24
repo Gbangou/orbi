@@ -2159,7 +2159,7 @@ describe('PaymentsService', () => {
         },
       ),
     ).rejects.toThrow(
-      'Payments are temporarily unavailable for this actor while rollout controls are active.',
+      'Paiements temporairement indisponibles pour ce compte pendant le deploiement progressif.',
     );
   });
 });

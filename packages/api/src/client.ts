@@ -45,6 +45,29 @@ export function extractApiErrorMessage(
   return fallback;
 }
 
+// Un message backend destine a un client mobile doit toujours etre en
+// francais. Un backend qui laisse passer un texte anglais non traduit (deja
+// arrive : "Trip completion is blocked by a critical route monitoring
+// alert.") ne doit jamais atteindre l'ecran du chauffeur/passager tel quel —
+// on retombe sur le message generique plutot que d'exposer du texte brut non
+// verifie. Ce filtre ne doit s'appliquer qu'a l'affichage final ; les
+// classifieurs qui font du pattern-matching sur le texte brut (ex: l'auth)
+// doivent continuer a utiliser extractApiErrorMessage directement.
+const unvettedEnglishMessagePattern =
+  /\b(not|is|was|has|does|cannot|only|already|before|found|could|would|should|must|the|this|please|your)\b/i;
+
+export function looksLikeUnvettedEnglishMessage(message: string): boolean {
+  return unvettedEnglishMessagePattern.test(message);
+}
+
+export function resolveDisplayableApiErrorMessage(
+  error: unknown,
+  fallback = "Une erreur reseau ou serveur est survenue.",
+) {
+  const extracted = extractApiErrorMessage(error, fallback);
+  return looksLikeUnvettedEnglishMessage(extracted) ? fallback : extracted;
+}
+
 export type NetworkRetryOptions = {
   maxAttempts?: number;
   onRetry?: (attempt: number, maxAttempts: number) => void;

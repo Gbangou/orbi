@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { upsertDriverOnboarding, extractApiErrorMessage } from '@orbi/api';
+import { upsertDriverOnboarding, resolveDisplayableApiErrorMessage } from '@orbi/api';
 import type { OrbiTheme } from '@orbi/ui';
 import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
 import { restoreDriverSession } from '../lib/auth';
@@ -252,7 +252,7 @@ export default function DriverOnboardingScreen() {
       setErrorMessage(
         error instanceof TypeError
           ? 'Connexion impossible. Vérifiez votre réseau.'
-          : extractApiErrorMessage(error, 'Impossible de soumettre le dossier.'),
+          : resolveDisplayableApiErrorMessage(error, 'Impossible de soumettre le dossier.'),
       );
     } finally {
       setIsSubmitting(false);
