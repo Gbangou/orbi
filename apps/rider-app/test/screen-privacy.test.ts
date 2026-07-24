@@ -10,7 +10,6 @@ function readAppFile(relativePath: string) {
 describe('rider screenshot policy', () => {
   const formerlySensitiveScreens = [
     'app/auth.tsx',
-    'app/voice.tsx',
     'app/receipt.tsx',
     'app/(tabs)/account.tsx',
   ];

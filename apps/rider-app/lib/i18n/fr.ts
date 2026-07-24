@@ -31,8 +31,6 @@ export const fr = {
     passwordPlaceholder: '••••••••',
     namePlaceholder: 'Ex : Aminata Traoré',
     passwordHint: 'Min. 8 car. · Maj · Chiffre · Symbole',
-    demoAccess: 'Accès démo',
-    demoSignIn: 'Connexion compte de démonstration',
     tagline: 'Votre course en quelques secondes',
     invalidCredentials: 'Identifiants incorrects. Réessayez.',
   },
@@ -76,7 +74,6 @@ export const fr = {
     activeFlow: 'Voir l\'activité en cours',
     now: 'Maintenant',
     schedule: 'Programmer',
-    voiceSearch: 'Voix',
     bookingConfirmed: 'Course confirmée !',
   },
   activity: {
@@ -116,20 +113,6 @@ export const fr = {
     chooseDate: 'Choisir une date',
     chooseTime: 'Choisir l\'heure',
     cannotCancel: 'Annulation impossible moins de 10 min avant le dispatch',
-  },
-  voice: {
-    title: 'Recherche vocale',
-    pressToSpeak: 'Appuyez et parlez',
-    speaking: 'Parlez maintenant…',
-    analyzing: 'Analyse en cours…',
-    release: 'Relâchez pour analyser',
-    instruction: 'Dites votre destination en français. Ex: "Je vais à Ouaga 2000"',
-    foundPlaces: '{{count}} lieu trouvé',
-    foundPlaces_plural: '{{count}} lieux trouvés',
-    noResults: 'Aucun lieu identifié',
-    noResultsHint: 'Essayez avec les exemples ci-dessous',
-    trySample: 'Essayez avec',
-    permissionDenied: 'Permission microphone refusée. Activez-la dans les réglages.',
   },
 } as const;
 

@@ -147,6 +147,10 @@ const mockedUpdateTripStatusWithApi = jest.mocked(updateTripStatusWithApi);
 const mockedVerifyPickupCodeWithApi = jest.mocked(verifyPickupCodeWithApi);
 const mockedResolveDriverAppError = jest.mocked(resolveDriverAppError);
 
+function expectNoText(renderer: { root: ReactTestInstance }, text: string) {
+  expect(collectText(renderer.root)).not.toContain(text);
+}
+
 function buildDriverSession() {
   return {
     authClient: { token: 'driver-auth-client' },
@@ -468,19 +472,7 @@ describe('driver smoke flows', () => {
     });
     expect(router.replace).toHaveBeenCalledWith('/accueil');
     expectText(renderer, 'Se connecter');
-  });
-
-  it('opens the driver demo session from the top action', async () => {
-    mockedSignInDriverAccount.mockResolvedValue(buildDriverSession() as never);
-
-    const renderer = await renderScreen(<DriverAuthScreen />);
-    await pressByText(renderer, 'Accès terrain sécurisé');
-
-    expect(mockedSignInDriverAccount).toHaveBeenCalledWith({
-      email: 'driver@orbi.app',
-      password: 'Orbi123!',
-    });
-    expect(router.replace).toHaveBeenCalledWith('/accueil');
+    expectNoText(renderer, 'Accès terrain sécurisé');
   });
 
   it('normalizes driver sign-in email before submitting', async () => {

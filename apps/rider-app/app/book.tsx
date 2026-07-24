@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../lib/i18n';
 import { VehicleSelector } from '../lib/booking/vehicle-selector';
@@ -112,15 +112,6 @@ function sanitizePlaceText(value: unknown, fallback: string) {
   return typeof value === 'string' && value.trim().length > 0
     ? value.trim()
     : fallback;
-}
-
-function getPlaceDedupeKey(place: Place) {
-  const latitude = toFiniteCoordinate(place.coordinates?.latitude);
-  const longitude = toFiniteCoordinate(place.coordinates?.longitude);
-
-  return latitude !== null && longitude !== null
-    ? `${latitude.toFixed(4)}:${longitude.toFixed(4)}`
-    : place.id;
 }
 
 function normalizePlaceText(value: string) {
@@ -379,18 +370,6 @@ export default function BookingScreen() {
   const promoStyles = useMemo(() => makePromoStyles(theme), [theme]);
   const { t } = useTranslation();
   const tb = (key: string) => t(`booking.${key}`);
-  // Accept voice suggestion params from /voice screen
-  const {
-    suggestionName,
-    suggestionAddress,
-    suggestionLat,
-    suggestionLng,
-  } = useLocalSearchParams<{
-    suggestionName?: string;
-    suggestionAddress?: string;
-    suggestionLat?: string;
-    suggestionLng?: string;
-  }>();
   const [options, setOptions] = useState<RideOption[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [profile, setProfile] =
@@ -487,38 +466,6 @@ export default function BookingScreen() {
     () => profile.profile.savedPlaces.map(toPlaceFromSavedPlace),
     [profile],
   );
-  const destinationSuggestions = useMemo(() => {
-    const presetPlaces = cityPresets.map((city) => city.destination);
-    const uniquePlaces = new Map<string, Place>();
-
-    [...savedPlaces, selectedCity.destination, ...presetPlaces].forEach((place) => {
-      uniquePlaces.set(getPlaceDedupeKey(place), place);
-    });
-
-    return Array.from(uniquePlaces.values()).slice(0, 8);
-  }, [savedPlaces, selectedCity.destination]);
-  // Pre-fill destination from voice suggestion params
-  useEffect(() => {
-    if (
-      suggestionName &&
-      suggestionAddress &&
-      suggestionLat &&
-      suggestionLng
-    ) {
-      const lat = toFiniteCoordinate(suggestionLat);
-      const lng = toFiniteCoordinate(suggestionLng);
-      if (lat !== null && lng !== null) {
-        setDestinationPlace({
-          id: `voice-${Date.now()}`,
-          label: suggestionName,
-          address: suggestionAddress,
-          coordinates: { latitude: lat, longitude: lng },
-        });
-      }
-    }
-  // Only run once on mount (params don't change after navigation)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     void loadBookingContext();
@@ -1188,25 +1135,10 @@ export default function BookingScreen() {
             />
           </View>
           <View style={styles.searchField}>
-            <View style={styles.searchFieldHeaderRow}>
-              <Text style={styles.searchFieldLabel}>Destination</Text>
-              <Pressable
-                onPress={() => router.push('/voice')}
-                style={styles.voiceBtn}
-                hitSlop={8}
-              >
-                <View style={styles.voiceIcon} accessibilityElementsHidden>
-                  <View style={styles.voiceIconHead} />
-                  <View style={styles.voiceIconStem} />
-                </View>
-                <Text style={styles.voiceBtnText}>Voix</Text>
-              </Pressable>
-            </View>
+            <Text style={styles.searchFieldLabel}>Destination</Text>
             <PlaceSearch
               placeholder="Où allez-vous ?"
               tone="amber"
-              suggestions={destinationSuggestions}
-              suggestionLabel="Destinations rapides"
               cityHint={selectedCity.label}
               onSelectPlace={(place) => applyPlace('destination', place)}
             />
@@ -1655,12 +1587,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Search section
   searchSection: { gap: 7 },
   searchField: { gap: 4 },
-  searchFieldHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 2,
-  },
   searchFieldLabel: {
     fontSize: 11,
     fontWeight: '700',
@@ -1668,41 +1594,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
-  },
-  voiceBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(0,201,167,0.10)',
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(0,201,167,0.22)',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  voiceIcon: {
-    width: 10,
-    height: 14,
-    alignItems: 'center',
-  },
-  voiceIconHead: {
-    width: 8,
-    height: 10,
-    borderRadius: 4,
-    backgroundColor: theme.colors.teal,
-  },
-  voiceIconStem: {
-    width: 2,
-    height: 4,
-    borderRadius: 1,
-    backgroundColor: theme.colors.teal,
-    marginTop: 1,
-  },
-  voiceBtnText: {
-    fontSize: 11,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.teal,
   },
 
   // City chips

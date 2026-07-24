@@ -424,7 +424,7 @@ function formatTimeLabel(value: string) {
 export function buildRiderFlowTransitionLabel(
   previousFlowState: string | null,
   nextFlowState: string | null,
-  surface: "home" | "booking" | "activity" | "account" | "voice",
+  surface: "home" | "booking" | "activity" | "account",
 ) {
   const nextStatus = extractStatusFromFlowState(nextFlowState);
 
@@ -487,27 +487,6 @@ export function buildRiderFlowTransitionLabel(
     return null;
   }
 
-  if (surface === "voice") {
-    if (!previousFlowState && nextFlowState && nextStatus) {
-      return `La voix detecte maintenant un flux actif: ${formatOperationalStatus(nextStatus)}.`;
-    }
-
-    if (
-      previousFlowState &&
-      nextFlowState &&
-      previousFlowState !== nextFlowState &&
-      nextStatus
-    ) {
-      return `Le contexte vocal a change de phase: ${formatOperationalStatus(nextStatus)}.`;
-    }
-
-    if (previousFlowState && !nextFlowState) {
-      return "Le contexte vocal n a plus de reservation active a rattacher.";
-    }
-
-    return null;
-  }
-
   if (
     previousFlowState &&
     nextFlowState &&
@@ -522,30 +501,21 @@ export function buildRiderFlowTransitionLabel(
 
 export function buildRiderPeripheralStatusLabel(input: {
   flow: RiderActiveFlowSummary;
-  surface: "account" | "voice";
   fullName?: string;
 }) {
   if (input.flow.activeTrip) {
     const label = formatOperationalStatus(input.flow.activeTrip.status);
-    return input.surface === "account"
-      ? `Profil charge. Course ${label} en cours.`
-      : `Contexte vocal charge. Course ${label} en cours.`;
+    return `Profil charge. Course ${label} en cours.`;
   }
 
   if (input.flow.activeRequest) {
     const label = formatOperationalStatus(input.flow.activeRequest.status);
-    return input.surface === "account"
-      ? `Profil charge. Demande ${label} en cours.`
-      : `Contexte vocal charge. Demande ${label} en cours.`;
+    return `Profil charge. Demande ${label} en cours.`;
   }
 
-  if (input.surface === "account") {
-    return input.fullName
-      ? `Profil charge pour ${input.fullName}.`
-      : "Profil charge depuis la session reelle.";
-  }
-
-  return "Contexte vocal charge depuis la session reelle.";
+  return input.fullName
+    ? `Profil charge pour ${input.fullName}.`
+    : "Profil charge depuis la session reelle.";
 }
 
 function extractStatusFromFlowState(flowState: string | null) {

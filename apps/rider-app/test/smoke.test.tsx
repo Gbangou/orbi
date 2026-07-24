@@ -21,7 +21,6 @@ import {
   getMySupportTicketsWithApi,
   recordTripRoutePositionWithApi,
   reportTripIncidentWithApi,
-  resolveVoiceLocationIntentWithApi,
   riderRideOptions,
   triggerTripSafetySosWithApi,
   updateTrustedContactEntryWithApi,
@@ -43,7 +42,6 @@ import RiderAuthScreen from '../app/auth';
 import RiderHomeScreen from '../app/(tabs)/home';
 import BookingScreen from '../app/book';
 import TripsScreen from '../app/(tabs)/trips';
-import VoiceScreen from '../app/voice';
 import {
   collectText,
   expectText,
@@ -130,7 +128,6 @@ jest.mock('@orbi/api', () => {
     recordTripRoutePositionWithApi: jest.fn(),
     reportTripIncidentWithApi: jest.fn(),
     triggerTripSafetySosWithApi: jest.fn(),
-    resolveVoiceLocationIntentWithApi: jest.fn(),
     createRideRequestWithApi: jest.fn(),
     createSupportTicketWithApi: jest.fn(),
   createTripShareLinkWithApi: jest.fn(),
@@ -165,7 +162,6 @@ const mockedGetMySupportTicketsWithApi = jest.mocked(getMySupportTicketsWithApi)
 const mockedRecordTripRoutePositionWithApi = jest.mocked(recordTripRoutePositionWithApi);
 const mockedReportTripIncidentWithApi = jest.mocked(reportTripIncidentWithApi);
 const mockedTriggerTripSafetySosWithApi = jest.mocked(triggerTripSafetySosWithApi);
-const mockedResolveVoiceLocationIntentWithApi = jest.mocked(resolveVoiceLocationIntentWithApi);
 const mockedCreateRideRequestWithApi = jest.mocked(createRideRequestWithApi);
 const mockedCreateSupportTicketWithApi = jest.mocked(createSupportTicketWithApi);
 const mockedCreateTripShareLinkWithApi = jest.mocked(createTripShareLinkWithApi);
@@ -179,6 +175,10 @@ const mockedUpdateTrustedContactEntryWithApi = jest.mocked(updateTrustedContactE
 const mockedUpdateTrustedContactWithApi = jest.mocked(updateTrustedContactWithApi);
 const mockedUpdateTripStatusWithApi = jest.mocked(updateTripStatusWithApi);
 const mockedResolveRiderAppError = jest.mocked(resolveRiderAppError);
+
+function expectNoText(renderer: { root: ReactTestInstance }, text: string) {
+  expect(collectText(renderer.root)).not.toContain(text);
+}
 
 function buildRiderSession() {
   return {
@@ -387,7 +387,6 @@ beforeEach(() => {
   riderPositionState.positionNote = 'Position passager en attente.';
   mockedReportTripIncidentWithApi.mockReset();
   mockedTriggerTripSafetySosWithApi.mockReset();
-  mockedResolveVoiceLocationIntentWithApi.mockReset();
   mockedCreateRideRequestWithApi.mockReset();
   mockedCreateSupportTicketWithApi.mockReset();
   mockedCreateTripShareLinkWithApi.mockReset();
@@ -405,27 +404,6 @@ beforeEach(() => {
   jest.mocked(Share.share).mockReset();
 
   jest.mocked(createOrbiApiClient).mockReturnValue({ kind: 'mock-client' } as never);
-  mockedResolveVoiceLocationIntentWithApi.mockResolvedValue({
-    locale: 'fr-BF',
-    transcript: 'Je vais a Ouaga 2000',
-    normalizedTranscript: 'je vais a ouaga 2000',
-    interpretation: 'Destination vers Ouaga 2000',
-    intentType: 'destination',
-    confidence: 0.91,
-    needsClarification: false,
-    suggestions: [
-      {
-        id: 'voice-1',
-        name: 'Ouaga 2000',
-        address: 'Ouaga 2000, Ouagadougou',
-        district: 'Ouaga 2000',
-        latitude: 12.3456,
-        longitude: -1.5345,
-        confidence: 0.91,
-      },
-    ],
-  } as never);
-
   mockedResolveRiderAppError.mockResolvedValue({
     message: 'Fallback rider error.',
     shouldClearSessionToken: false,
@@ -573,19 +551,8 @@ describe('rider smoke flows', () => {
     });
     expect(router.replace).toHaveBeenCalledWith('/home');
     expectText(renderer, 'Se connecter');
-  });
-
-  it('opens the rider demo session from the top action', async () => {
-    mockedSignInRiderAccount.mockResolvedValue(buildRiderSession() as never);
-
-    const renderer = await renderScreen(<RiderAuthScreen />);
-    await pressByText(renderer, 'Compte de démonstration');
-
-    expect(mockedSignInRiderAccount).toHaveBeenCalledWith({
-      email: 'rider@orbi.app',
-      password: 'Orbi123!',
-    });
-    expect(router.replace).toHaveBeenCalledWith('/home');
+    expectNoText(renderer, 'Compte de démonstration');
+    expectNoText(renderer, 'Accès démo');
   });
 
   it('normalizes rider sign-in email before submitting', async () => {
@@ -626,7 +593,9 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
 
-    await pressByText(renderer, 'Compte de démonstration');
+    await changeInputByPlaceholder(renderer, 'exemple@gmail.com', 'rider@orbi.app');
+    await changeInputByPlaceholder(renderer, '••••••••', 'Orbi123!');
+    await pressByText(renderer, 'Se connecter');
 
     expect(router.replace).not.toHaveBeenCalled();
     expectText(
@@ -642,7 +611,9 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
 
-    await pressByText(renderer, 'Compte de démonstration');
+    await changeInputByPlaceholder(renderer, 'exemple@gmail.com', 'rider@orbi.app');
+    await changeInputByPlaceholder(renderer, '••••••••', 'Orbi123!');
+    await pressByText(renderer, 'Se connecter');
 
     expect(router.replace).not.toHaveBeenCalled();
     expectText(
@@ -799,8 +770,10 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<BookingScreen />);
     await flushMicrotasks();
 
-    expectText(renderer, 'Destinations rapides');
     expectText(renderer, 'Réserver');
+    expectText(renderer, 'Destination');
+    expectNoText(renderer, 'Destinations rapides');
+    expectNoText(renderer, 'Voix');
   });
 
   it('keeps booking usable when a new rider profile is partially hydrated', async () => {
@@ -1358,17 +1331,6 @@ describe('rider smoke flows', () => {
 
     expect(mockedCreateSavedPlaceWithApi).not.toHaveBeenCalled();
     expectText(renderer, 'Le lieu contient des caracteres non autorises.');
-  });
-
-  it('renders the destination intent screen with search prompt', async () => {
-    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
-    mockedFetchMyTrips.mockResolvedValue(buildRiderPendingRequestHistory('REQUESTED') as never);
-
-    const renderer = await renderScreen(<VoiceScreen />);
-    await flushMicrotasks();
-
-    // Intent search is triggered by user input, not automatically on mount.
-    expectText(renderer, 'Où allez-vous ?');
   });
 
   it('keeps rider support follow-up discreet inside activity', async () => {

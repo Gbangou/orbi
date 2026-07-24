@@ -107,16 +107,9 @@ describe('rider-active-flow', () => {
       ),
     ).toBe('Le compte reflete maintenant un flux actif: En attente.');
 
-    expect(
-      buildRiderFlowTransitionLabel(
-        'REQUEST:REQUESTED',
-        'TRIP:MATCHED',
-        'voice',
-      ),
-    ).toBe('Le contexte vocal a change de phase: Chauffeur assigné.');
   });
 
-  it('builds peripheral status labels for account and voice surfaces', () => {
+  it('builds peripheral status labels for account surfaces', () => {
     const idleFlow = resolveRiderActiveFlow({
       role: 'RIDER',
       stats: {
@@ -133,17 +126,9 @@ describe('rider-active-flow', () => {
     expect(
       buildRiderPeripheralStatusLabel({
         flow: idleFlow,
-        surface: 'account',
         fullName: 'Awa Ouedraogo',
       }),
     ).toBe('Profil charge pour Awa Ouedraogo.');
-
-    expect(
-      buildRiderPeripheralStatusLabel({
-        flow: idleFlow,
-        surface: 'voice',
-      }),
-    ).toBe('Contexte vocal charge depuis la session reelle.');
   });
 
   it('guides the rider while dispatch is still matching a request', () => {

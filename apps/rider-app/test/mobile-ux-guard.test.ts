@@ -18,7 +18,9 @@ describe('rider mobile UX guards', () => {
 
     expect(source).toContain('styles.trustLine} numberOfLines={2}');
     expect(source).toContain('styles.legalFooter} numberOfLines={3}');
-    expect(source).toContain('label="Compte de démonstration"');
+    expect(source).not.toContain('Compte de démonstration');
+    expect(source).not.toContain('Accès démo');
+    expect(source).not.toContain('orbiDemoAccessEnabled');
   });
 
   it('keeps booking bottom CTA compact', () => {

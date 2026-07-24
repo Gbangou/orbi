@@ -12,7 +12,6 @@ import {
   View,
 } from 'react-native';
 import { resolveMobileAuthErrorMessage } from '@orbi/api';
-import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
 import type { OrbiTheme } from '@orbi/ui';
 import { OrbiAuthIcon, OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { signInRiderAccount, signUpRiderAccount } from '../lib/auth';
@@ -65,22 +64,6 @@ export default function RiderAuthScreen() {
       } else {
         await signUpRiderAccount({ fullName: fullName.trim(), email: normalizedEmail, password });
       }
-      router.replace('/home');
-    } catch (error) {
-      setErrorMessage(describeAuthError(error));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleDemoSignIn() {
-    setErrorMessage('');
-    setIsSubmitting(true);
-    try {
-      await signInRiderAccount({
-        email: orbiDemoAccounts.rider.email,
-        password: orbiDemoAccounts.rider.password,
-      });
       router.replace('/home');
     } catch (error) {
       setErrorMessage(describeAuthError(error));
@@ -206,27 +189,6 @@ export default function RiderAuthScreen() {
             />
           </OrbiSurface>
 
-          {/* Demo access */}
-          {orbiDemoAccessEnabled ? (
-            <View style={styles.demoSection}>
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerLabel}>Accès démo</Text>
-                <View style={styles.dividerLine} />
-              </View>
-              <OrbiButton
-                onPress={() => void handleDemoSignIn()}
-                disabled={isSubmitting}
-                loading={isSubmitting}
-                label="Compte de démonstration"
-                variant="secondary"
-                tone="teal"
-                style={styles.demoBtn}
-                labelStyle={styles.demoBtnLabel}
-              />
-            </View>
-          ) : null}
-
           <Text style={styles.legalFooter} numberOfLines={3}>
             En continuant, vous acceptez les Conditions d&apos;utilisation et la
             Politique de confidentialité d&apos;Orbi.
@@ -345,34 +307,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   primaryBtnLabel: {
     fontSize: 16,
-  },
-
-  // Demo section
-  demoSection: {
-    gap: 10,
-    marginTop: 0,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  dividerLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
-  },
-  demoBtn: {
-    borderRadius: 12,
-    minHeight: 50,
-  },
-  demoBtnLabel: {
-    fontSize: 14,
   },
   legalFooter: {
     color: theme.colors.textMuted,

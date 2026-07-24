@@ -11,7 +11,6 @@ import {
   View,
 } from 'react-native';
 import { resolveMobileAuthErrorMessage } from '@orbi/api';
-import { orbiDemoAccessEnabled, orbiDemoAccounts } from '@orbi/config';
 import type { OrbiTheme } from '@orbi/ui';
 import { OrbiAuthIcon, OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { signInDriverAccount, signUpDriverAccount } from '../lib/auth';
@@ -72,22 +71,6 @@ export default function DriverAuthScreen() {
         });
         router.replace('/onboarding');
       }
-    } catch (error) {
-      setErrorMessage(describeAuthError(error));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleDemoSignIn() {
-    setErrorMessage('');
-    setIsSubmitting(true);
-    try {
-      await signInDriverAccount({
-        email: orbiDemoAccounts.driver.email,
-        password: orbiDemoAccounts.driver.password,
-      });
-      router.replace('/accueil');
     } catch (error) {
       setErrorMessage(describeAuthError(error));
     } finally {
@@ -214,18 +197,6 @@ export default function DriverAuthScreen() {
             labelStyle={styles.primaryButtonLabel}
           />
 
-          {orbiDemoAccessEnabled && (
-            <OrbiButton
-              onPress={() => void handleDemoSignIn()}
-              disabled={isSubmitting}
-              loading={isSubmitting}
-              label="Accès terrain sécurisé"
-              variant="secondary"
-              tone="amber"
-              style={styles.ghostButton}
-              labelStyle={styles.ghostButtonLabel}
-            />
-          )}
         </OrbiSurface>
 
         <Text style={styles.legalFooter} numberOfLines={3}>
@@ -323,13 +294,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   primaryButtonLabel: {
     fontSize: 16,
-  },
-  ghostButton: {
-    borderRadius: 12,
-    minHeight: 48,
-  },
-  ghostButtonLabel: {
-    fontSize: 13,
   },
   passwordHint: {
     color: theme.colors.muted,

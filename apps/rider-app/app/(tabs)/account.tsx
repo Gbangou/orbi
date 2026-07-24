@@ -271,7 +271,6 @@ export default function AccountScreen() {
         setStatus(
           buildRiderPeripheralStatusLabel({
             flow: nextFlow,
-            surface: 'account',
             fullName: normalizedProfile.profile.fullName,
           }),
         );
