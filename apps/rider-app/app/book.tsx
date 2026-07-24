@@ -74,6 +74,12 @@ import { normalizeRiderTripsResponse } from '../lib/rider-trips-normalizer';
 
 const cityPresets = burkinaPricingCityPresets;
 const fieldDispatchRadiusKm = 8;
+const emptyDestinationPlace: Place = {
+  id: 'destination-manual',
+  label: 'Destination a renseigner',
+  address: '',
+  coordinates: undefined,
+};
 
 function toPlaceFromSavedPlace(
   place: RiderProfileResponse['profile']['savedPlaces'][number],
@@ -387,7 +393,7 @@ export default function BookingScreen() {
   );
   const [pickupPlace, setPickupPlace] = useState<Place>(cityPresets[0].pickup);
   const [destinationPlace, setDestinationPlace] = useState<Place>(
-    cityPresets[0].destination,
+    emptyDestinationPlace,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -633,13 +639,6 @@ export default function BookingScreen() {
     }
 
     setDestinationPlace(place);
-  }
-
-  function handleSelectCity(city: (typeof cityPresets)[number]) {
-    setSelectedCityId(city.id);
-    setPickupPlace(city.pickup);
-    setDestinationPlace(city.destination);
-    setAutoAppliedRiderPosition(false);
   }
 
   function handleUseCurrentPositionAsPickup() {
@@ -1143,29 +1142,6 @@ export default function BookingScreen() {
               onSelectPlace={(place) => applyPlace('destination', place)}
             />
           </View>
-        </View>
-
-        {/* ── City chips ── */}
-        <View style={styles.cityScrollContent}>
-          {cityPresets.map((city) => (
-            <Pressable
-              key={city.id}
-              onPress={() => handleSelectCity(city)}
-              style={[
-                styles.cityChip,
-                selectedCityId === city.id && styles.cityChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.cityChipLabel,
-                  selectedCityId === city.id && styles.cityChipLabelActive,
-                ]}
-              >
-                {city.label}
-              </Text>
-            </Pressable>
-          ))}
         </View>
 
         {/* ── Map preview ── */}

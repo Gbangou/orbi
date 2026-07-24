@@ -126,13 +126,13 @@ export function buildDriverRouteSafetyBrief(input: {
   if (isCritical) {
     return {
       eyebrow: 'Sécurité trajet',
-      title: 'Course à contrôler avant finalisation',
+      title: 'Course à contrôler après finalisation',
       description:
-        'La position GPS indique une anomalie possible: perte réseau, localisation imprécise ou trajet incohérent.',
+        'La position GPS indique une anomalie possible. Orbi garde la trace pour revue operations, sans bloquer la fin de course.',
       tone: 'rose' as RouteTone,
       actionLabel:
-        'Arretez les actions non urgentes, contactez le support ou utilisez SOS si necessaire.',
-      blocksCompletion: true,
+        'Terminez seulement si le client est arrive; contactez le support ou utilisez SOS si necessaire.',
+      blocksCompletion: false,
       insights: buildRouteSafetyInsights({
         routeMonitoring,
         ageSeconds,

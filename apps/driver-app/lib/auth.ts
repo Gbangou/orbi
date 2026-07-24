@@ -15,8 +15,11 @@ import type { AuthSessionResponse, AuthenticatedApiContext } from '@orbi/api';
 import { flushDriverMobileErrorReports } from './mobile-error-reporting';
 import { driverSessionStorage, driverSessionStorageKey } from './session-storage';
 
-const driverFieldRequestTimeoutMs = 25_000;
-const driverAuthRequestTimeoutMs = 18_000;
+// Le backend free-tier Render se met en veille apres inactivite et peut
+// prendre jusqu'a ~50s a se reveiller (cold start) — le timeout doit tolerer
+// ca, sans quoi une connexion reseau parfaite est faussement signalee comme lente.
+const driverFieldRequestTimeoutMs = 40_000;
+const driverAuthRequestTimeoutMs = 40_000;
 
 export function createDriverPublicClient() {
   return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {

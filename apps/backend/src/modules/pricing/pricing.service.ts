@@ -310,12 +310,18 @@ export class PricingService {
       signalFreshnessSeconds: number | null;
     },
   ) {
-    const onlineDrivers = Math.max(
-      vehicleType === 'MOTORCYCLE' ? 2 : 1,
-      Math.round(
-        (activeDriverCount ?? 6) * (vehicleType === 'MOTORCYCLE' ? 0.62 : 0.38),
-      ),
-    );
+    const onlineDrivers =
+      activeDriverCount === undefined
+        ? Math.max(
+            vehicleType === 'MOTORCYCLE' ? 2 : 1,
+            Math.round(6 * (vehicleType === 'MOTORCYCLE' ? 0.62 : 0.38)),
+          )
+        : Math.max(
+            0,
+            Math.round(
+              activeDriverCount * (vehicleType === 'MOTORCYCLE' ? 0.62 : 0.38),
+            ),
+          );
     const pickupRadiusKm = Number(
       Math.max(
         vehicleType === 'MOTORCYCLE' ? 0.9 : 1.4,
@@ -769,6 +775,7 @@ export class PricingService {
         where: {
           status: 'ONLINE',
           verificationStatus: 'APPROVED',
+          updatedAt: { gte: tenMinutesAgo },
           ...(cityFilter
             ? {
                 onboardingReviews: {

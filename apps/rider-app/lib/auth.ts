@@ -15,8 +15,11 @@ import type { AuthSessionResponse, AuthenticatedApiContext } from '@orbi/api';
 import { flushRiderMobileErrorReports } from './mobile-error-reporting';
 import { riderSessionStorage, riderSessionStorageKey } from './session-storage';
 
-const riderFieldRequestTimeoutMs = 25_000;
-const riderAuthRequestTimeoutMs = 18_000;
+// Le backend free-tier Render se met en veille apres inactivite et peut
+// prendre jusqu'a ~50s a se reveiller (cold start) — le timeout doit tolerer
+// ca, sans quoi une connexion reseau parfaite est faussement signalee comme lente.
+const riderFieldRequestTimeoutMs = 40_000;
+const riderAuthRequestTimeoutMs = 40_000;
 
 export function createRiderPublicClient() {
   return createOrbiApiClient(resolveOrbiApiBaseUrlForRuntime(), {

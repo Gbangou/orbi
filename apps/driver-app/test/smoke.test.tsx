@@ -1444,7 +1444,10 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
-    expectText(renderer, 'Avant de terminer: Arretez les actions non urgentes, contactez le support ou utilisez SOS si necessaire.');
+    expectText(
+      renderer,
+      'Avant de terminer: Terminez seulement si le client est arrive; contactez le support ou utilisez SOS si necessaire.',
+    );
     await pressByText(renderer, 'Terminer la course');
     const completeOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
       | Array<{ text?: string; onPress?: () => void }>

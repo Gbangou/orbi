@@ -64,12 +64,7 @@ function compactSuggestionLabel(label: unknown): string {
     typeof label === 'string' && label.trim().length > 0
       ? label.trim()
       : 'Lieu';
-  const lower = normalized.toLowerCase();
-
-  if (lower.includes('universite norbert zongo')) return 'Univ. N. Zongo';
-  if (lower.includes('gare routiere de banfora')) return 'Gare Banfora';
-
-  return normalized.length > 18 ? `${normalized.slice(0, 17).trim()}…` : normalized;
+  return normalized.length > 24 ? `${normalized.slice(0, 23).trim()}…` : normalized;
 }
 
 function createTimeoutSignal(timeoutMs: number): {

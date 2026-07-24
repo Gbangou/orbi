@@ -1296,12 +1296,14 @@ export class DriversService {
     }>;
     total: number;
   }> {
+    const staleCutoff = new Date(Date.now() - 10 * 60_000);
     const profiles = await this.prisma.driverProfile.findMany({
       where: {
         status: DriverStatus.ONLINE,
         verificationStatus: VerificationStatus.APPROVED,
         currentLatitude: { not: null },
         currentLongitude: { not: null },
+        updatedAt: { gte: staleCutoff },
       },
       select: {
         id: true,

@@ -661,6 +661,10 @@ export default function ActivityScreen() {
       setStatus(
         `Course arretee. Montant a payer: ${formatRiderMoneyAmount(response.trip.actualFare)}.`,
       );
+      router.replace({
+        pathname: "/receipt",
+        params: { tripId: response.trip.id },
+      });
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: "active-trip",
@@ -966,6 +970,11 @@ export default function ActivityScreen() {
         <View style={styles.tripSheet}>
           {/* Handle */}
           <View style={styles.sheetHandle} />
+          <ScrollView
+            style={styles.tripSheetScroll}
+            contentContainerStyle={styles.tripSheetContent}
+            showsVerticalScrollIndicator={false}
+          >
 
           {/* Étapes de la course */}
           <TripStageTracker status={activeTrip.status} audience="rider" style={styles.stageTracker} />
@@ -1161,6 +1170,7 @@ export default function ActivityScreen() {
               />
             ) : null}
           </View>
+          </ScrollView>
         </View>
       </View>
     );
@@ -1406,14 +1416,21 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    maxHeight: '74%',
     backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 16,
-    paddingBottom: 36,
+    paddingBottom: 18,
     paddingTop: 8,
-    gap: 14,
     ...theme.shadows.sheet,
+  },
+  tripSheetScroll: {
+    flexGrow: 0,
+  },
+  tripSheetContent: {
+    gap: 14,
+    paddingBottom: 42,
   },
   sheetHandle: {
     width: 38,

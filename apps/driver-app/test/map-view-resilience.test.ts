@@ -18,8 +18,12 @@ describe('driver map view resilience', () => {
     'lib/approach-map-view.tsx',
   ])('wraps the native WebView in %s with a local ErrorBoundary', (relativePath) => {
     const source = readAppFile(relativePath);
+    const nativeUiImportLine = source
+      .split('\n')
+      .find((line) => line.includes("from '@orbi/ui/native'"));
 
-    expect(source).toContain("ErrorBoundary, useOrbiTheme } from '@orbi/ui/native'");
+    expect(nativeUiImportLine).toContain('ErrorBoundary');
+    expect(nativeUiImportLine).toContain('useOrbiTheme');
     expect(source).toContain('<ErrorBoundary');
     expect(source).toContain('fallback={renderDegradedPanel()}');
     expect(source).toContain('renderDegradedPanel()');

@@ -679,23 +679,24 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<BookingScreen />);
 
-    await pressByText(renderer, 'Bobo-Dioulasso');
+    await flushMicrotasks();
+    await pressByText(renderer, 'Maison');
     await pressByLabel(renderer, 'booking-cta');
     await flushMicrotasks();
 
     expect(mockedCreateRideRequestWithApi).toHaveBeenCalledWith(
       { token: 'rider-auth-client' },
       expect.objectContaining({
-        pickupAddress: 'Gare Routiere de Bobo-Dioulasso',
-        destinationAddress: 'Sarfalao, Bobo-Dioulasso',
+        pickupAddress: 'Universite Joseph Ki-Zerbo, Ouagadougou',
+        destinationAddress: 'Patte d Oie, Ouagadougou',
         paymentMethod: 'CASH',
-        pickupAreaType: 'URBAN_EDGE',
-        city: 'BOBO_DIOULASSO',
-        districtProfile: 'MARKET_DENSE',
+        pickupAreaType: 'URBAN_CORE',
+        city: 'OUAGADOUGOU',
+        districtProfile: 'UNIVERSITY',
       }),
       expect.objectContaining({
         idempotencyKey: expect.stringMatching(
-          /^ride-request-rider-bobo-dioulasso-/,
+          /^ride-request-rider-ouagadougou-/,
         ),
       }),
     );
@@ -1009,7 +1010,8 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<BookingScreen />);
 
-    await pressByText(renderer, 'Bobo-Dioulasso');
+    await flushMicrotasks();
+    await pressByText(renderer, 'Maison');
     const confirmButton = renderer.root.find(
       (node: ReactTestInstance) =>
         (node.type as unknown) === 'Pressable' &&

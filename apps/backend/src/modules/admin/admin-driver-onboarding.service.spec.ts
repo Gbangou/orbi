@@ -242,7 +242,7 @@ describe('AdminDriverOnboardingService', () => {
     const profile = completeProfile();
     profile.onboardingDocuments[1] = {
       ...profile.onboardingDocuments[1],
-      expiresAt: new Date('2026-07-20T00:00:00.000Z'),
+      expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
     };
 
     prisma.driverProfile.findUnique.mockResolvedValue(profile);

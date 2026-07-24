@@ -15,7 +15,7 @@ describe('rider auth feedback source', () => {
   it('keeps sign-in and sign-up on the fast auth path', () => {
     const source = readFileSync(join(process.cwd(), 'lib/auth.ts'), 'utf8');
 
-    expect(source).toContain('const riderAuthRequestTimeoutMs = 18_000');
+    expect(source).toContain('const riderAuthRequestTimeoutMs = 40_000');
     expect(source).toContain('buildFastRiderAuthContext(client, session)');
     expect(source).not.toContain('const riderFieldRequestTimeoutMs = 90_000');
   });

@@ -171,7 +171,7 @@ describe('driver earnings signal helpers', () => {
       recentTrips: [],
     });
 
-    expect(summary.settlementStateLabel).toBe('A verifier');
+    expect(summary.settlementStateLabel).toBe('Contrôle requis');
     expect(summary.settlementTone).toBe('amber');
   });
 });

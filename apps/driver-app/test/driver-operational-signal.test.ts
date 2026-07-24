@@ -47,10 +47,10 @@ describe('driver operational signal helpers', () => {
         lastPositionAt: null,
         latestPosition: null,
       }),
-    ).toEqual(['Ride Check: Attention (ND)', 'Dernier signal: Long Stop']);
+    ).toEqual(['GPS mission: Attention (ND)', 'Dernière alerte: Long Stop']);
   });
 
-  it('marks impossible route signals as blocking before sensitive trip actions', () => {
+  it('marks impossible route signals as operational review without trapping completion', () => {
     const brief = buildDriverRouteSafetyBrief({
       now: Date.parse('2026-04-19T08:15:00.000Z'),
       routeMonitoring: {
@@ -75,8 +75,8 @@ describe('driver operational signal helpers', () => {
     expect(brief).toEqual(
       expect.objectContaining({
         tone: 'rose',
-        blocksCompletion: true,
-        title: 'Mission a verifier avant action sensible',
+        blocksCompletion: false,
+        title: 'Course à contrôler après finalisation',
       }),
     );
     expect(brief.insights).toEqual(
@@ -113,7 +113,7 @@ describe('driver operational signal helpers', () => {
     expect(brief).toEqual(
       expect.objectContaining({
         tone: 'rose',
-        blocksCompletion: true,
+        blocksCompletion: false,
       }),
     );
     expect(brief.insights).toEqual(
@@ -135,9 +135,9 @@ describe('driver operational signal helpers', () => {
       expect.objectContaining({
         tone: 'amber',
         blocksCompletion: false,
-        title: 'Signal route indisponible',
+        title: 'GPS en synchronisation',
         actionLabel:
-          'Gardez le telephone ouvert; Orbi verifiera le dernier signal au moment de finaliser.',
+          'Gardez le telephone ouvert; Orbi vérifiera la position au moment de finaliser.',
       }),
     );
   });
@@ -161,7 +161,7 @@ describe('driver operational signal helpers', () => {
         blocksCompletion: false,
         title: 'Premier signal GPS attendu',
         actionLabel:
-          'Gardez la localisation active; Orbi verifiera le signal recent avant de valider la fin.',
+          'Gardez la localisation active; Orbi vérifiera la position récente avant de valider la fin.',
       }),
     );
   });

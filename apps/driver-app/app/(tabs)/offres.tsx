@@ -710,9 +710,10 @@ export default function OffersScreen() {
         ) ?? 0,
       );
 
-    const safetyNote = driverRouteSafetyBrief.blocksCompletion
-      ? `\n\nAttention: ${driverRouteSafetyBrief.actionLabel}`
-      : "";
+    const safetyNote =
+      driverRouteSafetyBrief.tone !== "teal"
+        ? `\n\nAttention: ${driverRouteSafetyBrief.actionLabel}`
+        : "";
 
     Alert.alert(
       "Terminer la course",
@@ -903,7 +904,7 @@ export default function OffersScreen() {
             emphasis="primary"
             style={isSubmitting ? styles.disabled : null}
           />
-          {driverRouteSafetyBrief.blocksCompletion ? (
+          {driverRouteSafetyBrief.tone !== "teal" ? (
             <Text style={styles.routeSafetyBlockNote}>
               Avant de terminer: {driverRouteSafetyBrief.actionLabel}
             </Text>
@@ -1200,7 +1201,7 @@ export default function OffersScreen() {
                 <Text style={styles.missionPaymentLabel}>Paiement</Text>
                 <Text style={styles.missionPaymentValue}>{activePaymentMethodLabel}</Text>
               </View>
-              {driverRouteSafetyBrief.blocksCompletion ? (
+              {driverRouteSafetyBrief.tone !== "teal" ? (
                 <Text style={styles.routeSafetyBlockNote}>
                   Avant de terminer: {driverRouteSafetyBrief.actionLabel}
                 </Text>
