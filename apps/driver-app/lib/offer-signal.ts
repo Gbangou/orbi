@@ -272,7 +272,7 @@ export function buildDriverOfferConfidenceExplainer(offer: DriverOffer): {
 
   const explanations: Record<string, string> = {
     PRIORITY:
-      'Votre historique recent est excellent. Le dispatch vous a selectionne en priorite pour ce trajet.',
+      'Votre fiabilité récente est excellente. Le dispatch vous a sélectionné en priorité pour ce trajet.',
     HIGH:
       'Votre comportement recent est positif. Vous etes le meilleur candidat disponible pour cette course.',
     MEDIUM:

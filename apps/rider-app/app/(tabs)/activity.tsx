@@ -1234,7 +1234,7 @@ export default function ActivityScreen() {
         <OrbiSurface style={styles.supportCard}>
           <View style={styles.supportHeader}>
             <View>
-              <Text style={styles.supportEyebrow}>Support rapide</Text>
+              <Text style={styles.supportEyebrow}>Assistance trajet</Text>
               <Text style={styles.supportTitle}>Paiement, prix, annulation</Text>
             </View>
             {supportTickets.length ? (

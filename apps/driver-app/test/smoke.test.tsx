@@ -608,7 +608,7 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<RevenusScreen />);
     await pressByText(renderer, 'Actualiser le direct');
 
-    expectText(renderer, 'Revenus synchronises. Mission Chauffeur assigné.');
+    expectText(renderer, 'Revenus synchronises. Course active: Chauffeur assigné.');
     expectText(renderer, 'Universite Joseph Ki-Zerbo vers Ouaga 2000');
     expectText(renderer, 'Contrôle payout');
     expectText(renderer, '82% chauffeur');
@@ -1092,8 +1092,8 @@ describe('driver smoke flows', () => {
       renderer,
       'Demarrez seulement quand le passager est avec vous et pret a partir.',
     );
-    expectText(renderer, 'Details support');
-    await pressByText(renderer, 'Details support');
+    expectText(renderer, 'Journal de course');
+    await pressByText(renderer, 'Journal de course');
     expectText(renderer, 'Chauffeur en approche');
   });
 
@@ -1444,7 +1444,7 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
-    expectText(renderer, 'A verifier: Arretez les actions non urgentes, contactez le support ou utilisez SOS si necessaire.');
+    expectText(renderer, 'Avant de terminer: Arretez les actions non urgentes, contactez le support ou utilisez SOS si necessaire.');
     await pressByText(renderer, 'Terminer la course');
     const completeOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
       | Array<{ text?: string; onPress?: () => void }>
@@ -1492,7 +1492,7 @@ describe('driver smoke flows', () => {
     );
     expectText(renderer, 'Course active');
     expectText(renderer, 'Conduisez vers la destination');
-    expectText(renderer, 'Details support');
+    expectText(renderer, 'Journal de course');
   });
 
   it('triggers driver SOS from offers and opens the local emergency dialer', async () => {

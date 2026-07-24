@@ -46,7 +46,7 @@ const driverJourneySteps: Array<{
     href: '/revenus',
     eyebrow: 'Finance',
     title: 'Revenus et performance',
-    description: 'Suivre les gains live, l historique recent et la cadence du jour.',
+    description: 'Suivre les gains du jour, les courses clôturées et la cadence.',
   },
   {
     id: 'profil',

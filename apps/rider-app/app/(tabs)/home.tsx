@@ -466,7 +466,7 @@ export default function RiderHomeScreen() {
 
     Alert.alert(
       'Arreter la course',
-      'Confirmez si vous souhaitez descendre maintenant. Le prix sera ajuste selon le trajet deja parcouru quand le signal route le permet.',
+      'Confirmez si vous souhaitez descendre maintenant. Le prix sera ajuste selon le trajet deja parcouru quand la position GPS le permet.',
       [
         { text: 'Continuer', style: 'cancel' },
         {

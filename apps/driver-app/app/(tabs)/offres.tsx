@@ -649,7 +649,7 @@ export default function OffersScreen() {
     });
   }
 
-  // Ride Check (driverRouteSafetyBrief) is advisory only — surfaced in the
+  // Route safety review is advisory only and surfaced in the
   // handleCompleteTrip confirmation below, never a client-side block. A driver
   // must always be able to reach the server for a real completion decision;
   // a GPS/route warning is not proof of fraud.
@@ -905,7 +905,7 @@ export default function OffersScreen() {
           />
           {driverRouteSafetyBrief.blocksCompletion ? (
             <Text style={styles.routeSafetyBlockNote}>
-              A verifier: {driverRouteSafetyBrief.actionLabel}
+              Avant de terminer: {driverRouteSafetyBrief.actionLabel}
             </Text>
           ) : null}
         </View>
@@ -1178,7 +1178,7 @@ export default function OffersScreen() {
               </View>
               <View style={styles.missionMetricRow}>
                 <View style={styles.missionMetric}>
-                  <Text style={styles.missionMetricLabel}>Signal</Text>
+                  <Text style={styles.missionMetricLabel}>GPS</Text>
                   <Text style={styles.missionMetricValue}>
                     {driverRouteProgress?.freshnessLabel ?? "Live actif"}
                   </Text>
@@ -1202,7 +1202,7 @@ export default function OffersScreen() {
               </View>
               {driverRouteSafetyBrief.blocksCompletion ? (
                 <Text style={styles.routeSafetyBlockNote}>
-                  A verifier: {driverRouteSafetyBrief.actionLabel}
+                  Avant de terminer: {driverRouteSafetyBrief.actionLabel}
                 </Text>
               ) : null}
             </View>
@@ -1283,7 +1283,7 @@ export default function OffersScreen() {
                   style={styles.supportTimelineToggle}
                 >
                   <Text style={styles.supportTimelineToggleText}>
-                    {showMissionTimeline ? "Masquer details support" : "Details support"}
+                    {showMissionTimeline ? "Masquer le journal" : "Journal de course"}
                   </Text>
                 </Pressable>
                 {showMissionTimeline ? (

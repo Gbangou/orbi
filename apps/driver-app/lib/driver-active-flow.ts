@@ -224,13 +224,13 @@ export function buildDriverMissionSnapshot(input: {
       helper:
         hasApproachDistance
           ? latestPosition?.observedAt
-            ? `Dernier signal ${formatTimeLabel(latestPosition.observedAt)}`
+            ? `Position mise a jour ${formatTimeLabel(latestPosition.observedAt)}`
             : "Position mission recue"
           : routeMonitoring
             ? routeMonitoring.alertCount > 0
-              ? `${routeMonitoring.alertCount} signal route`
+              ? `${routeMonitoring.alertCount} alerte trajet`
               : "Trajet coherent"
-            : "Premier signal route attendu",
+            : "Position GPS attendue",
     },
     {
       label: "Vehicule",
@@ -284,7 +284,7 @@ export function buildDriverLiveRouteProgress(input: {
         : routeMonitoring.state === "clear"
           ? 42
           : 18,
-    freshnessLabel: `Signal ${formatTimeLabel(latestPosition.observedAt)}`,
+    freshnessLabel: `GPS ${formatTimeLabel(latestPosition.observedAt)}`,
     coordinateLabel: formatApproxCoordinateLabel(
       latestPosition.latitude,
       latestPosition.longitude,
@@ -308,10 +308,10 @@ export function buildDriverLiveRouteProgress(input: {
         : "ETA en attente",
     note:
       routeMonitoring.state === "unknown"
-        ? "Premier signal route attendu par les operations."
+        ? "Position GPS attendue par Orbi."
         : routeMonitoring.state === "clear"
-          ? "Route coherente sur le dernier signal."
-          : "Une anomalie route est visible cote operations.",
+          ? "Route coherente sur la derniere position."
+          : "Une anomalie route est visible par Orbi.",
     tone:
       routeMonitoring.state === "critical"
         ? "rose"
@@ -428,7 +428,7 @@ export function buildDriverEarningsStatusLabel(input: {
   flow: DriverActiveFlowSummary;
 }) {
   if (input.flow.activeTrip) {
-    return `Revenus synchronises. Mission ${input.flow.primaryStatusLabel}.`;
+    return `Revenus synchronises. Course active: ${input.flow.primaryStatusLabel}.`;
   }
 
   if (input.flow.operationalStatus === "SUSPENDED") {
@@ -436,8 +436,8 @@ export function buildDriverEarningsStatusLabel(input: {
   }
 
   return input.flow.availabilityStatus === "ONLINE"
-    ? "Revenus charges depuis le flux protege. Chauffeur en ligne pour le dispatch."
-    : "Revenus charges depuis le flux protege. Chauffeur hors ligne, historique toujours disponible.";
+    ? "Revenus a jour. Vous etes en ligne pour recevoir des courses."
+    : "Revenus a jour. Passez en ligne pour recevoir des courses.";
 }
 
 export function buildDriverProfileStatusLabel(input: {

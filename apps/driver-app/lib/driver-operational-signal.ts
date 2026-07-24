@@ -38,18 +38,18 @@ export function buildDriverRouteMonitoringLines(
   }
 
   if (routeMonitoring.state === 'unknown') {
-    return ['Ride Check: en attente du premier signal route.'];
+    return ['GPS mission: position en cours de confirmation.'];
   }
 
   if (routeMonitoring.state === 'clear') {
-    return ['Ride Check: trajet coherent sur le dernier signal route.'];
+    return ['GPS mission: route cohérente.'];
   }
 
   return [
-    `Ride Check: ${formatOperationalStatus(routeMonitoring.state)} (${formatOperationalCount(routeMonitoring.alertCount)})`,
+    `GPS mission: ${formatOperationalStatus(routeMonitoring.state)} (${formatOperationalCount(routeMonitoring.alertCount)})`,
     routeMonitoring.lastAlertType
-      ? `Dernier signal: ${formatOperationalStatus(routeMonitoring.lastAlertType)}`
-      : 'Dernier signal: anomalie route',
+      ? `Dernière alerte: ${formatOperationalStatus(routeMonitoring.lastAlertType)}`
+      : 'Dernière alerte: route à contrôler',
   ];
 }
 
@@ -61,13 +61,13 @@ export function buildDriverRouteSafetyBrief(input: {
 
   if (!routeMonitoring) {
     return {
-      eyebrow: 'Ride Check',
-      title: 'Signal route indisponible',
+      eyebrow: 'Sécurité trajet',
+      title: 'GPS en synchronisation',
       description:
-        'La mission reste visible pendant la synchronisation du detail route.',
+        'La course reste disponible pendant la mise à jour de la position.',
       tone: 'amber' as RouteTone,
       actionLabel:
-        'Gardez le telephone ouvert; Orbi verifiera le dernier signal au moment de finaliser.',
+        'Gardez le telephone ouvert; Orbi vérifiera la position au moment de finaliser.',
       blocksCompletion: false,
       insights: [
         { label: 'GPS', value: 'Synchronisation', tone: 'amber' as RouteTone },
@@ -80,13 +80,13 @@ export function buildDriverRouteSafetyBrief(input: {
 
   if (!latestPosition || routeMonitoring.state === 'unknown') {
     return {
-      eyebrow: 'Ride Check',
+      eyebrow: 'Sécurité trajet',
       title: 'Premier signal GPS attendu',
       description:
-        'Le cockpit attend encore le premier retour GPS mission.',
+        'La carte attend encore la première position de mission.',
       tone: 'amber' as RouteTone,
       actionLabel:
-        'Gardez la localisation active; Orbi verifiera le signal recent avant de valider la fin.',
+        'Gardez la localisation active; Orbi vérifiera la position récente avant de valider la fin.',
       blocksCompletion: false,
       insights: [
         { label: 'GPS', value: 'En attente', tone: 'amber' as RouteTone },
@@ -125,10 +125,10 @@ export function buildDriverRouteSafetyBrief(input: {
 
   if (isCritical) {
     return {
-      eyebrow: 'Ride Check critique',
-      title: 'Mission a verifier avant action sensible',
+      eyebrow: 'Sécurité trajet',
+      title: 'Course à contrôler avant finalisation',
       description:
-        'Un signal route critique peut indiquer une perte GPS, une position manipulee ou un trajet incoherent.',
+        'La position GPS indique une anomalie possible: perte réseau, localisation imprécise ou trajet incohérent.',
       tone: 'rose' as RouteTone,
       actionLabel:
         'Arretez les actions non urgentes, contactez le support ou utilisez SOS si necessaire.',
@@ -145,13 +145,13 @@ export function buildDriverRouteSafetyBrief(input: {
 
   if (isWarning) {
     return {
-      eyebrow: 'Ride Check attention',
-      title: 'Signal route a surveiller',
+      eyebrow: 'Sécurité trajet',
+      title: 'Route à surveiller',
       description:
-        'La course peut continuer, mais le dernier signal merite une verification terrain.',
+        'La course peut continuer, mais la position récente mérite une vérification.',
       tone: 'amber' as RouteTone,
       actionLabel:
-        'Confirmez la route, gardez le GPS actif et signalez un incident si le probleme persiste.',
+        'Confirmez la route, gardez le GPS actif et signalez un incident si le problème persiste.',
       blocksCompletion: false,
       insights: buildRouteSafetyInsights({
         routeMonitoring,
@@ -164,10 +164,10 @@ export function buildDriverRouteSafetyBrief(input: {
   }
 
   return {
-    eyebrow: 'Ride Check',
-    title: 'Route coherente',
+    eyebrow: 'Sécurité trajet',
+    title: 'Route cohérente',
     description:
-      'Le dernier signal GPS est exploitable et ne montre pas d anomalie operationnelle.',
+      'La position GPS est exploitable et ne montre pas d anomalie.',
     tone: 'teal' as RouteTone,
     actionLabel: 'Continuez la mission normalement.',
     blocksCompletion: false,

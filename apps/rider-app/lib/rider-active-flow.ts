@@ -157,13 +157,13 @@ export function buildRiderMissionSnapshot(input: {
       helper:
         hasApproachDistance
           ? latestPosition?.observedAt
-            ? `Dernier signal ${formatTimeLabel(latestPosition.observedAt)}`
+            ? `Position mise a jour ${formatTimeLabel(latestPosition.observedAt)}`
             : "Position chauffeur recue"
           : routeMonitoring
             ? routeMonitoring.alertCount > 0
-              ? `${routeMonitoring.alertCount} signal route`
+              ? `${routeMonitoring.alertCount} alerte trajet`
               : "Trajet coherent"
-            : "En attente du premier signal route",
+            : "En attente de la position chauffeur",
     },
     {
       label: "Depart",
@@ -258,8 +258,8 @@ export function buildRiderRouteSignalHealth(input: {
 
   if (Number.isNaN(observedAt.getTime()) || Number.isNaN(now.getTime())) {
     return {
-      freshnessLabel: "Signal recent",
-      note: "Signal route recu, horodatage a verifier.",
+      freshnessLabel: "GPS recent",
+      note: "Position reçue, horodatage en cours de vérification.",
       tone: "amber" as const,
     };
   }
@@ -267,10 +267,10 @@ export function buildRiderRouteSignalHealth(input: {
   const ageSeconds = Math.max(0, Math.round(ageMs / 1000));
   const freshnessLabel =
     ageSeconds < 45
-      ? "Signal maintenant"
+      ? "GPS maintenant"
       : ageSeconds < 120
-        ? `Signal il y a ${Math.round(ageSeconds / 60)} min`
-        : `Signal ancien ${Math.round(ageSeconds / 60)} min`;
+        ? `GPS il y a ${Math.round(ageSeconds / 60)} min`
+        : `GPS ancien ${Math.round(ageSeconds / 60)} min`;
 
   if (input.routeState === "critical") {
     return {
@@ -283,7 +283,7 @@ export function buildRiderRouteSignalHealth(input: {
   if (input.routeState === "warning") {
     return {
       freshnessLabel,
-      note: "Signal route a surveiller: les operations voient aussi cette anomalie.",
+      note: "Position à surveiller: l'équipe Orbi voit aussi cette anomalie.",
       tone: "amber" as const,
     };
   }
@@ -291,7 +291,7 @@ export function buildRiderRouteSignalHealth(input: {
   if (ageSeconds >= 120) {
     return {
       freshnessLabel,
-      note: "Signal chauffeur ancien: Orbi garde le dernier point et attend une nouvelle position.",
+      note: "Position chauffeur ancienne: Orbi garde le dernier point et attend une nouvelle position.",
       tone: "amber" as const,
     };
   }
@@ -300,8 +300,8 @@ export function buildRiderRouteSignalHealth(input: {
     freshnessLabel,
     note:
       input.routeState === "unknown"
-        ? "Le premier signal route est attendu."
-        : "Le dernier signal route est coherent.",
+        ? "La première position chauffeur est attendue."
+        : "La dernière position chauffeur est cohérente.",
     tone: "sky" as const,
   };
 }

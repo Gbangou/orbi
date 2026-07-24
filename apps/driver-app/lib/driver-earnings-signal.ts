@@ -160,13 +160,13 @@ export function buildDriverEarningsTrustSummary(
       settlement.recentPlatformFee,
     ),
     settlementStateLabel: hasAnomaly
-      ? 'A verifier'
+      ? 'Contrôle requis'
       : earnings.recentTrips.length > 0
         ? 'Lisible'
         : 'En attente',
     settlementTone: hasAnomaly ? ('amber' as const) : ('sky' as const),
     note: hasAnomaly
-      ? 'Controle requis: une valeur finance semble incoherente ou hors devise attendue.'
+      ? 'Contrôle requis: une valeur finance semble incohérente ou hors devise attendue.'
       : compensationWeek > 0
         ? `Les revenus incluent ${formatDriverEarningsAmount(compensationWeek)} d indemnites annulation validees par operations cette semaine.`
       : earnings.recentTrips.length > 0

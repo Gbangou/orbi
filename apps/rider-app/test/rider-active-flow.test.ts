@@ -352,7 +352,7 @@ describe('rider-active-flow', () => {
         distanceLabel: '0.4 km restant',
         progressPercent: 78,
         etaLabel: 'Pickup ~1 min',
-        freshnessLabel: 'Signal maintenant',
+        freshnessLabel: 'GPS maintenant',
       }),
     );
     expect(buildRiderDriverTrustSnapshot({ tripDetail })).toEqual(
@@ -372,8 +372,8 @@ describe('rider-active-flow', () => {
         now: '2026-04-19T08:03:20.000Z',
       }),
     ).toEqual({
-      freshnessLabel: 'Signal ancien 3 min',
-      note: 'Signal chauffeur ancien: Orbi garde le dernier point et attend une nouvelle position.',
+      freshnessLabel: 'GPS ancien 3 min',
+      note: 'Position chauffeur ancienne: Orbi garde le dernier point et attend une nouvelle position.',
       tone: 'amber',
     });
 
@@ -384,7 +384,7 @@ describe('rider-active-flow', () => {
         now: '2026-04-19T08:03:20.000Z',
       }),
     ).toEqual({
-      freshnessLabel: 'Signal maintenant',
+      freshnessLabel: 'GPS maintenant',
       note: 'Alerte route critique: restez attentif et gardez le partage actif.',
       tone: 'rose',
     });
