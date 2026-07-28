@@ -363,7 +363,7 @@ describe('DriversService', () => {
     expect(prisma.rideRequest.findMany).toHaveBeenCalledTimes(1);
   });
 
-  it('marks pickup distance source as fallback when coordinates are unavailable', async () => {
+  it('does not expose offers to a driver without a fresh GPS presence', async () => {
     const { prisma, service } = createService();
 
     prisma.driverProfile.findUnique.mockResolvedValue({
@@ -414,13 +414,9 @@ describe('DriversService', () => {
       },
     } as never);
 
-    expect(result[0]).toEqual(
-      expect.objectContaining({
-        pickupDistanceKm: null,
-        pickupDistanceSource: 'DISPATCH_FALLBACK',
-        reservationExpiresAt: expect.any(String),
-      }),
-    );
+    expect(result).toEqual([]);
+    expect(prisma.rideRequest.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.rideRequest.updateMany).not.toHaveBeenCalled();
   });
 
   it('updates driver availability to online when the profile is approved and has an active vehicle', async () => {
@@ -1307,29 +1303,29 @@ describe('DriversService', () => {
     });
     expect(result.summary).toMatchObject({
       currency: 'XOF',
-      today: 6970,
-      week: 6970,
-      month: 6970,
+      today: 7480,
+      week: 7480,
+      month: 7480,
       completedTrips: 2,
-      averagePayout: 3485,
+      averagePayout: 3740,
     });
     expect(result.settlement).toMatchObject({
       currency: 'XOF',
       source: 'COMPLETED_TRIPS',
-      payoutRateBps: 8200,
-      payoutRate: 0.82,
+      payoutRateBps: 8800,
+      payoutRate: 0.88,
       recentTripCount: 2,
       recentGrossFare: 8500,
-      recentNetPayout: 6970,
-      recentPlatformFee: 1530,
+      recentNetPayout: 7480,
+      recentPlatformFee: 1020,
       state: 'RECONCILED',
       anomalies: [],
     });
     expect(result.recentTrips[0]).toMatchObject({
       id: 'trip-1',
-      payout: 4100,
+      payout: 4400,
       grossFare: 5000,
-      platformFee: 900,
+      platformFee: 600,
     });
   });
 
@@ -1383,10 +1379,10 @@ describe('DriversService', () => {
         }),
       }),
     );
-    expect(result.summary.today).toBe(1470);
-    expect(result.summary.week).toBe(1470);
-    expect(result.summary.month).toBe(1470);
-    expect(result.summary.averagePayout).toBe(1230);
+    expect(result.summary.today).toBe(1560);
+    expect(result.summary.week).toBe(1560);
+    expect(result.summary.month).toBe(1560);
+    expect(result.summary.averagePayout).toBe(1320);
     expect(result.adjustments).toMatchObject({
       currency: 'XOF',
       cancellationCompensationToday: 240,
@@ -2328,7 +2324,7 @@ describe('DriversService', () => {
     expect(result.summary.month).toBe(monthPayout);
     expect(result.summary.completedTrips).toBe(3);
     expect(result.summary.averagePayout).toBe(Math.round(monthPayout / 3));
-    expect(result.settlement.payoutRateBps).toBe(8200);
+    expect(result.settlement.payoutRateBps).toBe(8800);
     expect(result.recentTrips).toHaveLength(3);
     expect(result.recentTrips[0]?.id).toBe('trip-today');
     expect(result.recentTrips[0]?.payout).toBe(todayPayout);
@@ -2357,13 +2353,13 @@ describe('DriversService', () => {
     const auth = { user: { driverProfile: { id: 'driver-1' } } };
     const result = await service.getEarnings(auth as never);
 
-    const payoutRate = 8200 / 10_000;
+    const payoutRate = 8800 / 10_000;
     const payout = Math.round(2500 * payoutRate);
     const platformFee = Math.max(0, 2500 - payout);
 
     expect(result.settlement.state).toBe('RECONCILED');
     expect(result.settlement.anomalies).toHaveLength(0);
-    expect(result.settlement.payoutRateBps).toBe(8200);
+    expect(result.settlement.payoutRateBps).toBe(8800);
     expect(result.recentTrips[0]).toMatchObject({
       id: 'trip-a',
       payout,

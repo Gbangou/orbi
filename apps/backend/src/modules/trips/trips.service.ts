@@ -1561,6 +1561,7 @@ export class TripsService {
           driver: {
             select: {
               userId: true,
+              createdAt: true,
             },
           },
           rideRequest: {
@@ -1576,6 +1577,23 @@ export class TripsService {
       }
 
       this.assertTripAccess(auth, trip);
+
+      if (
+        (nextStatus === 'COMPLETED' || nextStatus === 'CANCELLED') &&
+        trip.status === nextStatus
+      ) {
+        const { rider, driver, rideRequest, ...terminalTrip } = trip;
+        return {
+          ...terminalTrip,
+          riderId: terminalTrip.riderId,
+          driverId: terminalTrip.driverId,
+          riderUserId: rider?.userId ?? null,
+          driverUserId: driver?.userId ?? null,
+          driverCreatedAt: driver?.createdAt ?? null,
+          paymentMethod: rideRequest?.paymentMethod ?? null,
+          alreadyTerminal: true,
+        };
+      }
 
       const isRiderEarlyStop =
         auth.user.role === UserRole.RIDER &&
@@ -1846,24 +1864,28 @@ export class TripsService {
         driverId: trip.driverId,
         riderUserId: trip.rider?.userId ?? null,
         driverUserId: trip.driver?.userId ?? null,
+        driverCreatedAt: trip.driver?.createdAt ?? null,
         paymentMethod: trip.rideRequest?.paymentMethod ?? null,
+        alreadyTerminal: false,
       };
     });
 
-    this.realtimeService.publish({
-      channel: 'trip',
-      type: 'trip.updated',
-      entityId: updatedTrip.id,
-      riderId: updatedTrip.riderId,
-      driverId: updatedTrip.driverId,
-      actorRole: auth.user.role,
-      payload: {
-        status: nextStatus,
-        ...(cancellationPolicy ? { cancellationPolicy } : {}),
-      },
-    });
+    if (!updatedTrip.alreadyTerminal) {
+      this.realtimeService.publish({
+        channel: 'trip',
+        type: 'trip.updated',
+        entityId: updatedTrip.id,
+        riderId: updatedTrip.riderId,
+        driverId: updatedTrip.driverId,
+        actorRole: auth.user.role,
+        payload: {
+          status: nextStatus,
+          ...(cancellationPolicy ? { cancellationPolicy } : {}),
+        },
+      });
+    }
 
-    if (updatedTrip.riderUserId) {
+    if (updatedTrip.riderUserId && !updatedTrip.alreadyTerminal) {
       if (nextStatus === 'DRIVER_ARRIVING') {
         void this.notificationsService.enqueue({
           userId: updatedTrip.riderUserId,
@@ -1906,7 +1928,9 @@ export class TripsService {
     const driverEconomics =
       grossFare > 0
         ? calculateDriverEconomics(grossFare, {
-            driverCreatedAt: auth.user.driverProfile?.createdAt,
+            driverCreatedAt:
+              updatedTrip.driverCreatedAt ??
+              auth.user.driverProfile?.createdAt,
           })
         : null;
 

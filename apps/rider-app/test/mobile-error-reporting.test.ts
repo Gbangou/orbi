@@ -7,6 +7,7 @@ import {
 } from '../lib/mobile-error-reporting';
 import { riderSessionStorage } from '../lib/session-storage';
 import { submitMobileErrorReportsWithApi } from '@orbi/api';
+import { restoreRiderSession } from '../lib/auth';
 
 jest.mock('../lib/session-storage', () => ({
   riderSessionStorage: {
@@ -33,6 +34,7 @@ const mockedStorage = jest.mocked(riderSessionStorage);
 const mockedSubmitMobileErrorReportsWithApi = jest.mocked(
   submitMobileErrorReportsWithApi,
 );
+const mockedRestoreRiderSession = jest.mocked(restoreRiderSession);
 
 function buildQueuedReport(overrides: Record<string, unknown> = {}) {
   return {
@@ -71,7 +73,14 @@ describe('rider mobile error reporting queue', () => {
     mockedStorage.setItem.mockReset();
     mockedStorage.removeItem.mockReset();
     mockedSubmitMobileErrorReportsWithApi.mockReset();
+    mockedRestoreRiderSession.mockReset();
+    mockedRestoreRiderSession.mockRejectedValue(new Error('no session in test') as never);
   });
+
+  async function flushPendingPromises() {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await Promise.resolve();
+  }
 
   it('normalizes persisted reports before they can be flushed to the backend', async () => {
     mockedStorage.getItem.mockResolvedValue(
@@ -152,9 +161,7 @@ describe('rider mobile error reporting queue', () => {
     mockedStorage.setItem.mockResolvedValue(undefined);
 
     reportRiderRenderCrash(new Error('boom'), { pathname: '/book' });
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushPendingPromises();
 
     expect(mockedStorage.setItem).toHaveBeenCalledWith(
       riderMobileErrorReportQueueKey,
@@ -171,13 +178,42 @@ describe('rider mobile error reporting queue', () => {
     mockedStorage.setItem.mockResolvedValue(undefined);
 
     reportRiderRenderCrash(new Error('boom'), {});
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushPendingPromises();
 
     expect(mockedStorage.setItem).toHaveBeenCalledWith(
       riderMobileErrorReportQueueKey,
       expect.stringContaining('"surface":"unknown"'),
+    );
+  });
+
+  it('flushes a render crash report immediately when a rider session exists', async () => {
+    mockedStorage.getItem
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(JSON.stringify([buildQueuedReport()]))
+      .mockResolvedValueOnce(JSON.stringify([buildQueuedReport()]));
+    mockedStorage.setItem.mockResolvedValue(undefined);
+    mockedRestoreRiderSession.mockResolvedValue({
+      authClient: { token: 'rider-auth-client' },
+    } as never);
+    mockedSubmitMobileErrorReportsWithApi.mockResolvedValue({
+      acceptedReports: 1,
+      ignoredReports: 0,
+      duplicateReports: 0,
+      supportTicketCount: 1,
+    });
+
+    reportRiderRenderCrash(new Error('boom'), { pathname: '/book' });
+    await flushPendingPromises();
+
+    expect(mockedSubmitMobileErrorReportsWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      expect.objectContaining({
+        reports: [
+          expect.objectContaining({
+            appRole: 'rider',
+          }),
+        ],
+      }),
     );
   });
 });

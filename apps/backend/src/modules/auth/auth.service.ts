@@ -5,7 +5,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AuthProvider, NotificationChannel, ServiceTier, TripStatus, UserRole, VehicleType, VerificationStatus } from '@prisma/client';
+import { AuthProvider, DriverStatus, NotificationChannel, ServiceTier, TripStatus, UserRole, VehicleType, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
@@ -431,6 +431,34 @@ export class AuthService {
       where: { id: session.id },
       data: { revokedAt: new Date() },
     });
+
+    const isCurrentDriverSession =
+      session.id === auth.session.id && auth.user.role === UserRole.DRIVER;
+
+    if (isCurrentDriverSession) {
+      await this.prisma.driverProfile.updateMany({
+        where: {
+          userId: auth.user.id,
+          status: DriverStatus.ONLINE,
+          assignedTrips: {
+            none: {
+              status: {
+                in: [
+                  TripStatus.MATCHED,
+                  TripStatus.DRIVER_ARRIVING,
+                  TripStatus.IN_PROGRESS,
+                ],
+              },
+            },
+          },
+        },
+        data: {
+          status: DriverStatus.OFFLINE,
+          currentLatitude: null,
+          currentLongitude: null,
+        },
+      });
+    }
 
     await this.logAuthEvent(auth.user.id, 'SIGN_OUT', {
       ipAddress: auth.session.ipAddress ?? undefined,

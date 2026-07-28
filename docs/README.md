@@ -27,6 +27,7 @@ ce flux doit changer dans le meme travail.
 | Master prompt et plan leader-parity | `orbi-master-prompt-plan.md` |
 | Roadmap world-class | `world-class-readiness-roadmap.md` |
 | Audit professionnel app/APK du 30 juin 2026 | `professional-app-audit-2026-06-30.md` |
+| Pack business et operations du pilote Orbi 2026 | `orbi-pilot-business-operating-pack-2026.md` |
 
 ## Organisation
 
@@ -50,6 +51,8 @@ Documents d'execution locale, terrain et production:
 Documents qui cadrent les choix marche et operationnels:
 
 - `competitive-benchmark.md`
+- `competitive-pricing-burkina-2026.md`
+- `orbi-pilot-business-operating-pack-2026.md`
 - `orbi-master-prompt-plan.md`
 - `professional-app-audit-2026-06-30.md`
 - `payment-strategy.md`

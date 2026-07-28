@@ -317,8 +317,12 @@ export default function AccountScreen() {
       const wallet = await fetchWalletBalanceWithApi(authClient).catch(() => null);
       setWalletBalance(wallet);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Rechargement échoué';
-      setTopUpError(msg);
+      const feedback = await resolveRiderAppError(error, {
+        surface: 'payments',
+        network: 'Rechargement impossible: verifiez le reseau puis reessayez.',
+        fallback: 'Rechargement impossible pour le moment. Le support peut verifier le wallet.',
+      });
+      setTopUpError(feedback.message);
     } finally {
       setIsTopUpSubmitting(false);
     }

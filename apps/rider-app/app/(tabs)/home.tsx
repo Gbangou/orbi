@@ -155,7 +155,7 @@ function buildMarketplaceTrustLine(option: RideOption) {
 
   const signalLabel = marketplace.signalLabel || 'Estime';
   const supplyLabel =
-    marketplace.nearbyDrivers > 0
+    marketplace.supplySource === 'LIVE' && marketplace.nearbyDrivers > 0
       ? `${marketplace.nearbyDrivers} proches`
       : marketplace.availabilityLabel;
 
@@ -695,7 +695,7 @@ export default function RiderHomeScreen() {
               <View style={styles.servicesBlock}>
                 <View style={styles.servicesHeader}>
                   <Text style={styles.servicesTitle}>Choisir une option</Text>
-                  <Text style={styles.servicesHint}>{realNearbyCount > 0 ? `${realNearbyCount} proches` : 'Temps reel'}</Text>
+                  <Text style={styles.servicesHint}>{realNearbyCount > 0 ? `${realNearbyCount} proches` : 'A confirmer'}</Text>
                 </View>
                 <View style={styles.services}>
                   {options.slice(0, 3).map((opt) => (

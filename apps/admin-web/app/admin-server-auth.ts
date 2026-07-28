@@ -7,8 +7,6 @@ import {
   type OrbiApiClient,
 } from '@orbi/api';
 import {
-  orbiDemoAccessEnabled,
-  orbiDemoAccounts,
   orbiRuntimeConfig,
 } from '@orbi/config';
 import { cookies } from 'next/headers';
@@ -49,7 +47,7 @@ export function buildAdminSessionCookieOptions() {
 }
 
 export function canUseAdminDemoAccess() {
-  return orbiDemoAccessEnabled;
+  return false;
 }
 
 export function isAdminRole(role: string) {
@@ -138,36 +136,13 @@ export async function getAdminServerAuthSession() {
     }
   }
 
-  if (!canUseAdminDemoAccess()) {
-    if (isProductionRuntime() && legacyToken) {
-      tryPersistCookieWrite(() =>
-        cookieStore.delete(legacyAdminSessionCookieName),
-      );
-    }
-
-    throw new AdminServerAuthRequiredError();
-  }
-
-  const session = await signInWithApi(baseClient, orbiDemoAccounts.admin);
-
   if (isProductionRuntime() && legacyToken) {
     tryPersistCookieWrite(() =>
       cookieStore.delete(legacyAdminSessionCookieName),
     );
   }
 
-  tryPersistCookieWrite(() =>
-    cookieStore.set(
-      activeCookieName,
-      session.sessionToken,
-      buildAdminSessionCookieOptions(),
-    ),
-  );
-
-  return {
-    authClient: baseClient.withAuthToken(session.sessionToken),
-    sessionToken: session.sessionToken,
-  };
+  throw new AdminServerAuthRequiredError();
 }
 
 export async function createAdminServerSessionFromCredentials(payload: {

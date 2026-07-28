@@ -1,4 +1,4 @@
-export const DEFAULT_PLATFORM_COMMISSION_RATE = 0.18;
+export const DEFAULT_PLATFORM_COMMISSION_RATE = 0.12;
 export const DRIVER_COMMISSION_STEP_XOF = 10;
 
 export function resolveDriverOnboardingDays(
@@ -18,7 +18,6 @@ export function resolveDriverOnboardingDays(
 export function resolveDriverCommissionRate(driverOnboardingDays?: number) {
   if (driverOnboardingDays === undefined) return DEFAULT_PLATFORM_COMMISSION_RATE;
   if (driverOnboardingDays <= 30) return 0.10;
-  if (driverOnboardingDays <= 90) return 0.15;
   return DEFAULT_PLATFORM_COMMISSION_RATE;
 }
 

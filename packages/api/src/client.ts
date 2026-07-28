@@ -100,6 +100,29 @@ function isNetworkLevelError(error: unknown): boolean {
   return isLikelyOrbiNetworkError(error);
 }
 
+function isLikelyOrbiConnectivityFailure(error: unknown): boolean {
+  if (isLikelyOrbiNetworkError(error)) {
+    return true;
+  }
+
+  if (
+    error &&
+    typeof error === "object" &&
+    "name" in error &&
+    typeof error.name === "string" &&
+    error.name.toLowerCase() === "aborterror"
+  ) {
+    return true;
+  }
+
+  const message = normalizeOrbiErrorMessage(error);
+
+  return (
+    message.includes("aborted") ||
+    message.includes("aborterror")
+  );
+}
+
 function retryDelayMs(attempt: number): number {
   return Math.min(1000 * Math.pow(2, attempt - 1), 8000);
 }
@@ -157,7 +180,11 @@ function resolveApiErrorMessage(payload: unknown) {
   return null;
 }
 
-export { isLikelyOrbiNetworkError, normalizeOrbiErrorMessage };
+export {
+  isLikelyOrbiNetworkError,
+  isLikelyOrbiConnectivityFailure,
+  normalizeOrbiErrorMessage,
+};
 
 // These values mirror apiConfig in routes.ts — kept here so OrbiApiClient
 // has no import dependency on routes.ts (avoids circular imports).

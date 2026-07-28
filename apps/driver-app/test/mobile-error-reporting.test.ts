@@ -6,6 +6,7 @@ import {
 } from '../lib/mobile-error-reporting';
 import { driverSessionStorage } from '../lib/session-storage';
 import { submitMobileErrorReportsWithApi } from '@orbi/api';
+import { restoreDriverSession } from '../lib/auth';
 
 jest.mock('../lib/session-storage', () => ({
   driverSessionStorage: {
@@ -32,6 +33,7 @@ const mockedStorage = jest.mocked(driverSessionStorage);
 const mockedSubmitMobileErrorReportsWithApi = jest.mocked(
   submitMobileErrorReportsWithApi,
 );
+const mockedRestoreDriverSession = jest.mocked(restoreDriverSession);
 
 function buildQueuedReport(overrides: Record<string, unknown> = {}) {
   return {
@@ -67,7 +69,14 @@ describe('driver mobile error reporting queue', () => {
     mockedStorage.setItem.mockReset();
     mockedStorage.removeItem.mockReset();
     mockedSubmitMobileErrorReportsWithApi.mockReset();
+    mockedRestoreDriverSession.mockReset();
+    mockedRestoreDriverSession.mockRejectedValue(new Error('no session in test') as never);
   });
+
+  async function flushPendingPromises() {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await Promise.resolve();
+  }
 
   it('keeps only normalized driver reports from persisted storage', async () => {
     mockedStorage.getItem.mockResolvedValue(
@@ -129,9 +138,7 @@ describe('driver mobile error reporting queue', () => {
     mockedStorage.setItem.mockResolvedValue(undefined);
 
     reportDriverRenderCrash(new Error('boom'), { pathname: '/(tabs)/offres' });
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushPendingPromises();
 
     expect(mockedStorage.setItem).toHaveBeenCalledWith(
       driverMobileErrorReportQueueKey,
@@ -140,6 +147,37 @@ describe('driver mobile error reporting queue', () => {
     expect(mockedStorage.setItem).not.toHaveBeenCalledWith(
       driverMobileErrorReportQueueKey,
       expect.stringContaining('"surface":"unknown"'),
+    );
+  });
+
+  it('flushes a render crash report immediately when a driver session exists', async () => {
+    mockedStorage.getItem
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(JSON.stringify([buildQueuedReport()]))
+      .mockResolvedValueOnce(JSON.stringify([buildQueuedReport()]));
+    mockedStorage.setItem.mockResolvedValue(undefined);
+    mockedRestoreDriverSession.mockResolvedValue({
+      authClient: { token: 'driver-auth-client' },
+    } as never);
+    mockedSubmitMobileErrorReportsWithApi.mockResolvedValue({
+      acceptedReports: 1,
+      ignoredReports: 0,
+      duplicateReports: 0,
+      supportTicketCount: 1,
+    });
+
+    reportDriverRenderCrash(new Error('boom'), { pathname: '/(tabs)/offres' });
+    await flushPendingPromises();
+
+    expect(mockedSubmitMobileErrorReportsWithApi).toHaveBeenCalledWith(
+      { token: 'driver-auth-client' },
+      expect.objectContaining({
+        reports: [
+          expect.objectContaining({
+            appRole: 'driver',
+          }),
+        ],
+      }),
     );
   });
 });

@@ -45,6 +45,7 @@ export function reportRiderRenderCrash(
   })
     .then(() => import('./auth'))
     .then(({ restoreRiderSession }) => restoreRiderSession())
+    .then((session) => flushRiderMobileErrorReports(session.authClient))
     .catch(() => undefined);
 }
 

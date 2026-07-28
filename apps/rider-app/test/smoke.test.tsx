@@ -42,6 +42,7 @@ import RiderAuthScreen from '../app/auth';
 import RiderHomeScreen from '../app/(tabs)/home';
 import BookingScreen from '../app/book';
 import TripsScreen from '../app/(tabs)/trips';
+import { PlaceSearch } from '../lib/place-search';
 import {
   collectText,
   expectText,
@@ -52,6 +53,32 @@ import {
   pressByLabel,
   renderScreen,
 } from '../../../scripts/testing/mobile/test-utils';
+
+const fieldTestDestination = {
+  id: 'field-destination-patte-doie',
+  label: 'Patte d Oie',
+  address: 'Patte d Oie, Ouagadougou',
+  coordinates: {
+    latitude: 12.334,
+    longitude: -1.537,
+  },
+};
+
+async function selectBookingDestination(renderer: {
+  root: ReactTestInstance;
+}) {
+  const destinationSearch = renderer.root
+    .findAllByType(PlaceSearch)
+    .find((node) => node.props.placeholder === 'Où allez-vous ?');
+
+  if (!destinationSearch) {
+    throw new Error('Destination search field not found.');
+  }
+
+  await invokeInAct(() => {
+    destinationSearch.props.onSelectPlace(fieldTestDestination);
+  });
+}
 
 jest.mock('../lib/auth', () => ({
   createRiderPublicClient: jest.fn(() => ({ kind: 'mock-client' })),
@@ -680,7 +707,7 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<BookingScreen />);
 
     await flushMicrotasks();
-    await pressByText(renderer, 'Maison');
+    await selectBookingDestination(renderer);
     await pressByLabel(renderer, 'booking-cta');
     await flushMicrotasks();
 
@@ -1011,7 +1038,7 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<BookingScreen />);
 
     await flushMicrotasks();
-    await pressByText(renderer, 'Maison');
+    await selectBookingDestination(renderer);
     const confirmButton = renderer.root.find(
       (node: ReactTestInstance) =>
         (node.type as unknown) === 'Pressable' &&
@@ -1595,6 +1622,77 @@ describe('rider smoke flows', () => {
       renderer,
       'Annulation apres chauffeur mobilise. Revue support ouverte: frais suggere 300 XOF, 240 XOF pour proteger le chauffeur si le contexte le confirme. Dossier support ticket-c ouvert.',
     );
+  });
+
+  it('stops an in-progress rider trip and opens the receipt with the adjusted fare', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchMyTrips
+      .mockResolvedValueOnce(buildRiderRealtimeHistory('IN_PROGRESS') as never)
+      .mockResolvedValueOnce({
+        role: 'RIDER',
+        stats: {
+          activeTrips: 0,
+          completedTrips: 5,
+          cancelledTrips: 0,
+          totalAmount: 20500,
+          currency: 'XOF',
+        },
+        pendingRequests: [],
+        recentTrips: [
+          {
+            id: 'trip-rider-1',
+            pickupAddress: 'Universite Joseph Ki-Zerbo',
+            destinationAddress: 'Ouaga 2000',
+            status: 'COMPLETED',
+            amount: 2100,
+            currency: 'XOF',
+            counterpartyName: 'Issa Driver',
+            vehicleLabel: 'Yamaha Crypton',
+            completedAt: '2026-04-19T08:18:00.000Z',
+            createdAt: '2026-04-19T08:00:00.000Z',
+          },
+        ],
+      } as never);
+    mockedFetchTripDetail.mockResolvedValue(
+      {
+        ...buildTripDetail(['timeline-1'], ['Course demarree']),
+        trip: {
+          ...buildTripDetail(['timeline-1'], ['Course demarree']).trip,
+          status: 'IN_PROGRESS',
+        },
+      } as never,
+    );
+    mockedUpdateTripStatusWithApi.mockResolvedValue({
+      trip: {
+        id: 'trip-rider-1',
+        status: 'COMPLETED',
+        actualFare: 2100,
+      },
+    } as never);
+
+    const renderer = await renderScreen(<ActivityScreen />);
+    await pressByLabel(renderer, 'activity-refresh');
+    await flushMicrotasks();
+    await pressByText(renderer, 'Arreter maintenant');
+    const stopOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
+      | Array<{ text: string; onPress?: () => void }>
+      | undefined;
+    await invokeInAct(async () => {
+      stopOptions?.find((option) => option.text === 'Confirmer l arret')?.onPress?.();
+      await flushMicrotasks();
+    });
+
+    expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      'trip-rider-1',
+      'COMPLETED',
+      'Arret demande par le passager',
+    );
+    expectText(renderer, 'Course arretee. Montant a payer: 2 100 F CFA.');
+    expect(router.replace).toHaveBeenCalledWith({
+      pathname: '/receipt',
+      params: { tripId: 'trip-rider-1' },
+    });
   });
 
   it('reports a rider incident from activity', async () => {

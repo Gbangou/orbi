@@ -41,8 +41,8 @@ function createService() {
 /**
  * Référence: trajet standard Ouagadougou 5.8 km / 16 min
  * Moto Urban Core fallback:
- *   base=300, 90×5.8=522, 18×16=288, fee=100, min=750
- *   Sous-total: 300+522+288+100 = 1 210 XOF
+ *   base=200, 110×5.8=638, 20×16=320, fee=50, min=650
+ *   Sous-total: 200+638+320+50 = 1 208 XOF
  */
 const REFERENCE_MOTO_QUOTE = {
   vehicleType: 'MOTORCYCLE' as const,
@@ -72,24 +72,24 @@ describe('PricingService — commission tiers chauffeur', () => {
     expect(quote.driverEconomics.commissionRate).toBe(0.10);
   });
 
-  it('applique 15% de J31 à J90 (phase de croissance)', async () => {
+  it('applique 12% a partir de J31 pendant le pilote', async () => {
     const { service } = createService();
     const q31 = await service.quote({ ...REFERENCE_MOTO_QUOTE, driverOnboardingDays: 31 });
     const q90 = await service.quote({ ...REFERENCE_MOTO_QUOTE, driverOnboardingDays: 90 });
-    expect(q31.driverEconomics.commissionRate).toBe(0.15);
-    expect(q90.driverEconomics.commissionRate).toBe(0.15);
+    expect(q31.driverEconomics.commissionRate).toBe(0.12);
+    expect(q90.driverEconomics.commissionRate).toBe(0.12);
   });
 
-  it('applique 18% steady-state à partir de J91', async () => {
+  it('reste a 12% a partir de J91 tant que le pilote n a pas valide une hausse', async () => {
     const { service } = createService();
     const quote = await service.quote({ ...REFERENCE_MOTO_QUOTE, driverOnboardingDays: 91 });
-    expect(quote.driverEconomics.commissionRate).toBe(0.18);
+    expect(quote.driverEconomics.commissionRate).toBe(0.12);
   });
 
-  it('applique 18% quand driverOnboardingDays est absent', async () => {
+  it('applique 12% quand driverOnboardingDays est absent', async () => {
     const { service } = createService();
     const quote = await service.quote(REFERENCE_MOTO_QUOTE);
-    expect(quote.driverEconomics.commissionRate).toBe(0.18);
+    expect(quote.driverEconomics.commissionRate).toBe(0.12);
   });
 
   it('garantit que driverPayout = estimatedFare - commissionAmount', async () => {
@@ -105,8 +105,8 @@ describe('PricingService — commission tiers chauffeur', () => {
     const { service } = createService();
     const quote = await service.quote(REFERENCE_MOTO_QUOTE);
 
-    expect(quote.driverEconomics.driverShareRate).toBeGreaterThanOrEqual(0.82);
-    expect(quote.driverEconomics.platformTakeRate).toBeLessThanOrEqual(0.18);
+    expect(quote.driverEconomics.driverShareRate).toBeGreaterThanOrEqual(0.88);
+    expect(quote.driverEconomics.platformTakeRate).toBeLessThanOrEqual(0.12);
     expect(quote.driverEconomics.driverPayoutPerKm).toBeGreaterThan(0);
     expect(quote.driverEconomics.driverPayoutPerMinute).toBeGreaterThan(0);
     expect(quote.driverEconomics.commissionAmount % 10).toBe(0);
@@ -115,7 +115,7 @@ describe('PricingService — commission tiers chauffeur', () => {
       quote.driverEconomics.rawCommissionAmount,
     );
     expect(quote.driverEconomics.wealthDistributionBand).toBe(
-      'STANDARD_FAIR_SHARE',
+      'DRIVER_GROWTH_SUPPORT',
     );
   });
 
@@ -133,8 +133,8 @@ describe('PricingService — commission tiers chauffeur', () => {
 // ── Tarifs fallback calibrés Burkina Faso ─────────────────────────────────────
 
 describe('PricingService — tarifs fallback Burkina Faso', () => {
-  // Moto Urban Core : 300 + 90/km + 18/min + 100 booking = 1 210 XOF
-  it('retourne le tarif Moto Urban Core attendu (1 210 XOF)', async () => {
+  // Moto Urban Core : 200 + 110/km + 20/min + 50 booking = 1 208 XOF
+  it('retourne le tarif Moto Urban Core attendu pour le pilote', async () => {
     const { service } = createService();
     const quote = await service.quote({
       vehicleType: 'MOTORCYCLE',
@@ -146,10 +146,11 @@ describe('PricingService — tarifs fallback Burkina Faso', () => {
       city: 'OUAGADOUGOU',
       districtProfile: 'UNIVERSITY',
     });
-    // Tarif de base sans ajustements: 300 + 522 + 288 + 100 = 1 210
-    expect(quote.fareBreakdown.baseFare).toBe(300);
-    expect(quote.fareBreakdown.bookingFee).toBe(100);
-    expect(quote.estimatedFare).toBeGreaterThanOrEqual(750); // >= minimum
+    expect(quote.fareBreakdown.baseFare).toBe(200);
+    expect(quote.fareBreakdown.bookingFee).toBe(50);
+    expect(quote.fareBreakdown.distanceCharge).toBe(638);
+    expect(quote.fareBreakdown.timeCharge).toBe(320);
+    expect(quote.estimatedFare).toBeGreaterThanOrEqual(650);
   });
 
   it('applique un tarif plus bas en SEMI_URBAN (zone peripherique)', async () => {
@@ -178,7 +179,7 @@ describe('PricingService — tarifs fallback Burkina Faso', () => {
     expect(car.estimatedFare).toBeGreaterThan(moto.estimatedFare);
   });
 
-  it('fallback Car SEMI_URBAN: baseFare = 600', async () => {
+  it('fallback Car SEMI_URBAN: baseFare = 450', async () => {
     const { service } = createService();
     const quote = await service.quote({
       vehicleType: 'CAR',
@@ -190,7 +191,7 @@ describe('PricingService — tarifs fallback Burkina Faso', () => {
       city: 'BOBO_DIOULASSO',
       districtProfile: 'RESIDENTIAL_PERIPHERAL',
     });
-    expect(quote.fareBreakdown.baseFare).toBe(600);
+    expect(quote.fareBreakdown.baseFare).toBe(450);
     expect(quote.serviceTier).toBe(ServiceTier.CAR_STANDARD);
   });
 
@@ -247,7 +248,7 @@ describe('PricingService — tarifs fallback Burkina Faso', () => {
 // ── Protection minimum fare ───────────────────────────────────────────────────
 
 describe('PricingService — protection minimum fare', () => {
-  it('protège les très courts trajets moto (< 750 XOF)', async () => {
+  it('protège les très courts trajets moto (< 650 XOF)', async () => {
     const { service } = createService();
     const quote = await service.quote({
       vehicleType: 'MOTORCYCLE',
@@ -258,7 +259,7 @@ describe('PricingService — protection minimum fare', () => {
       city: 'OUAGADOUGOU',
       districtProfile: 'UNIVERSITY',
     });
-    expect(quote.estimatedFare).toBeGreaterThanOrEqual(750);
+    expect(quote.estimatedFare).toBeGreaterThanOrEqual(650);
     expect(quote.fareBreakdown.minimumFareApplied).toBe(true);
   });
 
@@ -272,7 +273,7 @@ describe('PricingService — protection minimum fare', () => {
     expect(quote.fareBreakdown.minimumFareApplied).toBe(false);
   });
 
-  it('protège le minimum Car Standard (>= 1600 Urban Core)', async () => {
+  it('protège le minimum Car Standard (>= 1500 Urban Core)', async () => {
     const { service } = createService();
     const quote = await service.quote({
       vehicleType: 'CAR',
@@ -283,7 +284,7 @@ describe('PricingService — protection minimum fare', () => {
       city: 'OUAGADOUGOU',
       districtProfile: 'CBD',
     });
-    expect(quote.estimatedFare).toBeGreaterThanOrEqual(1600);
+    expect(quote.estimatedFare).toBeGreaterThanOrEqual(1500);
     expect(quote.fareBreakdown.minimumFareApplied).toBe(true);
   });
 });
@@ -291,18 +292,18 @@ describe('PricingService — protection minimum fare', () => {
 // ── Surge pricing ─────────────────────────────────────────────────────────────
 
 describe('PricingService — surge pricing calibré Burkina Faso', () => {
-  it('cap moto a 1.35x pour preserver accessibilite', async () => {
+  it('limite la moto a 1.30x pour preserver accessibilite', async () => {
     const { service } = createService();
     const quote = await service.quote({
       ...REFERENCE_MOTO_QUOTE,
       demandLevel: 'PEAK',
       isPeakHour: true,
     });
-    expect(quote.fareBreakdown.demandMultiplier).toBeLessThanOrEqual(1.35);
-    expect(quote.fareBreakdown.surgeCapApplied).toBe(true);
+    expect(quote.fareBreakdown.demandMultiplier).toBeLessThanOrEqual(1.30);
+    expect(quote.fareBreakdown.surgeCapApplied).toBe(false);
   });
 
-  it('cap voiture à 1.45x', async () => {
+  it('cap voiture à 1.30x', async () => {
     const { service } = createService();
     const quote = await service.quote({
       vehicleType: 'CAR',
@@ -315,7 +316,7 @@ describe('PricingService — surge pricing calibré Burkina Faso', () => {
       demandLevel: 'PEAK',
       isPeakHour: true,
     });
-    expect(quote.fareBreakdown.demandMultiplier).toBeLessThanOrEqual(1.45);
+    expect(quote.fareBreakdown.demandMultiplier).toBeLessThanOrEqual(1.30);
   });
 
   it('NORMAL demand -> multiplicateur = 1.0', async () => {
@@ -329,7 +330,7 @@ describe('PricingService — surge pricing calibré Burkina Faso', () => {
     expect(quote.fareBreakdown.surgeCapApplied).toBe(false);
   });
 
-  it('HIGH demand avec heure de pointe -> multiplicateur entre 1.1 et 1.2', async () => {
+  it('HIGH demand avec heure de pointe -> multiplicateur entre 1.1 et 1.15', async () => {
     const { service } = createService();
     const quote = await service.quote({
       ...REFERENCE_MOTO_QUOTE,
@@ -337,7 +338,7 @@ describe('PricingService — surge pricing calibré Burkina Faso', () => {
       isPeakHour: true,
     });
     expect(quote.fareBreakdown.demandMultiplier).toBeGreaterThan(1);
-    expect(quote.fareBreakdown.demandMultiplier).toBeLessThanOrEqual(1.35);
+    expect(quote.fareBreakdown.demandMultiplier).toBeLessThanOrEqual(1.15);
   });
 
   it('surgeAmount = 0 quand pas de surge', async () => {

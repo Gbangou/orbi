@@ -794,6 +794,119 @@ describe('TripsService', () => {
     );
   });
 
+  it('treats repeated driver completion as an idempotent success without double-counting the driver', async () => {
+    const { prisma, realtimeService, service } = createService();
+    const driverAuth = {
+      user: {
+        id: 'user-driver-repeat',
+        role: 'DRIVER',
+        driverProfile: {
+          id: 'driver-repeat',
+          createdAt: new Date('2026-07-28T10:00:00.000Z'),
+        },
+      },
+    } as never;
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-repeat-complete',
+      rideRequestId: 'request-repeat-complete',
+      riderId: 'rider-repeat',
+      driverId: 'driver-repeat',
+      status: 'COMPLETED',
+      pickupAddress: 'Marche Katr yaar, Ouagadougou',
+      destinationAddress: 'Plateau omnisports de Pissy',
+      actualFare: 6140,
+      distanceKm: 8.4,
+      durationMinutes: 14,
+      currency: 'XOF',
+      startedAt: new Date('2026-07-28T10:45:00.000Z'),
+      completedAt: new Date('2026-07-28T11:00:00.000Z'),
+      createdAt: new Date('2026-07-28T10:30:00.000Z'),
+      events: [buildFreshDriverRouteEvent({ distanceToDestinationKm: 0 })],
+      rider: { userId: 'user-rider-repeat' },
+      driver: {
+        userId: 'user-driver-repeat',
+        createdAt: new Date('2026-07-28T10:00:00.000Z'),
+      },
+      rideRequest: { paymentMethod: 'MOBILE_MONEY' },
+    });
+
+    const result = await service.updateStatus(
+      driverAuth,
+      'trip-repeat-complete',
+      'COMPLETED',
+    );
+
+    expect(result.trip.status).toBe('COMPLETED');
+    expect(result.trip.driverPayout).toBe(5530);
+    expect(result.trip.platformFee).toBe(610);
+    expect(prisma.trip.update).not.toHaveBeenCalled();
+    expect(prisma.rideRequest.update).not.toHaveBeenCalled();
+    expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+    expect(realtimeService.publish).not.toHaveBeenCalled();
+  });
+
+  it('uses the assigned driver creation date for rider early-stop payout economics', async () => {
+    const { prisma, service } = createService();
+    const riderAuth = {
+      user: {
+        id: 'user-rider-founder-stop',
+        role: 'RIDER',
+        riderProfile: {
+          id: 'rider-founder-stop',
+        },
+      },
+    } as never;
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-founder-stop',
+      rideRequestId: 'request-founder-stop',
+      riderId: 'rider-founder-stop',
+      driverId: 'driver-founder-stop',
+      status: 'IN_PROGRESS',
+      pickupAddress: 'Marche Katr yaar, Ouagadougou',
+      destinationAddress: 'Plateau omnisports de Pissy',
+      actualFare: 6140,
+      distanceKm: 8.4,
+      durationMinutes: 14,
+      currency: 'XOF',
+      startedAt: new Date('2026-07-28T10:45:00.000Z'),
+      completedAt: null,
+      createdAt: new Date('2026-07-28T10:30:00.000Z'),
+      events: [buildFreshDriverRouteEvent({ distanceToDestinationKm: 0 })],
+      rider: { userId: 'user-rider-founder-stop' },
+      driver: {
+        userId: 'user-driver-founder-stop',
+        createdAt: new Date(),
+      },
+      rideRequest: { paymentMethod: 'MOBILE_MONEY' },
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-founder-stop',
+      rideRequestId: 'request-founder-stop',
+      riderId: 'rider-founder-stop',
+      driverId: 'driver-founder-stop',
+      status: 'COMPLETED',
+      actualFare: 6140,
+      currency: 'XOF',
+      completedAt: new Date('2026-07-28T11:00:00.000Z'),
+    });
+    prisma.rideRequest.update.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+
+    const result = await service.updateStatus(
+      riderAuth,
+      'trip-founder-stop',
+      'COMPLETED',
+      'RIDER_REQUESTED_STOP',
+    );
+
+    expect(result.trip.status).toBe('COMPLETED');
+    expect(result.trip.commissionRate).toBe(0.1);
+    expect(result.trip.platformFee).toBe(610);
+    expect(result.trip.driverPayout).toBe(5530);
+  });
+
   it('prepares a trusted-contact share link when the rider enables all-trip sharing', async () => {
     const { prisma, realtimeService, service } = createService();
 

@@ -40,6 +40,7 @@ if ($AdminUrl) {
 }
 
 $readyUrl = "$ApiUrl/api/v1/health/ready"
+$healthUrl = "$ApiUrl/api/v1/health"
 $deadline = (Get-Date).AddSeconds($TimeoutSec)
 $lastError = $null
 
@@ -70,6 +71,16 @@ while ((Get-Date) -lt $deadline) {
     $lastError = "HTTP $($response.StatusCode), status=$($body.status)"
   } catch {
     $lastError = $_.Exception.Message
+    try {
+      $healthResponse = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 15
+      $healthBody = $healthResponse.Content | ConvertFrom-Json
+      $dependencies = $healthBody.dependencies
+      if ($dependencies) {
+        $lastError = "$lastError. Health status=$($healthBody.status), database=$($dependencies.database), rateLimit=$($dependencies.rateLimit), realtime=$($dependencies.realtime), driverReservationExpiry=$($dependencies.driverReservationExpiry)"
+      }
+    } catch {
+      $lastError = "$lastError. Health details unavailable: $($_.Exception.Message)"
+    }
   }
 
   Write-Host "[wait] Not ready yet: $lastError" -ForegroundColor Yellow

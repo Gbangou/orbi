@@ -1405,7 +1405,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   tripRoot: { flex: 1 },
   tripStatusOverlay: {
     position: 'absolute',
-    top: 44,
+    top: 52,
     left: 12,
     right: 12,
     zIndex: 100,
@@ -1416,7 +1416,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    maxHeight: '74%',
+    maxHeight: '70%',
     backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -1430,7 +1430,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   tripSheetContent: {
     gap: 14,
-    paddingBottom: 42,
+    paddingBottom: 128,
   },
   sheetHandle: {
     width: 38,
@@ -1696,6 +1696,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 110,
     gap: 12,
   },
   headerLiveText: {

@@ -308,8 +308,25 @@ function Build-App {
     New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
     $ApkDst = "$DistDir\orbi-$AppName-mvp.apk"
     Copy-Item $ApkSrc $ApkDst -Force
+    $ApkFile = Get-Item $ApkDst
+    $ApkHash = (Get-FileHash -Algorithm SHA256 $ApkDst).Hash.ToLowerInvariant()
+    $AppConfig = Get-Content "$AppDir\app.json" -Raw | ConvertFrom-Json
+    $BuildProof = [ordered]@{
+        app = $AppName
+        apkPath = "dist/orbi-$AppName-mvp.apk"
+        package = $AppConfig.expo.android.package
+        version = $AppConfig.expo.version
+        versionCode = $AppConfig.expo.android.versionCode
+        apiBaseUrl = $ResolvedApiBaseUrl
+        apiVersion = $EnvVars.EXPO_PUBLIC_API_VERSION
+        builtAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+        sizeBytes = $ApkFile.Length
+        sha256 = $ApkHash
+    }
+    $BuildProof | ConvertTo-Json -Depth 5 | Set-Content "$DistDir\orbi-$AppName-mvp.apk.json" -Encoding UTF8
 
     Write-Host "  APK -> dist\orbi-$AppName-mvp.apk" -ForegroundColor Green
+    Write-Host "  proof -> dist\orbi-$AppName-mvp.apk.json" -ForegroundColor Green
     Set-Location $Root
 }
 
@@ -330,22 +347,17 @@ Assert-NoReactNativeSvg -Scope "workspace mobile dependencies" -Paths @(
 
 # Variables d'environnement communes aux deux apps
 $CommonEnv = @{
-    EXPO_PUBLIC_API_BASE_URL         = $ResolvedApiBaseUrl
-    EXPO_PUBLIC_API_VERSION          = "v1"
-    EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS = "true"
+    EXPO_PUBLIC_API_BASE_URL = $ResolvedApiBaseUrl
+    EXPO_PUBLIC_API_VERSION  = "v1"
 }
 
 if ($App -eq 'rider' -or $App -eq 'all') {
-    Build-App -AppName 'rider' -AppDir "$Root\apps\rider-app" -EnvVars ($CommonEnv + @{
-            EXPO_PUBLIC_ORBI_DEMO_RIDER_EMAIL    = "testpassager@orbi.test"
-            EXPO_PUBLIC_ORBI_DEMO_RIDER_PASSWORD = "TestOrbi2026!"
-        })
+    $RiderEnv = $CommonEnv.Clone()
+    Build-App -AppName 'rider' -AppDir "$Root\apps\rider-app" -EnvVars $RiderEnv
 }
 if ($App -eq 'driver' -or $App -eq 'all') {
-    Build-App -AppName 'driver' -AppDir "$Root\apps\driver-app" -EnvVars ($CommonEnv + @{
-            EXPO_PUBLIC_ORBI_DEMO_DRIVER_EMAIL    = "testchauffeur@orbi.test"
-            EXPO_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD = "TestOrbi2026!"
-        })
+    $DriverEnv = $CommonEnv.Clone()
+    Build-App -AppName 'driver' -AppDir "$Root\apps\driver-app" -EnvVars $DriverEnv
 }
 
 Write-Host ""

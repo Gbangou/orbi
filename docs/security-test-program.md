@@ -127,12 +127,14 @@ pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\testing\security
    d'un autre role et d'un autre proprietaire.
 2. Paiement: modifier montant, devise, reference provider, webhook secret,
    signature, replay et refund doit rester idempotent et audite.
-3. Geo/fraude: un chauffeur ne doit pas pouvoir gagner argent/statut avec une
+3. Geo/fraude: un chauffeur ne doit pas pouvoir masquer argent/statut avec une
    position impossible, un trajet circulaire suspect ou une presence manipulee.
-   La finalisation chauffeur d'une course `IN_PROGRESS` est bloquee cote
-   mobile et cote API si le dernier signal route chauffeur est absent, trop
-   ancien, trop imprecis, physiquement impossible ou associe a une alerte route
-   critique; la resolution manuelle reste reservee aux operations/admin.
+   La finalisation chauffeur d'une course `IN_PROGRESS` doit toujours atteindre
+   le backend afin de ne pas bloquer une vraie course terminee; les signaux GPS
+   absents, anciens, imprecis, impossibles ou critiques sont conserves en
+   `routeCompletionReview`, visibles ops et investigables apres finalisation.
+   Les corrections de payout, suspension ou litige restent reservees aux
+   operations/admin.
 4. Admin: toute action finance, onboarding, support, pricing ou incident doit
    etre role-bound, no-store, auditee et visible en realtime ops.
 5. Mobile: aucun token/session, mot de passe, secret ou header Authorization ne

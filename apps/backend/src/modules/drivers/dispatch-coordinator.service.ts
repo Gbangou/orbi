@@ -62,6 +62,16 @@ function roundDistance(value: number | null) {
   return Math.round(value * 10) / 10;
 }
 
+const fieldPresenceFreshnessMs = 90_000;
+
+function freshPresenceWhere(now = new Date()) {
+  return {
+    currentLatitude: { not: null },
+    currentLongitude: { not: null },
+    updatedAt: { gte: new Date(now.getTime() - fieldPresenceFreshnessMs) },
+  };
+}
+
 @Injectable()
 export class DispatchCoordinator {
   constructor(
@@ -220,6 +230,19 @@ export class DispatchCoordinator {
       return [];
     }
 
+    const driverPresenceUpdatedAt =
+      driverProfile.updatedAt instanceof Date
+        ? driverProfile.updatedAt.getTime()
+        : Date.now();
+
+    if (
+      toNumber(driverProfile.currentLatitude) === null ||
+      toNumber(driverProfile.currentLongitude) === null ||
+      driverPresenceUpdatedAt < Date.now() - fieldPresenceFreshnessMs
+    ) {
+      return [];
+    }
+
     if (driverProfile.verificationStatus !== VerificationStatus.APPROVED) {
       return [];
     }
@@ -260,6 +283,7 @@ export class DispatchCoordinator {
       where: {
         status: DriverStatus.ONLINE,
         verificationStatus: VerificationStatus.APPROVED,
+        ...freshPresenceWhere(),
       },
     });
 
@@ -647,6 +671,7 @@ export class DispatchCoordinator {
       where: {
         status: DriverStatus.ONLINE,
         verificationStatus: VerificationStatus.APPROVED,
+        ...freshPresenceWhere(),
         vehicles: {
           some: {
             isActive: true,
@@ -690,6 +715,7 @@ export class DispatchCoordinator {
       where: {
         status: DriverStatus.ONLINE,
         verificationStatus: VerificationStatus.APPROVED,
+        ...freshPresenceWhere(),
       },
     });
 

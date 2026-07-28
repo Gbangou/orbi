@@ -7,9 +7,9 @@ describe('driver commission economics', () => {
   it('arrondit la commission sur un palier CFA sans depasser le taux affiche', () => {
     const economics = calculateDriverEconomics(1500);
 
-    expect(economics.rawCommissionAmount).toBe(270);
-    expect(economics.commissionAmount).toBe(270);
-    expect(economics.driverPayout).toBe(1230);
+    expect(economics.rawCommissionAmount).toBe(180);
+    expect(economics.commissionAmount).toBe(180);
+    expect(economics.driverPayout).toBe(1320);
     expect(economics.commissionRoundingDiscount).toBe(0);
     expect(economics.settlementRoundingStep).toBe(10);
   });
@@ -17,9 +17,9 @@ describe('driver commission economics', () => {
   it('evite les commissions impraticables comme 261 XOF', () => {
     const economics = calculateDriverEconomics(1450);
 
-    expect(economics.rawCommissionAmount).toBe(261);
-    expect(economics.commissionAmount).toBe(260);
-    expect(economics.driverPayout).toBe(1190);
+    expect(economics.rawCommissionAmount).toBe(174);
+    expect(economics.commissionAmount).toBe(170);
+    expect(economics.driverPayout).toBe(1280);
   });
 
   it('garde aussi les paliers propres pendant l onboarding chauffeur', () => {

@@ -44,8 +44,8 @@ describe('admin server auth cookie hardening', () => {
     });
   });
 
-  it('keeps demo auto sign-in behind the shared runtime flag', () => {
-    expect(canUseAdminDemoAccess()).toBe(true);
+  it('keeps admin demo auto sign-in disabled', () => {
+    expect(canUseAdminDemoAccess()).toBe(false);
   });
 
   it('allows only operational admin roles for explicit admin sessions', () => {

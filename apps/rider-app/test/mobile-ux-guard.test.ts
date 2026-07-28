@@ -32,6 +32,14 @@ describe('rider mobile UX guards', () => {
     expect(source).toContain('ctaSignalMeta} numberOfLines={1}');
   });
 
+  it('keeps wallet top-up failures behind mobile-safe feedback', () => {
+    const source = readAppFile('app/(tabs)/account.tsx');
+
+    expect(source).toContain("surface: 'payments'");
+    expect(source).toContain('setTopUpError(feedback.message)');
+    expect(source).not.toContain("error instanceof Error ? error.message : 'Rechargement échoué'");
+  });
+
   it('keeps booking price confidence visible and rounded for the rider', () => {
     const source = readAppFile('app/book.tsx');
 
@@ -103,5 +111,16 @@ describe('rider mobile UX guards', () => {
     expect(source).toContain("if (data.type === 'event')");
     expect(source).toContain('const directEventType = String(data.type ??');
     expect(source).toContain('eventTypesRef.current.includes(directEventType)');
+  });
+
+  it('keeps Metro from scanning volatile local QA/build artifacts', () => {
+    const riderMetro = readWorkspaceFile('apps/rider-app/metro.config.js');
+    const driverMetro = readWorkspaceFile('apps/driver-app/metro.config.js');
+
+    for (const source of [riderMetro, driverMetro]) {
+      expect(source).toContain('[\\\\/]artifacts');
+      expect(source).toContain('[\\\\/]tmp');
+      expect(source).toContain('[\\\\/]\\.chrome-(cdp|headless)');
+    }
   });
 });

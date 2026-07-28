@@ -54,6 +54,9 @@ describe('AuthService', () => {
         update: jest.fn(),
         updateMany: jest.fn(),
       },
+      driverProfile: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
       phoneOtp: {
         create: jest.fn().mockResolvedValue(undefined),
         findFirst: jest.fn(),
@@ -495,6 +498,45 @@ describe('AuthService', () => {
 
     expect(result.revokedSessionId).toBe('session-current');
     expect(prisma.userSession.update).toHaveBeenCalled();
+  });
+
+  it('clears online driver presence on current driver sign-out when no trip is active', async () => {
+    const { prisma, service } = createService();
+
+    prisma.userSession.findFirst.mockResolvedValue({
+      ...SESSION_STUB,
+      id: 'session-current',
+      userId: 'user-1',
+    });
+    prisma.userSession.update.mockResolvedValue(undefined);
+
+    await service.signOut({
+      user: { id: 'user-1', role: UserRole.DRIVER },
+      session: {
+        id: 'session-current',
+        ipAddress: '127.0.0.1',
+        userAgent: 'jest',
+      },
+    } as never);
+
+    expect(prisma.driverProfile.updateMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        userId: 'user-1',
+        status: 'ONLINE',
+        assignedTrips: {
+          none: {
+            status: {
+              in: ['MATCHED', 'DRIVER_ARRIVING', 'IN_PROGRESS'],
+            },
+          },
+        },
+      }),
+      data: {
+        status: 'OFFLINE',
+        currentLatitude: null,
+        currentLongitude: null,
+      },
+    });
   });
 
   // ── RGPD account deletion ─────────────────────────────────────────────────────

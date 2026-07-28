@@ -1,6 +1,6 @@
 # Burkina Pricing Strategy
 
-Date de reference: 17 avril 2026
+Date de reference: 26 juillet 2026
 
 ## Objectif
 
@@ -91,6 +91,10 @@ Les apps clientes peuvent envoyer explicitement `city` et `districtProfile` au m
 - Proteger les trajets peu rentables via un minimum fare.
 - Garder des ajustements positifs dans les zones a contrainte operationnelle.
 - Garder la commission lisible et stable.
+- Pendant le pilote terrain, appliquer 10% de commission aux chauffeurs
+  fondateurs pendant 30 jours puis 12% standard. Ne pas passer au-dela avant
+  d avoir prouve, sur au moins 500 courses, que le revenu net chauffeur, la
+  retention rider et la contribution Orbi restent conformes aux seuils Go / No Go.
 - Regler la commission par course sur des paliers de 10 XOF, sans depasser le
   taux de commission annonce. Cela evite des montants comme 261 XOF sans
   sacrifier trop de marge projet. Les paliers 50/100 XOF doivent etre geres au
@@ -121,6 +125,22 @@ Les apps clientes peuvent envoyer explicitement `city` et `districtProfile` au m
 - Eviter une guerre de prix destructrice.
 - Preferer un pricing qui construit retention et confiance.
 - Preserver une marge saine pour le support, la securite, le paiement et les operations.
+- Ne pas confondre objectif long terme et pilote: le premier test doit maximiser
+  la densite chauffeur et la confiance. La marge se construit ensuite par volume,
+  B2B, discipline support et reduction des trajets a vide.
+
+## Grille pilote active
+
+| Produit | Base | Distance | Temps | Frais service | Minimum | Commission |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Moto Ouagadougou | 200 XOF | 110 XOF/km | 20 XOF/min | 50 XOF | 650 XOF | 10% puis 12% |
+| Voiture Ville | 500 XOF | 240 XOF/km | 45 XOF/min | 100 XOF | 1 500 XOF | 10% puis 12% |
+| Voiture Confort | 700 XOF | 300 XOF/km | 55 XOF/min | 150 XOF | 2 000 XOF | 10% puis 12% |
+
+Les zones semi-urbaines et bordures urbaines gardent une variation moderee pour
+rester accessibles, mais les prix de reference ci-dessus sont ceux du coeur
+pilote de Ouagadougou. Le multiplicateur de demande est plafonne a 1,30 pendant
+le pilote et doit toujours etre explique avant confirmation.
 
 ## Sources de contexte utilisees
 

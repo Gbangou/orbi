@@ -81,26 +81,6 @@ const emptyDestinationPlace: Place = {
   coordinates: undefined,
 };
 
-function toPlaceFromSavedPlace(
-  place: RiderProfileResponse['profile']['savedPlaces'][number],
-): Place {
-  const latitude = toFiniteCoordinate(place.latitude);
-  const longitude = toFiniteCoordinate(place.longitude);
-
-  return {
-    id: String(place.id),
-    label: sanitizePlaceText(place.label, 'Lieu enregistré'),
-    address: sanitizePlaceText(place.address, 'Adresse non précisée'),
-    coordinates:
-      latitude !== null && longitude !== null
-        ? {
-            latitude,
-            longitude,
-          }
-        : undefined,
-  };
-}
-
 function toFiniteCoordinate(value: unknown) {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : null;
@@ -286,16 +266,6 @@ function ForwardGlyph({ color }: { color: string }) {
   );
 }
 
-function SavedPlaceGlyph() {
-  const theme = useOrbiTheme();
-  const bookIconStyles = useMemo(() => makeBookIconStyles(theme), [theme]);
-  return (
-    <View style={bookIconStyles.savedPin}>
-      <View style={bookIconStyles.savedPinDot} />
-    </View>
-  );
-}
-
 const makePromoStyles = (theme: OrbiTheme) => StyleSheet.create({
   container: {
     backgroundColor: theme.colors.panel,
@@ -468,11 +438,6 @@ export default function BookingScreen() {
     selectedCity.estimatedDurationMinutes,
     selectedCity.zone,
   ]);
-  const savedPlaces = useMemo(
-    () => profile.profile.savedPlaces.map(toPlaceFromSavedPlace),
-    [profile],
-  );
-
   useEffect(() => {
     void loadBookingContext();
   }, [pickupPlace, destinationPlace, selectedCityId, selectedPaymentMethod]);
@@ -1314,31 +1279,6 @@ export default function BookingScreen() {
           )}
         </View>
 
-        {/* ── Saved places ── */}
-        {savedPlaces.length > 0 ? (
-          <View style={styles.savedSection}>
-            <Text style={styles.sectionTitle}>{tb('savedPlaces')}</Text>
-            {savedPlaces.slice(0, 2).map((place) => (
-              <Pressable
-                key={place.id}
-                style={styles.savedRow}
-                onPress={() => applyPlace('destination', place)}
-              >
-                <View style={styles.savedIconWrap}>
-                  <SavedPlaceGlyph />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.savedLabel}>{place.label}</Text>
-                  <Text style={styles.savedAddress} numberOfLines={1}>
-                    {place.address}
-                  </Text>
-                </View>
-                <ForwardGlyph color={theme.colors.textMuted} />
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
         {/* ── Payment preview (after booking) ── */}
         {paymentPreview ? (
           <OrbiStatusBanner
@@ -1821,38 +1761,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
   },
 
-  // Saved places
-  savedSection: { gap: 8 },
-  savedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  savedIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,201,167,0.10)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  savedLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.text,
-  },
-  savedAddress: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    fontFamily: 'Inter_400Regular',
-  },
   // ── Booking confirmation overlay ────────────────────────────────────────────
   confirmOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -2036,20 +1944,5 @@ const makeBookIconStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   forwardLineBottom: {
     transform: [{ rotate: '-45deg' }, { translateY: 3 }],
-  },
-  savedPin: {
-    width: 15,
-    height: 15,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: theme.colors.teal,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  savedPinDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: theme.colors.teal,
   },
 });

@@ -78,4 +78,17 @@ describe('resolveDriverAppError', () => {
     });
     expect(mockedEnqueueDriverMobileErrorReport).not.toHaveBeenCalled();
   });
+
+  it('treats mobile request timeouts as recoverable network errors', async () => {
+    const feedback = await resolveDriverAppError(
+      new DOMException('The operation was aborted.', 'AbortError'),
+    );
+
+    expect(feedback).toMatchObject({
+      code: 'MOB-NETWORK-OFFLINE',
+      reportable: false,
+      shouldClearSessionToken: false,
+    });
+    expect(mockedEnqueueDriverMobileErrorReport).not.toHaveBeenCalled();
+  });
 });

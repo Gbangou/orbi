@@ -767,6 +767,21 @@ Objectif: rendre le produit exploitable comme un service de transport reel.
   reportees. Le smoke admin neutralise aussi `server-only` au niveau Jest, et le
   test promo verifie directement le rejet d une fenetre invalide. Gates
   `pnpm test:production:gate` et `pnpm test:security:local` verts.
+- 26 juillet 2026: gap A ferme "strategie business/pilote raccordee au moteur
+  pricing". Les documents business fournis ont ete consolides en pack terrain
+  `docs/orbi-pilot-business-operating-pack-2026.md` avec questionnaires,
+  formulaire de veille concurrentielle, fiche trajet supervise et seuils Go /
+  No Go. Le backend applique maintenant une commission pilote 10% fondateurs
+  puis 12% standard, une grille Moto/Voiture alignee sur l etude documentaire,
+  un cap de demande 1,30 et des seeds coherents. Tests pricing, paiement,
+  drivers, presenter, e2e pricing et `pnpm typecheck` verts. Les donnees
+  terrain reelles, contrats, assurance, provider live et supply density restent
+  des gaps B/C/D.
+- 26 juillet 2026: gap A ferme "runbooks terrain incoherents avec Ride Check".
+  Les runbooks terrain et securite ne demandent plus de bloquer la finalisation
+  chauffeur sur alerte GPS critique. Le comportement attendu est desormais:
+  avertir le chauffeur, laisser finaliser une course reelle, produire recu et
+  payout, puis conserver `routeCompletionReview` pour revue operations.
 
 ```text
 Tu es l agent d ingenierie Orbi (Codex, Claude ou equivalent). Ta mission est

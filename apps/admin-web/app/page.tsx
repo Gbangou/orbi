@@ -44,7 +44,6 @@ import {
 
 import {
   executionPhases,
-  orbiDemoAccounts,
   orbiRuntimeConfig,
 } from "@orbi/config";
 import { redirect } from "next/navigation";
@@ -495,10 +494,6 @@ const fallbackFinanceDashboard: AdminFinanceDashboardResponse = {
   risks: [],
 };
 
-function shouldShowDemoPasswords() {
-  return process.env.NODE_ENV !== "production";
-}
-
 type AdminAuthNotice = {
   tone: "success" | "warning";
   message: string;
@@ -514,18 +509,6 @@ async function signInAdminAction(formData: FormData) {
     });
   } catch {
     redirect("/?adminAuth=failed");
-  }
-
-  redirect("/?adminAuth=signed-in");
-}
-
-async function signInDemoAdminAction() {
-  "use server";
-
-  try {
-    await createAdminServerSessionFromCredentials(orbiDemoAccounts.admin);
-  } catch {
-    redirect("/?adminAuth=demo-failed");
   }
 
   redirect("/?adminAuth=signed-in");
@@ -554,14 +537,6 @@ function resolveAdminAuthNotice(
     return {
       tone: "success",
       message: "Session admin fermee sur cette console.",
-    };
-  }
-
-  if (code === "demo-failed") {
-    return {
-      tone: "warning",
-      message:
-        "Connexion demo admin indisponible. Verifiez le backend et les identifiants seed.",
     };
   }
 
@@ -1061,7 +1036,6 @@ export default async function AdminHomePage({
     operationalKpis,
     pricingScenarios,
   } = await loadAdminData();
-  const showDemoPasswords = shouldShowDemoPasswords();
   const adminAuthNotice = resolveAdminAuthNotice(
     resolvedSearchParams.adminAuth,
   );
@@ -1075,8 +1049,7 @@ export default async function AdminHomePage({
           <h2>Connexion operations reelle</h2>
           <p>
             Ouvrez une session ADMIN, OPS ou SUPPORT pour piloter les actions
-            sensibles. Le bouton demo utilise les memes routes auth que le
-            backend local.
+            sensibles avec un compte terrain valide sur le serveur configure.
           </p>
           {adminAuthNotice ? (
             <p
@@ -1092,7 +1065,6 @@ export default async function AdminHomePage({
             <input
               name="email"
               type="email"
-              defaultValue={orbiDemoAccounts.admin.email}
               autoComplete="email"
               required
             />
@@ -1102,9 +1074,6 @@ export default async function AdminHomePage({
             <input
               name="password"
               type="password"
-              defaultValue={
-                showDemoPasswords ? orbiDemoAccounts.admin.password : undefined
-              }
               autoComplete="current-password"
               minLength={8}
               required
@@ -1113,14 +1082,6 @@ export default async function AdminHomePage({
           <div className="admin-auth-actions">
             <button className="admin-auth-primary" type="submit">
               Se connecter
-            </button>
-            <button
-              className="admin-auth-secondary"
-              formAction={signInDemoAdminAction}
-              formNoValidate
-              type="submit"
-            >
-              Demo admin
             </button>
             <button
               className="admin-auth-ghost"
@@ -1145,53 +1106,6 @@ export default async function AdminHomePage({
       </section>
 
       <LiveOverviewStats initialData={overview} />
-
-      <section className="panel test-access-panel">
-        <div>
-          <p className="eyebrow">Acces test local</p>
-          <h2>Acces directs actionnables</h2>
-          <p className="lede">
-            Ouvrez chaque surface locale depuis cette console, puis utilisez le
-            bouton demo dans l app cible pour entrer sans ressaisir les
-            identifiants.
-          </p>
-        </div>
-        <div className="test-access-grid">
-          <article className="test-access-card">
-            <span>Admin web</span>
-            <strong>{orbiDemoAccounts.admin.email}</strong>
-            <p>Deja connecte sur cette console.</p>
-            <a className="test-access-link" href="http://localhost:3001">
-              Ouvrir admin
-            </a>
-            {showDemoPasswords ? (
-              <code>{orbiDemoAccounts.admin.password}</code>
-            ) : null}
-          </article>
-          <article className="test-access-card">
-            <span>Rider app</span>
-            <strong>{orbiDemoAccounts.rider.email}</strong>
-            <p>Connexion, inscription, reservation et suivi live.</p>
-            <a className="test-access-link" href="http://localhost:8081/auth">
-              Ouvrir rider
-            </a>
-            {showDemoPasswords ? (
-              <code>{orbiDemoAccounts.rider.password}</code>
-            ) : null}
-          </article>
-          <article className="test-access-card">
-            <span>Driver app</span>
-            <strong>{orbiDemoAccounts.driver.email}</strong>
-            <p>
-              Lancez `pnpm dev:web-driver-preview`, puis ouvrez l URL Expo
-              affichee dans le terminal.
-            </p>
-            {showDemoPasswords ? (
-              <code>{orbiDemoAccounts.driver.password}</code>
-            ) : null}
-          </article>
-        </div>
-      </section>
 
       <section className="split">
         <div className="panel">

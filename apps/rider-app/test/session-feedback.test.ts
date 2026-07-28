@@ -78,4 +78,17 @@ describe('resolveRiderAppError', () => {
     });
     expect(mockedEnqueueRiderMobileErrorReport).not.toHaveBeenCalled();
   });
+
+  it('treats mobile request timeouts as recoverable network errors', async () => {
+    const feedback = await resolveRiderAppError(
+      new DOMException('The operation was aborted.', 'AbortError'),
+    );
+
+    expect(feedback).toMatchObject({
+      code: 'MOB-NETWORK-OFFLINE',
+      reportable: false,
+      shouldClearSessionToken: false,
+    });
+    expect(mockedEnqueueRiderMobileErrorReport).not.toHaveBeenCalled();
+  });
 });

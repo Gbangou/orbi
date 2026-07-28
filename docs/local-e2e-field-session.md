@@ -153,11 +153,13 @@ pnpm --filter backend start
   ping arrives, and flags active trips still waiting for the first driver GPS
   signal.
 - Before completing, temporarily simulate a missing or stale driver route signal
-  when possible. Expected: the driver cockpit shows `Finalisation bloquee par
-  Ride Check` and does not send the completion request until a fresh driver
-  route signal is visible.
+  when possible. Expected: the driver cockpit shows a Ride Check warning, but
+  the completion request is still sent when the driver confirms the client has
+  arrived. Admin/trip detail should preserve a route-completion review signal
+  for operations.
 - Complete the trip.
-- Expected: no invalid transition is accepted; admin timeline stays readable.
+- Expected: no invalid transition is accepted; fare, receipt, driver payout,
+  route review and admin timeline stay readable.
 
 ### 4. Checkout Intent
 

@@ -34,81 +34,39 @@ export const orbiRuntimeConfig = {
   launchMarket: 'Burkina Faso',
 } as const;
 
-export function resolveOrbiDemoAccessEnabled(
-  env: Record<string, string | undefined> = runtimeEnvironment.process?.env ?? {},
-) {
-  if (env.NODE_ENV === 'production') {
-    return false;
-  }
-
-  const explicitValue =
-    env.EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS ??
-    env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS;
-
-  if (explicitValue) {
-    return ['1', 'true', 'yes', 'on'].includes(explicitValue.toLowerCase());
-  }
-
-  return env.NODE_ENV !== 'production';
-}
-
-export const orbiDemoAccessEnabled = resolveOrbiDemoAccessEnabled();
+const defaultFieldApiBaseUrl = 'https://orbi-field-api.onrender.com';
 
 export function resolveOrbiApiBaseUrlForRuntime(
   configuredBaseUrl = orbiRuntimeConfig.apiBaseUrl,
 ) {
+  const normalizedBaseUrl = normalizeApiBaseUrl(configuredBaseUrl);
   const location = runtimeEnvironment.location;
 
-  if (!location || !isLocalWebHost(location.hostname)) {
-    return configuredBaseUrl;
+  if (!location) {
+    return isLoopbackApiBaseUrl(normalizedBaseUrl)
+      ? defaultFieldApiBaseUrl
+      : normalizedBaseUrl;
+  }
+
+  if (!isLocalWebHost(location.hostname)) {
+    return isLoopbackApiBaseUrl(normalizedBaseUrl)
+      ? defaultFieldApiBaseUrl
+      : normalizedBaseUrl;
   }
 
   try {
-    const apiUrl = new URL(configuredBaseUrl);
+    const apiUrl = new URL(normalizedBaseUrl);
 
     if (isPrivateLanHost(apiUrl.hostname)) {
       apiUrl.hostname = 'localhost';
       return apiUrl.toString().replace(/\/$/, '');
     }
   } catch {
-    return configuredBaseUrl;
+    return normalizedBaseUrl;
   }
 
-  return configuredBaseUrl;
+  return normalizedBaseUrl;
 }
-
-export const orbiDemoAccounts = {
-  rider: {
-    email:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_RIDER_EMAIL ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_RIDER_EMAIL ??
-      'rider@orbi.app',
-    password:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_RIDER_PASSWORD ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_RIDER_PASSWORD ??
-      'Orbi123!',
-  },
-  driver: {
-    email:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_DRIVER_EMAIL ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_DRIVER_EMAIL ??
-      'driver@orbi.app',
-    password:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD ??
-      'Orbi123!',
-  },
-  admin: {
-    email:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_ADMIN_EMAIL ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_ADMIN_EMAIL ??
-      'admin@orbi.app',
-    password:
-      runtimeEnvironment.process?.env?.EXPO_PUBLIC_ORBI_DEMO_ADMIN_PASSWORD ??
-      runtimeEnvironment.process?.env?.NEXT_PUBLIC_ORBI_DEMO_ADMIN_PASSWORD ??
-      'Orbi123!',
-  },
-} as const;
 
 export const executionPhases = [
   {
@@ -156,6 +114,19 @@ export function parseAllowedOrigins(value: string | undefined) {
 
 function isLocalWebHost(hostname: string) {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+}
+
+function normalizeApiBaseUrl(value: string) {
+  return value.trim().replace(/\/+$/, '');
+}
+
+function isLoopbackApiBaseUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function isPrivateLanHost(hostname: string) {

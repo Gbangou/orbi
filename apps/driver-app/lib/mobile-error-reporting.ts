@@ -45,6 +45,7 @@ export function reportDriverRenderCrash(
   })
     .then(() => import('./auth'))
     .then(({ restoreDriverSession }) => restoreDriverSession())
+    .then((session) => flushDriverMobileErrorReports(session.authClient))
     .catch(() => undefined);
 }
 

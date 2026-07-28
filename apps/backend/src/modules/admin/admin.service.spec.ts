@@ -1948,7 +1948,7 @@ describe('AdminService', () => {
         completionRate: 33.3,
         cancellationRate: 66.7,
         averageFare: 1600,
-        averageDriverPayout: 1312,
+        averageDriverPayout: 1408,
         averagePickupWaitMinutes: 4,
       }),
     );

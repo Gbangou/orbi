@@ -664,8 +664,14 @@ export class RideRequestsService {
     pickupAddress: string;
   }): Promise<void> {
     try {
+      const freshPresenceCutoff = new Date(Date.now() - 90_000);
       const onlineDrivers = await this.prisma.driverProfile.findMany({
-        where: { status: 'ONLINE' },
+        where: {
+          status: 'ONLINE',
+          currentLatitude: { not: null },
+          currentLongitude: { not: null },
+          updatedAt: { gte: freshPresenceCutoff },
+        },
         select: { userId: true },
         take: 100,
       });

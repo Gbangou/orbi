@@ -22,10 +22,12 @@ Telephone Android (Chauffeur)
 Le backend est disponible independamment de tout PC local. Sur plan gratuit
 Render, un cold start reste possible apres inactivite.
 
-## Comptes de demonstration
+## Comptes terrain
 
-Les APK terrain contiennent les identifiants controles directement dans le build.
-Un bouton "Acces terrain securise" apparait sur l'ecran de connexion de chaque app.
+Les APK terrain ne doivent pas embarquer de bouton demo ni d'identifiants
+visibles. Les comptes ci-dessous sont seulement des comptes de reference
+prepares cote backend pour un pilote controle; les testeurs les saisissent
+manuellement ou utilisent des comptes reels crees pendant le test.
 
 | Role      | Email                       | Mot de passe    |
 | --------- | --------------------------- | --------------- |
@@ -38,13 +40,14 @@ explicitement l'auto-onboarding.
 
 ## 1. Verifier que le backend est operationnel
 
-Avant tout test, verifier depuis un navigateur ou PowerShell:
+Avant tout test, verifier depuis PowerShell:
 
-```
-https://orbi-field-api.onrender.com/api/v1/health/ready
+```powershell
+pnpm field:api:check
+pnpm mobile:check
 ```
 
-La reponse doit etre:
+La reponse API doit etre:
 
 ```json
 {"status":"ready", ...}
@@ -56,8 +59,9 @@ Depuis PowerShell si necessaire:
 Invoke-WebRequest -Uri "https://orbi-field-api.onrender.com/api/v1/health/ready" -UseBasicParsing
 ```
 
-Code attendu: `200`. Si le backend ne repond pas, verifier Render →
-`orbi-field-api` → Logs et Environment.
+Code attendu: `200`. Les dependances `database`, `rateLimit`, `realtime` et
+`driverReservationExpiry` doivent etre `up`. Si le backend ne repond pas,
+verifier Render → `orbi-field-api` → Logs et Environment.
 
 ## 2. Construire les APK
 
@@ -67,9 +71,9 @@ Build local recommande depuis la racine du projet:
 pnpm mobile:apk
 ```
 
-Les APKs sont produits dans `dist/`. Par defaut, le build local pointe vers
-l'API LAN du PC (`http://<ip-du-pc>:3000`) pour que le telephone, l'admin local
-et la base locale utilisent les memes donnees.
+Les APKs sont produits dans `dist/`. Le script local ecrit un fichier preuve
+`dist/orbi-*-mvp.apk.json` contenant package, version, `versionCode`, API cible,
+taille et SHA256.
 
 Pour un APK connecte au backend Render, utiliser les scripts explicites:
 
@@ -171,8 +175,7 @@ premier pour valider que tout fonctionne.
 ### Etape 1 — Connexion chauffeur
 
 1. Ouvrir `Orbi Chauffeur`.
-2. Appuyer sur `Acces terrain securise` ou entrer `testchauffeur@orbi.test` /
-   `TestOrbi2026!`.
+2. Entrer le compte chauffeur terrain fourni par l'equipe operations.
 3. Sur l'ecran accueil, verifier que la carte affiche le statut.
 4. Passer `En ligne` (disponible).
 
@@ -182,8 +185,8 @@ suivre les etapes d'onboarding (automatiquement approuve).
 ### Etape 2 — Connexion passager
 
 1. Ouvrir `Orbi Passager`.
-2. Appuyer sur `Acces terrain securise` ou entrer `testpassager@orbi.test` /
-   `TestOrbi2026!`.
+2. Entrer le compte passager terrain fourni par l'equipe operations, ou creer
+   un compte reel de test.
 3. Sur l'ecran accueil, verifier que la carte s'affiche.
 
 ### Etape 3 — Demande de course

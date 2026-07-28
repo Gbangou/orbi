@@ -537,17 +537,18 @@ export async function updateTripStatusWithApi(
   status: "DRIVER_ARRIVING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED",
   cancellationReason?: string,
 ) {
-  return client.request<TripLifecycleResponse>(
+  return client.requestWithRetry<TripLifecycleResponse>(
     `${apiRoutes.trips.root ?? "/trips"}/${tripId}/status`,
     {
       method: "PATCH",
       body: {
         status,
-        ...(status === "CANCELLED" && cancellationReason
+        ...(cancellationReason
           ? { cancellationReason }
           : {}),
       },
     },
+    { maxAttempts: 2 },
   );
 }
 

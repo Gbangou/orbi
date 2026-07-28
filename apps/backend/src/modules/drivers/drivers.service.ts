@@ -50,6 +50,7 @@ const isoUtcDateTimePattern =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/;
 const driverCancellationPauseWindowMinutes = 30;
 const driverCancellationPauseThreshold = 3;
+const fieldPresenceFreshnessMs = 90_000;
 
 type DriverDispatchBlockerCode =
   | 'OFFLINE'
@@ -1296,7 +1297,7 @@ export class DriversService {
     }>;
     total: number;
   }> {
-    const staleCutoff = new Date(Date.now() - 10 * 60_000);
+    const staleCutoff = new Date(Date.now() - fieldPresenceFreshnessMs);
     const profiles = await this.prisma.driverProfile.findMany({
       where: {
         status: DriverStatus.ONLINE,

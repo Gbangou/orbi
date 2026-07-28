@@ -571,7 +571,7 @@ export class PricingService {
     const wealthDistributionBand =
       driverEconomics.commissionRate <= 0.1
         ? 'DRIVER_ONBOARDING_BOOST'
-        : driverEconomics.commissionRate <= 0.15
+        : driverEconomics.commissionRate <= 0.12
           ? 'DRIVER_GROWTH_SUPPORT'
           : 'STANDARD_FAIR_SHARE';
 
@@ -702,12 +702,12 @@ export class PricingService {
     let multiplier = 1;
 
     if (demandLevel === 'PEAK') {
-      multiplier = isPeakHour ? 1.4 : 1.3;
+      multiplier = isPeakHour ? 1.3 : 1.22;
     } else if (demandLevel === 'HIGH') {
-      multiplier = isPeakHour ? 1.2 : 1.12;
+      multiplier = isPeakHour ? 1.15 : 1.1;
     }
 
-    const cap = vehicleType === 'MOTORCYCLE' ? 1.35 : 1.45;
+    const cap = 1.3;
 
     return {
       multiplier: Math.min(multiplier, cap),
@@ -716,11 +716,10 @@ export class PricingService {
   }
 
   /**
-   * Commission tiers calibrés pour le marché Burkina Faso.
-   * Structure dégressive pour maximiser la rétention des chauffeurs.
-   *
-   * Rentabilité cible: 15-20 000 XOF/jour plateforme dès 80 courses/jour
-   * (80 × 1 200 XOF moyen × 18% = 17 280 XOF/jour)
+   * Commission pilote calibrée pour le marché Burkina Faso.
+   * Le pilote privilégie l'adhésion chauffeur: 10% pendant l'onboarding,
+   * puis 12% tant que les données terrain ne prouvent pas qu'un taux plus
+   * élevé conserve revenu net chauffeur, rétention rider et marge Orbi.
    */
   private resolveCommissionRate(driverOnboardingDays?: number) {
     return resolveDriverCommissionRate(driverOnboardingDays);
@@ -757,6 +756,7 @@ export class PricingService {
       );
 
     const tenMinutesAgo = new Date(now.getTime() - 10 * 60_000);
+    const freshPresenceCutoff = new Date(now.getTime() - 90_000);
 
     const cityFilter =
       cityHint &&
@@ -775,7 +775,9 @@ export class PricingService {
         where: {
           status: 'ONLINE',
           verificationStatus: 'APPROVED',
-          updatedAt: { gte: tenMinutesAgo },
+          currentLatitude: { not: null },
+          currentLongitude: { not: null },
+          updatedAt: { gte: freshPresenceCutoff },
           ...(cityFilter
             ? {
                 onboardingReviews: {
@@ -1269,59 +1271,48 @@ export class PricingService {
   ): RateCard {
     const zone = input.zone ?? 'URBAN_CORE';
 
-    // ── Tarifs Burkina Faso calibrés — compétitifs ET rentables ─────────────
-    //
-    // Objectif: 1 200-1 500 XOF pour un trajet moyen 5.8km/16min Ouagadougou
-    // Comparable à: Bolt/Yango moto ~800-1500 XOF, Zémidjan premium ~500-1000 XOF
-    // Commission 18% → ~215-270 XOF/trajet → rentable dès 80 courses/jour
-    //
-    // Formule: baseFare + (distanceKm × perKmRate) + (durationMin × perMinuteRate) + bookingFee
-    // Test: 5.8km / 16min URBAN_CORE moto → 300 + 522 + 288 + 100 = 1 210 XOF ✅
+    // Tarifs pilote Burkina Faso — grille documentaire juillet 2026.
+    // Formule: baseFare + distanceKm * perKmRate + durationMin * perMinuteRate
+    // + bookingFee, avec minimum fare, ajustements contextuels et arrondi XOF.
 
     if (input.vehicleType === 'MOTORCYCLE') {
-      // Moto — tarif d'entrée, accessible quotidiennement
       if (zone === 'SEMI_URBAN') {
-        return { serviceTier: ServiceTier.MOTO_STANDARD, baseFare: 200, perKmRate: 75, perMinuteRate: 15, bookingFee: 75, minimumFare: 550 };
+        return { serviceTier: ServiceTier.MOTO_STANDARD, baseFare: 150, perKmRate: 95, perMinuteRate: 18, bookingFee: 50, minimumFare: 600 };
       }
       if (zone === 'URBAN_EDGE') {
-        return { serviceTier: ServiceTier.MOTO_STANDARD, baseFare: 250, perKmRate: 85, perMinuteRate: 17, bookingFee: 85, minimumFare: 650 };
+        return { serviceTier: ServiceTier.MOTO_STANDARD, baseFare: 180, perKmRate: 105, perMinuteRate: 19, bookingFee: 50, minimumFare: 650 };
       }
-      // Urban Core — cœur de marché Ouagadougou
-      return { serviceTier: ServiceTier.MOTO_STANDARD, baseFare: 300, perKmRate: 90, perMinuteRate: 18, bookingFee: 100, minimumFare: 750 };
+      return { serviceTier: ServiceTier.MOTO_STANDARD, baseFare: 200, perKmRate: 110, perMinuteRate: 20, bookingFee: 50, minimumFare: 650 };
     }
 
     // ── Voitures ──────────────────────────────────────────────────────────────
 
     if (input.serviceTier === ServiceTier.CAR_COMFORT) {
-      // Car Comfort — climatisée, cuir, segment premium
       if (zone === 'SEMI_URBAN') {
-        return { serviceTier: ServiceTier.CAR_COMFORT, baseFare: 900, perKmRate: 165, perMinuteRate: 38, bookingFee: 275, minimumFare: 1600 };
+        return { serviceTier: ServiceTier.CAR_COMFORT, baseFare: 650, perKmRate: 270, perMinuteRate: 50, bookingFee: 150, minimumFare: 1900 };
       }
       if (zone === 'URBAN_EDGE') {
-        return { serviceTier: ServiceTier.CAR_COMFORT, baseFare: 1100, perKmRate: 195, perMinuteRate: 45, bookingFee: 325, minimumFare: 2000 };
+        return { serviceTier: ServiceTier.CAR_COMFORT, baseFare: 700, perKmRate: 285, perMinuteRate: 53, bookingFee: 150, minimumFare: 2000 };
       }
-      return { serviceTier: ServiceTier.CAR_COMFORT, baseFare: 1200, perKmRate: 210, perMinuteRate: 50, bookingFee: 350, minimumFare: 2300 };
+      return { serviceTier: ServiceTier.CAR_COMFORT, baseFare: 700, perKmRate: 300, perMinuteRate: 55, bookingFee: 150, minimumFare: 2000 };
     }
 
     if (input.serviceTier === ServiceTier.CAR_XL) {
-      // Car XL — minivan, famille, groupe jusqu'à 6 places
       if (zone === 'SEMI_URBAN') {
-        return { serviceTier: ServiceTier.CAR_XL, baseFare: 1000, perKmRate: 175, perMinuteRate: 40, bookingFee: 300, minimumFare: 1800 };
+        return { serviceTier: ServiceTier.CAR_XL, baseFare: 750, perKmRate: 300, perMinuteRate: 58, bookingFee: 200, minimumFare: 2200 };
       }
       if (zone === 'URBAN_EDGE') {
-        return { serviceTier: ServiceTier.CAR_XL, baseFare: 1200, perKmRate: 200, perMinuteRate: 48, bookingFee: 350, minimumFare: 2200 };
+        return { serviceTier: ServiceTier.CAR_XL, baseFare: 800, perKmRate: 315, perMinuteRate: 62, bookingFee: 200, minimumFare: 2350 };
       }
-      return { serviceTier: ServiceTier.CAR_XL, baseFare: 1400, perKmRate: 220, perMinuteRate: 55, bookingFee: 400, minimumFare: 2600 };
+      return { serviceTier: ServiceTier.CAR_XL, baseFare: 800, perKmRate: 330, perMinuteRate: 65, bookingFee: 200, minimumFare: 2500 };
     }
 
-    // Car Standard — berline climatisée, segment principal
     if (zone === 'SEMI_URBAN') {
-      return { serviceTier: ServiceTier.CAR_STANDARD, baseFare: 600, perKmRate: 120, perMinuteRate: 25, bookingFee: 175, minimumFare: 1100 };
+      return { serviceTier: ServiceTier.CAR_STANDARD, baseFare: 450, perKmRate: 220, perMinuteRate: 40, bookingFee: 100, minimumFare: 1400 };
     }
     if (zone === 'URBAN_EDGE') {
-      return { serviceTier: ServiceTier.CAR_STANDARD, baseFare: 750, perKmRate: 140, perMinuteRate: 30, bookingFee: 200, minimumFare: 1350 };
+      return { serviceTier: ServiceTier.CAR_STANDARD, baseFare: 500, perKmRate: 230, perMinuteRate: 43, bookingFee: 100, minimumFare: 1500 };
     }
-    // Urban Core
-    return { serviceTier: ServiceTier.CAR_STANDARD, baseFare: 900, perKmRate: 160, perMinuteRate: 35, bookingFee: 225, minimumFare: 1600 };
+    return { serviceTier: ServiceTier.CAR_STANDARD, baseFare: 500, perKmRate: 240, perMinuteRate: 45, bookingFee: 100, minimumFare: 1500 };
   }
 }

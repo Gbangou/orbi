@@ -3,6 +3,7 @@
 import {
   isOrbiApiError,
   extractApiErrorMessage,
+  isLikelyOrbiConnectivityFailure,
   isLikelyOrbiNetworkError,
   normalizeOrbiErrorMessage,
   resolveDisplayableApiErrorMessage,
@@ -174,7 +175,7 @@ export function classifyOrbiClientError(
     };
   }
 
-  if (isLikelyOrbiNetworkError(error)) {
+  if (isLikelyOrbiConnectivityFailure(error)) {
     return {
       code: "MOB-NETWORK-OFFLINE",
       surface: "network",

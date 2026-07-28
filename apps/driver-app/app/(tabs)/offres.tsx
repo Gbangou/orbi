@@ -1539,7 +1539,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   onlineDot: { width: 9, height: 9, borderRadius: 5 },
   headerRefreshBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.backgroundAlt, alignItems: "center", justifyContent: "center" },
-  content: { paddingHorizontal: 16, paddingTop: 12, gap: 10 },
+  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 110, gap: 10 },
   completionCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
     padding: 14,
@@ -1700,8 +1700,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.teal,
   },
   missionActions: { gap: 7 },
-  secondaryActions: { flexDirection: "row", gap: 8 },
-  secondaryBtn: { flex: 1 },
+  secondaryActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  secondaryBtn: { flexGrow: 1, flexBasis: "47%", minHeight: 48 },
   tripDetailStatus: { fontSize: 12, color: theme.colors.textMuted, fontFamily: "Inter_400Regular" },
   supportTimelineWrap: { gap: 8 },
   supportTimelineToggle: {

@@ -1,5 +1,7 @@
 param(
-  [switch]$AllowLocalhost
+  [switch]$AllowLocalhost,
+  [int]$TimeoutSec = 180,
+  [int]$PollSeconds = 3
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,6 +34,27 @@ function Read-EnvValue {
   return ($match -replace "^$([regex]::Escape($Key))=", "").Trim()
 }
 
+function Read-OptionalEnvValue {
+  param(
+    [string]$Path,
+    [string]$Key
+  )
+
+  if (-not (Test-Path -LiteralPath $Path)) {
+    return $null
+  }
+
+  $match = Get-Content -LiteralPath $Path |
+    Where-Object { $_ -match "^$([regex]::Escape($Key))=" } |
+    Select-Object -First 1
+
+  if (-not $match) {
+    return $null
+  }
+
+  return ($match -replace "^$([regex]::Escape($Key))=", "").Trim()
+}
+
 function Test-MobileApiUrl {
   param(
     [string]$Name,
@@ -53,27 +76,79 @@ function Test-IsLocalApiUrl {
   return $Url -match "localhost|127\.0\.0\.1|0\.0\.0\.0|\.local($|/)"
 }
 
+function Test-DemoAccountsDisabledForField {
+  param(
+    [string]$Name,
+    [string]$EnvPath,
+    [string]$ApiBaseUrl
+  )
+
+  if (Test-IsLocalApiUrl -Url $ApiBaseUrl) {
+    return
+  }
+
+  $demoEnabled = Read-OptionalEnvValue -Path $EnvPath -Key "EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS"
+  if ($demoEnabled -and @("1", "true", "yes", "on") -contains $demoEnabled.ToLowerInvariant()) {
+    throw "$Name field env enables demo accounts while pointing to a public API. Set EXPO_PUBLIC_ENABLE_DEMO_ACCOUNTS=false."
+  }
+
+  $demoCredentialKeys = @(
+    "EXPO_PUBLIC_ORBI_DEMO_RIDER_EMAIL",
+    "EXPO_PUBLIC_ORBI_DEMO_RIDER_PASSWORD",
+    "EXPO_PUBLIC_ORBI_DEMO_DRIVER_EMAIL",
+    "EXPO_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD"
+  )
+
+  foreach ($key in $demoCredentialKeys) {
+    $value = Read-OptionalEnvValue -Path $EnvPath -Key $key
+    if ($value) {
+      throw "$Name field env embeds $key. Remove public demo credentials before field testing."
+    }
+  }
+}
+
 function Test-BackendHealth {
   param([string]$ApiBaseUrl)
 
   $healthUrl = "$ApiBaseUrl/api/v1/health/ready"
+  $detailsUrl = "$ApiBaseUrl/api/v1/health"
+  $deadline = (Get-Date).AddSeconds($TimeoutSec)
+  $lastError = $null
 
-  try {
-    $response = Invoke-WebRequest -Uri $healthUrl -Method Get -UseBasicParsing -TimeoutSec 15
-    $body = $response.Content | ConvertFrom-Json
-    if ($response.StatusCode -eq 200 -and $body.status -eq "ready") {
-      Write-Host "[ok] Backend readiness reachable: $healthUrl" -ForegroundColor Green
-      return
+  while ((Get-Date) -lt $deadline) {
+    try {
+      $response = Invoke-WebRequest -Uri $healthUrl -Method Get -UseBasicParsing -TimeoutSec 30
+      $body = $response.Content | ConvertFrom-Json
+      if ($response.StatusCode -eq 200 -and $body.status -eq "ready") {
+        Write-Host "[ok] Backend readiness reachable: $healthUrl" -ForegroundColor Green
+        return
+      }
+
+      $lastError = "HTTP $($response.StatusCode), status=$($body.status)"
+    } catch {
+      $lastError = $_.Exception.Message
+      try {
+        $detailsResponse = Invoke-WebRequest -Uri $detailsUrl -Method Get -UseBasicParsing -TimeoutSec 30
+        $detailsBody = $detailsResponse.Content | ConvertFrom-Json
+        if ($detailsBody.dependencies) {
+          $lastError = "$lastError. Health status=$($detailsBody.status), database=$($detailsBody.dependencies.database), rateLimit=$($detailsBody.dependencies.rateLimit), realtime=$($detailsBody.dependencies.realtime), driverReservationExpiry=$($detailsBody.dependencies.driverReservationExpiry)"
+        }
+      } catch {
+        $lastError = "$lastError. Health details unavailable: $($_.Exception.Message)"
+      }
     }
 
-    throw "Backend readiness returned HTTP $($response.StatusCode) with status '$($body.status)': $healthUrl"
-  } catch {
-    if (Test-IsLocalApiUrl -Url $ApiBaseUrl) {
-      throw "Backend readiness is not reachable from configured mobile URL: $healthUrl. Start pnpm dev:backend and check firewall/Wi-Fi."
+    if ((Get-Date) -lt $deadline) {
+      Write-Host "[wait] Backend readiness not ready yet: $lastError" -ForegroundColor Yellow
+      Start-Sleep -Seconds $PollSeconds
     }
-
-    throw "Backend readiness is not reachable from configured mobile URL: $healthUrl. Check public API uptime before APK generation."
   }
+
+  if (Test-IsLocalApiUrl -Url $ApiBaseUrl) {
+    throw "Backend readiness is not reachable from configured mobile URL: $healthUrl. Start pnpm dev:backend and check firewall/Wi-Fi. Last error: $lastError"
+  }
+
+  throw "Backend readiness is not reachable from configured mobile URL within ${TimeoutSec}s: $healthUrl. Check public API uptime before APK generation. Last error: $lastError"
 }
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
@@ -102,6 +177,11 @@ if ($riderApiVersion -ne "v1" -or $driverApiVersion -ne "v1") {
 }
 
 Write-Host "[ok] Mobile env files are aligned." -ForegroundColor Green
+
+Write-Section "Demo exposure"
+Test-DemoAccountsDisabledForField -Name "Rider" -EnvPath $riderEnv -ApiBaseUrl $riderApiBaseUrl
+Test-DemoAccountsDisabledForField -Name "Driver" -EnvPath $driverEnv -ApiBaseUrl $driverApiBaseUrl
+Write-Host "[ok] Public field env does not expose demo account affordances." -ForegroundColor Green
 
 Write-Section "Backend"
 Test-BackendHealth -ApiBaseUrl $riderApiBaseUrl

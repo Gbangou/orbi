@@ -1,4 +1,4 @@
-import { createOrbiApiClient } from '@orbi/api';
+import { createOrbiApiClient, updateTripStatusWithApi } from '@orbi/api';
 
 /**
  * OWASP MASVS-NETWORK-1 / NIST SSDF SA.15 — Invariants de timeout des requêtes.
@@ -135,5 +135,38 @@ describe('OrbiApiClient — timeout des requêtes', () => {
     expect(capturedSignal).not.toBeNull();
     // Le signal ne doit pas être annulé immédiatement (le timeout de 30s n'a pas expiré)
     expect(capturedSignal!.aborted).toBe(false);
+  });
+
+  it('réessaie une mutation critique de statut trajet après une erreur réseau courte', async () => {
+    const fetchSpy = jest
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Network request failed'))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          trip: {
+            id: 'trip-field-retry',
+            rideRequestId: 'request-field-retry',
+            status: 'COMPLETED',
+            actualFare: 2100,
+            currency: 'XOF',
+            completedAt: '2026-07-28T11:05:00.000Z',
+          },
+        }),
+      } as Response);
+
+    const client = createOrbiApiClient('https://orbi-field-api.example', {
+      fetcher: fetchSpy as never,
+    });
+
+    const result = await updateTripStatusWithApi(
+      client,
+      'trip-field-retry',
+      'COMPLETED',
+      'Arret demande par le passager',
+    );
+
+    expect(result.trip.status).toBe('COMPLETED');
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });

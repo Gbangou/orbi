@@ -70,14 +70,6 @@ async function main() {
               isActive: true,
             },
           },
-          savedPlaces: {
-            create: {
-              label: 'Home',
-              address: 'Ouaga 2000, Ouagadougou',
-              latitude: 12.32743,
-              longitude: -1.53388,
-            },
-          },
         },
       },
       wallets: {
@@ -227,11 +219,11 @@ async function main() {
         id: motoStandardRule.id,
       },
       data: {
-        baseFare: 500,
-        perKmRate: 175,
-        perMinuteRate: 35,
-        bookingFee: 150,
-        minimumFare: 1000,
+        baseFare: 200,
+        perKmRate: 110,
+        perMinuteRate: 20,
+        bookingFee: 50,
+        minimumFare: 650,
         isActive: true,
       },
     });
@@ -241,11 +233,11 @@ async function main() {
         name: 'Moto',
         vehicleType: VehicleType.MOTORCYCLE,
         serviceTier: ServiceTier.MOTO_STANDARD,
-        baseFare: 500,
-        perKmRate: 175,
-        perMinuteRate: 35,
-        bookingFee: 150,
-        minimumFare: 1000,
+        baseFare: 200,
+        perKmRate: 110,
+        perMinuteRate: 20,
+        bookingFee: 50,
+        minimumFare: 650,
       },
     });
   }
@@ -264,11 +256,11 @@ async function main() {
         id: carStandardRule.id,
       },
       data: {
-        baseFare: 900,
-        perKmRate: 275,
-        perMinuteRate: 55,
-        bookingFee: 250,
-        minimumFare: 1800,
+        baseFare: 500,
+        perKmRate: 240,
+        perMinuteRate: 45,
+        bookingFee: 100,
+        minimumFare: 1500,
         isActive: true,
       },
     });
@@ -278,16 +270,25 @@ async function main() {
         name: 'Car Standard',
         vehicleType: VehicleType.CAR,
         serviceTier: ServiceTier.CAR_STANDARD,
-        baseFare: 900,
-        perKmRate: 275,
-        perMinuteRate: 55,
-        bookingFee: 250,
-        minimumFare: 1800,
+        baseFare: 500,
+        perKmRate: 240,
+        perMinuteRate: 45,
+        bookingFee: 100,
+        minimumFare: 1500,
       },
     });
   }
 
   if (riderUser.riderProfile) {
+    await prisma.savedPlace.deleteMany({
+      where: {
+        riderId: riderUser.riderProfile.id,
+        label: {
+          in: ['Home', 'Maison', 'Bureau'],
+        },
+      },
+    });
+
     await prisma.rideRequest.updateMany({
       where: {
         riderId: riderUser.riderProfile.id,
@@ -302,7 +303,7 @@ async function main() {
   }
 
   console.log(
-    `Seeded Orbi foundation data for admin ${admin.email}. Demo credentials are documented in the local runbook.`,
+    `Seeded Orbi foundation data for admin ${admin.email}. Field accounts are offline by default and contain no quick-destination prototype shortcuts.`,
   );
 }
 
