@@ -245,7 +245,7 @@ function Build-App {
     # suffisante evite les builds release fragiles sur Windows.
     $GradlePropsPath = "$AppDir\android\gradle.properties"
     $GradleProps = Get-Content $GradlePropsPath -Raw
-    $GradleJvmArgs = "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8"
+    $GradleJvmArgs = "org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8"
     if ($GradleProps -match "(?m)^org\.gradle\.jvmargs=.*$") {
         $GradleProps = $GradleProps -replace "(?m)^org\.gradle\.jvmargs=.*$", $GradleJvmArgs
     }
