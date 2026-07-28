@@ -1154,6 +1154,59 @@ describe('driver smoke flows', () => {
     );
   });
 
+  it('lets the driver cancel an in-progress trip and receive new offers again', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never);
+    mockedFetchMyTrips
+      .mockResolvedValueOnce(buildDriverTripsWithStatus('IN_PROGRESS') as never)
+      .mockResolvedValueOnce(buildDriverTrips() as never);
+    mockedFetchDriverProfile
+      .mockResolvedValueOnce(buildDriverProfile() as never)
+      .mockResolvedValueOnce(buildDriverProfile() as never);
+    mockedFetchTripDetail.mockResolvedValue(
+      buildDriverTripDetail(['driver-timeline-1'], ['Course demarree']) as never,
+    );
+    mockedUpdateTripStatusWithApi.mockResolvedValue({
+      trip: {
+        id: 'trip-driver-1',
+        status: 'CANCELLED',
+        cancellationPolicy: {
+          actor: 'DRIVER',
+          level: 'CLEAR',
+          suggestedFeeAmount: 0,
+          driverCompensationAmount: 0,
+          currency: 'XOF',
+          recentCancellationCount: 1,
+          message: 'Annulation chauffeur prise en compte. Vous restez eligible aux prochaines offres.',
+        },
+      },
+    } as never);
+
+    const renderer = await renderScreen(<OffersScreen />);
+    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Annuler la course');
+    const cancelOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
+      | Array<{ text?: string; onPress?: () => void }>
+      | undefined;
+    await invokeInAct(async () => {
+      cancelOptions?.find((option) => option.text === 'Passager introuvable')?.onPress?.();
+      await flushMicrotasks();
+    });
+
+    expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
+      { token: 'driver-auth-client' },
+      'trip-driver-1',
+      'CANCELLED',
+      'Passager introuvable',
+    );
+    expectText(
+      renderer,
+      'Annulation chauffeur prise en compte. Vous restez eligible aux prochaines offres.',
+    );
+  });
+
   it('toggles driver availability from home', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverOffers

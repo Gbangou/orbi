@@ -904,6 +904,13 @@ export default function OffersScreen() {
             emphasis="primary"
             style={isSubmitting ? styles.disabled : null}
           />
+          <FlowActionButton
+            disabled={isSubmitting}
+            label="Annuler la course"
+            onPress={() => handleDriverCancelTrip(activeTrip.id)}
+            emphasis="secondary"
+            style={isSubmitting ? styles.disabled : null}
+          />
           {driverRouteSafetyBrief.tone !== "teal" ? (
             <Text style={styles.routeSafetyBlockNote}>
               Avant de terminer: {driverRouteSafetyBrief.actionLabel}

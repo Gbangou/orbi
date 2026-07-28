@@ -229,6 +229,14 @@ quand les signaux route permettent de l'estimer. Si l'API est indisponible, les
 apps doivent afficher un etat vide ou une erreur reseau, pas des offres ou
 options fictives.
 
+Si une course deja presente en base bloque a la fois le passager et le
+chauffeur, et que les apps ne peuvent plus la terminer, ops/admin ouvre l'audit
+trajets, filtre les courses actives, saisit une justification, puis utilise
+`Debloquer la course`. Cette action ferme le trajet en `CANCELLED`, annule la
+demande liee, remet le chauffeur `ONLINE`, publie le changement temps reel et
+ecrit `TRIP_FORCE_CLOSED` dans l'audit log. Le meme passager et le meme
+chauffeur peuvent ensuite rematcher.
+
 ### Etape 7 — Fin de course
 
 1. Sur le telephone chauffeur:

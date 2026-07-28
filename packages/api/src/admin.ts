@@ -366,6 +366,17 @@ export type AdminTripAuditRiskResolutionResponse = {
   riskReasons: string[];
 };
 
+export type AdminTripForceCloseResponse = {
+  tripId: string;
+  rideRequestId: string;
+  riderId: string;
+  driverId: string;
+  status: string;
+  cancelledBy: string | null;
+  changed: boolean;
+  message: string;
+};
+
 export type AdminLaunchReadinessResponse = {
   generatedAt: string;
   environment: string;
@@ -1377,6 +1388,20 @@ export async function resolveAdminTripAuditRisk(
 ) {
   return client.request<AdminTripAuditRiskResolutionResponse>(
     `${apiRoutes.admin.tripsAudit}/${tripId}/resolve`,
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
+}
+
+export async function forceCloseAdminTrip(
+  client: OrbiApiClient,
+  tripId: string,
+  payload: { reason: string },
+) {
+  return client.request<AdminTripForceCloseResponse>(
+    `/admin/trips/${tripId}/force-close`,
     {
       method: "POST",
       body: payload,

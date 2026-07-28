@@ -690,7 +690,7 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus("Annulation de la course avant depart...");
+    setStatus("Annulation de la course en cours...");
 
     try {
       const { authClient } = await restoreRiderSession();

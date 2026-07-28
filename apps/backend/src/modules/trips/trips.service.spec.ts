@@ -1536,6 +1536,112 @@ describe('TripsService', () => {
     );
   });
 
+  it('lets a rider stop an in-progress trip with adjusted fare and frees both accounts for a new ride', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-rider-stop-1',
+      rideRequestId: 'request-rider-stop-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+      startedAt: new Date('2026-07-28T10:45:00.000Z'),
+      completedAt: null,
+      actualFare: 6140,
+      distanceKm: 8.4,
+      currency: 'XOF',
+      events: [
+        buildFreshDriverRouteEvent({
+          distanceToDestinationKm: 4.2,
+        }),
+      ],
+      rider: {
+        userId: 'user-rider-1',
+      },
+      driver: {
+        userId: 'user-driver-1',
+        createdAt: new Date('2026-04-01T08:00:00.000Z'),
+      },
+      rideRequest: {
+        paymentMethod: 'MOBILE_MONEY',
+      },
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-rider-stop-1',
+      rideRequestId: 'request-rider-stop-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'COMPLETED',
+      actualFare: 3100,
+      currency: 'XOF',
+      startedAt: new Date('2026-07-28T10:45:00.000Z'),
+      completedAt: new Date('2026-07-28T10:55:00.000Z'),
+    });
+    prisma.rideRequest.update.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.updateStatus(
+      {
+        user: {
+          id: 'user-rider-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      'trip-rider-stop-1',
+      'COMPLETED',
+      'Arret demande par le passager',
+    );
+
+    expect(result.trip.status).toBe('COMPLETED');
+    expect(result.trip.actualFare).toBe(3100);
+    expect(prisma.rideRequest.update).toHaveBeenCalledWith({
+      where: { id: 'request-rider-stop-1' },
+      data: { status: 'FULFILLED' },
+    });
+    expect(prisma.driverProfile.update).toHaveBeenCalledWith({
+      where: { id: 'driver-1' },
+      data: { status: 'ONLINE', completedTripsCount: { increment: 1 } },
+    });
+    expect(prisma.trip.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'COMPLETED',
+          actualFare: 3100,
+          distanceKm: 4.2,
+          events: {
+            create: expect.objectContaining({
+              eventType: 'TRIP_COMPLETED',
+              payload: expect.objectContaining({
+                status: 'COMPLETED',
+                actorRole: 'RIDER',
+                earlyStop: expect.objectContaining({
+                  requestedByRole: 'RIDER',
+                  reason: 'Arret demande par le passager',
+                  originalFare: 6140,
+                  adjustedFare: 3100,
+                  progressRatio: 0.5,
+                  completedDistanceKm: 4.2,
+                  remainingDistanceKm: 4.2,
+                }),
+              }),
+            }),
+          },
+        }),
+      }),
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.updated',
+        entityId: 'trip-rider-stop-1',
+        payload: { status: 'COMPLETED' },
+      }),
+    );
+  });
+
   it('creates a support incident for an active trip and records an event', async () => {
     const { prisma, realtimeService, service } = createService();
 

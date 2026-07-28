@@ -3957,6 +3957,129 @@ export class AdminService {
     };
   }
 
+  async forceCloseTrip(
+    tripId: string,
+    payload: { reason: string },
+    auth: RequestAuthContext,
+  ) {
+    const reason = payload.reason.trim();
+    const result = await this.prisma.$transaction(async (tx) => {
+      const trip = await tx.trip.findUnique({
+        where: { id: tripId },
+        select: {
+          id: true,
+          rideRequestId: true,
+          riderId: true,
+          driverId: true,
+          status: true,
+          cancelledBy: true,
+        },
+      });
+
+      if (!trip) {
+        throw new NotFoundException('Trip not found.');
+      }
+
+      if (!ACTIVE_TRIP_STATUSES.includes(trip.status)) {
+        return {
+          trip,
+          changed: false,
+        };
+      }
+
+      const forcedAt = new Date();
+      const closedTrip = await tx.trip.update({
+        where: { id: tripId },
+        data: {
+          status: 'CANCELLED',
+          cancelledBy: 'ADMIN',
+          events: {
+            create: {
+              eventType: 'TRIP_CANCELLED',
+              payload: {
+                status: 'CANCELLED',
+                actorRole: auth.user.role,
+                forcedByUserId: auth.user.id,
+                reason,
+                previousStatus: trip.status,
+                forcedAt: forcedAt.toISOString(),
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          rideRequestId: true,
+          riderId: true,
+          driverId: true,
+          status: true,
+          cancelledBy: true,
+        },
+      });
+
+      await tx.rideRequest.update({
+        where: { id: trip.rideRequestId },
+        data: { status: RideRequestStatus.CANCELLED },
+      });
+
+      await tx.driverProfile.update({
+        where: { id: trip.driverId },
+        data: { status: DriverStatus.ONLINE },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: auth.user.id,
+          action: 'TRIP_FORCE_CLOSED',
+          entityType: 'TRIP',
+          entityId: tripId,
+          metadata: {
+            reason,
+            previousStatus: trip.status,
+            nextStatus: 'CANCELLED',
+            riderId: trip.riderId,
+            driverId: trip.driverId,
+            rideRequestId: trip.rideRequestId,
+            forcedAt: forcedAt.toISOString(),
+          } satisfies Prisma.InputJsonObject,
+        },
+      });
+
+      return {
+        trip: closedTrip,
+        changed: true,
+      };
+    });
+
+    if (result.changed) {
+      this.realtimeService.publish({
+        channel: 'trip',
+        type: 'trip.updated',
+        entityId: result.trip.id,
+        riderId: result.trip.riderId,
+        driverId: result.trip.driverId,
+        actorRole: auth.user.role,
+        payload: {
+          status: 'CANCELLED',
+          forced: true,
+        },
+      });
+    }
+
+    return {
+      tripId: result.trip.id,
+      rideRequestId: result.trip.rideRequestId,
+      riderId: result.trip.riderId,
+      driverId: result.trip.driverId,
+      status: result.trip.status,
+      cancelledBy: result.trip.cancelledBy,
+      changed: result.changed,
+      message: result.changed
+        ? 'Trip force-closed. Rider and driver can be matched again.'
+        : 'Trip was already terminal. No active lock remains.',
+    };
+  }
+
   async launchReadiness() {
     const now = new Date();
     const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);

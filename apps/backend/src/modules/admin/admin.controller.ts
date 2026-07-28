@@ -41,6 +41,7 @@ import { UpdateSupportTicketDto } from './dto/update-support-ticket.dto';
 import { DriverSuspensionDto } from './dto/driver-suspension.dto';
 import { LaunchReadinessActionAcknowledgementDto } from './dto/launch-readiness-action-acknowledgement.dto';
 import { ResolveTripAuditRiskDto } from './dto/resolve-trip-audit-risk.dto';
+import { ForceCloseTripDto } from './dto/force-close-trip.dto';
 import { CreatePromoCodeDto } from './dto/create-promo-code.dto';
 import { RidersQueryDto } from './dto/riders-query.dto';
 import { SetRiderStatusDto } from './dto/set-rider-status.dto';
@@ -128,6 +129,19 @@ export class AdminController {
     @CurrentAuth() auth: RequestAuthContext,
   ) {
     return this.adminService.resolveTripAuditRisk(tripId, payload, auth);
+  }
+
+  @Post('trips/:tripId/force-close')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
+  forceCloseTrip(
+    @Param('tripId', new OpaqueIdPipe('tripId')) tripId: string,
+    @Body() payload: ForceCloseTripDto,
+    @CurrentAuth() auth: RequestAuthContext,
+  ) {
+    return this.adminService.forceCloseTrip(tripId, payload, auth);
   }
 
   @Get('job-queue')

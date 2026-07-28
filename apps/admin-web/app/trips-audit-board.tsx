@@ -12,6 +12,11 @@ type TripsAuditBoardProps = {
 
 const lookbackOptions = [24, 72, 168] as const;
 const tripsAuditLimitOptions = [50, 100, 300, 500] as const;
+const forceClosableTripStatuses = new Set([
+  'MATCHED',
+  'DRIVER_ARRIVING',
+  'IN_PROGRESS',
+]);
 
 function resolveTripsAuditLimit(value: string) {
   return (
@@ -134,6 +139,49 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
         });
       } catch {
         setStatusMsg("Le risque trajet n'a pas pu etre cloture.");
+      } finally {
+        setResolvingTripId(null);
+      }
+    },
+    [
+      filterFrom,
+      filterStatus,
+      filterTo,
+      refreshAudit,
+      resolutionReasonByTripId,
+    ],
+  );
+
+  const forceCloseTrip = useCallback(
+    async (tripId: string) => {
+      const reason = (resolutionReasonByTripId[tripId] ?? '').trim();
+
+      if (reason.length < 10) {
+        setStatusMsg('Ajoutez une justification de deblocage plus precise.');
+        return;
+      }
+
+      setResolvingTripId(tripId);
+      setStatusMsg('Deblocage audite du trajet actif...');
+
+      try {
+        await postAdminMutation(`/api/admin/trips/${tripId}/force-close`, {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason }),
+        });
+        setResolutionReasonByTripId((current) => {
+          const next = { ...current };
+          delete next[tripId];
+          return next;
+        });
+        setStatusMsg('Trajet actif ferme. Rider et chauffeur peuvent rematcher.');
+        await refreshAudit({
+          status: filterStatus || undefined,
+          fromDate: filterFrom || undefined,
+          toDate: filterTo || undefined,
+        });
+      } catch {
+        setStatusMsg("Le trajet actif n'a pas pu etre debloque.");
       } finally {
         setResolvingTripId(null);
       }
@@ -378,6 +426,18 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
                   ? 'Cloture...'
                   : 'Cloturer le risque'}
               </button>
+              {forceClosableTripStatuses.has(trip.status) ? (
+                <button
+                  className="ghost-button danger"
+                  disabled={resolvingTripId === trip.id}
+                  onClick={() => void forceCloseTrip(trip.id)}
+                  type="button"
+                >
+                  {resolvingTripId === trip.id
+                    ? 'Deblocage...'
+                    : 'Debloquer la course'}
+                </button>
+              ) : null}
             </div>
           </article>
         ))}

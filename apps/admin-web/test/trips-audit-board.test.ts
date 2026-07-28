@@ -134,6 +134,33 @@ describe('trips audit board', () => {
     expect(boardSource).toContain('resolvedRiskTripCount');
   });
 
+  it('keeps trip force-close guarded and no-store', () => {
+    const routeSource = readFileSync(
+      join(process.cwd(), 'app/api/admin/trips/[tripId]/force-close/route.ts'),
+      'utf8',
+    );
+
+    expect(routeSource).toContain('force-dynamic');
+    expect(routeSource).toContain('isSafeAdminMutationRequest');
+    expect(routeSource).toContain('isSafeOpaqueAdminId');
+    expect(routeSource).toContain('createNoStoreAdminHeaders()');
+    expect(routeSource).toContain('forceCloseAdminTrip');
+    expect(routeSource).toContain('reason.length < 10');
+    expect(routeSource).toContain('reason.length > 500');
+  });
+
+  it('exposes an ops force-close action only for active trips', () => {
+    const boardSource = readFileSync(
+      join(process.cwd(), 'app/trips-audit-board.tsx'),
+      'utf8',
+    );
+
+    expect(boardSource).toContain('forceClosableTripStatuses');
+    expect(boardSource).toContain('IN_PROGRESS');
+    expect(boardSource).toContain('/api/admin/trips/${tripId}/force-close');
+    expect(boardSource).toContain('Debloquer la course');
+  });
+
   it('keeps public shared-trip pages private from crawlers and unsafe tokens', () => {
     const pageSource = readFileSync(
       join(process.cwd(), 'app/shared/[token]/page.tsx'),

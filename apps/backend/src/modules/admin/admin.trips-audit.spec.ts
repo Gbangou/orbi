@@ -41,9 +41,17 @@ function createTrip(overrides: Record<string, unknown> = {}) {
 
 function createService(trips = [createTrip()]) {
   const prisma = {
+    $transaction: jest.fn(),
     trip: {
       findMany: jest.fn().mockResolvedValue(trips),
       findUnique: jest.fn().mockResolvedValue(trips[0] ?? null),
+      update: jest.fn(),
+    },
+    rideRequest: {
+      update: jest.fn(),
+    },
+    driverProfile: {
+      update: jest.fn(),
     },
     auditLog: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -52,9 +60,17 @@ function createService(trips = [createTrip()]) {
     },
   };
 
+  prisma.$transaction.mockImplementation(
+    async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
+  );
+
+  const realtimeService = {
+    publish: jest.fn(),
+  };
+
   const service = new AdminService(
     prisma as never,
-    {} as never,
+    realtimeService as never,
     {} as never,
     {} as never,
     {} as never,
@@ -67,7 +83,7 @@ function createService(trips = [createTrip()]) {
     { getOrSet: (_k: string, factory: () => unknown) => factory() } as never,
   );
 
-  return { prisma, service };
+  return { prisma, realtimeService, service };
 }
 
 describe('AdminService.tripsAudit', () => {
@@ -178,6 +194,95 @@ describe('AdminService.tripsAudit', () => {
             ],
           }),
         }),
+      }),
+    );
+  });
+
+  it('force-close un trajet actif et libere le rider et le chauffeur pour rematcher', async () => {
+    const { prisma, realtimeService, service } = createService([
+      createTrip({
+        id: 'trip-active-1',
+        rideRequestId: 'request-active-1',
+        riderId: 'rider-1',
+        driverId: 'driver-1',
+        status: 'IN_PROGRESS',
+        cancelledBy: null,
+        completedAt: null,
+      }),
+    ]);
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-active-1',
+      rideRequestId: 'request-active-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+      cancelledBy: null,
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-active-1',
+      rideRequestId: 'request-active-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'CANCELLED',
+      cancelledBy: 'ADMIN',
+    });
+
+    const response = await service.forceCloseTrip(
+      'trip-active-1',
+      { reason: 'Deblocage terrain pour permettre un nouveau matching.' },
+      { user: { id: 'ops-1', role: 'OPS' } } as never,
+    );
+
+    expect(response).toEqual(
+      expect.objectContaining({
+        tripId: 'trip-active-1',
+        rideRequestId: 'request-active-1',
+        status: 'CANCELLED',
+        cancelledBy: 'ADMIN',
+        changed: true,
+      }),
+    );
+    expect(prisma.trip.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'trip-active-1' },
+        data: expect.objectContaining({
+          status: 'CANCELLED',
+          cancelledBy: 'ADMIN',
+          events: {
+            create: expect.objectContaining({
+              eventType: 'TRIP_CANCELLED',
+              payload: expect.objectContaining({
+                previousStatus: 'IN_PROGRESS',
+                reason: 'Deblocage terrain pour permettre un nouveau matching.',
+              }),
+            }),
+          },
+        }),
+      }),
+    );
+    expect(prisma.rideRequest.update).toHaveBeenCalledWith({
+      where: { id: 'request-active-1' },
+      data: { status: 'CANCELLED' },
+    });
+    expect(prisma.driverProfile.update).toHaveBeenCalledWith({
+      where: { id: 'driver-1' },
+      data: { status: 'ONLINE' },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'ops-1',
+          action: 'TRIP_FORCE_CLOSED',
+          entityType: 'TRIP',
+          entityId: 'trip-active-1',
+        }),
+      }),
+    );
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.updated',
+        entityId: 'trip-active-1',
+        payload: { status: 'CANCELLED', forced: true },
       }),
     );
   });
