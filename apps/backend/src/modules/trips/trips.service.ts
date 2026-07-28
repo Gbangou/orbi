@@ -9,6 +9,7 @@ import {
   DriverDocumentType,
   NotificationChannel,
   Prisma,
+  RideRequestStatus,
   TrustedContactShareMode,
   TripStatus,
   UserRole,
@@ -1731,14 +1732,34 @@ export class TripsService {
       // empechant le rider de jamais reserver une nouvelle course differente
       // (bloque par le garde-fou "1 ride request active par rider").
       if (nextStatus === 'COMPLETED') {
+        const rideRequestCompletionStatus =
+          await this.resolveRideRequestCompletionStatus(tx);
+
         await tx.rideRequest.update({
           where: {
             id: trip.rideRequestId,
           },
           data: {
-            status: 'FULFILLED',
+            status: rideRequestCompletionStatus,
           },
         });
+
+        if (rideRequestCompletionStatus !== RideRequestStatus.FULFILLED) {
+          await tx.auditLog.create({
+            data: {
+              userId: auth.user.id,
+              action: 'RIDE_REQUEST_COMPLETION_STATUS_SCHEMA_FALLBACK',
+              entityType: 'RIDE_REQUEST',
+              entityId: trip.rideRequestId,
+              metadata: {
+                tripId,
+                requestedStatus: RideRequestStatus.FULFILLED,
+                appliedStatus: rideRequestCompletionStatus,
+                reason: 'FULFILLED enum value unavailable on database',
+              },
+            },
+          });
+        }
 
         if (trip.rideRequest?.paymentMethod === 'CASH') {
           await tx.trip.update({
@@ -1897,6 +1918,24 @@ export class TripsService {
       commissionRate: driverEconomics?.commissionRate ?? null,
       cancellationPolicy,
     });
+  }
+
+  private async resolveRideRequestCompletionStatus(
+    tx: Pick<Prisma.TransactionClient, '$queryRaw'>,
+  ): Promise<RideRequestStatus> {
+    try {
+      const enumRows = await tx.$queryRaw<Array<{ enumlabel: string }>>`
+        SELECT enumlabel
+        FROM pg_enum
+        WHERE enumtypid = '"RideRequestStatus"'::regtype
+      `;
+
+      return enumRows.some((row) => row.enumlabel === RideRequestStatus.FULFILLED)
+        ? RideRequestStatus.FULFILLED
+        : RideRequestStatus.EXPIRED;
+    } catch {
+      return RideRequestStatus.FULFILLED;
+    }
   }
 
   private resolveRiderTripCancellationPolicy(input: {

@@ -177,6 +177,7 @@ export const rideRequestLifecycleStatuses = [
   'DRIVER_ARRIVING',
   'EXPIRED',
   'CANCELLED',
+  'FULFILLED',
 ] as const;
 export type RideRequestLifecycleStatus =
   (typeof rideRequestLifecycleStatuses)[number];

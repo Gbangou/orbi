@@ -26,6 +26,14 @@ describe('TripsService', () => {
   function createService() {
     const prisma = {
       $transaction: jest.fn(),
+      $queryRaw: jest.fn().mockResolvedValue([
+        { enumlabel: 'REQUESTED' },
+        { enumlabel: 'MATCHED' },
+        { enumlabel: 'DRIVER_ARRIVING' },
+        { enumlabel: 'EXPIRED' },
+        { enumlabel: 'CANCELLED' },
+        { enumlabel: 'FULFILLED' },
+      ]),
       driverProfile: {
         findUnique: jest.fn(),
         update: jest.fn(),
@@ -614,6 +622,173 @@ describe('TripsService', () => {
       expect.objectContaining({
         type: 'trip.updated',
         entityId: tripId,
+        payload: { status: 'COMPLETED' },
+      }),
+    );
+  });
+
+  it('does not fail trip completion when the deployed database lacks the FULFILLED ride-request enum', async () => {
+    const { prisma, realtimeService, service } = createService();
+    const driverAuth = {
+      user: {
+        id: 'user-driver-legacy-db',
+        role: 'DRIVER',
+        driverProfile: {
+          id: 'driver-legacy-db',
+          createdAt: new Date('2026-04-01T08:00:00.000Z'),
+        },
+      },
+    } as never;
+
+    prisma.$queryRaw.mockResolvedValue([
+      { enumlabel: 'REQUESTED' },
+      { enumlabel: 'MATCHED' },
+      { enumlabel: 'DRIVER_ARRIVING' },
+      { enumlabel: 'EXPIRED' },
+      { enumlabel: 'CANCELLED' },
+    ]);
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-legacy-db',
+      rideRequestId: 'request-legacy-db',
+      riderId: 'rider-legacy-db',
+      driverId: 'driver-legacy-db',
+      status: 'IN_PROGRESS',
+      pickupAddress: 'Marche Katr yaar, Ouagadougou',
+      destinationAddress: 'Plateau omnisports de Pissy',
+      actualFare: 6140,
+      distanceKm: 8.4,
+      durationMinutes: 14,
+      currency: 'XOF',
+      startedAt: new Date('2026-07-28T10:45:00.000Z'),
+      completedAt: null,
+      createdAt: new Date('2026-07-28T10:30:00.000Z'),
+      events: [buildFreshDriverRouteEvent({ distanceToDestinationKm: 0 })],
+      rider: { userId: 'user-rider-legacy-db' },
+      driver: { userId: 'user-driver-legacy-db' },
+      rideRequest: { paymentMethod: 'MOBILE_MONEY' },
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-legacy-db',
+      rideRequestId: 'request-legacy-db',
+      riderId: 'rider-legacy-db',
+      driverId: 'driver-legacy-db',
+      status: 'COMPLETED',
+      actualFare: 6140,
+      currency: 'XOF',
+      completedAt: new Date('2026-07-28T11:00:00.000Z'),
+    });
+    prisma.rideRequest.update.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.updateStatus(
+      driverAuth,
+      'trip-legacy-db',
+      'COMPLETED',
+    );
+
+    expect(result.trip.status).toBe('COMPLETED');
+    expect(prisma.rideRequest.update).toHaveBeenCalledWith({
+      where: { id: 'request-legacy-db' },
+      data: { status: 'EXPIRED' },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'RIDE_REQUEST_COMPLETION_STATUS_SCHEMA_FALLBACK',
+        entityType: 'RIDE_REQUEST',
+        entityId: 'request-legacy-db',
+        metadata: expect.objectContaining({
+          tripId: 'trip-legacy-db',
+          requestedStatus: 'FULFILLED',
+          appliedStatus: 'EXPIRED',
+        }),
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.updated',
+        entityId: 'trip-legacy-db',
+        payload: { status: 'COMPLETED' },
+      }),
+    );
+  });
+
+  it('does not fail rider early stop when the deployed database lacks the FULFILLED ride-request enum', async () => {
+    const { prisma, realtimeService, service } = createService();
+    const riderAuth = {
+      user: {
+        id: 'user-rider-legacy-db',
+        role: 'RIDER',
+        riderProfile: {
+          id: 'rider-legacy-db',
+        },
+      },
+    } as never;
+
+    prisma.$queryRaw.mockResolvedValue([
+      { enumlabel: 'REQUESTED' },
+      { enumlabel: 'MATCHED' },
+      { enumlabel: 'DRIVER_ARRIVING' },
+      { enumlabel: 'EXPIRED' },
+      { enumlabel: 'CANCELLED' },
+    ]);
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-rider-stop-legacy-db',
+      rideRequestId: 'request-rider-stop-legacy-db',
+      riderId: 'rider-legacy-db',
+      driverId: 'driver-legacy-db',
+      status: 'IN_PROGRESS',
+      pickupAddress: 'Marche Katr yaar, Ouagadougou',
+      destinationAddress: 'Plateau omnisports de Pissy',
+      actualFare: 6140,
+      distanceKm: 8.4,
+      durationMinutes: 14,
+      currency: 'XOF',
+      startedAt: new Date('2026-07-28T10:45:00.000Z'),
+      completedAt: null,
+      createdAt: new Date('2026-07-28T10:30:00.000Z'),
+      events: [buildFreshDriverRouteEvent({ distanceToDestinationKm: 0 })],
+      rider: { userId: 'user-rider-legacy-db' },
+      driver: { userId: 'user-driver-legacy-db' },
+      rideRequest: { paymentMethod: 'MOBILE_MONEY' },
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-rider-stop-legacy-db',
+      rideRequestId: 'request-rider-stop-legacy-db',
+      riderId: 'rider-legacy-db',
+      driverId: 'driver-legacy-db',
+      status: 'COMPLETED',
+      actualFare: 6140,
+      currency: 'XOF',
+      completedAt: new Date('2026-07-28T11:00:00.000Z'),
+    });
+    prisma.rideRequest.update.mockResolvedValue(undefined);
+    prisma.driverProfile.update.mockResolvedValue(undefined);
+    prisma.auditLog.create.mockResolvedValue(undefined);
+
+    const result = await service.updateStatus(
+      riderAuth,
+      'trip-rider-stop-legacy-db',
+      'COMPLETED',
+      'RIDER_REQUESTED_STOP',
+    );
+
+    expect(result.trip.status).toBe('COMPLETED');
+    expect(prisma.rideRequest.update).toHaveBeenCalledWith({
+      where: { id: 'request-rider-stop-legacy-db' },
+      data: { status: 'EXPIRED' },
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'RIDE_REQUEST_COMPLETION_STATUS_SCHEMA_FALLBACK',
+        entityType: 'RIDE_REQUEST',
+        entityId: 'request-rider-stop-legacy-db',
+      }),
+    });
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.updated',
+        entityId: 'trip-rider-stop-legacy-db',
         payload: { status: 'COMPLETED' },
       }),
     );
