@@ -51,6 +51,24 @@ const isoUtcDateTimePattern =
 const driverCancellationPauseWindowMinutes = 30;
 const driverCancellationPauseThreshold = 3;
 const fieldPresenceFreshnessMs = 90_000;
+const fieldSessionFreshnessMs = 10 * 60_000;
+
+function activeDriverSessionWhere(now = new Date()) {
+  return {
+    user: {
+      isActive: true,
+      sessions: {
+        some: {
+          revokedAt: null,
+          expiresAt: { gt: now },
+          lastSeenAt: {
+            gte: new Date(now.getTime() - fieldSessionFreshnessMs),
+          },
+        },
+      },
+    },
+  };
+}
 
 type DriverDispatchBlockerCode =
   | 'OFFLINE'
@@ -1297,11 +1315,13 @@ export class DriversService {
     }>;
     total: number;
   }> {
-    const staleCutoff = new Date(Date.now() - fieldPresenceFreshnessMs);
+    const now = new Date();
+    const staleCutoff = new Date(now.getTime() - fieldPresenceFreshnessMs);
     const profiles = await this.prisma.driverProfile.findMany({
       where: {
         status: DriverStatus.ONLINE,
         verificationStatus: VerificationStatus.APPROVED,
+        ...activeDriverSessionWhere(now),
         currentLatitude: { not: null },
         currentLongitude: { not: null },
         updatedAt: { gte: staleCutoff },

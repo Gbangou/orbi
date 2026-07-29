@@ -503,7 +503,7 @@ describe('driver smoke flows', () => {
 
     expectText(
       renderer,
-      'Connexion trop lente. Vérifiez votre réseau puis réessayez.',
+      'Le serveur ne repond pas encore. Orbi continue de fonctionner sur reseau faible: reessayez dans un instant ou changez de reseau si besoin.',
     );
   });
 

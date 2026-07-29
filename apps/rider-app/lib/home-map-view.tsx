@@ -23,7 +23,7 @@ export interface HomeMapViewProps {
   riderLat?: number | null;
   riderLng?: number | null;
   style?: object;
-  onDriversUpdate?: (count: number) => void;
+  onDriversUpdate?: (drivers: NearbyDriverMarker[]) => void;
 }
 
 function FallbackMiniVehicleGlyph({ kind }: { kind: 'moto' | 'car' }) {
@@ -189,7 +189,7 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
         }),
       );
       setDrivers(list);
-      onDriversUpdate?.(list.length);
+      onDriversUpdate?.(list);
       if (webRef.current) {
         webRef.current.postMessage(
           JSON.stringify({ type: 'UPDATE_DRIVERS', drivers: list }),

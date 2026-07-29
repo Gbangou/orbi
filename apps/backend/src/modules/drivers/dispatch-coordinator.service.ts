@@ -63,12 +63,25 @@ function roundDistance(value: number | null) {
 }
 
 const fieldPresenceFreshnessMs = 90_000;
+const fieldSessionFreshnessMs = 10 * 60_000;
 
 function freshPresenceWhere(now = new Date()) {
   return {
     currentLatitude: { not: null },
     currentLongitude: { not: null },
     updatedAt: { gte: new Date(now.getTime() - fieldPresenceFreshnessMs) },
+    user: {
+      isActive: true,
+      sessions: {
+        some: {
+          revokedAt: null,
+          expiresAt: { gt: now },
+          lastSeenAt: {
+            gte: new Date(now.getTime() - fieldSessionFreshnessMs),
+          },
+        },
+      },
+    },
   };
 }
 

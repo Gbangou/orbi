@@ -22,6 +22,7 @@ import {
   fetchRideOptionsPreview,
   triggerTripSafetySosWithApi,
   updateTripStatusWithApi,
+  type NearbyDriverMarker,
   type MyTripsResponse,
   type RideOption,
 } from '@orbi/api';
@@ -53,6 +54,48 @@ const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
 // Bottom sheet heights
 const SHEET_PEEK = 300;
 const SHEET_ACTIVE_TRIP = 282;
+
+type NearbyDriverCounts = {
+  total: number;
+  motorcycle: number;
+  car: number;
+};
+
+const emptyNearbyDriverCounts: NearbyDriverCounts = {
+  total: 0,
+  motorcycle: 0,
+  car: 0,
+};
+
+function countNearbyDriversByVehicle(drivers: NearbyDriverMarker[]): NearbyDriverCounts {
+  return drivers.reduce<NearbyDriverCounts>(
+    (counts, driver) => {
+      if (driver.status !== 'ONLINE') {
+        return counts;
+      }
+
+      const vehicleType = String(driver.vehicleType ?? '').toUpperCase();
+      if (vehicleType === 'MOTORCYCLE' || vehicleType === 'MOTO') {
+        return {
+          ...counts,
+          total: counts.total + 1,
+          motorcycle: counts.motorcycle + 1,
+        };
+      }
+
+      if (vehicleType === 'CAR') {
+        return {
+          ...counts,
+          total: counts.total + 1,
+          car: counts.car + 1,
+        };
+      }
+
+      return counts;
+    },
+    emptyNearbyDriverCounts,
+  );
+}
 
 function ForwardGlyph({ color }: { color: string }) {
   return (
@@ -147,7 +190,17 @@ const ServiceVehicleIcon = memo(function ServiceVehicleIcon({ tier }: { tier: st
   return <VehicleIllustration tier={tier} width={40} height={30} />;
 });
 
-function buildMarketplaceTrustLine(option: RideOption) {
+function getCompatibleNearbyCount(option: RideOption, counts: NearbyDriverCounts) {
+  return option.category === 'motorcycle' ? counts.motorcycle : counts.car;
+}
+
+function formatNearbyCountLabel(count: number) {
+  return count > 0
+    ? `${count} proche${count > 1 ? 's' : ''}`
+    : 'Aucun proche';
+}
+
+function buildMarketplaceTrustLine(option: RideOption, nearbyCount: number) {
   const marketplace = option.marketplace;
   if (!marketplace) {
     return `${option.etaMinutes} min estime · ${option.capacity}`;
@@ -155,8 +208,8 @@ function buildMarketplaceTrustLine(option: RideOption) {
 
   const signalLabel = marketplace.signalLabel || 'Estime';
   const supplyLabel =
-    marketplace.supplySource === 'LIVE' && marketplace.nearbyDrivers > 0
-      ? `${marketplace.nearbyDrivers} proches`
+    marketplace.supplySource === 'LIVE'
+      ? formatNearbyCountLabel(nearbyCount)
       : marketplace.availabilityLabel;
 
   return `${option.etaMinutes} min ${signalLabel.toLowerCase()} · ${supplyLabel}`;
@@ -164,7 +217,15 @@ function buildMarketplaceTrustLine(option: RideOption) {
 
 // ── Service option row ────────────────────────────────────────────────────────
 
-const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideOption; onPress: () => void }) {
+const ServiceRow = memo(function ServiceRow({
+  option,
+  nearbyCount,
+  onPress,
+}: {
+  option: RideOption;
+  nearbyCount: number;
+  onPress: () => void;
+}) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const isMoto = option.category === 'motorcycle';
@@ -188,7 +249,7 @@ const ServiceRow = memo(function ServiceRow({ option, onPress }: { option: RideO
         <View style={styles.serviceInfo}>
           <Text style={styles.serviceTitle}>{option.title}</Text>
           <Text style={styles.serviceMeta} numberOfLines={1} ellipsizeMode="tail">
-            {buildMarketplaceTrustLine(option)}
+            {buildMarketplaceTrustLine(option, nearbyCount)}
           </Text>
           {option.marketplace?.reliabilityNote ? (
             <Text style={styles.serviceTrustNote} numberOfLines={1} ellipsizeMode="tail">
@@ -218,7 +279,7 @@ export default function RiderHomeScreen() {
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
-  const [realNearbyCount, setRealNearbyCount] = useState(0);
+  const [nearbyDriverCounts, setNearbyDriverCounts] = useState<NearbyDriverCounts>(emptyNearbyDriverCounts);
   const [userName, setUserName] = useState('');
   const [flowTransitionLabel, setFlowTransitionLabel] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
@@ -230,6 +291,10 @@ export default function RiderHomeScreen() {
   const previousFlowStateRef = useRef<string | null>(null);
 
   const riderPosition = useRiderPosition({ enabled: true });
+
+  const handleDriversUpdate = useCallback((drivers: NearbyDriverMarker[]) => {
+    setNearbyDriverCounts(countNearbyDriversByVehicle(drivers));
+  }, []);
 
   // Stable handler reference — prevents ServiceRow remounts
   const navigateToBook = useCallback(() => {
@@ -537,7 +602,7 @@ export default function RiderHomeScreen() {
         riderLat={riderPosition.latestPosition?.latitude}
         riderLng={riderPosition.latestPosition?.longitude}
         style={styles.map}
-        onDriversUpdate={setRealNearbyCount}
+        onDriversUpdate={handleDriversUpdate}
       />
 
       {/* ── Offline banner ── */}
@@ -600,8 +665,8 @@ export default function RiderHomeScreen() {
             >
               <StatusDot active={isRealtimeSyncing} />
               <Text style={styles.nearbyText} numberOfLines={1} ellipsizeMode="tail">
-                {realNearbyCount > 0
-                  ? `${realNearbyCount} chauffeur${realNearbyCount > 1 ? 's' : ''} proche${realNearbyCount > 1 ? 's' : ''}`
+                {nearbyDriverCounts.total > 0
+                  ? `${nearbyDriverCounts.total} dispo proche${nearbyDriverCounts.total > 1 ? 's' : ''}`
                   : 'Recherche'}
               </Text>
             </Pressable>
@@ -661,7 +726,12 @@ export default function RiderHomeScreen() {
           />
         ) : (
           /* ── Default: search bar + services ── */
-          <>
+          <ScrollView
+            style={styles.sheetScroll}
+            contentContainerStyle={styles.sheetScrollContent}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled
+          >
             {/* Search prompt with fare estimator */}
             <Pressable
               style={({ pressed }) => [
@@ -695,13 +765,20 @@ export default function RiderHomeScreen() {
               <View style={styles.servicesBlock}>
                 <View style={styles.servicesHeader}>
                   <Text style={styles.servicesTitle}>Choisir une option</Text>
-                  <Text style={styles.servicesHint}>{realNearbyCount > 0 ? `${realNearbyCount} proches` : 'A confirmer'}</Text>
+                  <Text style={styles.servicesHint}>
+                    {nearbyDriverCounts.car > 0
+                      ? `${nearbyDriverCounts.car} voiture${nearbyDriverCounts.car > 1 ? 's' : ''}`
+                      : nearbyDriverCounts.motorcycle > 0
+                        ? `${nearbyDriverCounts.motorcycle} moto${nearbyDriverCounts.motorcycle > 1 ? 's' : ''}`
+                        : 'Recherche'}
+                  </Text>
                 </View>
                 <View style={styles.services}>
                   {options.slice(0, 3).map((opt) => (
                   <ServiceRow
                     key={opt.id}
                     option={opt}
+                    nearbyCount={getCompatibleNearbyCount(opt, nearbyDriverCounts)}
                     onPress={navigateToBook}
                   />
                   ))}
@@ -714,7 +791,7 @@ export default function RiderHomeScreen() {
                 <SkeletonServiceRow />
               </View>
             )}
-          </>
+          </ScrollView>
         )}
       </View>
     </View>
@@ -832,6 +909,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: '#D3DEE2',
     alignSelf: 'center',
     marginBottom: 16,
+  },
+  sheetScroll: {
+    flex: 1,
+  },
+  sheetScrollContent: {
+    paddingBottom: 20,
   },
 
   // Search bar

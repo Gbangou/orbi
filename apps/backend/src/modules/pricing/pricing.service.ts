@@ -757,6 +757,7 @@ export class PricingService {
 
     const tenMinutesAgo = new Date(now.getTime() - 10 * 60_000);
     const freshPresenceCutoff = new Date(now.getTime() - 90_000);
+    const freshSessionCutoff = new Date(now.getTime() - 10 * 60_000);
 
     const cityFilter =
       cityHint &&
@@ -775,6 +776,16 @@ export class PricingService {
         where: {
           status: 'ONLINE',
           verificationStatus: 'APPROVED',
+          user: {
+            isActive: true,
+            sessions: {
+              some: {
+                revokedAt: null,
+                expiresAt: { gt: now },
+                lastSeenAt: { gte: freshSessionCutoff },
+              },
+            },
+          },
           currentLatitude: { not: null },
           currentLongitude: { not: null },
           updatedAt: { gte: freshPresenceCutoff },

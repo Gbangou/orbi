@@ -664,10 +664,22 @@ export class RideRequestsService {
     pickupAddress: string;
   }): Promise<void> {
     try {
-      const freshPresenceCutoff = new Date(Date.now() - 90_000);
+      const now = new Date();
+      const freshPresenceCutoff = new Date(now.getTime() - 90_000);
+      const freshSessionCutoff = new Date(now.getTime() - 10 * 60_000);
       const onlineDrivers = await this.prisma.driverProfile.findMany({
         where: {
           status: 'ONLINE',
+          user: {
+            isActive: true,
+            sessions: {
+              some: {
+                revokedAt: null,
+                expiresAt: { gt: now },
+                lastSeenAt: { gte: freshSessionCutoff },
+              },
+            },
+          },
           currentLatitude: { not: null },
           currentLongitude: { not: null },
           updatedAt: { gte: freshPresenceCutoff },
