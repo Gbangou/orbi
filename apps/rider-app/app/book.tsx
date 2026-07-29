@@ -490,7 +490,8 @@ export default function BookingScreen() {
 
       const compatibleDriverCount = nearbyDriversResponse
         ? nearbyDriversResponse.drivers.filter(
-            (driver) => driver.status === 'ONLINE',
+            (driver) =>
+              driver.status === 'ONLINE' && driver.vehicleType === 'MOTORCYCLE',
           ).length
         : null;
       const normalizedHistory = normalizeRiderTripsResponse(historyResponse);
@@ -1080,7 +1081,7 @@ export default function BookingScreen() {
                 {nearbyCompatibleDriverCount === null
                   ? 'Scan'
                   : nearbyCompatibleDriverCount > 0
-                    ? `${nearbyCompatibleDriverCount} proche${nearbyCompatibleDriverCount > 1 ? 's' : ''}`
+                    ? `${nearbyCompatibleDriverCount} compatible${nearbyCompatibleDriverCount > 1 ? 's' : ''}`
                     : 'Aucun proche'}
               </Text>
             </View>
@@ -1175,8 +1176,8 @@ export default function BookingScreen() {
         ) : nearbyCompatibleDriverCount !== null ? (
           <OrbiStatusBanner
             tone="teal"
-            title={`${nearbyCompatibleDriverCount} chauffeur${nearbyCompatibleDriverCount > 1 ? 's' : ''} en ligne`}
-            message={`Disponibilité réelle vérifiée dans ${fieldDispatchRadiusKm} km autour du départ.`}
+            title={`${nearbyCompatibleDriverCount} chauffeur${nearbyCompatibleDriverCount > 1 ? 's' : ''} compatible${nearbyCompatibleDriverCount > 1 ? 's' : ''} proche${nearbyCompatibleDriverCount > 1 ? 's' : ''}`}
+            message={`Moto disponible vérifiée dans ${fieldDispatchRadiusKm} km autour du départ.`}
           />
         ) : null}
 
