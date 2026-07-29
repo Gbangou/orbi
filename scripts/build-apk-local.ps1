@@ -22,6 +22,7 @@ $DefaultFieldApiBaseUrl = "https://orbi-field-api.onrender.com"
 
 $env:CI = "true"
 $env:EXPO_NO_TELEMETRY = "1"
+$env:EXPO_NO_GIT_STATUS = "1"
 $env:NODE_ENV = "production"
 if (-not $env:GRADLE_OPTS) {
     $env:GRADLE_OPTS = "-Dfile.encoding=UTF-8"
@@ -120,27 +121,64 @@ function Test-MobileApiBaseUrl {
 
     $readyUrl = "$BaseUrl/api/v1/health/ready"
     Write-Host "  Checking mobile API readiness -> $readyUrl" -ForegroundColor DarkGray
+    $lastErrorMessage = $null
 
-    try {
-        $requestArgs = @{
-            Uri             = $readyUrl
-            UseBasicParsing = $true
-            TimeoutSec      = 15
+    for ($attempt = 1; $attempt -le 4; $attempt++) {
+        try {
+            $requestArgs = @{
+                Uri             = $readyUrl
+                UseBasicParsing = $true
+                TimeoutSec      = 15
+            }
+
+            $requestArgs.NoProxy = $true
+
+            $response = Invoke-WebRequest @requestArgs
+            $body = $response.Content | ConvertFrom-Json
+
+            if ($response.StatusCode -ne 200 -or $body.status -ne 'ready') {
+                throw "HTTP $($response.StatusCode), status '$($body.status)'"
+            }
+
+            Write-Host "  Mobile API readiness: OK" -ForegroundColor Green
+            return
         }
-
-        $requestArgs.NoProxy = $true
-
-        $response = Invoke-WebRequest @requestArgs
-        $body = $response.Content | ConvertFrom-Json
-
-        if ($response.StatusCode -ne 200 -or $body.status -ne 'ready') {
-            throw "HTTP $($response.StatusCode), status '$($body.status)'"
-        }
-
-        Write-Host "  Mobile API readiness: OK" -ForegroundColor Green
+        catch {
+            $lastErrorMessage = $_.Exception.Message
+            try {
+                $nodeCheck = @'
+const url = process.argv[1];
+fetch(url)
+  .then(async (response) => {
+    const body = await response.json();
+    if (!response.ok || body.status !== 'ready') {
+      throw new Error(`HTTP ${response.status}, status '${body.status}'`);
     }
-    catch {
-        throw @"
+  })
+  .catch((error) => {
+    console.error(error && error.message ? error.message : String(error));
+    process.exit(1);
+  });
+'@
+                $nodeOutput = node -e $nodeCheck $readyUrl 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "  Mobile API readiness: OK (node fallback)" -ForegroundColor Green
+                    return
+                }
+                $lastErrorMessage = "$lastErrorMessage; node fallback: $($nodeOutput -join ' ')"
+            }
+            catch {
+                $lastErrorMessage = "$lastErrorMessage; node fallback: $($_.Exception.Message)"
+            }
+
+            if ($attempt -lt 4) {
+                Write-Host "  Mobile API readiness retry $attempt/4: $lastErrorMessage" -ForegroundColor Yellow
+                Start-Sleep -Seconds ([Math]::Min(20, 3 * $attempt))
+            }
+        }
+    }
+
+    throw @"
 Mobile API is not reachable from the configured APK URL:
   $readyUrl
 
@@ -148,9 +186,8 @@ Start or deploy the backend targeted by this APK, then pass the exact URL explic
   pnpm mobile:apk -- -ApiBaseUrl http://YOUR_WIFI_IP:3000
   pnpm mobile:apk -- -ApiBaseUrl https://orbi-field-api.onrender.com
 
-Details: $($_.Exception.Message)
+Details: $lastErrorMessage
 "@
-    }
 }
 
 Test-MobileApiBaseUrl -BaseUrl $ResolvedApiBaseUrl
@@ -232,7 +269,7 @@ function Build-App {
 
     # Expo prebuild : genere le dossier android/
     Write-Host "  expo prebuild --platform android --clean ..." -ForegroundColor Yellow
-    npx expo prebuild --platform android --clean
+    pnpm exec expo prebuild --platform android --clean --no-install
     if ($LASTEXITCODE -ne 0) { throw "expo prebuild failed for $AppName" }
     Assert-NoReactNativeSvg -Scope "$AppName generated Android project" -Paths @("$AppDir\android")
 
