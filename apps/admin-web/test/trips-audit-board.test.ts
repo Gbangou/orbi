@@ -145,6 +145,8 @@ describe('trips audit board', () => {
     expect(routeSource).toContain('isSafeOpaqueAdminId');
     expect(routeSource).toContain('createNoStoreAdminHeaders()');
     expect(routeSource).toContain('forceCloseAdminTrip');
+    expect(routeSource).toContain('updateTripStatusWithApi');
+    expect(routeSource).toContain("'CANCELLED'");
     expect(routeSource).toContain('reason.length < 10');
     expect(routeSource).toContain('reason.length > 500');
   });

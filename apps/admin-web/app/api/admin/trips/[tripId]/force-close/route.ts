@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { forceCloseAdminTrip } from '@orbi/api';
+import {
+  forceCloseAdminTrip,
+  isOrbiApiError,
+  updateTripStatusWithApi,
+} from '@orbi/api';
 import {
   createAdminServerAuthErrorResponse,
   getAdminServerAuthClient,
@@ -25,6 +29,10 @@ function normalizeForceClosePayload(value: unknown) {
   }
 
   return { reason };
+}
+
+function shouldUseStatusCancellationFallback(error: unknown) {
+  return isOrbiApiError(error) && (error.status === 404 || error.status === 405);
 }
 
 export async function POST(
@@ -60,7 +68,34 @@ export async function POST(
 
   try {
     const authClient = await getAdminServerAuthClient();
-    const response = await forceCloseAdminTrip(authClient, tripId, payload);
+    let response;
+
+    try {
+      response = await forceCloseAdminTrip(authClient, tripId, payload);
+    } catch (error) {
+      if (!shouldUseStatusCancellationFallback(error)) {
+        throw error;
+      }
+
+      const fallback = await updateTripStatusWithApi(
+        authClient,
+        tripId,
+        'CANCELLED',
+        payload.reason,
+      );
+
+      response = {
+        tripId: fallback.trip.id,
+        rideRequestId: fallback.trip.rideRequestId,
+        riderId: '',
+        driverId: '',
+        status: fallback.trip.status,
+        cancelledBy: 'ADMIN',
+        changed: fallback.trip.status === 'CANCELLED',
+        message:
+          'Trip closed through status cancellation fallback. Rider and driver can be matched again.',
+      };
+    }
 
     return NextResponse.json(response, {
       headers: createNoStoreAdminHeaders(),
