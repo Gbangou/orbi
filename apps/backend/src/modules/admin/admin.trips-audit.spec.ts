@@ -155,6 +155,46 @@ describe('AdminService.tripsAudit', () => {
     expect(audit.riskTrips).toEqual([]);
   });
 
+  it('garde les courses actives debloquables meme si leur risque audit a deja ete resolu', async () => {
+    const { prisma, service } = createService([
+      createTrip({
+        status: 'IN_PROGRESS',
+        completedAt: null,
+        events: [
+          {
+            id: 'event-active-1',
+            eventType: 'ROUTE_POSITION_RECORDED',
+            payload: { sourceRole: 'DRIVER' },
+            createdAt: new Date(),
+          },
+        ],
+      }),
+    ]);
+    prisma.auditLog.findMany.mockResolvedValue([
+      {
+        entityId: 'trip-1',
+        metadata: {
+          riskReasons: ['Course active: deblocage operations disponible.'],
+        },
+      },
+    ]);
+
+    const audit = await service.tripsAudit({ status: 'IN_PROGRESS' });
+
+    expect(audit.summary.riskTripCount).toBe(1);
+    expect(audit.summary.resolvedRiskTripCount).toBe(0);
+    expect(audit.riskTrips[0]).toEqual(
+      expect.objectContaining({
+        id: 'trip-1',
+        status: 'IN_PROGRESS',
+        owner: 'ops',
+        reasons: expect.arrayContaining([
+          'Course active: deblocage operations disponible.',
+        ]),
+      }),
+    );
+  });
+
   it('ecrit un audit log quand un ops resout un risque trajet actif', async () => {
     const { prisma, service } = createService([
       createTrip({

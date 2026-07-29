@@ -34,4 +34,5 @@ dist/
 
 # Local QA/debug scratch (Metro cache dumps, Chrome automation profiles)
 .tmp/
+tmp/
 artifacts/

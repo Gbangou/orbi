@@ -1327,6 +1327,7 @@ function safeRate(numerator: number, denominator: number) {
 }
 
 const tripAuditRiskResolvedAction = 'TRIP_AUDIT_RISK_RESOLVED';
+const activeTripAuditStatuses = new Set<string>(ACTIVE_TRIP_STATUSES);
 
 const tripsAuditTripInclude = Prisma.validator<Prisma.TripInclude>()({
   rider: { include: { user: true } },
@@ -1397,6 +1398,12 @@ function buildTripAuditRisk(
   const reasons: string[] = [];
   let severity: 'low' | 'medium' | 'high' | 'critical' = 'low';
   let owner: 'ops' | 'finance' | 'support' | 'engineering' = 'ops';
+
+  if (activeTripAuditStatuses.has(trip.status)) {
+    reasons.push('Course active: deblocage operations disponible.');
+    severity = 'medium';
+    owner = 'ops';
+  }
 
   if (
     trip.status === 'COMPLETED' &&
@@ -3810,6 +3817,10 @@ export class AdminService {
 
     const riskTrips = candidateRiskTrips
       .filter((trip) => {
+        if (activeTripAuditStatuses.has(trip.status)) {
+          return true;
+        }
+
         const resolvedReasons = readAuditRiskReasons(
           latestResolutionByTripId.get(trip.id),
         );
