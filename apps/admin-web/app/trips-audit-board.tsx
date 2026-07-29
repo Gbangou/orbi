@@ -3,7 +3,11 @@
 import { useCallback, useState } from 'react';
 import type { AdminTripsAuditResponse } from '@orbi/api';
 import { formatOperationalStatus } from '@orbi/ui';
-import { fetchAdminJson, postAdminMutation } from './admin-client-fetch';
+import {
+  AdminClientRequestError,
+  fetchAdminJson,
+  postAdminMutation,
+} from './admin-client-fetch';
 import { formatAdminMoney } from './admin-ops-kernel';
 
 type TripsAuditBoardProps = {
@@ -17,6 +21,7 @@ const forceClosableTripStatuses = new Set([
   'DRIVER_ARRIVING',
   'IN_PROGRESS',
 ]);
+const adminMutationTimeoutMs = 20_000;
 
 function resolveTripsAuditLimit(value: string) {
   return (
@@ -29,6 +34,34 @@ function formatOwner(value: string) {
   if (value === 'ops') return 'Ops';
   if (value === 'support') return 'Support';
   return 'Engineering';
+}
+
+function getAdminActionErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof AdminClientRequestError) {
+    return `${fallback}: ${error.message}`;
+  }
+
+  if (error instanceof Error && error.name === 'AbortError') {
+    return `${fallback}: delai depasse, verifiez la connexion backend puis recommencez.`;
+  }
+
+  return fallback;
+}
+
+async function withAdminTimeout<TResponse>(
+  operation: (signal: AbortSignal) => Promise<TResponse>,
+) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(
+    () => controller.abort(),
+    adminMutationTimeoutMs,
+  );
+
+  try {
+    return await operation(controller.signal);
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 async function fetchTripsAudit(opts: {
@@ -122,10 +155,13 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
       setStatusMsg('Cloture auditee du risque trajet...');
 
       try {
-        await postAdminMutation(`/api/admin/trips/audit/${tripId}/resolve`, {
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason }),
-        });
+        await withAdminTimeout((signal) =>
+          postAdminMutation(`/api/admin/trips/audit/${tripId}/resolve`, {
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason }),
+            signal,
+          }),
+        );
         setResolutionReasonByTripId((current) => {
           const next = { ...current };
           delete next[tripId];
@@ -137,8 +173,13 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
           fromDate: filterFrom || undefined,
           toDate: filterTo || undefined,
         });
-      } catch {
-        setStatusMsg("Le risque trajet n'a pas pu etre cloture.");
+      } catch (error) {
+        setStatusMsg(
+          getAdminActionErrorMessage(
+            error,
+            "Le risque trajet n'a pas pu etre cloture",
+          ),
+        );
       } finally {
         setResolvingTripId(null);
       }
@@ -165,10 +206,13 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
       setStatusMsg('Deblocage audite du trajet actif...');
 
       try {
-        await postAdminMutation(`/api/admin/trips/${tripId}/force-close`, {
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason }),
-        });
+        await withAdminTimeout((signal) =>
+          postAdminMutation(`/api/admin/trips/${tripId}/force-close`, {
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason }),
+            signal,
+          }),
+        );
         setResolutionReasonByTripId((current) => {
           const next = { ...current };
           delete next[tripId];
@@ -180,8 +224,13 @@ export function TripsAuditBoard({ initialAudit }: TripsAuditBoardProps) {
           fromDate: filterFrom || undefined,
           toDate: filterTo || undefined,
         });
-      } catch {
-        setStatusMsg("Le trajet actif n'a pas pu etre debloque.");
+      } catch (error) {
+        setStatusMsg(
+          getAdminActionErrorMessage(
+            error,
+            "Le trajet actif n'a pas pu etre debloque",
+          ),
+        );
       } finally {
         setResolvingTripId(null);
       }
