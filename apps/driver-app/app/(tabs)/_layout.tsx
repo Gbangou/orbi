@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { type OrbiTheme } from '@orbi/ui';
 import { useOrbiTheme } from '@orbi/ui/native';
 import { usePushRegistration } from '../../lib/use-push-registration';
+import { useDriverOfferAutoOpen } from '../../lib/use-driver-offer-auto-open';
 
 type TabIconProps = { color: string; focused: boolean };
 
@@ -56,6 +57,7 @@ function ProfileIcon({ color, focused }: TabIconProps) {
 
 export default function DriverTabsLayout() {
   usePushRegistration();
+  useDriverOfferAutoOpen();
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 

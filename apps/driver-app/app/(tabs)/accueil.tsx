@@ -427,7 +427,7 @@ export default function DriverHomeScreen() {
     }
   }, []);
 
-  useLiveRefresh(() => loadDriverHome(true), 5000);
+  useLiveRefresh(() => loadDriverHome(true), 2500);
 
   useDriverRealtimeStream(
     sessionToken,

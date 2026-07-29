@@ -337,7 +337,7 @@ export default function OffersScreen() {
     }
   }, []);
 
-  useLiveRefresh(() => loadDriverData(true), 5000);
+  useLiveRefresh(() => loadDriverData(true), 2500);
   useDriverRealtimeStream(
     sessionToken,
     driverProfileId,
@@ -850,7 +850,7 @@ export default function OffersScreen() {
         <>
           <FlowActionButton
             disabled={isSubmitting}
-            label="Signaler l arrivee"
+            label="Je suis au point de depart"
             onPress={() => handleAdvanceTrip(activeTrip.id, "DRIVER_ARRIVING")}
             tone="amber"
             emphasis="primary"

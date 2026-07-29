@@ -1293,7 +1293,7 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
-    await pressByText(renderer, 'Signaler l arrivee');
+    await pressByText(renderer, 'Je suis au point de depart');
 
     expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
       { token: 'driver-auth-client' },

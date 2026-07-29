@@ -726,7 +726,7 @@ export default function BookingScreen() {
       : immediateBookingUnavailable
         ? 'Aucun chauffeur proche'
       : immediateBookingSupplyUnknown
-        ? 'Vérification chauffeur...'
+        ? 'Recherche de chauffeurs...'
       : selectedOption && destinationPlace.coordinates
         ? tb('confirm').replace('{{fare}}', formatRiderMoneyAmount(selectedOption.fare))
         : tb('noServiceSelected');
@@ -1165,11 +1165,11 @@ export default function BookingScreen() {
         ) : immediateBookingUnavailable || immediateBookingSupplyUnknown ? (
           <OrbiStatusBanner
             tone={immediateBookingUnavailable ? 'amber' : 'sky'}
-            title={immediateBookingUnavailable ? 'Aucun chauffeur proche' : 'Vérification chauffeur en cours'}
+            title={immediateBookingUnavailable ? 'Aucun chauffeur proche' : 'Recherche en cours'}
             message={
               immediateBookingUnavailable
-                ? `Demande immédiate bloquée tant qu'aucun chauffeur n'est en ligne dans ${fieldDispatchRadiusKm} km.`
-                : 'Le backend doit confirmer la présence chauffeur avant de lancer la recherche.'
+                ? 'Aucun chauffeur disponible tout pres du depart pour le moment.'
+                : 'Nous cherchons un chauffeur disponible autour du depart.'
             }
           />
         ) : nearbyCompatibleDriverCount !== null ? (
