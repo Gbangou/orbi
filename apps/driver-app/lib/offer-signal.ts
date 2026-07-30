@@ -35,6 +35,40 @@ function resolveOfferPriorityLabel(label: DriverOffer['offerConfidenceLabel']) {
   }
 }
 
+function resolveBusinessPriorityTone(
+  label: DriverOffer['businessPriorityLabel'],
+): OfferSignalTone {
+  switch (label) {
+    case 'EXCELLENT':
+      return 'teal';
+    case 'SOLID':
+      return 'sky';
+    case 'WATCH':
+      return 'amber';
+    case 'WEAK':
+      return 'rose';
+    default:
+      return 'sky';
+  }
+}
+
+function resolveBusinessPriorityLabel(
+  label: DriverOffer['businessPriorityLabel'],
+) {
+  switch (label) {
+    case 'EXCELLENT':
+      return 'Tres rentable';
+    case 'SOLID':
+      return 'Solide';
+    case 'WATCH':
+      return 'A verifier';
+    case 'WEAK':
+      return 'Faible';
+    default:
+      return 'Standard';
+  }
+}
+
 export function toFiniteOfferNumber(value: unknown) {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : null;
@@ -137,9 +171,9 @@ export function buildDriverOfferInsights(
       tone: 'teal',
     },
     {
-      label: 'Priorite',
-      value: resolveOfferPriorityLabel(offer.offerConfidenceLabel),
-      tone: resolveOfferPriorityTone(offer.offerConfidenceLabel),
+      label: 'Qualite',
+      value: resolveBusinessPriorityLabel(offer.businessPriorityLabel),
+      tone: resolveBusinessPriorityTone(offer.businessPriorityLabel),
     },
     {
       label: 'Gain',
@@ -174,6 +208,10 @@ export function buildDriverOfferDetailLines(offer: DriverOffer) {
     offer.offerConfidenceLabel || offerConfidenceScore !== null
       ? `Confiance offre: ${offer.offerConfidenceLabel ?? 'ND'}${offerConfidenceScore !== null ? ` (${offerConfidenceScore}/100)` : ''}`
       : null,
+    offer.businessPriorityLabel || offer.businessPriorityScore
+      ? `Priorite economique: ${offer.businessPriorityLabel ?? 'ND'}${offer.businessPriorityScore ? ` (${offer.businessPriorityScore}/100)` : ''}`
+      : null,
+    offer.businessPrioritySummary ?? null,
     offer.fairnessSummary
       ? `Fairness marketplace: ${offer.fairnessSummary}`
       : fairnessScore !== null

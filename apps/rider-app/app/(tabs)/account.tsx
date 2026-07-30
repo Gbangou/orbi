@@ -44,7 +44,6 @@ import {
 import { resolveRiderAppError } from '../../lib/session-feedback';
 import {
   buildRiderFlowTransitionLabel,
-  buildRiderPeripheralStatusLabel,
   resolveRiderActiveFlow,
 } from '../../lib/rider-active-flow';
 import { formatRiderMoneyAmount } from '../../lib/rider-display-format';
@@ -267,13 +266,7 @@ export default function AccountScreen() {
       });
       setHistory(normalizedHistory);
       if (!silent) {
-        const nextFlow = resolveRiderActiveFlow(normalizedHistory);
-        setStatus(
-          buildRiderPeripheralStatusLabel({
-            flow: nextFlow,
-            fullName: normalizedProfile.profile.fullName,
-          }),
-        );
+        setStatus('');
       }
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
@@ -722,8 +715,8 @@ export default function AccountScreen() {
       {/* Status feedback — shown for errors and transitions */}
       {status && !status.includes('Chargement') ? (
         <OrbiStatusBanner
-          tone="sky"
-          title="Compte synchronisé"
+          tone="amber"
+          title="Information"
           message={status}
           style={styles.accountStatusBanner}
           accessibilityLabel="account-status"

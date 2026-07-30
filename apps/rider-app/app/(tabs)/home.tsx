@@ -472,14 +472,17 @@ export default function RiderHomeScreen() {
     setIsFlowActionBusy(true);
     try {
       const { authClient } = await restoreRiderSession();
-      await updateTripStatusWithApi(
+      const response = await updateTripStatusWithApi(
         authClient,
         tripId,
         'COMPLETED',
         'Arret demande depuis accueil passager',
       );
       await loadHomeContext(true);
-      router.push('/activity');
+      router.push({
+        pathname: '/receipt',
+        params: { tripId: response.trip.id },
+      });
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: 'active-trip',
@@ -530,12 +533,12 @@ export default function RiderHomeScreen() {
     if (!flow.activeTrip || !canRiderStopTrip(flow.activeTrip.status)) return;
 
     Alert.alert(
-      'Arreter la course',
-      'Confirmez si vous souhaitez descendre maintenant. Le prix sera ajuste selon le trajet deja parcouru quand la position GPS le permet.',
+      'Terminer ma course maintenant',
+      'Confirmez si vous descendez ici. Orbi cloture la course, calcule le montant du trajet deja effectue, puis ouvre le recu pour payer.',
       [
         { text: 'Continuer', style: 'cancel' },
         {
-          text: 'Arreter',
+          text: 'Arreter et voir le montant',
           style: 'destructive',
           onPress: () => void stopTripInProgress(flow.activeTrip!.id),
         },
@@ -603,6 +606,7 @@ export default function RiderHomeScreen() {
         riderLng={riderPosition.latestPosition?.longitude}
         style={styles.map}
         onDriversUpdate={handleDriversUpdate}
+        showNearbyDrivers={!activeTrip}
       />
 
       {/* ── Offline banner ── */}
@@ -659,17 +663,19 @@ export default function RiderHomeScreen() {
                 </Text>
               </View>
             ) : null}
-            <Pressable
-              style={[styles.nearbyBadge, { flexShrink: 1 }]}
-              onPress={() => router.push('/book')}
-            >
-              <StatusDot active={isRealtimeSyncing} />
-              <Text style={styles.nearbyText} numberOfLines={1} ellipsizeMode="tail">
-                {nearbyDriverCounts.total > 0
-                  ? `${nearbyDriverCounts.total} dispo proche${nearbyDriverCounts.total > 1 ? 's' : ''}`
-                  : 'Recherche'}
-              </Text>
-            </Pressable>
+            {!activeTrip ? (
+              <Pressable
+                style={[styles.nearbyBadge, { flexShrink: 1 }]}
+                onPress={() => router.push('/book')}
+              >
+                <StatusDot active={isRealtimeSyncing} />
+                <Text style={styles.nearbyText} numberOfLines={1} ellipsizeMode="tail">
+                  {nearbyDriverCounts.total > 0
+                    ? `${nearbyDriverCounts.total} dispo proche${nearbyDriverCounts.total > 1 ? 's' : ''}`
+                    : 'Recherche'}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
       </SafeAreaView>

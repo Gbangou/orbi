@@ -563,6 +563,15 @@ export type RideOption = {
     vehicleExamples: string[];
     pricePromise: string;
   };
+  businessBalance?: {
+    score: number;
+    label: 'EXCELLENT' | 'BALANCED' | 'WATCH' | 'WEAK';
+    riderAffordabilityScore: number;
+    driverValueScore: number;
+    platformContributionScore: number;
+    summary: string;
+    actionHint: string;
+  };
   fareBreakdown?: {
     baseFare: number;
     distanceCharge?: number;
@@ -599,6 +608,9 @@ export type DriverOffer = {
   reservationExpiresAt?: string | null;
   serviceRadiusKm?: number | null;
   dispatchScore?: number;
+  businessPriorityScore?: number;
+  businessPriorityLabel?: 'EXCELLENT' | 'SOLID' | 'WATCH' | 'WEAK' | null;
+  businessPrioritySummary?: string | null;
   matchedTier?: string | null;
   dispatchContextSummary?: string | null;
   offerConfidenceScore?: number | null;

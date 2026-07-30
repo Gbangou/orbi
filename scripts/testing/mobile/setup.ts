@@ -108,6 +108,7 @@ if (!i18n.isInitialized) {
 }
 
 let pathname = "/";
+let localSearchParams: Record<string, unknown> = {};
 
 const router = {
   replace: jest.fn(),
@@ -213,12 +214,15 @@ jest.mock(
       router,
       useRouter: () => router,
       usePathname: () => pathname,
-      useLocalSearchParams: () => ({}),
+      useLocalSearchParams: () => localSearchParams,
       useGlobalSearchParams: () => ({}),
       useSegments: () => [],
       useRootNavigationState: () => ({ key: 'root', index: 0, routes: [] }),
       __setPathname: (nextPathname: string) => {
         pathname = nextPathname;
+      },
+      __setLocalSearchParams: (nextParams: Record<string, unknown>) => {
+        localSearchParams = nextParams;
       },
     };
   },
@@ -356,6 +360,7 @@ beforeEach(() => {
   router.replace.mockReset();
   router.push.mockReset();
   router.back.mockReset();
+  localSearchParams = {};
 });
 
 afterEach(async () => {

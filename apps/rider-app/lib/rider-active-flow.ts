@@ -341,6 +341,33 @@ export function buildRiderDriverTrustSnapshot(input: {
     photoLabel: verification.profilePhotoUrl
       ? "Photo chauffeur verifiee"
       : "Photo chauffeur pas encore exposee",
+    boardingChecklist: [
+      {
+        label: "Nom",
+        value: detail.driverName,
+        ok: true,
+      },
+      {
+        label: "Plaque",
+        value: vehicle.plateNumber || "A verifier",
+        ok: Boolean(vehicle.plateNumber),
+      },
+      {
+        label: "Vehicule",
+        value: `${vehicle.color} ${vehicle.make} ${vehicle.model}`,
+        ok: Boolean(vehicle.make && vehicle.model),
+      },
+      {
+        label: "Telephone",
+        value: verification.phoneVerified ? "Verifie" : "Non verifie",
+        ok: verification.phoneVerified,
+      },
+      {
+        label: "Paiement",
+        value: formatOperationalStatus(detail.paymentMethod ?? "MOBILE_MONEY"),
+        ok: Boolean(detail.paymentMethod),
+      },
+    ],
   };
 }
 

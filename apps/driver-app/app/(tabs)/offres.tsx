@@ -188,50 +188,53 @@ function formatPaymentMethodLabel(paymentMethod: string | null | undefined) {
   }
 }
 
-function TripStartToggle({
+function TripStartAction({
   state,
   disabled,
-  onToggle,
+  onPress,
 }: {
   state: "idle" | "confirming" | "confirmed";
   disabled: boolean;
-  onToggle: () => void;
+  onPress: () => void;
 }) {
   const theme = useOrbiTheme();
-  const styles = useMemo(() => makeTripStartToggleStyles(theme), [theme]);
-  const isActive = state !== "idle";
+  const styles = useMemo(() => makeTripStartActionStyles(theme), [theme]);
   const isConfirming = state === "confirming";
   const label = isConfirming
     ? "Demarrage..."
     : state === "confirmed"
       ? "Course demarree"
       : "Demarrer la course";
+  const hint = isConfirming
+    ? "Validation serveur en cours"
+    : state === "confirmed"
+      ? "Conduisez vers la destination"
+      : "Passager a bord, pret a partir";
+  const isDisabled = disabled || isConfirming || state === "confirmed";
 
   return (
     <Pressable
-      accessibilityRole="switch"
-      accessibilityState={{ checked: isActive, disabled }}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: isConfirming }}
       accessibilityLabel="Demarrer la course"
-      disabled={disabled}
-      onPress={onToggle}
+      disabled={isDisabled}
+      onPress={onPress}
       style={({ pressed }) => [
-        styles.track,
-        isActive ? styles.trackActive : styles.trackIdle,
-        pressed ? styles.trackPressed : null,
-        disabled ? styles.trackDisabled : null,
+        styles.button,
+        state === "confirmed" ? styles.buttonConfirmed : null,
+        pressed ? styles.buttonPressed : null,
+        isDisabled ? styles.buttonDisabled : null,
       ]}
     >
-      <View style={[styles.handle, isActive ? styles.handleActive : null]}>
-        {isConfirming ? (
-          <ActivityIndicator size="small" color={theme.colors.teal} />
-        ) : (
-          <Text style={[styles.handleMark, isActive ? styles.handleMarkActive : null]}>
-            {isActive ? "OK" : ">"}
-          </Text>
+      <View style={styles.iconWrap}>
+        {isConfirming ? <ActivityIndicator size="small" color="#07111F" /> : (
+          <Text style={styles.iconText}>{state === "confirmed" ? "OK" : "GO"}</Text>
         )}
       </View>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.handleSpacer} />
+      <View style={styles.copy}>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.hint}>{hint}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -273,9 +276,11 @@ export default function OffersScreen() {
     fareLabel: string;
     netLabel: string;
     paymentLabel: string;
+    paymentInstruction: string;
   } | null>(null);
   const [showMissionTimeline, setShowMissionTimeline] = useState(false);
-  const [startTripToggleOn, setStartTripToggleOn] = useState(false);
+  const [isStartTripConfirming, setIsStartTripConfirming] = useState(false);
+  const [startTripRecoveryNote, setStartTripRecoveryNote] = useState<string | null>(null);
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
   const previousTimelineEventIdsRef = useRef<string[] | null>(null);
@@ -470,12 +475,10 @@ export default function OffersScreen() {
     () =>
       activeTrip?.status === "IN_PROGRESS"
         ? "confirmed"
-        : isSubmitting && startTripToggleOn
+        : isStartTripConfirming
           ? "confirming"
-          : startTripToggleOn
-            ? "confirmed"
-            : "idle",
-    [activeTrip?.status, isSubmitting, startTripToggleOn],
+          : "idle",
+    [activeTrip?.status, isStartTripConfirming],
   );
   const { latestPosition: driverGpsPosition } = useDriverPresence(
     flow.availabilityStatus === "ONLINE" || Boolean(activeTrip),
@@ -489,12 +492,13 @@ export default function OffersScreen() {
 
   useEffect(() => {
     setShowMissionTimeline(false);
-    setStartTripToggleOn(false);
+    setIsStartTripConfirming(false);
   }, [activeTrip?.id]);
 
   useEffect(() => {
     if (activeTrip?.status !== "DRIVER_ARRIVING") {
-      setStartTripToggleOn(false);
+      setIsStartTripConfirming(false);
+      setStartTripRecoveryNote(null);
     }
   }, [activeTrip?.status]);
 
@@ -635,6 +639,50 @@ export default function OffersScreen() {
     }
   }
 
+  async function recoverStartedTripAfterFailedUpdate(tripId: string) {
+    try {
+      const { authClient } = await restoreDriverSession();
+      const latestHistory = await withNetworkRetry(() => fetchMyTrips(authClient), {
+        maxAttempts: 2,
+      });
+      const recoveredTrip = latestHistory.recentTrips.find((trip) => trip.id === tripId);
+
+      if (recoveredTrip?.status !== "IN_PROGRESS") {
+        const detail = await withNetworkRetry(() => fetchTripDetail(authClient, tripId), {
+          maxAttempts: 2,
+        });
+
+        if (detail.trip.status !== "IN_PROGRESS") {
+          return false;
+        }
+
+        setActiveTripDetail(detail);
+        setHistory((current) => ({
+          ...current,
+          recentTrips: current.recentTrips.map((trip) =>
+            trip.id === tripId ? { ...trip, status: "IN_PROGRESS" } : trip,
+          ),
+        }));
+        setStartTripRecoveryNote(null);
+        setStatus("Course demarree. Statut confirme par le serveur.");
+        safeHaptics.notify("success");
+        return true;
+      }
+
+      if (!recoveredTrip) {
+        return false;
+      }
+
+      setHistory(latestHistory);
+      setStartTripRecoveryNote(null);
+      setStatus("Course demarree. Statut confirme apres resynchronisation.");
+      safeHaptics.notify("success");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async function handleAcceptOffer(rideRequestId: string) {
     safeHaptics.impact('medium');
     setIncomingOfferId(null);
@@ -734,21 +782,52 @@ export default function OffersScreen() {
           tripId,
           nextStatus,
         );
+        setHistory((current) => ({
+          ...current,
+          recentTrips: current.recentTrips.map((trip) =>
+            trip.id === tripId
+              ? {
+                  ...trip,
+                  status: response.trip.status ?? nextStatus,
+                  amount:
+                    typeof response.trip.actualFare === "number"
+                      ? response.trip.actualFare
+                      : trip.amount,
+                  paymentMethod:
+                    response.trip.paymentMethod !== undefined
+                      ? response.trip.paymentMethod
+                      : trip.paymentMethod,
+                }
+              : trip,
+          ),
+        }));
         setStatus(
           `Trajet ${response.trip.id.slice(0, 8)} mis a jour: ${response.trip.status}.`,
         );
         const gross = toFiniteEarningsNumber(response.trip.actualFare);
         const net = toFiniteEarningsNumber(response.trip.driverPayout);
         if (nextStatus === "COMPLETED" && gross !== null && net !== null) {
+          const paymentLabel = formatPaymentMethodLabel(response.trip.paymentMethod);
           setCompletionFlash({
             fareLabel: formatDriverEarningsAmount(gross),
             netLabel: formatDriverEarningsAmount(net),
-            paymentLabel: formatPaymentMethodLabel(response.trip.paymentMethod),
+            paymentLabel,
+            paymentInstruction:
+              paymentLabel === "Especes"
+                ? "Encaissez le montant exact, confirmez au passager et gardez la course visible dans l historique."
+                : "Le passager doit finaliser le paiement sur son telephone. Verifiez le statut avant de quitter la zone.",
           });
         }
         await loadDriverData();
         return true;
       } catch (error) {
+        if (
+          nextStatus === "IN_PROGRESS" &&
+          (await recoverStartedTripAfterFailedUpdate(tripId))
+        ) {
+          return true;
+        }
+
         const feedback = await resolveDriverAppError(error, {
           surface: "active-trip",
           fallback: "La mise a jour du trajet a echoue.",
@@ -758,28 +837,48 @@ export default function OffersScreen() {
           setSessionToken(null);
         }
 
-        setStatus(feedback.message);
-        Alert.alert(
-          nextStatus === "COMPLETED" ? "Course non terminee" : "Mise a jour echouee",
-          feedback.message,
-        );
+        const nextMessage =
+          nextStatus === "IN_PROGRESS"
+            ? "Depart non confirme. Reessayez maintenant ou actualisez le direct."
+            : feedback.message;
+        setStatus(nextMessage);
+        if (nextStatus === "IN_PROGRESS") {
+          setStartTripRecoveryNote(nextMessage);
+        } else {
+          Alert.alert(
+            nextStatus === "COMPLETED" ? "Course non terminee" : "Mise a jour echouee",
+            feedback.message,
+          );
+        }
         return false;
       }
     });
   }
 
   async function handleStartTripToggle(tripId: string) {
-    if (startTripToggleOn || isSubmitting) {
+    if (isStartTripConfirming || isSubmitting) {
+      return;
+    }
+
+    if (activeTrip?.id === tripId && activeTrip.status === "IN_PROGRESS") {
+      setStatus("Course deja demarree. Continuez vers la destination.");
+      setStartTripRecoveryNote(null);
       return;
     }
 
     safeHaptics.impact("medium");
-    setStartTripToggleOn(true);
-    setStatus("Depart en confirmation: gardez le passager a bord, synchronisation en cours...");
+    setIsStartTripConfirming(true);
+    setStartTripRecoveryNote(null);
+    setStatus("Demarrage de la course...");
     const started = await handleAdvanceTrip(tripId, "IN_PROGRESS");
 
+    if (started) {
+      setIsStartTripConfirming(false);
+      return;
+    }
+
     if (!started) {
-      setStartTripToggleOn(false);
+      setIsStartTripConfirming(false);
     }
   }
 
@@ -978,11 +1077,24 @@ export default function OffersScreen() {
               </Text>
             </View>
           </View>
-          <TripStartToggle
+          <TripStartAction
             state={startTripToggleState}
             disabled={isSubmitting}
-            onToggle={() => void handleStartTripToggle(activeTrip.id)}
+            onPress={() => void handleStartTripToggle(activeTrip.id)}
           />
+          {startTripRecoveryNote ? (
+            <OrbiStatusBanner
+              tone="amber"
+              title="Depart non confirme"
+              message={startTripRecoveryNote}
+            />
+          ) : startTripToggleState === "confirming" ? (
+            <OrbiStatusBanner
+              tone="sky"
+              title="Validation serveur"
+              message="Gardez le passager a bord. Orbi verrouille le depart et reprendra le statut si le reseau coupe."
+            />
+          ) : null}
           <FlowActionButton
             disabled={isSubmitting}
             label="Annuler (passager absent)"
@@ -1156,6 +1268,9 @@ export default function OffersScreen() {
               <Text style={styles.completionFare}>Prix client : {completionFlash.fareLabel}</Text>
               <Text style={styles.completionNet}>Votre gain : {completionFlash.netLabel}</Text>
               <Text style={styles.completionPayment}>Paiement : {completionFlash.paymentLabel}</Text>
+              <Text style={styles.completionInstruction}>
+                {completionFlash.paymentInstruction}
+              </Text>
             </View>
             <Pressable onPress={() => setCompletionFlash(null)} style={styles.completionClose} hitSlop={12}>
               <CloseGlyph />
@@ -1660,6 +1775,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   completionFare: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular" },
   completionNet: { fontSize: 13, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: theme.colors.teal },
   completionPayment: { fontSize: 12, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.textSoft },
+  completionInstruction: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 17,
+    color: theme.colors.text,
+    fontFamily: "Inter_600SemiBold",
+  },
   completionClose: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.colors.backgroundDim, alignItems: "center", justifyContent: "center" },
   statusNotice: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular", paddingHorizontal: 2 },
   compactOfflineNotice: {
@@ -2056,66 +2178,70 @@ const makeIconStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
 });
 
-const makeTripStartToggleStyles = (theme: OrbiTheme) => StyleSheet.create({
-  track: {
-    minHeight: 58,
-    borderRadius: 999,
-    padding: 6,
+const makeTripStartActionStyles = (theme: OrbiTheme) => StyleSheet.create({
+  button: {
+    minHeight: 70,
+    borderRadius: 18,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
+    justifyContent: "flex-start",
+    gap: 12,
     borderWidth: 1,
+    backgroundColor: "#07111F",
+    borderColor: "#07111F",
     ...theme.shadows.button,
   },
-  trackIdle: {
-    backgroundColor: theme.colors.text,
-    borderColor: theme.colors.text,
-  },
-  trackActive: {
+  buttonConfirmed: {
     backgroundColor: theme.colors.teal,
-    borderColor: theme.colors.teal,
+    borderColor: "rgba(0,201,167,0.86)",
   },
-  trackPressed: {
+  buttonPressed: {
     opacity: 0.9,
     transform: [{ scale: 0.99 }],
   },
-  trackDisabled: {
-    opacity: 0.72,
+  buttonDisabled: {
+    opacity: 0.82,
   },
-  handle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+  iconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: theme.colors.surface,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.72)",
   },
-  handleActive: {
-    backgroundColor: "#FFFFFF",
+  iconText: {
+    color: "#07111F",
+    fontSize: 13,
+    fontWeight: "900",
+    fontFamily: "Inter_700Bold",
+    lineHeight: 16,
   },
-  handleMark: {
-    color: theme.colors.text,
+  copy: {
+    flex: 1,
+    alignItems: "flex-start",
+    justifyContent: "center",
+    gap: 3,
+    minWidth: 0,
+  },
+  label: {
+    color: theme.colors.textInverse,
     fontSize: 18,
     fontWeight: "900",
     fontFamily: "Inter_700Bold",
+    textAlign: "left",
     lineHeight: 22,
   },
-  handleMarkActive: {
-    color: theme.colors.teal,
-  },
-  label: {
-    flex: 1,
-    color: theme.colors.textInverse,
-    fontSize: 16,
-    fontWeight: "800",
+  hint: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 12,
+    fontWeight: "700",
     fontFamily: "Inter_700Bold",
-    textAlign: "center",
-  },
-  handleSpacer: {
-    width: 46,
-    height: 46,
-    flexShrink: 0,
+    textAlign: "left",
   },
 });

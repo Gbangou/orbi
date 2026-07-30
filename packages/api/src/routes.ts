@@ -32,6 +32,8 @@ export const apiRoutes = {
   admin: {
     preview: "/admin/preview",
     overview: "/admin/overview",
+    businessModel: "/admin/business-model",
+    pilotCommandCenter: "/admin/pilot-command-center",
     liveOps: "/admin/live-ops",
     financeDashboard: "/admin/finance-dashboard",
     operationalKpis: "/admin/operational-kpis",
@@ -164,6 +166,15 @@ export const riderRideOptions: RideOption[] = [
       vehicleExamples: ["Yamaha Crypton", "TVS HLX", "Bajaj Boxer"],
       pricePromise: "Prix upfront verrouille avant confirmation.",
     },
+    businessBalance: {
+      score: 82,
+      label: "BALANCED",
+      riderAffordabilityScore: 86,
+      driverValueScore: 80,
+      platformContributionScore: 76,
+      summary: "Equilibre 82/100: passager 86, chauffeur 80, Orbi 76.",
+      actionHint: "Prix equilibre: suivre acceptation et temps pickup.",
+    },
     fareBreakdown: {
       baseFare: 600,
       distanceCharge: 410,
@@ -198,6 +209,15 @@ export const riderRideOptions: RideOption[] = [
       reliabilityNote: "Disponibilite confirmee uniquement par les chauffeurs en ligne recents.",
       vehicleExamples: ["Toyota Corolla", "Hyundai Accent", "Suzuki Dzire"],
       pricePromise: "Prix upfront affiche sans frais de pickup caches.",
+    },
+    businessBalance: {
+      score: 78,
+      label: "BALANCED",
+      riderAffordabilityScore: 74,
+      driverValueScore: 82,
+      platformContributionScore: 78,
+      summary: "Equilibre 78/100: passager 74, chauffeur 82, Orbi 78.",
+      actionHint: "Prix equilibre: suivre acceptation et temps pickup.",
     },
     fareBreakdown: {
       baseFare: 1200,
@@ -261,6 +281,10 @@ export const driverOffers: DriverOffer[] = [
     reservationExpiresAt: createPreviewReservationExpiry(45),
     serviceRadiusKm: 8,
     dispatchScore: 86,
+    businessPriorityScore: 89,
+    businessPriorityLabel: "EXCELLENT",
+    businessPrioritySummary:
+      "Priorite forte: proche, fiable, rentable et saine pour la marketplace.",
     matchedTier: "MOTO_STANDARD",
     dispatchContextSummary: "HIGH - HEAVY - dispo 74/100",
     offerConfidenceScore: 91,
@@ -294,6 +318,10 @@ export const driverOffers: DriverOffer[] = [
     reservationExpiresAt: createPreviewReservationExpiry(35),
     serviceRadiusKm: 8,
     dispatchScore: 71,
+    businessPriorityScore: 63,
+    businessPriorityLabel: "WATCH",
+    businessPrioritySummary:
+      "Priorite a surveiller: verifier distance, acceptation ou economie chauffeur.",
     matchedTier: "CAR_STANDARD",
     dispatchContextSummary: "BALANCED - MODERATE - dispo 81/100",
     offerConfidenceScore: 68,

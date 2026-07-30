@@ -174,3 +174,71 @@ export function buildDriverEarningsTrustSummary(
         : 'Aucun payout recent a rapprocher pour le moment.',
   };
 }
+
+function isSameLocalDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+export function buildDriverDailyOperatingCompass(
+  earnings: DriverEarningsResponse,
+  now = new Date(),
+) {
+  const todayAmount = toFiniteEarningsNumber(earnings.summary.today) ?? 0;
+  const averagePayout =
+    toFiniteEarningsNumber(earnings.summary.averagePayout) ?? 0;
+  const todayTrips = earnings.recentTrips.filter((trip) => {
+    if (typeof trip.completedAt !== 'string') return false;
+    const completedAt = new Date(trip.completedAt);
+    return Number.isFinite(completedAt.getTime()) && isSameLocalDay(completedAt, now);
+  }).length;
+  const observedTrips = todayTrips > 0
+    ? todayTrips
+    : Math.max(0, Math.floor(toFiniteEarningsNumber(earnings.summary.completedTrips) ?? 0));
+  const targetTrips = averagePayout >= 4500 ? 5 : averagePayout >= 3000 ? 6 : 8;
+  const targetAmount = Math.max(
+    targetTrips * Math.max(averagePayout, 2500),
+    15000,
+  );
+  const remainingTrips = Math.max(0, targetTrips - observedTrips);
+  const remainingAmount = Math.max(0, targetAmount - todayAmount);
+  const progressPercent = Math.min(100, Math.round((todayAmount / targetAmount) * 100));
+  const gross = toFiniteEarningsNumber(earnings.settlement.recentGrossFare) ?? 0;
+  const net = toFiniteEarningsNumber(earnings.settlement.recentNetPayout) ?? 0;
+  const payoutRate = gross > 0 ? net / gross : toFiniteEarningsNumber(earnings.settlement.payoutRate);
+  const payoutRateLabel = formatDriverEarningsRatioPercent(payoutRate, 'ND%');
+  const primaryAction =
+    remainingTrips <= 0
+      ? 'Objectif atteint: gardez une presence selective sur les offres tres proches.'
+      : observedTrips === 0
+        ? 'Priorite: rester en ligne pres des zones de depart denses et accepter une premiere course courte.'
+        : remainingTrips <= 2
+          ? 'Encore quelques courses courtes peuvent verrouiller une bonne journee.'
+          : 'Cherchez les pickups courts et les offres avec gain net clair avant les longs trajets.';
+
+  return {
+    targetAmountLabel: formatDriverEarningsAmount(targetAmount),
+    remainingAmountLabel: formatDriverEarningsAmount(remainingAmount),
+    remainingTrips,
+    progressPercent,
+    payoutRateLabel,
+    primaryAction,
+    headline:
+      progressPercent >= 100
+        ? 'Journee rentabilisee'
+        : progressPercent >= 60
+          ? 'Bonne cadence'
+          : observedTrips > 0
+            ? 'Cadence a renforcer'
+            : 'Premiere course a securiser',
+    indicators: [
+      { label: 'Objectif', value: formatDriverEarningsAmount(targetAmount) },
+      { label: 'Reste', value: formatDriverEarningsAmount(remainingAmount) },
+      { label: 'Courses', value: remainingTrips === 0 ? 'OK' : `${remainingTrips} restantes` },
+      { label: 'Part', value: payoutRateLabel },
+    ],
+  };
+}

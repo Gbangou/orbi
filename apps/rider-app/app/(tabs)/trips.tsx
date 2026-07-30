@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -48,60 +47,78 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function TripCard({ trip, onPress }: { trip: TripItem; onPress: () => void }) {
+function TripCard({
+  trip,
+  onPress,
+  onRebook,
+}: {
+  trip: TripItem;
+  onPress: () => void;
+  onRebook: () => void;
+}) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const amount = resolveRiderMoneyAmount(trip.amount);
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [pressed ? styles.cardPressed : null]}
-    >
-      <OrbiSurface style={styles.card} elevated={trip.status === 'COMPLETED'}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardRoute}>
-            <View style={styles.routePin}>
-              <View style={[styles.routeDot, { backgroundColor: theme.colors.teal }]} />
-              <View style={styles.routeVert} />
-              <View style={[styles.routeDot, { backgroundColor: theme.colors.amber }]} />
-            </View>
-            <View style={styles.routeAddresses}>
-              <Text style={styles.addressText} numberOfLines={1}>
-                {trip.pickupAddress}
-              </Text>
-              <Text style={styles.addressText} numberOfLines={1}>
-                {trip.destinationAddress}
-              </Text>
-            </View>
+    <OrbiSurface style={styles.card} elevated={trip.status === 'COMPLETED'}>
+      <View style={styles.cardHeader}>
+        <View style={styles.cardRoute}>
+          <View style={styles.routePin}>
+            <View style={[styles.routeDot, { backgroundColor: theme.colors.teal }]} />
+            <View style={styles.routeVert} />
+            <View style={[styles.routeDot, { backgroundColor: theme.colors.amber }]} />
           </View>
-          <StatusBadge status={trip.status} />
+          <View style={styles.routeAddresses}>
+            <Text style={styles.addressText} numberOfLines={1}>
+              {trip.pickupAddress}
+            </Text>
+            <Text style={styles.addressText} numberOfLines={1}>
+              {trip.destinationAddress}
+            </Text>
+          </View>
         </View>
+        <StatusBadge status={trip.status} />
+      </View>
 
-        <View style={styles.cardMeta}>
-          <Text style={styles.metaText}>{formatDate(trip.completedAt ?? trip.createdAt)}</Text>
-          {trip.vehicleLabel ? (
-            <Text style={styles.metaText}>{trip.vehicleLabel}</Text>
-          ) : null}
-          {trip.counterpartyName ? (
-            <Text style={styles.metaText}>{trip.counterpartyName}</Text>
-          ) : null}
-        </View>
+      <View style={styles.cardMeta}>
+        <Text style={styles.metaText}>{formatDate(trip.completedAt ?? trip.createdAt)}</Text>
+        {trip.vehicleLabel ? (
+          <Text style={styles.metaText}>{trip.vehicleLabel}</Text>
+        ) : null}
+        {trip.counterpartyName ? (
+          <Text style={styles.metaText}>{trip.counterpartyName}</Text>
+        ) : null}
+      </View>
 
-        <View style={styles.cardFooter}>
-          {amount !== null && amount > 0 ? (
-            <View style={styles.cardFare}>
-              <Text style={styles.fareAmount}>{formatRiderMoneyAmount(amount)}</Text>
-              <Text style={styles.fareCurrency}>{trip.currency}</Text>
-            </View>
-          ) : (
-            <Text style={styles.metaText}>Montant indisponible</Text>
-          )}
-          <Text style={styles.cardActionHint}>
-            {trip.status === 'COMPLETED' ? 'Voir recu' : 'Voir suivi'}
-          </Text>
-        </View>
-      </OrbiSurface>
-    </Pressable>
+      <View style={styles.cardFooter}>
+        {amount !== null && amount > 0 ? (
+          <View style={styles.cardFare}>
+            <Text style={styles.fareAmount}>{formatRiderMoneyAmount(amount)}</Text>
+            <Text style={styles.fareCurrency}>{trip.currency}</Text>
+          </View>
+        ) : (
+          <Text style={styles.metaText}>Montant indisponible</Text>
+        )}
+        <OrbiButton
+          label={trip.status === 'COMPLETED' ? 'Voir recu' : 'Voir suivi'}
+          onPress={onPress}
+          variant="secondary"
+          tone="teal"
+          style={styles.openAction}
+        />
+      </View>
+
+      {trip.status === 'COMPLETED' ? (
+        <OrbiButton
+          label="Refaire ce trajet"
+          helper="Depart et destination repris"
+          onPress={onRebook}
+          variant="secondary"
+          tone="sky"
+          style={styles.rebookAction}
+        />
+      ) : null}
+    </OrbiSurface>
   );
 }
 
@@ -141,7 +158,7 @@ function RequestCard({ request }: { request: RequestItem }) {
             <Text style={styles.fareAmount}>{formatRiderMoneyAmount(estimatedFare)}</Text>
             <Text style={styles.fareCurrency}>estime</Text>
           </View>
-          <Text style={styles.cardActionHint}>Suivi actif</Text>
+          <Text style={styles.followHint}>Suivi actif</Text>
         </View>
       ) : null}
     </OrbiSurface>
@@ -257,6 +274,15 @@ export default function TripsScreen() {
                 } else {
                   router.push('/activity');
                 }
+              }}
+              onRebook={() => {
+                router.push({
+                  pathname: '/book',
+                  params: {
+                    prefillPickup: trip.pickupAddress,
+                    prefillDest: trip.destinationAddress,
+                  },
+                });
               }}
             />
           ))}
@@ -393,6 +419,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  rebookAction: {
+    alignSelf: 'flex-start',
+  },
+  openAction: {
+    minWidth: 112,
+  },
   fareAmount: {
     color: theme.colors.amber,
     fontSize: 16,
@@ -402,7 +434,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.muted,
     fontSize: 11,
   },
-  cardActionHint: {
+  followHint: {
     color: theme.colors.teal,
     fontSize: 12,
     fontWeight: '800',

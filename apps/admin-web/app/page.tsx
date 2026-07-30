@@ -12,6 +12,8 @@ import {
   fetchAdminFeatureFlags,
   fetchAdminLaunchReadiness,
   fetchAdminOverview,
+  fetchAdminBusinessModel,
+  fetchAdminPilotCommandCenter,
   fetchAdminOperationalKpis,
   fetchAdminDriverOnboardingQueue,
   fetchAdminDriverWallets,
@@ -37,6 +39,8 @@ import {
   type HealthCheckResponse,
   type DriverOnboardingQueueResponse,
   type AdminMetric,
+  type AdminBusinessModelResponse,
+  type AdminPilotCommandCenterResponse,
   type AdminPreviewResponse,
   type PricingEstimate,
   type SupportTicketQueueResponse,
@@ -113,6 +117,66 @@ const fallbackOperationalKpis: AdminOperationalKpisResponse = {
   offerAcceptanceRate7d: 0,
   avgDriverOnlineMinutes7d: null,
   avgSupportFirstResponseMinutes7d: null,
+};
+
+const fallbackBusinessModel: AdminBusinessModelResponse = {
+  generatedAt: new Date(0).toISOString(),
+  windows: { shortDays: 7, retentionDays: 30 },
+  thesis: {
+    apparentProduct: "Une course moto ou voiture.",
+    realProduct: "Un acces fiable a une mobilite organisee, tracable et monetisable.",
+    operatingDefinition:
+      "Orbi transforme une offre de transport fragmentee en marketplace liquide, sure et rentable.",
+  },
+  summary: {
+    marketplaceLiquidityScore: 0,
+    trustScore: 0,
+    driverValueScore: 0,
+    recurringDemandScore: 0,
+    contributionScore: 0,
+    overallScore: 0,
+    posture: "learning",
+    action:
+      "Connecter le backend terrain pour lire le modele economique reel.",
+  },
+  metrics: {
+    rideRequests7d: 0,
+    completedTrips7d: 0,
+    completionRate7d: 0,
+    cancellationRate7d: 0,
+    assignmentRate7d: 0,
+    repeatRiderRate30d: 0,
+    activeDrivers7d: 0,
+    tripsPerActiveDriver7d: null,
+    grossBookingsXof7d: 0,
+    estimatedCommissionXof7d: 0,
+    estimatedDriverPayoutXof7d: 0,
+    averageFareXof7d: null,
+    paymentSuccessRate7d: 0,
+    supportTicketsPer100Trips7d: null,
+  },
+  levers: [],
+};
+
+const fallbackPilotCommandCenter: AdminPilotCommandCenterResponse = {
+  generatedAt: new Date(0).toISOString(),
+  decision: {
+    state: "limited",
+    label: "Pilote limite",
+    detail:
+      "Connecter le backend terrain pour obtenir la decision pilote officielle.",
+    nextReviewAt: new Date(0).toISOString(),
+  },
+  scorecard: {
+    overallScore: 0,
+    businessScore: 0,
+    operationalScore: 0,
+    financeScore: 0,
+    supportScore: 0,
+    mobileScore: 0,
+  },
+  gates: [],
+  fieldActions: [],
 };
 
 const fallbackLiveOps: AdminLiveOpsResponse = {
@@ -673,7 +737,9 @@ async function loadAdminData(): Promise<{
     detail: string;
   };
   preview: AdminPreviewResponse;
+  pilotCommandCenter: AdminPilotCommandCenterResponse;
   liveOps: AdminLiveOpsResponse;
+  businessModel: AdminBusinessModelResponse;
   operationalKpis: AdminOperationalKpisResponse;
   tripsAudit: AdminTripsAuditResponse;
   support: SupportTicketQueueResponse;
@@ -716,6 +782,8 @@ async function loadAdminData(): Promise<{
     const me = await fetchCurrentUser(authClient);
     const [
       overviewResult,
+      pilotCommandCenterResult,
+      businessModelResult,
       operationalKpisResult,
       liveOpsResult,
       tripsAuditResult,
@@ -737,6 +805,8 @@ async function loadAdminData(): Promise<{
       northEstimateResult,
     ] = await Promise.allSettled([
       fetchAdminOverview(authClient),
+      fetchAdminPilotCommandCenter(authClient),
+      fetchAdminBusinessModel(authClient),
       fetchAdminOperationalKpis(authClient),
       fetchAdminLiveOps(authClient),
       fetchAdminTripsAudit(authClient, { lookbackHours: 24 }),
@@ -808,6 +878,11 @@ async function loadAdminData(): Promise<{
     const fallbackOverview = { users: 0, riders: 0, drivers: 0, vehicles: 0, openRequests: 0, activeTrips: 0, revenueXof24h: 0, completionRate24h: 0, avgPickupMinutes24h: null };
 
     const overview = settled(overviewResult, fallbackOverview);
+    const pilotCommandCenter = settled(
+      pilotCommandCenterResult,
+      fallbackPilotCommandCenter,
+    );
+    const businessModel = settled(businessModelResult, fallbackBusinessModel);
     const operationalKpis = settled(
       operationalKpisResult,
       fallbackOperationalKpis,
@@ -886,6 +961,8 @@ async function loadAdminData(): Promise<{
         incidents: liveOps.alerts.length ? liveOps.alerts : calmIncidentFeed,
       },
       liveOps,
+      pilotCommandCenter,
+      businessModel,
       tripsAudit,
       support,
       onboardingQueue,
@@ -923,6 +1000,8 @@ async function loadAdminData(): Promise<{
         incidents: fallbackIncidents,
       },
       liveOps: fallbackLiveOps,
+      pilotCommandCenter: fallbackPilotCommandCenter,
+      businessModel: fallbackBusinessModel,
       operationalKpis: fallbackOperationalKpis,
       tripsAudit: fallbackTripsAudit,
       support: fallbackSupport,
@@ -1018,6 +1097,8 @@ export default async function AdminHomePage({
     preview,
     backendConnection,
     liveOps,
+    pilotCommandCenter,
+    businessModel,
     tripsAudit,
     support,
     onboardingQueue,
@@ -1106,6 +1187,142 @@ export default async function AdminHomePage({
       </section>
 
       <LiveOverviewStats initialData={overview} />
+
+      <section className="panel">
+        <div className="roadmap-heading">
+          <div>
+            <p className="eyebrow">Centre de commande pilote</p>
+            <h2>{pilotCommandCenter.decision.label}</h2>
+          </div>
+          <p className="lede">{pilotCommandCenter.decision.detail}</p>
+        </div>
+        <div className="kpi-grid">
+          <div className="kpi-card">
+            <span>Decision</span>
+            <strong>{pilotCommandCenter.decision.state}</strong>
+            <p>
+              Revue {new Date(pilotCommandCenter.decision.nextReviewAt).toLocaleString("fr-FR")}
+            </p>
+          </div>
+          <div className="kpi-card">
+            <span>Score global</span>
+            <strong>{pilotCommandCenter.scorecard.overallScore}/100</strong>
+            <p>Business {pilotCommandCenter.scorecard.businessScore}/100</p>
+          </div>
+          <div className="kpi-card">
+            <span>Operations</span>
+            <strong>{pilotCommandCenter.scorecard.operationalScore}/100</strong>
+            <p>Finance {pilotCommandCenter.scorecard.financeScore}/100</p>
+          </div>
+          <div className="kpi-card">
+            <span>Support</span>
+            <strong>{pilotCommandCenter.scorecard.supportScore}/100</strong>
+            <p>Mobile {pilotCommandCenter.scorecard.mobileScore}/100</p>
+          </div>
+        </div>
+        {pilotCommandCenter.gates.length ? (
+          <div className="alert-stack">
+            {pilotCommandCenter.gates.map((gate) => (
+              <div className="row" key={gate.id}>
+                <div>
+                  <h3>{gate.label}</h3>
+                  <p>{gate.signal}</p>
+                  <p>{gate.action}</p>
+                </div>
+                <strong>{gate.state}</strong>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {pilotCommandCenter.fieldActions.length ? (
+          <div className="panel-subsection">
+            <h3>Actions terrain prioritaires</h3>
+            <div className="alert-stack">
+              {pilotCommandCenter.fieldActions.map((item) => (
+                <div className="alert" key={`${item.priority}-${item.owner}-${item.metric}`}>
+                  <span>
+                    {item.priority} · {item.owner} · {item.action} ({item.metric})
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="panel">
+        <div className="roadmap-heading">
+          <div>
+            <p className="eyebrow">Modele economique reel</p>
+            <h2>Orbi vend la mobilite organisee</h2>
+          </div>
+          <p className="lede">{businessModel.thesis.operatingDefinition}</p>
+        </div>
+        <div className="row">
+          <div>
+            <h3>Produit apparent</h3>
+            <p>{businessModel.thesis.apparentProduct}</p>
+          </div>
+          <strong>course</strong>
+        </div>
+        <div className="row">
+          <div>
+            <h3>Vrai produit</h3>
+            <p>{businessModel.thesis.realProduct}</p>
+          </div>
+          <strong>{businessModel.summary.overallScore}/100</strong>
+        </div>
+        <div className="kpi-grid">
+          <div className="kpi-card">
+            <span>Liquidite</span>
+            <strong>{businessModel.summary.marketplaceLiquidityScore}/100</strong>
+            <p>{businessModel.metrics.assignmentRate7d}% assignees</p>
+          </div>
+          <div className="kpi-card">
+            <span>Confiance</span>
+            <strong>{businessModel.summary.trustScore}/100</strong>
+            <p>{businessModel.metrics.paymentSuccessRate7d}% paiements OK</p>
+          </div>
+          <div className="kpi-card">
+            <span>Chauffeurs</span>
+            <strong>{businessModel.summary.driverValueScore}/100</strong>
+            <p>
+              {businessModel.metrics.tripsPerActiveDriver7d === null
+                ? "Pas de donnee"
+                : `${businessModel.metrics.tripsPerActiveDriver7d} courses/chauffeur`}
+            </p>
+          </div>
+          <div className="kpi-card">
+            <span>Recurrence</span>
+            <strong>{businessModel.summary.recurringDemandScore}/100</strong>
+            <p>{businessModel.metrics.repeatRiderRate30d}% riders repetes</p>
+          </div>
+          <div className="kpi-card">
+            <span>Contribution</span>
+            <strong>{businessModel.summary.contributionScore}/100</strong>
+            <p>
+              XOF {businessModel.metrics.estimatedCommissionXof7d.toLocaleString("fr-FR")}
+            </p>
+          </div>
+        </div>
+        <div className="alert">
+          <span>{businessModel.summary.action}</span>
+        </div>
+        {businessModel.levers.length ? (
+          <div className="alert-stack">
+            {businessModel.levers.map((lever) => (
+              <div className="row" key={lever.pillar}>
+                <div>
+                  <h3>{lever.label}</h3>
+                  <p>{lever.signal}</p>
+                  <p>{lever.action}</p>
+                </div>
+                <strong>{lever.pillar}</strong>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </section>
 
       <section className="split">
         <div className="panel">

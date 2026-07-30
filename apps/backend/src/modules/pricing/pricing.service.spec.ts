@@ -608,6 +608,29 @@ describe('PricingService — estimateRideOptions catalogue Burkina', () => {
     }
   });
 
+  it('chaque option expose un score d equilibre passager chauffeur Orbi', async () => {
+    const { service } = createService();
+    const preview = await service.estimateRideOptions({
+      distanceKm: 5.8,
+      durationMinutes: 16,
+      activeDriverCount: 8,
+      openRequestCount: 4,
+    } as never);
+
+    for (const option of preview.options) {
+      expect(option.businessBalance?.score).toBeGreaterThanOrEqual(0);
+      expect(option.businessBalance?.score).toBeLessThanOrEqual(100);
+      expect(['EXCELLENT', 'BALANCED', 'WATCH', 'WEAK']).toContain(
+        option.businessBalance?.label,
+      );
+      expect(option.businessBalance?.riderAffordabilityScore).toBeGreaterThanOrEqual(0);
+      expect(option.businessBalance?.driverValueScore).toBeGreaterThanOrEqual(0);
+      expect(option.businessBalance?.platformContributionScore).toBeGreaterThanOrEqual(0);
+      expect(option.businessBalance?.summary).toContain('passager');
+      expect(option.businessBalance?.actionHint.length).toBeGreaterThan(12);
+    }
+  });
+
   it('marketplace expose nearbyDrivers, etaConfidence et sources de signal', async () => {
     const { service } = createService();
     const preview = await service.estimateRideOptions({

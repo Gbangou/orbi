@@ -794,9 +794,6 @@ describe('RideRequestsService', () => {
       pickupAreaType: 'URBAN_CORE',
     });
 
-    // proactiveDispatch est appelé en arrière-plan (void) — on attend la prochaine tick
-    await new Promise((resolve) => setImmediate(resolve));
-
     expect(dispatchCoordinator.proactiveDispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         rideRequestId: 'request-dispatch-1',
@@ -844,8 +841,6 @@ describe('RideRequestsService', () => {
       paymentMethod: 'MOBILE_MONEY',
       pickupAreaType: 'URBAN_CORE',
     });
-
-    await new Promise((resolve) => setImmediate(resolve));
 
     expect(notificationsService.enqueue).toHaveBeenCalledWith(
       expect.objectContaining({

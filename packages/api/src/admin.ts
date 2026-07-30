@@ -187,6 +187,88 @@ export type AdminOperationalKpisResponse = {
   avgSupportFirstResponseMinutes7d: number | null;
 };
 
+export type AdminBusinessModelResponse = {
+  generatedAt: string;
+  windows: {
+    shortDays: number;
+    retentionDays: number;
+  };
+  thesis: {
+    apparentProduct: string;
+    realProduct: string;
+    operatingDefinition: string;
+  };
+  summary: {
+    marketplaceLiquidityScore: number;
+    trustScore: number;
+    driverValueScore: number;
+    recurringDemandScore: number;
+    contributionScore: number;
+    overallScore: number;
+    posture: "learning" | "healthy" | "constrained" | "fragile";
+    action: string;
+  };
+  metrics: {
+    rideRequests7d: number;
+    completedTrips7d: number;
+    completionRate7d: number;
+    cancellationRate7d: number;
+    assignmentRate7d: number;
+    repeatRiderRate30d: number;
+    activeDrivers7d: number;
+    tripsPerActiveDriver7d: number | null;
+    grossBookingsXof7d: number;
+    estimatedCommissionXof7d: number;
+    estimatedDriverPayoutXof7d: number;
+    averageFareXof7d: number | null;
+    paymentSuccessRate7d: number;
+    supportTicketsPer100Trips7d: number | null;
+  };
+  levers: Array<{
+    pillar:
+      | "liquidity"
+      | "trust"
+      | "driver_value"
+      | "recurring_demand"
+      | "contribution";
+    label: string;
+    signal: string;
+    action: string;
+  }>;
+};
+
+export type AdminPilotCommandCenterResponse = {
+  generatedAt: string;
+  decision: {
+    state: "go" | "limited" | "no_go";
+    label: string;
+    detail: string;
+    nextReviewAt: string;
+  };
+  scorecard: {
+    overallScore: number;
+    businessScore: number;
+    operationalScore: number;
+    financeScore: number;
+    supportScore: number;
+    mobileScore: number;
+  };
+  gates: Array<{
+    id: string;
+    label: string;
+    state: "pass" | "watch" | "block";
+    owner: "ops" | "engineering" | "support" | "finance";
+    signal: string;
+    action: string;
+  }>;
+  fieldActions: Array<{
+    priority: "today" | "this_week" | "monitor";
+    owner: "ops" | "engineering" | "support" | "finance";
+    action: string;
+    metric: string;
+  }>;
+};
+
 export type AdminLiveOpsResponse = {
   summary: {
     activeTrips: number;
@@ -1350,6 +1432,18 @@ export async function fetchAdminPreview(client: OrbiApiClient) {
 
 export async function fetchAdminOverview(client: OrbiApiClient) {
   return client.request<AdminOverviewResponse>(apiRoutes.admin.overview);
+}
+
+export async function fetchAdminBusinessModel(client: OrbiApiClient) {
+  return client.request<AdminBusinessModelResponse>(
+    apiRoutes.admin.businessModel,
+  );
+}
+
+export async function fetchAdminPilotCommandCenter(client: OrbiApiClient) {
+  return client.request<AdminPilotCommandCenterResponse>(
+    apiRoutes.admin.pilotCommandCenter,
+  );
 }
 
 export async function fetchAdminOperationalKpis(client: OrbiApiClient) {

@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ServiceTier, VehicleType } from '@prisma/client';
 import {
+  calculateMarketplaceDispatchPriority,
   calculateMarketplaceFairnessSignal,
   summarizeDispatchLearning,
   type DispatchBehaviorSignal,
   type FairnessSignalLabel,
+  type MarketplaceDispatchPrioritySignal,
 } from './dispatch-engine';
 import { calculateDriverEconomics } from '../../common/economics/driver-commission';
 
@@ -24,6 +26,9 @@ export type DriverOfferViewModel = {
   reservationExpiresAt: string | null;
   serviceRadiusKm: number | null;
   dispatchScore: number;
+  businessPriorityScore: number;
+  businessPriorityLabel: MarketplaceDispatchPrioritySignal['label'];
+  businessPrioritySummary: string;
   matchedTier: ServiceTier | null;
   dispatchContextSummary: string;
   offerConfidenceScore: number;
@@ -58,6 +63,7 @@ export type DriverOfferProjectionInput = {
   reservationExpiresAt: string | null;
   reservationWindowSeconds: number;
   availabilityScore: number;
+  supplyPressureLevel: 'LOW' | 'BALANCED' | 'TIGHT' | 'CRITICAL';
   demandLevel: 'NORMAL' | 'HIGH' | 'PEAK';
   trafficLevel: 'FREE_FLOW' | 'MODERATE' | 'HEAVY' | 'GRIDLOCK';
   dispatchBehavior: DispatchBehaviorSignal;
@@ -80,7 +86,16 @@ export class DriverOfferProjector {
       vehicleType:
         input.requestedVehicleType === VehicleType.MOTORCYCLE
           ? 'MOTORCYCLE'
-          : 'CAR',
+        : 'CAR',
+    });
+    const businessPriority = calculateMarketplaceDispatchPriority({
+      dispatchScore: input.dispatchScore,
+      offerConfidenceScore: input.offerConfidenceScore,
+      behavioralScore: input.dispatchBehavior.score,
+      fairnessScore: fairness.score,
+      pickupDistanceKm: input.pickupDistanceKm,
+      estimatedTripDistanceKm: input.estimatedTripDistanceKm,
+      supplyPressureLevel: input.supplyPressureLevel,
     });
 
     return {
@@ -108,6 +123,9 @@ export class DriverOfferProjector {
       reservationExpiresAt: input.reservationExpiresAt,
       serviceRadiusKm: input.serviceRadiusKm,
       dispatchScore: input.dispatchScore,
+      businessPriorityScore: businessPriority.score,
+      businessPriorityLabel: businessPriority.label,
+      businessPrioritySummary: businessPriority.summary,
       matchedTier: input.matchedTier,
       dispatchContextSummary: this.buildDispatchContextSummary(
         input.demandLevel,
@@ -139,6 +157,10 @@ export class DriverOfferProjector {
     left: DriverOfferViewModel,
     right: DriverOfferViewModel,
   ): number {
+    if (right.businessPriorityScore !== left.businessPriorityScore) {
+      return right.businessPriorityScore - left.businessPriorityScore;
+    }
+
     if (right.dispatchScore !== left.dispatchScore) {
       return right.dispatchScore - left.dispatchScore;
     }

@@ -11,6 +11,7 @@ describe('DriversService', () => {
     const prisma = {
       driverProfile: {
         findUnique: jest.fn(),
+        findMany: jest.fn(),
         update: jest.fn(),
         count: jest.fn().mockResolvedValue(6),
       },
@@ -153,6 +154,7 @@ describe('DriversService', () => {
       verificationStatus: 'APPROVED',
       currentLatitude: 12.36,
       currentLongitude: -1.54,
+      currentLocationUpdatedAt: new Date(),
       serviceRadiusKm: 8,
       vehicles: [
         {
@@ -265,6 +267,7 @@ describe('DriversService', () => {
       verificationStatus: 'APPROVED',
       currentLatitude: 12.36,
       currentLongitude: -1.54,
+      currentLocationUpdatedAt: new Date(),
       serviceRadiusKm: 5,
       vehicles: [
         {
@@ -519,6 +522,7 @@ describe('DriversService', () => {
       verificationStatus: 'APPROVED',
       currentLatitude: 12.36,
       currentLongitude: -1.54,
+      currentLocationUpdatedAt: new Date(),
       serviceRadiusKm: 8,
       vehicles: [
         {
@@ -788,6 +792,7 @@ describe('DriversService', () => {
       data: {
         currentLatitude: 12.365,
         currentLongitude: -1.533,
+        currentLocationUpdatedAt: expect.any(Date),
       },
     });
     expect(result.presence).toEqual({
@@ -796,6 +801,74 @@ describe('DriversService', () => {
       latitude: 12.365,
       longitude: -1.533,
     });
+  });
+
+  it('exposes only fresh, available, authenticated nearby drivers to riders', async () => {
+    const { prisma, service } = createService();
+    const beforeCall = Date.now();
+
+    prisma.driverProfile.findMany.mockResolvedValue([
+      {
+        id: 'driver-visible-001',
+        status: 'ONLINE',
+        currentLatitude: 12.365,
+        currentLongitude: -1.533,
+        vehicles: [{ type: 'MOTORCYCLE' }],
+      },
+      {
+        id: 'driver-far-away',
+        status: 'ONLINE',
+        currentLatitude: 13.5,
+        currentLongitude: -2.2,
+        vehicles: [{ type: 'MOTORCYCLE' }],
+      },
+    ]);
+
+    const result = await service.getNearbyDrivers(12.365, -1.533, 3);
+
+    expect(prisma.driverProfile.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: 'ONLINE',
+          verificationStatus: 'APPROVED',
+          currentLatitude: { not: null },
+          currentLongitude: { not: null },
+          currentLocationUpdatedAt: {
+            gte: expect.any(Date),
+          },
+          assignedTrips: {
+            none: {
+              status: {
+                in: expect.arrayContaining(['DRIVER_ARRIVING', 'IN_PROGRESS']),
+              },
+            },
+          },
+          user: expect.objectContaining({
+            isActive: true,
+            sessions: expect.objectContaining({
+              some: expect.objectContaining({
+                revokedAt: null,
+                expiresAt: { gt: expect.any(Date) },
+                lastSeenAt: { gte: expect.any(Date) },
+              }),
+            }),
+          }),
+        }),
+      }),
+    );
+
+    const query = prisma.driverProfile.findMany.mock.calls[0][0];
+    expect(
+      query.where.currentLocationUpdatedAt.gte.getTime(),
+    ).toBeGreaterThanOrEqual(beforeCall - 90_000);
+    expect(result.total).toBe(1);
+    expect(result.drivers[0]).toEqual(
+      expect.objectContaining({
+        id: 'driver-v',
+        vehicleType: 'MOTORCYCLE',
+        status: 'ONLINE',
+      }),
+    );
   });
 
   it('builds an onboarding summary from profile state and latest submission', async () => {
@@ -1657,6 +1730,7 @@ describe('DriversService', () => {
       verificationStatus: 'APPROVED',
       currentLatitude: 12.36,
       currentLongitude: -1.54,
+      currentLocationUpdatedAt: new Date(),
       serviceRadiusKm: 8,
       vehicles: [
         {
@@ -1716,6 +1790,7 @@ describe('DriversService', () => {
       verificationStatus: 'APPROVED',
       currentLatitude: 12.36,
       currentLongitude: -1.54,
+      currentLocationUpdatedAt: new Date(),
       serviceRadiusKm: 8,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       vehicles: [
@@ -1894,6 +1969,7 @@ describe('DriversService', () => {
       verificationStatus: 'APPROVED',
       currentLatitude: 12.36,
       currentLongitude: -1.54,
+      currentLocationUpdatedAt: new Date(),
       serviceRadiusKm: 10,
       vehicles: [
         {
@@ -1977,6 +2053,7 @@ describe('DriversService', () => {
       verificationStatus: 'APPROVED',
       currentLatitude: 12.36,
       currentLongitude: -1.54,
+      currentLocationUpdatedAt: new Date(),
       serviceRadiusKm: 8,
       vehicles: [
         {
@@ -2183,6 +2260,7 @@ describe('DriversService', () => {
       verificationStatus: 'APPROVED',
       currentLatitude: 12.36,
       currentLongitude: -1.54,
+      currentLocationUpdatedAt: new Date(),
       serviceRadiusKm: 8,
       vehicles: [
         {

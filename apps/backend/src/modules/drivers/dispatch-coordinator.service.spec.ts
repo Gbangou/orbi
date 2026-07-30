@@ -82,6 +82,7 @@ describe('DispatchCoordinator.proactiveDispatch', () => {
       verificationStatus: 'APPROVED',
       currentLatitude: 12.3655,
       currentLongitude: -1.535,
+      currentLocationUpdatedAt: new Date(),
       serviceRadiusKm: 10,
       vehicles: [
         {

@@ -114,7 +114,7 @@ export class FraudDetectionService {
       select: {
         currentLatitude: true,
         currentLongitude: true,
-        updatedAt: true,
+        currentLocationUpdatedAt: true,
       },
     });
 
@@ -122,7 +122,11 @@ export class FraudDetectionService {
 
     const prevLat = Number(profile.currentLatitude);
     const prevLng = Number(profile.currentLongitude);
-    const elapsedMs = Date.now() - profile.updatedAt.getTime();
+    const elapsedMs =
+      Date.now() -
+      (profile.currentLocationUpdatedAt instanceof Date
+        ? profile.currentLocationUpdatedAt.getTime()
+        : Date.now());
     const elapsedHours = elapsedMs / 3_600_000;
 
     if (elapsedHours <= 0) return false;

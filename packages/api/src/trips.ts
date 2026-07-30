@@ -153,6 +153,16 @@ export type TripDetailResponse = {
     driverPhoneNumber: string | null;
     riderPhoneNumber: string | null;
     paymentMethod?: "MOBILE_MONEY" | "CASH" | "WALLET" | string | null;
+    receipt: {
+      paymentAttemptId: string;
+      status: string;
+      provider: string;
+      channel: string;
+      amount: number;
+      currency: string;
+      transactionRef: string | null;
+      updatedAt: string;
+    } | null;
     actualFare: number;
     driverPayout?: number | null;
     platformFee?: number | null;

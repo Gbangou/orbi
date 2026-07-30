@@ -3,6 +3,7 @@
 import type { ApiServiceTier, ApiUserRole } from "@orbi/domain";
 
 import type { OrbiApiClient } from "./client";
+import { isOrbiApiError } from "./client";
 import { apiRoutes } from "./routes";
 
 export type SignUpPayload = {
@@ -69,6 +70,10 @@ export type AuthenticatedApiContext = {
   authClient: OrbiApiClient;
   me: CurrentUserResponse;
 };
+
+function shouldForgetPersistedSession(error: unknown) {
+  return isOrbiApiError(error) && [401, 403].includes(error.status);
+}
 
 export type SessionStorageAdapter = {
   getItem(key: string): Promise<string | null>;
@@ -198,8 +203,10 @@ export async function restoreOrAuthenticateSession(
         authClient,
         me,
       };
-    } catch {
-      await storage.removeItem(storageKey);
+    } catch (error) {
+      if (shouldForgetPersistedSession(error)) {
+        await storage.removeItem(storageKey);
+      }
     }
   }
 
@@ -243,7 +250,9 @@ export async function restorePersistedSession(
       me,
     };
   } catch (error) {
-    await storage.removeItem(storageKey);
+    if (shouldForgetPersistedSession(error)) {
+      await storage.removeItem(storageKey);
+    }
     throw error;
   }
 }

@@ -217,6 +217,16 @@ export function serializeTripDetail(trip: {
     destinationLatitude?: unknown;
     destinationLongitude?: unknown;
     paymentMethod?: string | null;
+    paymentAttempts?: Array<{
+      id: string;
+      status: string;
+      provider: string;
+      channel: string;
+      amount: unknown;
+      currency: string;
+      transactionRef?: string | null;
+      updatedAt: Date;
+    }>;
   } | null;
   promoCode?: { code: string; discountBps: number } | null;
   events: Array<{
@@ -257,6 +267,10 @@ export function serializeTripDetail(trip: {
     trip.rideRequest?.destinationLongitude,
   );
   const latestPosition = routeMonitoring.latestPosition;
+  const latestPaymentAttempt = trip.rideRequest?.paymentAttempts?.[0] ?? null;
+  const cashReceipt = latestPaymentAttempt
+    ? null
+    : resolveCashPaymentReceipt(trip.events);
 
   if (latestPosition) {
     if (pickupLatitude !== null && pickupLongitude !== null) {
@@ -320,6 +334,18 @@ export function serializeTripDetail(trip: {
       driverPhoneNumber,
       riderPhoneNumber,
       paymentMethod: trip.rideRequest?.paymentMethod ?? 'MOBILE_MONEY',
+      receipt: latestPaymentAttempt
+        ? {
+            paymentAttemptId: latestPaymentAttempt.id,
+            status: latestPaymentAttempt.status,
+            provider: latestPaymentAttempt.provider,
+            channel: latestPaymentAttempt.channel,
+            amount: toAmount(latestPaymentAttempt.amount),
+            currency: latestPaymentAttempt.currency,
+            transactionRef: latestPaymentAttempt.transactionRef ?? null,
+            updatedAt: latestPaymentAttempt.updatedAt.toISOString(),
+          }
+        : cashReceipt,
       actualFare,
       driverPayout: driverEconomics?.driverPayout ?? null,
       platformFee: driverEconomics?.commissionAmount ?? null,

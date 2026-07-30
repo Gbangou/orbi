@@ -12,6 +12,8 @@ describe('AdminController', () => {
     const adminService = {
       previewOverview: jest.fn(),
       overview: jest.fn(),
+      businessModel: jest.fn(),
+      pilotCommandCenter: jest.fn(),
       liveOps: jest.fn(),
       launchReadiness: jest.fn(),
       acknowledgeLaunchReadinessAction: jest.fn(),
@@ -136,6 +138,24 @@ describe('AdminController', () => {
         session: { expiresAt: new Date('2026-05-17T10:00:00.000Z') },
       } as never),
     ).toThrow(ServiceUnavailableException);
+  });
+
+  it('delegates business model cockpit reads to the admin service', () => {
+    const { controller, adminService } = createController();
+    const response = { summary: { overallScore: 72 } };
+    adminService.businessModel.mockReturnValue(response);
+
+    expect(controller.businessModel()).toBe(response);
+    expect(adminService.businessModel).toHaveBeenCalledTimes(1);
+  });
+
+  it('delegates pilot command center reads to the admin service', () => {
+    const { controller, adminService } = createController();
+    const response = { decision: { state: 'limited' } };
+    adminService.pilotCommandCenter.mockReturnValue(response);
+
+    expect(controller.pilotCommandCenter()).toBe(response);
+    expect(adminService.pilotCommandCenter).toHaveBeenCalledTimes(1);
   });
 
   it('delegates support ticket updates with the current auth context', async () => {

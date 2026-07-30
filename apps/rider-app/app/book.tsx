@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '../lib/i18n';
 import { VehicleSelector } from '../lib/booking/vehicle-selector';
@@ -65,7 +65,7 @@ import {
 } from '../lib/rider-active-flow';
 import { useRiderPosition } from '../lib/use-rider-position';
 import { TripMapView } from '../lib/trip-map-view';
-import { PlaceSearch } from '../lib/place-search';
+import { PlaceSearch, resolveBurkinaPlaceSuggestion } from '../lib/place-search';
 import {
   fallbackRiderProfile,
   normalizeRiderProfileResponse,
@@ -205,6 +205,17 @@ function PriceConfidenceCard({
     option.driverPayout && option.driverPayout > 0
       ? formatRiderMoneyAmount(option.driverPayout)
       : null;
+  const businessBalance = option.businessBalance ?? null;
+  const businessBalanceLabel =
+    businessBalance?.label === 'EXCELLENT'
+      ? 'Excellent'
+      : businessBalance?.label === 'BALANCED'
+        ? 'Equilibre'
+        : businessBalance?.label === 'WATCH'
+          ? 'A suivre'
+          : businessBalance?.label === 'WEAK'
+            ? 'Fragile'
+            : null;
 
   return (
     <OrbiSurface style={styles.priceConfidenceCard}>
@@ -255,6 +266,40 @@ function PriceConfidenceCard({
               <Text style={styles.priceBreakdownValue}>{row.value}</Text>
             </View>
           ))}
+        </View>
+      ) : null}
+
+      {businessBalance ? (
+        <View style={styles.priceBusinessBox}>
+          <View style={styles.priceBusinessTop}>
+            <Text style={styles.priceBusinessTitle}>Equilibre course</Text>
+            <Text style={styles.priceBusinessScore}>
+              {businessBalanceLabel} · {businessBalance.score}/100
+            </Text>
+          </View>
+          <View style={styles.priceBusinessGrid}>
+            <View style={styles.priceBusinessTile}>
+              <Text style={styles.priceBusinessMetricLabel}>Passager</Text>
+              <Text style={styles.priceBusinessMetricValue}>
+                {businessBalance.riderAffordabilityScore}
+              </Text>
+            </View>
+            <View style={styles.priceBusinessTile}>
+              <Text style={styles.priceBusinessMetricLabel}>Chauffeur</Text>
+              <Text style={styles.priceBusinessMetricValue}>
+                {businessBalance.driverValueScore}
+              </Text>
+            </View>
+            <View style={styles.priceBusinessTile}>
+              <Text style={styles.priceBusinessMetricLabel}>Orbi</Text>
+              <Text style={styles.priceBusinessMetricValue}>
+                {businessBalance.platformContributionScore}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.priceBusinessHint} numberOfLines={2}>
+            {businessBalance.actionHint}
+          </Text>
         </View>
       ) : null}
 
@@ -395,6 +440,10 @@ const makePromoStyles = (theme: OrbiTheme) => StyleSheet.create({
 
 export default function BookingScreen() {
   const router = useRouter();
+  const prefillParams = useLocalSearchParams<{
+    prefillPickup?: string | string[];
+    prefillDest?: string | string[];
+  }>();
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const promoStyles = useMemo(() => makePromoStyles(theme), [theme]);
@@ -451,6 +500,7 @@ export default function BookingScreen() {
   const [showPromo, setShowPromo] = useState(false);
   const previousFlowStateRef = useRef<string | null>(null);
   const bookingMutationInFlightRef = useRef(false);
+  const prefillAppliedRef = useRef(false);
   const riderPosition = useRiderPosition({
     enabled: true,
   });
@@ -495,6 +545,79 @@ export default function BookingScreen() {
   useEffect(() => {
     void loadBookingContext();
   }, [pickupPlace, destinationPlace, selectedCityId, selectedPaymentMethod]);
+
+  useEffect(() => {
+    if (prefillAppliedRef.current) {
+      return;
+    }
+
+    const prefillPickup = Array.isArray(prefillParams.prefillPickup)
+      ? prefillParams.prefillPickup[0]
+      : prefillParams.prefillPickup;
+    const prefillDest = Array.isArray(prefillParams.prefillDest)
+      ? prefillParams.prefillDest[0]
+      : prefillParams.prefillDest;
+
+    if (!prefillPickup && !prefillDest) {
+      return;
+    }
+
+    const userPlaces = profile.profile.savedPlaces.map((place) => ({
+      id: place.id,
+      label: sanitizePlaceText(place.label, 'Favori'),
+      address: sanitizePlaceText(place.address, 'Adresse favorite'),
+      coordinates:
+        toFiniteCoordinate(place.latitude) !== null &&
+        toFiniteCoordinate(place.longitude) !== null
+          ? {
+              latitude: toFiniteCoordinate(place.latitude) as number,
+              longitude: toFiniteCoordinate(place.longitude) as number,
+            }
+          : undefined,
+    }));
+
+    if (prefillPickup) {
+      const resolvedPickup = resolveBurkinaPlaceSuggestion(
+        prefillPickup,
+        selectedCity.label,
+        userPlaces,
+      );
+      setPickupPlace(
+        resolvedPickup ?? {
+          id: 'prefill-pickup',
+          label: prefillPickup,
+          address: prefillPickup,
+          coordinates: undefined,
+        },
+      );
+    }
+
+    if (prefillDest) {
+      const resolvedDestination = resolveBurkinaPlaceSuggestion(
+        prefillDest,
+        selectedCity.label,
+        userPlaces,
+      );
+      setDestinationPlace(
+        resolvedDestination ?? {
+          id: 'prefill-destination',
+          label: prefillDest,
+          address: prefillDest,
+          coordinates: undefined,
+        },
+      );
+    }
+
+    prefillAppliedRef.current = true;
+    setStatus(
+      'Ancien trajet repris. Verifiez le depart, la destination et la disponibilite avant confirmation.',
+    );
+  }, [
+    prefillParams.prefillDest,
+    prefillParams.prefillPickup,
+    profile.profile.savedPlaces,
+    selectedCity.label,
+  ]);
 
   useEffect(() => {
     if (autoAppliedRiderPosition || !riderPosition.latestPosition) {
@@ -1823,6 +1946,71 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: theme.colors.text,
     textAlign: 'right',
+  },
+  priceBusinessBox: {
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,201,167,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,201,167,0.22)',
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    gap: 8,
+  },
+  priceBusinessTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  priceBusinessTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text,
+  },
+  priceBusinessScore: {
+    flexShrink: 0,
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.teal,
+    textAlign: 'right',
+  },
+  priceBusinessGrid: {
+    flexDirection: 'row',
+    gap: 7,
+  },
+  priceBusinessTile: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    justifyContent: 'center',
+  },
+  priceBusinessMetricLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  priceBusinessMetricValue: {
+    marginTop: 1,
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text,
+  },
+  priceBusinessHint: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: theme.colors.textSoft,
   },
   priceSignalRow: {
     flexDirection: 'row',

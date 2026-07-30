@@ -24,6 +24,7 @@ describe('DriverOfferProjector', () => {
       reservationExpiresAt: '2026-04-24T16:00:30.000Z',
       reservationWindowSeconds: 45,
       availabilityScore: 74,
+      supplyPressureLevel: 'TIGHT',
       demandLevel: 'HIGH',
       trafficLevel: 'HEAVY',
       dispatchBehavior: {
@@ -73,6 +74,7 @@ describe('DriverOfferProjector', () => {
       reservationExpiresAt: null,
       reservationWindowSeconds: 33,
       availabilityScore: 81,
+      supplyPressureLevel: 'BALANCED',
       demandLevel: 'NORMAL',
       trafficLevel: 'MODERATE',
       dispatchBehavior: {
@@ -108,6 +110,7 @@ describe('DriverOfferProjector', () => {
       reservationExpiresAt: null,
       reservationWindowSeconds: 45,
       availabilityScore: 76,
+      supplyPressureLevel: 'TIGHT',
       demandLevel: 'HIGH',
       trafficLevel: 'HEAVY',
       dispatchBehavior: {
@@ -136,6 +139,7 @@ describe('DriverOfferProjector', () => {
       reservationExpiresAt: null,
       reservationWindowSeconds: 38,
       availabilityScore: 72,
+      supplyPressureLevel: 'BALANCED',
       demandLevel: 'HIGH',
       trafficLevel: 'MODERATE',
       dispatchBehavior: {
@@ -164,6 +168,7 @@ describe('DriverOfferProjector', () => {
       reservationExpiresAt: null,
       reservationWindowSeconds: 38,
       availabilityScore: 72,
+      supplyPressureLevel: 'BALANCED',
       demandLevel: 'HIGH',
       trafficLevel: 'MODERATE',
       dispatchBehavior: {
@@ -192,6 +197,7 @@ describe('DriverOfferProjector', () => {
       reservationExpiresAt: null,
       reservationWindowSeconds: 38,
       availabilityScore: 72,
+      supplyPressureLevel: 'BALANCED',
       demandLevel: 'HIGH',
       trafficLevel: 'MODERATE',
       dispatchBehavior: {

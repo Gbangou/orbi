@@ -14,9 +14,9 @@ export const dynamic = 'force-dynamic';
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: Promise<{ driverId: string }> },
+  context: { params: Promise<{ userId: string }> },
 ) {
-  const { driverId } = await context.params;
+  const { userId } = await context.params;
 
   if (!isSafeAdminMutationRequest(request)) {
     return NextResponse.json(
@@ -25,7 +25,7 @@ export async function PATCH(
     );
   }
 
-  if (!isSafeOpaqueAdminId(driverId)) {
+  if (!isSafeOpaqueAdminId(userId)) {
     return NextResponse.json(
       { message: 'Invalid driver user identifier.' },
       { status: 400, headers: createNoStoreAdminHeaders() },
@@ -34,7 +34,7 @@ export async function PATCH(
 
   try {
     const authClient = await getAdminServerAuthClient();
-    const response = await repairAdminDriverProfile(authClient, driverId);
+    const response = await repairAdminDriverProfile(authClient, userId);
 
     return NextResponse.json(response, {
       headers: createNoStoreAdminHeaders(),

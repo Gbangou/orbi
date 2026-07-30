@@ -13,7 +13,14 @@ import {
   View,
 } from 'react-native';
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
-import { fetchTripDetail, reportTripIncidentWithApi, type TripDetailResponse } from '@orbi/api';
+import {
+  createCheckoutIntentWithApi,
+  fetchRiderProfile,
+  fetchTripDetail,
+  reportTripIncidentWithApi,
+  type TripDetailResponse,
+} from '@orbi/api';
+import { orbiRuntimeConfig } from '@orbi/config';
 import { type OrbiTheme } from '@orbi/ui';
 import {
   OrbiButton,
@@ -192,6 +199,8 @@ export default function ReceiptScreen() {
 
   const [detail, setDetail] = useState<TripDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -243,6 +252,56 @@ export default function ReceiptScreen() {
         ].join('\n'),
       });
     } catch { /* silent */ }
+  }
+
+  async function handleFinalizePayment() {
+    if (!detail || paymentSubmitting) return;
+
+    const trip = detail.trip;
+    setPaymentSubmitting(true);
+    setPaymentMessage('Initialisation du paiement Mobile Money...');
+
+    try {
+      const { authClient } = await restoreRiderSession();
+      const profile = await fetchRiderProfile(authClient);
+      const customerPhoneNumber = profile.profile.phoneNumber;
+
+      if (!customerPhoneNumber) {
+        setPaymentMessage(
+          'Ajoutez un numero Mobile Money dans votre profil avant de finaliser le paiement.',
+        );
+        return;
+      }
+
+      const paymentIntent = await createCheckoutIntentWithApi(
+        authClient,
+        {
+          rideRequestId: trip.rideRequestId,
+          channel: 'MOBILE_MONEY',
+          amount: trip.actualFare,
+          customerPhoneNumber,
+          redirectUrl: orbiRuntimeConfig.paymentRedirectUrl,
+        },
+        {
+          idempotencyKey: `receipt-${trip.rideRequestId}-mobile-money`,
+        },
+      );
+
+      setPaymentMessage(
+        `Paiement ${paymentIntent.provider} initialise. Confirmez la demande sur votre telephone. Ref ${paymentIntent.transactionRef.slice(0, 12)}.`,
+      );
+      const refreshed = await fetchTripDetail(authClient, trip.id);
+      setDetail(refreshed);
+    } catch (error) {
+      const feedback = await resolveRiderAppError(error, {
+        surface: 'payments',
+        fallback: "Le paiement n'a pas pu etre initialise.",
+      });
+      setPaymentMessage(feedback.message);
+      Alert.alert('Paiement non initialise', feedback.message);
+    } finally {
+      setPaymentSubmitting(false);
+    }
   }
 
   function handleRate() {
@@ -356,6 +415,14 @@ export default function ReceiptScreen() {
         discountBps: trip.promoCode.discountBps,
       })
     : null;
+  const receiptStatus = trip.receipt?.status?.toUpperCase() ?? null;
+  const paymentMethod = (trip.paymentMethod ?? 'MOBILE_MONEY').toUpperCase();
+  const paymentSettled =
+    paymentMethod === 'CASH' ||
+    receiptStatus === 'SUCCEEDED' ||
+    receiptStatus === 'COMPLETED';
+  const canFinalizePayment =
+    !paymentSettled && paymentMethod !== 'CASH' && paymentMethod !== 'WALLET';
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -395,10 +462,21 @@ export default function ReceiptScreen() {
         </OrbiSurface>
 
         <OrbiStatusBanner
-          title="Recu professionnel"
-          message="Reference, paiement et details chauffeur disponibles. Vous pouvez l envoyer par SMS, WhatsApp ou email."
-          tone="sky"
+          title={paymentSettled ? "Recu professionnel" : "Paiement a finaliser"}
+          message={
+            paymentSettled
+              ? "Reference, paiement et details chauffeur disponibles. Vous pouvez l envoyer par SMS, WhatsApp ou email."
+              : `Montant a payer: ${formatRiderMoneyAmount(trip.actualFare)}. Finalisez le paiement avant de quitter le flux.`
+          }
+          tone={paymentSettled ? "sky" : "amber"}
         />
+        {paymentMessage ? (
+          <OrbiStatusBanner
+            title="Paiement"
+            message={paymentMessage}
+            tone={paymentMessage.includes('initialise') ? 'teal' : 'amber'}
+          />
+        ) : null}
 
         {/* Route card */}
         <OrbiSurface style={styles.card}>
@@ -441,6 +519,10 @@ export default function ReceiptScreen() {
             />
           ) : null}
           <Row label="Mode de paiement" value={formatPaymentMethod(trip.paymentMethod)} />
+          <Row
+            label="Statut"
+            value={paymentSettled ? 'Regle' : receiptStatus ?? 'A finaliser'}
+          />
           <Row label="Total facturé" value={formatRiderMoneyAmount(trip.actualFare)} bold />
           <View style={[row.wrap, { borderBottomWidth: 0 }]}>
             <Text style={[row.label, { color: theme.colors.textMuted, fontSize: 12 }]}>
@@ -478,6 +560,16 @@ export default function ReceiptScreen() {
             onPress={() => void handleShare()}
             tone="teal"
           />
+
+          {canFinalizePayment ? (
+            <OrbiButton
+              label={paymentSubmitting ? "Paiement..." : "Finaliser le paiement"}
+              helper={`${formatRiderMoneyAmount(trip.actualFare)} via Mobile Money`}
+              onPress={() => void handleFinalizePayment()}
+              tone="amber"
+              disabled={paymentSubmitting}
+            />
+          ) : null}
 
           <OrbiButton
             label="Evaluer ce trajet"

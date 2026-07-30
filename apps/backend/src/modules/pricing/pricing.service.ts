@@ -61,6 +61,16 @@ type OperatingContextInput = Pick<
 
 type MarketplaceSignalSource = 'LIVE' | 'ESTIMATED' | 'DEGRADED';
 
+type RideOptionBusinessBalance = {
+  score: number;
+  label: 'EXCELLENT' | 'BALANCED' | 'WATCH' | 'WEAK';
+  riderAffordabilityScore: number;
+  driverValueScore: number;
+  platformContributionScore: number;
+  summary: string;
+  actionHint: string;
+};
+
 type RateCard = {
   serviceTier: ServiceTier;
   baseFare: number;
@@ -69,6 +79,14 @@ type RateCard = {
   bookingFee: number;
   minimumFare: number;
 };
+
+function clampScore(value: number) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, value));
+}
 
 @Injectable()
 export class PricingService {
@@ -267,6 +285,16 @@ export class PricingService {
               signalFreshnessSeconds: marketplaceSignal.signalFreshnessSeconds,
             },
           ),
+          businessBalance: this.buildRideOptionBusinessBalance({
+            fare: estimate.estimatedFare,
+            distanceKm: resolvedDistanceKm,
+            durationMinutes: resolvedDurationMinutes,
+            driverPayout: estimate.driverEconomics.driverPayout,
+            commissionAmount: estimate.driverEconomics.commissionAmount,
+            platformTakeRate: estimate.driverEconomics.platformTakeRate,
+            demandMultiplier,
+            vehicleType: configuration.vehicleType,
+          }),
           driverPayout: estimate.driverEconomics.driverPayout,
           surgeActive,
           surgeLabel,
@@ -371,6 +399,77 @@ export class PricingService {
       vehicleExamples,
       pricePromise:
         'Prix upfront affiche avant confirmation; approche chauffeur utilisee pour l ETA sans frais caches.',
+    };
+  }
+
+  private buildRideOptionBusinessBalance(input: {
+    fare: number;
+    distanceKm: number;
+    durationMinutes: number;
+    driverPayout: number;
+    commissionAmount: number;
+    platformTakeRate: number;
+    demandMultiplier: number;
+    vehicleType: 'MOTORCYCLE' | 'CAR';
+  }): RideOptionBusinessBalance {
+    const distanceKm = Math.max(0.5, input.distanceKm);
+    const durationMinutes = Math.max(1, input.durationMinutes);
+    const farePerKm = input.fare / distanceKm;
+    const payoutPerKm = input.driverPayout / distanceKm;
+    const payoutPerMinute = input.driverPayout / durationMinutes;
+    const affordabilityReference =
+      input.vehicleType === 'MOTORCYCLE' ? 420 : 760;
+    const payoutPerKmReference =
+      input.vehicleType === 'MOTORCYCLE' ? 285 : 520;
+    const payoutPerMinuteReference =
+      input.vehicleType === 'MOTORCYCLE' ? 75 : 125;
+
+    const riderAffordabilityScore = clampScore(
+      100 - ((farePerKm - affordabilityReference) / affordabilityReference) * 55,
+    );
+    const driverValueScore = clampScore(
+      Math.min(100, (payoutPerKm / payoutPerKmReference) * 58) +
+        Math.min(42, (payoutPerMinute / payoutPerMinuteReference) * 42),
+    );
+    const platformContributionScore = clampScore(
+      input.commissionAmount <= 0
+        ? 0
+        : 100 -
+            Math.abs(input.platformTakeRate - 0.14) * 260 -
+            Math.max(0, input.demandMultiplier - 1.25) * 45,
+    );
+    const score = Math.round(
+      riderAffordabilityScore * 0.38 +
+        driverValueScore * 0.42 +
+        platformContributionScore * 0.2,
+    );
+    const label =
+      score >= 86
+        ? 'EXCELLENT'
+        : score >= 72
+          ? 'BALANCED'
+          : score >= 56
+            ? 'WATCH'
+            : 'WEAK';
+    const actionHint =
+      label === 'EXCELLENT'
+        ? 'Prix tres sain: garder le dispatch ouvert sur cette option.'
+        : label === 'BALANCED'
+          ? 'Prix equilibre: suivre acceptation et temps pickup.'
+          : riderAffordabilityScore < driverValueScore
+            ? 'Surveiller acceptation passager: prix/km sensible pour ce segment.'
+            : driverValueScore < riderAffordabilityScore
+              ? 'Surveiller valeur chauffeur: gain/km ou gain/minute sous tension.'
+              : 'Surveiller contribution Orbi et couts paiement/support avant extension.';
+
+    return {
+      score,
+      label,
+      riderAffordabilityScore: Math.round(riderAffordabilityScore),
+      driverValueScore: Math.round(driverValueScore),
+      platformContributionScore: Math.round(platformContributionScore),
+      summary: `Equilibre ${score}/100: passager ${Math.round(riderAffordabilityScore)}, chauffeur ${Math.round(driverValueScore)}, Orbi ${Math.round(platformContributionScore)}.`,
+      actionHint,
     };
   }
 
@@ -790,7 +889,7 @@ export class PricingService {
           },
           currentLatitude: { not: null },
           currentLongitude: { not: null },
-          updatedAt: { gte: freshPresenceCutoff },
+          currentLocationUpdatedAt: { gte: freshPresenceCutoff },
           ...(cityFilter
             ? {
                 onboardingReviews: {

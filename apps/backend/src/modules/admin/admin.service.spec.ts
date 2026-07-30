@@ -131,7 +131,14 @@ describe('AdminService', () => {
         findUnique: jest.fn(),
         update: jest.fn(),
       },
-      trip: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+      trip: {
+        count: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+        aggregate: jest.fn().mockResolvedValue({
+          _sum: { actualFare: 0 },
+          _avg: { actualFare: 0 },
+        }),
+      },
       rating: {
         findMany: jest.fn().mockResolvedValue([]),
       },
@@ -4830,6 +4837,187 @@ describe('AdminService', () => {
       });
       expect(kpis.mobileObservabilityPosture).toBe('warn');
       expect(kpis.mobileObservabilityAction).toContain('pilote limite');
+    });
+  });
+
+  describe('businessModel', () => {
+    it('turns marketplace, trust, driver value and contribution into an operating cockpit', async () => {
+      const { prisma, service } = createService();
+
+      prisma.rideRequest.count
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(8);
+      prisma.trip.count
+        .mockResolvedValueOnce(7)
+        .mockResolvedValueOnce(1);
+      prisma.trip.findMany
+        .mockResolvedValueOnce([
+          { riderId: 'rider-1' },
+          { riderId: 'rider-1' },
+          { riderId: 'rider-2' },
+        ])
+        .mockResolvedValueOnce([
+          { driverId: 'driver-1' },
+          { driverId: 'driver-1' },
+          { driverId: 'driver-2' },
+          { driverId: 'driver-2' },
+          { driverId: 'driver-2' },
+          { driverId: 'driver-3' },
+          { driverId: 'driver-3' },
+        ]);
+      prisma.trip.aggregate.mockResolvedValueOnce({
+        _sum: { actualFare: 21000 },
+        _avg: { actualFare: 3000 },
+      });
+      prisma.paymentAttempt.count
+        .mockResolvedValueOnce(9)
+        .mockResolvedValueOnce(8);
+      prisma.supportTicket.count.mockResolvedValueOnce(1);
+
+      const model = await service.businessModel();
+
+      expect(model.thesis.realProduct).toContain('mobilite organisee');
+      expect(model.metrics.rideRequests7d).toBe(10);
+      expect(model.metrics.completedTrips7d).toBe(7);
+      expect(model.metrics.assignmentRate7d).toBe(80);
+      expect(model.metrics.completionRate7d).toBe(70);
+      expect(model.metrics.repeatRiderRate30d).toBe(50);
+      expect(model.metrics.activeDrivers7d).toBe(3);
+      expect(model.metrics.tripsPerActiveDriver7d).toBe(2.3);
+      expect(model.metrics.grossBookingsXof7d).toBe(21000);
+      expect(model.metrics.estimatedCommissionXof7d).toBeGreaterThan(0);
+      expect(model.metrics.estimatedDriverPayoutXof7d).toBeLessThan(21000);
+      expect(model.metrics.averageFareXof7d).toBe(3000);
+      expect(model.metrics.paymentSuccessRate7d).toBe(88.9);
+      expect(model.metrics.supportTicketsPer100Trips7d).toBe(14.3);
+      expect(model.summary.overallScore).toBeGreaterThan(0);
+      expect(model.summary.posture).toBe('learning');
+      expect(model.levers.map((lever) => lever.pillar)).toEqual([
+        'liquidity',
+        'trust',
+        'driver_value',
+        'recurring_demand',
+        'contribution',
+      ]);
+    });
+  });
+
+  describe('pilotCommandCenter', () => {
+    it('blocks field expansion when core pilot gates are below threshold', async () => {
+      const { service } = createService();
+
+      jest.spyOn(service, 'businessModel').mockResolvedValue({
+        summary: {
+          overallScore: 42,
+          marketplaceLiquidityScore: 40,
+          trustScore: 45,
+          driverValueScore: 30,
+          recurringDemandScore: 20,
+          contributionScore: 10,
+          posture: 'fragile',
+          action: 'Block.',
+        },
+        metrics: {
+          rideRequests7d: 40,
+          completedTrips7d: 18,
+          completionRate7d: 45,
+          cancellationRate7d: 30,
+          assignmentRate7d: 50,
+          repeatRiderRate30d: 12,
+          activeDrivers7d: 12,
+          tripsPerActiveDriver7d: 1.5,
+          grossBookingsXof7d: 54000,
+          estimatedCommissionXof7d: 5400,
+          estimatedDriverPayoutXof7d: 48600,
+          averageFareXof7d: 3000,
+          paymentSuccessRate7d: 70,
+          supportTicketsPer100Trips7d: 8,
+        },
+      } as never);
+      jest.spyOn(service, 'operationalKpis').mockResolvedValue({
+        windowDays: 7,
+        crashFreeSessionRate7d: 91,
+        criticalMobileErrors7d: 4,
+        affectedMobileSessions7d: 3,
+        topCriticalMobileSignal: null,
+        mobileCollectorDegradedDeliveries7d: 0,
+        mobileObservabilityPosture: 'bad',
+        mobileObservabilityAction: 'Block mobile expansion.',
+        firstBookingConversionRate30d: 12,
+        offerAcceptanceRate7d: 40,
+        avgDriverOnlineMinutes7d: 20,
+        avgSupportFirstResponseMinutes7d: 95,
+      } as never);
+      jest.spyOn(service, 'liveOps').mockResolvedValue({
+        summary: {
+          activeTrips: 2,
+          openRequests: 8,
+          urgentSupportTickets: 2,
+          tripsByStatus: { matched: 1, arriving: 1, inProgress: 0 },
+          stalledMatchedTrips: 1,
+          staleDriverSignals: 1,
+          payments: {
+            lookbackHours: 24,
+            attempts: 10,
+            succeeded: 7,
+            failed: 3,
+            refundPending: 1,
+            refunded: 0,
+            reconciled: 6,
+            webhookEvents: 3,
+            webhookConflicts: 1,
+            webhookUnknownReferences: 1,
+            successRate: 70,
+            reconciliationRate: 60,
+          },
+        },
+      } as never);
+      jest.spyOn(service, 'financeDashboard').mockResolvedValue({
+        summary: {
+          paymentAttempts: 10,
+          succeededPayments: 7,
+          failedPayments: 3,
+          refundPending: 1,
+          refundedPayments: 0,
+          reconciledPayments: 6,
+          reconciliationRate: 60,
+          oldestUnreconciledAgeMinutes: 90,
+          webhookEvents: 3,
+          ignoredWebhooks: 1,
+          webhookConflicts: 1,
+          webhookUnknownReferences: 1,
+          walletRecoveryDue: 0,
+          walletsInRecovery: 0,
+          payoutBacklog: 1,
+          preparedPayouts: 1,
+          currency: 'XOF',
+        },
+        risks: [
+          {
+            id: 'finance-risk',
+            label: 'Finance critical',
+            severity: 'critical',
+            owner: 'finance',
+            value: 1,
+            threshold: 0,
+            action: 'Fix finance.',
+          },
+        ],
+      } as never);
+      jest.spyOn(service, 'tripsAudit').mockResolvedValue({
+        summary: {
+          criticalRiskTripCount: 1,
+          moneyAtRisk: 3000,
+        },
+      } as never);
+      jest.spyOn(service, 'overview').mockResolvedValue({ activeTrips: 2 } as never);
+
+      const command = await service.pilotCommandCenter();
+
+      expect(command.decision.state).toBe('no_go');
+      expect(command.gates.some((gate) => gate.state === 'block')).toBe(true);
+      expect(command.fieldActions.some((action) => action.priority === 'today')).toBe(true);
+      expect(command.scorecard.financeScore).toBeLessThan(100);
     });
   });
 });

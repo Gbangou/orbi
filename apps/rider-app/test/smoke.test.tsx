@@ -41,6 +41,7 @@ import ActivityScreen from '../app/(tabs)/activity';
 import RiderAuthScreen from '../app/auth';
 import RiderHomeScreen from '../app/(tabs)/home';
 import BookingScreen from '../app/book';
+import ReceiptScreen from '../app/receipt';
 import TripsScreen from '../app/(tabs)/trips';
 import { PlaceSearch } from '../lib/place-search';
 import {
@@ -340,6 +341,10 @@ function buildTripDetail(eventIds: string[], labels: string[]) {
         },
       },
       pickupCode: '1234',
+      driverPhoneNumber: '+22670000000',
+      riderPhoneNumber: '+22671000000',
+      paymentMethod: 'MOBILE_MONEY',
+      receipt: null,
       actualFare: 2500,
       currency: 'XOF',
       startedAt: null,
@@ -887,6 +892,10 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Distance');
     expectText(renderer, 'Duree');
     expectText(renderer, 'Service');
+    expectText(renderer, 'Equilibre course');
+    expectText(renderer, 'Passager');
+    expectText(renderer, 'Chauffeur');
+    expectText(renderer, 'Orbi');
   });
 
   it('uses the selected Mobile Money phone number when creating checkout', async () => {
@@ -1447,6 +1456,48 @@ describe('rider smoke flows', () => {
     expectText(renderer, '0 courses au total · 0 terminees');
   });
 
+  it('lets the rider restart a completed trip from history', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchMyTrips.mockResolvedValue({
+      role: 'RIDER',
+      stats: {
+        activeTrips: 0,
+        completedTrips: 1,
+        cancelledTrips: 0,
+        totalAmount: 2700,
+        currency: 'XOF',
+      },
+      pendingRequests: [],
+      recentTrips: [
+        {
+          id: 'trip-repeat-1',
+          pickupAddress: 'Tampuy, Ouagadougou',
+          destinationAddress: 'Ouaga 2000',
+          status: 'COMPLETED',
+          amount: 2700,
+          currency: 'XOF',
+          counterpartyName: 'Issa Driver',
+          vehicleLabel: 'Moto',
+          receipt: null,
+          completedAt: '2026-04-19T08:40:00.000Z',
+          createdAt: '2026-04-19T08:00:00.000Z',
+        },
+      ],
+    } as never);
+
+    const renderer = await renderScreen(<TripsScreen />);
+    await flushMicrotasks();
+    await pressByText(renderer, 'Refaire ce trajet');
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/book',
+      params: {
+        prefillPickup: 'Tampuy, Ouagadougou',
+        prefillDest: 'Ouaga 2000',
+      },
+    });
+  });
+
   it('shows live rider trip transitions in activity after a realtime update', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
     mockedFetchMyTrips
@@ -1467,7 +1518,6 @@ describe('rider smoke flows', () => {
     await pressByLabel(renderer, 'activity-refresh');
     await flushMicrotasks();
 
-    expectText(renderer, 'Historique charge depuis le flux protege.');
     expectText(renderer, 'Chauffeur assigné');
 
     await flushMicrotasks();
@@ -1478,6 +1528,18 @@ describe('rider smoke flows', () => {
 
     // After realtime update: trip detail should reflect new state
     expectText(renderer, 'Issa Driver');
+    expectText(renderer, 'Plaque');
+    expectText(renderer, '11 AA 1234');
+    expectText(renderer, 'Vehicule');
+    expectText(renderer, 'rouge Yamaha Crypton');
+    expectText(renderer, 'Telephone');
+    expectText(renderer, 'Verifie');
+    expectText(renderer, 'Paiement');
+    expectText(renderer, 'Mobile Money');
+    expectText(
+      renderer,
+      'Comparez les lignes Nom, Plaque, Vehicule et Paiement ci-dessus. Montez seulement si tout correspond.',
+    );
   });
 
   it('keeps rider activity usable when trip detail is temporarily unavailable', async () => {
@@ -1715,12 +1777,12 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<ActivityScreen />);
     await pressByLabel(renderer, 'activity-refresh');
     await flushMicrotasks();
-    await pressByText(renderer, 'Arreter maintenant');
+    await pressByText(renderer, 'Arreter la course');
     const stopOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
       | Array<{ text: string; onPress?: () => void }>
       | undefined;
     await invokeInAct(async () => {
-      stopOptions?.find((option) => option.text === 'Confirmer l arret')?.onPress?.();
+      stopOptions?.find((option) => option.text === 'Arreter et voir le montant')?.onPress?.();
       await flushMicrotasks();
     });
 
@@ -1730,11 +1792,94 @@ describe('rider smoke flows', () => {
       'COMPLETED',
       'Arret demande par le passager',
     );
-    expectText(renderer, 'Course arretee. Montant a payer: 2 100 F CFA.');
+    expectText(renderer, 'Course terminee. Montant a payer: 2 100 F CFA.');
     expect(router.replace).toHaveBeenCalledWith({
       pathname: '/receipt',
       params: { tripId: 'trip-rider-1' },
     });
+  });
+
+  it('lets the rider finalize mobile money payment from receipt before rating', async () => {
+    const expoRouter = jest.requireMock('expo-router') as {
+      __setLocalSearchParams: (params: Record<string, unknown>) => void;
+    };
+    expoRouter.__setLocalSearchParams({ tripId: 'trip-rider-1' });
+
+    const unpaidReceipt = {
+      ...buildTripDetail(['timeline-1'], ['Course terminee']),
+      trip: {
+        ...buildTripDetail(['timeline-1'], ['Course terminee']).trip,
+        status: 'COMPLETED',
+        actualFare: 2500,
+        paymentMethod: 'MOBILE_MONEY',
+        receipt: null,
+        completedAt: '2026-04-19T08:30:00.000Z',
+      },
+    };
+    const paidReceipt = {
+      ...unpaidReceipt,
+      trip: {
+        ...unpaidReceipt.trip,
+        receipt: {
+          paymentAttemptId: 'payment-1',
+          status: 'SUCCEEDED',
+          provider: 'PAWAPAY',
+          channel: 'MOBILE_MONEY',
+          amount: 2500,
+          currency: 'XOF',
+          transactionRef: 'orbi-payment-1',
+          updatedAt: '2026-04-19T08:31:00.000Z',
+        },
+      },
+    };
+
+    mockedRestoreRiderSession.mockResolvedValue({
+      authClient: { token: 'rider-auth-client' },
+      session: { sessionToken: 'session-rider-1' },
+    } as never);
+    mockedFetchTripDetail
+      .mockResolvedValueOnce(unpaidReceipt as never)
+      .mockResolvedValueOnce(paidReceipt as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile({
+      phoneNumber: '+22670000000',
+    }) as never);
+    mockedCreateCheckoutIntentWithApi.mockResolvedValue({
+      provider: 'PAWAPAY',
+      transactionRef: 'orbi-payment-1',
+      checkoutMode: 'PUSH_USSD',
+      amount: 2500,
+      currency: 'XOF',
+      channel: 'MOBILE_MONEY',
+      supportedMobileMoneyNetworks: ['ORANGE_MONEY'],
+      providerMetadata: {},
+      trustNotes: {
+        providerAbstractionEnabled: true,
+        webhookVerificationRequired: true,
+        settlementModel: 'aggregator',
+      },
+    } as never);
+
+    const renderer = await renderScreen(<ReceiptScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Paiement a finaliser');
+    expectText(renderer, 'Montant a payer: 2 500 F CFA. Finalisez le paiement avant de quitter le flux.');
+    expectText(renderer, 'Finaliser le paiement');
+    await pressByText(renderer, 'Finaliser le paiement');
+    await flushMicrotasks();
+
+    expect(mockedCreateCheckoutIntentWithApi).toHaveBeenCalledWith(
+      { token: 'rider-auth-client' },
+      expect.objectContaining({
+        rideRequestId: 'ride-request-1',
+        channel: 'MOBILE_MONEY',
+        amount: 2500,
+        customerPhoneNumber: '+22670000000',
+      }),
+      { idempotencyKey: 'receipt-ride-request-1-mobile-money' },
+    );
+    expectText(renderer, 'Paiement PAWAPAY initialise. Confirmez la demande sur votre telephone. Ref orbi-payment.');
+    expectText(renderer, 'Evaluer ce trajet');
   });
 
   it('reports a rider incident from activity', async () => {

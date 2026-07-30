@@ -332,7 +332,7 @@ export default function ActivityScreen() {
       }
 
       if (!silent) {
-        setStatus("Historique charge depuis le flux protege.");
+        setStatus("");
       }
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
@@ -626,11 +626,11 @@ export default function ActivityScreen() {
       activeTripDetail?.trip.actualFare ?? activeTrip?.amount,
     );
     Alert.alert(
-      "Arreter maintenant",
-      `Confirmez seulement si vous descendez maintenant. Prix actuel: ${fareLabel}. Le montant peut etre ajuste selon le trajet reel disponible.`,
+      "Terminer ma course maintenant",
+      `Confirmez seulement si vous descendez ici. Orbi cloture la course, calcule le montant du trajet deja effectue, puis ouvre le recu pour payer. Estimation actuelle: ${fareLabel}.`,
       [
         {
-          text: "Confirmer l arret",
+          text: "Arreter et voir le montant",
           style: "destructive" as const,
           onPress: () =>
             void doStopInProgressTrip(tripId, "Arret demande par le passager"),
@@ -647,7 +647,7 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus("Arret de la course en cours...");
+    setStatus("Cloture de la course et calcul du montant...");
 
     try {
       const { authClient } = await restoreRiderSession();
@@ -659,7 +659,7 @@ export default function ActivityScreen() {
       );
       await loadHistory();
       setStatus(
-        `Course arretee. Montant a payer: ${formatRiderMoneyAmount(response.trip.actualFare)}.`,
+        `Course terminee. Montant a payer: ${formatRiderMoneyAmount(response.trip.actualFare)}.`,
       );
       router.replace({
         pathname: "/receipt",
@@ -943,8 +943,8 @@ export default function ActivityScreen() {
         {/* Status feedback — visible in active trip view for operational signals */}
         {status && !status.includes('Chargement') ? (
           <OrbiStatusBanner
-            tone="sky"
-            title="Suivi synchronisé"
+            tone="amber"
+            title="Information trajet"
             message={status}
             style={styles.tripStatusOverlay}
           />
@@ -1053,41 +1053,61 @@ export default function ActivityScreen() {
 
           {/* Driver card */}
           <OrbiSurface style={styles.driverCard}>
-            <View style={styles.driverAvatar}>
-              {driverTrustSnapshot?.profilePhotoUrl ? (
-                <Image
-                  source={{ uri: driverTrustSnapshot.profilePhotoUrl }}
-                  style={styles.driverAvatarImg}
-                />
-              ) : (
-                <Text style={styles.driverAvatarInitials}>
-                  {driverTrustSnapshot?.initials ?? 'OR'}
+            <View style={styles.driverCardTop}>
+              <View style={styles.driverAvatar}>
+                {driverTrustSnapshot?.profilePhotoUrl ? (
+                  <Image
+                    source={{ uri: driverTrustSnapshot.profilePhotoUrl }}
+                    style={styles.driverAvatarImg}
+                  />
+                ) : (
+                  <Text style={styles.driverAvatarInitials}>
+                    {driverTrustSnapshot?.initials ?? 'OR'}
+                  </Text>
+                )}
+              </View>
+              <View style={styles.driverInfo}>
+                <Text style={styles.driverName}>
+                  {driverTrustSnapshot?.driverName ?? activeTrip.counterpartyName ?? 'Chauffeur assigné'}
                 </Text>
-              )}
-            </View>
-            <View style={styles.driverInfo}>
-              <Text style={styles.driverName}>
-                {driverTrustSnapshot?.driverName ?? activeTrip.counterpartyName ?? 'Chauffeur assigné'}
-              </Text>
-              <Text style={styles.driverMeta}>
-                {driverTrustSnapshot
-                  ? `${driverTrustSnapshot.ratingLabel} · ${driverTrustSnapshot.vehicleLabel}`
-                  : 'En route vers vous'}
-              </Text>
-              {driverTrustSnapshot?.plateLabel ? (
-                <Text style={styles.driverPlate}>{driverTrustSnapshot.plateLabel}</Text>
+                <Text style={styles.driverMeta}>
+                  {driverTrustSnapshot
+                    ? `${driverTrustSnapshot.ratingLabel} · ${driverTrustSnapshot.vehicleLabel}`
+                    : 'En route vers vous'}
+                </Text>
+                {driverTrustSnapshot?.plateLabel ? (
+                  <Text style={styles.driverPlate}>{driverTrustSnapshot.plateLabel}</Text>
+                ) : null}
+              </View>
+              {activeTripDetail?.trip.driverPhoneNumber ? (
+                <OrbiButton
+                  onPress={() => void Linking.openURL(`tel:${activeTripDetail.trip.driverPhoneNumber}`)}
+                  style={styles.callDriverBtn}
+                  accessibilityLabel="call-driver"
+                  label="Appeler"
+                  variant="secondary"
+                  tone="teal"
+                  labelStyle={styles.callDriverLabel}
+                />
               ) : null}
             </View>
-            {activeTripDetail?.trip.driverPhoneNumber ? (
-              <OrbiButton
-                onPress={() => void Linking.openURL(`tel:${activeTripDetail.trip.driverPhoneNumber}`)}
-                style={styles.callDriverBtn}
-                accessibilityLabel="call-driver"
-                label="Appeler"
-                variant="secondary"
-                tone="teal"
-                labelStyle={styles.callDriverLabel}
-              />
+            {driverTrustSnapshot ? (
+              <View style={styles.boardingChecklist}>
+                {driverTrustSnapshot.boardingChecklist.map((item) => (
+                  <View
+                    key={item.label}
+                    style={[
+                      styles.boardingCheckItem,
+                      item.ok ? styles.boardingCheckItemOk : styles.boardingCheckItemWarn,
+                    ]}
+                  >
+                    <Text style={styles.boardingCheckLabel}>{item.label}</Text>
+                    <Text style={styles.boardingCheckValue} numberOfLines={1}>
+                      {item.value}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             ) : null}
           </OrbiSurface>
 
@@ -1095,7 +1115,7 @@ export default function ActivityScreen() {
             <OrbiSurface tone="teal" style={styles.pickupCheckCard}>
               <Text style={styles.pickupCheckEyebrow}>Chauffeur arrive</Text>
               <Text style={styles.pickupCheckHint}>
-                Confirmez le nom, le vehicule et la plaque avant de monter.
+                Comparez les lignes Nom, Plaque, Vehicule et Paiement ci-dessus. Montez seulement si tout correspond.
               </Text>
             </OrbiSurface>
           ) : null}
@@ -1163,7 +1183,7 @@ export default function ActivityScreen() {
                 onPress={() => handleStopInProgressTrip(activeTrip.id)}
                 disabled={isSubmitting}
                 style={styles.actionBtn}
-                label="Arreter maintenant"
+                label="Arreter la course"
                 variant="danger"
                 tone="danger"
                 labelStyle={styles.actionBtnLabel}
@@ -1199,8 +1219,8 @@ export default function ActivityScreen() {
       {/* Status feedback */}
       {status && !status.includes('Chargement') ? (
         <OrbiStatusBanner
-          tone="sky"
-          title="État du suivi"
+          tone="amber"
+          title="Information"
           message={status}
           style={styles.historyStatusBanner}
         />
@@ -1520,11 +1540,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Driver card
   driverCard: {
+    borderRadius: 14,
+    padding: 12,
+    gap: 10,
+  },
+  driverCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderRadius: 14,
-    padding: 12,
   },
   driverAvatar: {
     width: 48,
@@ -1560,6 +1583,43 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: theme.colors.teal,
     letterSpacing: 0,
+  },
+  boardingChecklist: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingTop: 2,
+  },
+  boardingCheckItem: {
+    width: '48%',
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    gap: 2,
+  },
+  boardingCheckItemOk: {
+    borderColor: 'rgba(0,201,167,0.22)',
+    backgroundColor: 'rgba(0,201,167,0.07)',
+  },
+  boardingCheckItemWarn: {
+    borderColor: 'rgba(255,149,0,0.28)',
+    backgroundColor: 'rgba(255,149,0,0.08)',
+  },
+  boardingCheckLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  boardingCheckValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text,
   },
 
   // Pickup verification

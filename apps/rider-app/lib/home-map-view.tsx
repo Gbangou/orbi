@@ -24,6 +24,7 @@ export interface HomeMapViewProps {
   riderLng?: number | null;
   style?: object;
   onDriversUpdate?: (drivers: NearbyDriverMarker[]) => void;
+  showNearbyDrivers?: boolean;
 }
 
 function FallbackMiniVehicleGlyph({ kind }: { kind: 'moto' | 'car' }) {
@@ -159,7 +160,13 @@ initMap(CFG);
 </html>`;
 }
 
-export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: HomeMapViewProps) {
+export function HomeMapView({
+  riderLat,
+  riderLng,
+  style,
+  onDriversUpdate,
+  showNearbyDrivers = true,
+}: HomeMapViewProps) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const webRef = useRef<WebView>(null);
@@ -177,6 +184,17 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
   );
 
   const refreshDrivers = useCallback(async () => {
+    if (!showNearbyDrivers) {
+      setDrivers([]);
+      onDriversUpdate?.([]);
+      if (webRef.current) {
+        webRef.current.postMessage(
+          JSON.stringify({ type: 'UPDATE_DRIVERS', drivers: [] }),
+        );
+      }
+      return;
+    }
+
     try {
       const client = createRiderPublicClient();
       const lat = rider?.latitude ?? OUAGA_LAT;
@@ -198,7 +216,7 @@ export function HomeMapView({ riderLat, riderLng, style, onDriversUpdate }: Home
     } catch (error) {
       enqueueRiderMapError(error, { surface: 'home-map', action: 'refresh-drivers' });
     }
-  }, [rider, onDriversUpdate]);
+  }, [rider, onDriversUpdate, showNearbyDrivers]);
 
   useEffect(() => {
     void refreshDrivers();

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
@@ -63,6 +64,9 @@ const pickupMismatchDistanceKmThreshold = 0.8;
 const routeCompletionMaxSignalAgeMinutes = 10;
 const routeCompletionMaxAccuracyMeters = 250;
 const routeCompletionMaxSpeedKph = 110;
+const riderEarlyStopMinimumFareRatio = 0.35;
+const riderEarlyStopDistanceWeight = 0.7;
+const riderEarlyStopTimeWeight = 0.3;
 const trustedContactNightStartHour = 20;
 const trustedContactNightEndHour = 5;
 
@@ -291,6 +295,8 @@ function hasCriticalRouteMonitoringAlert(
 
 @Injectable()
 export class TripsService {
+  private readonly logger = new Logger(TripsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
@@ -1644,12 +1650,16 @@ export class TripsService {
         updateData.startedAt = new Date();
       }
 
-      if (nextStatus === 'COMPLETED') {
-        updateData.completedAt = new Date();
+      const completionAt = nextStatus === 'COMPLETED' ? new Date() : null;
+
+      if (completionAt) {
+        updateData.completedAt = completionAt;
       }
 
       const earlyStopFare =
-        isRiderEarlyStop ? this.resolveRiderEarlyStopFare(trip) : null;
+        isRiderEarlyStop && completionAt
+          ? this.resolveRiderEarlyStopFare(trip, completionAt)
+          : null;
 
       if (earlyStopFare) {
         updateData.actualFare = earlyStopFare.adjustedFare;
@@ -1722,8 +1732,12 @@ export class TripsService {
                 originalFare: earlyStopFare.originalFare,
                 adjustedFare: earlyStopFare.adjustedFare,
                 progressRatio: earlyStopFare.progressRatio,
+                distanceProgressRatio: earlyStopFare.distanceProgressRatio,
+                timeProgressRatio: earlyStopFare.timeProgressRatio,
                 completedDistanceKm: earlyStopFare.completedDistanceKm,
                 remainingDistanceKm: earlyStopFare.remainingDistanceKm,
+                elapsedMinutes: earlyStopFare.elapsedMinutes,
+                plannedDurationMinutes: earlyStopFare.plannedDurationMinutes,
               },
             }
           : {}),
@@ -1899,7 +1913,7 @@ export class TripsService {
     });
 
     if (!updatedTrip.alreadyTerminal && !updatedTrip.alreadyApplied) {
-      this.realtimeService.publish({
+      this.publishTripLifecycleBestEffort({
         channel: 'trip',
         type: 'trip.updated',
         entityId: updatedTrip.id,
@@ -1915,7 +1929,7 @@ export class TripsService {
 
     if (updatedTrip.riderUserId && !updatedTrip.alreadyTerminal) {
       if (nextStatus === 'DRIVER_ARRIVING') {
-        void this.notificationsService.enqueue({
+        this.enqueueTripNotificationBestEffort({
           userId: updatedTrip.riderUserId,
           title: 'Votre chauffeur est arrivé !',
           body: 'Votre chauffeur vous attend au point de prise en charge.',
@@ -1928,7 +1942,7 @@ export class TripsService {
         const fareDisplay = updatedTrip.actualFare
           ? `${Number(updatedTrip.actualFare).toLocaleString('fr-BF')} XOF`
           : '';
-        void this.notificationsService.enqueue({
+        this.enqueueTripNotificationBestEffort({
           userId: updatedTrip.riderUserId,
           title: `Course terminée${fareDisplay ? ` — ${fareDisplay}` : ''}`,
           body: `Votre trajet s'est bien passé. Évaluez votre chauffeur pour aider la communauté Orbi !`,
@@ -1940,7 +1954,7 @@ export class TripsService {
         // Notification chauffeur — confirmation du gain net
         const driverUserId = updatedTrip.driverUserId;
         if (driverUserId) {
-          void this.notificationsService.enqueue({
+          this.enqueueTripNotificationBestEffort({
             userId: driverUserId,
             title: 'Trajet terminé — bon travail !',
             body: `Votre course a été validée. Consultez vos revenus pour le détail du payout.`,
@@ -1970,6 +1984,40 @@ export class TripsService {
       commissionRate: driverEconomics?.commissionRate ?? null,
       cancellationPolicy,
     });
+  }
+
+  private publishTripLifecycleBestEffort(
+    event: Parameters<RealtimeService['publish']>[0],
+  ) {
+    try {
+      this.realtimeService.publish(event);
+    } catch (error) {
+      this.logger.warn(
+        `Trip lifecycle update persisted but realtime publish failed for ${event.type}:${event.entityId}: ${String(
+          (error as Error)?.message ?? error,
+        )}`,
+      );
+    }
+  }
+
+  private enqueueTripNotificationBestEffort(
+    payload: Parameters<NotificationsService['enqueue']>[0],
+  ) {
+    try {
+      void this.notificationsService.enqueue(payload).catch((error) => {
+        this.logger.warn(
+          `Trip lifecycle persisted but notification enqueue failed for ${payload.dedupeKey}: ${String(
+            (error as Error)?.message ?? error,
+          )}`,
+        );
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Trip lifecycle persisted but notification enqueue failed for ${payload.dedupeKey}: ${String(
+          (error as Error)?.message ?? error,
+        )}`,
+      );
+    }
   }
 
   private async resolveRideRequestCompletionStatus(
@@ -2282,7 +2330,7 @@ export class TripsService {
     });
 
     if (rating.qualityReviewTicket) {
-      this.realtimeService.publish({
+      this.publishTripLifecycleBestEffort({
         channel: 'admin',
         type: 'support-ticket.updated',
         entityId: rating.qualityReviewTicket.id,
@@ -2554,7 +2602,14 @@ export class TripsService {
           },
         },
         vehicle: true,
-        rideRequest: true,
+        rideRequest: {
+          include: {
+            paymentAttempts: {
+              orderBy: { updatedAt: 'desc' },
+              take: 1,
+            },
+          },
+        },
         events: {
           orderBy: {
             createdAt: 'asc',
@@ -2933,38 +2988,74 @@ export class TripsService {
   private resolveRiderEarlyStopFare(trip: {
     actualFare: unknown;
     distanceKm: unknown;
+    durationMinutes?: number | null;
+    startedAt?: Date | null;
     events: Array<{
       eventType: string;
       payload?: unknown;
       createdAt: Date;
     }>;
-  }) {
+  }, completedAt: Date) {
     const originalFare = toAmount(trip.actualFare);
     const plannedDistanceKm = toAmount(trip.distanceKm);
+    const plannedDurationMinutes =
+      typeof trip.durationMinutes === 'number' && trip.durationMinutes > 0
+        ? trip.durationMinutes
+        : null;
     const latestPosition = resolveLatestDriverRoutePosition(trip.events);
     const remainingDistanceKm =
       typeof latestPosition?.distanceToDestinationKm === 'number' &&
       Number.isFinite(latestPosition.distanceToDestinationKm)
         ? Math.max(0, latestPosition.distanceToDestinationKm)
         : null;
+    const completedAtMs =
+      latestPosition?.createdAt instanceof Date &&
+      Number.isFinite(latestPosition.createdAt.getTime()) &&
+      latestPosition.createdAt <= completedAt
+        ? latestPosition.createdAt.getTime()
+        : completedAt.getTime();
+    const elapsedMinutes =
+      trip.startedAt instanceof Date && Number.isFinite(trip.startedAt.getTime())
+        ? Math.max(0, Math.round((completedAtMs - trip.startedAt.getTime()) / 60000))
+        : null;
+    const timeProgressRatio =
+      elapsedMinutes !== null && plannedDurationMinutes
+        ? Math.min(1, elapsedMinutes / plannedDurationMinutes)
+        : null;
 
-    if (originalFare <= 0 || plannedDistanceKm <= 0 || remainingDistanceKm === null) {
+    if (originalFare <= 0) {
       return {
         originalFare,
         adjustedFare: originalFare,
         progressRatio: 1,
+        distanceProgressRatio: null,
+        timeProgressRatio,
         completedDistanceKm: null,
         remainingDistanceKm,
+        elapsedMinutes,
+        plannedDurationMinutes,
       };
     }
 
-    const completedDistanceKm = Math.max(
-      0,
-      plannedDistanceKm - Math.min(plannedDistanceKm, remainingDistanceKm),
-    );
+    const completedDistanceKm =
+      plannedDistanceKm > 0 && remainingDistanceKm !== null
+        ? Math.max(
+            0,
+            plannedDistanceKm - Math.min(plannedDistanceKm, remainingDistanceKm),
+          )
+        : null;
+    const distanceProgressRatio =
+      completedDistanceKm !== null && plannedDistanceKm > 0
+        ? Math.min(1, completedDistanceKm / plannedDistanceKm)
+        : null;
+    const measuredProgressRatio =
+      distanceProgressRatio !== null && timeProgressRatio !== null
+        ? distanceProgressRatio * riderEarlyStopDistanceWeight +
+          timeProgressRatio * riderEarlyStopTimeWeight
+        : distanceProgressRatio ?? timeProgressRatio ?? 1;
     const progressRatio = Math.min(
       1,
-      Math.max(0.35, completedDistanceKm / plannedDistanceKm),
+      Math.max(riderEarlyStopMinimumFareRatio, measuredProgressRatio),
     );
     const adjustedFare = Math.min(
       originalFare,
@@ -2975,8 +3066,20 @@ export class TripsService {
       originalFare,
       adjustedFare,
       progressRatio: Number(progressRatio.toFixed(3)),
-      completedDistanceKm: Number(Math.max(0.1, completedDistanceKm).toFixed(2)),
-      remainingDistanceKm: Number(remainingDistanceKm.toFixed(2)),
+      distanceProgressRatio:
+        distanceProgressRatio === null
+          ? null
+          : Number(distanceProgressRatio.toFixed(3)),
+      timeProgressRatio:
+        timeProgressRatio === null ? null : Number(timeProgressRatio.toFixed(3)),
+      completedDistanceKm:
+        completedDistanceKm === null
+          ? null
+          : Number(Math.max(0.1, completedDistanceKm).toFixed(2)),
+      remainingDistanceKm:
+        remainingDistanceKm === null ? null : Number(remainingDistanceKm.toFixed(2)),
+      elapsedMinutes,
+      plannedDurationMinutes,
     };
   }
 

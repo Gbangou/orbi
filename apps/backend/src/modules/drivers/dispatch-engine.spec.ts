@@ -1,5 +1,6 @@
 import {
   calculateMarketplaceFairnessSignal,
+  calculateMarketplaceDispatchPriority,
   calculateDispatchScore,
   evaluateDispatchBehaviorSignal,
   resolveAssignmentWindowMs,
@@ -45,6 +46,32 @@ describe('dispatch-engine', () => {
     });
 
     expect(strongScore).toBeGreaterThan(weakScore);
+  });
+
+  it('promotes offers that are operationally strong and economically balanced', () => {
+    const strong = calculateMarketplaceDispatchPriority({
+      dispatchScore: 92,
+      offerConfidenceScore: 91,
+      behavioralScore: 84,
+      fairnessScore: 88,
+      pickupDistanceKm: 0.8,
+      estimatedTripDistanceKm: 6,
+      supplyPressureLevel: 'TIGHT',
+    });
+    const weak = calculateMarketplaceDispatchPriority({
+      dispatchScore: 72,
+      offerConfidenceScore: 65,
+      behavioralScore: 48,
+      fairnessScore: 42,
+      pickupDistanceKm: 6,
+      estimatedTripDistanceKm: 2,
+      supplyPressureLevel: 'LOW',
+    });
+
+    expect(strong.score).toBeGreaterThan(weak.score);
+    expect(strong.label).toBe('EXCELLENT');
+    expect(weak.label).toBe('WEAK');
+    expect(strong.summary).toContain('marketplace');
   });
 
   it('keeps marketplace fairness balanced when rider price, payout and margin are healthy', () => {

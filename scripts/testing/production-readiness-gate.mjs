@@ -37,7 +37,7 @@ function runGate(name, command, args) {
 
 function runSecretHygieneGate() {
   writeSection('Secret hygiene');
-  const trackedFiles = collectWorkspaceFiles('.');
+  const trackedFiles = collectTrackedFiles();
   const forbiddenPathPatterns = [
     /\.(pem|p12|pfx|key)$/iu,
   ];
@@ -47,13 +47,20 @@ function runSecretHygieneGate() {
     /FLWSECK-[A-Za-z0-9_-]{16,}/u,
     /CINETPAY[_-]?(?:API|SECRET)[_-]?KEY\s*[:=]\s*['"]?[A-Za-z0-9_-]{16,}/iu,
   ];
+  const trackedEnvFiles = trackedFiles.filter(
+    (file) => isEnvFile(file) && !isExampleEnvFile(file),
+  );
   const forbiddenPaths = trackedFiles.filter((file) =>
     forbiddenPathPatterns.some((pattern) => pattern.test(file)),
   );
   const forbiddenContent = [];
 
   for (const file of trackedFiles) {
-    if (/(^|\/)\.env(\.|$)/u.test(file)) {
+    if (trackedEnvFiles.includes(file)) {
+      continue;
+    }
+
+    if (isExampleEnvFile(file)) {
       continue;
     }
 
@@ -81,8 +88,9 @@ function runSecretHygieneGate() {
     }
   }
 
-  if (forbiddenPaths.length || forbiddenContent.length) {
+  if (trackedEnvFiles.length || forbiddenPaths.length || forbiddenContent.length) {
     const details = [
+      ...trackedEnvFiles.map((file) => `tracked runtime env file: ${file}`),
       ...forbiddenPaths.map((file) => `tracked secret-like path: ${file}`),
       ...forbiddenContent.map((file) => `secret-like content: ${file}`),
     ].join('\n');
@@ -93,6 +101,34 @@ function runSecretHygieneGate() {
   process.stdout.write(
     '[ok] No private-key/certificate/provider-secret patterns found.\n',
   );
+}
+
+function collectTrackedFiles() {
+  const result = spawnSync('git', ['ls-files'], {
+    encoding: 'utf8',
+  });
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (result.status !== 0) {
+    throw new Error('Could not list tracked files for secret hygiene gate.');
+  }
+
+  return result.stdout
+    .split(/\r?\n/u)
+    .map((file) => file.trim())
+    .filter(Boolean);
+}
+
+function isEnvFile(file) {
+  const name = file.split('/').pop() ?? file;
+  return name === '.env' || name.startsWith('.env.');
+}
+
+function isExampleEnvFile(file) {
+  return file.endsWith('.env.example') || file.endsWith('/.env.example');
 }
 
 function collectWorkspaceFiles(directory) {

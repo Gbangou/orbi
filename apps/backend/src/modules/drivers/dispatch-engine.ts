@@ -65,6 +65,19 @@ export type MarketplaceFairnessSignal = {
   summary: string;
 };
 
+export type MarketplaceDispatchPrioritySignal = {
+  score: number;
+  label: 'EXCELLENT' | 'SOLID' | 'WATCH' | 'WEAK';
+  summary: string;
+  components: {
+    dispatchScore: number;
+    confidenceScore: number;
+    behaviorScore: number;
+    fairnessScore: number;
+    pickupEfficiencyScore: number;
+  };
+};
+
 function clampScore(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
@@ -272,6 +285,64 @@ export function calculateOfferConfidenceScore(input: {
         behavioralContribution,
     ),
   );
+}
+
+export function calculateMarketplaceDispatchPriority(input: {
+  dispatchScore: number;
+  offerConfidenceScore: number;
+  behavioralScore: number;
+  fairnessScore: number;
+  pickupDistanceKm: number | null;
+  estimatedTripDistanceKm: number;
+  supplyPressureLevel: 'LOW' | 'BALANCED' | 'TIGHT' | 'CRITICAL';
+}): MarketplaceDispatchPrioritySignal {
+  const pickupDistanceKm = input.pickupDistanceKm ?? 1.2;
+  const estimatedTripDistanceKm = Math.max(1, input.estimatedTripDistanceKm);
+  const pickupRatio = pickupDistanceKm / estimatedTripDistanceKm;
+  const pickupEfficiencyScore = clampScore(100 - pickupRatio * 115);
+  const pressureBoost =
+    {
+      LOW: -4,
+      BALANCED: 0,
+      TIGHT: 3,
+      CRITICAL: 6,
+    }[input.supplyPressureLevel] ?? 0;
+  const score = clampScore(
+    input.dispatchScore * 0.28 +
+      input.offerConfidenceScore * 0.24 +
+      input.behavioralScore * 0.18 +
+      input.fairnessScore * 0.22 +
+      pickupEfficiencyScore * 0.08 +
+      pressureBoost,
+  );
+  const label =
+    score >= 86
+      ? 'EXCELLENT'
+      : score >= 72
+        ? 'SOLID'
+        : score >= 55
+          ? 'WATCH'
+          : 'WEAK';
+
+  return {
+    score,
+    label,
+    summary:
+      label === 'EXCELLENT'
+        ? 'Priorite forte: proche, fiable, rentable et saine pour la marketplace.'
+        : label === 'SOLID'
+          ? 'Priorite solide: bonne affectation avec risque operationnel limite.'
+          : label === 'WATCH'
+            ? 'Priorite a surveiller: verifier distance, acceptation ou economie chauffeur.'
+            : 'Priorite faible: risque de temps vide, refus ou desequilibre economique.',
+    components: {
+      dispatchScore: clampScore(input.dispatchScore),
+      confidenceScore: clampScore(input.offerConfidenceScore),
+      behaviorScore: clampScore(input.behavioralScore),
+      fairnessScore: clampScore(input.fairnessScore),
+      pickupEfficiencyScore,
+    },
+  };
 }
 
 export function resolveOfferConfidenceLabel(confidenceScore: number) {

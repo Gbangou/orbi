@@ -268,7 +268,7 @@ export class RideRequestsService {
         },
       });
 
-      void this.dispatchAndNotify({
+      await this.dispatchAndNotify({
         rideRequestId: rideRequest.id,
         riderId: rideRequest.riderId ?? payload.riderId,
         requestedVehicleType: payload.requestedVehicleType,
@@ -682,7 +682,7 @@ export class RideRequestsService {
           },
           currentLatitude: { not: null },
           currentLongitude: { not: null },
-          updatedAt: { gte: freshPresenceCutoff },
+          currentLocationUpdatedAt: { gte: freshPresenceCutoff },
         },
         select: { userId: true },
         take: 100,

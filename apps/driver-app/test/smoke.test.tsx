@@ -1330,6 +1330,8 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
+    expectText(renderer, 'GO');
+    expectText(renderer, 'Passager a bord, pret a partir');
     await pressByText(renderer, 'Demarrer la course');
 
     expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
@@ -1340,6 +1342,61 @@ describe('driver smoke flows', () => {
     expect(mockedVerifyPickupCodeWithApi).not.toHaveBeenCalled();
     expectText(renderer, 'Conduisez vers la destination');
     expectText(renderer, 'Terminer la course');
+  });
+
+  it('recovers the start flow when the server applied IN_PROGRESS before the network failed', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers.mockResolvedValue([] as never);
+    mockedFetchMyTrips
+      .mockResolvedValueOnce(buildDriverTripsWithStatus('DRIVER_ARRIVING') as never)
+      .mockResolvedValueOnce(buildDriverTripsWithStatus('IN_PROGRESS') as never);
+    mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
+    mockedFetchTripDetail.mockResolvedValue(
+      buildDriverTripDetail(['driver-timeline-1'], ['Chauffeur en approche']) as never,
+    );
+    mockedUpdateTripStatusWithApi.mockRejectedValue(new Error('socket timeout after commit'));
+
+    const renderer = await renderScreen(<OffersScreen />);
+    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Demarrer la course');
+    await flushMicrotasks();
+
+    expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
+      { token: 'driver-auth-client' },
+      'trip-driver-1',
+      'IN_PROGRESS',
+    );
+    expectText(renderer, 'Course demarree. Statut confirme apres resynchronisation.');
+    expectText(renderer, 'Terminer la course');
+  });
+
+  it('keeps the professional start toggle recoverable when the start update fails', async () => {
+    mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
+    mockedFetchDriverOffers.mockResolvedValue([] as never);
+    mockedFetchMyTrips.mockResolvedValue(buildDriverTripsWithStatus('DRIVER_ARRIVING') as never);
+    mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
+    mockedFetchTripDetail.mockResolvedValue(
+      buildDriverTripDetail(['driver-timeline-1'], ['Chauffeur en approche']) as never,
+    );
+    mockedUpdateTripStatusWithApi.mockRejectedValue(new Error('network down'));
+    mockedResolveDriverAppError.mockResolvedValue({
+      message: 'La mise a jour du trajet a echoue.',
+      shouldClearSessionToken: false,
+    });
+
+    const renderer = await renderScreen(<OffersScreen />);
+    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Demarrer la course');
+    await flushMicrotasks();
+
+    expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
+      { token: 'driver-auth-client' },
+      'trip-driver-1',
+      'IN_PROGRESS',
+    );
+    expectText(renderer, 'Depart non confirme');
+    expectText(renderer, 'Depart non confirme. Reessayez maintenant ou actualisez le direct.');
+    expectText(renderer, 'Demarrer la course');
   });
 
   it('does not show pickup code entry in the standard start flow', async () => {
@@ -1461,7 +1518,13 @@ describe('driver smoke flows', () => {
       'trip-driver-1',
       'COMPLETED',
     );
+    expectText(renderer, 'Prix client : 3 500 F CFA');
+    expectText(renderer, 'Votre gain : 3 150 F CFA');
     expectText(renderer, 'Paiement : Especes');
+    expectText(
+      renderer,
+      'Encaissez le montant exact, confirmez au passager et gardez la course visible dans l historique.',
+    );
     expectText(renderer, 'Aucune offre active');
   });
 

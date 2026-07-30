@@ -25,6 +25,7 @@ import {
 } from '../../lib/driver-active-flow';
 import {
   buildDriverEarningsTrustSummary,
+  buildDriverDailyOperatingCompass,
   buildDriverEarningsDeltaLabel,
   formatDriverEarningsAmount,
   formatDriverEarningsCount,
@@ -390,6 +391,138 @@ const makeMilestoneStyles = (theme: OrbiTheme) => StyleSheet.create({
   progressMeta: { fontSize: 11, color: theme.colors.muted, fontWeight: '600' },
 });
 
+function DriverOperatingCompassCard({
+  earnings,
+}: {
+  earnings: DriverEarningsResponse;
+}) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeCompassStyles(theme), [theme]);
+  const compass = useMemo(
+    () => buildDriverDailyOperatingCompass(earnings),
+    [earnings],
+  );
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.eyebrow}>Boussole économique</Text>
+          <Text style={styles.title}>{compass.headline}</Text>
+        </View>
+        <View style={styles.progressBadge}>
+          <Text style={styles.progressText}>{compass.progressPercent}%</Text>
+        </View>
+      </View>
+      <View style={styles.progressTrack}>
+        <View
+          style={[
+            styles.progressFill,
+            { width: `${compass.progressPercent}%` as `${number}%` },
+          ]}
+        />
+      </View>
+      <Text style={styles.actionText}>{compass.primaryAction}</Text>
+      <View style={styles.indicatorGrid}>
+        {compass.indicators.map((indicator) => (
+          <View key={indicator.label} style={styles.indicator}>
+            <Text style={styles.indicatorLabel}>{indicator.label}</Text>
+            <Text style={styles.indicatorValue} numberOfLines={1}>
+              {indicator.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const makeCompassStyles = (theme: OrbiTheme) => StyleSheet.create({
+  card: {
+    backgroundColor: '#071311',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0,201,167,0.26)',
+    padding: 16,
+    gap: 12,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.teal,
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
+    color: '#FFFFFF',
+  },
+  progressBadge: {
+    minWidth: 54,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,201,167,0.14)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignItems: 'center',
+  },
+  progressText: {
+    color: theme.colors.teal,
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+  },
+  progressTrack: {
+    height: 7,
+    borderRadius: 99,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 99,
+    backgroundColor: theme.colors.teal,
+  },
+  actionText: {
+    color: '#D8E7E2',
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: 'Inter_400Regular',
+  },
+  indicatorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  indicator: {
+    width: '48%',
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    padding: 10,
+    gap: 2,
+  },
+  indicatorLabel: {
+    color: '#9FB2AC',
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+  },
+  indicatorValue: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+  },
+});
+
 export default function RevenusScreen() {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -621,6 +754,8 @@ export default function RevenusScreen() {
 
         {/* Graphique hebdomadaire — gains par jour (7 derniers jours) */}
         <WeeklyEarningsChart recentTrips={earnings.recentTrips} />
+
+        <DriverOperatingCompassCard earnings={earnings} />
 
         {/* Incentives — objectifs quotidiens */}
         {incentives && incentives.dailyQuests.length > 0 ? (

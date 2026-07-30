@@ -84,7 +84,7 @@ describe('AdminSupportService', () => {
         actionHint: expect.stringContaining('Traiter immediatement'),
         sla: expect.objectContaining({
           tier: 'critical',
-          targetMinutes: 10,
+          targetMinutes: 5,
           state: 'breached',
           owner: 'ops',
           respondedAt: null,
@@ -140,6 +140,10 @@ describe('AdminSupportService', () => {
         category: 'driver_cancellation',
         tripId: 'trip-driver-cancel-1',
         actionHint: expect.stringContaining('pause/revue'),
+        sla: expect.objectContaining({
+          targetMinutes: 20,
+          owner: 'ops',
+        }),
       }),
     );
   });
@@ -174,6 +178,10 @@ describe('AdminSupportService', () => {
         category: 'refund',
         paymentAttemptId: 'payment-1',
         actionHint: expect.stringContaining('statut provider'),
+        sla: expect.objectContaining({
+          targetMinutes: 20,
+          owner: 'support',
+        }),
       }),
     );
   });
@@ -239,7 +247,7 @@ describe('AdminSupportService', () => {
 
     expect(result.tickets[0].sla).toMatchObject({
       tier: 'standard',
-      targetMinutes: 30,
+      targetMinutes: 20,
       state: 'responded',
       owner: 'support',
       respondedAt: updatedAt.toISOString(),

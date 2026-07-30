@@ -69,7 +69,9 @@ function freshPresenceWhere(now = new Date()) {
   return {
     currentLatitude: { not: null },
     currentLongitude: { not: null },
-    updatedAt: { gte: new Date(now.getTime() - fieldPresenceFreshnessMs) },
+    currentLocationUpdatedAt: {
+      gte: new Date(now.getTime() - fieldPresenceFreshnessMs),
+    },
     user: {
       isActive: true,
       sessions: {
@@ -244,9 +246,9 @@ export class DispatchCoordinator {
     }
 
     const driverPresenceUpdatedAt =
-      driverProfile.updatedAt instanceof Date
-        ? driverProfile.updatedAt.getTime()
-        : Date.now();
+      driverProfile.currentLocationUpdatedAt instanceof Date
+        ? driverProfile.currentLocationUpdatedAt.getTime()
+        : 0;
 
     if (
       toNumber(driverProfile.currentLatitude) === null ||
@@ -475,6 +477,7 @@ export class DispatchCoordinator {
               : null,
           reservationWindowSeconds,
           availabilityScore: operatingContext.availabilityScore,
+          supplyPressureLevel: operatingContext.supplyPressureLevel,
           demandLevel: operatingContext.demandLevel,
           trafficLevel: operatingContext.trafficLevel,
           dispatchBehavior,
@@ -537,6 +540,8 @@ export class DispatchCoordinator {
           metadata: {
             expiresAt: assignmentExpiresAt.toISOString(),
             dispatchScore: offer.dispatchScore ?? null,
+            businessPriorityScore: offer.businessPriorityScore ?? null,
+            businessPriorityLabel: offer.businessPriorityLabel ?? null,
             offerConfidenceScore: offer.offerConfidenceScore ?? null,
             fairnessScore: offer.fairnessScore ?? null,
             fairnessLabel: offer.fairnessLabel ?? null,
@@ -825,7 +830,7 @@ export class DispatchCoordinator {
       availabilityScore: operatingContext.availabilityScore,
       ageMinutes: 0,
       hasExactTierMatch: Boolean(input.requestedServiceTier),
-      behavioralScore: 0.5,
+      behavioralScore: 60,
     });
     const assignmentExpiresAt = new Date(
       Date.now() + resolveAssignmentWindowMs(offerConfidenceScore),

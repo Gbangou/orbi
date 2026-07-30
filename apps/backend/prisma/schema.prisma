@@ -303,6 +303,7 @@ model DriverProfile {
   status              DriverStatus        @default(OFFLINE)
   currentLatitude     Decimal?            @db.Decimal(10, 7) @map("current_latitude")
   currentLongitude    Decimal?            @db.Decimal(10, 7) @map("current_longitude")
+  currentLocationUpdatedAt DateTime?       @map("current_location_updated_at")
   serviceRadiusKm     Decimal?            @db.Decimal(6, 2) @map("service_radius_km")
   averageRating       Decimal?            @db.Decimal(3, 2) @map("average_rating")
   completedTripsCount Int                 @default(0) @map("completed_trips_count")
@@ -316,6 +317,7 @@ model DriverProfile {
   onboardingReviews   DriverOnboardingReview[]
 
   @@index([status, verificationStatus])
+  @@index([status, verificationStatus, currentLocationUpdatedAt])
   @@map("driver_profiles")
 }
 

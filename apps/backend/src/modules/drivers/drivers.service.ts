@@ -70,6 +70,17 @@ function activeDriverSessionWhere(now = new Date()) {
   };
 }
 
+function freshDriverPresenceWhere(now = new Date()) {
+  return {
+    ...activeDriverSessionWhere(now),
+    currentLatitude: { not: null },
+    currentLongitude: { not: null },
+    currentLocationUpdatedAt: {
+      gte: new Date(now.getTime() - fieldPresenceFreshnessMs),
+    },
+  };
+}
+
 type DriverDispatchBlockerCode =
   | 'OFFLINE'
   | 'SUSPENDED'
@@ -1063,6 +1074,7 @@ export class DriversService {
       data: {
         currentLatitude: payload.latitude,
         currentLongitude: payload.longitude,
+        currentLocationUpdatedAt: new Date(),
       },
     });
 
@@ -1316,15 +1328,18 @@ export class DriversService {
     total: number;
   }> {
     const now = new Date();
-    const staleCutoff = new Date(now.getTime() - fieldPresenceFreshnessMs);
     const profiles = await this.prisma.driverProfile.findMany({
       where: {
         status: DriverStatus.ONLINE,
         verificationStatus: VerificationStatus.APPROVED,
-        ...activeDriverSessionWhere(now),
-        currentLatitude: { not: null },
-        currentLongitude: { not: null },
-        updatedAt: { gte: staleCutoff },
+        ...freshDriverPresenceWhere(now),
+        assignedTrips: {
+          none: {
+            status: {
+              in: ACTIVE_TRIP_STATUSES,
+            },
+          },
+        },
       },
       select: {
         id: true,

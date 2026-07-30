@@ -82,6 +82,24 @@ export class AdminController {
     return this.adminService.overview();
   }
 
+  @Get('business-model')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  businessModel() {
+    return this.adminService.businessModel();
+  }
+
+  @Get('pilot-command-center')
+  @Version('1')
+  @ApiBearerAuth('session-token')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  pilotCommandCenter() {
+    return this.adminService.pilotCommandCenter();
+  }
+
   @Get('live-ops')
   @Version('1')
   @ApiBearerAuth('session-token')

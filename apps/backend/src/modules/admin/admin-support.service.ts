@@ -253,21 +253,81 @@ function resolveSupportTicketOpsClassification(ticket: {
   };
 }
 
+function resolveSupportSlaPolicy(
+  category: SupportTicketOpsCategory,
+  priority: number,
+): {
+  tier: SupportTicketSla['tier'];
+  targetMinutes: number;
+  owner: SupportTicketSla['owner'];
+} {
+  if (category === 'safety') {
+    return {
+      tier: 'critical',
+      targetMinutes: priority >= 3 ? 5 : 10,
+      owner: 'ops',
+    };
+  }
+
+  if (category === 'driver_cancellation' || category === 'rider_cancellation') {
+    return {
+      tier: priority >= 2 ? 'standard' : 'normal',
+      targetMinutes: priority >= 2 ? 20 : 45,
+      owner: 'ops',
+    };
+  }
+
+  if (category === 'mobile_health') {
+    return {
+      tier: priority >= 3 ? 'critical' : 'standard',
+      targetMinutes: priority >= 3 ? 10 : 30,
+      owner: 'ops',
+    };
+  }
+
+  if (category === 'refund' || category === 'payment') {
+    return {
+      tier: priority >= 3 ? 'critical' : 'standard',
+      targetMinutes: priority >= 2 ? 20 : 60,
+      owner: 'support',
+    };
+  }
+
+  if (category === 'fare_review' || category === 'quality_review') {
+    return {
+      tier: priority >= 3 ? 'critical' : priority >= 2 ? 'standard' : 'normal',
+      targetMinutes: priority >= 3 ? 20 : priority >= 2 ? 45 : 120,
+      owner: 'support',
+    };
+  }
+
+  if (category === 'onboarding') {
+    return {
+      tier: priority >= 3 ? 'critical' : priority >= 2 ? 'standard' : 'normal',
+      targetMinutes: priority >= 3 ? 20 : priority >= 2 ? 60 : 180,
+      owner: priority >= 3 ? 'ops' : 'support',
+    };
+  }
+
+  return {
+    tier: priority >= 3 ? 'critical' : priority === 2 ? 'standard' : 'normal',
+    targetMinutes: priority >= 3 ? 10 : priority === 2 ? 30 : 120,
+    owner: priority >= 3 ? 'ops' : 'support',
+  };
+}
+
 function resolveSupportSla(ticket: {
   priority: number;
   status: SupportTicketStatus;
   adminNote?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  category: SupportTicketOpsCategory;
 }): SupportTicketSla {
-  const targetMinutes = ticket.priority >= 3 ? 10 : ticket.priority === 2 ? 30 : 120;
-  const tier =
-    ticket.priority >= 3
-      ? ('critical' as const)
-      : ticket.priority === 2
-        ? ('standard' as const)
-        : ('normal' as const);
-  const owner = ticket.priority >= 3 ? ('ops' as const) : ('support' as const);
+  const { tier, targetMinutes, owner } = resolveSupportSlaPolicy(
+    ticket.category,
+    ticket.priority,
+  );
   const dueAt = new Date(ticket.createdAt.getTime() + targetMinutes * 60_000);
   const isClosed =
     ticket.status === SupportTicketStatus.RESOLVED ||
@@ -397,7 +457,14 @@ export class AdminSupportService {
           actionHint: classification.actionHint,
           createdAt: ticket.createdAt.toISOString(),
           updatedAt: ticket.updatedAt.toISOString(),
-          sla: resolveSupportSla(ticket),
+          sla: resolveSupportSla({
+            priority: ticket.priority,
+            status: ticket.status,
+            adminNote: ticket.adminNote,
+            createdAt: ticket.createdAt,
+            updatedAt: ticket.updatedAt,
+            category: classification.category,
+          }),
         };
       });
 

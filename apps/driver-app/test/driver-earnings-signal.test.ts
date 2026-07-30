@@ -1,5 +1,6 @@
 import {
   buildDriverEarningsTrustSummary,
+  buildDriverDailyOperatingCompass,
   buildDriverEarningsDeltaLabel,
   formatDriverEarningsAmount,
   formatDriverEarningsCount,
@@ -173,5 +174,64 @@ describe('driver earnings signal helpers', () => {
 
     expect(summary.settlementStateLabel).toBe('Contrôle requis');
     expect(summary.settlementTone).toBe('amber');
+  });
+
+  it('builds an operating compass from real daily earnings signals', () => {
+    const compass = buildDriverDailyOperatingCompass(
+      {
+        summary: {
+          currency: 'XOF',
+          today: 12000,
+          week: 18000,
+          month: 62000,
+          completedTrips: 2,
+          averagePayout: 3000,
+        },
+        settlement: {
+          currency: 'XOF',
+          source: 'COMPLETED_TRIPS',
+          payoutRateBps: 8200,
+          payoutRate: 0.82,
+          payoutRateMin: 0.82,
+          payoutRateMax: 0.82,
+          recentTripCount: 2,
+          recentGrossFare: 14634,
+          recentNetPayout: 12000,
+          recentPlatformFee: 2634,
+          state: 'RECONCILED',
+          anomalies: [],
+          calculatedAt: '2026-04-19T10:00:00.000Z',
+        },
+        recentTrips: [
+          {
+            id: 'trip-1',
+            route: 'A vers B',
+            payout: 4500,
+            grossFare: 5488,
+            platformFee: 988,
+            status: 'COMPLETED',
+            completedAt: '2026-04-19T08:40:00.000Z',
+          },
+          {
+            id: 'trip-2',
+            route: 'C vers D',
+            payout: 4500,
+            grossFare: 5488,
+            platformFee: 988,
+            status: 'COMPLETED',
+            completedAt: '2026-04-19T09:40:00.000Z',
+          },
+        ],
+      },
+      new Date('2026-04-19T11:00:00.000Z'),
+    );
+
+    expect(compass).toMatchObject({
+      headline: 'Bonne cadence',
+      progressPercent: 67,
+      remainingTrips: 4,
+      payoutRateLabel: '82%',
+    });
+    expect(compass.primaryAction).toContain('pickups courts');
   });
 });

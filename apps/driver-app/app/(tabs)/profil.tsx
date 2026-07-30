@@ -43,10 +43,7 @@ import {
 } from '../../lib/driver-onboarding-safety';
 import { useLiveRefresh } from '../../lib/use-live-refresh';
 import { resolveDriverAppError } from '../../lib/session-feedback';
-import {
-  buildDriverProfileStatusLabel,
-  resolveDriverActiveFlow,
-} from '../../lib/driver-active-flow';
+import { resolveDriverActiveFlow } from '../../lib/driver-active-flow';
 import {
   formatDriverOnboardingProgress,
   formatDriverProfileBytes,
@@ -510,14 +507,8 @@ export default function ProfilScreen() {
         setIsOnboardingFormOpen(normalizedProfile.profile.vehicles.length === 0);
         setHasSetOnboardingFormDefault(true);
       }
-      const flow = resolveDriverActiveFlow({
-        history: historyResponse,
-        offers: [],
-        reservationNow: 0,
-        driverProfileStatus: normalizedProfile.profile.status,
-      });
       if (!silent) {
-        setStatus(buildDriverProfileStatusLabel({ flow }));
+        setStatus('');
       }
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
@@ -826,8 +817,8 @@ export default function ProfilScreen() {
         {/* Status notice (shown when non-idle) */}
         {status && status !== 'Chargement du profil chauffeur...' ? (
           <OrbiStatusBanner
-            tone="sky"
-            title="Profil synchronisé"
+            tone="amber"
+            title="Information"
             message={status}
           />
         ) : null}

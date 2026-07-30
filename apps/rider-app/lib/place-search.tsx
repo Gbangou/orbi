@@ -368,6 +368,14 @@ function searchLocalPlaces(
     .slice(0, 6);
 }
 
+export function resolveBurkinaPlaceSuggestion(
+  query: string,
+  cityHint = 'Burkina Faso',
+  userPlaces: Place[] = [],
+) {
+  return searchLocalPlaces(query, cityHint, userPlaces)[0] ?? null;
+}
+
 function mergePlaces(primary: Place[], secondary: Place[], limit = 6) {
   const seen = new Set<string>();
   const merged: Place[] = [];

@@ -1326,6 +1326,18 @@ function safeRate(numerator: number, denominator: number) {
   return Math.round((numerator / denominator) * 1000) / 10;
 }
 
+function roundOne(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+function clampScore(value: number) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 const tripAuditRiskResolvedAction = 'TRIP_AUDIT_RISK_RESOLVED';
 const activeTripAuditStatuses = new Set<string>(ACTIVE_TRIP_STATUSES);
 
@@ -3458,6 +3470,403 @@ export class AdminService {
     );
   }
 
+  async businessModel() {
+    return this.cache.getOrSet(
+      'admin:business-model',
+      () => this.fetchBusinessModel(),
+      60,
+    );
+  }
+
+  async pilotCommandCenter() {
+    return this.cache.getOrSet(
+      'admin:pilot-command-center',
+      () => this.fetchPilotCommandCenter(),
+      30,
+    );
+  }
+
+  private async fetchPilotCommandCenter() {
+    const generatedAt = new Date();
+    const nextReviewAt = new Date(generatedAt.getTime() + 6 * 60 * 60 * 1000);
+    const [
+      businessModel,
+      operationalKpis,
+      liveOps,
+      financeDashboard,
+      tripsAudit,
+      overview,
+    ] = await Promise.all([
+      this.businessModel(),
+      this.operationalKpis(),
+      this.liveOps(),
+      this.financeDashboard(),
+      this.tripsAudit({ lookbackHours: 24 }),
+      this.overview(),
+    ]);
+
+    const financeCriticalRisks = financeDashboard.risks.filter(
+      (risk) => risk.severity === 'critical',
+    ).length;
+    const financeWatchRisks = financeDashboard.risks.filter(
+      (risk) => risk.severity === 'watch',
+    ).length;
+    const mobileScore =
+      operationalKpis.mobileObservabilityPosture === 'good'
+        ? 100
+        : operationalKpis.mobileObservabilityPosture === 'warn'
+          ? 65
+          : 20;
+    const financeScore = clampScore(
+      100 -
+        financeCriticalRisks * 35 -
+        financeWatchRisks * 15 -
+        financeDashboard.summary.refundPending * 8 -
+        financeDashboard.summary.webhookConflicts * 12 -
+        financeDashboard.summary.webhookUnknownReferences * 10,
+    );
+    const supportScore = clampScore(
+      100 -
+        liveOps.summary.urgentSupportTickets * 20 -
+        (operationalKpis.avgSupportFirstResponseMinutes7d === null
+          ? 0
+          : Math.max(0, operationalKpis.avgSupportFirstResponseMinutes7d - 30)),
+    );
+    const operationalScore = clampScore(
+      businessModel.metrics.completionRate7d * 0.4 +
+        businessModel.metrics.assignmentRate7d * 0.25 +
+        Math.max(0, 100 - businessModel.metrics.cancellationRate7d) * 0.15 +
+        Math.max(0, 100 - liveOps.summary.stalledMatchedTrips * 20) * 0.1 +
+        Math.max(0, 100 - liveOps.summary.staleDriverSignals * 15) * 0.1,
+    );
+    const businessScore = businessModel.summary.overallScore;
+    const overallScore = clampScore(
+      businessScore * 0.3 +
+        operationalScore * 0.25 +
+        financeScore * 0.2 +
+        supportScore * 0.15 +
+        mobileScore * 0.1,
+    );
+
+    const gates = [
+      this.pilotGate({
+        id: 'marketplace-liquidity',
+        label: 'Liquidite course',
+        owner: 'ops',
+        value: businessModel.metrics.assignmentRate7d,
+        passAt: 70,
+        watchAt: 55,
+        signal: `${businessModel.metrics.assignmentRate7d}% demandes assignees, ${businessModel.metrics.completionRate7d}% completees.`,
+        action:
+          'Concentrer chauffeurs et demandes sur les corridors actifs avant expansion marketing.',
+      }),
+      this.pilotGate({
+        id: 'trip-completion',
+        label: 'Execution course',
+        owner: 'ops',
+        value: businessModel.metrics.completionRate7d,
+        passAt: 80,
+        watchAt: 65,
+        signal: `${businessModel.metrics.completedTrips7d} courses completees sur 7 jours; ${businessModel.metrics.cancellationRate7d}% annulees.`,
+        action:
+          'Auditer les annulations, pickup rates, retards chauffeur et erreurs de depart.',
+      }),
+      this.pilotGate({
+        id: 'payment-reliability',
+        label: 'Argent et paiement',
+        owner: 'finance',
+        value: businessModel.metrics.paymentSuccessRate7d,
+        passAt: 90,
+        watchAt: 75,
+        signal: `${businessModel.metrics.paymentSuccessRate7d}% paiements reussis; ${financeDashboard.summary.refundPending} remboursement(s) en attente.`,
+        action:
+          'Verifier mobile money, webhooks, refunds, reconciliation et payout backlog avant volume reel.',
+      }),
+      this.pilotGate({
+        id: 'mobile-stability',
+        label: 'Stabilite mobile',
+        owner: 'engineering',
+        value: mobileScore,
+        passAt: 90,
+        watchAt: 60,
+        signal: `${operationalKpis.crashFreeSessionRate7d}% sessions sans crash; posture ${operationalKpis.mobileObservabilityPosture}.`,
+        action:
+          'Traiter les erreurs critiques mobile avant toute ouverture large.',
+      }),
+      this.pilotGate({
+        id: 'support-readiness',
+        label: 'Support terrain',
+        owner: 'support',
+        value: supportScore,
+        passAt: 80,
+        watchAt: 60,
+        signal: `${liveOps.summary.urgentSupportTickets} ticket(s) urgent(s); premiere reponse ${operationalKpis.avgSupportFirstResponseMinutes7d ?? 'n/a'} min.`,
+        action:
+          'Assigner un owner a chaque ticket urgent et fermer les incidents ouverts avant extension.',
+      }),
+      this.pilotGate({
+        id: 'driver-economics',
+        label: 'Valeur chauffeur',
+        owner: 'ops',
+        value:
+          businessModel.metrics.tripsPerActiveDriver7d === null
+            ? 0
+            : Math.min(100, (businessModel.metrics.tripsPerActiveDriver7d / 8) * 100),
+        passAt: 65,
+        watchAt: 40,
+        signal:
+          businessModel.metrics.tripsPerActiveDriver7d === null
+            ? 'Aucune donnee chauffeur active.'
+            : `${businessModel.metrics.tripsPerActiveDriver7d} course(s) par chauffeur actif; payout estime XOF ${businessModel.metrics.estimatedDriverPayoutXof7d.toLocaleString('fr-FR')}.`,
+        action:
+          'Proteger les gains nets chauffeur et reduire les temps vides par zone.',
+      }),
+    ];
+
+    const blockCount = gates.filter((gate) => gate.state === 'block').length;
+    const watchCount = gates.filter((gate) => gate.state === 'watch').length;
+    const state =
+      blockCount > 0 || financeCriticalRisks > 0
+        ? 'no_go'
+        : overallScore >= 78 && watchCount === 0 && overview.activeTrips <= 10
+          ? 'go'
+          : 'limited';
+
+    return {
+      generatedAt: generatedAt.toISOString(),
+      decision: {
+        state,
+        label:
+          state === 'go'
+            ? 'GO pilote controle'
+            : state === 'limited'
+              ? 'Pilote limite'
+              : 'NO GO extension',
+        detail:
+          state === 'go'
+            ? 'Les signaux critiques permettent un pilote controle, zone par zone.'
+            : state === 'limited'
+              ? 'Continuer les tests terrain encadres sans ouvrir largement le trafic.'
+              : 'Bloquer l extension tant que les gates critiques ne sont pas retablis.',
+        nextReviewAt: nextReviewAt.toISOString(),
+      },
+      scorecard: {
+        overallScore,
+        businessScore,
+        operationalScore,
+        financeScore,
+        supportScore,
+        mobileScore,
+      },
+      gates,
+      fieldActions: this.resolvePilotFieldActions({
+        gates,
+        businessModel,
+        liveOps,
+        financeDashboard,
+        tripsAudit,
+        operationalKpis,
+      }),
+    };
+  }
+
+  private async fetchBusinessModel() {
+    const now = new Date();
+    const since7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const since30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const commissionRate = DEFAULT_PLATFORM_COMMISSION_RATE;
+
+    const [
+      rideRequests7d,
+      assignedRequests7d,
+      completedTrips7d,
+      cancelledTrips7d,
+      completedTrips30d,
+      activeDriverTrips7d,
+      grossBookingsAgg7d,
+      paymentAttempts7d,
+      succeededPayments7d,
+      supportTickets7d,
+    ] = await Promise.all([
+      this.prisma.rideRequest.count({ where: { createdAt: { gte: since7d } } }),
+      this.prisma.rideRequest.count({
+        where: {
+          createdAt: { gte: since7d },
+          status: {
+            in: [
+              RideRequestStatus.MATCHED,
+              RideRequestStatus.DRIVER_ARRIVING,
+              RideRequestStatus.FULFILLED,
+            ],
+          },
+        },
+      }),
+      this.prisma.trip.count({
+        where: { createdAt: { gte: since7d }, status: 'COMPLETED' },
+      }),
+      this.prisma.trip.count({
+        where: { createdAt: { gte: since7d }, status: 'CANCELLED' },
+      }),
+      this.prisma.trip.findMany({
+        where: { createdAt: { gte: since30d }, status: 'COMPLETED' },
+        select: { riderId: true },
+      }),
+      this.prisma.trip.findMany({
+        where: { createdAt: { gte: since7d }, status: 'COMPLETED' },
+        select: { driverId: true },
+      }),
+      this.prisma.trip.aggregate({
+        where: { createdAt: { gte: since7d }, status: 'COMPLETED' },
+        _sum: { actualFare: true },
+        _avg: { actualFare: true },
+      }),
+      this.prisma.paymentAttempt.count({
+        where: { createdAt: { gte: since7d } },
+      }),
+      this.prisma.paymentAttempt.count({
+        where: {
+          createdAt: { gte: since7d },
+          status: PaymentAttemptStatus.SUCCEEDED,
+        },
+      }),
+      this.prisma.supportTicket.count({
+        where: { createdAt: { gte: since7d } },
+      }),
+    ]);
+
+    const riderTripCounts = new Map<string, number>();
+    for (const trip of completedTrips30d) {
+      riderTripCounts.set(trip.riderId, (riderTripCounts.get(trip.riderId) ?? 0) + 1);
+    }
+    const ridersWithCompletedTrips30d = riderTripCounts.size;
+    const repeatRiders30d = [...riderTripCounts.values()].filter(
+      (count) => count >= 2,
+    ).length;
+
+    const activeDrivers = new Set(
+      activeDriverTrips7d.map((trip) => trip.driverId),
+    );
+    const activeDrivers7d = activeDrivers.size;
+    const grossBookingsXof7d = Math.round(
+      Number(grossBookingsAgg7d._sum.actualFare ?? 0),
+    );
+    const averageFareXof7d =
+      completedTrips7d > 0
+        ? Math.round(Number(grossBookingsAgg7d._avg.actualFare ?? 0))
+        : null;
+    const estimatedCommissionXof7d = Math.round(
+      grossBookingsXof7d * commissionRate,
+    );
+    const estimatedDriverPayoutXof7d =
+      grossBookingsXof7d - estimatedCommissionXof7d;
+    const completionRate7d = safeRate(completedTrips7d, rideRequests7d);
+    const cancellationRate7d = safeRate(cancelledTrips7d, rideRequests7d);
+    const assignmentRate7d = safeRate(assignedRequests7d, rideRequests7d);
+    const repeatRiderRate30d = safeRate(
+      repeatRiders30d,
+      ridersWithCompletedTrips30d,
+    );
+    const tripsPerActiveDriver7d =
+      activeDrivers7d > 0 ? roundOne(completedTrips7d / activeDrivers7d) : null;
+    const paymentSuccessRate7d = safeRate(succeededPayments7d, paymentAttempts7d);
+    const supportTicketsPer100Trips7d =
+      completedTrips7d > 0
+        ? roundOne((supportTickets7d / completedTrips7d) * 100)
+        : null;
+
+    const marketplaceLiquidityScore = clampScore(
+      completionRate7d * 0.5 + assignmentRate7d * 0.35 + Math.max(0, 100 - cancellationRate7d) * 0.15,
+    );
+    const trustScore = clampScore(
+      completionRate7d * 0.45 +
+        paymentSuccessRate7d * 0.35 +
+        Math.max(0, 100 - (supportTicketsPer100Trips7d ?? 0) * 10) * 0.2,
+    );
+    const driverValueScore = clampScore(
+      (tripsPerActiveDriver7d === null
+        ? 0
+        : Math.min(100, (tripsPerActiveDriver7d / 12) * 100)) *
+        0.65 +
+        completionRate7d * 0.35,
+    );
+    const recurringDemandScore = clampScore(
+      repeatRiderRate30d * 0.7 + completionRate7d * 0.3,
+    );
+    const contributionScore = clampScore(
+      estimatedCommissionXof7d > 0 ? 70 + Math.min(30, completedTrips7d) : 0,
+    );
+    const overallScore = clampScore(
+      marketplaceLiquidityScore * 0.3 +
+        trustScore * 0.25 +
+        driverValueScore * 0.2 +
+        recurringDemandScore * 0.15 +
+        contributionScore * 0.1,
+    );
+    const posture =
+      completedTrips7d < 20
+        ? 'learning'
+        : overallScore >= 75
+          ? 'healthy'
+          : overallScore >= 50
+            ? 'constrained'
+            : 'fragile';
+
+    return {
+      generatedAt: now.toISOString(),
+      windows: { shortDays: 7, retentionDays: 30 },
+      thesis: {
+        apparentProduct: 'Une course moto ou voiture.',
+        realProduct:
+          'Un acces fiable a une mobilite organisee, traçable et monétisable.',
+        operatingDefinition:
+          'Orbi transforme une offre de transport fragmentee en marketplace liquide, sûre et rentable.',
+      },
+      summary: {
+        marketplaceLiquidityScore,
+        trustScore,
+        driverValueScore,
+        recurringDemandScore,
+        contributionScore,
+        overallScore,
+        posture,
+        action: this.resolveBusinessModelAction({
+          posture,
+          rideRequests7d,
+          completionRate7d,
+          assignmentRate7d,
+          repeatRiderRate30d,
+          tripsPerActiveDriver7d,
+          paymentSuccessRate7d,
+        }),
+      },
+      metrics: {
+        rideRequests7d,
+        completedTrips7d,
+        completionRate7d,
+        cancellationRate7d,
+        assignmentRate7d,
+        repeatRiderRate30d,
+        activeDrivers7d,
+        tripsPerActiveDriver7d,
+        grossBookingsXof7d,
+        estimatedCommissionXof7d,
+        estimatedDriverPayoutXof7d,
+        averageFareXof7d,
+        paymentSuccessRate7d,
+        supportTicketsPer100Trips7d,
+      },
+      levers: this.resolveBusinessModelLevers({
+        assignmentRate7d,
+        completionRate7d,
+        repeatRiderRate30d,
+        tripsPerActiveDriver7d,
+        paymentSuccessRate7d,
+        estimatedCommissionXof7d,
+        supportTicketsPer100Trips7d,
+      }),
+    };
+  }
+
   private async fetchOperationalKpis() {
     const now = new Date();
     const since7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -3618,6 +4027,207 @@ export class AdminService {
       avgDriverOnlineMinutes7d,
       avgSupportFirstResponseMinutes7d,
     };
+  }
+
+  private resolveBusinessModelAction(input: {
+    posture: 'learning' | 'healthy' | 'constrained' | 'fragile';
+    rideRequests7d: number;
+    completionRate7d: number;
+    assignmentRate7d: number;
+    repeatRiderRate30d: number;
+    tripsPerActiveDriver7d: number | null;
+    paymentSuccessRate7d: number;
+  }) {
+    if (input.posture === 'learning' || input.rideRequests7d < 50) {
+      return 'Pilote encadre: concentrer les courses sur peu de zones, rapprocher chaque trajet et apprendre vite avant expansion.';
+    }
+
+    if (input.assignmentRate7d < 65 || input.completionRate7d < 80) {
+      return 'Priorite liquidite: renforcer l offre chauffeur par zone et reduire les courses non servies avant toute croissance marketing.';
+    }
+
+    if (input.paymentSuccessRate7d < 90) {
+      return 'Priorite confiance argent: stabiliser paiement, reconciliation et support avant d augmenter le volume.';
+    }
+
+    if ((input.tripsPerActiveDriver7d ?? 0) < 5) {
+      return 'Priorite valeur chauffeur: augmenter la densite de demande par chauffeur actif pour reduire le temps vide.';
+    }
+
+    if (input.repeatRiderRate30d < 25) {
+      return 'Priorite habitude: pousser trajets recurrents, lieux favoris, relances post-course et corridors domicile-travail.';
+    }
+
+    return 'Modele sain: continuer zone par zone, garder les prix lisibles et reinvestir dans support, dispatch et acquisition chauffeur.';
+  }
+
+  private resolveBusinessModelLevers(input: {
+    assignmentRate7d: number;
+    completionRate7d: number;
+    repeatRiderRate30d: number;
+    tripsPerActiveDriver7d: number | null;
+    paymentSuccessRate7d: number;
+    estimatedCommissionXof7d: number;
+    supportTicketsPer100Trips7d: number | null;
+  }) {
+    return [
+      {
+        pillar: 'liquidity' as const,
+        label: 'Liquidite marketplace',
+        signal: `${input.assignmentRate7d}% des demandes sont assignees; ${input.completionRate7d}% finissent en course completee.`,
+        action:
+          input.assignmentRate7d >= 70
+            ? 'Maintenir la discipline zone par zone et surveiller les heures de tension.'
+            : 'Recruter ou repositionner les chauffeurs dans les zones ou les demandes restent sans affectation.',
+      },
+      {
+        pillar: 'trust' as const,
+        label: 'Confiance et paiement',
+        signal: `${input.paymentSuccessRate7d}% de paiements reussis; ${input.supportTicketsPer100Trips7d ?? 0} ticket(s) pour 100 courses.`,
+        action:
+          input.paymentSuccessRate7d >= 90
+            ? 'Conserver la promesse prix connu, recu clair et support joignable.'
+            : 'Traiter mobile money, remboursements et reconciliation comme blocage pilote.',
+      },
+      {
+        pillar: 'driver_value' as const,
+        label: 'Valeur chauffeur',
+        signal:
+          input.tripsPerActiveDriver7d === null
+            ? 'Aucun chauffeur actif avec course terminee sur la fenetre.'
+            : `${input.tripsPerActiveDriver7d} course(s) completee(s) par chauffeur actif.`,
+        action:
+          (input.tripsPerActiveDriver7d ?? 0) >= 8
+            ? 'Proteger les gains nets et reduire les annulations qui gaspillent le temps chauffeur.'
+            : 'Limiter le nombre de chauffeurs en ligne dans les zones faibles et concentrer la demande.',
+      },
+      {
+        pillar: 'recurring_demand' as const,
+        label: 'Habitude passager',
+        signal: `${input.repeatRiderRate30d}% des riders ayant complete une course reviennent dans les 30 jours.`,
+        action:
+          input.repeatRiderRate30d >= 25
+            ? 'Identifier les corridors recurrents et les proposer plus vite dans la reservation.'
+            : 'Construire la recurrence: favoris, trajets domicile-travail, relance apres course et comptes entreprise pilotes.',
+      },
+      {
+        pillar: 'contribution' as const,
+        label: 'Contribution Orbi',
+        signal: `${input.estimatedCommissionXof7d.toLocaleString('fr-FR')} XOF de commission estimee sur 7 jours.`,
+        action:
+          input.estimatedCommissionXof7d > 0
+            ? 'Comparer commission, frais paiement, support et promotions pour mesurer la contribution nette.'
+            : 'Ne pas optimiser la marge avant d avoir des courses completes et payees.',
+      },
+    ];
+  }
+
+  private pilotGate(input: {
+    id: string;
+    label: string;
+    owner: 'ops' | 'engineering' | 'support' | 'finance';
+    value: number;
+    passAt: number;
+    watchAt: number;
+    signal: string;
+    action: string;
+  }) {
+    return {
+      id: input.id,
+      label: input.label,
+      state:
+        input.value >= input.passAt
+          ? ('pass' as const)
+          : input.value >= input.watchAt
+            ? ('watch' as const)
+            : ('block' as const),
+      owner: input.owner,
+      signal: input.signal,
+      action: input.action,
+    };
+  }
+
+  private resolvePilotFieldActions(input: {
+    gates: Array<{
+      id: string;
+      label: string;
+      state: 'pass' | 'watch' | 'block';
+      owner: 'ops' | 'engineering' | 'support' | 'finance';
+      signal: string;
+      action: string;
+    }>;
+    businessModel: Awaited<ReturnType<AdminService['businessModel']>>;
+    liveOps: Awaited<ReturnType<AdminService['liveOps']>>;
+    financeDashboard: Awaited<ReturnType<AdminService['financeDashboard']>>;
+    tripsAudit: Awaited<ReturnType<AdminService['tripsAudit']>>;
+    operationalKpis: Awaited<ReturnType<AdminService['operationalKpis']>>;
+  }) {
+    const gateActions = input.gates
+      .filter((gate) => gate.state !== 'pass')
+      .map((gate) => ({
+        priority: gate.state === 'block' ? ('today' as const) : ('this_week' as const),
+        owner: gate.owner,
+        action: gate.action,
+        metric: gate.signal,
+      }));
+
+    const actions: Array<{
+      priority: 'today' | 'this_week' | 'monitor';
+      owner: 'ops' | 'engineering' | 'support' | 'finance';
+      action: string;
+      metric: string;
+    }> = [...gateActions];
+    if (input.liveOps.summary.stalledMatchedTrips > 0) {
+      actions.push({
+        priority: 'today' as const,
+        owner: 'ops' as const,
+        action:
+          'Appeler les chauffeurs sur trajets bloques MATCHED et confirmer leur disponibilite reelle.',
+        metric: `${input.liveOps.summary.stalledMatchedTrips} trajet(s) MATCHED en depassement SLA.`,
+      });
+    }
+
+    if (input.tripsAudit.summary.criticalRiskTripCount > 0) {
+      actions.push({
+        priority: 'today' as const,
+        owner: 'finance' as const,
+        action:
+          'Fermer les risques critiques trajet avant payout ou extension terrain.',
+        metric: `${input.tripsAudit.summary.criticalRiskTripCount} risque(s) critique(s), XOF ${input.tripsAudit.summary.moneyAtRisk.toLocaleString('fr-FR')} a risque.`,
+      });
+    }
+
+    if (input.businessModel.metrics.repeatRiderRate30d < 25) {
+      actions.push({
+        priority: 'this_week' as const,
+        owner: 'ops' as const,
+        action:
+          'Construire des corridors recurrents avec favoris, relances post-course et comptes pilotes entreprise.',
+        metric: `${input.businessModel.metrics.repeatRiderRate30d}% riders repetes sur 30 jours.`,
+      });
+    }
+
+    if (input.financeDashboard.summary.payoutBacklog > 0) {
+      actions.push({
+        priority: 'today' as const,
+        owner: 'finance' as const,
+        action:
+          'Traiter le backlog payout chauffeur pour proteger la confiance supply.',
+        metric: `${input.financeDashboard.summary.payoutBacklog} payout(s) en backlog.`,
+      });
+    }
+
+    if (input.operationalKpis.mobileObservabilityPosture === 'good') {
+      actions.push({
+        priority: 'monitor' as const,
+        owner: 'engineering' as const,
+        action:
+          'Maintenir la collecte mobile et surveiller les nouvelles sessions terrain.',
+        metric: `${input.operationalKpis.crashFreeSessionRate7d}% sessions sans crash.`,
+      });
+    }
+
+    return actions.slice(0, 8);
   }
 
   private resolveMobileObservabilitySignal(input: {

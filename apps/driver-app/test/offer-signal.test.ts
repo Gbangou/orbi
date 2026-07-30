@@ -38,9 +38,9 @@ describe('driver offer signal helpers', () => {
         tone: 'teal',
       },
       {
-        label: 'Priorite',
+        label: 'Qualite',
         value: 'Standard',
-        tone: 'rose',
+        tone: 'sky',
       },
       {
         label: 'Gain',
@@ -84,6 +84,10 @@ describe('driver offer signal helpers', () => {
       dispatchScore: '86',
       offerConfidenceScore: '91',
       offerConfidenceLabel: 'PRIORITY',
+      businessPriorityScore: '89',
+      businessPriorityLabel: 'EXCELLENT',
+      businessPrioritySummary:
+        'Priorite forte: proche, fiable, rentable et saine pour la marketplace.',
       reservationWindowSeconds: '45',
     } as never;
 
@@ -99,6 +103,8 @@ describe('driver offer signal helpers', () => {
         'Pickup a 1.1 km',
         'Rayon actif: 8 km',
         'Confiance offre: PRIORITY (91/100)',
+        'Priorite economique: EXCELLENT (89/100)',
+        'Priorite forte: proche, fiable, rentable et saine pour la marketplace.',
         'Fenetre d acceptation: 45s',
       ]),
     );
@@ -163,6 +169,10 @@ describe('driver offer signal helpers', () => {
       dispatchScore: 86,
       offerConfidenceScore: 91,
       offerConfidenceLabel: 'PRIORITY',
+      businessPriorityScore: 89,
+      businessPriorityLabel: 'EXCELLENT',
+      businessPrioritySummary:
+        'Priorite forte: proche, fiable, rentable et saine pour la marketplace.',
       reservationWindowSeconds: 45,
       fairnessScore: 84,
       fairnessLabel: 'BALANCED',
@@ -173,6 +183,11 @@ describe('driver offer signal helpers', () => {
     expect(buildDriverOfferDetailLines(offer)).toContain(
       'Fairness marketplace: Equilibre marketplace sain. Rider 88/100 - Chauffeur 78/100 - Ops 96/100.',
     );
+    expect(buildDriverOfferInsights(offer)[1]).toEqual({
+      label: 'Qualite',
+      value: 'Tres rentable',
+      tone: 'teal',
+    });
   });
 
   it('summarizes driver offer decision with net gain, effort and share', () => {
