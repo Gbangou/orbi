@@ -188,6 +188,54 @@ function formatPaymentMethodLabel(paymentMethod: string | null | undefined) {
   }
 }
 
+function TripStartToggle({
+  state,
+  disabled,
+  onToggle,
+}: {
+  state: "idle" | "confirming" | "confirmed";
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeTripStartToggleStyles(theme), [theme]);
+  const isActive = state !== "idle";
+  const isConfirming = state === "confirming";
+  const label = isConfirming
+    ? "Demarrage..."
+    : state === "confirmed"
+      ? "Course demarree"
+      : "Demarrer la course";
+
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityState={{ checked: isActive, disabled }}
+      accessibilityLabel="Demarrer la course"
+      disabled={disabled}
+      onPress={onToggle}
+      style={({ pressed }) => [
+        styles.track,
+        isActive ? styles.trackActive : styles.trackIdle,
+        pressed ? styles.trackPressed : null,
+        disabled ? styles.trackDisabled : null,
+      ]}
+    >
+      <View style={[styles.handle, isActive ? styles.handleActive : null]}>
+        {isConfirming ? (
+          <ActivityIndicator size="small" color={theme.colors.teal} />
+        ) : (
+          <Text style={[styles.handleMark, isActive ? styles.handleMarkActive : null]}>
+            {isActive ? "OK" : ">"}
+          </Text>
+        )}
+      </View>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.handleSpacer} />
+    </Pressable>
+  );
+}
+
 export default function OffersScreen() {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -227,6 +275,7 @@ export default function OffersScreen() {
     paymentLabel: string;
   } | null>(null);
   const [showMissionTimeline, setShowMissionTimeline] = useState(false);
+  const [startTripToggleOn, setStartTripToggleOn] = useState(false);
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
   const previousTimelineEventIdsRef = useRef<string[] | null>(null);
@@ -417,6 +466,17 @@ export default function OffersScreen() {
     () => buildDriverNextActionHint(flow),
     [flow],
   );
+  const startTripToggleState = useMemo<"idle" | "confirming" | "confirmed">(
+    () =>
+      activeTrip?.status === "IN_PROGRESS"
+        ? "confirmed"
+        : isSubmitting && startTripToggleOn
+          ? "confirming"
+          : startTripToggleOn
+            ? "confirmed"
+            : "idle",
+    [activeTrip?.status, isSubmitting, startTripToggleOn],
+  );
   const { latestPosition: driverGpsPosition } = useDriverPresence(
     flow.availabilityStatus === "ONLINE" || Boolean(activeTrip),
     activeTrip?.id,
@@ -429,7 +489,14 @@ export default function OffersScreen() {
 
   useEffect(() => {
     setShowMissionTimeline(false);
+    setStartTripToggleOn(false);
   }, [activeTrip?.id]);
+
+  useEffect(() => {
+    if (activeTrip?.status !== "DRIVER_ARRIVING") {
+      setStartTripToggleOn(false);
+    }
+  }, [activeTrip?.status]);
 
   useEffect(() => {
     const previousVisibleOfferIds = previousVisibleOfferIdsRef.current;
@@ -552,16 +619,16 @@ export default function OffersScreen() {
     return () => clearTimeout(timeout);
   }, [completionFlash]);
 
-  async function runExclusiveDriverAction(action: () => Promise<void>) {
+  async function runExclusiveDriverAction<T>(action: () => Promise<T>) {
     if (submissionLockRef.current) {
-      return;
+      return undefined;
     }
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
 
     try {
-      await action();
+      return await action();
     } finally {
       submissionLockRef.current = false;
       setIsSubmitting(false);
@@ -657,7 +724,7 @@ export default function OffersScreen() {
     tripId: string,
     nextStatus: "DRIVER_ARRIVING" | "IN_PROGRESS" | "COMPLETED",
   ) {
-    await runExclusiveDriverAction(async () => {
+    return await runExclusiveDriverAction(async () => {
       setStatus(`Mise a jour du trajet vers ${nextStatus}...`);
 
       try {
@@ -680,6 +747,7 @@ export default function OffersScreen() {
           });
         }
         await loadDriverData();
+        return true;
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
           surface: "active-trip",
@@ -695,8 +763,24 @@ export default function OffersScreen() {
           nextStatus === "COMPLETED" ? "Course non terminee" : "Mise a jour echouee",
           feedback.message,
         );
+        return false;
       }
     });
+  }
+
+  async function handleStartTripToggle(tripId: string) {
+    if (startTripToggleOn || isSubmitting) {
+      return;
+    }
+
+    safeHaptics.impact("medium");
+    setStartTripToggleOn(true);
+    setStatus("Depart en confirmation: gardez le passager a bord, synchronisation en cours...");
+    const started = await handleAdvanceTrip(tripId, "IN_PROGRESS");
+
+    if (!started) {
+      setStartTripToggleOn(false);
+    }
   }
 
   function handleCompleteTrip(tripId: string) {
@@ -870,16 +954,34 @@ export default function OffersScreen() {
     if (canDriverStartTrip(activeTrip.status)) {
       return (
         <View style={styles.codeBlock}>
-          <Text style={styles.meta}>
-            Demarrez seulement quand le passager est avec vous et pret a partir.
-          </Text>
-          <FlowActionButton
+          <View style={styles.departureChecklist}>
+            <View style={styles.departureChecklistHeader}>
+              <Text style={styles.departureChecklistTitle}>Checklist depart</Text>
+              <Text style={styles.departureChecklistPill}>{activePaymentMethodLabel}</Text>
+            </View>
+            <View style={styles.departureChecklistRow}>
+              <Text style={styles.departureChecklistDot}>1</Text>
+              <Text style={styles.departureChecklistText}>
+                Passager a bord et pret a partir
+              </Text>
+            </View>
+            <View style={styles.departureChecklistRow}>
+              <Text style={styles.departureChecklistDot}>2</Text>
+              <Text style={styles.departureChecklistText}>
+                Depart confirme au bon point de prise en charge
+              </Text>
+            </View>
+            <View style={styles.departureChecklistRow}>
+              <Text style={styles.departureChecklistDot}>3</Text>
+              <Text style={styles.departureChecklistText}>
+                Prix et gain visibles, aucun supplement hors app
+              </Text>
+            </View>
+          </View>
+          <TripStartToggle
+            state={startTripToggleState}
             disabled={isSubmitting}
-            label="Demarrer la course"
-            onPress={() => handleAdvanceTrip(activeTrip.id, "IN_PROGRESS")}
-            tone="amber"
-            emphasis="primary"
-            style={isSubmitting ? styles.disabled : null}
+            onToggle={() => void handleStartTripToggle(activeTrip.id)}
           />
           <FlowActionButton
             disabled={isSubmitting}
@@ -1824,6 +1926,66 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   disabled: { opacity: 0.38 },
   codeBlock: { gap: 10 },
   meta: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  departureChecklist: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,201,167,0.22)",
+    backgroundColor: "rgba(0,201,167,0.07)",
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    gap: 8,
+  },
+  departureChecklistHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    paddingBottom: 2,
+  },
+  departureChecklistTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: theme.colors.text,
+  },
+  departureChecklistPill: {
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: theme.colors.text,
+    color: theme.colors.textInverse,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    fontSize: 10,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+  },
+  departureChecklistRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  departureChecklistDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: theme.colors.teal,
+    color: theme.colors.textInverse,
+    textAlign: "center",
+    fontSize: 11,
+    lineHeight: 20,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+  },
+  departureChecklistText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
+    color: theme.colors.textSoft,
+  },
   routeSafetyBlockNote: { fontSize: 12, color: theme.colors.amberDark, fontFamily: "Inter_400Regular", lineHeight: 17 },
   // Mission labels
   missionSectionLabel: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.amber, textTransform: "uppercase", letterSpacing: 0 },
@@ -1891,5 +2053,69 @@ const makeIconStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   closeLineB: {
     transform: [{ rotate: "-45deg" }],
+  },
+});
+
+const makeTripStartToggleStyles = (theme: OrbiTheme) => StyleSheet.create({
+  track: {
+    minHeight: 58,
+    borderRadius: 999,
+    padding: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderWidth: 1,
+    ...theme.shadows.button,
+  },
+  trackIdle: {
+    backgroundColor: theme.colors.text,
+    borderColor: theme.colors.text,
+  },
+  trackActive: {
+    backgroundColor: theme.colors.teal,
+    borderColor: theme.colors.teal,
+  },
+  trackPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.99 }],
+  },
+  trackDisabled: {
+    opacity: 0.72,
+  },
+  handle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  handleActive: {
+    backgroundColor: "#FFFFFF",
+  },
+  handleMark: {
+    color: theme.colors.text,
+    fontSize: 18,
+    fontWeight: "900",
+    fontFamily: "Inter_700Bold",
+    lineHeight: 22,
+  },
+  handleMarkActive: {
+    color: theme.colors.teal,
+  },
+  label: {
+    flex: 1,
+    color: theme.colors.textInverse,
+    fontSize: 16,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    textAlign: "center",
+  },
+  handleSpacer: {
+    width: 46,
+    height: 46,
+    flexShrink: 0,
   },
 });

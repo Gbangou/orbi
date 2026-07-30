@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,11 +9,12 @@ import {
 } from 'react-native';
 import type { OrbiTheme } from '@orbi/ui';
 import { useOrbiTheme } from '@orbi/ui/native';
-import type { Place } from '@orbi/api';
+import { burkinaPricingCityPresets, type Place } from '@orbi/api';
 import { normalizeMapCoordinatePair } from './map-coordinate';
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 const DEBOUNCE_MS = 600;
+const MIN_LOCAL_QUERY_LENGTH = 1;
 const BURKINA_VIEWBOX = '-5.6,9.3,2.6,15.2';
 const CITY_VIEWBOXES: Record<string, string> = {
   OUAGADOUGOU: '-1.7,12.2,-1.3,12.5',
@@ -23,6 +24,170 @@ const CITY_VIEWBOXES: Record<string, string> = {
   BANFORA: '-4.9,10.55,-4.65,10.75',
   OUAHIGOUYA: '-2.55,13.45,-2.25,13.7',
 };
+
+const PLACE_ALIASES: Record<string, string[]> = {
+  'ouaga-tampuy': ['tampui', 'tampoui', 'tampouy', 'tam pouy', 'tampouy ouaga'],
+  'ouaga-nioko-ii': ['nioko 2', 'nioko deux', 'nioko ii', 'niongo', 'nyoko'],
+  'ouaga-nong-warbin': ['nong warbin', 'nongwarbin', 'nong warbain', 'nong warbine'],
+  'ouaga-dassasgho': ['dassasgo', 'dassasgo ouaga', 'dasasgho', 'dassasgho'],
+  'ouaga-patte-doie': [
+    'patte d oie',
+    'pate doie',
+    'pate d oie',
+    'pat doie',
+    'patte doie',
+    'patte d oie ouaga',
+  ],
+  'ouaga-gounghin': ['goungin', 'gounghin ouaga', 'gounghin'],
+  'ouaga-zogona': ['zogna', 'zogonna', 'zogona ouaga'],
+  'ouaga-koulouba': ['kuluba', 'kouluba', 'koulouba ouaga'],
+  'ouaga-zone-du-bois': ['zone bois', 'zdb', 'zone de bois', 'zone du boi'],
+  'ouaga-somgande': ['somgande', 'somgandé', 'somgandé ouaga', 'somgande ouaga'],
+  'ouaga-pissy': ['pissi', 'pissy ouaga'],
+  'ouaga-kilwin': ['kilwin', 'kilouin', 'kilwin ouaga'],
+  'ouaga-saaba': ['saba', 'saaba ouaga'],
+  'ouaga-aeroport': ['aeroport', 'airport', 'aéroport', 'aeroport ouaga'],
+  'ouaga-2000': ['ouaga deux mille', 'ouaga 2000', 'zone ouaga 2000'],
+  'ouaga-universite-joseph-ki-zerbo': [
+    'universite',
+    'u jkz',
+    'ujkz',
+    'joseph ki zerbo',
+    'ki zerbo',
+  ],
+  'bobo-gare-routiere': ['gare bobo', 'gare routiere bobo', 'gare routiere'],
+  'bobo-sarfalao': ['sarfalao', 'sarfalao bobo'],
+};
+
+const LOCAL_BURKINA_PLACES: Place[] = [
+  ...burkinaPricingCityPresets.flatMap((city) => [city.pickup, city.destination]),
+  {
+    id: 'ouaga-tampuy',
+    label: 'Tampuy',
+    address: 'Tampuy, Ouagadougou',
+    district: 'Tampuy',
+    coordinates: { latitude: 12.3988, longitude: -1.5552 },
+  },
+  {
+    id: 'ouaga-nioko-ii',
+    label: 'Nioko II',
+    address: 'Nioko II, Rue 25.02, Nong-Warbin, Ouagadougou',
+    district: 'Nong-Warbin',
+    coordinates: { latitude: 12.4018, longitude: -1.4778 },
+  },
+  {
+    id: 'ouaga-nong-warbin',
+    label: 'Nong-Warbin',
+    address: 'Nong-Warbin, Ouagadougou',
+    district: 'Nong-Warbin',
+    coordinates: { latitude: 12.3977, longitude: -1.4856 },
+  },
+  {
+    id: 'ouaga-dassasgho',
+    label: 'Dassasgho',
+    address: 'Dassasgho, Ouagadougou',
+    district: 'Dassasgho',
+    coordinates: { latitude: 12.3827, longitude: -1.4939 },
+  },
+  {
+    id: 'ouaga-patte-doie',
+    label: "Patte d Oie",
+    address: "Patte d Oie, Ouagadougou",
+    district: "Patte d Oie",
+    coordinates: { latitude: 12.334, longitude: -1.537 },
+  },
+  {
+    id: 'ouaga-gounghin',
+    label: 'Gounghin',
+    address: 'Gounghin, Ouagadougou',
+    district: 'Gounghin',
+    coordinates: { latitude: 12.362, longitude: -1.533 },
+  },
+  {
+    id: 'ouaga-zogona',
+    label: 'Zogona',
+    address: 'Zogona, Ouagadougou',
+    district: 'Zogona',
+    coordinates: { latitude: 12.371, longitude: -1.503 },
+  },
+  {
+    id: 'ouaga-koulouba',
+    label: 'Koulouba',
+    address: 'Koulouba, Ouagadougou',
+    district: 'Koulouba',
+    coordinates: { latitude: 12.3716, longitude: -1.5235 },
+  },
+  {
+    id: 'ouaga-zone-du-bois',
+    label: 'Zone du Bois',
+    address: 'Zone du Bois, Ouagadougou',
+    district: 'Zone du Bois',
+    coordinates: { latitude: 12.382, longitude: -1.509 },
+  },
+  {
+    id: 'ouaga-somgande',
+    label: 'Somgande',
+    address: 'Somgande, Ouagadougou',
+    district: 'Somgande',
+    coordinates: { latitude: 12.4058, longitude: -1.5038 },
+  },
+  {
+    id: 'ouaga-pissy',
+    label: 'Pissy',
+    address: 'Pissy, Ouagadougou',
+    district: 'Pissy',
+    coordinates: { latitude: 12.3446, longitude: -1.5746 },
+  },
+  {
+    id: 'ouaga-kilwin',
+    label: 'Kilwin',
+    address: 'Kilwin, Ouagadougou',
+    district: 'Kilwin',
+    coordinates: { latitude: 12.395, longitude: -1.557 },
+  },
+  {
+    id: 'ouaga-saaba',
+    label: 'Saaba',
+    address: 'Saaba, Ouagadougou',
+    district: 'Saaba',
+    coordinates: { latitude: 12.371, longitude: -1.414 },
+  },
+  {
+    id: 'ouaga-gare-routiere-ouaga-inter',
+    label: 'Gare routiere Ouaga Inter',
+    address: 'Gare routiere Ouaga Inter, Ouagadougou',
+    district: 'Centre',
+    coordinates: { latitude: 12.3637, longitude: -1.5331 },
+  },
+  {
+    id: 'ouaga-aeroport',
+    label: 'Aeroport de Ouagadougou',
+    address: 'Aeroport international Thomas Sankara, Ouagadougou',
+    district: 'Centre',
+    coordinates: { latitude: 12.3532, longitude: -1.5124 },
+  },
+  {
+    id: 'bobo-belleville',
+    label: 'Belleville',
+    address: 'Belleville, Bobo-Dioulasso',
+    district: 'Belleville',
+    coordinates: { latitude: 11.1858, longitude: -4.2864 },
+  },
+  {
+    id: 'bobo-colma',
+    label: 'Colma',
+    address: 'Colma, Bobo-Dioulasso',
+    district: 'Colma',
+    coordinates: { latitude: 11.1802, longitude: -4.3032 },
+  },
+  {
+    id: 'bobo-secteur-22',
+    label: 'Secteur 22',
+    address: 'Secteur 22, Bobo-Dioulasso',
+    district: 'Secteur 22',
+    coordinates: { latitude: 11.1657, longitude: -4.3096 },
+  },
+];
 
 interface NominatimResult {
   place_id: number;
@@ -65,6 +230,156 @@ function compactSuggestionLabel(label: unknown): string {
       ? label.trim()
       : 'Lieu';
   return normalized.length > 24 ? `${normalized.slice(0, 23).trim()}…` : normalized;
+}
+
+function normalizeSearchToken(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[-_'’]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function compactSearchToken(value: string) {
+  return normalizeSearchToken(value).replace(/\s+/g, '');
+}
+
+function uniqueWords(value: string) {
+  return Array.from(new Set(normalizeSearchToken(value).split(' ').filter(Boolean)));
+}
+
+function levenshteinDistance(left: string, right: string, maxDistance = 2) {
+  if (Math.abs(left.length - right.length) > maxDistance) {
+    return maxDistance + 1;
+  }
+
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+
+  for (let i = 1; i <= left.length; i += 1) {
+    const current = [i];
+    let rowMin = current[0];
+
+    for (let j = 1; j <= right.length; j += 1) {
+      const substitutionCost = left[i - 1] === right[j - 1] ? 0 : 1;
+      const cost = Math.min(
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + substitutionCost,
+      );
+      current[j] = cost;
+      rowMin = Math.min(rowMin, cost);
+    }
+
+    if (rowMin > maxDistance) {
+      return maxDistance + 1;
+    }
+
+    previous = current;
+  }
+
+  return previous[right.length];
+}
+
+function resolveTypoTolerance(token: string) {
+  if (token.length >= 7) return 2;
+  if (token.length >= 4) return 1;
+  return 0;
+}
+
+function tokenMatchesWord(token: string, word: string) {
+  if (!token || !word) return false;
+  if (word.includes(token) || word.startsWith(token)) return true;
+
+  const tolerance = resolveTypoTolerance(token);
+  return tolerance > 0 && levenshteinDistance(token, word, tolerance) <= tolerance;
+}
+
+function tokenMatchesPlace(token: string, words: string[]) {
+  if (token.length === 1) {
+    return words.some((word) => word.startsWith(token));
+  }
+
+  return words.some((word) => tokenMatchesWord(token, word));
+}
+
+function scoreLocalPlace(place: Place, query: string, cityHint: string) {
+  const normalizedQuery = normalizeSearchToken(query);
+  if (normalizedQuery.length < MIN_LOCAL_QUERY_LENGTH) return 0;
+
+  const normalizedCity = normalizeSearchToken(cityHint);
+  const aliases = PLACE_ALIASES[place.id] ?? [];
+  const haystack = normalizeSearchToken(
+    `${place.label} ${place.address} ${place.district ?? ''} ${aliases.join(' ')}`,
+  );
+  const compactHaystack = compactSearchToken(haystack);
+  const compactQuery = compactSearchToken(normalizedQuery);
+  const label = normalizeSearchToken(place.label);
+  const address = normalizeSearchToken(place.address);
+  const words = uniqueWords(haystack);
+  const queryParts = normalizedQuery.split(' ').filter(Boolean);
+  const everyPartMatches = queryParts.every((part) =>
+    tokenMatchesPlace(part, words),
+  );
+  const compactMatches =
+    compactQuery.length >= 3 &&
+    (compactHaystack.includes(compactQuery) ||
+      levenshteinDistance(
+        compactQuery,
+        compactSearchToken(label),
+        resolveTypoTolerance(compactQuery),
+      ) <= resolveTypoTolerance(compactQuery));
+
+  if (!everyPartMatches && !compactMatches) return 0;
+
+  let score = 20;
+  if (label === normalizedQuery) score += 80;
+  if (label.startsWith(normalizedQuery)) score += 55;
+  if (address.startsWith(normalizedQuery)) score += 35;
+  if (haystack.includes(` ${normalizedQuery}`)) score += 25;
+  if (compactMatches) score += 32;
+  if (!everyPartMatches && compactMatches) score += 10;
+  if (aliases.some((alias) => normalizeSearchToken(alias) === normalizedQuery)) {
+    score += 70;
+  }
+  if (normalizedCity && haystack.includes(normalizedCity)) score += 12;
+  score += Math.max(0, 18 - label.length / 3);
+
+  return score;
+}
+
+function searchLocalPlaces(
+  query: string,
+  cityHint: string,
+  userPlaces: Place[] = [],
+) {
+  const uniquePlaces = mergePlaces(
+    userPlaces,
+    LOCAL_BURKINA_PLACES,
+    userPlaces.length + LOCAL_BURKINA_PLACES.length,
+  );
+
+  return uniquePlaces
+    .map((place) => ({ place, score: scoreLocalPlace(place, query, cityHint) }))
+    .filter((entry) => entry.score > 0)
+    .sort((left, right) => right.score - left.score)
+    .map((entry) => entry.place)
+    .slice(0, 6);
+}
+
+function mergePlaces(primary: Place[], secondary: Place[], limit = 6) {
+  const seen = new Set<string>();
+  const merged: Place[] = [];
+
+  for (const place of [...primary, ...secondary]) {
+    const key = normalizeSearchToken(`${place.label}|${place.address}`);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(place);
+  }
+
+  return merged.slice(0, limit);
 }
 
 function createTimeoutSignal(timeoutMs: number): {
@@ -137,10 +452,21 @@ export function PlaceSearch({
         : theme.colors.amber;
 
   const search = useCallback(async (q: string) => {
-    if (q.trim().length < 3) {
+    const localResults = searchLocalPlaces(q, cityHint, safeSuggestions);
+
+    if (q.trim().length < MIN_LOCAL_QUERY_LENGTH) {
       setResults([]);
+      setError(null);
       return;
     }
+
+    setResults(localResults);
+
+    if (q.trim().length < 3) {
+      setError(null);
+      return;
+    }
+
     setIsSearching(true);
     setError(null);
     const timeout = createTimeoutSignal(8000);
@@ -170,33 +496,49 @@ export function PlaceSearch({
       });
       if (!response.ok) throw new Error('Recherche indisponible');
       const data: NominatimResult[] = await response.json();
-      setResults(data.map(toPlace).filter((place): place is Place => place !== null));
+      const remoteResults = data
+        .map(toPlace)
+        .filter((place): place is Place => place !== null);
+      setResults(mergePlaces(localResults, remoteResults));
     } catch {
-      setError('Recherche indisponible. Verifiez la connexion.');
-      setResults([]);
+      setError(
+        localResults.length > 0
+          ? null
+          : 'Recherche indisponible. Verifiez la connexion.',
+      );
+      setResults(localResults);
     } finally {
       timeout.clear();
       setIsSearching(false);
     }
-  }, [cityHint]);
+  }, [cityHint, safeSuggestions]);
 
   const handleChange = useCallback(
     (text: string) => {
       setQuery(text);
+      setResults(searchLocalPlaces(text, cityHint, safeSuggestions));
+      setError(null);
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => void search(text), DEBOUNCE_MS);
     },
-    [search],
+    [cityHint, safeSuggestions, search],
   );
 
   const handleSelect = useCallback(
     (place: Place) => {
       onSelectPlace(place);
       setQuery(place.address);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       setResults([]);
     },
     [onSelectPlace],
   );
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   return (
     <View style={styles.root}>
@@ -222,6 +564,7 @@ export function PlaceSearch({
             onPress={() => {
               setQuery('');
               setResults([]);
+              setError(null);
             }}
             style={styles.clearButton}
           >

@@ -166,6 +166,8 @@ export const riderRideOptions: RideOption[] = [
     },
     fareBreakdown: {
       baseFare: 600,
+      distanceCharge: 410,
+      timeCharge: 40,
       bookingFee: 150,
       demandMultiplier: 1,
       commercialRoundingAmount: 0,
@@ -199,6 +201,8 @@ export const riderRideOptions: RideOption[] = [
     },
     fareBreakdown: {
       baseFare: 1200,
+      distanceCharge: 760,
+      timeCharge: 190,
       bookingFee: 250,
       demandMultiplier: 1.1,
       commercialRoundingAmount: 0,

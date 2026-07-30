@@ -847,6 +847,48 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Réserver');
   });
 
+  it('suggests Burkina localities despite a typo while typing a booking destination', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+    await changeInputByPlaceholder(renderer, 'Où allez-vous ?', 'Tmpuy');
+
+    expectText(renderer, 'Tampuy');
+    expectNoText(renderer, 'Recherche indisponible. Verifiez la connexion.');
+  });
+
+  it('shows transparent upfront fare details before booking confirmation', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Prix transparent');
+    expectText(renderer, 'Prise en charge');
+    expectText(renderer, 'Distance');
+    expectText(renderer, 'Duree');
+    expectText(renderer, 'Service');
+  });
+
   it('uses the selected Mobile Money phone number when creating checkout', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
     mockedFetchRideOptionsPreview.mockResolvedValue({

@@ -1536,6 +1536,144 @@ describe('TripsService', () => {
     );
   });
 
+  it('lets a driver start from matched by implicitly confirming pickup arrival', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-implicit-start-1',
+      rideRequestId: 'request-implicit-start-1',
+      driverId: 'driver-1',
+      riderId: 'rider-1',
+      status: 'MATCHED',
+      startedAt: null,
+      completedAt: null,
+      actualFare: 1800,
+      currency: 'XOF',
+      events: [],
+      rider: {
+        userId: 'user-rider-1',
+      },
+      driver: {
+        userId: 'user-driver-1',
+        createdAt: new Date('2026-04-01T08:00:00.000Z'),
+      },
+      rideRequest: {
+        paymentMethod: 'CASH',
+      },
+    });
+    prisma.trip.update.mockResolvedValue({
+      id: 'trip-implicit-start-1',
+      rideRequestId: 'request-implicit-start-1',
+      riderId: 'rider-1',
+      driverId: 'driver-1',
+      status: 'IN_PROGRESS',
+      startedAt: new Date('2026-04-17T10:05:00.000Z'),
+      completedAt: null,
+      actualFare: 1800,
+      currency: 'XOF',
+      events: [],
+    });
+
+    const result = await service.updateStatus(
+      {
+        user: {
+          id: 'user-driver-1',
+          role: 'DRIVER',
+          driverProfile: {
+            id: 'driver-1',
+          },
+        },
+      } as never,
+      'trip-implicit-start-1',
+      'IN_PROGRESS',
+    );
+
+    expect(prisma.trip.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'trip-implicit-start-1' },
+        data: expect.objectContaining({
+          status: 'IN_PROGRESS',
+          startedAt: expect.any(Date),
+          events: {
+            create: [
+              expect.objectContaining({
+                eventType: 'DRIVER_ARRIVING',
+                payload: expect.objectContaining({
+                  implicit: true,
+                }),
+              }),
+              expect.objectContaining({
+                eventType: 'TRIP_STARTED',
+                payload: expect.objectContaining({
+                  status: 'IN_PROGRESS',
+                  implicitPickupArrival: true,
+                  previousStatus: 'MATCHED',
+                }),
+              }),
+            ],
+          },
+        }),
+      }),
+    );
+    expect(prisma.rideRequest.update).toHaveBeenCalledWith({
+      where: { id: 'request-implicit-start-1' },
+      data: { status: 'DRIVER_ARRIVING' },
+    });
+    expect(result.trip.status).toBe('IN_PROGRESS');
+    expect(realtimeService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'trip.updated',
+        entityId: 'trip-implicit-start-1',
+        payload: { status: 'IN_PROGRESS' },
+      }),
+    );
+  });
+
+  it('treats a repeated active status update as already applied', async () => {
+    const { prisma, realtimeService, service } = createService();
+
+    prisma.trip.findUnique.mockResolvedValue({
+      id: 'trip-start-repeat-1',
+      rideRequestId: 'request-start-repeat-1',
+      driverId: 'driver-1',
+      riderId: 'rider-1',
+      status: 'IN_PROGRESS',
+      startedAt: new Date('2026-04-17T10:05:00.000Z'),
+      completedAt: null,
+      actualFare: 1800,
+      currency: 'XOF',
+      events: [],
+      rider: {
+        userId: 'user-rider-1',
+      },
+      driver: {
+        userId: 'user-driver-1',
+        createdAt: new Date('2026-04-01T08:00:00.000Z'),
+      },
+      rideRequest: {
+        paymentMethod: 'CASH',
+      },
+    });
+
+    const result = await service.updateStatus(
+      {
+        user: {
+          id: 'user-driver-1',
+          role: 'DRIVER',
+          driverProfile: {
+            id: 'driver-1',
+          },
+        },
+      } as never,
+      'trip-start-repeat-1',
+      'IN_PROGRESS',
+    );
+
+    expect(prisma.trip.update).not.toHaveBeenCalled();
+    expect(realtimeService.publish).not.toHaveBeenCalled();
+    expect(result.trip.status).toBe('IN_PROGRESS');
+  });
+
   it('lets a rider stop an in-progress trip with adjusted fare and frees both accounts for a new ride', async () => {
     const { prisma, realtimeService, service } = createService();
 

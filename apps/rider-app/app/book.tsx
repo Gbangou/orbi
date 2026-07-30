@@ -170,6 +170,41 @@ function PriceConfidenceCard({
   const pricePromise =
     option.marketplace?.pricePromise ??
     'Prix upfront affiche sans frais de pickup caches.';
+  const fareBreakdown = option.fareBreakdown;
+  const transparentRows = [
+    {
+      label: 'Prise en charge',
+      value:
+        fareBreakdown?.baseFare !== undefined
+          ? formatRiderMoneyAmount(fareBreakdown.baseFare)
+          : null,
+    },
+    {
+      label: 'Distance',
+      value:
+        fareBreakdown?.distanceCharge !== undefined
+          ? formatRiderMoneyAmount(fareBreakdown.distanceCharge)
+          : null,
+    },
+    {
+      label: 'Duree',
+      value:
+        fareBreakdown?.timeCharge !== undefined
+          ? formatRiderMoneyAmount(fareBreakdown.timeCharge)
+          : null,
+    },
+    {
+      label: 'Service',
+      value:
+        fareBreakdown?.bookingFee !== undefined
+          ? formatRiderMoneyAmount(fareBreakdown.bookingFee)
+          : null,
+    },
+  ].filter((row): row is { label: string; value: string } => Boolean(row.value));
+  const driverPayoutLabel =
+    option.driverPayout && option.driverPayout > 0
+      ? formatRiderMoneyAmount(option.driverPayout)
+      : null;
 
   return (
     <OrbiSurface style={styles.priceConfidenceCard}>
@@ -203,6 +238,25 @@ function PriceConfidenceCard({
           </Text>
         </View>
       </View>
+
+      {transparentRows.length > 0 ? (
+        <View style={styles.priceBreakdownBox}>
+          <View style={styles.priceBreakdownHeader}>
+            <Text style={styles.priceBreakdownTitle}>Prix transparent</Text>
+            {driverPayoutLabel ? (
+              <Text style={styles.priceBreakdownPayout}>
+                Chauffeur {driverPayoutLabel}
+              </Text>
+            ) : null}
+          </View>
+          {transparentRows.map((row) => (
+            <View key={row.label} style={styles.priceBreakdownRow}>
+              <Text style={styles.priceBreakdownLabel}>{row.label}</Text>
+              <Text style={styles.priceBreakdownValue}>{row.value}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       <View style={styles.priceSignalRow}>
         <Text style={styles.priceSignalText} numberOfLines={2}>
@@ -1720,6 +1774,55 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     color: theme.colors.text,
+  },
+  priceBreakdownBox: {
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    gap: 7,
+  },
+  priceBreakdownHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingBottom: 2,
+  },
+  priceBreakdownTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text,
+  },
+  priceBreakdownPayout: {
+    flexShrink: 1,
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.teal,
+    textAlign: 'right',
+  },
+  priceBreakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  priceBreakdownLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: theme.colors.textSoft,
+  },
+  priceBreakdownValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: theme.colors.text,
+    textAlign: 'right',
   },
   priceSignalRow: {
     flexDirection: 'row',

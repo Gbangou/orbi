@@ -1578,20 +1578,18 @@ export class TripsService {
 
       this.assertTripAccess(auth, trip);
 
-      if (
-        (nextStatus === 'COMPLETED' || nextStatus === 'CANCELLED') &&
-        trip.status === nextStatus
-      ) {
-        const { rider, driver, rideRequest, ...terminalTrip } = trip;
+      if (trip.status === nextStatus) {
+        const { rider, driver, rideRequest, ...currentTrip } = trip;
         return {
-          ...terminalTrip,
-          riderId: terminalTrip.riderId,
-          driverId: terminalTrip.driverId,
+          ...currentTrip,
+          riderId: currentTrip.riderId,
+          driverId: currentTrip.driverId,
           riderUserId: rider?.userId ?? null,
           driverUserId: driver?.userId ?? null,
           driverCreatedAt: driver?.createdAt ?? null,
           paymentMethod: rideRequest?.paymentMethod ?? null,
-          alreadyTerminal: true,
+          alreadyTerminal: nextStatus === 'COMPLETED' || nextStatus === 'CANCELLED',
+          alreadyApplied: true,
         };
       }
 
@@ -1599,6 +1597,10 @@ export class TripsService {
         auth.user.role === UserRole.RIDER &&
         trip.status === 'IN_PROGRESS' &&
         nextStatus === 'COMPLETED';
+      const isDriverImplicitPickupStart =
+        auth.user.role === UserRole.DRIVER &&
+        trip.status === 'MATCHED' &&
+        nextStatus === 'IN_PROGRESS';
 
       if (
         auth.user.role === UserRole.RIDER &&
@@ -1611,7 +1613,7 @@ export class TripsService {
       }
 
       const transitionDecision = resolveTripStatusTransitionDecision(
-        trip.status,
+        isDriverImplicitPickupStart ? 'DRIVER_ARRIVING' : trip.status,
         nextStatus,
         auth.user.role,
       );
@@ -1698,6 +1700,55 @@ export class TripsService {
         });
       }
 
+      const lifecycleEventPayload = {
+        status: nextStatus,
+        actorRole: auth.user.role,
+        ...(isDriverImplicitPickupStart
+          ? {
+              implicitPickupArrival: true,
+              previousStatus: trip.status,
+            }
+          : {}),
+        ...(nextStatus === 'CANCELLED' && cancellationReason
+          ? { cancellationReason }
+          : {}),
+        ...(cancellationPolicy ? { cancellationPolicy } : {}),
+        ...(routeCompletionReview ? { routeCompletionReview } : {}),
+        ...(earlyStopFare
+          ? {
+              earlyStop: {
+                requestedByRole: auth.user.role,
+                reason: cancellationReason ?? 'RIDER_REQUESTED_STOP',
+                originalFare: earlyStopFare.originalFare,
+                adjustedFare: earlyStopFare.adjustedFare,
+                progressRatio: earlyStopFare.progressRatio,
+                completedDistanceKm: earlyStopFare.completedDistanceKm,
+                remainingDistanceKm: earlyStopFare.remainingDistanceKm,
+              },
+            }
+          : {}),
+      };
+      const lifecycleEventsCreate = isDriverImplicitPickupStart
+        ? [
+            {
+              eventType: 'DRIVER_ARRIVING' as const,
+              payload: {
+                status: 'DRIVER_ARRIVING',
+                actorRole: auth.user.role,
+                implicit: true,
+                reason: 'DRIVER_STARTED_FROM_MATCHED',
+              },
+            },
+            {
+              eventType: transitionDecision.eventType,
+              payload: lifecycleEventPayload,
+            },
+          ]
+        : {
+            eventType: transitionDecision.eventType,
+            payload: lifecycleEventPayload,
+          };
+
       const updatedTrip = await tx.trip.update({
         where: {
           id: tripId,
@@ -1705,36 +1756,12 @@ export class TripsService {
         data: {
           ...updateData,
           events: {
-            create: {
-              eventType: transitionDecision.eventType,
-              payload: {
-                status: nextStatus,
-                actorRole: auth.user.role,
-                ...(nextStatus === 'CANCELLED' && cancellationReason
-                  ? { cancellationReason }
-                  : {}),
-                ...(cancellationPolicy ? { cancellationPolicy } : {}),
-                ...(routeCompletionReview ? { routeCompletionReview } : {}),
-                ...(earlyStopFare
-                  ? {
-                      earlyStop: {
-                        requestedByRole: auth.user.role,
-                        reason: cancellationReason ?? 'RIDER_REQUESTED_STOP',
-                        originalFare: earlyStopFare.originalFare,
-                        adjustedFare: earlyStopFare.adjustedFare,
-                        progressRatio: earlyStopFare.progressRatio,
-                        completedDistanceKm: earlyStopFare.completedDistanceKm,
-                        remainingDistanceKm: earlyStopFare.remainingDistanceKm,
-                      },
-                    }
-                  : {}),
-              },
-            },
+            create: lifecycleEventsCreate,
           },
         },
       });
 
-      if (nextStatus === 'DRIVER_ARRIVING') {
+      if (nextStatus === 'DRIVER_ARRIVING' || isDriverImplicitPickupStart) {
         await tx.rideRequest.update({
           where: {
             id: trip.rideRequestId,
@@ -1867,10 +1894,11 @@ export class TripsService {
         driverCreatedAt: trip.driver?.createdAt ?? null,
         paymentMethod: trip.rideRequest?.paymentMethod ?? null,
         alreadyTerminal: false,
+        alreadyApplied: false,
       };
     });
 
-    if (!updatedTrip.alreadyTerminal) {
+    if (!updatedTrip.alreadyTerminal && !updatedTrip.alreadyApplied) {
       this.realtimeService.publish({
         channel: 'trip',
         type: 'trip.updated',

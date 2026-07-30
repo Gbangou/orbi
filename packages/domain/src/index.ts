@@ -565,6 +565,8 @@ export type RideOption = {
   };
   fareBreakdown?: {
     baseFare: number;
+    distanceCharge?: number;
+    timeCharge?: number;
     bookingFee: number;
     demandMultiplier: number;
     commercialRoundingAmount?: number;

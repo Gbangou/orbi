@@ -272,6 +272,8 @@ export class PricingService {
           surgeLabel,
           fareBreakdown: {
             baseFare: estimate.fareBreakdown.baseFare,
+            distanceCharge: estimate.fareBreakdown.distanceCharge,
+            timeCharge: estimate.fareBreakdown.timeCharge,
             bookingFee: estimate.fareBreakdown.bookingFee,
             demandMultiplier: estimate.fareBreakdown.demandMultiplier,
             commercialRoundingAmount:

@@ -1088,10 +1088,9 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Agrandir');
     expectText(renderer, 'Paiement');
     expectText(renderer, 'Especes');
-    expectText(
-      renderer,
-      'Demarrez seulement quand le passager est avec vous et pret a partir.',
-    );
+    expectText(renderer, 'Checklist depart');
+    expectText(renderer, 'Passager a bord et pret a partir');
+    expectText(renderer, 'Prix et gain visibles, aucun supplement hors app');
     expectText(renderer, 'Journal de course');
     await pressByText(renderer, 'Journal de course');
     expectText(renderer, 'Chauffeur en approche');

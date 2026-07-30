@@ -593,6 +593,21 @@ describe('PricingService — estimateRideOptions catalogue Burkina', () => {
     }
   });
 
+  it('chaque option expose une ventilation tarifaire passager lisible', async () => {
+    const { service } = createService();
+    const preview = await service.estimateRideOptions({
+      distanceKm: 5.8,
+      durationMinutes: 16,
+    } as never);
+
+    for (const option of preview.options) {
+      expect(option.fareBreakdown?.baseFare).toBeGreaterThan(0);
+      expect(option.fareBreakdown?.distanceCharge).toBeGreaterThan(0);
+      expect(option.fareBreakdown?.timeCharge).toBeGreaterThan(0);
+      expect(option.fareBreakdown?.bookingFee).toBeGreaterThanOrEqual(0);
+    }
+  });
+
   it('marketplace expose nearbyDrivers, etaConfidence et sources de signal', async () => {
     const { service } = createService();
     const preview = await service.estimateRideOptions({
