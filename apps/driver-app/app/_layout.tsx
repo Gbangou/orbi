@@ -8,7 +8,7 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useFonts, Raleway_800ExtraBold } from '@expo-google-fonts/raleway';
 import {
   Inter_400Regular,
@@ -17,7 +17,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import * as Notifications from 'expo-notifications';
-import { orbiTheme, resolveTheme } from '@orbi/ui';
+import { orbiTheme } from '@orbi/ui';
 import { ErrorBoundary, OrbiThemeProvider } from '@orbi/ui/native';
 import { initDriverI18n } from '../lib/i18n';
 import { hasPersistedDriverSession } from '../lib/auth';
@@ -39,9 +39,7 @@ export default function RootLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const rootNavigationState = useRootNavigationState();
-  const colorScheme = useColorScheme();
-  const theme = resolveTheme(colorScheme);
-  const isDark = colorScheme === 'dark';
+  const theme = orbiTheme;
   const appBackground = theme.colors.driverBackground as string;
   const [isNavigationMounted, setIsNavigationMounted] = useState(false);
   const [isResolved, setIsResolved] = useState(false);
@@ -144,7 +142,7 @@ export default function RootLayout() {
         showDebugDetails={process.env.EXPO_PUBLIC_DEBUG_CRASH_DETAILS === 'true'}
       >
         <>
-          <StatusBar style={isDark ? 'light' : 'dark'} />
+          <StatusBar style="dark" />
           {canRenderApp ? (
             <TypedStack
               screenOptions={{

@@ -12,7 +12,7 @@ type Tier = 'moto-standard' | 'moto-plus' | 'car-standard' | 'car-comfort' | 'ca
 
 const W = 180;
 const H = 124;
-const PLUS_BADGE_COLOR = '#F2A900';
+const PLUS_BADGE_COLOR = '#0B0B0B';
 
 const VEHICLE_COLORS: Record<Tier, {
   body: string;
@@ -24,49 +24,49 @@ const VEHICLE_COLORS: Record<Tier, {
   accent: string;
 }> = {
   'moto-standard': {
-    body: '#00C9A7',
-    bodyMid: '#00A987',
-    bodyDark: '#075E52',
-    roof: '#0FE1BB',
-    glass: '#9FE8F6',
-    glow: 'rgba(0,201,167,0.20)',
-    accent: '#FF3B30',
+    body: '#0B0B0B',
+    bodyMid: '#2F2F2F',
+    bodyDark: '#050505',
+    roof: '#3C3C3C',
+    glass: '#D8D8D2',
+    glow: 'rgba(11,11,11,0.10)',
+    accent: '#00A884',
   },
   'moto-plus': {
-    body: '#00C9A7',
-    bodyMid: '#00A987',
-    bodyDark: '#075E52',
-    roof: '#0FE1BB',
-    glass: '#9FE8F6',
-    glow: 'rgba(0,201,167,0.22)',
-    accent: '#F2A900',
+    body: '#0B0B0B',
+    bodyMid: '#2F2F2F',
+    bodyDark: '#050505',
+    roof: '#3C3C3C',
+    glass: '#D8D8D2',
+    glow: 'rgba(11,11,11,0.12)',
+    accent: '#0B0B0B',
   },
   'car-standard': {
-    body: '#EEF3F8',
-    bodyMid: '#D7DEE8',
-    bodyDark: '#9AA6B8',
+    body: '#F1F1ED',
+    bodyMid: '#D8D8D2',
+    bodyDark: '#9D9D96',
     roof: '#FFFFFF',
-    glass: '#75B9E7',
-    glow: 'rgba(23,55,86,0.10)',
-    accent: '#FF3B30',
+    glass: '#3C3C3C',
+    glow: 'rgba(11,11,11,0.08)',
+    accent: '#00A884',
   },
   'car-comfort': {
-    body: '#222735',
-    bodyMid: '#171B26',
-    bodyDark: '#080B12',
-    roof: '#333A50',
-    glass: '#5F86D6',
-    glow: 'rgba(95,134,214,0.15)',
-    accent: '#00C9A7',
+    body: '#0B0B0B',
+    bodyMid: '#242424',
+    bodyDark: '#050505',
+    roof: '#3C3C3C',
+    glass: '#D8D8D2',
+    glow: 'rgba(11,11,11,0.12)',
+    accent: '#00A884',
   },
   'car-xl': {
-    body: '#F5F1E8',
-    bodyMid: '#DDD7CA',
-    bodyDark: '#A9A094',
-    roof: '#FFF9EC',
-    glass: '#7DB8DE',
-    glow: 'rgba(242,169,0,0.14)',
-    accent: '#D8AC44',
+    body: '#F1F1ED',
+    bodyMid: '#D8D8D2',
+    bodyDark: '#9D9D96',
+    roof: '#FFFFFF',
+    glass: '#3C3C3C',
+    glow: 'rgba(11,11,11,0.08)',
+    accent: '#00A884',
   },
 };
 

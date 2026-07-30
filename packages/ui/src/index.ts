@@ -1,43 +1,42 @@
 export const orbiTheme = {
   colors: {
-    // Backgrounds
-    background: "#F7FAFC",
-    backgroundAlt: "#EEF4F3",
-    backgroundDim: "#DDE8E6",
-    riderBackground: "#F5FBFF",
-    driverBackground: "#FFF9ED",
-    riderChrome: "#EAF6FF",
-    driverChrome: "#FFF0D6",
+    // Uber/Yango-style field palette: neutral UI, one Orbi action accent.
+    background: "#F5F5F2",
+    backgroundAlt: "#EEEEEA",
+    backgroundDim: "#E2E2DD",
+    riderBackground: "#F5F5F2",
+    driverBackground: "#F5F5F2",
+    riderChrome: "#F5F5F2",
+    driverChrome: "#F5F5F2",
 
     // Surfaces
     panel: "#FFFFFF",
     surface: "#FFFFFF",
-    panelSoft: "#F1F6F8",
-    surfaceSoft: "#F1F6F8",
-    surfaceStrong: "#DFEBEF",
+    panelSoft: "#F7F7F4",
+    surfaceSoft: "#F7F7F4",
+    surfaceStrong: "#E9E9E4",
 
     // Text hierarchy
-    text: "#07111F",
-    textMuted: "#75818B",
-    textSoft: "#394653",
-    muted: "#75818B",
+    text: "#0B0B0B",
+    textMuted: "#767676",
+    textSoft: "#3C3C3C",
+    muted: "#767676",
 
-    // Orbi brand: graphite mobility, emerald trust, electric blue clarity, gold energy.
-    teal: "#00C2A8",
-    accentDark: "#007C69",
-    accentLight: "rgba(0, 194, 168, 0.12)",
+    teal: "#00A884",
+    accentDark: "#007A63",
+    accentLight: "rgba(0, 168, 132, 0.10)",
 
-    // Semantic
-    amber: "#FFB020",
-    sky: "#3D7BFF",
-    rose: "#F0445E",
-    success: "#00C2A8",
-    danger: "#F0445E",
-    warning: "#FFB020",
+    // Semantic aliases stay available, but keep the app visually restrained.
+    amber: "#0B0B0B",
+    sky: "#0B0B0B",
+    rose: "#0B0B0B",
+    success: "#00A884",
+    danger: "#0B0B0B",
+    warning: "#0B0B0B",
 
     // Borders
-    border: "#D8E4E8",
-    borderSoft: "rgba(7, 17, 31, 0.07)",
+    border: "#DFDFDA",
+    borderSoft: "rgba(11, 11, 11, 0.08)",
 
     // Overlay
     overlay: "rgba(0, 0, 0, 0.48)",
@@ -47,15 +46,15 @@ export const orbiTheme = {
     textInverse: "#FFFFFF",
   },
   gradients: {
-    hero: ["#F7FAFC", "#FFFFFF"],
-    accent: ["#007C69", "#00E0C2"],
-    warm: ["#FFB020", "#FF7A1A"],
+    hero: ["#F5F5F2", "#FFFFFF"],
+    accent: ["#007A63", "#00A884"],
+    warm: ["#0B0B0B", "#3C3C3C"],
   },
   radius: {
-    card: 16,
+    card: 12,
     button: 12,
     pill: 999,
-    panel: 20,
+    panel: 18,
     input: 12,
   },
   spacing: {
@@ -84,32 +83,32 @@ export const orbiTheme = {
   },
   shadows: {
     card: {
-      shadowColor: "#07111F",
-      shadowOpacity: 0.09,
-      shadowRadius: 20,
-      shadowOffset: { width: 0, height: 8 },
-      elevation: 7,
+      shadowColor: "#0B0B0B",
+      shadowOpacity: 0.07,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3,
     },
     sheet: {
-      shadowColor: "#07111F",
-      shadowOpacity: 0.15,
-      shadowRadius: 30,
-      shadowOffset: { width: 0, height: -6 },
-      elevation: 16,
+      shadowColor: "#0B0B0B",
+      shadowOpacity: 0.12,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: -4 },
+      elevation: 8,
     },
     button: {
-      shadowColor: "#07111F",
-      shadowOpacity: 0.20,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 5 },
-      elevation: 5,
+      shadowColor: "#0B0B0B",
+      shadowOpacity: 0.14,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 3,
     },
     float: {
-      shadowColor: "#07111F",
-      shadowOpacity: 0.14,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 6 },
-      elevation: 9,
+      shadowColor: "#0B0B0B",
+      shadowOpacity: 0.10,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
     },
   },
 } as const;

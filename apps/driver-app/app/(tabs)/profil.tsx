@@ -1356,7 +1356,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,176,32,0.20)',
+    borderColor: theme.colors.border,
   },
   avatarCircle: {
     width: 52,

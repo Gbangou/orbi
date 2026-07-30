@@ -22,7 +22,7 @@ import {
 } from './map-coordinate';
 
 const TypedWebView = WebView as any;
-const TRIP_ROUTE_SCRIPT = buildTripRouteScript({ routeColor: '#00B894' });
+const TRIP_ROUTE_SCRIPT = buildTripRouteScript({ routeColor: '#00A884' });
 
 export interface TripMapViewProps {
   pickupLat: number | null | undefined;
@@ -76,17 +76,17 @@ function buildMapHtml(cfg: {
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body,#map{width:100%;height:100%;background:#eef3f1}
+html,body,#map{width:100%;height:100%;background:#F5F5F2}
 .leaflet-tile-pane{filter:saturate(.92) contrast(1.02)}
 .leaflet-control-attribution,.leaflet-control-zoom{display:none}
 ${ORBI_MAP_VEHICLE_CSS}
-.driver-label{position:relative;background:rgba(7,19,17,.94);color:#b8fff0;font-family:-apple-system,sans-serif;font-size:10px;font-weight:800;padding:3px 7px;border-radius:7px;letter-spacing:.2px;white-space:nowrap;border:1px solid rgba(0,184,148,.24);box-shadow:0 4px 10px rgba(0,0,0,.24)}
+.driver-label{position:relative;background:rgba(11,11,11,.92);color:#FFFFFF;font-family:-apple-system,sans-serif;font-size:10px;font-weight:800;padding:3px 7px;border-radius:7px;letter-spacing:.2px;white-space:nowrap;border:1px solid rgba(255,255,255,.42);box-shadow:0 4px 10px rgba(0,0,0,.20)}
 .pickup-pin{display:flex;align-items:center;gap:4px}
-.pickup-pin-dot{width:10px;height:10px;background:#22c55e;border-radius:50%;border:2px solid #16a34a;flex-shrink:0}
-.pickup-pin-label{background:rgba(7,19,17,.92);color:#b8fff0;font-family:-apple-system,sans-serif;font-size:10px;font-weight:800;padding:3px 7px;border-radius:6px;letter-spacing:.2px;white-space:nowrap}
+.pickup-pin-dot{width:10px;height:10px;background:#00A884;border-radius:50%;border:2px solid #FFFFFF;flex-shrink:0}
+.pickup-pin-label{background:rgba(11,11,11,.92);color:#FFFFFF;font-family:-apple-system,sans-serif;font-size:10px;font-weight:800;padding:3px 7px;border-radius:6px;letter-spacing:.2px;white-space:nowrap}
 .dest-pin{display:flex;align-items:center;gap:4px}
-.dest-pin-dot{width:10px;height:10px;background:#f59e0b;border-radius:50%;border:2px solid #d97706;flex-shrink:0}
-.dest-pin-label{background:rgba(7,19,17,.92);color:#ffe39a;font-family:-apple-system,sans-serif;font-size:10px;font-weight:800;padding:3px 7px;border-radius:6px;letter-spacing:.2px;white-space:nowrap}
+.dest-pin-dot{width:10px;height:10px;background:#0B0B0B;border-radius:50%;border:2px solid #FFFFFF;flex-shrink:0}
+.dest-pin-label{background:rgba(11,11,11,.92);color:#FFFFFF;font-family:-apple-system,sans-serif;font-size:10px;font-weight:800;padding:3px 7px;border-radius:6px;letter-spacing:.2px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -422,8 +422,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   routeWarningPanel: {
     maxWidth: '86%',
     alignItems: 'flex-start',
-    backgroundColor: '#fff7ed',
-    borderColor: 'rgba(245,158,11,0.35)',
+    backgroundColor: '#F7F7F4',
+    borderColor: 'rgba(11,11,11,0.10)',
   },
   routeWarningTitle: {
     fontSize: 13,

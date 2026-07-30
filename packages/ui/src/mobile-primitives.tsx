@@ -31,28 +31,28 @@ function makeToneTokens(theme: OrbiTheme): Record<
       solid: theme.colors.text,
     },
     teal: {
-      background: 'rgba(0, 194, 168, 0.11)',
-      border: 'rgba(0, 194, 168, 0.32)',
+      background: 'rgba(0, 168, 132, 0.08)',
+      border: 'rgba(0, 168, 132, 0.22)',
       text: theme.colors.accentDark,
       solid: theme.colors.teal,
     },
     amber: {
-      background: 'rgba(255, 176, 32, 0.13)',
-      border: 'rgba(255, 176, 32, 0.34)',
-      text: '#A86600',
-      solid: theme.colors.amber,
+      background: theme.colors.surfaceSoft,
+      border: theme.colors.border,
+      text: theme.colors.text,
+      solid: theme.colors.text,
     },
     sky: {
-      background: 'rgba(61, 123, 255, 0.11)',
-      border: 'rgba(61, 123, 255, 0.30)',
-      text: theme.colors.sky,
-      solid: theme.colors.sky,
+      background: theme.colors.surfaceSoft,
+      border: theme.colors.border,
+      text: theme.colors.text,
+      solid: theme.colors.text,
     },
     danger: {
-      background: 'rgba(240, 68, 94, 0.11)',
-      border: 'rgba(240, 68, 94, 0.30)',
-      text: theme.colors.danger,
-      solid: theme.colors.danger,
+      background: theme.colors.surface,
+      border: theme.colors.border,
+      text: theme.colors.text,
+      solid: theme.colors.text,
     },
   };
 }
@@ -169,11 +169,9 @@ export function OrbiButton({
         ? 'transparent'
         : theme.colors.border;
   const textColor = isPrimary
-    ? tone === 'amber'
-      ? '#3B2205'
-      : '#FFFFFF'
+    ? '#FFFFFF'
     : isDanger
-      ? theme.colors.danger
+      ? theme.colors.text
       : tone === 'teal'
         ? theme.colors.accentDark
         : theme.colors.text;
@@ -205,7 +203,7 @@ export function OrbiButton({
           style={[
             mobileButton.helper,
             { fontFamily: orbiTheme.typography.fontFamily.regular },
-            { color: isPrimary ? 'rgba(255,255,255,0.70)' : theme.colors.textMuted },
+            { color: isPrimary ? 'rgba(255,255,255,0.72)' : theme.colors.textMuted },
           ]}
         >
           {helper}
@@ -324,7 +322,7 @@ export function PersonBadge({
           </Text>
           {rating != null ? (
             <View style={mobilePerson.ratingChip}>
-              <Text style={[mobilePerson.ratingText, { fontFamily: orbiTheme.typography.fontFamily.bold, color: theme.colors.amber }]}>
+              <Text style={[mobilePerson.ratingText, { fontFamily: orbiTheme.typography.fontFamily.bold, color: theme.colors.text }]}>
                 ★ {rating.toFixed(1)}
               </Text>
             </View>
@@ -371,7 +369,7 @@ const mobilePerson = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 176, 32, 0.14)',
+    backgroundColor: '#F1F1ED',
   },
   ratingText: {
     fontSize: 11,

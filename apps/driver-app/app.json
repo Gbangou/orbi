@@ -5,7 +5,7 @@
     "scheme": "orbi-chauffeur",
     "version": "1.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "icon": "./icon.png",
     "platforms": [
       "ios",
@@ -29,7 +29,7 @@
         "expo-notifications",
         {
           "icon": "./icon.png",
-          "color": "#F2A900",
+          "color": "#00A884",
           "defaultChannel": "default",
           "sounds": [],
           "enableBackgroundRemoteNotifications": false
@@ -59,11 +59,11 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "usesCleartextTraffic": true,
+      "usesCleartextTraffic": false,
       "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./adaptive-icon.png",
-        "backgroundColor": "#071311"
+        "backgroundColor": "#0B0B0B"
       }
     },
     "web": {
@@ -73,7 +73,7 @@
     "splash": {
       "image": "./splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#06100E"
+      "backgroundColor": "#F5F5F2"
     },
     "extra": {
       "eas": {

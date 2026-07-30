@@ -36,7 +36,7 @@ function StatusBadge({ status }: { status: string }) {
     IN_PROGRESS: { label: 'En cours', bg: 'rgba(0,199,199,0.12)', color: '#67e8f9' },
     MATCHED: { label: 'Chauffeur trouve', bg: 'rgba(56,189,248,0.12)', color: '#7dd3fc' },
     DRIVER_ARRIVING: { label: 'Chauffeur en route', bg: 'rgba(56,189,248,0.12)', color: '#7dd3fc' },
-    REQUESTED: { label: 'Recherche en cours', bg: 'rgba(255,176,32,0.14)', color: '#facc15' },
+    REQUESTED: { label: 'Recherche en cours', bg: '#F1F1ED', color: '#0B0B0B' },
     EXPIRED: { label: 'Expiree', bg: 'rgba(148,163,184,0.12)', color: theme.colors.muted },
   };
   const c = cfg[status] ?? { label: status, bg: 'rgba(148,163,184,0.1)', color: theme.colors.muted };

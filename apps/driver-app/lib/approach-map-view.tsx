@@ -18,8 +18,8 @@ import { hasMapCoordinatePair, normalizeMapCoordinatePair } from './map-coordina
 
 const TypedWebView = WebView as any;
 const APPROACH_ROUTE_SCRIPT = buildTripRouteScript({
-  routeColor: '#818cf8',
-  altColor: '#64748b',
+  routeColor: '#00A884',
+  altColor: '#767676',
 });
 
 export interface ApproachMapViewProps {
@@ -49,17 +49,17 @@ function buildApproachHtml(cfg: {
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body,#map{width:100%;height:100%;background:#0a0c0e}
-.leaflet-tile-pane{filter:brightness(.62) invert(1) contrast(3) hue-rotate(200deg) saturate(.28) brightness(.72)}
+html,body,#map{width:100%;height:100%;background:#F5F5F2}
+.leaflet-tile-pane{filter:saturate(.88) contrast(1.02)}
 .leaflet-control-attribution,.leaflet-control-zoom{display:none}
-@keyframes glowDriver{0%,100%{filter:drop-shadow(0 0 3px rgba(129,140,248,.6))}50%{filter:drop-shadow(0 0 9px rgba(129,140,248,1))}}
-@keyframes glowRider{0%,100%{filter:drop-shadow(0 0 3px rgba(34,197,94,.6))}50%{filter:drop-shadow(0 0 8px rgba(34,197,94,1))}}
+@keyframes glowDriver{0%,100%{filter:drop-shadow(0 2px 4px rgba(0,0,0,.20))}50%{filter:drop-shadow(0 4px 8px rgba(0,0,0,.26))}}
+@keyframes glowRider{0%,100%{filter:drop-shadow(0 2px 4px rgba(0,0,0,.18))}50%{filter:drop-shadow(0 4px 8px rgba(0,0,0,.24))}}
 .driver-svg{animation:glowDriver 1.5s ease-in-out infinite;display:block}
 .rider-svg{animation:glowRider 2s ease-in-out infinite;display:block}
 .driver-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
-.driver-lbl{background:rgba(10,12,14,.92);color:#a5b4fc;font-family:-apple-system,sans-serif;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;letter-spacing:.2px;border:1px solid rgba(129,140,248,.25)}
+.driver-lbl{background:rgba(11,11,11,.92);color:#FFFFFF;font-family:-apple-system,sans-serif;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;letter-spacing:.2px;border:1px solid rgba(255,255,255,.42)}
 .pickup-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
-.pickup-lbl{background:rgba(10,12,14,.92);color:#86efac;font-family:-apple-system,sans-serif;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;border:1px solid rgba(34,197,94,.25)}
+.pickup-lbl{background:rgba(11,11,11,.92);color:#FFFFFF;font-family:-apple-system,sans-serif;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;border:1px solid rgba(255,255,255,.42)}
 </style>
 </head>
 <body>
@@ -71,8 +71,8 @@ var map=L.map('map',{zoomControl:false,attributionControl:false});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,subdomains:['a','b','c']}).addTo(map);
 var driverMarker=null,pickupMarker=null;
 
-var DRIVER_SVG='<svg class="driver-svg" xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="11.5" fill="rgba(99,102,241,0.18)" stroke="rgba(129,140,248,0.45)" stroke-width="1.5"/><circle cx="13" cy="13" r="6.5" fill="rgba(99,102,241,0.5)" stroke="#818cf8" stroke-width="1.8"/><path d="M13 7 L16.5 16 L13 13.5 L9.5 16 Z" fill="white" opacity="0.95"/></svg>';
-var RIDER_SVG='<svg class="rider-svg" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="8" r="5" fill="rgba(34,197,94,0.25)" stroke="#22c55e" stroke-width="1.8"/><path d="M4 26 Q4 18 14 18 Q24 18 24 26" fill="rgba(34,197,94,0.25)" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round"/><circle cx="14" cy="8" r="3" fill="#22c55e"/></svg>';
+var DRIVER_SVG='<svg class="driver-svg" xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="11.5" fill="#0B0B0B" stroke="#FFFFFF" stroke-width="1.5"/><path d="M13 7 L16.5 16 L13 13.5 L9.5 16 Z" fill="white" opacity="0.95"/></svg>';
+var RIDER_SVG='<svg class="rider-svg" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="8" r="5" fill="#00A884" stroke="#FFFFFF" stroke-width="1.8"/><path d="M4 26 Q4 18 14 18 Q24 18 24 26" fill="#00A884" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/><circle cx="14" cy="8" r="3" fill="#FFFFFF"/></svg>';
 
 function driverIcon(){return L.divIcon({html:'<div class="driver-wrap">'+DRIVER_SVG+'<span class="driver-lbl">Vous</span></div>',iconSize:[60,46],iconAnchor:[13,13],className:''})}
 function pickupIcon(addr){return L.divIcon({html:'<div class="pickup-wrap">'+RIDER_SVG+'<span class="pickup-lbl">'+addr+'</span></div>',iconSize:[140,50],iconAnchor:[14,14],className:''})}
@@ -375,7 +375,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   routeWarningPanel: {
     maxWidth: '86%',
     alignItems: 'flex-start',
-    backgroundColor: '#fff7ed',
+    backgroundColor: '#F7F7F4',
     borderColor: 'rgba(245,158,11,0.35)',
   },
   routeWarningTitle: {
