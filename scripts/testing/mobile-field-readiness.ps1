@@ -107,6 +107,30 @@ function Test-DemoAccountsDisabledForField {
   }
 }
 
+function Invoke-FieldWebRequest {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Uri,
+
+    [string]$Method = "Get",
+
+    [int]$RequestTimeoutSec = 30
+  )
+
+  $request = @{
+    Uri             = $Uri
+    Method          = $Method
+    UseBasicParsing = $true
+    TimeoutSec      = $RequestTimeoutSec
+  }
+
+  if ((Get-Command Invoke-WebRequest).Parameters.ContainsKey("NoProxy")) {
+    $request.NoProxy = $true
+  }
+
+  Invoke-WebRequest @request
+}
+
 function Test-BackendHealth {
   param([string]$ApiBaseUrl)
 
@@ -117,7 +141,7 @@ function Test-BackendHealth {
 
   while ((Get-Date) -lt $deadline) {
     try {
-      $response = Invoke-WebRequest -Uri $healthUrl -Method Get -UseBasicParsing -TimeoutSec 30
+      $response = Invoke-FieldWebRequest -Uri $healthUrl
       $body = $response.Content | ConvertFrom-Json
       if ($response.StatusCode -eq 200 -and $body.status -eq "ready") {
         Write-Host "[ok] Backend readiness reachable: $healthUrl" -ForegroundColor Green
@@ -128,7 +152,7 @@ function Test-BackendHealth {
     } catch {
       $lastError = $_.Exception.Message
       try {
-        $detailsResponse = Invoke-WebRequest -Uri $detailsUrl -Method Get -UseBasicParsing -TimeoutSec 30
+        $detailsResponse = Invoke-FieldWebRequest -Uri $detailsUrl
         $detailsBody = $detailsResponse.Content | ConvertFrom-Json
         if ($detailsBody.dependencies) {
           $lastError = "$lastError. Health status=$($detailsBody.status), database=$($detailsBody.dependencies.database), rateLimit=$($detailsBody.dependencies.rateLimit), realtime=$($detailsBody.dependencies.realtime), driverReservationExpiry=$($detailsBody.dependencies.driverReservationExpiry)"

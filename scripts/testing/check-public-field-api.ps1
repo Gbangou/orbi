@@ -18,6 +18,28 @@ function Fail {
   exit 1
 }
 
+function Invoke-FieldWebRequest {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Uri,
+
+    [string]$Method = "Get"
+  )
+
+  $request = @{
+    Uri             = $Uri
+    Method          = $Method
+    UseBasicParsing = $true
+    TimeoutSec      = 15
+  }
+
+  if ((Get-Command Invoke-WebRequest).Parameters.ContainsKey("NoProxy")) {
+    $request.NoProxy = $true
+  }
+
+  Invoke-WebRequest @request
+}
+
 $ApiUrl = $ApiUrl.TrimEnd("/")
 $AdminUrl = $AdminUrl.TrimEnd("/")
 
@@ -52,14 +74,14 @@ if ($AdminUrl) {
 
 while ((Get-Date) -lt $deadline) {
   try {
-    $response = Invoke-WebRequest -Uri $readyUrl -UseBasicParsing -TimeoutSec 15
+    $response = Invoke-FieldWebRequest -Uri $readyUrl
     $body = $response.Content | ConvertFrom-Json
 
     if ($response.StatusCode -eq 200 -and $body.status -eq "ready") {
       Write-Host "[ok] Public API is ready." -ForegroundColor Green
       Write-Host "Dependencies: database=$($body.dependencies.database), rateLimit=$($body.dependencies.rateLimit), realtime=$($body.dependencies.realtime), driverReservationExpiry=$($body.dependencies.driverReservationExpiry)"
       if ($AdminUrl) {
-        $adminResponse = Invoke-WebRequest -Uri $AdminUrl -Method Head -UseBasicParsing -TimeoutSec 15
+        $adminResponse = Invoke-FieldWebRequest -Uri $AdminUrl -Method Head
         if ($adminResponse.StatusCode -lt 200 -or $adminResponse.StatusCode -ge 400) {
           Fail "Admin returned HTTP $($adminResponse.StatusCode): $AdminUrl"
         }
@@ -72,7 +94,7 @@ while ((Get-Date) -lt $deadline) {
   } catch {
     $lastError = $_.Exception.Message
     try {
-      $healthResponse = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 15
+      $healthResponse = Invoke-FieldWebRequest -Uri $healthUrl
       $healthBody = $healthResponse.Content | ConvertFrom-Json
       $dependencies = $healthBody.dependencies
       if ($dependencies) {
