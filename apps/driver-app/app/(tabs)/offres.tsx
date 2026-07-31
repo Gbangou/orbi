@@ -227,7 +227,7 @@ function TripStartAction({
       ]}
     >
       <View style={styles.iconWrap}>
-        {isConfirming ? <ActivityIndicator size="small" color="#07111F" /> : (
+        {isConfirming ? <ActivityIndicator size="small" color="#000000" /> : (
           <Text style={styles.iconText}>{state === "confirmed" ? "OK" : "GO"}</Text>
         )}
       </View>
@@ -1318,7 +1318,7 @@ export default function OffersScreen() {
 
         {/* ── Active mission ── */}
         {activeTrip ? (
-          <OrbiSurface tone="amber" style={styles.missionCard} elevated>
+          <OrbiSurface style={styles.missionCard} elevated>
             {/* Section label — accessible for tests */}
             <Text style={styles.missionSectionLabel}>Course active</Text>
 
@@ -1326,8 +1326,8 @@ export default function OffersScreen() {
             <View style={styles.missionStatusRow}>
               {(() => {
                 const inProgress = activeTrip.status === "IN_PROGRESS";
-                const bg = inProgress ? "rgba(0,201,167,0.10)" : "rgba(255,149,0,0.10)";
-                const color = inProgress ? theme.colors.teal : theme.colors.amber;
+                const bg = theme.colors.backgroundAlt;
+                const color = inProgress ? theme.colors.teal : theme.colors.text;
                 return (
                   <View style={[styles.missionStatusPill, { backgroundColor: bg }]}>
                     <View style={[styles.missionStatusDot, { backgroundColor: color }]} />
@@ -1808,13 +1808,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: theme.colors.textSoft,
   },
-  missionCard: { padding: 10, gap: 10 },
+  missionCard: { padding: 10, gap: 10, borderColor: theme.colors.border },
   stageTracker: { paddingHorizontal: 2 },
   missionStatusRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   missionStatusDot: { width: 7, height: 7, borderRadius: 4 },
   missionStatusLabel: { fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold" },
-  missionTransition: { fontSize: 12, color: theme.colors.sky, fontFamily: "Inter_400Regular" },
+  missionTransition: { fontSize: 12, color: theme.colors.textMuted, fontFamily: "Inter_400Regular" },
   missionRoute: { backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 12, paddingVertical: 2 },
   missionRouteRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 },
   missionRouteDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
@@ -1823,8 +1823,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.borderSoft, padding: 10 },
   riderBadge: { flex: 1 },
   riderFareColumn: { alignItems: "flex-end", gap: 2 },
-  riderFare: { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.amber },
-  riderNetFare: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.teal },
+  riderFare: { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
+  riderNetFare: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.textMuted },
   navigationMapShell: {
     position: "relative",
     borderRadius: 16,
@@ -1863,7 +1863,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.amber,
+    color: theme.colors.textMuted,
     textTransform: "uppercase",
   },
   missionStageTitle: {
@@ -1910,9 +1910,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     justifyContent: "space-between",
     gap: 10,
     borderRadius: 12,
-    backgroundColor: "rgba(0,201,167,0.08)",
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: "rgba(0,201,167,0.22)",
+    borderColor: theme.colors.border,
     paddingHorizontal: 10,
     paddingVertical: 9,
   },
@@ -1928,7 +1928,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.teal,
+    color: theme.colors.text,
   },
   missionActions: { gap: 7 },
   secondaryActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
@@ -2049,10 +2049,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   codeBlock: { gap: 10 },
   meta: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular", lineHeight: 18 },
   departureChecklist: {
-    borderRadius: 14,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(0,201,167,0.22)",
-    backgroundColor: "rgba(0,201,167,0.07)",
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
     paddingHorizontal: 12,
     paddingVertical: 11,
     gap: 8,
@@ -2091,7 +2091,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     height: 20,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: theme.colors.teal,
+    backgroundColor: theme.colors.text,
     color: theme.colors.textInverse,
     textAlign: "center",
     fontSize: 11,
@@ -2181,7 +2181,7 @@ const makeIconStyles = (theme: OrbiTheme) => StyleSheet.create({
 const makeTripStartActionStyles = (theme: OrbiTheme) => StyleSheet.create({
   button: {
     minHeight: 70,
-    borderRadius: 18,
+    borderRadius: 999,
     paddingVertical: 9,
     paddingHorizontal: 10,
     flexDirection: "row",
@@ -2189,13 +2189,13 @@ const makeTripStartActionStyles = (theme: OrbiTheme) => StyleSheet.create({
     justifyContent: "flex-start",
     gap: 12,
     borderWidth: 1,
-    backgroundColor: "#07111F",
-    borderColor: "#07111F",
+    backgroundColor: theme.colors.text,
+    borderColor: theme.colors.text,
     ...theme.shadows.button,
   },
   buttonConfirmed: {
-    backgroundColor: theme.colors.teal,
-    borderColor: "rgba(0,201,167,0.86)",
+    backgroundColor: theme.colors.text,
+    borderColor: theme.colors.text,
   },
   buttonPressed: {
     opacity: 0.9,
@@ -2213,11 +2213,11 @@ const makeTripStartActionStyles = (theme: OrbiTheme) => StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.72)",
+    borderColor: theme.colors.border,
   },
   iconText: {
-    color: "#07111F",
-    fontSize: 13,
+    color: theme.colors.text,
+    fontSize: 24,
     fontWeight: "900",
     fontFamily: "Inter_700Bold",
     lineHeight: 16,
@@ -2231,7 +2231,7 @@ const makeTripStartActionStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   label: {
     color: theme.colors.textInverse,
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: "900",
     fontFamily: "Inter_700Bold",
     textAlign: "left",

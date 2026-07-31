@@ -31,10 +31,10 @@ function makeToneTokens(theme: OrbiTheme): Record<
       solid: theme.colors.text,
     },
     teal: {
-      background: 'rgba(0, 168, 132, 0.08)',
-      border: 'rgba(0, 168, 132, 0.22)',
-      text: theme.colors.accentDark,
-      solid: theme.colors.teal,
+      background: theme.colors.surfaceSoft,
+      border: theme.colors.border,
+      text: theme.colors.text,
+      solid: theme.colors.text,
     },
     amber: {
       background: theme.colors.surfaceSoft,
@@ -155,14 +155,14 @@ export function OrbiButton({
   const isDanger = variant === 'danger';
   const isGhost = variant === 'ghost';
   const backgroundColor = isPrimary
-    ? token.solid
+    ? theme.colors.text
     : isDanger
       ? makeToneTokens(theme).danger.background
       : isGhost
         ? 'transparent'
         : theme.colors.backgroundAlt;
   const borderColor = isPrimary
-    ? token.solid
+    ? theme.colors.text
     : isDanger
       ? makeToneTokens(theme).danger.border
       : isGhost
@@ -415,11 +415,11 @@ const mobileScreen = StyleSheet.create({
 
 const mobileButton = StyleSheet.create({
   button: {
-    minHeight: 52,
-    borderRadius: 14,
+    minHeight: 50,
+    borderRadius: 10,
     borderWidth: 1,
     paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
@@ -447,12 +447,12 @@ const mobileBanner = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    padding: 14,
+    padding: 12,
   },
   dot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
     marginTop: 4,
     flexShrink: 0,
   },
@@ -461,7 +461,7 @@ const mobileBanner = StyleSheet.create({
     gap: 2,
   },
   title: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     lineHeight: 18,
   },

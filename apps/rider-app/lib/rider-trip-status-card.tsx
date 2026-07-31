@@ -123,7 +123,7 @@ export function RiderTripStatusCard({
             style={styles.driverBadge}
           />
           {isArrived ? (
-            <Text style={styles.driverReadyHint}>Verifiez nom et plaque avant de monter.</Text>
+            <Text style={styles.driverReadyHint}>Verifiez nom, plaque et vehicule.</Text>
           ) : null}
         </View>
       ) : null}
@@ -225,10 +225,10 @@ const makeStyles = (theme: OrbiTheme) =>
     farePill: {
       maxWidth: 96,
       flexShrink: 0,
-      borderRadius: 12,
-      backgroundColor: 'rgba(0,201,167,0.10)',
+      borderRadius: 8,
+      backgroundColor: theme.colors.backgroundAlt,
       borderWidth: 1,
-      borderColor: 'rgba(0,201,167,0.24)',
+      borderColor: theme.colors.border,
       paddingHorizontal: 9,
       paddingVertical: 7,
       alignItems: 'flex-end',
@@ -245,7 +245,7 @@ const makeStyles = (theme: OrbiTheme) =>
       fontSize: 12,
       fontWeight: '800',
       fontFamily: 'Inter_700Bold',
-      color: theme.colors.teal,
+      color: theme.colors.text,
     },
     routeTitle: {
       fontSize: 14,
@@ -262,11 +262,11 @@ const makeStyles = (theme: OrbiTheme) =>
       fontSize: 12,
       fontWeight: '700',
       fontFamily: 'Inter_700Bold',
-      color: theme.colors.teal,
+      color: theme.colors.text,
       marginTop: 2,
     },
     etaLabelArrived: {
-      color: theme.colors.amber,
+      color: theme.colors.text,
     },
     transitionLabel: {
       fontSize: 11,
@@ -296,7 +296,7 @@ const makeStyles = (theme: OrbiTheme) =>
       fontSize: 11,
       lineHeight: 15,
       fontFamily: 'Inter_700Bold',
-      color: theme.colors.successDark,
+      color: theme.colors.text,
     },
     quickActions: {
       flexDirection: 'row',
@@ -308,14 +308,14 @@ const makeStyles = (theme: OrbiTheme) =>
       flexBasis: '47%',
       alignItems: 'center',
       paddingVertical: 10,
-      borderRadius: 12,
+      borderRadius: 8,
       backgroundColor: theme.colors.backgroundAlt,
       borderWidth: 1,
       borderColor: theme.colors.border,
     },
     quickActionDanger: {
-      backgroundColor: 'rgba(240, 68, 94, 0.10)',
-      borderColor: 'rgba(240, 68, 94, 0.28)',
+      backgroundColor: theme.colors.backgroundAlt,
+      borderColor: theme.colors.border,
     },
     quickActionPressed: {
       opacity: 0.85,
@@ -330,7 +330,7 @@ const makeStyles = (theme: OrbiTheme) =>
       color: theme.colors.text,
     },
     quickActionDangerLabel: {
-      color: theme.colors.danger,
+      color: theme.colors.text,
     },
   });
 

@@ -160,68 +160,11 @@ function PriceConfidenceCard({
 
   if (!option) return null;
 
-  const priceWindow = option.fareBreakdown?.priceWindow;
-  const roundingAmount = option.fareBreakdown?.commercialRoundingAmount ?? 0;
-  const roundingStep = option.fareBreakdown?.commercialRoundingStep ?? null;
-  const demandLabel =
-    option.surgeActive && option.surgeLabel
-      ? `Demande ${option.surgeLabel}`
-      : 'Demande normale';
-  const pricePromise =
-    option.marketplace?.pricePromise ??
-    'Prix upfront affiche sans frais de pickup caches.';
-  const fareBreakdown = option.fareBreakdown;
-  const transparentRows = [
-    {
-      label: 'Prise en charge',
-      value:
-        fareBreakdown?.baseFare !== undefined
-          ? formatRiderMoneyAmount(fareBreakdown.baseFare)
-          : null,
-    },
-    {
-      label: 'Distance',
-      value:
-        fareBreakdown?.distanceCharge !== undefined
-          ? formatRiderMoneyAmount(fareBreakdown.distanceCharge)
-          : null,
-    },
-    {
-      label: 'Duree',
-      value:
-        fareBreakdown?.timeCharge !== undefined
-          ? formatRiderMoneyAmount(fareBreakdown.timeCharge)
-          : null,
-    },
-    {
-      label: 'Service',
-      value:
-        fareBreakdown?.bookingFee !== undefined
-          ? formatRiderMoneyAmount(fareBreakdown.bookingFee)
-          : null,
-    },
-  ].filter((row): row is { label: string; value: string } => Boolean(row.value));
-  const driverPayoutLabel =
-    option.driverPayout && option.driverPayout > 0
-      ? formatRiderMoneyAmount(option.driverPayout)
-      : null;
-  const businessBalance = option.businessBalance ?? null;
-  const businessBalanceLabel =
-    businessBalance?.label === 'EXCELLENT'
-      ? 'Excellent'
-      : businessBalance?.label === 'BALANCED'
-        ? 'Equilibre'
-        : businessBalance?.label === 'WATCH'
-          ? 'A suivre'
-          : businessBalance?.label === 'WEAK'
-            ? 'Fragile'
-            : null;
-
   return (
     <OrbiSurface style={styles.priceConfidenceCard}>
       <View style={styles.priceConfidenceTop}>
         <View style={styles.priceConfidenceCopy}>
-          <Text style={styles.priceConfidenceLabel}>Prix verrouille</Text>
+          <Text style={styles.priceConfidenceLabel}>Prix estime</Text>
           <Text style={styles.priceConfidenceFare}>
             {formatRiderMoneyAmount(option.fare)}
           </Text>
@@ -232,94 +175,17 @@ function PriceConfidenceCard({
           </Text>
         </View>
       </View>
-
-      <View style={styles.priceMetricGrid}>
-        <View style={styles.priceMetricTile}>
-          <Text style={styles.priceMetricLabel}>Trajet</Text>
-          <Text style={styles.priceMetricValue}>
-            {distanceKm} km · {durationMinutes} min
-          </Text>
-        </View>
-        <View style={styles.priceMetricTile}>
-          <Text style={styles.priceMetricLabel}>Fenetre</Text>
-          <Text style={styles.priceMetricValue}>
-            {priceWindow
-              ? `${formatRiderMoneyAmount(priceWindow.min)} - ${formatRiderMoneyAmount(priceWindow.max)}`
-              : 'Prix fixe'}
-          </Text>
-        </View>
-      </View>
-
-      {transparentRows.length > 0 ? (
-        <View style={styles.priceBreakdownBox}>
-          <View style={styles.priceBreakdownHeader}>
-            <Text style={styles.priceBreakdownTitle}>Prix transparent</Text>
-            {driverPayoutLabel ? (
-              <Text style={styles.priceBreakdownPayout}>
-                Chauffeur {driverPayoutLabel}
-              </Text>
-            ) : null}
-          </View>
-          {transparentRows.map((row) => (
-            <View key={row.label} style={styles.priceBreakdownRow}>
-              <Text style={styles.priceBreakdownLabel}>{row.label}</Text>
-              <Text style={styles.priceBreakdownValue}>{row.value}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      {businessBalance ? (
-        <View style={styles.priceBusinessBox}>
-          <View style={styles.priceBusinessTop}>
-            <Text style={styles.priceBusinessTitle}>Equilibre course</Text>
-            <Text style={styles.priceBusinessScore}>
-              {businessBalanceLabel} · {businessBalance.score}/100
-            </Text>
-          </View>
-          <View style={styles.priceBusinessGrid}>
-            <View style={styles.priceBusinessTile}>
-              <Text style={styles.priceBusinessMetricLabel}>Passager</Text>
-              <Text style={styles.priceBusinessMetricValue}>
-                {businessBalance.riderAffordabilityScore}
-              </Text>
-            </View>
-            <View style={styles.priceBusinessTile}>
-              <Text style={styles.priceBusinessMetricLabel}>Chauffeur</Text>
-              <Text style={styles.priceBusinessMetricValue}>
-                {businessBalance.driverValueScore}
-              </Text>
-            </View>
-            <View style={styles.priceBusinessTile}>
-              <Text style={styles.priceBusinessMetricLabel}>Orbi</Text>
-              <Text style={styles.priceBusinessMetricValue}>
-                {businessBalance.platformContributionScore}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.priceBusinessHint} numberOfLines={2}>
-            {businessBalance.actionHint}
-          </Text>
-        </View>
-      ) : null}
-
       <View style={styles.priceSignalRow}>
-        <Text style={styles.priceSignalText} numberOfLines={2}>
-          {pricePromise}
+        <Text style={styles.priceSignalText} numberOfLines={1}>
+          {distanceKm} km · {durationMinutes} min
         </Text>
         <Text style={styles.priceSignalPill} numberOfLines={1}>
-          {demandLabel}
+          {option.etaMinutes} min
         </Text>
       </View>
-
-      {roundingAmount > 0 ? (
-        <Text style={styles.priceRoundingText}>
-          Arrondi CFA +{roundingAmount} XOF
-          {roundingStep ? ` · palier ${roundingStep}` : ''}
-        </Text>
-      ) : null}
     </OrbiSurface>
   );
+
 }
 
 function BackGlyph() {
@@ -1578,12 +1444,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Route summary card
   routeSummaryCard: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(0,194,168,0.24)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    ...theme.shadows.card,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
   },
   routeSummaryRow: {
     flexDirection: 'row',
@@ -1636,10 +1501,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,194,168,0.08)',
+    borderRadius: 8,
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: 'rgba(0,194,168,0.18)',
+    borderColor: theme.colors.border,
     paddingHorizontal: 11,
     paddingVertical: 7,
     marginTop: 6,
@@ -1719,13 +1584,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Map preview
   mapPreviewWrap: {
-    height: 150,
-    borderRadius: 16,
+    height: 220,
+    borderRadius: 10,
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 1,
-    borderColor: 'rgba(0, 201, 167, 0.12)',
-    ...theme.shadows.card,
+    borderColor: theme.colors.border,
   },
   mapPreview: { width: '100%', height: '100%' },
   mapBadge: {
@@ -1773,20 +1637,19 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   vehicleScroll: { gap: 10, paddingHorizontal: 2 },
   vehicleCard: {
-    width: 112,
+    width: 118,
     backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    borderRadius: 10,
     borderWidth: 1.5,
     borderColor: theme.colors.border,
     padding: 12,
     alignItems: 'center',
     gap: 6,
-    ...theme.shadows.card,
   },
   vehicleAvatar: {
     width: 64,
     height: 64,
-    borderRadius: 14,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -1826,9 +1689,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: 'Inter_400Regular',
   },
   priceConfidenceCard: {
-    padding: 12,
+    padding: 14,
     gap: 10,
-    borderColor: 'rgba(0,194,168,0.22)',
+    borderColor: theme.colors.border,
   },
   priceConfidenceTop: {
     flexDirection: 'row',
@@ -1856,10 +1719,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     marginTop: 1,
   },
   priceConfidenceBadge: {
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,194,168,0.10)',
+    borderRadius: 8,
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: 'rgba(0,194,168,0.22)',
+    borderColor: theme.colors.border,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
@@ -1867,7 +1730,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: theme.colors.text,
   },
   priceMetricGrid: {
     flexDirection: 'row',
@@ -2027,7 +1890,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   priceSignalPill: {
     maxWidth: 112,
-    borderRadius: 999,
+    borderRadius: 8,
     backgroundColor: theme.colors.text,
     color: theme.colors.textInverse,
     overflow: 'hidden',
@@ -2066,10 +1929,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#00C9A7',
+    backgroundColor: theme.colors.text,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00C9A7',
+    shadowColor: theme.colors.text,
     shadowOpacity: 0.55,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 6 },
@@ -2091,8 +1954,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: -4 },
     elevation: 12,
   },

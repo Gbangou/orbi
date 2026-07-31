@@ -1486,7 +1486,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255, 59, 48, 0.07)',
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
     borderColor: theme.colors.danger,
   },
@@ -1729,7 +1729,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.success,
   },
   badgeDanger: {
-    backgroundColor: 'rgba(255, 59, 48, 0.08)',
+    backgroundColor: theme.colors.backgroundAlt,
     color: theme.colors.danger,
   },
   badgePending: {

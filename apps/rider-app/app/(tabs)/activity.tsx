@@ -913,7 +913,7 @@ export default function ActivityScreen() {
 
   function getStatusBg(status: string) {
     if (status === 'MATCHED') return 'rgba(0,122,255,0.10)';
-    if (status === 'DRIVER_ARRIVING') return 'rgba(255,149,0,0.10)';
+    if (status === 'DRIVER_ARRIVING') return theme.colors.backgroundAlt;
     if (status === 'IN_PROGRESS') return 'rgba(0,201,167,0.10)';
     return 'rgba(0,122,255,0.10)';
   }
@@ -1605,8 +1605,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: 'rgba(0,201,167,0.07)',
   },
   boardingCheckItemWarn: {
-    borderColor: 'rgba(255,149,0,0.28)',
-    backgroundColor: 'rgba(255,149,0,0.08)',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
   },
   boardingCheckLabel: {
     fontSize: 10,
@@ -1873,9 +1873,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: 'rgba(255,149,0,0.06)',
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: 'rgba(255,149,0,0.22)',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     padding: 12,
   },

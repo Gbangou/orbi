@@ -243,7 +243,7 @@ const ServiceRow = memo(function ServiceRow({
           isMoto ? styles.serviceRowPrimary : styles.serviceRowWarm,
         ]}
       >
-        <View style={[styles.serviceIcon, { backgroundColor: isMoto ? theme.colors.accentLight : 'rgba(255, 149, 0, 0.10)' }]}>
+        <View style={[styles.serviceIcon, { backgroundColor: theme.colors.backgroundAlt }]}>
           <ServiceVehicleIcon tier={option.tier} />
         </View>
         <View style={styles.serviceInfo}>
@@ -655,14 +655,6 @@ export default function RiderHomeScreen() {
 
           {/* Right: surge badge + nearby + realtime dot */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, justifyContent: 'flex-end' }}>
-            {/* Surge badge — visible quand demande élevée */}
-            {options.some(o => o.surgeActive) ? (
-              <View style={[styles.surgeBadge, { flexShrink: 1 }]}>
-                <Text style={styles.surgeBadgeText} numberOfLines={1} ellipsizeMode="tail">
-                  Forte demande: {options.find(o => o.surgeActive)?.surgeLabel}
-                </Text>
-              </View>
-            ) : null}
             {!activeTrip ? (
               <Pressable
                 style={[styles.nearbyBadge, { flexShrink: 1 }]}
@@ -738,7 +730,7 @@ export default function RiderHomeScreen() {
             showsVerticalScrollIndicator={false}
             nestedScrollEnabled
           >
-            {/* Search prompt with fare estimator */}
+            {/* Search prompt */}
             <Pressable
               style={({ pressed }) => [
                 styles.searchBar,
@@ -753,7 +745,6 @@ export default function RiderHomeScreen() {
                 <View style={styles.searchDotCore} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.searchKicker}>Course maintenant</Text>
                 <Text style={styles.searchPlaceholder}>{t('home.whereToGo')}</Text>
                 {options.length > 0 ? (
                   <Text style={styles.fareHint}>
@@ -769,16 +760,7 @@ export default function RiderHomeScreen() {
             {/* Quick services */}
             {options.length > 0 ? (
               <View style={styles.servicesBlock}>
-                <View style={styles.servicesHeader}>
-                  <Text style={styles.servicesTitle}>Choisir une option</Text>
-                  <Text style={styles.servicesHint}>
-                    {nearbyDriverCounts.car > 0
-                      ? `${nearbyDriverCounts.car} voiture${nearbyDriverCounts.car > 1 ? 's' : ''}`
-                      : nearbyDriverCounts.motorcycle > 0
-                        ? `${nearbyDriverCounts.motorcycle} moto${nearbyDriverCounts.motorcycle > 1 ? 's' : ''}`
-                        : 'Recherche'}
-                  </Text>
-                </View>
+                <Text style={styles.servicesTitle}>Suggestions</Text>
                 <View style={styles.services}>
                   {options.slice(0, 3).map((opt) => (
                   <ServiceRow
@@ -899,20 +881,20 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingBottom: 32,
-    paddingTop: 12,
+    paddingTop: 10,
     ...theme.shadows.sheet,
   },
   handle: {
     width: 44,
     height: 5,
     borderRadius: 999,
-    backgroundColor: '#D3DEE2',
+    backgroundColor: theme.colors.border,
     alignSelf: 'center',
     marginBottom: 16,
   },
@@ -927,13 +909,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#07111F',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: theme.colors.border,
     marginBottom: 12,
     ...theme.shadows.card,
   },
@@ -942,65 +924,43 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     opacity: 0.96,
   },
   searchDot: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 194, 168, 0.14)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0, 194, 168, 0.34)',
+    borderColor: theme.colors.border,
   },
   searchDotCore: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: theme.colors.teal,
-  },
-  searchKicker: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.64)',
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    textTransform: 'uppercase',
-    marginBottom: 2,
+    backgroundColor: theme.colors.text,
   },
   searchPlaceholder: {
     flex: 1,
-    fontSize: 17,
-    color: '#FFFFFF',
+    fontSize: 16,
+    color: theme.colors.text,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
   },
   searchIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: theme.colors.teal,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.colors.text,
     alignItems: 'center',
     justifyContent: 'center',
   },
   // Service rows
-  servicesBlock: {
-    gap: 8,
-  },
-  servicesHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 2,
-  },
+  servicesBlock: { gap: 8 },
   servicesTitle: {
     fontSize: 13,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     color: theme.colors.text,
-  },
-  servicesHint: {
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
   },
   services: {
     gap: 2,
@@ -1014,16 +974,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 12,
     paddingVertical: 11,
     paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 8,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
+    borderColor: theme.colors.border,
   },
   serviceRowPrimary: {
-    borderColor: 'rgba(0, 194, 168, 0.18)',
+    borderColor: theme.colors.border,
   },
   serviceRowWarm: {
-    borderColor: 'rgba(255, 149, 0, 0.16)',
+    borderColor: theme.colors.border,
   },
   serviceRowPressed: {
     opacity: 0.82,
@@ -1032,7 +992,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   serviceIcon: {
     width: 42,
     height: 42,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1072,29 +1032,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
 
   // ── Surge badge ───────────────────────────────────────────────────────────
-  surgeBadge: {
-    backgroundColor: 'rgba(242, 169, 0, 0.92)',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  surgeBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    color: '#FFFFFF',
-  },
   serviceSurge: {
     fontSize: 10,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.amber,
+    color: theme.colors.textMuted,
   },
 
   // ── Fare estimator hint ────────────────────────────────────────────────────
   fareHint: {
     fontSize: 11,
-    color: theme.colors.teal,
+    color: theme.colors.textMuted,
     fontFamily: 'Inter_600SemiBold',
     fontWeight: '600',
     marginTop: 2,
@@ -1123,7 +1071,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: '#FF9500',
+    backgroundColor: theme.colors.text,
   },
   offlineText: {
     fontSize: 12,
@@ -1197,10 +1145,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 54,
     height: 46,
     borderRadius: 14,
-    backgroundColor: '#E53935',
+    backgroundColor: theme.colors.sos,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#E53935',
+    shadowColor: theme.colors.sos,
     shadowOpacity: 0.5,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },

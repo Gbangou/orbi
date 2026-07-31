@@ -872,7 +872,7 @@ describe('rider smoke flows', () => {
     expectNoText(renderer, 'Recherche indisponible. Verifiez la connexion.');
   });
 
-  it('shows transparent upfront fare details before booking confirmation', async () => {
+  it('shows a compact upfront fare summary before booking confirmation', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
     mockedFetchRideOptionsPreview.mockResolvedValue({
       route: {
@@ -887,15 +887,10 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<BookingScreen />);
     await flushMicrotasks();
 
-    expectText(renderer, 'Prix transparent');
-    expectText(renderer, 'Prise en charge');
-    expectText(renderer, 'Distance');
-    expectText(renderer, 'Duree');
-    expectText(renderer, 'Service');
-    expectText(renderer, 'Equilibre course');
-    expectText(renderer, 'Passager');
-    expectText(renderer, 'Chauffeur');
-    expectText(renderer, 'Orbi');
+    expectText(renderer, 'Prix estime');
+    expectText(renderer, 'Moto');
+    expectNoText(renderer, 'Prix transparent');
+    expectNoText(renderer, 'Equilibre course');
   });
 
   it('uses the selected Mobile Money phone number when creating checkout', async () => {

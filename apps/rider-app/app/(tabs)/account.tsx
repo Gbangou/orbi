@@ -1398,9 +1398,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: 'rgba(255,59,48,0.08)',
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: 'rgba(255,59,48,0.22)',
+    borderColor: theme.colors.border,
   },
   signOutBtnLabel: {
     fontSize: 12,
@@ -1526,8 +1526,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderColor: 'rgba(0,201,167,0.28)',
   },
   statusPillPending: {
-    backgroundColor: 'rgba(255,149,0,0.08)',
-    borderColor: 'rgba(255,149,0,0.28)',
+    backgroundColor: theme.colors.backgroundAlt,
+    borderColor: theme.colors.border,
   },
   statusPillText: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   statusPillTextReady: { color: theme.colors.teal },
@@ -1972,7 +1972,7 @@ const makeWalletStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   lockedText: {
     fontSize: 12,
-    color: '#FF9500',
+    color: theme.colors.text,
     fontFamily: 'Inter_500Medium',
   },
 
@@ -2050,7 +2050,7 @@ const makeWalletStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: '#FF3B30',
+    color: theme.colors.text,
     fontFamily: 'Inter_400Regular',
   },
   topUpActions: { flexDirection: 'row', gap: 10 },

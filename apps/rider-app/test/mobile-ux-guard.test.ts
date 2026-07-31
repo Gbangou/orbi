@@ -40,13 +40,14 @@ describe('rider mobile UX guards', () => {
     expect(source).not.toContain("error instanceof Error ? error.message : 'Rechargement échoué'");
   });
 
-  it('keeps booking price confidence visible and rounded for the rider', () => {
+  it('keeps booking price confidence compact for the rider', () => {
     const source = readAppFile('app/book.tsx');
 
     expect(source).toContain('function PriceConfidenceCard');
-    expect(source).toContain('Prix verrouille');
-    expect(source).toContain('Arrondi CFA');
-    expect(source).toContain('priceWindow.min');
+    expect(source).toContain('Prix estime');
+    expect(source).toContain('durationMinutes');
+    expect(source).not.toContain('Equilibre course');
+    expect(source).not.toContain('Prix transparent');
   });
 
   it('keeps crash debug details gated to an explicit field debug flag', () => {

@@ -164,7 +164,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderColor: theme.colors.border, padding: 8, alignItems: 'center', gap: 4,
     shadowColor: theme.shadows.card.shadowColor, shadowOpacity: 0.09, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 7,
   },
-  surgeBadge: { alignSelf: 'center', backgroundColor: 'rgba(255,149,0,0.90)', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 },
+  surgeBadge: { alignSelf: 'center', backgroundColor: '#000000', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 },
   surgeText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
   vehicleAvatar: {
     width: 96, height: 66, borderRadius: 14, alignItems: 'center', justifyContent: 'center',

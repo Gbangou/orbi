@@ -479,7 +479,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
     overflow: 'hidden',
   },
-  phoneInputError: { borderColor: '#FF3B30' },
+  phoneInputError: { borderColor: '#000000' },
   phonePrefix: {
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -503,7 +503,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: '#FF3B30',
+    color: '#000000',
     fontFamily: 'Inter_400Regular',
     marginTop: -2,
   },

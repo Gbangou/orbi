@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     gap: 12,
   },
-  icon: { fontSize: 40, color: '#FF9500' },
+  icon: { fontSize: 40, color: '#000000' },
   title: {
     fontSize: 17,
     fontWeight: '700',
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   debugText: {
-    color: '#FF9500',
+    color: '#000000',
     fontSize: 11,
     fontFamily: 'monospace',
   },

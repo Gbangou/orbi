@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   },
   dot: {
     fontSize: 8,
-    color: '#FF9500',
+    color: '#000000',
   },
   label: {
     fontSize: 12,

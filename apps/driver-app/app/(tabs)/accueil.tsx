@@ -192,9 +192,7 @@ function TripRequestModal({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isMoto = offer.category === 'motorcycle';
-  const isUrgent = secondsLeft <= 7;
-  const isWarn = secondsLeft <= 14;
-  const accent = isUrgent ? '#FF3B30' : isWarn ? '#FF9500' : '#00C9A7';
+  const accent = theme.colors.text;
   const pickupDistanceLabel = formatDriverOfferDistance(
     offer.pickupDistanceKm,
     formatDriverOfferMinutes(offer.etaToPickupMinutes, 'Pickup indisponible'),
@@ -223,8 +221,8 @@ function TripRequestModal({
               <VehicleIllustration tier={isMoto ? 'moto-standard' : 'car-standard'} width={66} height={48} />
             </View>
             <View style={modal.headerCopy}>
-              <View style={[modal.categoryTag, { backgroundColor: accent + '20', borderColor: accent + '50' }]}>
-                <Text style={[modal.categoryTagText, { color: accent }]}>
+              <View style={modal.categoryTag}>
+                <Text style={modal.categoryTagText}>
                   {isMoto ? 'MOTO' : 'CONFORT AUTO'}
                 </Text>
               </View>
@@ -233,9 +231,9 @@ function TripRequestModal({
                 {pickupDistanceLabel} pour rejoindre le client
               </Text>
             </View>
-            <View style={[modal.countdownCircle, { borderColor: accent }]}>
-              <Text style={[modal.countdownNum, { color: accent }]}>{secondsLeft}</Text>
-              <Text style={[modal.countdownUnit, { color: accent + 'AA' }]}>s</Text>
+            <View style={modal.countdownCircle}>
+              <Text style={modal.countdownNum}>{secondsLeft}</Text>
+              <Text style={modal.countdownUnit}>s</Text>
             </View>
           </View>
 
@@ -245,12 +243,12 @@ function TripRequestModal({
           {/* Route */}
           <View style={modal.routeCard}>
             <View style={modal.routeRow}>
-              <View style={[modal.routeDot, { backgroundColor: '#00C9A7' }]} />
+              <View style={[modal.routeDot, { backgroundColor: theme.colors.teal }]} />
               <Text style={modal.routeLabel} numberOfLines={2}>{offer.pickup}</Text>
             </View>
             <View style={modal.routeStem} />
             <View style={modal.routeRow}>
-              <View style={[modal.routeDot, { backgroundColor: '#FF3B30' }]} />
+              <View style={[modal.routeDot, { backgroundColor: theme.colors.text }]} />
               <Text style={modal.routeLabel} numberOfLines={2}>{offer.destination}</Text>
             </View>
           </View>
@@ -278,14 +276,14 @@ function TripRequestModal({
           </View>
 
           {/* Fare */}
-          <View style={[modal.fareBlock, { backgroundColor: accent + '12', borderColor: accent + '40' }]}>
+          <View style={modal.fareBlock}>
             <View>
               <Text style={modal.fareLabel}>
                 {moneyDisplay.isNet ? 'Votre gain net estime' : 'Prix client'}
               </Text>
               <Text style={modal.fareSub}>{moneyDisplay.helper}</Text>
             </View>
-            <Text style={[modal.fareAmt, { color: accent }]}>
+            <Text style={modal.fareAmt}>
               {moneyDisplay.amountLabel}
             </Text>
           </View>
@@ -314,7 +312,6 @@ function TripRequestModal({
               }}
               style={({ pressed }) => [
                 modal.acceptBtn,
-                { backgroundColor: accent },
                 (pressed || accepting) && { opacity: 0.86, transform: [{ scale: 0.985 }] },
               ]}
             >
@@ -889,19 +886,21 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Acceptance rate badge
   acceptanceBadge: {
-    backgroundColor: 'rgba(0,201,167,0.12)',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  acceptanceBadgeLow: { backgroundColor: 'rgba(255,149,0,0.12)' },
+  acceptanceBadgeLow: { backgroundColor: theme.colors.surface },
   acceptanceLabel: {
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: theme.colors.text,
   },
-  acceptanceLabelLow: { color: '#FF9500' },
+  acceptanceLabelLow: { color: theme.colors.text },
 
   // Navigation button
   navBtn: {
@@ -1012,9 +1011,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0,201,167,0.10)',
+    backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
-    borderColor: 'rgba(0,201,167,0.22)',
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -1100,20 +1099,20 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(4,12,10,0.86)',
+    backgroundColor: 'rgba(0,0,0,0.42)',
     justifyContent: 'flex-end',
     paddingBottom: 18,
     paddingHorizontal: 12,
   },
   card: {
-    backgroundColor: '#091814',
-    borderRadius: 24,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 22,
     overflow: 'hidden',
     borderWidth: 1,
   },
   progressTrack: {
     height: 3,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: theme.colors.border,
   },
   progressFill: {
     height: 3,
@@ -1137,8 +1136,10 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   categoryTag: {
     alignSelf: 'flex-start',
-    borderRadius: 8,
+    borderRadius: 999,
     borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundAlt,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
@@ -1146,23 +1147,25 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0,
+    color: theme.colors.text,
   },
   offerTitle: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#F2FFF8',
+    color: theme.colors.text,
     letterSpacing: 0,
   },
   offerSub: {
     fontSize: 12,
-    color: '#8DAA9E',
+    color: theme.colors.textMuted,
     fontWeight: '600',
   },
   countdownCircle: {
     width: 62,
     height: 62,
     borderRadius: 31,
-    borderWidth: 2.5,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -1172,11 +1175,13 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     lineHeight: 26,
+    color: theme.colors.text,
   },
   countdownUnit: {
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
+    color: theme.colors.textMuted,
   },
   riderRow: {
     flexDirection: 'row',
@@ -1187,11 +1192,11 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   routeCard: {
     marginHorizontal: 16,
-    backgroundColor: 'rgba(255,255,255,0.055)',
-    borderRadius: 14,
+    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 10,
     padding: 13,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.075)',
+    borderColor: theme.colors.border,
     marginBottom: 12,
   },
   routeRow: {
@@ -1209,23 +1214,23 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   routeLabel: {
     flex: 1,
     fontSize: 13,
-    color: '#C9E0D4',
+    color: theme.colors.text,
     lineHeight: 19,
   },
   routeStem: {
     width: 1,
     height: 10,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: theme.colors.border,
     marginLeft: 4.5,
     marginVertical: 3,
   },
   statsRow: {
     flexDirection: 'row',
     marginHorizontal: 16,
-    backgroundColor: 'rgba(255,255,255,0.055)',
-    borderRadius: 12,
+    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.075)',
+    borderColor: theme.colors.border,
     paddingVertical: 11,
     marginBottom: 12,
   },
@@ -1233,22 +1238,23 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   statVal: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#F0FFF8',
+    color: theme.colors.text,
   },
   statKey: {
     fontSize: 10.5,
-    color: '#4E7B69',
+    color: theme.colors.textMuted,
     textAlign: 'center',
   },
   statSep: {
     width: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: theme.colors.border,
     marginVertical: 4,
   },
   fareBlock: {
     marginHorizontal: 16,
-    borderRadius: 16,
+    borderRadius: 10,
     borderWidth: 1,
+    borderColor: theme.colors.border,
     paddingVertical: 13,
     paddingHorizontal: 14,
     flexDirection: 'row',
@@ -1259,19 +1265,20 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   fareLabel: {
     fontSize: 11,
-    color: '#9CB7AB',
+    color: theme.colors.textMuted,
     fontWeight: '700',
     letterSpacing: 0,
   },
   fareSub: {
     fontSize: 10.5,
-    color: '#577767',
+    color: theme.colors.textMuted,
     marginTop: 2,
   },
   fareAmt: {
     fontSize: 23,
     fontWeight: '800',
     flexShrink: 0,
+    color: theme.colors.text,
   },
   btnRow: {
     flexDirection: 'row',
@@ -1281,24 +1288,25 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   declineBtn: {
     flex: 1,
-    backgroundColor: 'rgba(255,59,48,0.12)',
-    borderRadius: 14,
+    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 10,
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,59,48,0.30)',
+    borderColor: theme.colors.border,
   },
   declineTxt: {
-    color: '#FF3B30',
+    color: theme.colors.text,
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0,
   },
   acceptBtn: {
     flex: 2,
-    borderRadius: 14,
+    borderRadius: 10,
     paddingVertical: 16,
     alignItems: 'center',
+    backgroundColor: theme.colors.text,
   },
   acceptTxt: {
     color: '#FFFFFF',

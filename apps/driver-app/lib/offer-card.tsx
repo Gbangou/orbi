@@ -343,7 +343,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   metric: { flex: 1, alignItems: "center", gap: 2 },
   metricVal: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
-  metricValNet: { color: theme.colors.amber },
+  metricValNet: { color: theme.colors.text },
   metricLbl: {
     fontSize: 10,
     color: theme.colors.textMuted,
@@ -352,7 +352,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   sep: { width: 1, backgroundColor: theme.colors.border, alignSelf: "stretch" },
-  expiry: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: theme.colors.amber },
+  expiry: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: theme.colors.textMuted },
   decisionPanel: {
     borderRadius: 12,
     borderWidth: 1,
@@ -361,16 +361,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 3,
   },
   decisionPanelTeal: {
-    backgroundColor: "rgba(0,201,167,0.08)",
-    borderColor: "rgba(0,201,167,0.22)",
+    backgroundColor: theme.colors.backgroundAlt,
+    borderColor: theme.colors.border,
   },
   decisionPanelAmber: {
-    backgroundColor: "rgba(255,149,0,0.10)",
-    borderColor: "rgba(255,149,0,0.28)",
+    backgroundColor: theme.colors.backgroundAlt,
+    borderColor: theme.colors.border,
   },
   decisionPanelRose: {
-    backgroundColor: "rgba(255,59,48,0.08)",
-    borderColor: "rgba(255,59,48,0.22)",
+    backgroundColor: theme.colors.backgroundAlt,
+    borderColor: theme.colors.border,
   },
   decisionTitle: {
     fontSize: 13,
