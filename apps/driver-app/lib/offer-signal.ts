@@ -191,36 +191,32 @@ export function buildDriverOfferDetailLines(offer: DriverOffer) {
   const reservationWindowSeconds = offer.reservationWindowSeconds;
   const reservationWindow = toFiniteOfferNumber(reservationWindowSeconds);
   const lines = [
-    `${offer.category === 'motorcycle' ? 'Moto' : 'Voiture'} - trajet ${formatOfferNumber(offer.distanceKm)} km - priorite dispatch ${formatOfferNumber(offer.dispatchScore, '-')}`,
+    `${offer.category === 'motorcycle' ? 'Moto' : 'Voiture'} - trajet ${formatOfferNumber(offer.distanceKm)} km`,
     pickupDistanceKm !== null
       ? `Pickup a ${pickupDistanceKm} km`
       : null,
     offer.pickupDistanceSource
-      ? `Source pickup: ${offer.pickupDistanceSource === 'DRIVER_AND_PICKUP_COORDINATES' ? 'coordonnees reelles' : 'fallback dispatch'}`
+      ? `Distance depart: ${offer.pickupDistanceSource === 'DRIVER_AND_PICKUP_COORDINATES' ? 'confirmee' : 'estimee'}`
       : null,
     serviceRadiusKm !== null
-      ? `Rayon actif: ${serviceRadiusKm} km`
+      ? `Zone de service: ${serviceRadiusKm} km`
       : null,
     offer.matchedTier ? `Vehicule retenu: ${offer.matchedTier}` : null,
-    offer.dispatchContextSummary
-      ? `Contexte dispatch: ${offer.dispatchContextSummary}`
-      : null,
+    null,
     offer.offerConfidenceLabel || offerConfidenceScore !== null
-      ? `Confiance offre: ${offer.offerConfidenceLabel ?? 'ND'}${offerConfidenceScore !== null ? ` (${offerConfidenceScore}/100)` : ''}`
+      ? `Qualite offre: ${resolveOfferPriorityLabel(offer.offerConfidenceLabel)}${offerConfidenceScore !== null ? ` (${offerConfidenceScore}/100)` : ''}`
       : null,
     offer.businessPriorityLabel || offer.businessPriorityScore
-      ? `Priorite economique: ${offer.businessPriorityLabel ?? 'ND'}${offer.businessPriorityScore ? ` (${offer.businessPriorityScore}/100)` : ''}`
+      ? `Rentabilite: ${resolveBusinessPriorityLabel(offer.businessPriorityLabel)}${offer.businessPriorityScore ? ` (${offer.businessPriorityScore}/100)` : ''}`
       : null,
-    offer.businessPrioritySummary ?? null,
-    offer.fairnessSummary
-      ? `Fairness marketplace: ${offer.fairnessSummary}`
-      : fairnessScore !== null
-        ? `Fairness marketplace: ${fairnessScore}/100`
+    null,
+    fairnessScore !== null
+        ? `Equilibre course: ${fairnessScore}/100`
         : null,
     reservationWindow !== null && reservationWindow >= 0
       ? `Fenetre d acceptation: ${reservationWindow}s`
       : null,
-    offer.dispatchLearningSummary ?? null,
+    null,
   ];
 
   return lines.filter((line): line is string => Boolean(line));
@@ -276,7 +272,7 @@ export function buildDriverOfferDecisionSummary(offer: DriverOffer): {
     tone === 'amber'
       ? `${share}. Pickup ou distance a surveiller avant acceptation.`
       : tone === 'rose'
-        ? `${share}. Marge ops fragile, acceptez seulement si le trajet est fluide.`
+        ? `${share}. Acceptez seulement si le trajet est fluide.`
         : `${share}. Offre lisible avec gain et effort connus.`;
 
   return {
@@ -310,13 +306,13 @@ export function buildDriverOfferConfidenceExplainer(offer: DriverOffer): {
 
   const explanations: Record<string, string> = {
     PRIORITY:
-      'Votre fiabilité récente est excellente. Le dispatch vous a sélectionné en priorité pour ce trajet.',
+      'Votre fiabilite recente est excellente. Cette course vous est proposee en priorite.',
     HIGH:
       'Votre comportement recent est positif. Vous etes le meilleur candidat disponible pour cette course.',
     MEDIUM:
-      'Quelques expirations recentes detectees. Accepter renforce votre score pour les prochaines offres.',
+      'Quelques expirations recentes detectees. Accepter aide a garder un profil solide.',
     LOW:
-      'Signal dispatch faible. Finaliser ce trajet redressera votre profil pour les prochaines assignations.',
+      'Signal faible. Finaliser ce trajet peut ameliorer vos prochaines propositions.',
   };
 
   return {
@@ -325,7 +321,7 @@ export function buildDriverOfferConfidenceExplainer(offer: DriverOffer): {
     barPercent: Math.max(5, Math.min(100, score)),
     explanation:
       explanations[offer.offerConfidenceLabel] ??
-      'Le dispatch a selectionne cette offre pour votre profil.',
+      'Cette offre correspond a votre profil.',
     windowLabel,
     tone: resolveOfferPriorityTone(offer.offerConfidenceLabel),
   };
@@ -334,14 +330,14 @@ export function buildDriverOfferConfidenceExplainer(offer: DriverOffer): {
 export function buildDriverOfferNote(offer: DriverOffer) {
   if (offer.pickupCodeRequired) {
     return {
-      text: 'Verification depart renforcee par les operations.',
+      text: 'Code depart requis avant de commencer.',
       tone: 'amber' as const,
     };
   }
 
   if (offer.pickupDistanceSource) {
     return {
-      text: `Source dispatch: ${offer.pickupDistanceSource === 'DRIVER_AND_PICKUP_COORDINATES' ? 'coordonnees reelles' : 'fallback dispatch'}`,
+      text: `Distance depart ${offer.pickupDistanceSource === 'DRIVER_AND_PICKUP_COORDINATES' ? 'confirmee' : 'estimee'}.`,
       tone: 'sky' as const,
     };
   }

@@ -107,11 +107,11 @@ export const en = {
     schedule: 'Schedule a ride',
     minAdvance: 'At least 30 minutes in advance',
     maxAdvance: 'Maximum 7 days',
-    dispatchInfo: 'Orbi searches your driver 15 min before pickup',
+    dispatchInfo: 'Orbi searches for your driver 15 min before pickup',
     today: 'Today',
     tomorrow: 'Tomorrow',
     chooseDate: 'Choose date',
     chooseTime: 'Choose time',
-    cannotCancel: 'Cannot cancel less than 10 min before dispatch starts',
+    cannotCancel: 'Cannot cancel less than 10 min before driver search starts',
   },
 } as const;

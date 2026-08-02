@@ -17,7 +17,6 @@ import {
   canDriverMarkArrived,
   canDriverStartTrip,
   declineDriverOfferWithApi,
-  fetchDriverDispatchReadiness,
   fetchDriverOffers,
   fetchDriverProfile,
   fetchMyTrips,
@@ -25,7 +24,6 @@ import {
   reportTripIncidentWithApi,
   triggerTripSafetySosWithApi,
   withNetworkRetry,
-  type DriverDispatchReadinessResponse,
   type DriverFatigueStatus,
   type DriverOffer,
   type MyTripsResponse,
@@ -80,7 +78,6 @@ import { TripMapView } from "../../lib/trip-map-view";
 import { normalizeDriverProfileResponse } from "../../lib/driver-profile-normalizer";
 import { ApproachMapView } from "../../lib/approach-map-view";
 import { useLiveRefresh } from "../../lib/use-live-refresh";
-import { buildDriverDispatchReadinessNote } from "../../lib/driver-dispatch-readiness";
 import {
   formatDriverEarningsAmount,
   toFiniteEarningsNumber,
@@ -268,8 +265,6 @@ export default function OffersScreen() {
     useState<string>("PENDING");
   const [driverFatigue, setDriverFatigue] =
     useState<DriverFatigueStatus>(fallbackFatigue);
-  const [dispatchReadiness, setDispatchReadiness] =
-    useState<DriverDispatchReadinessResponse["readiness"] | null>(null);
   const [tripDetailStatus, setTripDetailStatus] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [completionFlash, setCompletionFlash] = useState<{
@@ -302,17 +297,6 @@ export default function OffersScreen() {
           withNetworkRetry(() => fetchMyTrips(authClient), { maxAttempts: 3, onRetry }),
           withNetworkRetry(() => fetchDriverProfile(authClient), { maxAttempts: 3, onRetry }),
         ]);
-      let dispatchReadinessResponse:
-        | DriverDispatchReadinessResponse
-        | null = null;
-      try {
-        dispatchReadinessResponse = await withNetworkRetry(
-          () => fetchDriverDispatchReadiness(authClient),
-          { maxAttempts: 1 },
-        );
-      } catch {
-        dispatchReadinessResponse = null;
-      }
       const normalizedProfile = normalizeDriverProfileResponse(profileResponse);
       setOffers(offersResponse);
       setHistory(historyResponse);
@@ -320,7 +304,6 @@ export default function OffersScreen() {
       setDriverProfileStatus(normalizedProfile.profile.status);
       setDriverVerificationStatus(normalizedProfile.profile.verificationStatus);
       setDriverFatigue(normalizedProfile.profile.fatigue);
-      setDispatchReadiness(dispatchReadinessResponse?.readiness ?? null);
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: offersResponse,
@@ -356,7 +339,7 @@ export default function OffersScreen() {
       if (!silent) {
         setStatus(
           flow.canReceiveOffers && !flow.visibleOffers.length
-            ? buildDriverDispatchReadinessNote(dispatchReadinessResponse?.readiness ?? null)
+            ? "Vous êtes prêt. Nous vous prévenons dès qu'une course arrive."
             : buildDriverDispatchStatusLabel({ flow }),
         );
       }
@@ -380,7 +363,6 @@ export default function OffersScreen() {
       setDriverProfileId(null);
       setDriverProfileStatus("OFFLINE");
       setDriverVerificationStatus("PENDING");
-      setDispatchReadiness(null);
     } finally {
       if (silent) {
         setIsRealtimeSyncing(false);
@@ -946,11 +928,8 @@ export default function OffersScreen() {
         const cancellationMessage =
           response.trip.cancellationPolicy?.message ??
           "Course annulee. Vous repassez disponible.";
-        const supportTicketMessage = response.trip.cancellationPolicy?.supportTicketId
-          ? ` Dossier support ${response.trip.cancellationPolicy.supportTicketId.slice(0, 8)} ouvert.`
-          : "";
         await loadDriverData();
-        setStatus(`${cancellationMessage}${supportTicketMessage}`);
+        setStatus(cancellationMessage);
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
           surface: "active-trip",
@@ -966,7 +945,7 @@ export default function OffersScreen() {
 
   async function handleReportIncident(tripId: string) {
     await runExclusiveDriverAction(async () => {
-      setStatus("Signalement de l incident a l equipe operations...");
+      setStatus("Signalement de l incident au support...");
 
       try {
         const { authClient } = await restoreDriverSession();
@@ -995,12 +974,12 @@ export default function OffersScreen() {
   async function handleTriggerSos(tripId: string) {
     safeHaptics.notify('error');
     await runExclusiveDriverAction(async () => {
-      setStatus("SOS chauffeur en cours: notification operations...");
+      setStatus("SOS chauffeur en cours: alerte envoyee...");
 
       try {
         const { authClient } = await restoreDriverSession();
         const response = await triggerTripSafetySosWithApi(authClient, tripId, {
-          details: "SOS declenche depuis le cockpit chauffeur.",
+          details: "SOS declenche depuis l'application chauffeur.",
         });
 
         setStatus(
@@ -1091,8 +1070,8 @@ export default function OffersScreen() {
           ) : startTripToggleState === "confirming" ? (
             <OrbiStatusBanner
               tone="sky"
-              title="Validation serveur"
-              message="Gardez le passager a bord. Orbi verrouille le depart et reprendra le statut si le reseau coupe."
+              title="Depart en confirmation"
+              message="Gardez le passager a bord. Le depart sera confirme automatiquement si le reseau ralentit."
             />
           ) : null}
           <FlowActionButton
@@ -1259,7 +1238,7 @@ export default function OffersScreen() {
       >
         {/* ── Completion flash ── */}
         {completionFlash ? (
-          <OrbiSurface tone="teal" style={styles.completionCard} elevated>
+          <OrbiSurface tone="teal" style={styles.completionCard}>
             <View style={styles.completionCheckWrap}>
               <View style={styles.completionCheck} />
             </View>
@@ -1292,33 +1271,28 @@ export default function OffersScreen() {
           />
         ) : null}
 
-        {/* Shift readiness signal — accessible for tests */}
-        {shiftReadiness.description ? (
-          <Text style={styles.shiftNote}>{shiftReadiness.description}</Text>
-        ) : null}
-
         {/* ── Realtime notices ── */}
         {freshOfferIds.length > 0 ? (
           <TransitionNoticeCard
             label={freshOfferIds.length > 1 ? `${freshOfferIds.length} nouvelles offres` : "Nouvelle offre"}
-            message="Les nouvelles cartes restent surlignées quelques secondes."
+            message="Consultez les détails avant d'accepter."
             tone="sky"
           />
         ) : null}
         {recentlyExpiredCount > 0 ? (
           <TransitionNoticeCard
-            label={recentlyExpiredCount > 1 ? `${recentlyExpiredCount} offres ont expire` : "Une offre a expire"}
-            message="Les elements sortis du flux live ont ete retires pour garder la liste fiable."
+            label={recentlyExpiredCount > 1 ? `${recentlyExpiredCount} offres expirées` : "Offre expirée"}
+            message="Cette course n'est plus disponible."
             tone="rose"
           />
         ) : null}
         {activeTripTransitionLabel && !activeTrip ? (
-          <TransitionNoticeCard label="Transition live" message={activeTripTransitionLabel} tone="sky" />
+          <TransitionNoticeCard label="Mise à jour" message={activeTripTransitionLabel} tone="sky" />
         ) : null}
 
         {/* ── Active mission ── */}
         {activeTrip ? (
-          <OrbiSurface style={styles.missionCard} elevated>
+          <OrbiSurface style={styles.missionCard}>
             {/* Section label — accessible for tests */}
             <Text style={styles.missionSectionLabel}>Course active</Text>
 
@@ -1376,7 +1350,7 @@ export default function OffersScreen() {
             ) : (
               <OrbiStatusBanner
                 title="Carte en attente"
-                message="Le trajet s affichera des que les coordonnees pickup et destination sont confirmees."
+                message="La carte s'affichera dès que le trajet sera confirmé."
                 tone="amber"
               />
             )}
@@ -1397,21 +1371,7 @@ export default function OffersScreen() {
                 <View style={styles.missionMetric}>
                   <Text style={styles.missionMetricLabel}>Distance</Text>
                   <Text style={styles.missionMetricValue}>
-                    {driverRouteProgress?.distanceLabel ?? "En attente GPS"}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.missionMetricRow}>
-                <View style={styles.missionMetric}>
-                  <Text style={styles.missionMetricLabel}>GPS</Text>
-                  <Text style={styles.missionMetricValue}>
-                    {driverRouteProgress?.freshnessLabel ?? "Live actif"}
-                  </Text>
-                </View>
-                <View style={styles.missionMetric}>
-                  <Text style={styles.missionMetricLabel}>Prix client</Text>
-                  <Text style={styles.missionMetricValue}>
-                    {riderTrustSnapshot?.fareLabel ?? formatDriverEarningsAmount(activeTrip.amount)}
+                    {driverRouteProgress?.distanceLabel ?? "En attente"}
                   </Text>
                 </View>
               </View>
@@ -1532,7 +1492,7 @@ export default function OffersScreen() {
         ) : !activeTrip && flow.availabilityStatus !== "ONLINE" ? (
           <View style={styles.compactOfflineNotice}>
             <View style={styles.compactOfflineDot} />
-            <Text style={styles.compactOfflineText}>Hors ligne · activez le Cockpit pour recevoir des courses</Text>
+            <Text style={styles.compactOfflineText}>Hors ligne · passez en ligne pour recevoir des courses</Text>
           </View>
         ) : null}
 
@@ -1553,7 +1513,7 @@ export default function OffersScreen() {
 
         {/* ── Empty state ── */}
         {visibleOffers.length === 0 && !activeTrip ? (
-          <OrbiSurface style={styles.emptyState} elevated>
+          <OrbiSurface style={styles.emptyState}>
             <View style={styles.emptyHeader}>
               <View style={styles.emptyCopy}>
                 <View style={styles.emptySignal}>
@@ -1573,9 +1533,9 @@ export default function OffersScreen() {
                 </View>
                 <Text style={styles.emptyTitle}>Aucune offre active</Text>
                 <Text style={styles.emptyMeta} numberOfLines={2}>
-                  {flow.canReceiveOffers || dispatchReadiness
-                    ? buildDriverDispatchReadinessNote(dispatchReadiness)
-                    : "Passez en ligne depuis le Cockpit quand vous êtes prêt."}
+                  {flow.canReceiveOffers
+                    ? "Vous êtes disponible. Les courses apparaîtront ici."
+                    : "Passez en ligne depuis Accueil quand vous etes pret."}
                 </Text>
               </View>
               <View style={styles.emptyRadar}>
@@ -1594,7 +1554,7 @@ export default function OffersScreen() {
               </View>
               <View style={styles.emptyCheckItem}>
                 <Text style={styles.emptyCheckTitle}>Mission</Text>
-                <Text style={styles.emptyCheckMeta}>{flow.canReceiveOffers ? "Scan" : "Pause"}</Text>
+                <Text style={styles.emptyCheckMeta}>{flow.canReceiveOffers ? "Prêt" : "Pause"}</Text>
               </View>
             </View>
           </OrbiSurface>
@@ -1617,37 +1577,31 @@ export default function OffersScreen() {
 }
 
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
-  safe: { flex: 1 },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
   incomingBackdrop: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
     zIndex: 20,
-    elevation: 20,
   },
   incomingScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(2, 6, 23, 0.48)",
+    backgroundColor: "rgba(0, 0, 0, 0.52)",
   },
   incomingSheet: {
     margin: 12,
-    borderRadius: 18,
-    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
+    borderColor: '#E8E8E8',
     padding: 16,
     gap: 14,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.22,
-    shadowRadius: 24,
-    elevation: 18,
   },
   incomingGrabber: {
     alignSelf: "center",
-    width: 44,
+    width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: theme.colors.border,
+    backgroundColor: '#D8D8D8',
   },
   incomingHeader: {
     flexDirection: "row",
@@ -1657,8 +1611,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   incomingPulse: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(20, 184, 166, 0.14)",
+    borderRadius: 4,
+    backgroundColor: '#F3F3F3',
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1666,21 +1620,21 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
   },
   incomingTitleCol: { flex: 1, gap: 3 },
   incomingEyebrow: {
     fontSize: 11,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.teal,
+    color: '#111111',
     textTransform: "uppercase",
   },
   incomingTitle: {
     fontSize: 18,
     fontWeight: "800",
     fontFamily: "Raleway_800ExtraBold",
-    color: theme.colors.text,
+    color: '#111111',
   },
   incomingMoney: {
     alignItems: "flex-end",
@@ -1691,21 +1645,21 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textTransform: "uppercase",
   },
   incomingFare: {
     fontSize: 20,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.amber,
+    color: '#111111',
     textAlign: "right",
   },
   incomingRoute: {
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#F7F7F7',
     padding: 12,
     gap: 4,
   },
@@ -1713,14 +1667,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textTransform: "uppercase",
   },
   incomingRouteText: {
     fontSize: 14,
     fontWeight: "600",
     fontFamily: "Inter_600SemiBold",
-    color: theme.colors.text,
+    color: '#111111',
     lineHeight: 19,
   },
   incomingMetrics: {
@@ -1730,9 +1684,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   incomingMetric: {
     flex: 1,
     minHeight: 62,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
+    borderColor: '#E8E8E8',
     paddingHorizontal: 10,
     paddingVertical: 9,
     justifyContent: "center",
@@ -1742,12 +1696,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.text,
+    color: '#111111',
   },
   incomingMetricLabel: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
   },
   incomingActions: {
     flexDirection: "row",
@@ -1757,41 +1711,41 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   header: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: theme.colors.border,
+    borderBottomWidth: 1, borderBottomColor: '#E8E8E8',
   },
-  headerTitle: { fontSize: 22, fontWeight: "800", fontFamily: "Raleway_800ExtraBold", color: theme.colors.text },
+  headerTitle: { fontSize: 22, fontWeight: "900", fontFamily: "Raleway_800ExtraBold", color: '#111111' },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   onlineDot: { width: 9, height: 9, borderRadius: 5 },
-  headerRefreshBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.backgroundAlt, alignItems: "center", justifyContent: "center" },
+  headerRefreshBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F3F3', alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 110, gap: 10 },
   completionCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
     padding: 14,
   },
-  completionCheckWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.teal, alignItems: "center", justifyContent: "center" },
+  completionCheckWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#111111', alignItems: "center", justifyContent: "center" },
   completionCheck: { width: 12, height: 12, borderRadius: 6, backgroundColor: "#FFFFFF" },
   completionCopy: { flex: 1, gap: 2 },
-  completionTitle: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
-  completionFare: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular" },
-  completionNet: { fontSize: 13, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: theme.colors.teal },
-  completionPayment: { fontSize: 12, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.textSoft },
+  completionTitle: { fontSize: 15, fontWeight: "800", fontFamily: "Inter_700Bold", color: '#111111' },
+  completionFare: { fontSize: 13, color: '#525252', fontFamily: "Inter_400Regular" },
+  completionNet: { fontSize: 13, fontWeight: "700", fontFamily: "Inter_600SemiBold", color: '#111111' },
+  completionPayment: { fontSize: 12, fontWeight: "700", fontFamily: "Inter_700Bold", color: '#525252' },
   completionInstruction: {
     marginTop: 4,
     fontSize: 12,
     lineHeight: 17,
-    color: theme.colors.text,
+    color: '#111111',
     fontFamily: "Inter_600SemiBold",
   },
-  completionClose: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.colors.backgroundDim, alignItems: "center", justifyContent: "center" },
-  statusNotice: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular", paddingHorizontal: 2 },
+  completionClose: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F3F3F3', alignItems: "center", justifyContent: "center" },
+  statusNotice: { fontSize: 13, color: '#525252', fontFamily: "Inter_400Regular", paddingHorizontal: 2 },
   compactOfflineNotice: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderRadius: 999,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 8,
+    backgroundColor: '#F3F3F3',
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
+    borderColor: '#E8E8E8',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -1799,47 +1753,47 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: theme.colors.amber,
+    backgroundColor: '#111111',
   },
   compactOfflineText: {
     flex: 1,
     fontSize: 12,
     fontWeight: "700",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.textSoft,
+    color: '#525252',
   },
-  missionCard: { padding: 10, gap: 10, borderColor: theme.colors.border },
+  missionCard: { padding: 10, gap: 10, borderColor: '#E8E8E8', borderRadius: 8, backgroundColor: '#FFFFFF' },
   stageTracker: { paddingHorizontal: 2 },
   missionStatusRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   missionStatusDot: { width: 7, height: 7, borderRadius: 4 },
   missionStatusLabel: { fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold" },
-  missionTransition: { fontSize: 12, color: theme.colors.textMuted, fontFamily: "Inter_400Regular" },
-  missionRoute: { backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 12, paddingVertical: 2 },
+  missionTransition: { fontSize: 12, color: '#6B6B6B', fontFamily: "Inter_400Regular" },
+  missionRoute: { backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8', paddingHorizontal: 12, paddingVertical: 2 },
   missionRouteRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 },
   missionRouteDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  missionRouteSep: { height: 1, backgroundColor: theme.colors.border, marginLeft: 18 },
-  missionRouteText: { flex: 1, fontSize: 13, fontWeight: "500", fontFamily: "Inter_500Medium", color: theme.colors.text },
-  riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.borderSoft, padding: 10 },
+  missionRouteSep: { height: 1, backgroundColor: '#E8E8E8', marginLeft: 18 },
+  missionRouteText: { flex: 1, fontSize: 13, fontWeight: "600", fontFamily: "Inter_500Medium", color: '#111111' },
+  riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8', padding: 10 },
   riderBadge: { flex: 1 },
   riderFareColumn: { alignItems: "flex-end", gap: 2 },
-  riderFare: { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
-  riderNetFare: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.textMuted },
+  riderFare: { fontSize: 16, fontWeight: "800", fontFamily: "Inter_700Bold", color: '#111111' },
+  riderNetFare: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: '#6B6B6B' },
   navigationMapShell: {
     position: "relative",
-    borderRadius: 16,
+    borderRadius: 8,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(7,19,17,0.12)",
-    backgroundColor: theme.colors.backgroundDim,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#F3F3F3',
   },
-  missionMap: { height: 430, borderRadius: 16, overflow: "hidden" },
+  missionMap: { height: 430, borderRadius: 8, overflow: "hidden" },
   navigationMapBadge: {
     position: "absolute",
     left: 12,
     top: 12,
-    borderRadius: 999,
-    backgroundColor: "rgba(7,19,17,0.82)",
+    borderRadius: 8,
+    backgroundColor: "rgba(0,0,0,0.82)",
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
@@ -1852,10 +1806,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   missionNavigationPanel: {
     gap: 8,
-    borderRadius: 14,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
-    backgroundColor: theme.colors.surface,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
@@ -1863,18 +1817,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textTransform: "uppercase",
   },
   missionStageTitle: {
     fontSize: 18,
     fontWeight: "800",
     fontFamily: "Raleway_800ExtraBold",
-    color: theme.colors.text,
+    color: '#111111',
   },
   missionStageHint: {
     fontSize: 12,
-    color: theme.colors.textSoft,
+    color: '#525252',
     fontFamily: "Inter_400Regular",
     lineHeight: 17,
   },
@@ -1882,10 +1836,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   missionMetric: {
     flex: 1,
     minHeight: 58,
-    borderRadius: 12,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 8,
+    backgroundColor: '#F7F7F7',
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
+    borderColor: '#E8E8E8',
     paddingHorizontal: 10,
     paddingVertical: 9,
     gap: 3,
@@ -1894,14 +1848,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textTransform: "uppercase",
   },
   missionMetricValue: {
     fontSize: 13,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.text,
+    color: '#111111',
     lineHeight: 17,
   },
   missionPaymentNotice: {
@@ -1909,10 +1863,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
-    borderRadius: 12,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 8,
+    backgroundColor: '#F7F7F7',
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
     paddingHorizontal: 10,
     paddingVertical: 9,
   },
@@ -1920,7 +1874,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textTransform: "uppercase",
   },
   missionPaymentValue: {
@@ -1928,19 +1882,19 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.text,
+    color: '#111111',
   },
   missionActions: { gap: 7 },
   secondaryActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   secondaryBtn: { flexGrow: 1, flexBasis: "47%", minHeight: 48 },
-  tripDetailStatus: { fontSize: 12, color: theme.colors.textMuted, fontFamily: "Inter_400Regular" },
+  tripDetailStatus: { fontSize: 12, color: '#6B6B6B', fontFamily: "Inter_400Regular" },
   supportTimelineWrap: { gap: 8 },
   supportTimelineToggle: {
     alignSelf: "flex-start",
-    borderRadius: 999,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#F3F3F3',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -1948,14 +1902,15 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.textSoft,
+    color: '#525252',
   },
   emptyState: {
     padding: 13,
     gap: 11,
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
-    backgroundColor: theme.colors.surface,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
   },
   emptyHeader: {
     flexDirection: "row",
@@ -1971,8 +1926,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    borderRadius: 999,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 8,
+    backgroundColor: '#F3F3F3',
     paddingHorizontal: 9,
     paddingVertical: 4,
   },
@@ -1981,26 +1936,26 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.textSoft,
+    color: '#525252',
     textTransform: "uppercase",
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.text,
+    color: '#111111',
   },
   emptyMeta: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     fontFamily: "Inter_400Regular",
     lineHeight: 17,
   },
   emptyRadar: {
     width: 72,
     height: 72,
-    borderRadius: 36,
-    backgroundColor: "rgba(0,201,167,0.08)",
+    borderRadius: 4,
+    backgroundColor: '#F3F3F3',
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -2011,23 +1966,23 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     height: 58,
     borderRadius: 29,
     borderWidth: 1,
-    borderColor: "rgba(0,201,167,0.28)",
+    borderColor: '#D8D8D8',
   },
   emptyRadarDot: {
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
     borderWidth: 3,
     borderColor: "#FFFFFF",
   },
   emptyChecklist: { flexDirection: "row", gap: 7 },
   emptyCheckItem: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#F7F7F7',
     paddingHorizontal: 9,
     paddingVertical: 8,
     gap: 2,
@@ -2036,23 +1991,23 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textTransform: "uppercase",
   },
   emptyCheckMeta: {
     fontSize: 12,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.text,
+    color: '#111111',
   },
   disabled: { opacity: 0.38 },
   codeBlock: { gap: 10 },
-  meta: { fontSize: 13, color: theme.colors.textSoft, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  meta: { fontSize: 13, color: '#525252', fontFamily: "Inter_400Regular", lineHeight: 18 },
   departureChecklist: {
-    borderRadius: 10,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#F7F7F7',
     paddingHorizontal: 12,
     paddingVertical: 11,
     gap: 8,
@@ -2068,7 +2023,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.text,
+    color: '#111111',
   },
   departureChecklistPill: {
     borderRadius: 999,
@@ -2106,19 +2061,19 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     lineHeight: 16,
     fontWeight: "600",
     fontFamily: "Inter_600SemiBold",
-    color: theme.colors.textSoft,
+    color: '#525252',
   },
-  routeSafetyBlockNote: { fontSize: 12, color: theme.colors.amberDark, fontFamily: "Inter_400Regular", lineHeight: 17 },
+  routeSafetyBlockNote: { fontSize: 12, color: '#525252', fontFamily: "Inter_400Regular", lineHeight: 17 },
   // Mission labels
-  missionSectionLabel: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.amber, textTransform: "uppercase", letterSpacing: 0 },
+  missionSectionLabel: { fontSize: 11, fontWeight: "800", fontFamily: "Inter_700Bold", color: '#111111', textTransform: "uppercase", letterSpacing: 0 },
   missionSignalsPanel: { gap: 7 },
   missionSignalGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  missionSignalTile: { width: "48%", minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.borderSoft, backgroundColor: theme.colors.surface, paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
+  missionSignalTile: { width: "48%", minHeight: 44, borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8', backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
   missionSignalTileDanger: { borderColor: "#BDBDB7", backgroundColor: "#F7F7F4" },
-  missionSignalLabel: { fontSize: 9, fontWeight: "800", fontFamily: "Inter_700Bold", color: theme.colors.textMuted, textTransform: "uppercase", letterSpacing: 0 },
-  missionSignalValue: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text, lineHeight: 15 },
+  missionSignalLabel: { fontSize: 9, fontWeight: "800", fontFamily: "Inter_700Bold", color: '#6B6B6B', textTransform: "uppercase", letterSpacing: 0 },
+  missionSignalValue: { fontSize: 11, fontWeight: "800", fontFamily: "Inter_700Bold", color: '#111111', lineHeight: 15 },
   routeMonitoringCompact: { gap: 2 },
-  missionDetailLabel: { fontSize: 12, fontWeight: "800", fontFamily: "Inter_700Bold", color: theme.colors.textSoft },
+  missionDetailLabel: { fontSize: 12, fontWeight: "800", fontFamily: "Inter_700Bold", color: '#525252' },
   missionDetailStatus: { fontSize: 10, color: theme.colors.textMuted, fontFamily: "Inter_400Regular", lineHeight: 14 },
   missionBlockedLabel: { fontSize: 12, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.danger },
   shiftNote: { fontSize: 11, color: theme.colors.textMuted, fontFamily: "Inter_400Regular", paddingHorizontal: 2 },
@@ -2167,7 +2122,7 @@ const makeIconStyles = (theme: OrbiTheme) => StyleSheet.create({
     position: "absolute",
     width: 14,
     height: 2,
-    borderRadius: 999,
+    borderRadius: 8,
     backgroundColor: theme.colors.textSoft,
   },
   closeLineA: {
@@ -2191,7 +2146,6 @@ const makeTripStartActionStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderWidth: 1,
     backgroundColor: theme.colors.text,
     borderColor: theme.colors.text,
-    ...theme.shadows.button,
   },
   buttonConfirmed: {
     backgroundColor: theme.colors.text,

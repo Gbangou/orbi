@@ -23,7 +23,7 @@ import {
 } from '../rider-display-format';
 
 function VehicleAvatar({
-  isSelected, tone, tier,
+  isSelected, tier,
 }: {
   category: RideOption['category'];
   isSelected: boolean;
@@ -32,19 +32,19 @@ function VehicleAvatar({
 }) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const accent = tone === 'teal' ? theme.colors.teal : tone === 'sky' ? theme.colors.sky : theme.colors.amber;
+  const accent = '#111111';
   return (
     <View style={[
       styles.vehicleAvatar,
-      isSelected && { backgroundColor: accent + '0F', borderColor: accent, borderWidth: 1.5 },
-      !isSelected && { borderColor: theme.colors.border },
+      isSelected && { backgroundColor: '#FFFFFF', borderColor: accent, borderWidth: 1.5 },
+      !isSelected && { borderColor: '#E8E8E8' },
     ]}>
-      <View style={[styles.vehicleAura, { backgroundColor: accent + '18' }]} />
+      <View style={styles.vehicleAura} />
       <View style={styles.svgWrap}>
-        <VehicleIllustration tier={tier} width={92} height={64} />
+        <VehicleIllustration tier={tier} width={64} height={44} />
       </View>
       {isSelected ? (
-        <View style={[styles.checkBadge, { backgroundColor: accent }]}>
+        <View style={styles.checkBadge}>
           <View style={styles.checkMarkShort} />
           <View style={styles.checkMarkLong} />
         </View>
@@ -77,14 +77,10 @@ export const VehicleSelector = memo(function VehicleSelector({
     return { tone: isMoto ? 'teal' : option.tier === 'car-comfort' ? 'sky' : 'amber' };
   }
 
-  function buildSignalLabel(option: RideOption) {
-    return option.marketplace?.signalLabel ?? 'Estime';
-  }
-
   if (isRefreshing && options.length === 0) {
     return (
       <View style={styles.loadingRow}>
-        <ActivityIndicator size="small" color={theme.colors.teal} />
+        <ActivityIndicator size="small" color="#111111" />
         <Text style={styles.loadingText}>Calcul des options…</Text>
       </View>
     );
@@ -94,12 +90,11 @@ export const VehicleSelector = memo(function VehicleSelector({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Choisir un service</Text>
+      <Text style={styles.sectionTitle}>Service</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {options.map((option) => {
           const { tone } = buildRideOptionVisual(option);
           const isSelected = option.id === (selectedOptionId || options[0]?.id);
-          const accentColor = tone === 'teal' ? theme.colors.teal : tone === 'sky' ? theme.colors.sky : theme.colors.amber;
           const discountedFare = calculateRiderDiscountedFare({
             fare: option.fare,
             discountBps: promoValidation?.discountBps,
@@ -110,43 +105,20 @@ export const VehicleSelector = memo(function VehicleSelector({
             <Pressable
               key={option.id}
               onPress={() => onSelect(option.id)}
-              style={[styles.card, isSelected && { borderColor: accentColor, backgroundColor: accentColor + '0D' }]}
+              style={[styles.card, isSelected && styles.cardSelected]}
             >
-              {option.surgeActive ? (
-                <View style={styles.surgeBadge}>
-                  <Text style={styles.surgeText}>{option.surgeLabel}</Text>
-                </View>
-              ) : null}
               <VehicleAvatar
                 category={option.category}
                 isSelected={isSelected}
                 tone={tone}
                 tier={option.tier}
               />
-              <Text style={[styles.name, isSelected && { color: theme.colors.text }]}>{title}</Text>
-              <View style={styles.etaRow}>
-                <Text style={styles.eta}>{option.etaMinutes} min</Text>
-                <Text style={styles.signalText} numberOfLines={1} ellipsizeMode="tail">
-                  {buildSignalLabel(option)}
-                </Text>
-                {option.marketplace?.nearbyDrivers != null && option.marketplace.nearbyDrivers > 0 ? (
-                  <View style={[styles.driverCountBadge, { borderColor: accentColor + '60' }]}>
-                    <Text style={[styles.driverCountText, { color: accentColor }]}>
-                      {option.marketplace.nearbyDrivers}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-              <Text style={[styles.fare, isSelected && { color: accentColor }]}>
+              <Text style={styles.name}>{title}</Text>
+              <Text style={styles.eta}>{option.etaMinutes} min</Text>
+              <Text style={[styles.fare, isSelected && styles.fareSelected]}>
                 {formatRiderMoneyAmount(discountedFare)}
               </Text>
-              {option.marketplace?.etaConfidence === 'LOW' || option.marketplace?.etaSource === 'DEGRADED' ? (
-                <Text style={styles.lowConfidence}>
-                  {option.marketplace?.etaSource === 'DEGRADED'
-                    ? 'ETA a confirmer'
-                    : 'Disponibilite limitee'}
-                </Text>
-              ) : null}
+              {option.surgeActive ? <Text style={styles.surgeText}>Forte demande</Text> : null}
             </Pressable>
           );
         })}
@@ -155,23 +127,26 @@ export const VehicleSelector = memo(function VehicleSelector({
   );
 });
 
-const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
+const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
   section: { gap: 8 },
-  sectionTitle: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.text, paddingHorizontal: 2 },
-  scroll: { gap: 6, paddingHorizontal: 2 },
+  sectionTitle: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111', paddingHorizontal: 2 },
+  scroll: { gap: 8, paddingHorizontal: 2 },
   card: {
-    width: 140, backgroundColor: theme.colors.surface, borderRadius: 16, borderWidth: 1.5,
-    borderColor: theme.colors.border, padding: 8, alignItems: 'center', gap: 4,
-    shadowColor: theme.shadows.card.shadowColor, shadowOpacity: 0.09, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 7,
+    width: 108, minHeight: 124, backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1,
+    borderColor: '#E8E8E8', paddingHorizontal: 8, paddingVertical: 8, alignItems: 'center', gap: 3,
   },
-  surgeBadge: { alignSelf: 'center', backgroundColor: '#000000', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2 },
-  surgeText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
+  cardSelected: {
+    borderColor: '#111111',
+    backgroundColor: '#FFFFFF',
+  },
+  surgeText: { fontSize: 9, fontWeight: '700', color: '#6B6B6B' },
   vehicleAvatar: {
-    width: 96, height: 66, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.backgroundAlt, overflow: 'hidden',
+    width: 70, height: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#E8E8E8', backgroundColor: '#F7F7F7', overflow: 'hidden',
   },
   checkBadge: {
-    position: 'absolute', top: 4, left: 4, width: 18, height: 18, borderRadius: 9,
+    position: 'absolute', top: 4, left: 4, width: 18, height: 18, borderRadius: 6,
+    backgroundColor: '#111111',
     borderWidth: 1.5, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
   },
   checkMarkShort: {
@@ -182,35 +157,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     position: 'absolute', width: 10, height: 2, borderRadius: 1, backgroundColor: '#FFFFFF',
     left: 7, top: 8, transform: [{ rotate: '-45deg' }],
   },
-  name: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.textSoft, textAlign: 'center', minHeight: 18 },
-  eta: { fontSize: 11, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
-  fare: { fontSize: 13, fontWeight: '800', fontFamily: 'Inter_700Bold', color: theme.colors.textSoft, textAlign: 'center' },
+  name: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111', textAlign: 'center', minHeight: 16 },
+  eta: { fontSize: 11, color: '#6B6B6B', fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  fare: { fontSize: 13, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111', textAlign: 'center' },
+  fareSelected: { color: '#111111' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
-  loadingText: { fontSize: 14, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular' },
-  vehicleAura: { position: 'absolute', width: 80, height: 46, borderRadius: 24, top: 9 },
-  svgWrap: { width: 92, height: 64, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  etaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, width: '100%' },
-  signalText: {
-    maxWidth: 64,
-    fontSize: 9,
-    color: theme.colors.textMuted,
-    fontWeight: '700',
-  },
-  driverCountBadge: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
-  driverCountText: {
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  lowConfidence: {
-    fontSize: 9,
-    color: theme.colors.amber,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: -4,
-  },
+  loadingText: { fontSize: 14, color: '#6B6B6B', fontFamily: 'Inter_400Regular' },
+  vehicleAura: { position: 'absolute', width: 56, height: 32, borderRadius: 4, top: 9, backgroundColor: '#EFEFEF' },
+  svgWrap: { width: 64, height: 44, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 });

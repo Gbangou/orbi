@@ -49,7 +49,7 @@ describe('driver offer signal helpers', () => {
       },
     ]);
     expect(buildDriverOfferDetailLines(dirtyOffer)).toEqual([
-      'Moto - trajet ND km - priorite dispatch -',
+      'Moto - trajet ND km',
     ]);
     expect(buildDriverOfferNote(dirtyOffer)).toBeNull();
     expect(formatDriverOfferFare(dirtyOffer)).toBe('Prix indisponible');
@@ -99,12 +99,11 @@ describe('driver offer signal helpers', () => {
     });
     expect(buildDriverOfferDetailLines(offer)).toEqual(
       expect.arrayContaining([
-        'Moto - trajet 5.8 km - priorite dispatch 86',
+        'Moto - trajet 5.8 km',
         'Pickup a 1.1 km',
-        'Rayon actif: 8 km',
-        'Confiance offre: PRIORITY (91/100)',
-        'Priorite economique: EXCELLENT (89/100)',
-        'Priorite forte: proche, fiable, rentable et saine pour la marketplace.',
+        'Zone de service: 8 km',
+        'Qualite offre: Priorite max (91/100)',
+        'Rentabilite: Tres rentable (89/100)',
         'Fenetre d acceptation: 45s',
       ]),
     );
@@ -152,7 +151,7 @@ describe('driver offer signal helpers', () => {
     });
   });
 
-  it('surfaces marketplace fairness in driver offer detail lines', () => {
+  it('keeps internal marketplace fairness out of driver offer detail lines', () => {
     const offer = {
       id: 'offer-fair',
       riderName: 'Awa',
@@ -180,9 +179,10 @@ describe('driver offer signal helpers', () => {
         'Equilibre marketplace sain. Rider 88/100 - Chauffeur 78/100 - Ops 96/100.',
     } as never;
 
-    expect(buildDriverOfferDetailLines(offer)).toContain(
-      'Fairness marketplace: Equilibre marketplace sain. Rider 88/100 - Chauffeur 78/100 - Ops 96/100.',
-    );
+    const detailLines = buildDriverOfferDetailLines(offer);
+    expect(detailLines).toContain('Equilibre course: 84/100');
+    expect(detailLines.join(' ')).not.toContain('marketplace');
+    expect(detailLines.join(' ')).not.toContain('Ops');
     expect(buildDriverOfferInsights(offer)[1]).toEqual({
       label: 'Qualite',
       value: 'Tres rentable',

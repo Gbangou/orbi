@@ -12,9 +12,9 @@ describe('driver mobile UX guards', () => {
     const source = readAppFile('app/onboarding.tsx');
 
     expect(source).toContain('benefitTitle} numberOfLines={1}');
-    expect(source).toContain('benefitDesc} numberOfLines={2}');
+    expect(source).toContain('benefitDesc} numberOfLines={2} ellipsizeMode="tail"');
     expect(source).toContain('docDesc} numberOfLines={1}');
-    expect(source).toContain('label="Soumettre le dossier"');
+    expect(source).toContain('label="Soumettre le profil"');
   });
 
   it('keeps auth first-screen copy bounded', () => {

@@ -96,7 +96,7 @@ export function resolveDriverActiveFlow(input: {
         : operationalStatus === "ONLINE"
           ? accountCanReceiveOffers
             ? "En ligne"
-            : "Dossier en revue"
+            : "En validation"
           : operationalStatus === "SUSPENDED"
             ? "Suspendu"
             : "Hors ligne",
@@ -117,17 +117,17 @@ export function buildDriverHomeStatusLabel(input: {
   }
 
   if (input.flow.operationalStatus === "SUSPENDED") {
-    return "Compte suspendu. Contactez les operations pour reprendre le direct.";
+    return "Compte suspendu. Contactez le support pour reprendre le service.";
   }
 
   if (
     input.flow.availabilityStatus === "ONLINE" &&
     !input.flow.accountCanReceiveOffers
   ) {
-    return "Compte en attente d approbation operations. Les offres restent bloquees jusqu a validation.";
+    return "Compte en attente de validation. Les offres seront disponibles apres approbation.";
   }
 
-  return `Connecte comme ${input.fullName}. Statut ${formatOperationalStatus(input.flow.availabilityStatus)}. ${input.flow.visibleOfferCount} offres disponibles et 0 course active.`;
+  return `Connecte comme ${input.fullName}. Statut ${formatOperationalStatus(input.flow.availabilityStatus)}. ${input.flow.visibleOfferCount} offres disponibles.`;
 }
 
 export function buildDriverDispatchStatusLabel(input: {
@@ -138,17 +138,17 @@ export function buildDriverDispatchStatusLabel(input: {
   }
 
   if (input.flow.operationalStatus === "SUSPENDED") {
-    return "Compte suspendu. Le dispatch reste bloque tant que les operations n ont pas reactive le profil.";
+    return "Compte suspendu. Les offres reprendront apres reactivation du profil.";
   }
 
   if (
     input.flow.availabilityStatus === "ONLINE" &&
     !input.flow.accountCanReceiveOffers
   ) {
-    return "Compte chauffeur non approuve. Les offres sont bloquees jusqu a validation operations.";
+    return "Compte chauffeur en validation. Les offres sont bloquees jusqu a approbation.";
   }
 
-  return `${input.flow.visibleOfferCount} offres chargees. Statut chauffeur ${formatOperationalStatus(input.flow.availabilityStatus)}.`;
+  return `${input.flow.visibleOfferCount} offres disponibles. Statut ${formatOperationalStatus(input.flow.availabilityStatus)}.`;
 }
 
 export function buildDriverNextActionHint(flow: DriverActiveFlowSummary) {
@@ -165,17 +165,17 @@ export function buildDriverNextActionHint(flow: DriverActiveFlowSummary) {
   }
 
   if (flow.operationalStatus === "SUSPENDED") {
-    return "Aucune action terrain: attendez la reactivation par les operations.";
+    return "Aucune action requise: attendez la reactivation du profil.";
   }
 
   if (flow.availabilityStatus === "ONLINE" && !flow.accountCanReceiveOffers) {
-    return "Finalisez ou faites approuver le dossier chauffeur pour debloquer les offres.";
+    return "Finalisez votre profil pour debloquer les offres.";
   }
 
   if (flow.availabilityStatus === "ONLINE") {
     return flow.visibleOfferCount > 0
       ? "Traitez les offres reservees avant expiration."
-      : "Restez proche de votre zone et gardez la presence active.";
+      : "Restez disponible et gardez l application ouverte.";
   }
 
   return "Passez en ligne quand vous etes pret a recevoir des offres.";
@@ -230,7 +230,7 @@ export function buildDriverMissionSnapshot(input: {
             ? routeMonitoring.alertCount > 0
               ? `${routeMonitoring.alertCount} alerte trajet`
               : "Trajet coherent"
-            : "Position GPS attendue",
+            : "Position attendue",
     },
     {
       label: "Vehicule",
@@ -271,7 +271,7 @@ export function buildDriverLiveRouteProgress(input: {
 
   return {
     title: isHeadingToDestination
-      ? "Progression destination"
+      ? "Vers destination"
       : "Approche pickup",
     stateLabel: formatOperationalStatus(routeMonitoring.state),
     distanceLabel:
@@ -284,16 +284,12 @@ export function buildDriverLiveRouteProgress(input: {
         : routeMonitoring.state === "clear"
           ? 42
           : 18,
-    freshnessLabel: `GPS ${formatTimeLabel(latestPosition.observedAt)}`,
-    coordinateLabel: formatApproxCoordinateLabel(
-      latestPosition.latitude,
-      latestPosition.longitude,
-      "Zone mission",
-    ),
+    freshnessLabel: `Position ${formatTimeLabel(latestPosition.observedAt)}`,
+    coordinateLabel: "Position actualisee",
     accuracyLabel:
       accuracyMeters !== null
-        ? `Precision ${Math.round(accuracyMeters)} m`
-        : "Precision inconnue",
+        ? `Signal ${Math.round(accuracyMeters)} m`
+        : "Signal en attente",
     speedLabel:
       speedKph !== null
         ? `${Math.round(speedKph)} km/h`
@@ -308,10 +304,10 @@ export function buildDriverLiveRouteProgress(input: {
         : "ETA en attente",
     note:
       routeMonitoring.state === "unknown"
-        ? "Position GPS attendue par Orbi."
+        ? "Position en attente."
         : routeMonitoring.state === "clear"
           ? "Route coherente sur la derniere position."
-          : "Une anomalie route est visible par Orbi.",
+          : "Route a verifier avec attention.",
     tone:
       routeMonitoring.state === "critical"
         ? "rose"
@@ -432,7 +428,7 @@ export function buildDriverEarningsStatusLabel(input: {
   }
 
   if (input.flow.operationalStatus === "SUSPENDED") {
-    return "Revenus synchronises. Compte suspendu, reprise du direct en attente des operations.";
+    return "Revenus a jour. Compte suspendu, reprise en attente.";
   }
 
   return input.flow.availabilityStatus === "ONLINE"
@@ -448,12 +444,12 @@ export function buildDriverProfileStatusLabel(input: {
   }
 
   if (input.flow.operationalStatus === "SUSPENDED") {
-    return "Profil charge. Compte suspendu, revue operations requise.";
+    return "Profil charge. Compte suspendu, verification requise.";
   }
 
   return input.flow.availabilityStatus === "ONLINE"
-    ? "Profil charge depuis la session reelle. Chauffeur en ligne."
-    : "Profil charge depuis la session reelle. Chauffeur hors ligne.";
+    ? "Profil charge. Chauffeur en ligne."
+    : "Profil charge. Chauffeur hors ligne.";
 }
 
 export function buildDriverFlowTransitionLabel(
@@ -474,18 +470,18 @@ export function buildDriverFlowTransitionLabel(
       previousFlowState !== nextFlowState &&
       nextStatus
     ) {
-      return `Evolution live: ${formatOperationalStatus(nextStatus)}.`;
+      return `Mission mise a jour: ${formatOperationalStatus(nextStatus)}.`;
     }
 
     if (previousFlowState && !nextFlowState) {
-      return "La mission active a quitte le cockpit.";
+    return "La mission active est terminee.";
     }
 
     return null;
   }
 
   if (!previousFlowState && nextFlowState && nextStatus) {
-    return `Mission live ouverte: ${formatOperationalStatus(nextStatus)}.`;
+    return `Mission ouverte: ${formatOperationalStatus(nextStatus)}.`;
   }
 
   if (
@@ -494,11 +490,11 @@ export function buildDriverFlowTransitionLabel(
     previousFlowState !== nextFlowState &&
     nextStatus
   ) {
-    return `Statut critique mis a jour: ${formatOperationalStatus(nextStatus)}.`;
+    return `Statut mis a jour: ${formatOperationalStatus(nextStatus)}.`;
   }
 
   if (previousFlowState && !nextFlowState) {
-    return "La mission active a quitte le flux live.";
+    return "La mission active est terminee.";
   }
 
   return null;

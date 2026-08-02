@@ -77,7 +77,7 @@ const ProgressBar = memo(({ step, total }: { step: number; total: number }) => {
 
 const progress = StyleSheet.create({
   track: { flexDirection: 'row', gap: 4, marginBottom: 4 },
-  segment: { flex: 1, height: 4, borderRadius: 2 },
+  segment: { flex: 1, height: 4, borderRadius: 1 },
 });
 
 function BackGlyph() {
@@ -116,19 +116,24 @@ function StepContainer({
   const theme = useOrbiTheme();
   const step = useMemo(() => makeStepStyles(theme), [theme]);
   return (
-    <OrbiSurface style={step.container} elevated>
+    <View style={step.container}>
       <Text style={step.title}>{title}</Text>
       {subtitle ? <Text style={step.subtitle}>{subtitle}</Text> : null}
       <View style={step.body}>{children}</View>
-    </OrbiSurface>
+    </View>
   );
 }
 
 const makeStepStyles = (theme: OrbiTheme) => StyleSheet.create({
-  container: { gap: 4, padding: 16 },
-  title: { fontSize: 26, fontWeight: '800', fontFamily: 'Raleway_800ExtraBold', color: theme.colors.text },
-  subtitle: { fontSize: 15, color: theme.colors.textSoft, fontFamily: 'Inter_400Regular', lineHeight: 22, marginTop: 4 },
-  body: { gap: 16, marginTop: 20 },
+  container: {
+    gap: 4,
+    paddingHorizontal: 2,
+    paddingVertical: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  title: { fontSize: 24, fontWeight: '900', fontFamily: 'Raleway_800ExtraBold', color: '#111111' },
+  subtitle: { fontSize: 14, color: '#525252', fontFamily: 'Inter_400Regular', lineHeight: 20, marginTop: 4 },
+  body: { gap: 14, marginTop: 18 },
 });
 
 // ── Main wizard ───────────────────────────────────────────────────────────────
@@ -251,8 +256,8 @@ export default function DriverOnboardingScreen() {
     } catch (error) {
       setErrorMessage(
         error instanceof TypeError
-          ? 'Connexion impossible. Vérifiez votre réseau.'
-          : resolveDisplayableApiErrorMessage(error, 'Impossible de soumettre le dossier.'),
+          ? 'Connexion impossible. Verifiez votre reseau.'
+          : resolveDisplayableApiErrorMessage(error, 'Impossible de soumettre le profil.'),
       );
     } finally {
       setIsSubmitting(false);
@@ -291,10 +296,10 @@ export default function DriverOnboardingScreen() {
                 subtitle="Le service de courses connecté du Burkina Faso. Fixez vos horaires, gardez le contrôle de vos revenus."
               >
                 {[
-                  { code: '82%', title: '82% du tarif pour vous', desc: 'Commission claire. Revenu estimé avant acceptation.' },
+                  { code: '82%', title: '82% du tarif pour vous', desc: 'Commission claire. Revenu estime avant acceptation.' },
                   { code: 'Libre', title: 'Votre emploi du temps', desc: 'Passez en ligne quand vous voulez, sans horaire imposé.' },
-                  { code: 'MM', title: 'Paiement Mobile Money', desc: 'Orange Money et Moov Money avec suivi admin.' },
-                  { code: 'Safe', title: 'Protection chauffeur', desc: 'SOS, suivi de trajet et support ops 7j/7.' },
+                  { code: 'MM', title: 'Paiement Mobile Money', desc: 'Orange Money et Moov Money avec historique clair.' },
+                  { code: 'Safe', title: 'Protection chauffeur', desc: 'SOS, suivi de trajet et support 7j/7.' },
                 ].map((item) => (
                   <OrbiSurface key={item.title} style={styles.benefitCard}>
                     <View style={styles.benefitBadge}>
@@ -314,18 +319,18 @@ export default function DriverOnboardingScreen() {
                 <OrbiStatusBanner
                   tone="amber"
                   title="Documents requis"
-                  message="Permis, carte grise, assurance et pièce d'identité nationale seront vérifiés par les opérations."
+                  message="Permis, carte grise, assurance et piece d'identite nationale seront verifies avant activation."
                 />
               </StepContainer>
             )}
 
             {/* ── Step 2: Véhicule ── */}
             {currentStep === 2 && (
-              <StepContainer title="Votre véhicule" subtitle="Ces informations sont vérifiées par l'équipe Orbi avant activation.">
+              <StepContainer title="Votre vehicule" subtitle="Ces informations sont verifiees avant activation.">
 
                 {/* Vehicle type */}
                 <View>
-                  <Text style={styles.fieldLabel}>Type de véhicule</Text>
+                  <Text style={styles.fieldLabel}>Type de vehicule</Text>
                   <View style={styles.typeRow}>
                     {(['MOTORCYCLE', 'CAR'] as const).map((type) => {
                       const isMoto = type === 'MOTORCYCLE';
@@ -342,7 +347,7 @@ export default function DriverOnboardingScreen() {
                             {isMoto ? 'Moto' : 'Voiture'}
                           </Text>
                           <Text style={styles.typeDesc} numberOfLines={1} ellipsizeMode="tail">
-                            {isMoto ? '1 passager · Urbain' : '4 places · Climatisée'}
+                            {isMoto ? '1 passager · Urbain' : '4 places · Climatisee'}
                           </Text>
                         </Pressable>
                       );
@@ -369,7 +374,7 @@ export default function DriverOnboardingScreen() {
                 {/* Model */}
                 {selectedMake !== '' && (
                   <View>
-                    <Text style={styles.fieldLabel}>Modèle</Text>
+                  <Text style={styles.fieldLabel}>Modele</Text>
                     <View style={styles.chipGrid}>
                       {models.map((model) => (
                         <Pressable
@@ -398,11 +403,11 @@ export default function DriverOnboardingScreen() {
 
                 {/* Plate */}
                 <View>
-                  <Text style={styles.fieldLabel}>Numéro de plaque</Text>
+                  <Text style={styles.fieldLabel}>Numero de plaque</Text>
                   <TextInput
                     value={plateNumber}
                     onChangeText={(v) => setPlateNumber(v.toUpperCase())}
-                    placeholder="Ex : 11 AB 1234 BF"
+                    placeholder="11 AB 1234 BF"
                     placeholderTextColor={theme.colors.textMuted}
                     style={styles.input}
                     autoCapitalize="characters"
@@ -432,10 +437,10 @@ export default function DriverOnboardingScreen() {
 
             {/* ── Step 3: Informations personnelles ── */}
             {currentStep === 3 && (
-              <StepContainer title="Vos informations" subtitle="Nécessaires pour votre dossier chauffeur et vos paiements.">
+              <StepContainer title="Vos informations" subtitle="Necessaires pour votre profil chauffeur et vos paiements.">
 
                 <View>
-                  <Text style={styles.fieldLabel}>Téléphone</Text>
+                  <Text style={styles.fieldLabel}>Telephone</Text>
                   <TextInput
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
@@ -444,15 +449,15 @@ export default function DriverOnboardingScreen() {
                     keyboardType="phone-pad"
                     style={styles.input}
                   />
-                  <Text style={styles.fieldHint}>Ce numéro sera utilisé pour vos paiements Mobile Money.</Text>
+                  <Text style={styles.fieldHint}>Ce numero sera utilise pour vos paiements Mobile Money.</Text>
                 </View>
 
                 <View>
-                  <Text style={styles.fieldLabel}>Numéro de permis de conduire</Text>
+                  <Text style={styles.fieldLabel}>Numero de permis de conduire</Text>
                   <TextInput
                     value={licenseNumber}
                     onChangeText={(v) => setLicenseNumber(v.toUpperCase())}
-                    placeholder="Ex : BF-A-12345"
+                    placeholder="BF-A-12345"
                     placeholderTextColor={theme.colors.textMuted}
                     style={styles.input}
                     autoCapitalize="characters"
@@ -478,7 +483,7 @@ export default function DriverOnboardingScreen() {
 
                 <View style={styles.infoBox}>
                   <Text style={styles.infoBoxText}>
-                    Votre dossier sera examiné par l'équipe Orbi sous 24-48h. Vous recevrez une notification dès l'approbation.
+                    Votre profil sera examine par l'equipe Orbi sous 24-48h. Vous recevrez une notification des l'approbation.
                   </Text>
                 </View>
               </StepContainer>
@@ -486,7 +491,7 @@ export default function DriverOnboardingScreen() {
 
             {/* ── Step 4: Documents & confirmation ── */}
             {currentStep === 4 && (
-              <StepContainer title="Documents requis" subtitle="Confirmez les documents que vous avez à disposition. Ils seront vérifiés lors de la revue de votre dossier.">
+              <StepContainer title="Documents requis" subtitle="Confirmez les documents disponibles. Ils seront vérifiés avant activation.">
 
                 {([
                   { key: 'identity' as const, label: "Pièce d'identité nationale", desc: "CNI ou passeport valide" },
@@ -532,7 +537,7 @@ export default function DriverOnboardingScreen() {
                 {errorMessage ? (
                   <OrbiStatusBanner
                     tone="danger"
-                    title="Dossier non soumis"
+                    title="Profil non soumis"
                     message={errorMessage}
                   />
                 ) : null}
@@ -557,7 +562,7 @@ export default function DriverOnboardingScreen() {
               onPress={() => void handleSubmit()}
               disabled={isSubmitting}
               loading={isSubmitting}
-              label="Soumettre le dossier"
+              label="Soumettre le profil"
               tone="amber"
               style={styles.ctaBtn}
               labelStyle={styles.ctaBtnLabel}
@@ -580,7 +585,7 @@ export default function DriverOnboardingScreen() {
 }
 
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
-  safe: { flex: 1 },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -591,23 +596,26 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: theme.colors.backgroundAlt,
+    backgroundColor: '#F3F3F3',
     alignItems: 'center', justifyContent: 'center',
   },
-  stepLabel: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.textMuted },
-  scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24, gap: 0 },
+  stepLabel: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_600SemiBold', color: '#525252' },
+  scroll: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 24, gap: 0 },
 
   // Benefits (step 1)
   benefitCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 14,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 8,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
   },
   benefitBadge: {
     minWidth: 42,
     height: 34,
-    borderRadius: 10,
-    backgroundColor: 'rgba(242,169,0,0.14)',
+    borderRadius: 8,
+    backgroundColor: '#F3F3F3',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
@@ -616,40 +624,40 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: '#8A5900',
+    color: '#111111',
   },
-  benefitTitle: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text },
-  benefitDesc: { fontSize: 12, color: theme.colors.textSoft, fontFamily: 'Inter_400Regular', marginTop: 2, lineHeight: 17 },
+  benefitTitle: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111' },
+  benefitDesc: { fontSize: 12, color: '#525252', fontFamily: 'Inter_400Regular', marginTop: 2, lineHeight: 17 },
 
   // Field
-  fieldLabel: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.textSoft, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0 },
-  fieldHint: { fontSize: 11, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 4 },
+  fieldLabel: { fontSize: 13, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#525252', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0 },
+  fieldHint: { fontSize: 11, color: '#6B6B6B', fontFamily: 'Inter_400Regular', marginTop: 4 },
   input: {
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border,
+    backgroundColor: '#F3F3F3',
+    borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8',
     paddingHorizontal: 14, paddingVertical: 13,
-    fontSize: 16, fontFamily: 'Inter_400Regular', color: theme.colors.text,
+    fontSize: 16, fontFamily: 'Inter_400Regular', color: '#111111',
   },
 
   // Vehicle type
   typeRow: { flexDirection: 'row', gap: 12 },
   typeCard: {
-    flex: 1, alignItems: 'center', gap: 6, padding: 16,
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 16, borderWidth: 2, borderColor: theme.colors.border,
+    flex: 1, alignItems: 'center', gap: 6, padding: 14,
+    backgroundColor: '#F3F3F3',
+    borderRadius: 8, borderWidth: 1.5, borderColor: '#E8E8E8',
   },
-  typeLabel: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text },
-  typeDesc: { fontSize: 11, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  typeLabel: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111' },
+  typeDesc: { fontSize: 11, color: '#6B6B6B', fontFamily: 'Inter_400Regular', textAlign: 'center' },
 
   // Chips
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8,
-    backgroundColor: theme.colors.backgroundAlt,
-    borderWidth: 1, borderColor: theme.colors.border,
+    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: '#F3F3F3',
+    borderWidth: 1, borderColor: '#E8E8E8',
   },
-  chipActive: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
-  chipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.textSoft },
+  chipActive: { backgroundColor: '#111111', borderColor: '#111111' },
+  chipText: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_600SemiBold', color: '#525252' },
   chipTextActive: { color: theme.colors.textInverse },
 
   // Color swatches
@@ -660,46 +668,50 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Info box
   infoBox: {
-    backgroundColor: 'rgba(0,122,255,0.06)',
-    borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,122,255,0.18)',
+    backgroundColor: '#F7F7F7',
+    borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8',
     padding: 14,
   },
-  infoBoxText: { fontSize: 13, color: theme.colors.textSoft, fontFamily: 'Inter_400Regular', lineHeight: 19 },
+  infoBoxText: { fontSize: 13, color: '#525252', fontFamily: 'Inter_400Regular', lineHeight: 19 },
 
   // Documents
   docCard: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    borderRadius: 14, borderWidth: 1.5, borderColor: theme.colors.border,
-    padding: 14, backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8',
+    padding: 13, backgroundColor: '#F3F3F3',
   },
-  docCardChecked: { borderColor: theme.colors.teal, backgroundColor: 'rgba(0,201,167,0.04)' },
+  docCardChecked: { borderColor: '#111111', backgroundColor: '#FFFFFF' },
   docCheck: {
     width: 26, height: 26, borderRadius: 13,
-    borderWidth: 2, borderColor: theme.colors.border,
+    borderWidth: 2, borderColor: '#CFCFCF',
     alignItems: 'center', justifyContent: 'center',
   },
-  docCheckFilled: { backgroundColor: theme.colors.teal, borderColor: theme.colors.teal },
-  docLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.text },
-  docDesc: { fontSize: 12, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  docCheckFilled: { backgroundColor: '#111111', borderColor: '#111111' },
+  docLabel: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_600SemiBold', color: '#111111' },
+  docDesc: { fontSize: 12, color: '#6B6B6B', fontFamily: 'Inter_400Regular', marginTop: 2 },
 
   // Summary
   summaryCard: {
-    borderRadius: 14,
+    borderRadius: 8,
     padding: 14, gap: 6,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
   },
-  summaryTitle: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text, marginBottom: 4 },
-  summaryLine: { fontSize: 13, color: theme.colors.textSoft, fontFamily: 'Inter_400Regular' },
+  summaryTitle: { fontSize: 13, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111', marginBottom: 4 },
+  summaryLine: { fontSize: 13, color: '#525252', fontFamily: 'Inter_400Regular' },
 
   // CTA
   cta: {
     paddingHorizontal: 20, paddingBottom: 28, paddingTop: 12,
     gap: 10,
-    backgroundColor: theme.colors.driverBackground,
-    borderTopWidth: 1, borderTopColor: theme.colors.border,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1, borderTopColor: '#E8E8E8',
   },
   ctaBtn: {
-    borderRadius: 14,
+    borderRadius: 6,
     minHeight: 54,
+    backgroundColor: '#111111',
   },
   ctaBtnLabel: { fontSize: 17 },
   ghostBtn: { minHeight: 38 },

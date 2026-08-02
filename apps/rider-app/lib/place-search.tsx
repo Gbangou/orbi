@@ -645,15 +645,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 10,
+    backgroundColor: '#F7F7F7',
+    borderRadius: 4,
     borderWidth: 1,
+    borderColor: '#E8E8E8',
     paddingHorizontal: 12,
     paddingVertical: 2,
   },
   input: {
     flex: 1,
-    color: theme.colors.text,
+    color: '#111111',
     fontSize: 14,
     paddingVertical: 10,
   },
@@ -668,7 +669,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     justifyContent: 'center',
   },
   error: {
-    color: theme.colors.rose ?? '#f87171',
+    color: '#111111',
     fontSize: 12,
     paddingHorizontal: 4,
   },
@@ -676,7 +677,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 7,
   },
   suggestionsLabel: {
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -688,18 +689,19 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   suggestionChip: {
     width: '46.5%',
-    borderRadius: 999,
+    borderRadius: 4,
     borderWidth: 1,
-    backgroundColor: theme.colors.surface,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 10,
     paddingVertical: 8,
     overflow: 'hidden',
   },
   suggestionChipPressed: {
-    backgroundColor: 'rgba(0,199,199,0.08)',
+    backgroundColor: '#F3F3F3',
   },
   suggestionChipLabel: {
-    color: theme.colors.text,
+    color: '#111111',
     fontSize: 12,
     fontWeight: '700',
     width: '100%',
@@ -707,10 +709,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     overflow: 'hidden',
   },
   resultsList: {
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
     overflow: 'hidden',
   },
   resultItem: {
@@ -720,10 +722,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: '#E8E8E8',
   },
   resultItemPressed: {
-    backgroundColor: 'rgba(0,199,199,0.08)',
+    backgroundColor: '#F3F3F3',
   },
   resultDot: {
     width: 7,
@@ -736,12 +738,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 1,
   },
   resultLabel: {
-    color: theme.colors.text,
+    color: '#111111',
     fontSize: 13,
     fontWeight: '600',
   },
   resultAddress: {
-    color: theme.colors.muted,
+    color: '#6B6B6B',
     fontSize: 11,
   },
 });

@@ -60,7 +60,7 @@ const makeGlyphStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: theme.colors.backgroundAlt,
+    backgroundColor: '#F3F3F3',
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -70,7 +70,7 @@ const makeGlyphStyles = (theme: OrbiTheme) => StyleSheet.create({
     height: 32,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: theme.colors.textMuted,
+    borderColor: '#525252',
     padding: 5,
     justifyContent: 'center',
     gap: 4,
@@ -78,7 +78,7 @@ const makeGlyphStyles = (theme: OrbiTheme) => StyleSheet.create({
   line: {
     height: 2,
     borderRadius: 1,
-    backgroundColor: theme.colors.textMuted,
+    backgroundColor: '#525252',
   },
   lineShort: {
     width: '65%',
@@ -166,16 +166,16 @@ const makeRowStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: '#E8E8E8',
   },
   label: {
     fontSize: 14,
-    color: theme.colors.textSoft,
+    color: '#525252',
     flex: 1,
   },
   value: {
     fontSize: 14,
-    color: theme.colors.text,
+    color: '#111111',
     fontWeight: '500',
     textAlign: 'right',
     flex: 1,
@@ -183,7 +183,7 @@ const makeRowStyles = (theme: OrbiTheme) => StyleSheet.create({
   valueBold: {
     fontWeight: '800',
     fontSize: 15,
-    color: theme.colors.text,
+    color: '#111111',
   },
 });
 
@@ -452,7 +452,7 @@ export default function ReceiptScreen() {
         <TripStageTracker status="COMPLETED" audience="rider" style={styles.stageTracker} />
 
         {/* Hero — fare + status */}
-        <OrbiSurface tone="teal" style={styles.hero} elevated>
+        <OrbiSurface tone="teal" style={styles.hero}>
           <View style={styles.heroCheck}>
             <CheckGlyph />
           </View>
@@ -628,7 +628,7 @@ export default function ReceiptScreen() {
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: theme.colors.riderBackground,
+    backgroundColor: '#FFFFFF',
   },
 
   // Sticky header
@@ -639,14 +639,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.riderBackground,
+    borderBottomColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
   },
   headerBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.colors.backgroundAlt,
+    backgroundColor: '#F3F3F3',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -654,7 +654,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: '#111111',
   },
 
   scroll: {
@@ -667,18 +667,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Loading / error
   centered: {
     flex: 1,
-    backgroundColor: theme.colors.riderBackground,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
   },
   loadingText: {
     fontSize: 15,
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
   },
   errorScreen: {
     flex: 1,
-    backgroundColor: theme.colors.riderBackground,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 32,
     alignItems: 'center',
     justifyContent: 'center',
@@ -687,12 +687,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   errorTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: theme.colors.text,
+    color: '#111111',
     textAlign: 'center',
   },
   errorMessage: {
     fontSize: 14,
-    color: theme.colors.textSoft,
+    color: '#525252',
     lineHeight: 20,
     textAlign: 'center',
   },
@@ -716,7 +716,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -725,34 +725,34 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 44,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
-    color: theme.colors.text,
+    color: '#111111',
     letterSpacing: 0,
   },
   heroLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.textSoft,
+    color: '#525252',
   },
   heroDate: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textAlign: 'center',
   },
 
   // Cards
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 4,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
   },
   cardTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginBottom: 8,
@@ -778,7 +778,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   routeTrackLine: {
     flex: 1,
     width: 2,
-    backgroundColor: theme.colors.border,
+    backgroundColor: '#E8E8E8',
     marginVertical: 4,
     minHeight: 20,
   },
@@ -786,11 +786,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   routeAddrBlock: {
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: '#E8E8E8',
   },
   routeAddrLabel: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0,
@@ -798,7 +798,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   routeAddrText: {
     fontSize: 14,
-    color: theme.colors.text,
+    color: '#111111',
     fontWeight: '500',
     lineHeight: 20,
   },
@@ -806,11 +806,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: '#E8E8E8',
   },
   routeDurationText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     fontWeight: '500',
   },
 
@@ -829,13 +829,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
     flexShrink: 0,
   },
   timelineLine: {
     flex: 1,
     width: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: '#E8E8E8',
     marginTop: 4,
     minHeight: 12,
   },
@@ -843,18 +843,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   timelineLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: theme.colors.text,
+    color: '#111111',
   },
   timelineTime: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
   },
 
   // Actions
   actions: { gap: 10, marginTop: 4 },
   primaryBtn: {
-    backgroundColor: theme.colors.text,
-    borderRadius: 14,
+    backgroundColor: '#111111',
+    borderRadius: 4,
     paddingVertical: 16,
     alignItems: 'center',
   },
@@ -865,15 +865,15 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: 'Inter_700Bold',
   },
   secondaryBtn: {
-    backgroundColor: theme.colors.riderBackground,
-    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
     paddingVertical: 15,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
   },
   secondaryBtnLabel: {
-    color: theme.colors.text,
+    color: '#111111',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -882,7 +882,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
   },
   ghostBtnLabel: {
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     fontSize: 14,
     fontWeight: '500',
   },

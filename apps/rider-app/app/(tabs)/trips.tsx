@@ -31,13 +31,13 @@ function StatusBadge({ status }: { status: string }) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const cfg: Record<string, { label: string; bg: string; color: string }> = {
-    COMPLETED: { label: 'Terminee', bg: 'rgba(34,197,94,0.12)', color: '#86efac' },
-    CANCELLED: { label: 'Annulee', bg: 'rgba(248,113,113,0.12)', color: '#fca5a5' },
-    IN_PROGRESS: { label: 'En cours', bg: 'rgba(0,199,199,0.12)', color: '#67e8f9' },
-    MATCHED: { label: 'Chauffeur trouve', bg: 'rgba(56,189,248,0.12)', color: '#7dd3fc' },
-    DRIVER_ARRIVING: { label: 'Chauffeur en route', bg: 'rgba(56,189,248,0.12)', color: '#7dd3fc' },
-    REQUESTED: { label: 'Recherche en cours', bg: '#F1F1ED', color: '#0B0B0B' },
-    EXPIRED: { label: 'Expiree', bg: 'rgba(148,163,184,0.12)', color: theme.colors.muted },
+    COMPLETED: { label: 'Terminee', bg: '#F3F3F3', color: '#111111' },
+    CANCELLED: { label: 'Annulee', bg: '#F3F3F3', color: '#525252' },
+    IN_PROGRESS: { label: 'En cours', bg: '#111111', color: '#FFFFFF' },
+    MATCHED: { label: 'Chauffeur trouve', bg: '#111111', color: '#FFFFFF' },
+    DRIVER_ARRIVING: { label: 'Chauffeur en route', bg: '#111111', color: '#FFFFFF' },
+    REQUESTED: { label: 'Recherche en cours', bg: '#F1F1F1', color: '#111111' },
+    EXPIRED: { label: 'Expiree', bg: '#F3F3F3', color: '#6B6B6B' },
   };
   const c = cfg[status] ?? { label: status, bg: 'rgba(148,163,184,0.1)', color: theme.colors.muted };
   return (
@@ -60,13 +60,13 @@ function TripCard({
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const amount = resolveRiderMoneyAmount(trip.amount);
   return (
-    <OrbiSurface style={styles.card} elevated={trip.status === 'COMPLETED'}>
+    <OrbiSurface style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.cardRoute}>
           <View style={styles.routePin}>
-            <View style={[styles.routeDot, { backgroundColor: theme.colors.teal }]} />
+            <View style={[styles.routeDot, { backgroundColor: '#111111' }]} />
             <View style={styles.routeVert} />
-            <View style={[styles.routeDot, { backgroundColor: theme.colors.amber }]} />
+            <View style={[styles.routeDot, { backgroundColor: '#111111', borderRadius: 2 }]} />
           </View>
           <View style={styles.routeAddresses}>
             <Text style={styles.addressText} numberOfLines={1}>
@@ -131,9 +131,9 @@ function RequestCard({ request }: { request: RequestItem }) {
       <View style={styles.cardHeader}>
         <View style={styles.cardRoute}>
           <View style={styles.routePin}>
-            <View style={[styles.routeDot, { backgroundColor: theme.colors.sky }]} />
+            <View style={[styles.routeDot, { backgroundColor: '#111111' }]} />
             <View style={styles.routeVert} />
-            <View style={[styles.routeDot, { backgroundColor: theme.colors.amber }]} />
+            <View style={[styles.routeDot, { backgroundColor: '#111111', borderRadius: 2 }]} />
           </View>
           <View style={styles.routeAddresses}>
             <Text style={styles.addressText} numberOfLines={1}>
@@ -208,8 +208,8 @@ export default function TripsScreen() {
         <RefreshControl
           refreshing={isRefreshing}
           onRefresh={() => void loadTrips()}
-          tintColor={theme.colors.teal}
-          colors={[theme.colors.teal]}
+          tintColor="#111111"
+          colors={['#111111']}
         />
       }
     >
@@ -290,7 +290,7 @@ export default function TripsScreen() {
       ) : null}
 
       {!hasContent && !isRefreshing ? (
-        <OrbiSurface style={styles.empty} elevated>
+        <OrbiSurface style={styles.empty}>
           <Text style={styles.emptyTitle}>Aucune course pour l instant</Text>
           <Text style={styles.emptyBody}>
             Vos trajets apparaissent ici apres votre premiere reservation.
@@ -310,22 +310,22 @@ export default function TripsScreen() {
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: theme.colors.riderBackground,
+    backgroundColor: '#FFFFFF',
   },
   screen: {
-    paddingTop: 72,
+    paddingTop: 54,
     paddingHorizontal: 18,
     paddingBottom: 40,
-    backgroundColor: theme.colors.riderBackground,
+    backgroundColor: '#FFFFFF',
     gap: 14,
   },
   title: {
-    color: theme.colors.text,
+    color: '#111111',
     fontSize: 30,
     fontWeight: '800',
   },
   statusText: {
-    color: theme.colors.muted,
+    color: '#525252',
     fontSize: 13,
   },
   statsRow: {
@@ -346,6 +346,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   card: {
     padding: 14,
     gap: 10,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E8E8E8',
   },
   cardPressed: {
     opacity: 0.75,
@@ -375,7 +378,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   routeVert: {
     width: 1.5,
     height: 18,
-    backgroundColor: theme.colors.border,
+    backgroundColor: '#D8D8D8',
     marginVertical: 2,
   },
   routeAddresses: {
@@ -383,13 +386,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 6,
   },
   addressText: {
-    color: theme.colors.text,
+    color: '#111111',
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 16,
   },
   badge: {
-    borderRadius: 6,
+    borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 3,
     alignSelf: 'flex-start',
@@ -405,7 +408,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 8,
   },
   metaText: {
-    color: theme.colors.muted,
+    color: '#6B6B6B',
     fontSize: 11,
   },
   cardFare: {
@@ -426,16 +429,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     minWidth: 112,
   },
   fareAmount: {
-    color: theme.colors.amber,
+    color: '#111111',
     fontSize: 16,
     fontWeight: '800',
   },
   fareCurrency: {
-    color: theme.colors.muted,
+    color: '#6B6B6B',
     fontSize: 11,
   },
   followHint: {
-    color: theme.colors.teal,
+    color: '#111111',
     fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -447,13 +450,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 10,
   },
   emptyTitle: {
-    color: theme.colors.text,
+    color: '#111111',
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
   },
   emptyBody: {
-    color: theme.colors.muted,
+    color: '#525252',
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,

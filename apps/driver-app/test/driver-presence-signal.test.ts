@@ -60,7 +60,7 @@ describe("driver-presence-signal", () => {
       buildDriverPresenceSyncedNote({
         accuracyMeters: 18.2,
       }),
-    ).toBe("Presence GPS synchronisee. Precision 18 m.");
+    ).toBe("Position synchronisee. Precision 18 m.");
   });
 
   it("summarizes backend route progress during an active mission", () => {

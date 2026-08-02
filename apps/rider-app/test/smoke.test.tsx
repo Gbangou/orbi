@@ -1047,7 +1047,7 @@ describe('rider smoke flows', () => {
     expect(mockedCreateRideRequestWithApi).toHaveBeenCalledWith(
       { token: 'rider-auth-client' },
       expect.objectContaining({
-        pickupAddress: 'Position GPS actuelle',
+        pickupAddress: 'Position actuelle',
         pickupLatitude: 12.365,
         pickupLongitude: -1.533,
       }),
@@ -1174,10 +1174,10 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Mon compte');
     expectText(renderer, 'Aucun contact actif');
     expectText(renderer, 'Contacts suivis');
-    expectText(renderer, 'Dossiers suivis');
+    expectText(renderer, 'Support');
     expectText(
       renderer,
-      '1 dossier(s) ouvert(s) ou recemment mis a jour. Les details de course restent dans Activite.',
+      '1 demande(s) ouverte(s) ou recemment mise(s) a jour. Les details de course restent dans Activite.',
     );
     expect(collectText(renderer.root)).not.toContain('Prix de course conteste');
   });
@@ -1431,11 +1431,10 @@ describe('rider smoke flows', () => {
     await flushMicrotasks();
 
     expectText(renderer, 'Activité');
-    expectText(renderer, 'Programme Fidélité');
     expectText(renderer, 'Suivi support actif');
     expectText(
       renderer,
-      '1 dossier(s) en cours. L equipe garde les details de course et vous recontacte si une action est necessaire.',
+      '1 demande(s) en cours. L equipe garde les details de course et vous recontacte si une action est necessaire.',
     );
     expect(collectText(renderer.root)).not.toContain('SOS trajet');
   });
@@ -1590,7 +1589,7 @@ describe('rider smoke flows', () => {
     );
     expectText(
       renderer,
-      'Dossier ticket-q ouvert. Le support suit votre demande paiement.',
+      'Votre demande a été envoyée au support.',
     );
   });
 
@@ -1719,7 +1718,7 @@ describe('rider smoke flows', () => {
     );
     expectText(
       renderer,
-      'Annulation apres chauffeur mobilise. Revue support ouverte: frais suggere 300 XOF, 240 XOF pour proteger le chauffeur si le contexte le confirme. Dossier support ticket-c ouvert.',
+      'Annulation apres chauffeur mobilise. Revue support ouverte: frais suggere 300 XOF, 240 XOF pour proteger le chauffeur si le contexte le confirme.',
     );
   });
 
@@ -1925,7 +1924,7 @@ describe('rider smoke flows', () => {
       { token: 'rider-auth-client' },
       'trip-rider-1',
       {
-        details: 'SOS declenche depuis le cockpit passager.',
+        details: "SOS declenche depuis l'application passager.",
         latitude: 12.365,
         longitude: -1.533,
         accuracyMeters: 18,

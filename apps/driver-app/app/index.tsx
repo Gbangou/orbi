@@ -1,20 +1,32 @@
 import { router } from 'expo-router';
-import { useEffect, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import type { OrbiTheme } from '@orbi/ui';
 import { useOrbiTheme } from '@orbi/ui/native';
 import { hasPersistedDriverSession } from '../lib/auth';
-import {
-  InsightBadge,
-  SectionCard,
-  SectionHeading,
-} from '../lib/realtime-widgets';
 import { OrbiLogo } from '../lib/orbi-logo';
 
 export default function IndexScreen() {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.92)).current;
+
   useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeIn, {
+        toValue: 1,
+        duration: 320,
+        useNativeDriver: false,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        tension: 70,
+        friction: 9,
+        useNativeDriver: false,
+      }),
+    ]).start();
+
     let isMounted = true;
 
     async function handoff() {
@@ -30,7 +42,9 @@ export default function IndexScreen() {
         return;
       }
 
-      router.replace(hasSession ? '/accueil' : '/auth');
+      setTimeout(() => {
+        router.replace(hasSession ? '/accueil' : '/auth');
+      }, 340);
     }
 
     void handoff();
@@ -41,50 +55,41 @@ export default function IndexScreen() {
   }, []);
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <OrbiLogo size="sm" />
-      <Text style={styles.title}>Ouverture du tunnel chauffeur</Text>
-      <Text style={styles.body}>
-        Verification de la session et preparation du bon point d entree pour reprendre sans friction.
-      </Text>
-
-      <SectionCard tone="sky">
-        <SectionHeading
-          eyebrow="Handoff"
-          title="Preparation du bon ecran"
-          description="L application regarde si la session chauffeur existe puis vous redirige vers l accueil ou l acces securise."
-        />
-        <View style={styles.insightRow}>
-          <InsightBadge label="Session" value="Verification" tone="sky" />
-          <InsightBadge label="Cockpit" value="Continu" tone="amber" />
-          <InsightBadge label="Etat" value="Redirection" tone="teal" />
-        </View>
-      </SectionCard>
-    </ScrollView>
+    <View style={styles.screen}>
+      <Animated.View style={[styles.content, { opacity: fadeIn, transform: [{ scale }] }]}>
+        <OrbiLogo size="xl" />
+        <Text style={styles.title}>Accueil chauffeur</Text>
+      </Animated.View>
+      <Text style={styles.market}>Orbi Driver</Text>
+    </View>
   );
 }
 
-const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
+const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
   screen: {
-    flexGrow: 1,
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 48,
-    backgroundColor: theme.colors.driverBackground,
+    backgroundColor: '#FFFFFF',
     gap: 16,
   },
+  content: {
+    alignItems: 'center',
+    gap: 14,
+  },
   title: {
-    color: theme.colors.text,
-    fontSize: 34,
+    color: '#111111',
+    fontSize: 18,
     fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
   },
-  body: {
-    color: theme.colors.muted,
-    lineHeight: 22,
-  },
-  insightRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+  market: {
+    position: 'absolute',
+    bottom: 40,
+    fontSize: 12,
+    color: '#6B6B6B',
+    fontFamily: 'Inter_400Regular',
   },
 });

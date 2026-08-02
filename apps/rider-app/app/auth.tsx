@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { resolveMobileAuthErrorMessage } from '@orbi/api';
 import type { OrbiTheme } from '@orbi/ui';
-import { OrbiAuthIcon, OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
+import { OrbiAuthIcon, OrbiButton, OrbiStatusBanner, useOrbiTheme } from '@orbi/ui/native';
 import { signInRiderAccount, signUpRiderAccount } from '../lib/auth';
 import { OrbiLogo } from '../lib/orbi-logo';
 import { useTranslation } from '../lib/i18n';
@@ -85,7 +85,7 @@ export default function RiderAuthScreen() {
         >
           {/* Wordmark */}
           <View style={styles.brand}>
-            <OrbiLogo size="md" />
+            <OrbiLogo size="sm" tint="#111111" wordmarkColor="#111111" />
             <Text style={styles.tagline} numberOfLines={1}>
               Votre course en quelques secondes
             </Text>
@@ -122,7 +122,7 @@ export default function RiderAuthScreen() {
           </View>
 
           {/* Form */}
-          <OrbiSurface style={styles.form} elevated>
+          <View style={styles.form}>
             {mode === 'sign-up' ? (
               <View style={styles.inputRow}>
                 <OrbiAuthIcon name="user" color={theme.colors.textMuted} />
@@ -187,7 +187,7 @@ export default function RiderAuthScreen() {
               style={styles.primaryBtn}
               labelStyle={styles.primaryBtnLabel}
             />
-          </OrbiSurface>
+          </View>
 
           <Text style={styles.legalFooter} numberOfLines={3}>
             En continuant, vous acceptez les Conditions d&apos;utilisation et la
@@ -202,116 +202,118 @@ export default function RiderAuthScreen() {
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: theme.colors.riderBackground,
+    backgroundColor: '#FFFFFF',
   },
   flex: {
     flex: 1,
   },
   scroll: {
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 22,
     paddingBottom: 28,
-    gap: 18,
+    gap: 14,
   },
 
   // Brand
   brand: {
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
+    alignItems: 'flex-start',
+    gap: 5,
+    marginBottom: 0,
   },
   wordmark: {
     fontSize: 48,
     fontWeight: '800',
-    color: theme.colors.text,
+    color: '#111111',
     letterSpacing: 0,
   },
   tagline: {
-    fontSize: 15,
-    color: theme.colors.textMuted,
+    fontSize: 14,
+    color: '#525252',
     fontWeight: '400',
     fontFamily: 'Inter_400Regular',
-    textAlign: 'center',
+    textAlign: 'left',
   },
   trustLine: {
-    fontSize: 12,
-    color: theme.colors.teal,
+    fontSize: 11.5,
+    color: '#111111',
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    textAlign: 'center',
+    textAlign: 'left',
   },
 
   // Mode toggle
   toggle: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 14,
-    padding: 3,
+    backgroundColor: '#F3F3F3',
+    borderRadius: 8,
+    padding: 2,
     gap: 2,
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
+    borderColor: '#E8E8E8',
   },
   toggleBtn: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 9,
+    borderRadius: 6,
     alignItems: 'center',
   },
   toggleBtnActive: {
-    backgroundColor: theme.colors.riderBackground,
-    ...theme.shadows.card,
+    backgroundColor: '#111111',
   },
   toggleLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
   },
   toggleLabelActive: {
-    color: theme.colors.text,
+    color: '#FFFFFF',
   },
 
   // Form
   form: {
-    gap: 12,
-    padding: 12,
+    gap: 10,
+    padding: 0,
+    borderWidth: 0,
+    backgroundColor: '#FFFFFF',
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 14,
+    backgroundColor: '#F3F3F3',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: 14,
+    borderColor: '#E8E8E8',
+    paddingHorizontal: 13,
   },
   input: {
     flex: 1,
     minWidth: 0,
-    paddingVertical: 13,
-    fontSize: 16,
+    paddingVertical: 11,
+    fontSize: 15,
     fontFamily: 'Inter_400Regular',
-    color: theme.colors.text,
+    color: '#111111',
   },
   eyeBtn: {
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingLeft: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
   // Primary button
   primaryBtn: {
-    marginTop: 4,
-    borderRadius: 12,
-    minHeight: 54,
+    marginTop: 2,
+    borderRadius: 6,
+    minHeight: 48,
+    backgroundColor: '#111111',
   },
   primaryBtnLabel: {
-    fontSize: 16,
+    fontSize: 15,
   },
   legalFooter: {
-    color: theme.colors.textMuted,
-    fontSize: 11.5,
-    lineHeight: 17,
+    color: '#6B6B6B',
+    fontSize: 11,
+    lineHeight: 16,
     textAlign: 'center',
     paddingHorizontal: 12,
     marginTop: 2,

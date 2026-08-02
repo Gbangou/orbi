@@ -134,7 +134,7 @@ function buildCurrentPositionPlace(position: {
   return {
     id: 'current-position',
     label: 'Ma position',
-    address: 'Position GPS actuelle',
+    address: 'Position actuelle',
     coordinates: {
       latitude: position.latitude,
       longitude: position.longitude,
@@ -583,12 +583,12 @@ export default function BookingScreen() {
 
       setStatus(
         flow.hasOpenFlow
-          ? `${me.user.fullName} a deja une demande ou une course active.`
+          ? "Vous avez déjà une course en cours."
           : compatibleDriverCount === null
-            ? `Disponibilite chauffeur non verifiee autour du depart. Reessayez avant de lancer une demande immediate.`
+            ? "Nous vérifions la disponibilité autour du départ."
             : compatibleDriverCount > 0
-              ? `Pret a reserver pour ${me.user.fullName} a ${selectedCity.label}. ${compatibleDriverCount} chauffeur${compatibleDriverCount > 1 ? 's' : ''} compatible${compatibleDriverCount > 1 ? 's' : ''} en ligne dans ${fieldDispatchRadiusKm} km.`
-              : `Aucun chauffeur compatible en ligne dans ${fieldDispatchRadiusKm} km autour du depart. Passez un chauffeur en ligne avant de tester une demande immediate.`,
+              ? "Prêt à réserver."
+              : "Aucun chauffeur disponible pour le moment.",
       );
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
@@ -652,13 +652,13 @@ export default function BookingScreen() {
 
   function handleUseCurrentPositionAsPickup() {
     if (!riderPosition.latestPosition) {
-      setStatus('Position GPS passager pas encore disponible.');
+      setStatus('Position actuelle pas encore disponible.');
       return;
     }
 
     setPickupPlace(buildCurrentPositionPlace(riderPosition.latestPosition));
     setAutoAppliedRiderPosition(true);
-    setStatus('Depart mis a jour avec votre position GPS actuelle.');
+    setStatus('Depart mis a jour avec votre position actuelle.');
   }
 
   function handleSelectDestinationOnMap(coordinates: {
@@ -683,7 +683,7 @@ export default function BookingScreen() {
 
     if (!place.coordinates) {
       setStatus(
-        "Ce lieu n'a pas encore de coordonnees et ne peut pas etre enregistre.",
+        "Choisissez un lieu précis avant de l'enregistrer.",
       );
       return;
     }
@@ -883,7 +883,7 @@ export default function BookingScreen() {
 
     if (scheduleMode === 'now' && nearbyCompatibleDriverCount === null) {
       setStatus(
-        'Disponibilite chauffeur pas encore verifiee. Attendez la synchronisation ou reessayez.',
+        "Disponibilité en cours de vérification. Réessayez dans un instant.",
       );
       return;
     }
@@ -894,7 +894,7 @@ export default function BookingScreen() {
       nearbyCompatibleDriverCount <= 0
     ) {
       setStatus(
-        `Aucun chauffeur compatible en ligne dans ${fieldDispatchRadiusKm} km. Ouvrez l'app chauffeur, connectez le compte driver, passez en ligne, puis relancez la demande.`,
+        "Aucun chauffeur disponible pour le moment. Vous pouvez réessayer ou programmer la course.",
       );
       return;
     }
@@ -992,14 +992,10 @@ export default function BookingScreen() {
           supportedNetworks: paymentIntent.supportedMobileMoneyNetworks,
           channel: paymentIntent.channel,
         });
-        setStatus(
-          `Demande ${createdRequest.id.slice(0, 8)} creee. ${createdRequest.bookingReadinessSummary ?? `Metriques ${createdRequest.routeMetricsSource === 'SERVER_COORDINATES' ? 'serveur GPS' : 'client fallback'}.`} Paiement ${paymentIntent.provider} initialise via ${paymentIntent.channel}.${createdRequest.pricingReason ? ` ${createdRequest.pricingReason}` : ''}`,
-        );
+        setStatus("Course demandée. Confirmez le paiement pour continuer.");
       } else {
         setPaymentPreview(null);
-        setStatus(
-          `Demande ${createdRequest.id.slice(0, 8)} creee avec succes. ${createdRequest.bookingReadinessSummary ?? `Metriques ${createdRequest.routeMetricsSource === 'SERVER_COORDINATES' ? 'serveur GPS' : 'client fallback'}.`} Paiement en espece a regler a la fin du trajet.${createdRequest.pricingReason ? ` ${createdRequest.pricingReason}` : ''}`,
-        );
+        setStatus("Course demandée. Nous cherchons un chauffeur.");
       }
 
       // Feedback de creation de demande, avant acceptation chauffeur.
@@ -1023,7 +1019,7 @@ export default function BookingScreen() {
       const feedback = await resolveRiderAppError(error, {
         surface: selectedPaymentMethod === 'cash' ? 'booking' : 'payments',
         fallback:
-          'La creation de demande a echoue. Verifiez le backend ou la base locale.',
+          "La demande n'a pas pu être envoyée. Réessayez.",
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -1069,7 +1065,7 @@ export default function BookingScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Route summary card ── */}
-        <OrbiSurface style={styles.routeSummaryCard} elevated>
+        <OrbiSurface style={styles.routeSummaryCard}>
           <View style={styles.routeSummaryRow}>
             <View style={styles.routeDotGreen} />
             <View style={styles.routeSummaryField}>
@@ -1106,28 +1102,6 @@ export default function BookingScreen() {
             <Text style={styles.tripDecisionValue} numberOfLines={1}>
               {selectedOption ? formatRiderMoneyAmount(selectedOption.fare) : '--'} · {tripEstimate.distanceKm} km · {tripEstimate.durationMinutes} min
             </Text>
-            <View style={styles.tripDecisionSignal}>
-              <View
-                style={[
-                  styles.tripDecisionDot,
-                  {
-                    backgroundColor:
-                      nearbyCompatibleDriverCount === null
-                        ? theme.colors.sky
-                        : nearbyCompatibleDriverCount > 0
-                          ? theme.colors.teal
-                          : theme.colors.amber,
-                  },
-                ]}
-              />
-              <Text style={styles.tripDecisionSignalText} numberOfLines={1}>
-                {nearbyCompatibleDriverCount === null
-                  ? 'Scan'
-                  : nearbyCompatibleDriverCount > 0
-                    ? `${nearbyCompatibleDriverCount} compatible${nearbyCompatibleDriverCount > 1 ? 's' : ''}`
-                    : 'Aucun proche'}
-              </Text>
-            </View>
           </View>
         </OrbiSurface>
 
@@ -1215,12 +1189,6 @@ export default function BookingScreen() {
                 ? 'Aucun chauffeur disponible tout pres du depart pour le moment.'
                 : 'Nous cherchons un chauffeur disponible autour du depart.'
             }
-          />
-        ) : nearbyCompatibleDriverCount !== null ? (
-          <OrbiStatusBanner
-            tone="teal"
-            title={`${nearbyCompatibleDriverCount} chauffeur${nearbyCompatibleDriverCount > 1 ? 's' : ''} compatible${nearbyCompatibleDriverCount > 1 ? 's' : ''} proche${nearbyCompatibleDriverCount > 1 ? 's' : ''}`}
-            message={`Moto disponible vérifiée dans ${fieldDispatchRadiusKm} km autour du départ.`}
           />
         ) : null}
 
@@ -1327,8 +1295,8 @@ export default function BookingScreen() {
         {paymentPreview ? (
           <OrbiStatusBanner
             tone="teal"
-            title="Paiement initié"
-            message={`${paymentPreview.provider} · ${paymentPreview.channel} · Réf: ${paymentPreview.transactionRef}`}
+            title="Paiement lancé"
+            message="Confirmez la demande sur votre téléphone."
           />
         ) : null}
 
@@ -1336,8 +1304,8 @@ export default function BookingScreen() {
         {isRealtimeSyncing ? (
           <OrbiStatusBanner
             tone="sky"
-            title="Mise à jour en cours"
-            message="Synchronisation du booking et du direct."
+            title="Mise à jour"
+            message="Nous actualisons votre course."
           />
         ) : null}
 
@@ -1354,7 +1322,7 @@ export default function BookingScreen() {
                 : immediateBookingUnavailable
                   ? 'Aucun chauffeur autour du départ'
                 : immediateBookingSupplyUnknown
-                  ? 'Scan disponibilité'
+                  ? 'Recherche chauffeur'
                   : selectedOption && destinationPlace.coordinates
                     ? `${formatRiderMoneyAmount(selectedOption.fare)} · ${selectedOption.title}`
                     : 'Choisissez votre course'}
@@ -1365,7 +1333,7 @@ export default function BookingScreen() {
                 : immediateBookingUnavailable
                   ? `Essayez plus tard ou programmez la course`
                   : immediateBookingSupplyUnknown
-                    ? `Vérification dans ${fieldDispatchRadiusKm} km`
+                    ? "Disponibilité en cours"
                     : selectedOption && destinationPlace.coordinates
                       ? `${tripEstimate.distanceKm} km · ${tripEstimate.durationMinutes} min · ${selectedPaymentMethod === 'cash' ? 'Espèces' : selectedPaymentMethod}`
                       : 'Départ, destination et disponibilité requis'}
@@ -1405,7 +1373,7 @@ export default function BookingScreen() {
 }
 
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
-  safe: { flex: 1 },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: 16,
@@ -1423,14 +1391,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.riderBackground,
+    borderBottomColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: theme.colors.backgroundAlt,
+    backgroundColor: '#F3F3F3',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1438,15 +1406,15 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: '#111111',
   },
 
   // Route summary card
   routeSummaryCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
     paddingHorizontal: 10,
     paddingVertical: 2,
   },
@@ -1460,14 +1428,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
     flexShrink: 0,
   },
   routeDotDark: {
     width: 10,
     height: 10,
     borderRadius: 3,
-    backgroundColor: theme.colors.text,
+    backgroundColor: '#111111',
     flexShrink: 0,
   },
   routeSummaryField: { flex: 1 },
@@ -1475,7 +1443,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginBottom: 2,
@@ -1484,7 +1452,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.text,
+    color: '#111111',
   },
   routeSummaryPlaceholder: {
     color: theme.colors.textMuted,
@@ -1493,7 +1461,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   routeSummarySep: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: '#E8E8E8',
     marginLeft: 22,
   },
   tripDecisionRow: {
@@ -1502,9 +1470,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     borderRadius: 8,
-    backgroundColor: theme.colors.backgroundAlt,
+    backgroundColor: '#F3F3F3',
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
     paddingHorizontal: 11,
     paddingVertical: 7,
     marginTop: 6,
@@ -1513,7 +1481,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: '#111111',
     flex: 1,
   },
   tripDecisionSignal: {
@@ -1531,13 +1499,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.textSoft,
+    color: '#525252',
   },
   gpsBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: theme.colors.accentLight,
+    backgroundColor: '#F3F3F3',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -1550,7 +1518,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -1563,16 +1531,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingHorizontal: 2,
   },
   cityChip: {
-    borderRadius: 999,
+    borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: theme.colors.backgroundAlt,
+    backgroundColor: '#F3F3F3',
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
   },
   cityChipActive: {
-    backgroundColor: theme.colors.text,
-    borderColor: theme.colors.text,
+    backgroundColor: '#111111',
+    borderColor: '#111111',
   },
   cityChipLabel: {
     fontSize: 12,
@@ -1585,7 +1553,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Map preview
   mapPreviewWrap: {
     height: 220,
-    borderRadius: 10,
+    borderRadius: 8,
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 1,
@@ -1639,8 +1607,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   vehicleCard: {
     width: 118,
     backgroundColor: theme.colors.surface,
-    borderRadius: 10,
-    borderWidth: 1.5,
+    borderRadius: 8,
+    borderWidth: 1,
     borderColor: theme.colors.border,
     padding: 12,
     alignItems: 'center',
@@ -1739,7 +1707,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   priceMetricTile: {
     flex: 1,
     minWidth: 0,
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -1762,7 +1730,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.text,
   },
   priceBreakdownBox: {
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
@@ -1811,7 +1779,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textAlign: 'right',
   },
   priceBusinessBox: {
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: 'rgba(0,201,167,0.07)',
     borderWidth: 1,
     borderColor: 'rgba(0,201,167,0.22)',
@@ -1932,11 +1900,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: theme.colors.text,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: theme.colors.text,
-    shadowOpacity: 0.55,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 14,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   confirmLabel: {
     fontSize: 18,
@@ -1953,11 +1918,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: -4 },
-    elevation: 12,
   },
   ctaBtn: {
     minHeight: 50,

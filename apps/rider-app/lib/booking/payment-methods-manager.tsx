@@ -197,7 +197,7 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
               onChangeText={handlePhoneChange}
               onBlur={handlePhoneBlur}
               placeholder="70 12 34 56"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor="#6B6B6B"
               keyboardType="phone-pad"
               maxLength={13}
               returnKeyType="done"
@@ -304,21 +304,21 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
         <OrbiStatusBanner
           tone="teal"
           title="Wallet sécurisé"
-          message="Le débit wallet reste lié à la demande de course et à son idempotency key."
+          message="Le paiement sera confirmé avec votre réservation."
         />
       )}
     </View>
   );
 });
 
-const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
+const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
   root: { gap: 8 },
 
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginBottom: 2,
@@ -328,36 +328,36 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   cardSelected: {
-    borderColor: theme.colors.teal,
-    backgroundColor: 'rgba(0,201,167,0.04)',
+    borderColor: '#111111',
+    backgroundColor: '#FFFFFF',
   },
   cardPressed: { opacity: 0.82 },
 
   iconWrap: {
     width: 40,
     height: 38,
-    borderRadius: 12,
-    backgroundColor: theme.colors.backgroundDim,
+    borderRadius: 4,
+    backgroundColor: '#F3F3F3',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconWrapSelected: { backgroundColor: 'rgba(0,201,167,0.12)' },
+  iconWrapSelected: { backgroundColor: '#111111' },
   icon: {
     fontSize: 12,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     letterSpacing: 0,
   },
-  iconSelected: { color: theme.colors.teal },
+  iconSelected: { color: '#FFFFFF' },
 
   info: { flex: 1, gap: 2 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -365,17 +365,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: '#111111',
   },
   sublabel: {
     fontSize: 11,
-    color: theme.colors.textSoft,
+    color: '#5F5F5F',
     fontFamily: 'Inter_400Regular',
   },
 
   badge: {
-    backgroundColor: 'rgba(0,201,167,0.12)',
-    borderRadius: 999,
+    backgroundColor: '#F3F3F3',
+    borderRadius: 4,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
@@ -383,11 +383,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: '#111111',
   },
   walletBadge: {
-    backgroundColor: 'rgba(0,201,167,0.12)',
-    borderRadius: 999,
+    backgroundColor: '#F3F3F3',
+    borderRadius: 4,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
@@ -395,7 +395,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.teal,
+    color: '#111111',
   },
 
   radio: {
@@ -403,30 +403,32 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: theme.colors.border,
+    borderColor: '#CFCFCF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioSelected: { borderColor: theme.colors.teal },
+  radioSelected: { borderColor: '#111111' },
   radioDot: {
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
   },
 
   // Mobile Money expanded panel
   mobileMoneyPanel: {
-    borderRadius: 14,
+    borderRadius: 4,
     padding: 12,
     gap: 7,
     marginTop: -4,
+    backgroundColor: '#F7F7F7',
+    borderColor: '#E8E8E8',
   },
   panelLabel: {
     fontSize: 12,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.textSoft,
+    color: '#5F5F5F',
   },
 
   networkRow: { gap: 7 },
@@ -436,14 +438,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
   },
   networkChipActive: {
-    borderColor: theme.colors.teal,
-    backgroundColor: 'rgba(0,201,167,0.04)',
+    borderColor: '#111111',
+    backgroundColor: '#FFFFFF',
   },
   networkChipPressed: { opacity: 0.8 },
   networkDot: {
@@ -451,32 +453,32 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: theme.colors.border,
+    borderColor: '#CFCFCF',
   },
   networkDotActive: {
-    borderColor: theme.colors.teal,
-    backgroundColor: theme.colors.teal,
+    borderColor: '#111111',
+    backgroundColor: '#111111',
   },
   networkLabel: {
     fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.text,
+    color: '#111111',
   },
-  networkLabelActive: { color: theme.colors.teal },
+  networkLabelActive: { color: '#111111' },
   networkSublabel: {
     fontSize: 10,
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     fontFamily: 'Inter_400Regular',
   },
 
   phoneInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
   phoneInputError: { borderColor: '#000000' },
@@ -486,10 +488,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.text,
+    color: '#111111',
     borderRightWidth: 1,
-    borderRightColor: theme.colors.border,
-    backgroundColor: theme.colors.backgroundDim,
+    borderRightColor: '#E8E8E8',
+    backgroundColor: '#F3F3F3',
   },
   phoneInput: {
     flex: 1,
@@ -498,7 +500,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     fontFamily: 'Inter_500Medium',
-    color: theme.colors.text,
+    color: '#111111',
     letterSpacing: 0,
   },
   errorText: {

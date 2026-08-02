@@ -39,7 +39,7 @@ export function buildDriverPresenceSyncedNote(input: {
   const precision = Math.round(toFiniteRouteNumber(input.accuracyMeters) ?? 0);
 
   if (!input.activeTripId) {
-    return `Presence GPS synchronisee. Precision ${precision} m.`;
+    return `Position synchronisee. Precision ${precision} m.`;
   }
 
   const pickupDistance = formatRouteDistance(

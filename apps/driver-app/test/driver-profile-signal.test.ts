@@ -38,7 +38,7 @@ describe('driver profile signal helpers', () => {
         totalItems: undefined,
         readinessPercent: Number.NaN,
       }),
-    ).toBe('Dossier ND/ND complete a ND%');
+    ).toBe('Profil ND/ND complete a ND%');
   });
 
   it('normalizes stringified profile metrics before display', () => {

@@ -261,7 +261,7 @@ export function TripMapView({
             <Text style={styles.routeInfoEyebrow}>Navigation</Text>
             <Text style={styles.routeWarningTitle}>{routeUnavailableReason}</Text>
             <Text style={styles.routeWarningText}>
-              Ouvrez une navigation GPS avant de partir. Orbi ne trace pas de ligne droite.
+              Ouvrez la navigation avant de partir. Aucun raccourci n est dessine.
             </Text>
           </View>
         </View>
@@ -361,8 +361,8 @@ export function TripMapView({
             <View style={styles.fullscreenHint}>
               <Text style={styles.fullscreenHintTitle}>Carte mission</Text>
               <Text style={styles.fullscreenHintText}>
-                Suivez uniquement l itineraire route calcule. S il est indisponible, ouvrez une
-                navigation GPS.
+                Suivez uniquement l itineraire route calcule. S il est indisponible, ouvrez
+                la navigation.
               </Text>
             </View>
           ) : null}
@@ -408,7 +408,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
-    ...theme.shadows.card,
   },
   routeWarningPanel: {
     maxWidth: '86%',

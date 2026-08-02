@@ -198,63 +198,63 @@ export const ScheduledRidePicker = memo(function ScheduledRidePicker({
   );
 });
 
-const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
+const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
   container: { gap: 9 },
   toggle: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 12, padding: 3, gap: 2,
+    backgroundColor: '#F3F3F3',
+    borderRadius: 4, padding: 3, gap: 2,
   },
-  toggleBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
-  toggleBtnActive: { backgroundColor: theme.colors.surface, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 8, elevation: 3 },
-  toggleLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.textMuted },
-  toggleLabelActive: { color: theme.colors.text },
+  toggleBtn: { flex: 1, paddingVertical: 8, borderRadius: 4, alignItems: 'center' },
+  toggleBtnActive: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8E8E8' },
+  toggleLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: '#6B6B6B' },
+  toggleLabelActive: { color: '#111111' },
 
   pickers: { gap: 11 },
   pickerSection: { gap: 7 },
-  pickerLabel: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 0 },
+  pickerLabel: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold', color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: 0 },
 
   dateChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  dateChip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: theme.colors.backgroundAlt, borderWidth: 1, borderColor: theme.colors.border },
-  dateChipActive: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
-  dateChipText: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.textSoft },
-  dateChipTextActive: { color: theme.colors.textInverse },
+  dateChip: { borderRadius: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#F7F7F7', borderWidth: 1, borderColor: '#E8E8E8' },
+  dateChipActive: { backgroundColor: '#111111', borderColor: '#111111' },
+  dateChipText: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: '#5F5F5F' },
+  dateChipTextActive: { color: '#FFFFFF' },
 
   timeDisplay: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: theme.colors.backgroundAlt, borderRadius: 12,
-    borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 13, paddingVertical: 10,
+    backgroundColor: '#F7F7F7', borderRadius: 4,
+    borderWidth: 1, borderColor: '#E8E8E8', paddingHorizontal: 13, paddingVertical: 10,
   },
-  timeValue: { fontSize: 16, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.text },
+  timeValue: { fontSize: 16, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: '#111111' },
 
   timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   timeSlot: {
-    borderRadius: 8, paddingHorizontal: 9, paddingVertical: 6,
-    backgroundColor: theme.colors.backgroundAlt,
-    borderWidth: 1, borderColor: theme.colors.border,
+    borderRadius: 4, paddingHorizontal: 9, paddingVertical: 6,
+    backgroundColor: '#F7F7F7',
+    borderWidth: 1, borderColor: '#E8E8E8',
     minWidth: 60, alignItems: 'center',
   },
-  timeSlotActive: { backgroundColor: theme.colors.teal, borderColor: theme.colors.teal },
-  timeSlotText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.textSoft },
+  timeSlotActive: { backgroundColor: '#111111', borderColor: '#111111' },
+  timeSlotText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: '#5F5F5F' },
   timeSlotTextActive: { color: '#FFFFFF' },
 
   scheduledInfo: {
-    backgroundColor: 'rgba(0,201,167,0.06)', borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(0,201,167,0.22)', padding: 10, gap: 4,
+    backgroundColor: '#F7F7F7', borderRadius: 4,
+    borderWidth: 1, borderColor: '#E8E8E8', padding: 10, gap: 4,
   },
   scheduledInfoHeader: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   scheduledInfoCopy: { flex: 1, gap: 4 },
-  scheduledInfoText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.teal },
-  scheduledInfoNote: { fontSize: 12, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular' },
+  scheduledInfoText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: '#111111' },
+  scheduledInfoNote: { fontSize: 12, color: '#6B6B6B', fontFamily: 'Inter_400Regular' },
 });
 
-const makeGlyphStyles = (theme: OrbiTheme) => StyleSheet.create({
+const makeGlyphStyles = (_theme: OrbiTheme) => StyleSheet.create({
   calendar: {
     width: 22,
     height: 22,
-    borderRadius: 7,
+    borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: theme.colors.teal,
+    borderColor: '#111111',
     paddingHorizontal: 4,
     paddingTop: 5,
   },
@@ -270,12 +270,12 @@ const makeGlyphStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 3,
     height: 7,
     borderRadius: 2,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
   },
   calendarLine: {
     height: 1.5,
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,201,167,0.38)',
+    borderRadius: 2,
+    backgroundColor: '#CFCFCF',
     marginBottom: 5,
   },
   calendarDotRow: {
@@ -286,7 +286,7 @@ const makeGlyphStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 2,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
   },
   chevron: {
     width: 18,
@@ -301,16 +301,16 @@ const makeGlyphStyles = (theme: OrbiTheme) => StyleSheet.create({
     position: 'absolute',
     width: 8,
     height: 2,
-    borderRadius: 999,
-    backgroundColor: theme.colors.textMuted,
+    borderRadius: 1,
+    backgroundColor: '#6B6B6B',
     transform: [{ translateX: -3 }, { rotate: '45deg' }],
   },
   chevronLineRight: {
     position: 'absolute',
     width: 8,
     height: 2,
-    borderRadius: 999,
-    backgroundColor: theme.colors.textMuted,
+    borderRadius: 1,
+    backgroundColor: '#6B6B6B',
     transform: [{ translateX: 3 }, { rotate: '-45deg' }],
   },
 });

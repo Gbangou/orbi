@@ -114,17 +114,13 @@ export default function RiderTabsLayout() {
 
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   tabBar: {
-    backgroundColor: theme.colors.surface,
-    borderTopColor: theme.colors.border,
+    backgroundColor: '#FFFFFF',
+    borderTopColor: '#E8E8E8',
     borderTopWidth: 1,
-    height: 82,
-    paddingBottom: 16,
-    paddingTop: 10,
+    height: 78,
+    paddingBottom: 14,
+    paddingTop: 9,
     elevation: 0,
-    shadowColor: theme.shadows.card.shadowColor,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: -2 },
   },
   label: {
     fontSize: 10,

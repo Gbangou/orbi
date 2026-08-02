@@ -29,18 +29,18 @@ export function buildDriverShiftReadiness(input: {
 
   if (input.flow.operationalStatus === 'SUSPENDED') {
     return {
-      eyebrow: 'Readiness',
+      eyebrow: 'Etat de service',
       title: 'Reprise verrouillee',
       description:
-        'Le cockpit reste lisible, mais la reprise depend d une action operations sur le dossier.',
+        'Le compte reste visible, mais la reprise depend d une verification du profil.',
       scoreLabel: '0/100',
       tone: 'rose',
-      note: 'Priorite: contacter les operations et garder les documents prets pour revue.',
+      note: 'Priorite: contacter le support et garder les documents disponibles.',
       noteTone: 'rose',
       insights: [
         { label: 'Compte', value: 'Suspendu', tone: 'rose' },
-        { label: 'Dispatch', value: 'Bloque', tone: 'amber' },
-        { label: 'Action', value: 'Ops', tone: 'sky' },
+        { label: 'Offres', value: 'Bloquees', tone: 'amber' },
+        { label: 'Action', value: 'Support', tone: 'sky' },
       ],
     };
   }
@@ -50,25 +50,25 @@ export function buildDriverShiftReadiness(input: {
     !input.flow.accountCanReceiveOffers
   ) {
     return {
-      eyebrow: 'Readiness',
-      title: 'Validation operations requise',
+      eyebrow: 'Etat de service',
+      title: 'Validation requise',
       description:
-        'Le direct peut rester visible, mais les offres sont retenues tant que le dossier chauffeur n est pas approuve.',
+        'Le direct peut rester visible, mais les offres attendent l approbation du profil chauffeur.',
       scoreLabel: '45/100',
       tone: 'amber',
-      note: 'Priorite: faire valider le dossier et le vehicule avant les tests de dispatch.',
+      note: 'Priorite: faire valider le profil et le vehicule.',
       noteTone: 'amber',
       insights: [
         { label: 'Compte', value: 'En revue', tone: 'amber' },
         { label: 'Offres', value: 'Bloquees', tone: 'rose' },
-        { label: 'Action', value: 'Ops', tone: 'sky' },
+        { label: 'Action', value: 'Support', tone: 'sky' },
       ],
     };
   }
 
   if (fatigue?.state === 'blocked') {
     return {
-      eyebrow: 'Readiness',
+      eyebrow: 'Etat de service',
       title: 'Pause prioritaire',
       description:
         'La securite passe avant le volume. Les nouvelles missions doivent attendre la recuperation.',
@@ -86,13 +86,13 @@ export function buildDriverShiftReadiness(input: {
 
   if (input.flow.activeTrip) {
     return {
-      eyebrow: 'Readiness',
+      eyebrow: 'Etat de service',
       title: 'Mission en execution',
       description:
         'Le meilleur prochain geste est de garder la route, le code passager et le support visibles.',
       scoreLabel: '88/100',
       tone: 'sky',
-      note: 'Le dispatch est verrouille pour eviter les doubles engagements pendant la course active.',
+      note: 'Les nouvelles offres sont mises en attente pendant la course active.',
       noteTone: 'sky',
       insights: [
         { label: 'Mission', value: input.flow.primaryStatusLabel, tone: 'amber' },
@@ -106,18 +106,18 @@ export function buildDriverShiftReadiness(input: {
     const score = fatigue?.state === 'warning' ? 78 : 94;
 
     return {
-      eyebrow: 'Readiness',
-      title: input.flow.visibleOfferCount > 0 ? 'Pret a choisir' : 'Pret au dispatch',
+      eyebrow: 'Etat de service',
+      title: input.flow.visibleOfferCount > 0 ? 'Pret a choisir' : 'Pret a recevoir',
       description:
         input.flow.visibleOfferCount > 0
           ? 'Des reservations sont disponibles. Comparez gain, distance et fenetre avant d accepter.'
-          : 'Le direct est ouvert. Orbi garde le flux pret pour la prochaine demande compatible.',
+          : 'Le direct est ouvert. Vous etes disponible pour la prochaine demande.',
       scoreLabel: `${score}/100`,
       tone: fatigue?.state === 'warning' ? 'amber' : 'teal',
       note:
         fatigue?.state === 'warning'
           ? fatigue.reason
-          : 'Position, disponibilite et flux live sont alignes pour recevoir une mission.',
+          : 'Position et disponibilite sont pretes pour recevoir une mission.',
       noteTone: fatigue?.state === 'warning' ? 'amber' : 'teal',
       insights: [
         { label: 'Direct', value: 'Ouvert', tone: 'teal' },
@@ -128,13 +128,13 @@ export function buildDriverShiftReadiness(input: {
   }
 
   return {
-    eyebrow: 'Readiness',
+    eyebrow: 'Etat de service',
     title: 'Hors ligne, pret a reprendre',
     description:
       'Le compte reste synchronise. Passez en ligne seulement quand vous etes vraiment disponible.',
     scoreLabel: '72/100',
     tone: 'amber',
-    note: 'Le mode hors ligne evite les refus inutiles et protege la qualite du dispatch.',
+    note: 'Le mode hors ligne evite les refus inutiles et protege votre qualite de service.',
     noteTone: 'amber',
     insights: [
       { label: 'Direct', value: 'Ferme', tone: 'amber' },

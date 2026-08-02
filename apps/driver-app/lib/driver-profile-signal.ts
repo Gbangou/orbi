@@ -91,5 +91,5 @@ export function formatDriverOnboardingProgress(input: {
   totalItems: unknown;
   readinessPercent: unknown;
 }) {
-  return `Dossier ${formatDriverProfileCount(input.completedItems)}/${formatDriverProfileCount(input.totalItems)} complete a ${formatDriverProfilePercent(input.readinessPercent)}`;
+  return `Profil ${formatDriverProfileCount(input.completedItems)}/${formatDriverProfileCount(input.totalItems)} complete a ${formatDriverProfilePercent(input.readinessPercent)}`;
 }

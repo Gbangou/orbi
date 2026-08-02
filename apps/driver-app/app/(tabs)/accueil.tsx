@@ -4,11 +4,9 @@ import { Animated, Linking, Pressable, SafeAreaView, StyleSheet, Text, View } fr
 import { useTranslation } from '../../lib/i18n';
 import {
   fetchDriverEarnings,
-  fetchDriverDispatchReadiness,
   fetchDriverOffers,
   fetchDriverProfile,
   fetchMyTrips,
-  type DriverDispatchReadinessResponse,
   type DriverFatigueStatus,
   type DriverEarningsResponse,
   type DriverOffer,
@@ -30,10 +28,7 @@ import {
   VehicleIllustration,
 } from '@orbi/ui/native';
 import { restoreDriverSession } from '../../lib/auth';
-import {
-  formatDriverEarningsAmount,
-  formatDriverEarningsRatioPercent,
-} from '../../lib/driver-earnings-signal';
+import { formatDriverEarningsAmount } from '../../lib/driver-earnings-signal';
 import { resolveDriverAppError } from '../../lib/session-feedback';
 import {
   useReservationExpiryRefresh,
@@ -60,7 +55,6 @@ import {
   resolveDriverOfferMoneyDisplay,
 } from '../../lib/offer-signal';
 import { normalizeDriverProfileResponse } from '../../lib/driver-profile-normalizer';
-import { buildDriverDispatchReadinessNote } from '../../lib/driver-dispatch-readiness';
 
 const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
 
@@ -332,9 +326,6 @@ export default function DriverHomeScreen() {
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [earnings, setEarnings] = useState<DriverEarningsResponse | null>(null);
-  const [dispatchReadiness, setDispatchReadiness] =
-    useState<DriverDispatchReadinessResponse['readiness'] | null>(null);
-  const [acceptanceRate, setAcceptanceRate] = useState<number | null>(null);
   const [statusNote, setStatusNote] = useState('Synchronisation terrain en cours...');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
@@ -371,24 +362,15 @@ export default function DriverHomeScreen() {
         fetchDriverEarnings(authClient),
         fetchDriverProfile(authClient),
       ]);
-      let dispatchReadinessResponse: DriverDispatchReadinessResponse | null =
-        null;
-      try {
-        dispatchReadinessResponse = await fetchDriverDispatchReadiness(authClient);
-      } catch {
-        dispatchReadinessResponse = null;
-      }
       const normalizedProfile = normalizeDriverProfileResponse(profileResponse);
       setOffers(offersResponse);
       setHistory(historyResponse);
       setEarnings(earningsResponse);
-      setDispatchReadiness(dispatchReadinessResponse?.readiness ?? null);
       setDriverProfileId(normalizedProfile.profile.id);
       setDriverProfileStatus(normalizedProfile.profile.status);
       setDriverVerificationStatus(normalizedProfile.profile.verificationStatus);
       setDriverFatigue(normalizedProfile.profile.fatigue);
       setVehicleCount(normalizedProfile.profile.vehicles.length);
-      setAcceptanceRate(normalizedProfile.profile.dispatchSignal?.acceptanceRate ?? null);
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: offersResponse,
@@ -399,7 +381,7 @@ export default function DriverHomeScreen() {
       if (!silent) {
         setStatusNote(
           flow.canReceiveOffers && !flow.visibleOffers.length
-            ? buildDriverDispatchReadinessNote(dispatchReadinessResponse?.readiness ?? null)
+            ? "Vous êtes prêt. Nous vous prévenons dès qu'une course arrive."
             : buildDriverHomeStatusLabel({ flow, fullName: me.user.fullName }),
         );
       }
@@ -415,7 +397,6 @@ export default function DriverHomeScreen() {
       setDriverProfileId(null);
       setDriverProfileStatus('OFFLINE');
       setDriverVerificationStatus('PENDING');
-      setDispatchReadiness(null);
       setVehicleCount(null);
       if (!silent) setStatusNote(feedback.message);
     } finally {
@@ -538,9 +519,9 @@ export default function DriverHomeScreen() {
       setStatusNote(
         response.availability.status === 'ONLINE'
           ? reservedOfferCount > 0
-            ? `${reservedOfferCount} demande${reservedOfferCount > 1 ? 's' : ''} compatible${reservedOfferCount > 1 ? 's' : ''} reservee${reservedOfferCount > 1 ? 's' : ''}.`
-            : 'Vous etes maintenant visible pour les nouvelles demandes.'
-          : 'Vous etes hors ligne et ne recevrez plus de nouvelles offres.',
+            ? `${reservedOfferCount} course${reservedOfferCount > 1 ? 's' : ''} en attente.`
+            : 'Vous êtes en ligne.'
+          : 'Vous êtes hors ligne.',
       );
       await loadDriverHome(true);
     } catch (error) {
@@ -585,11 +566,11 @@ export default function DriverHomeScreen() {
   const statusLabel = activeTrip
     ? 'En mission'
     : isOnline && !flow.accountCanReceiveOffers
-      ? 'Dossier en revue'
+      ? 'En validation'
       : isOnline
         ? 'En ligne'
         : 'Hors ligne';
-  const sheetH = activeTrip ? 244 : isOnline ? 246 : 226;
+  const sheetH = activeTrip ? 256 : isOnline ? 266 : 246;
 
   return (
     <View style={styles.root}>
@@ -611,23 +592,6 @@ export default function DriverHomeScreen() {
             </Text>
           </View>
 
-          {/* Acceptance rate badge — Bolt-style */}
-          {acceptanceRate !== null ? (
-            <View
-              style={[
-                styles.acceptanceBadge,
-                acceptanceRate < 0.7 && styles.acceptanceBadgeLow,
-              ]}
-            >
-              <Text style={[
-                styles.acceptanceLabel,
-                acceptanceRate < 0.7 && styles.acceptanceLabelLow,
-              ]}>
-                {formatDriverEarningsRatioPercent(acceptanceRate)} acceptées
-              </Text>
-            </View>
-          ) : null}
-
           <View style={styles.statusPill}>
             <View style={[styles.statusDot, { backgroundColor: isOnDuty ? theme.colors.teal : '#BBBBBB' }]} />
             <Text style={[styles.statusPillText, { color: isOnDuty ? theme.colors.teal : theme.colors.textMuted }]}>
@@ -646,7 +610,7 @@ export default function DriverHomeScreen() {
             label={isOnline ? td('goOffline') : td('goOnline')}
             loading={isTogglingAvailability}
             disabled={flow.availabilityLocked}
-            variant={isOnline ? 'secondary' : 'primary'}
+            variant="primary"
             tone="teal"
             style={styles.toggleBtn}
             labelStyle={styles.toggleLabel}
@@ -688,18 +652,22 @@ export default function DriverHomeScreen() {
           </View>
         ) : isOnline ? (
           <View style={styles.onlineSheet}>
+            <View style={styles.driverHandleCopy}>
+              <Text style={styles.driverModeLabel}>Mode chauffeur</Text>
+              <Text style={styles.driverModeTitle}>Vous êtes en ligne</Text>
+            </View>
             <View style={styles.onlineRow}>
               <View>
                 <Text style={styles.onlineTitle}>
                   {!flow.accountCanReceiveOffers
-                    ? 'Dossier chauffeur en validation'
+                    ? 'Profil en validation'
                     : visibleOffers.length > 0
                     ? td(visibleOffers.length > 1 ? 'offersAvailable_plural' : 'offersAvailable', { count: visibleOffers.length })
                     : td('waitingForOffers')}
                 </Text>
                 {!flow.accountCanReceiveOffers ? (
                   <Text style={styles.statusNoteText} numberOfLines={2}>
-                    {buildDriverDispatchReadinessNote(dispatchReadiness)}
+                    Votre compte n'est pas encore prêt à recevoir des courses.
                   </Text>
                 ) : null}
               </View>
@@ -728,6 +696,10 @@ export default function DriverHomeScreen() {
           </View>
         ) : (
           <View style={styles.offlineSheet}>
+            <View style={styles.driverHandleCopy}>
+              <Text style={styles.driverModeLabel}>Mode chauffeur</Text>
+              <Text style={styles.driverModeTitle}>Prêt à démarrer</Text>
+            </View>
             <View style={styles.offlineHeroRow}>
               <View style={styles.offlinePulse}>
                 <View style={styles.offlinePulseDot} />
@@ -735,30 +707,8 @@ export default function DriverHomeScreen() {
               <View style={styles.offlineHeroCopy}>
                 <Text style={styles.offlineTitle}>Vous êtes hors ligne</Text>
                 <Text style={styles.offlineSub} numberOfLines={2}>
-                  Activez le direct pour apparaître dans le dispatch.
+                  Activez le direct pour recevoir des courses.
                 </Text>
-              </View>
-            </View>
-            <View style={styles.offlineMetricRow}>
-              <View style={styles.offlineMetric}>
-                <Text style={styles.offlineMetricValue}>
-                  {vehicleCount === 0 ? 'À configurer' : 'Prêt'}
-                </Text>
-                <Text style={styles.offlineMetricLabel}>Véhicule</Text>
-              </View>
-              <View style={styles.offlineMetricDivider} />
-              <View style={styles.offlineMetric}>
-                <Text style={styles.offlineMetricValue}>
-                  {driverFatigue.state === 'clear' ? 'OK' : 'Pause'}
-                </Text>
-                <Text style={styles.offlineMetricLabel}>Fatigue</Text>
-              </View>
-              <View style={styles.offlineMetricDivider} />
-              <View style={styles.offlineMetric}>
-                <Text style={styles.offlineMetricValue}>
-                  {formatDriverEarningsRatioPercent(acceptanceRate)}
-                </Text>
-                <Text style={styles.offlineMetricLabel}>Accept.</Text>
               </View>
             </View>
             {vehicleCount === 0 ? (
@@ -836,19 +786,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: 14,
+    paddingTop: 7,
     paddingBottom: 4,
     gap: 10,
   },
   earningsBadge: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
-    paddingHorizontal: 15,
+    paddingHorizontal: 14,
     paddingVertical: 9,
-    ...theme.shadows.float,
   },
   earningsLabel: {
     fontSize: 10,
@@ -860,19 +809,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   earningsValue: {
     fontSize: 14,
     fontWeight: '800',
-    color: theme.colors.text,
+    color: '#111111',
   },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
     paddingHorizontal: 13,
     paddingVertical: 9,
-    ...theme.shadows.float,
   },
   statusDot: {
     width: 8,
@@ -886,7 +834,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Acceptance rate badge
   acceptanceBadge: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 999,
@@ -904,23 +852,24 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Navigation button
   navBtn: {
-    borderRadius: 12,
+    borderRadius: 8,
     minHeight: 46,
   },
 
   // Toggle
   toggleFloat: {
     position: 'absolute',
-    bottom: 260,
+    bottom: 278,
     left: 0,
     right: 0,
     alignItems: 'center',
   },
   toggleBtn: {
     borderRadius: 999,
-    minWidth: 204,
-    paddingHorizontal: 30,
-    minHeight: 56,
+    minWidth: 226,
+    paddingHorizontal: 34,
+    minHeight: 58,
+    backgroundColor: '#111111',
   },
   toggleLabel: { fontSize: 16, fontWeight: '800', fontFamily: 'Inter_700Bold' },
 
@@ -930,21 +879,19 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderWidth: 0,
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingBottom: 22,
     paddingTop: 10,
-    ...theme.shadows.sheet,
   },
   handle: {
-    width: 44,
-    height: 5,
+    width: 36,
+    height: 4,
     borderRadius: 999,
-    backgroundColor: '#D3DEE2',
+    backgroundColor: '#D8D8D8',
     alignSelf: 'center',
     marginBottom: 12,
   },
@@ -954,18 +901,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
-    borderRadius: 18,
+    borderRadius: 8,
     padding: 13,
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0, 194, 168, 0.26)',
-    ...theme.shadows.card,
+    borderColor: '#E8E8E8',
   },
   tripStatusDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
     flexShrink: 0,
   },
   tripInfo: { flex: 1, gap: 2 },
@@ -977,7 +923,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -985,16 +931,31 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Online sheet
   onlineSheet: { gap: 8 },
+  driverHandleCopy: {
+    gap: 2,
+    marginBottom: 4,
+  },
+  driverModeLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#6B6B6B',
+    textTransform: 'uppercase',
+  },
+  driverModeTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#111111',
+  },
   onlineRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 10,
   },
-  onlineTitle: { fontSize: 16, fontWeight: '800', color: theme.colors.text },
+  onlineTitle: { fontSize: 16, fontWeight: '800', color: '#111111' },
   onlineSub: { fontSize: 13, color: theme.colors.textMuted, marginTop: 2 },
   viewOffersBtn: {
-    borderRadius: 10,
+    borderRadius: 6,
     minHeight: 38,
     paddingHorizontal: 14,
   },
@@ -1010,8 +971,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   offlinePulse: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 8,
+    backgroundColor: '#F3F3F3',
     borderWidth: 1,
     borderColor: theme.colors.border,
     alignItems: 'center',
@@ -1022,23 +983,19 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: theme.colors.teal,
-    shadowColor: theme.colors.teal,
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    backgroundColor: '#111111',
   },
   offlineHeroCopy: {
     flex: 1,
     minWidth: 0,
   },
-  offlineTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text },
+  offlineTitle: { fontSize: 16, fontWeight: '800', color: '#111111' },
   offlineSub: { fontSize: 13, color: theme.colors.textMuted, lineHeight: 18 },
   offlineMetricRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 16,
+    backgroundColor: '#F7F7F7',
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
     paddingVertical: 10,
@@ -1052,7 +1009,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   offlineMetricValue: {
     fontSize: 13,
     fontWeight: '800',
-    color: theme.colors.text,
+    color: '#111111',
   },
   offlineMetricLabel: {
     fontSize: 10,
@@ -1068,14 +1025,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Setup
   setupBtn: {
     alignSelf: 'flex-start',
-    borderRadius: 10,
+    borderRadius: 4,
     minHeight: 38,
     paddingHorizontal: 12,
     marginTop: 4,
   },
   refreshDirectBtn: {
     alignSelf: 'center',
-    borderRadius: 999,
+    borderRadius: 4,
     minHeight: 30,
     paddingHorizontal: 12,
     marginTop: 2,
@@ -1105,14 +1062,14 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingHorizontal: 12,
   },
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
   },
   progressTrack: {
     height: 3,
-    backgroundColor: theme.colors.border,
+    backgroundColor: '#E2E2E2',
   },
   progressFill: {
     height: 3,
@@ -1136,10 +1093,10 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   categoryTag: {
     alignSelf: 'flex-start',
-    borderRadius: 999,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#F5F5F5',
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
@@ -1147,12 +1104,12 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0,
-    color: theme.colors.text,
+    color: '#111111',
   },
   offerTitle: {
     fontSize: 22,
     fontWeight: '900',
-    color: theme.colors.text,
+    color: '#111111',
     letterSpacing: 0,
   },
   offerSub: {
@@ -1165,7 +1122,7 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
     height: 62,
     borderRadius: 31,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E2E2E2',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -1175,7 +1132,7 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     lineHeight: 26,
-    color: theme.colors.text,
+    color: '#111111',
   },
   countdownUnit: {
     fontSize: 12,
@@ -1192,11 +1149,11 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   routeCard: {
     marginHorizontal: 16,
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 10,
+    backgroundColor: '#F7F7F7',
+    borderRadius: 4,
     padding: 13,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
     marginBottom: 12,
   },
   routeRow: {
@@ -1220,17 +1177,17 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   routeStem: {
     width: 1,
     height: 10,
-    backgroundColor: theme.colors.border,
+    backgroundColor: '#CFCFCF',
     marginLeft: 4.5,
     marginVertical: 3,
   },
   statsRow: {
     flexDirection: 'row',
     marginHorizontal: 16,
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 10,
+    backgroundColor: '#F7F7F7',
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
     paddingVertical: 11,
     marginBottom: 12,
   },
@@ -1238,7 +1195,7 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   statVal: {
     fontSize: 15,
     fontWeight: '700',
-    color: theme.colors.text,
+    color: '#111111',
   },
   statKey: {
     fontSize: 10.5,

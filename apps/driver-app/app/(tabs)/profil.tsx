@@ -51,9 +51,7 @@ import {
   formatDriverProfileDateTime,
   formatDriverProfileDistanceKm,
   formatDriverProfilePercent,
-  formatDriverProfileRatioPercent,
   formatDriverProfileRating,
-  resolveDriverProfileRatioTone,
 } from '../../lib/driver-profile-signal';
 import {
   fallbackDriverProfile,
@@ -259,7 +257,7 @@ export default function ProfilScreen() {
     const previousReadiness = previousReadinessRef.current;
 
     if (previousReadiness !== null && readiness !== previousReadiness) {
-      setProfileTransitionLabel(`Dossier ops mis a jour: readiness ${readiness}%.`);
+      setProfileTransitionLabel(`Profil mis à jour: ${readiness}%.`);
     }
 
     previousReadinessRef.current = readiness;
@@ -294,7 +292,7 @@ export default function ProfilScreen() {
 
       if (nextFreshReviewIds.length > 0) {
         setFreshReviewIds(nextFreshReviewIds);
-        setProfileTransitionLabel('Une nouvelle decision operations vient d entrer dans la timeline.');
+        setProfileTransitionLabel('Votre profil chauffeur a été mis à jour.');
       }
     }
 
@@ -381,7 +379,7 @@ export default function ProfilScreen() {
     }
 
     if (!form.serviceRadiusKm.trim()) {
-      return 'Le rayon de service est requis.';
+      return 'Indiquez votre zone de service.';
     }
 
     const parsedServiceRadiusKm = parseOptionalPositiveInteger(
@@ -389,7 +387,7 @@ export default function ProfilScreen() {
     );
 
     if (parsedServiceRadiusKm === null) {
-      return 'Le rayon de service doit etre un nombre positif.';
+      return 'La zone de service doit être valide.';
     }
 
     if (
@@ -535,7 +533,7 @@ export default function ProfilScreen() {
     }
 
     setIsSubmitting(true);
-    setStatus('Soumission du dossier chauffeur aux operations...');
+    setStatus('Envoi du profil chauffeur...');
 
     const parsedServiceRadiusKm = parseOptionalPositiveInteger(
       form.serviceRadiusKm,
@@ -544,7 +542,7 @@ export default function ProfilScreen() {
     const parsedVehicleSeats = parseOptionalPositiveInteger(form.vehicleSeats);
 
     if (parsedServiceRadiusKm === null) {
-      setStatus('Le rayon de service doit etre numerique.');
+      setStatus('La zone de service doit être valide.');
       setIsSubmitting(false);
       return;
     }
@@ -625,7 +623,7 @@ export default function ProfilScreen() {
         },
       }));
       setStatus(
-        'Dossier envoye. Les operations peuvent maintenant prendre la revue.',
+        'Profil envoyé. Nous vous informerons dès validation.',
       );
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
@@ -732,7 +730,7 @@ export default function ProfilScreen() {
         <Text style={styles.sectionEyebrow}>Identite</Text>
 
         {/* User card */}
-        <OrbiSurface style={styles.userCard} elevated>
+        <OrbiSurface style={styles.userCard}>
           <View style={styles.avatarCircle}>
             <Text style={styles.avatarInitials}>{initials}</Text>
           </View>
@@ -764,7 +762,7 @@ export default function ProfilScreen() {
           </View>
           <View style={styles.statusDivider} />
           <View style={styles.statusItem}>
-            <Text style={styles.statusItemLabel}>Dossier</Text>
+            <Text style={styles.statusItemLabel}>Profil</Text>
             <Text style={[styles.statusItemValue, { color: theme.colors.amber }]}>
               {formatDriverProfilePercent(profile.profile.onboarding.readinessPercent)}
             </Text>
@@ -785,13 +783,8 @@ export default function ProfilScreen() {
             style={styles.statCard}
           />
           <OrbiMetricTile
-            label="Taux acc."
-            value={formatDriverProfileRatioPercent(
-              profile.profile.dispatchSignal?.acceptanceRate,
-            )}
-            tone={resolveDriverProfileRatioTone(
-              profile.profile.dispatchSignal?.acceptanceRate,
-            )}
+            label="Véhicules"
+            value={String(profile.profile.vehicles.length)}
             style={styles.statCard}
           />
         </View>
@@ -838,7 +831,7 @@ export default function ProfilScreen() {
         {profileTransitionLabel ? (
           <OrbiStatusBanner
             tone="sky"
-            title="Dossier mis à jour"
+            title="Profil mis à jour"
             message={profileTransitionLabel}
           />
         ) : null}
@@ -862,7 +855,7 @@ export default function ProfilScreen() {
       <OrbiSurface style={styles.card}>
         <View style={styles.formHeaderRow}>
           <View style={styles.formHeaderText}>
-            <Text style={styles.name}>Dossier et véhicule</Text>
+            <Text style={styles.name}>Profil et véhicule</Text>
             <Text style={styles.meta}>
               {profile.profile.vehicles.length > 0
                 ? `${profile.profile.vehicles[0].type === 'MOTORCYCLE' ? 'Moto' : 'Voiture'} ${profile.profile.vehicles[0].make} ${profile.profile.vehicles[0].model} · ${profile.profile.vehicles[0].plateNumber}`
@@ -870,7 +863,7 @@ export default function ProfilScreen() {
             </Text>
           </View>
           <Pressable
-            accessibilityLabel={isOnboardingFormOpen ? 'Réduire le formulaire du dossier' : 'Modifier le dossier et le véhicule'}
+            accessibilityLabel={isOnboardingFormOpen ? 'Reduire le formulaire du profil' : 'Modifier le profil et le vehicule'}
             accessibilityRole="button"
             hitSlop={touchHitSlop}
             onPress={() => setIsOnboardingFormOpen((open) => !open)}
@@ -884,7 +877,7 @@ export default function ProfilScreen() {
         <>
         <Text style={styles.meta}>
           Ce formulaire prepare les liens documentaires securises puis envoie le
-          dossier complet a l equipe operations.
+          profil complet pour validation.
         </Text>
 
         <Text style={styles.fieldLabel}>Telephone</Text>
@@ -1099,12 +1092,12 @@ export default function ProfilScreen() {
             labelStyle={styles.secondaryButtonLabel}
           />
           <OrbiButton
-            accessibilityLabel="Soumettre le dossier chauffeur aux operations"
+            accessibilityLabel="Soumettre le profil chauffeur"
             hitSlop={touchHitSlop}
             onPress={() => void handleSubmitOnboarding()}
             disabled={isSubmitting || isPreparingDocuments}
             loading={isSubmitting}
-            label="Soumettre le dossier ops"
+            label="Soumettre le profil"
             tone="amber"
             style={styles.button}
             labelStyle={styles.primaryButtonLabel}
@@ -1170,7 +1163,7 @@ export default function ProfilScreen() {
                 <Text style={styles.documentTransitionBadge}>Statut mis a jour</Text>
               ) : null}
               <Text style={styles.meta}>
-                {document.fileName ?? 'Aucun fichier reference'}
+                {document.fileName ?? 'Aucun fichier'}
               </Text>
               {document.rejectionReason ? (
                 <Text style={styles.warningText}>{document.rejectionReason}</Text>
@@ -1220,11 +1213,11 @@ export default function ProfilScreen() {
 
         <View style={styles.supportSummary}>
           <View style={styles.supportSummaryText}>
-            <Text style={styles.supportSummaryTitle}>Dossiers suivis</Text>
+            <Text style={styles.supportSummaryTitle}>Support</Text>
             <Text style={styles.meta}>
               {tickets.length > 0
-                ? `${tickets.length} dossier(s) ouvert(s) ou recemment mis a jour. Les details de mission restent dans Missions.`
-                : 'Aucun dossier support actif sur ce profil.'}
+                ? `${tickets.length} demande(s) ouverte(s) ou recemment mise(s) a jour. Les details de mission restent dans Missions.`
+                : 'Aucune demande support active sur ce profil.'}
             </Text>
           </View>
           {tickets.length > 0 ? (
@@ -1315,7 +1308,7 @@ export default function ProfilScreen() {
 
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // ── New consumer styles ────────────────────────────────────────────────────
-  safe: { flex: 1, backgroundColor: theme.colors.driverBackground },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1324,24 +1317,24 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: '#E8E8E8',
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
-    color: theme.colors.text,
+    color: '#111111',
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerLiveText: {
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.amber,
+    color: '#111111',
     textTransform: 'uppercase',
   },
   signOutBtn: {
-    borderRadius: 10,
+    borderRadius: 4,
     minHeight: 36,
     paddingHorizontal: 12,
   },
@@ -1353,16 +1346,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderRadius: 16,
+    borderRadius: 4,
     padding: 14,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
   },
   avatarCircle: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: theme.colors.amber,
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1377,27 +1370,27 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: '#111111',
   },
   userEmail: {
     fontSize: 13,
-    color: theme.colors.textSoft,
+    color: '#525252',
     fontFamily: 'Inter_400Regular',
   },
   privacyHint: {
     marginTop: 4,
     fontSize: 10,
-    color: theme.colors.teal,
+    color: '#111111',
     fontFamily: 'Inter_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   statusRowCard: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 14,
+    backgroundColor: '#F3F3F3',
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
     overflow: 'hidden',
   },
   statusItem: {
@@ -1411,7 +1404,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -1419,25 +1412,25 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: '#111111',
     textAlign: 'center',
   },
   statusDivider: {
     width: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: '#E8E8E8',
     alignSelf: 'stretch',
   },
   // Driver performance stats
   statsRow: { flexDirection: 'row', gap: 8 },
   statCard: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 4,
   },
   sectionEyebrow: {
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: '#111111',
     textTransform: 'uppercase',
     letterSpacing: 0,
     paddingHorizontal: 2,
@@ -1448,16 +1441,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingTop: 88,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#FFFFFF',
     gap: 14,
   },
   title: {
-    color: theme.colors.text,
+    color: '#111111',
     fontSize: 32,
     fontWeight: '800',
   },
   subtitle: {
-    color: theme.colors.muted,
+    color: '#6B6B6B',
   },
   heroBadgeRow: {
     flexDirection: 'row',
@@ -1466,12 +1459,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   refreshButton: {
     alignSelf: 'flex-start',
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: theme.colors.backgroundAlt,
+    backgroundColor: '#F3F3F3',
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
   },
   refreshButtonDisabled: {
     opacity: 0.65,

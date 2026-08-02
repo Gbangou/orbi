@@ -78,12 +78,6 @@ import {
 } from "../../lib/rider-trips-normalizer";
 import { filterRiderVisibleSupportTickets } from "../../lib/rider-support-tickets";
 
-const MILESTONES = [
-  { trips: 5, badge: "Pionnier", icon: "▸" },
-  { trips: 20, badge: "Fidele", icon: "★" },
-  { trips: 50, badge: "Ambassadeur", icon: "◆" },
-] as const;
-
 const QUICK_SUPPORT_ACTIONS = [
   {
     key: "payment",
@@ -138,117 +132,6 @@ function formatRiderPaymentMethodLabel(paymentMethod: string | null | undefined)
       return "Mobile Money";
   }
 }
-
-function LoyaltyMilestoneCard({ completedTrips }: { completedTrips: number }) {
-  const theme = useOrbiTheme();
-  const loyaltyStyles = useMemo(() => makeLoyaltyStyles(theme), [theme]);
-  const earned = MILESTONES.filter((m) => completedTrips >= m.trips);
-  const next = MILESTONES.find((m) => completedTrips < m.trips);
-  const progress = next
-    ? Math.min(
-        Math.round((completedTrips / next.trips) * 100),
-        100,
-      )
-    : 100;
-
-  return (
-    <OrbiSurface tone="teal" style={loyaltyStyles.card}>
-      <View style={loyaltyStyles.header}>
-        <Text style={loyaltyStyles.eyebrow}>Programme Fidélité</Text>
-        {earned.length > 0 ? (
-          <View style={loyaltyStyles.badgeRow}>
-            {earned.map((m) => (
-              <View key={m.badge} style={loyaltyStyles.earnedBadge}>
-                <Text style={loyaltyStyles.earnedBadgeText}>
-                  {m.icon} {m.badge}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-      </View>
-
-      {next ? (
-        <>
-          <Text style={loyaltyStyles.nextLabel}>
-            {next.icon} {next.badge} — encore{" "}
-            {next.trips - completedTrips} course(s)
-          </Text>
-          <View style={loyaltyStyles.progressTrack}>
-            <View
-              style={[
-                loyaltyStyles.progressFill,
-                { width: `${progress}%` as `${number}%` },
-              ]}
-            />
-          </View>
-          <Text style={loyaltyStyles.progressMeta}>
-            {completedTrips} / {next.trips} courses
-          </Text>
-        </>
-      ) : (
-        <Text style={loyaltyStyles.nextLabel}>
-          Statut maximum atteint — merci de votre fidélité.
-        </Text>
-      )}
-    </OrbiSurface>
-  );
-}
-
-const makeLoyaltyStyles = (theme: OrbiTheme) => StyleSheet.create({
-  card: {
-    padding: 16,
-    gap: 10,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0,
-    color: theme.colors.teal,
-  },
-  badgeRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
-  earnedBadge: {
-    backgroundColor: "rgba(61,215,192,0.14)",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  earnedBadgeText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.teal,
-  },
-  nextLabel: {
-    fontSize: 13,
-    color: theme.colors.text,
-    fontWeight: "600",
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: 99,
-    backgroundColor: "rgba(61,215,192,0.12)",
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 99,
-    backgroundColor: theme.colors.teal,
-  },
-  progressMeta: {
-    fontSize: 11,
-    color: theme.colors.muted,
-    fontWeight: "600",
-  },
-});
-
 
 export default function ActivityScreen() {
   const router = useRouter();
@@ -510,11 +393,8 @@ export default function ActivityScreen() {
       const response = await cancelRideRequestWithApi(authClient, rideRequestId);
       const cancellationMessage =
         response.cancellationPolicy?.message ?? "Demande annulee avec succes.";
-      const supportTicketMessage = response.cancellationPolicy?.supportTicketId
-        ? ` Dossier support ${response.cancellationPolicy.supportTicketId.slice(0, 8)} ouvert.`
-        : "";
       await loadHistory();
-      setStatus(`${cancellationMessage}${supportTicketMessage}`);
+      setStatus(cancellationMessage);
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: "booking",
@@ -564,11 +444,11 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus(`Ouverture du dossier support ${action.label.toLowerCase()}...`);
+    setStatus(`Ouverture de la demande support ${action.label.toLowerCase()}...`);
 
     try {
       const { authClient } = await restoreRiderSession();
-      const response = await createSupportTicketWithApi(authClient, {
+      await createSupportTicketWithApi(authClient, {
         subject: action.subject,
         category: action.category,
         description:
@@ -579,13 +459,11 @@ export default function ActivityScreen() {
           `Statut ecran: ${status}`,
       });
       await loadHistory(true);
-      setStatus(
-        `Dossier ${response.ticket.id.slice(0, 8)} ouvert. Le support suit votre demande ${action.label.toLowerCase()}.`,
-      );
+      setStatus("Votre demande a été envoyée au support.");
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: action.category === "payment" ? "payments" : "active-trip",
-        fallback: "Le dossier support n'a pas pu etre ouvert.",
+        fallback: "La demande support n'a pas pu etre ouverte.",
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -703,11 +581,8 @@ export default function ActivityScreen() {
       const cancellationMessage =
         response.trip.cancellationPolicy?.message ??
         "Course annulee. Vous pouvez reserver a nouveau.";
-      const supportTicketMessage = response.trip.cancellationPolicy?.supportTicketId
-        ? ` Dossier support ${response.trip.cancellationPolicy.supportTicketId.slice(0, 8)} ouvert.`
-        : "";
       await loadHistory();
-      setStatus(`${cancellationMessage}${supportTicketMessage}`);
+      setStatus(cancellationMessage);
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: "active-trip",
@@ -742,7 +617,7 @@ export default function ActivityScreen() {
         details: "Signalement rapide envoye depuis l ecran passager.",
         priority: 3,
       });
-      setStatus("Incident signale. L equipe operations est notifiee.");
+      setStatus("Incident signalé. Le support est prévenu.");
       await loadHistory();
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
@@ -810,21 +685,19 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus("SOS en cours: creation du ticket prioritaire...");
+    setStatus("SOS en cours: alerte prioritaire envoyee...");
 
     try {
       const { authClient } = await restoreRiderSession();
       const response = await triggerTripSafetySosWithApi(authClient, tripId, {
-        details: "SOS declenche depuis le cockpit passager.",
+        details: "SOS declenche depuis l'application passager.",
         latitude: riderPosition.latestPosition?.latitude,
         longitude: riderPosition.latestPosition?.longitude,
         accuracyMeters:
           riderPosition.latestPosition?.accuracyMeters ?? undefined,
       });
 
-      setStatus(
-        `SOS envoye aux operations. Appel local ${response.sos.localEmergencyNumber} disponible.`,
-      );
+      setStatus(`SOS envoyé. Appel local ${response.sos.localEmergencyNumber} disponible.`);
       void Linking.openURL(`tel:${response.sos.localEmergencyNumber}`);
       await loadHistory();
     } catch (error) {
@@ -905,17 +778,11 @@ export default function ActivityScreen() {
   }
 
   function getStatusColor(status: string) {
-    if (status === 'MATCHED') return theme.colors.sky;
-    if (status === 'DRIVER_ARRIVING') return theme.colors.amber;
-    if (status === 'IN_PROGRESS') return theme.colors.teal;
-    return theme.colors.sky;
+    return "#111111";
   }
 
   function getStatusBg(status: string) {
-    if (status === 'MATCHED') return 'rgba(0,122,255,0.10)';
-    if (status === 'DRIVER_ARRIVING') return theme.colors.backgroundAlt;
-    if (status === 'IN_PROGRESS') return 'rgba(0,201,167,0.10)';
-    return 'rgba(0,122,255,0.10)';
+    return status === 'IN_PROGRESS' ? "#FFFFFF" : "#F3F3F3";
   }
 
   // ── Active trip view ────────────────────────────────────────────────────────
@@ -963,7 +830,7 @@ export default function ActivityScreen() {
             style={StyleSheet.absoluteFill}
           />
         ) : (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.backgroundDim }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: "#F3F3F3" }]} />
         )}
 
         {/* Bottom sheet */}
@@ -1123,14 +990,14 @@ export default function ActivityScreen() {
           {/* Route */}
           <OrbiSurface style={styles.routeCard}>
             <View style={styles.routeRow}>
-              <View style={[styles.routeDot, { backgroundColor: theme.colors.teal }]} />
+              <View style={[styles.routeDot, { backgroundColor: "#111111" }]} />
               <Text style={styles.routeText} numberOfLines={1}>
                 {activeTrip.pickupAddress}
               </Text>
             </View>
             <View style={styles.routeLineSep} />
             <View style={styles.routeRow}>
-              <View style={[styles.routeDot, { backgroundColor: theme.colors.text }]} />
+              <View style={[styles.routeDot, { backgroundColor: "#111111" }]} />
               <Text style={styles.routeText} numberOfLines={1}>
                 {activeTrip.destinationAddress}
               </Text>
@@ -1233,8 +1100,8 @@ export default function ActivityScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => void loadHistory()}
-            tintColor={theme.colors.teal}
-            colors={[theme.colors.teal]}
+            tintColor="#111111"
+            colors={["#111111"]}
           />
         }
       >
@@ -1250,16 +1117,7 @@ export default function ActivityScreen() {
             value={formatRiderMoneyAmount(history.stats.totalAmount)}
             style={styles.statCard}
           />
-          <OrbiMetricTile
-            label="En attente"
-            value={String(history.pendingRequests.length)}
-            tone={history.pendingRequests.length > 0 ? 'amber' : 'neutral'}
-            style={styles.statCard}
-          />
         </View>
-
-        {/* Loyalty card */}
-        <LoyaltyMilestoneCard completedTrips={history.stats.completedTrips} />
 
         <OrbiSurface style={styles.supportCard}>
           <View style={styles.supportHeader}>
@@ -1296,15 +1154,14 @@ export default function ActivityScreen() {
                 Suivi support actif
               </Text>
               <Text style={styles.supportHint}>
-                {supportTickets.length} dossier(s) en cours. L equipe garde les
+                {supportTickets.length} demande(s) en cours. L equipe garde les
                 details de course et vous recontacte si une action est
                 necessaire.
               </Text>
             </View>
           ) : (
             <Text style={styles.supportHint}>
-              Un dossier cree ici arrive dans la file operations avec le trajet
-              et le contexte utiles.
+              Choisissez le sujet. Notre équipe verra les détails utiles.
             </Text>
           )}
         </OrbiSurface>
@@ -1429,7 +1286,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     left: 12,
     right: 12,
     zIndex: 100,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
   },
   tripSheet: {
     position: 'absolute',
@@ -1437,13 +1297,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     left: 0,
     right: 0,
     maxHeight: '70%',
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
     paddingHorizontal: 16,
     paddingBottom: 18,
     paddingTop: 8,
-    ...theme.shadows.sheet,
+    borderTopWidth: 1,
+    borderColor: "#E8E8E8",
   },
   tripSheetScroll: {
     flexGrow: 0,
@@ -1466,7 +1327,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
@@ -1481,12 +1342,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: "#111111",
     textTransform: 'uppercase',
   },
   tripFocusPanel: {
     gap: 12,
-    borderRadius: 16,
+    borderRadius: 4,
+    backgroundColor: "#F7F7F7",
+    borderColor: "#E8E8E8",
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
@@ -1497,7 +1360,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: "#6B6B6B",
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -1506,7 +1369,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     lineHeight: 20,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: "#111111",
   },
   tripFocusMetrics: {
     flexDirection: 'row',
@@ -1515,10 +1378,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   tripFocusMetric: {
     flex: 1,
     minHeight: 52,
-    borderRadius: 12,
-    backgroundColor: theme.colors.surface,
+    borderRadius: 4,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
+    borderColor: "#E8E8E8",
     paddingHorizontal: 10,
     paddingVertical: 8,
     justifyContent: 'center',
@@ -1527,7 +1390,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.textMuted,
+    color: "#6B6B6B",
     textTransform: 'uppercase',
   },
   tripFocusMetricValue: {
@@ -1535,14 +1398,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: "#111111",
   },
 
   // Driver card
   driverCard: {
-    borderRadius: 14,
+    borderRadius: 4,
     padding: 12,
     gap: 10,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E8E8E8",
   },
   driverCardTop: {
     flexDirection: 'row',
@@ -1552,13 +1417,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   driverAvatar: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.colors.accentDark,
+    borderRadius: 4,
+    backgroundColor: "#111111",
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  driverAvatarImg: { width: 48, height: 48, borderRadius: 24 },
+  driverAvatarImg: { width: 48, height: 48, borderRadius: 4 },
   driverAvatarInitials: {
     fontSize: 18,
     fontWeight: '700',
@@ -1570,18 +1435,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: "#111111",
   },
   driverMeta: {
     fontSize: 13,
-    color: theme.colors.textSoft,
+    color: "#5F5F5F",
     fontFamily: 'Inter_400Regular',
   },
   driverPlate: {
     fontSize: 13,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: "#111111",
     letterSpacing: 0,
   },
   boardingChecklist: {
@@ -1593,7 +1458,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   boardingCheckItem: {
     width: '48%',
     minHeight: 48,
-    borderRadius: 12,
+    borderRadius: 4,
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -1601,45 +1466,47 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 2,
   },
   boardingCheckItemOk: {
-    borderColor: 'rgba(0,201,167,0.22)',
-    backgroundColor: 'rgba(0,201,167,0.07)',
+    borderColor: "#111111",
+    backgroundColor: "#FFFFFF",
   },
   boardingCheckItemWarn: {
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderColor: "#E8E8E8",
+    backgroundColor: "#F7F7F7",
   },
   boardingCheckLabel: {
     fontSize: 10,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.textMuted,
+    color: "#6B6B6B",
     textTransform: 'uppercase',
   },
   boardingCheckValue: {
     fontSize: 12,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: "#111111",
   },
 
   // Pickup verification
   pickupCheckCard: {
-    borderRadius: 14,
+    borderRadius: 4,
     padding: 14,
     alignItems: 'center',
     gap: 4,
+    backgroundColor: "#F7F7F7",
+    borderColor: "#E8E8E8",
   },
   pickupCheckEyebrow: {
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: "#111111",
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   pickupCheckHint: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: "#6B6B6B",
     fontFamily: 'Inter_400Regular',
     textAlign: 'center',
   },
@@ -1647,9 +1514,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Route card
   routeCard: {
     gap: 0,
-    borderRadius: 12,
+    borderRadius: 4,
     paddingHorizontal: 14,
     paddingVertical: 4,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E8E8E8",
   },
   routeRow: {
     flexDirection: 'row',
@@ -1663,11 +1532,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     fontFamily: 'Inter_500Medium',
-    color: theme.colors.text,
+    color: "#111111",
   },
   routeLineSep: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: "#E8E8E8",
     marginLeft: 18,
   },
 
@@ -1682,7 +1551,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexBasis: '47%',
     minHeight: 48,
     paddingHorizontal: 6,
-    borderRadius: 12,
+    borderRadius: 4,
   },
   actionBtnLabel: {
     fontSize: 12,
@@ -1693,15 +1562,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderRadius: 14,
+    borderRadius: 4,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    backgroundColor: "#F7F7F7",
+    borderColor: "#E8E8E8",
   },
   etaEyebrow: {
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.sky,
+    color: "#6B6B6B",
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginBottom: 2,
@@ -1710,13 +1581,15 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: "#111111",
   },
   etaDistBadge: {
     maxWidth: '42%',
     flexShrink: 1,
-    backgroundColor: 'rgba(0,122,255,0.12)',
-    borderRadius: 999,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
@@ -1724,7 +1597,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.sky,
+    color: "#111111",
   },
 
   // Call driver button (inside driver card)
@@ -1736,7 +1609,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   callDriverLabel: { fontSize: 12 },
 
   // ── History layout
-  safe: { flex: 1, backgroundColor: theme.colors.riderBackground },
+  safe: { flex: 1, backgroundColor: "#FFFFFF" },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1745,13 +1618,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: "#E8E8E8",
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
-    color: theme.colors.text,
+    color: "#111111",
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -1763,7 +1636,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: "#111111",
     textTransform: 'uppercase',
   },
   historyStatusBanner: {
@@ -1778,7 +1651,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 4,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E8E8E8",
   },
 
   // Sections
@@ -1787,7 +1662,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: "#111111",
     paddingHorizontal: 2,
   },
 
@@ -1795,7 +1670,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   supportCard: {
     padding: 14,
     gap: 12,
-    borderRadius: 14,
+    borderRadius: 4,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E8E8E8",
   },
   supportHeader: {
     flexDirection: 'row',
@@ -1807,7 +1684,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: "#6B6B6B",
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -1815,14 +1692,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
-    color: theme.colors.text,
+    color: "#111111",
     marginTop: 2,
   },
   supportCountBadge: {
     minWidth: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,201,167,0.12)',
+    borderRadius: 4,
+    backgroundColor: "#F3F3F3",
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
@@ -1831,7 +1708,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: "#111111",
   },
   supportActionGrid: {
     flexDirection: 'row',
@@ -1841,7 +1718,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   supportActionButton: {
     width: '48%',
     minHeight: 42,
-    borderRadius: 10,
+    borderRadius: 4,
     paddingHorizontal: 8,
   },
   supportActionLabel: {
@@ -1853,19 +1730,19 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     fontFamily: 'Inter_400Regular',
-    color: theme.colors.textMuted,
+    color: "#6B6B6B",
   },
   supportFollowUp: {
     gap: 4,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: "#E8E8E8",
   },
   supportFollowUpTitle: {
     fontSize: 13,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: "#111111",
   },
 
   // Pending requests
@@ -1873,17 +1750,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: theme.colors.backgroundAlt,
+    backgroundColor: "#F7F7F7",
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
+    borderColor: "#E8E8E8",
+    borderRadius: 4,
     padding: 12,
   },
   requestDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: theme.colors.amber,
+    backgroundColor: "#111111",
     flexShrink: 0,
   },
   requestInfo: { flex: 1 },
@@ -1891,15 +1768,15 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.text,
+    color: "#111111",
   },
   requestSub: {
     fontSize: 12,
-    color: theme.colors.textSoft,
+    color: "#5F5F5F",
     fontFamily: 'Inter_400Regular',
   },
   cancelBtn: {
-    borderRadius: 8,
+    borderRadius: 4,
     minHeight: 34,
     paddingHorizontal: 12,
   },
@@ -1907,7 +1784,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.danger,
+    color: "#111111",
   },
 
   // Trip history rows
@@ -1917,7 +1794,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: "#E8E8E8",
   },
   tripHistDate: {
     width: 40,
@@ -1927,7 +1804,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.textMuted,
+    color: "#6B6B6B",
     textAlign: 'center',
   },
   tripHistInfo: { flex: 1 },
@@ -1935,18 +1812,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     fontFamily: 'Inter_500Medium',
-    color: theme.colors.text,
+    color: "#111111",
   },
   tripHistStatus: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: "#6B6B6B",
     fontFamily: 'Inter_400Regular',
     marginTop: 2,
   },
-  tripHistStatusDone: { color: theme.colors.teal },
+  tripHistStatusDone: { color: "#111111" },
   tripHistReceipt: {
     fontSize: 10,
-    color: theme.colors.textMuted,
+    color: "#6B6B6B",
     fontFamily: 'Inter_400Regular',
     marginTop: 2,
   },
@@ -1954,7 +1831,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: "#111111",
   },
 
   // Empty state
@@ -1962,19 +1839,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: "#E8E8E8",
     paddingHorizontal: 14,
     paddingVertical: 14,
-    ...theme.shadows.card,
   },
   emptyOrbit: {
     width: 58,
     height: 58,
-    borderRadius: 29,
-    backgroundColor: 'rgba(0,201,167,0.08)',
+    borderRadius: 4,
+    backgroundColor: "#F7F7F7",
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -1984,15 +1860,15 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     position: 'absolute',
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(0,201,167,0.28)',
+    borderColor: "#E8E8E8",
   },
   emptyOrbitDot: {
     width: 12,
     height: 12,
-    borderRadius: 6,
-    backgroundColor: theme.colors.teal,
+    borderRadius: 4,
+    backgroundColor: "#111111",
     borderWidth: 3,
     borderColor: '#FFFFFF',
   },
@@ -2004,7 +1880,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.teal,
+    color: "#6B6B6B",
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -2012,18 +1888,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: "#111111",
   },
   emptyMeta: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: "#6B6B6B",
     fontFamily: 'Inter_400Regular',
     lineHeight: 17,
   },
   emptyAction: {
     minHeight: 42,
     paddingHorizontal: 14,
-    borderRadius: 12,
+    borderRadius: 4,
     flexShrink: 0,
   },
   emptyActionLabel: {
@@ -2032,32 +1908,32 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // ── Legacy stubs
   screen: { gap: 16 },
-  title: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
-  syncMeta: { color: theme.colors.muted, fontSize: 12 },
+  title: { fontSize: 24, fontWeight: '800', color: "#111111" },
+  syncMeta: { color: "#6B6B6B", fontSize: 12 },
   refreshButton: {
-    borderRadius: 10,
+    borderRadius: 4,
     minHeight: 38,
     paddingHorizontal: 14,
     alignSelf: 'flex-start',
   },
   refreshButtonLabel: { fontSize: 13 },
-  snapshotTitle: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
+  snapshotTitle: { fontSize: 13, fontWeight: '700', color: "#111111" },
   snapshotStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   trustCard: {
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 14,
+    backgroundColor: "#F7F7F7",
+    borderRadius: 4,
     padding: 14,
     gap: 10,
   },
   identityRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   identityCopy: { flex: 1, gap: 2 },
-  identityTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
-  identityMeta: { fontSize: 12, color: theme.colors.textSoft },
+  identityTitle: { fontSize: 15, fontWeight: '700', color: "#111111" },
+  identityMeta: { fontSize: 12, color: "#5F5F5F" },
   identityDetails: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  avatarImage: { width: 48, height: 48, borderRadius: 24 },
+  avatarImage: { width: 48, height: 48, borderRadius: 4 },
   avatarFallback: {
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: theme.colors.accentDark,
+    width: 48, height: 48, borderRadius: 4,
+    backgroundColor: "#111111",
     alignItems: 'center', justifyContent: 'center',
   },
   avatarInitials: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },

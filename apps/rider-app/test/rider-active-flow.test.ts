@@ -89,7 +89,7 @@ describe('rider-active-flow', () => {
         'REQUEST:REQUESTED',
         'booking',
       ),
-    ).toBe('Une reservation active vient d apparaitre dans le flux live.');
+    ).toBe('Une reservation active vient d apparaitre.');
 
     expect(
       buildRiderFlowTransitionLabel(
@@ -105,7 +105,7 @@ describe('rider-active-flow', () => {
         'REQUEST:REQUESTED',
         'account',
       ),
-    ).toBe('Le compte reflete maintenant un flux actif: En attente.');
+    ).toBe('Le compte affiche maintenant une course active: En attente.');
 
   });
 
@@ -155,7 +155,7 @@ describe('rider-active-flow', () => {
     });
 
     expect(buildRiderNextActionHint(flow)).toBe(
-      'Restez joignable: le dispatch cherche un chauffeur compatible.',
+      'Restez joignable: nous cherchons un chauffeur pour vous.',
     );
   });
 
@@ -352,7 +352,7 @@ describe('rider-active-flow', () => {
         distanceLabel: '0.4 km restant',
         progressPercent: 78,
         etaLabel: 'Pickup ~1 min',
-        freshnessLabel: 'GPS maintenant',
+        freshnessLabel: 'Position maintenant',
       }),
     );
     expect(buildRiderDriverTrustSnapshot({ tripDetail })).toEqual(
@@ -372,8 +372,8 @@ describe('rider-active-flow', () => {
         now: '2026-04-19T08:03:20.000Z',
       }),
     ).toEqual({
-      freshnessLabel: 'GPS ancien 3 min',
-      note: 'Position chauffeur ancienne: Orbi garde le dernier point et attend une nouvelle position.',
+      freshnessLabel: 'Position ancienne 3 min',
+      note: 'Position chauffeur ancienne: nous attendons une nouvelle position.',
       tone: 'amber',
     });
 
@@ -384,7 +384,7 @@ describe('rider-active-flow', () => {
         now: '2026-04-19T08:03:20.000Z',
       }),
     ).toEqual({
-      freshnessLabel: 'GPS maintenant',
+      freshnessLabel: 'Position maintenant',
       note: 'Alerte route critique: restez attentif et gardez le partage actif.',
       tone: 'rose',
     });

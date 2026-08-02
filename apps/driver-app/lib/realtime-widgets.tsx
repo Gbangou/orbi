@@ -9,7 +9,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { orbiTheme, type OrbiTheme } from '@orbi/ui';
+import { type OrbiTheme } from '@orbi/ui';
 import { useOrbiTheme } from '@orbi/ui/native';
 import { formatDriverTimelineTime } from './driver-date-format';
 
@@ -127,8 +127,9 @@ export function LiveStatusBanner({
 const makeBannerStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: orbiTheme.radius.card,
-    padding: 14,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     gap: 8,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -189,16 +190,16 @@ export function LiveHeroCard({
 const makeHeroStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     backgroundColor: theme.colors.surface,
-    borderRadius: orbiTheme.radius.card,
-    padding: 18,
-    gap: 8,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    gap: 7,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    ...theme.shadows.card,
   },
   wrapHighlight: {
-    borderColor: theme.colors.teal,
-    borderWidth: 1.5,
+    borderColor: theme.colors.text,
+    borderWidth: 1,
   },
   topRow: {
     flexDirection: 'row',
@@ -213,8 +214,8 @@ const makeHeroStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
     color: theme.colors.text,
     lineHeight: 24,
   },
@@ -260,7 +261,7 @@ export function MetricTile({
 const makeMetricStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 2,
@@ -275,8 +276,8 @@ const makeMetricStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   value: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: theme.colors.text,
   },
   helper: {
@@ -313,8 +314,9 @@ export function DashboardMetricCard({
 const makeDmcStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     flex: 1,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
     gap: 4,
     borderWidth: 1,
     minWidth: 90,
@@ -326,8 +328,8 @@ const makeDmcStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   value: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 21,
+    fontWeight: '800',
     color: theme.colors.text,
   },
   helper: {
@@ -394,8 +396,9 @@ export function QuickActionCard({
 
 const makeQacStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
-    borderRadius: orbiTheme.radius.card,
-    padding: 16,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     gap: 4,
   },
   primary: {
@@ -406,7 +409,6 @@ const makeQacStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    ...theme.shadows.card,
   },
   pressed: {
     opacity: 0.85,
@@ -422,8 +424,8 @@ const makeQacStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.textInverse + '8C',
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: theme.colors.text,
   },
   titlePrimary: {
@@ -528,16 +530,16 @@ export function RouteSignalCard({
 const makeRscStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     backgroundColor: theme.colors.surface,
-    borderRadius: orbiTheme.radius.card,
-    padding: 16,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     gap: 10,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    ...theme.shadows.card,
   },
   wrapHighlight: {
-    borderColor: theme.colors.teal,
-    borderWidth: 1.5,
+    borderColor: theme.colors.text,
+    borderWidth: 1,
   },
   topRow: {
     flexDirection: 'row',
@@ -559,13 +561,13 @@ const makeRscStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   title: {
     flex: 1,
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: theme.colors.text,
     lineHeight: 22,
   },
   titleAside: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: theme.colors.text,
   },
@@ -603,7 +605,7 @@ const makeRscStyles = (theme: OrbiTheme) => StyleSheet.create({
     lineHeight: 16,
   },
   note: {
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     padding: 10,
   },
@@ -642,12 +644,12 @@ export function SectionCard({
 const makeScStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     backgroundColor: theme.colors.surface,
-    borderRadius: orbiTheme.radius.card,
-    padding: 16,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     gap: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    ...theme.shadows.card,
   },
 });
 
@@ -697,8 +699,8 @@ const makeShStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 2,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: theme.colors.text,
   },
   subtitle: {
@@ -761,15 +763,14 @@ export function FlowActionButton({
 
 const makeFabStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
-    borderRadius: orbiTheme.radius.button,
-    paddingVertical: 16,
+    borderRadius: 6,
+    paddingVertical: 14,
     paddingHorizontal: 20,
     alignItems: 'center',
     gap: 3,
   },
   dark: {
     backgroundColor: theme.colors.text,
-    ...theme.shadows.button,
   },
   light: {
     backgroundColor: theme.colors.backgroundAlt,
@@ -831,7 +832,7 @@ export function InsightBadge({
 
 const ib = StyleSheet.create({
   wrap: {
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -917,12 +918,12 @@ export function LiveRouteProgressCard({
 const makeLrpStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     backgroundColor: theme.colors.surface,
-    borderRadius: orbiTheme.radius.card,
-    padding: 16,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     gap: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    ...theme.shadows.card,
   },
   topRow: {
     flexDirection: 'row',
@@ -1031,12 +1032,12 @@ export function LiveTimeline({
 const makeLtStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     backgroundColor: theme.colors.surface,
-    borderRadius: orbiTheme.radius.card,
-    padding: 16,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     gap: 0,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    ...theme.shadows.card,
   },
   heading: {
     fontSize: 13,
@@ -1126,7 +1127,7 @@ const tnc = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     padding: 12,
   },

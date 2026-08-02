@@ -52,7 +52,7 @@ export function useRiderPosition(input: {
 
     async function startRiderPositionSync() {
       setPositionStatus("requesting-permission");
-      setPositionNote("Verification de la permission GPS passager...");
+      setPositionNote("Verification de la permission de localisation...");
 
       try {
         const permission = await Location.requestForegroundPermissionsAsync();
@@ -64,7 +64,7 @@ export function useRiderPosition(input: {
         if (!permission.granted) {
           setPositionStatus("permission-denied");
           setPositionNote(
-            "Localisation refusee. Orbi garde les lieux saisis et le suivi degrade.",
+            "Localisation refusee. Les lieux saisis restent utilisables.",
           );
           return;
         }
@@ -79,7 +79,7 @@ export function useRiderPosition(input: {
         if (!locationServicesEnabled) {
           setPositionStatus("unavailable");
           setPositionNote(
-            "Le GPS du telephone est desactive. Les lieux saisis restent utilisables.",
+            "La localisation du telephone est desactivee. Les lieux saisis restent utilisables.",
           );
           return;
         }

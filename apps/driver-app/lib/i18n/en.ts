@@ -18,7 +18,7 @@ export const en = {
     invalidCredentials: 'Invalid credentials. Please try again.',
   },
   driver: {
-    cockpit: 'Cockpit',
+    cockpit: 'Home',
     missions: 'Missions',
     earnings: 'Earnings',
     profile: 'Profile',

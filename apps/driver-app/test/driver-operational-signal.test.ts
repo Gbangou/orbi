@@ -47,7 +47,7 @@ describe('driver operational signal helpers', () => {
         lastPositionAt: null,
         latestPosition: null,
       }),
-    ).toEqual(['GPS mission: Attention (ND)', 'Dernière alerte: Long Stop']);
+    ).toEqual(['Route mission: Attention (ND)', 'Dernière alerte: Long Stop']);
   });
 
   it('marks impossible route signals as operational review without trapping completion', () => {
@@ -82,7 +82,7 @@ describe('driver operational signal helpers', () => {
     expect(brief.insights).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ label: 'Fraicheur', value: '13 min' }),
-        expect.objectContaining({ label: 'Precision', value: '380 m' }),
+        expect.objectContaining({ label: 'Signal', value: '380 m' }),
         expect.objectContaining({ label: 'Vitesse', value: '128 km/h' }),
       ]),
     );
@@ -118,7 +118,7 @@ describe('driver operational signal helpers', () => {
     );
     expect(brief.insights).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ label: 'Precision', value: '380 m' }),
+        expect.objectContaining({ label: 'Signal', value: '380 m' }),
         expect.objectContaining({ label: 'Vitesse', value: '128 km/h' }),
         expect.objectContaining({ label: 'Alertes', value: '2', tone: 'amber' }),
       ]),
@@ -135,9 +135,9 @@ describe('driver operational signal helpers', () => {
       expect.objectContaining({
         tone: 'amber',
         blocksCompletion: false,
-        title: 'GPS en synchronisation',
+        title: 'Position en synchronisation',
         actionLabel:
-          'Gardez le telephone ouvert; Orbi vérifiera la position au moment de finaliser.',
+          'Gardez le telephone ouvert; la position sera vérifiée au moment de finaliser.',
       }),
     );
   });
@@ -159,9 +159,9 @@ describe('driver operational signal helpers', () => {
       expect.objectContaining({
         tone: 'amber',
         blocksCompletion: false,
-        title: 'Premier signal GPS attendu',
+        title: 'Premiere position attendue',
         actionLabel:
-          'Gardez la localisation active; Orbi vérifiera la position récente avant de valider la fin.',
+          'Gardez la localisation active; la position recente sera verifiee avant de valider la fin.',
       }),
     );
   });

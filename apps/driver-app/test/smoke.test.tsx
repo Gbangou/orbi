@@ -507,7 +507,7 @@ describe('driver smoke flows', () => {
     );
   });
 
-  it('loads the driver home cockpit', async () => {
+  it('loads the driver home screen', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverOffers.mockResolvedValue(driverOffers.slice(0, 2) as never);
     mockedFetchMyTrips.mockResolvedValue(buildDriverTrips() as never);
@@ -580,7 +580,7 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Vous êtes hors ligne');
   });
 
-  it('loads the driver earnings cockpit with active mission context', async () => {
+  it('loads the driver earnings screen with active mission context', async () => {
     mockedRestoreDriverSession.mockResolvedValue(buildDriverSession() as never);
     mockedFetchDriverEarnings.mockResolvedValue(
       buildDriverEarningsResponse({
@@ -668,7 +668,7 @@ describe('driver smoke flows', () => {
     await flushMicrotasks();
 
     expectText(renderer, 'Missions');
-    expectText(renderer, 'Hors ligne · activez le Cockpit pour recevoir des courses');
+    expectText(renderer, 'Hors ligne · passez en ligne pour recevoir des courses');
   });
 
   it('absorbs double taps while accepting an offer from the offres screen', async () => {
@@ -765,15 +765,11 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser le direct');
 
-    expectText(renderer, 'Contexte dispatch: HIGH - HEAVY - dispo 74/100');
-    expectText(renderer, 'Confiance offre: PRIORITY (91/100)');
+    expectText(renderer, 'Nouvelle course');
+    expectText(renderer, 'Accepter cette offre');
     expectText(renderer, '1 400 F CFA net - 193 XOF/km effort');
     expectText(renderer, '84% du prix. Offre lisible avec gain et effort connus.');
-    expectText(renderer, 'Fenetre d acceptation: 45s');
-    expectText(
-      renderer,
-      'Memoire dispatch solide: acceptations recentes elevees. Signal recent.',
-    );
+    expectText(renderer, 'Refuser cette offre');
   });
 
   it('shows the driver fallback profile when the network is down', async () => {
@@ -827,12 +823,12 @@ describe('driver smoke flows', () => {
 
     expectText(renderer, 'Nouveau Chauffeur');
     expectText(renderer, 'Onboarding securise');
-    expectText(renderer, 'Dossier 0/7 complete a 0%');
+    expectText(renderer, 'Profil 0/7 complete a 0%');
     expectText(renderer, 'Aucun véhicule enregistré pour le moment.');
-    expectText(renderer, 'Dossiers suivis');
+    expectText(renderer, 'Support');
     expectText(
       renderer,
-      '1 dossier(s) ouvert(s) ou recemment mis a jour. Les details de mission restent dans Missions.',
+      '1 demande(s) ouverte(s) ou recemment mise(s) a jour. Les details de mission restent dans Missions.',
     );
     expect(collectText(renderer.root)).not.toContain('Annulation chauffeur a revoir');
   });
@@ -868,7 +864,7 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<ProfilScreen />);
     await flushMicrotasks();
     await pressByText(renderer, 'Modifier');
-    await pressByText(renderer, 'Soumettre le dossier ops');
+    await pressByText(renderer, 'Soumettre le profil');
 
     expect(mockedRequestDriverDocumentUploadLinks).not.toHaveBeenCalled();
     expect(mockedUpsertDriverOnboarding).not.toHaveBeenCalled();
@@ -944,7 +940,7 @@ describe('driver smoke flows', () => {
       'Lien securise pret jusqu au 02/05/2026 12:00:00. Limite: 3.0 MB, formats: jpg, jpeg, png',
     );
 
-    await pressByText(renderer, 'Soumettre le dossier ops');
+    await pressByText(renderer, 'Soumettre le profil');
 
     expect(mockedUpsertDriverOnboarding).toHaveBeenCalledWith(
       expect.anything(),
@@ -1043,10 +1039,10 @@ describe('driver smoke flows', () => {
     });
     await flushMicrotasks();
 
-    expectText(renderer, 'Une offre a expire');
+    expectText(renderer, 'Offre expirée');
     expectText(
       renderer,
-      'Les elements sortis du flux live ont ete retires pour garder la liste fiable.',
+      "Cette course n'est plus disponible.",
     );
   });
 
@@ -1080,7 +1076,7 @@ describe('driver smoke flows', () => {
     });
     await flushMicrotasks();
 
-    expectText(renderer, 'Statut critique mis a jour: Chauffeur en route.');
+    expectText(renderer, 'Statut mis a jour: Chauffeur en route.');
     expectText(renderer, 'Confirmez puis demarrez');
     expectText(renderer, 'ETA');
     expectText(renderer, 'Distance');
@@ -1262,7 +1258,7 @@ describe('driver smoke flows', () => {
       { token: 'driver-auth-client' },
       'OFFLINE',
     );
-    expectText(renderer, 'Vous etes hors ligne et ne recevrez plus de nouvelles offres.');
+    expectText(renderer, 'Vous êtes hors ligne.');
   });
 
   it('advances a matched trip to driver arriving from offers', async () => {
@@ -1470,7 +1466,7 @@ describe('driver smoke flows', () => {
     );
     expectText(
       renderer,
-      'Annulations chauffeur repetees detectees. Revue support ouverte et pause operationnelle recommandee avant nouvelles offres. Dossier support ticket-d ouvert.',
+      'Annulations chauffeur repetees detectees. Revue support ouverte et pause operationnelle recommandee avant nouvelles offres.',
     );
   });
 
@@ -1636,7 +1632,7 @@ describe('driver smoke flows', () => {
       { token: 'driver-auth-client' },
       'trip-driver-1',
       {
-        details: 'SOS declenche depuis le cockpit chauffeur.',
+        details: "SOS declenche depuis l'application chauffeur.",
       },
     );
     expect(Linking.openURL).toHaveBeenCalledWith('tel:112');

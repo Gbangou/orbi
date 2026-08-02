@@ -112,7 +112,7 @@ export const fr = {
     tomorrow: 'Demain',
     chooseDate: 'Choisir une date',
     chooseTime: 'Choisir l\'heure',
-    cannotCancel: 'Annulation impossible moins de 10 min avant le dispatch',
+    cannotCancel: 'Annulation impossible moins de 10 min avant la recherche chauffeur',
   },
 } as const;
 

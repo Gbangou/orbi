@@ -90,9 +90,9 @@ describe('driver-active-flow', () => {
         flow,
         fullName: 'Issa Driver',
       }),
-    ).toBe('Compte suspendu. Contactez les operations pour reprendre le direct.');
+    ).toBe('Compte suspendu. Contactez le support pour reprendre le service.');
     expect(buildDriverNextActionHint(flow)).toBe(
-      'Aucune action terrain: attendez la reactivation par les operations.',
+      'Aucune action requise: attendez la reactivation du profil.',
     );
   });
 
@@ -120,13 +120,13 @@ describe('driver-active-flow', () => {
     });
 
     expect(flow.accountCanReceiveOffers).toBe(false);
-    expect(flow.heroTitle).toBe('Dossier en revue');
+    expect(flow.heroTitle).toBe('En validation');
     expect(flow.visibleOfferCount).toBe(0);
     expect(buildDriverHomeStatusLabel({ flow, fullName: 'Issa Driver' })).toBe(
-      'Compte en attente d approbation operations. Les offres restent bloquees jusqu a validation.',
+      'Compte en attente de validation. Les offres seront disponibles apres approbation.',
     );
     expect(buildDriverNextActionHint(flow)).toBe(
-      'Finalisez ou faites approuver le dossier chauffeur pour debloquer les offres.',
+      'Finalisez votre profil pour debloquer les offres.',
     );
   });
 
@@ -141,7 +141,7 @@ describe('driver-active-flow', () => {
         'TRIP:DRIVER_ARRIVING',
         'offers',
       ),
-    ).toBe('Statut critique mis a jour: Chauffeur en route.');
+    ).toBe('Statut mis a jour: Chauffeur en route.');
 
     expect(
       resolveDriverReservationChangeSet(['offer-1', 'offer-2'], ['offer-2', 'offer-3']),
@@ -195,10 +195,10 @@ describe('driver-active-flow', () => {
       'Revenus a jour. Passez en ligne pour recevoir des courses.',
     );
     expect(buildDriverProfileStatusLabel({ flow: onlineFlow })).toBe(
-      'Profil charge depuis la session reelle. Chauffeur en ligne.',
+      'Profil charge. Chauffeur en ligne.',
     );
     expect(buildDriverProfileStatusLabel({ flow: offlineFlow })).toBe(
-      'Profil charge depuis la session reelle. Chauffeur hors ligne.',
+      'Profil charge. Chauffeur hors ligne.',
     );
   });
 
@@ -426,7 +426,7 @@ describe('driver-active-flow', () => {
 
     expect(buildDriverLiveRouteProgress({ flow, tripDetail })).toEqual(
       expect.objectContaining({
-        title: 'Progression destination',
+        title: 'Vers destination',
         distanceLabel: '5.1 km restant',
         progressPercent: 18,
       }),

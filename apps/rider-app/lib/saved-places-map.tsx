@@ -64,12 +64,12 @@ function buildSavedPlacesMapHtml(pins: NormalizedSavedPlacePin[]): string {
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body,#map{width:100%;height:100%;background:#0a0c0e}
-.leaflet-tile-pane{filter:brightness(.62) invert(1) contrast(3) hue-rotate(200deg) saturate(.28) brightness(.72)}
+html,body,#map{width:100%;height:100%;background:#f4f4f2}
+.leaflet-tile-pane{filter:saturate(.18) contrast(1.02) brightness(1.04)}
 .leaflet-control-attribution,.leaflet-control-zoom{display:none}
 .place-pin{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
-.place-dot{width:13px;height:13px;border-radius:50%;background:#6366f1;border:2.5px solid #818cf8;box-shadow:0 0 7px rgba(99,102,241,0.7)}
-.place-label{background:rgba(10,12,20,0.88);color:#e2e8f0;font-size:10px;font-family:sans-serif;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis;border:1px solid rgba(129,140,248,0.35)}
+.place-dot{width:13px;height:13px;border-radius:50%;background:#111111;border:2.5px solid #FFFFFF;box-shadow:0 2px 8px rgba(0,0,0,0.22)}
+.place-label{background:rgba(255,255,255,0.94);color:#111111;font-size:10px;font-family:sans-serif;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis;border:1px solid rgba(0,0,0,0.10)}
 </style>
 </head>
 <body>
@@ -247,14 +247,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   webView: {
     flex: 1,
-    backgroundColor: '#0a0c0e',
+    backgroundColor: '#F4F4F2',
   },
   webFallback: {
-    backgroundColor: '#0b1215',
+    backgroundColor: '#F4F4F2',
   },
   webMapSurface: {
     flex: 1,
-    backgroundColor: '#0b1215',
+    backgroundColor: '#F4F4F2',
   },
   webRoute: {
     position: 'absolute',
@@ -263,7 +263,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     top: '49%',
     height: 2,
     borderRadius: 999,
-    backgroundColor: 'rgba(129, 140, 248, 0.44)',
+    backgroundColor: '#D8D8D2',
     transform: [{ rotate: '-14deg' }],
   },
   webPin: {
@@ -277,12 +277,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#818cf8',
+    backgroundColor: '#111111',
     borderWidth: 3,
-    borderColor: '#c7d2fe',
-    shadowColor: '#818cf8',
-    shadowOpacity: 0.45,
-    shadowRadius: 8,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOpacity: 0.14,
+    shadowRadius: 6,
   },
   webPinLabel: {
     maxWidth: 116,
@@ -290,10 +290,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 3,
     overflow: 'hidden',
-    backgroundColor: 'rgba(10, 12, 20, 0.86)',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderWidth: 1,
-    borderColor: 'rgba(129, 140, 248, 0.35)',
-    color: '#e2e8f0',
+    borderColor: 'rgba(0, 0, 0, 0.10)',
+    color: '#111111',
     fontSize: 10,
     fontWeight: '800',
   },
@@ -311,7 +311,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderColor: theme.colors.borderSoft,
   },
   webEyebrow: {
-    color: '#6366f1',
+    color: '#111111',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0,

@@ -52,8 +52,8 @@ import { RiderTripStatusCard } from '../../lib/rider-trip-status-card';
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
 
 // Bottom sheet heights
-const SHEET_PEEK = 300;
-const SHEET_ACTIVE_TRIP = 282;
+const SHEET_PEEK = 332;
+const SHEET_ACTIVE_TRIP = 292;
 
 type NearbyDriverCounts = {
   total: number;
@@ -190,40 +190,17 @@ const ServiceVehicleIcon = memo(function ServiceVehicleIcon({ tier }: { tier: st
   return <VehicleIllustration tier={tier} width={40} height={30} />;
 });
 
-function getCompatibleNearbyCount(option: RideOption, counts: NearbyDriverCounts) {
-  return option.category === 'motorcycle' ? counts.motorcycle : counts.car;
-}
-
-function formatNearbyCountLabel(count: number) {
-  return count > 0
-    ? `${count} proche${count > 1 ? 's' : ''}`
-    : 'Aucun proche';
-}
-
-function buildMarketplaceTrustLine(option: RideOption, nearbyCount: number) {
-  const marketplace = option.marketplace;
-  if (!marketplace) {
-    return `${option.etaMinutes} min estime · ${option.capacity}`;
-  }
-
-  const signalLabel = marketplace.signalLabel || 'Estime';
-  const supplyLabel =
-    marketplace.supplySource === 'LIVE'
-      ? formatNearbyCountLabel(nearbyCount)
-      : marketplace.availabilityLabel;
-
-  return `${option.etaMinutes} min ${signalLabel.toLowerCase()} · ${supplyLabel}`;
+function buildServiceMeta(option: RideOption) {
+  return `${option.etaMinutes} min · ${option.capacity}`;
 }
 
 // ── Service option row ────────────────────────────────────────────────────────
 
 const ServiceRow = memo(function ServiceRow({
   option,
-  nearbyCount,
   onPress,
 }: {
   option: RideOption;
-  nearbyCount: number;
   onPress: () => void;
 }) {
   const theme = useOrbiTheme();
@@ -249,13 +226,8 @@ const ServiceRow = memo(function ServiceRow({
         <View style={styles.serviceInfo}>
           <Text style={styles.serviceTitle}>{option.title}</Text>
           <Text style={styles.serviceMeta} numberOfLines={1} ellipsizeMode="tail">
-            {buildMarketplaceTrustLine(option, nearbyCount)}
+            {buildServiceMeta(option)}
           </Text>
-          {option.marketplace?.reliabilityNote ? (
-            <Text style={styles.serviceTrustNote} numberOfLines={1} ellipsizeMode="tail">
-              {option.marketplace.reliabilityNote}
-            </Text>
-          ) : null}
         </View>
         <View style={{ alignItems: 'flex-end', gap: 2 }}>
           <Text style={styles.serviceFare}>{formatRiderMoneyAmount(option.fare)}</Text>
@@ -637,7 +609,6 @@ export default function RiderHomeScreen() {
       {/* ── Floating top bar ── */}
       <SafeAreaView style={styles.topBarSafe} pointerEvents="box-none">
         <View style={styles.topBar}>
-          {/* Left: greeting pill */}
           <View style={styles.greetingPill}>
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarInitial}>
@@ -653,7 +624,6 @@ export default function RiderHomeScreen() {
             )}
           </View>
 
-          {/* Right: surge badge + nearby + realtime dot */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, justifyContent: 'flex-end' }}>
             {!activeTrip ? (
               <Pressable
@@ -741,8 +711,10 @@ export default function RiderHomeScreen() {
                 router.push('/book');
               }}
             >
-              <View style={styles.searchDot}>
-                <View style={styles.searchDotCore} />
+              <View style={styles.routeGlyph}>
+                <View style={styles.routePickupDot} />
+                <View style={styles.routeStem} />
+                <View style={styles.routeDestinationDot} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.searchPlaceholder}>{t('home.whereToGo')}</Text>
@@ -757,6 +729,17 @@ export default function RiderHomeScreen() {
               </View>
             </Pressable>
 
+            <View style={styles.quickActionRow}>
+              <Pressable style={styles.quickAction} onPress={navigateToBook}>
+                <Text style={styles.quickActionTitle}>Maintenant</Text>
+                <Text style={styles.quickActionMeta}>Départ immédiat</Text>
+              </Pressable>
+              <Pressable style={styles.quickAction} onPress={navigateToActivity}>
+                <Text style={styles.quickActionTitle}>Activité</Text>
+                <Text style={styles.quickActionMeta}>Courses et reçus</Text>
+              </Pressable>
+            </View>
+
             {/* Quick services */}
             {options.length > 0 ? (
               <View style={styles.servicesBlock}>
@@ -766,7 +749,6 @@ export default function RiderHomeScreen() {
                   <ServiceRow
                     key={opt.id}
                     option={opt}
-                    nearbyCount={getCompatibleNearbyCount(opt, nearbyDriverCounts)}
                     onPress={navigateToBook}
                   />
                   ))}
@@ -810,8 +792,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: 14,
+    paddingTop: 7,
     paddingBottom: 4,
     gap: 10,
   },
@@ -819,21 +801,20 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
-    paddingRight: 14,
+    paddingRight: 13,
     paddingLeft: 4,
     paddingVertical: 4,
     maxWidth: SCREEN_W * 0.55,
-    ...theme.shadows.float,
   },
   avatarCircle: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: theme.colors.accentDark,
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -852,14 +833,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
     paddingHorizontal: 12,
     paddingVertical: 8,
     maxWidth: SCREEN_W * 0.4,
-    ...theme.shadows.float,
   },
   statusDot: {
     width: 8,
@@ -880,23 +860,21 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderWidth: 0,
     paddingHorizontal: 16,
-    paddingBottom: 32,
+    paddingBottom: 28,
     paddingTop: 10,
-    ...theme.shadows.sheet,
   },
   handle: {
-    width: 44,
-    height: 5,
+    width: 36,
+    height: 4,
     borderRadius: 999,
     backgroundColor: theme.colors.border,
     alignSelf: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   sheetScroll: {
     flex: 1,
@@ -909,58 +887,95 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 8,
+    backgroundColor: '#F3F3F3',
+    borderRadius: 4,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 13,
     gap: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 12,
-    ...theme.shadows.card,
+    borderColor: '#E8E8E8',
+    marginBottom: 10,
   },
   searchBarPressed: {
     transform: [{ scale: 0.985 }],
     opacity: 0.96,
   },
-  searchDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: theme.colors.surface,
+  routeGlyph: {
+    width: 24,
+    height: 42,
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    justifyContent: 'space-between',
   },
-  searchDotCore: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: theme.colors.text,
+  routePickupDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#111111',
+    marginTop: 5,
+  },
+  routeStem: {
+    width: 1,
+    flex: 1,
+    backgroundColor: '#BDBDBD',
+    marginVertical: 4,
+  },
+  routeDestinationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    backgroundColor: '#111111',
+    marginBottom: 5,
   },
   searchPlaceholder: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 17,
     color: theme.colors.text,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: 'Inter_700Bold',
   },
   searchIconWrap: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: theme.colors.text,
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  quickActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  quickAction: {
+    flex: 1,
+    minHeight: 58,
+    borderRadius: 8,
+    backgroundColor: '#F7F7F7',
+    borderWidth: 1,
+    borderColor: '#ECECEC',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: 'center',
+  },
+  quickActionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: '#111111',
+  },
+  quickActionMeta: {
+    marginTop: 2,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B6B6B',
   },
   // Service rows
   servicesBlock: { gap: 8 },
   servicesTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: '#111111',
   },
   services: {
     gap: 2,
@@ -972,26 +987,27 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
     borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 0,
+    borderBottomWidth: 1,
+    borderColor: '#EFEFEF',
   },
   serviceRowPrimary: {
-    borderColor: theme.colors.border,
+    borderColor: '#EFEFEF',
   },
   serviceRowWarm: {
-    borderColor: theme.colors.border,
+    borderColor: '#EFEFEF',
   },
   serviceRowPressed: {
     opacity: 0.82,
     transform: [{ scale: 0.988 }],
   },
   serviceIcon: {
-    width: 42,
-    height: 42,
+    width: 50,
+    height: 44,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1001,8 +1017,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 2,
   },
   serviceTitle: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '800',
     fontFamily: 'Inter_600SemiBold',
     color: theme.colors.text,
   },
@@ -1018,7 +1034,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   serviceFare: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     color: theme.colors.text,
   },
@@ -1083,28 +1099,25 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // ── Match card — slides up from bottom when driver matched ───────────────
   matchCard: {
     position: 'absolute',
-    bottom: 260,
+    bottom: 286,
     left: 16,
     right: 16,
     backgroundColor: theme.colors.surface,
-    borderRadius: 18,
+    borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
     zIndex: 60,
   },
   matchCardDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
   },
   matchCardTitle: {
     fontSize: 15,
@@ -1121,8 +1134,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   matchCardCheck: {
     width: 34,
     height: 32,
-    borderRadius: 10,
-    backgroundColor: theme.colors.teal,
+    borderRadius: 8,
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1141,18 +1154,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     zIndex: 50,
   },
   sosBtnFixed: {
-    marginTop: 60,
-    width: 54,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: theme.colors.sos,
+    marginTop: 58,
+    width: 50,
+    height: 42,
+    borderRadius: 8,
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: theme.colors.sos,
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
   },
   sosBtnText: {
     fontSize: 12,

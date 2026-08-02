@@ -106,7 +106,7 @@ export function buildRiderNextActionHint(flow: RiderActiveFlowSummary) {
   }
 
   if (flow.activeRequest) {
-    return "Restez joignable: le dispatch cherche un chauffeur compatible.";
+    return "Restez joignable: nous cherchons un chauffeur pour vous.";
   }
 
   return "Aucune action urgente: vous pouvez preparer une nouvelle reservation.";
@@ -228,15 +228,11 @@ export function buildRiderLiveRouteProgress(input: {
           ? 42
           : 18,
     freshnessLabel: signalHealth.freshnessLabel,
-    coordinateLabel: formatApproxCoordinateLabel(
-      latestPosition.latitude,
-      latestPosition.longitude,
-      "Zone chauffeur",
-    ),
+    coordinateLabel: "Position chauffeur actualisee",
     accuracyLabel:
       accuracyMeters !== null
-        ? `Precision ${Math.round(accuracyMeters)} m`
-        : "Precision inconnue",
+        ? `Signal ${Math.round(accuracyMeters)} m`
+        : "Signal en attente",
     speedLabel:
       speedKph !== null
         ? `${Math.round(speedKph)} km/h`
@@ -258,7 +254,7 @@ export function buildRiderRouteSignalHealth(input: {
 
   if (Number.isNaN(observedAt.getTime()) || Number.isNaN(now.getTime())) {
     return {
-      freshnessLabel: "GPS recent",
+      freshnessLabel: "Position recente",
       note: "Position reçue, horodatage en cours de vérification.",
       tone: "amber" as const,
     };
@@ -267,10 +263,10 @@ export function buildRiderRouteSignalHealth(input: {
   const ageSeconds = Math.max(0, Math.round(ageMs / 1000));
   const freshnessLabel =
     ageSeconds < 45
-      ? "GPS maintenant"
+      ? "Position maintenant"
       : ageSeconds < 120
-        ? `GPS il y a ${Math.round(ageSeconds / 60)} min`
-        : `GPS ancien ${Math.round(ageSeconds / 60)} min`;
+        ? `Position il y a ${Math.round(ageSeconds / 60)} min`
+        : `Position ancienne ${Math.round(ageSeconds / 60)} min`;
 
   if (input.routeState === "critical") {
     return {
@@ -283,7 +279,7 @@ export function buildRiderRouteSignalHealth(input: {
   if (input.routeState === "warning") {
     return {
       freshnessLabel,
-      note: "Position à surveiller: l'équipe Orbi voit aussi cette anomalie.",
+      note: "Position à surveiller: gardez le partage actif et restez attentif.",
       tone: "amber" as const,
     };
   }
@@ -291,7 +287,7 @@ export function buildRiderRouteSignalHealth(input: {
   if (ageSeconds >= 120) {
     return {
       freshnessLabel,
-      note: "Position chauffeur ancienne: Orbi garde le dernier point et attend une nouvelle position.",
+      note: "Position chauffeur ancienne: nous attendons une nouvelle position.",
       tone: "amber" as const,
     };
   }
@@ -462,11 +458,11 @@ export function buildRiderFlowTransitionLabel(
       previousFlowState !== nextFlowState &&
       nextStatus
     ) {
-      return `Evolution live: ${formatOperationalStatus(nextStatus)}.`;
+      return `Course mise a jour: ${formatOperationalStatus(nextStatus)}.`;
     }
 
     if (previousFlowState && !nextFlowState) {
-      return "Le flux actif a disparu de la vue principale.";
+      return "La course active est terminee.";
     }
 
     return null;
@@ -474,7 +470,7 @@ export function buildRiderFlowTransitionLabel(
 
   if (surface === "booking") {
     if (!previousFlowState && nextFlowState) {
-      return "Une reservation active vient d apparaitre dans le flux live.";
+      return "Une reservation active vient d apparaitre.";
     }
 
     if (
@@ -487,7 +483,7 @@ export function buildRiderFlowTransitionLabel(
     }
 
     if (previousFlowState && !nextFlowState) {
-      return "Le flux actif a ete nettoye de cette reservation.";
+      return "Cette reservation n est plus active.";
     }
 
     return null;
@@ -495,7 +491,7 @@ export function buildRiderFlowTransitionLabel(
 
   if (surface === "account") {
     if (!previousFlowState && nextFlowState && nextStatus) {
-      return `Le compte reflete maintenant un flux actif: ${formatOperationalStatus(nextStatus)}.`;
+      return `Le compte affiche maintenant une course active: ${formatOperationalStatus(nextStatus)}.`;
     }
 
     if (
@@ -504,7 +500,7 @@ export function buildRiderFlowTransitionLabel(
       previousFlowState !== nextFlowState &&
       nextStatus
     ) {
-      return `Le compte a resynchronise le flux actif: ${formatOperationalStatus(nextStatus)}.`;
+      return `Le compte a mis a jour la course active: ${formatOperationalStatus(nextStatus)}.`;
     }
 
     if (previousFlowState && !nextFlowState) {
@@ -542,7 +538,7 @@ export function buildRiderPeripheralStatusLabel(input: {
 
   return input.fullName
     ? `Profil charge pour ${input.fullName}.`
-    : "Profil charge depuis la session reelle.";
+    : "Profil charge.";
 }
 
 function extractStatusFromFlowState(flowState: string | null) {

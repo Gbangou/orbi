@@ -38,15 +38,15 @@ export function buildDriverRouteMonitoringLines(
   }
 
   if (routeMonitoring.state === 'unknown') {
-    return ['GPS mission: position en cours de confirmation.'];
+    return ['Position mission en cours de confirmation.'];
   }
 
   if (routeMonitoring.state === 'clear') {
-    return ['GPS mission: route cohérente.'];
+    return ['Route mission cohérente.'];
   }
 
   return [
-    `GPS mission: ${formatOperationalStatus(routeMonitoring.state)} (${formatOperationalCount(routeMonitoring.alertCount)})`,
+    `Route mission: ${formatOperationalStatus(routeMonitoring.state)} (${formatOperationalCount(routeMonitoring.alertCount)})`,
     routeMonitoring.lastAlertType
       ? `Dernière alerte: ${formatOperationalStatus(routeMonitoring.lastAlertType)}`
       : 'Dernière alerte: route à contrôler',
@@ -62,16 +62,16 @@ export function buildDriverRouteSafetyBrief(input: {
   if (!routeMonitoring) {
     return {
       eyebrow: 'Sécurité trajet',
-      title: 'GPS en synchronisation',
+      title: 'Position en synchronisation',
       description:
         'La course reste disponible pendant la mise à jour de la position.',
       tone: 'amber' as RouteTone,
       actionLabel:
-        'Gardez le telephone ouvert; Orbi vérifiera la position au moment de finaliser.',
+        'Gardez le telephone ouvert; la position sera vérifiée au moment de finaliser.',
       blocksCompletion: false,
       insights: [
-        { label: 'GPS', value: 'Synchronisation', tone: 'amber' as RouteTone },
-        { label: 'Etat', value: 'Verification serveur', tone: 'amber' as RouteTone },
+        { label: 'Position', value: 'Synchronisation', tone: 'amber' as RouteTone },
+        { label: 'Etat', value: 'Verification', tone: 'amber' as RouteTone },
       ],
     };
   }
@@ -81,15 +81,15 @@ export function buildDriverRouteSafetyBrief(input: {
   if (!latestPosition || routeMonitoring.state === 'unknown') {
     return {
       eyebrow: 'Sécurité trajet',
-      title: 'Premier signal GPS attendu',
+      title: 'Premiere position attendue',
       description:
         'La carte attend encore la première position de mission.',
       tone: 'amber' as RouteTone,
       actionLabel:
-        'Gardez la localisation active; Orbi vérifiera la position récente avant de valider la fin.',
+        'Gardez la localisation active; la position recente sera verifiee avant de valider la fin.',
       blocksCompletion: false,
       insights: [
-        { label: 'GPS', value: 'En attente', tone: 'amber' as RouteTone },
+        { label: 'Position', value: 'En attente', tone: 'amber' as RouteTone },
         {
           label: 'Alertes',
           value: formatOperationalCount(routeMonitoring.alertCount),
@@ -128,7 +128,7 @@ export function buildDriverRouteSafetyBrief(input: {
       eyebrow: 'Sécurité trajet',
       title: 'Course à contrôler après finalisation',
       description:
-        'La position GPS indique une anomalie possible. Orbi garde la trace pour revue operations, sans bloquer la fin de course.',
+        'La position indique une anomalie possible. Terminez uniquement si la course est réellement arrivée.',
       tone: 'rose' as RouteTone,
       actionLabel:
         'Terminez seulement si le client est arrive; contactez le support ou utilisez SOS si necessaire.',
@@ -151,7 +151,7 @@ export function buildDriverRouteSafetyBrief(input: {
         'La course peut continuer, mais la position récente mérite une vérification.',
       tone: 'amber' as RouteTone,
       actionLabel:
-        'Confirmez la route, gardez le GPS actif et signalez un incident si le problème persiste.',
+        'Confirmez la route, gardez la localisation active et signalez un incident si le probleme persiste.',
       blocksCompletion: false,
       insights: buildRouteSafetyInsights({
         routeMonitoring,
@@ -167,7 +167,7 @@ export function buildDriverRouteSafetyBrief(input: {
     eyebrow: 'Sécurité trajet',
     title: 'Route cohérente',
     description:
-      'La position GPS est exploitable et ne montre pas d anomalie.',
+      'La position est exploitable et ne montre pas d anomalie.',
     tone: 'teal' as RouteTone,
     actionLabel: 'Continuez la mission normalement.',
     blocksCompletion: false,
@@ -198,7 +198,7 @@ function buildRouteSafetyInsights(input: {
       tone: input.tone,
     },
     {
-      label: 'Precision',
+      label: 'Signal',
       value:
         typeof input.accuracyMeters === 'number'
           ? `${Math.round(input.accuracyMeters)} m`

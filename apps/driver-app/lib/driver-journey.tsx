@@ -25,21 +25,21 @@ const driverJourneySteps: Array<{
     href: '/auth',
     eyebrow: 'Acces',
     title: 'Connexion et activation',
-    description: 'Ouvrir la session chauffeur et reprendre le cockpit.',
+    description: 'Ouvrir la session chauffeur et reprendre le service.',
   },
   {
     id: 'accueil',
     href: '/accueil',
-    eyebrow: 'Cockpit',
+    eyebrow: 'Accueil',
     title: 'Accueil chauffeur',
-    description: 'Voir le statut live, les offres et les revenus immediats.',
+    description: 'Voir le statut, les offres et les revenus immediats.',
   },
   {
     id: 'offres',
     href: '/offres',
-    eyebrow: 'Dispatch',
+    eyebrow: 'Courses',
     title: 'Voir toutes les offres',
-    description: 'Piloter les reservations, transitions et actions de course.',
+    description: 'Gerer les reservations et les actions de course.',
   },
   {
     id: 'revenus',
@@ -51,9 +51,9 @@ const driverJourneySteps: Array<{
   {
     id: 'profil',
     href: '/profil',
-    eyebrow: 'Dossier',
+    eyebrow: 'Profil',
     title: 'Profil et vehicule',
-    description: 'Suivre le dossier ops, les documents et le vehicule actif.',
+    description: 'Suivre les documents et le vehicule actif.',
   },
 ];
 
@@ -73,10 +73,10 @@ export function DriverJourneySection({
     <SectionCard tone="sky">
       <SectionHeading
         eyebrow="Parcours chauffeur"
-        title="Tunnel chauffeur continu"
+        title="Parcours chauffeur"
         description={
           description ??
-          'Le meme fil conducteur relie l acces, le cockpit live, le dispatch, les revenus et le dossier operations.'
+          'Acces, accueil, courses, revenus et profil restent connectes dans un parcours simple.'
         }
       />
       <View style={styles.actions}>

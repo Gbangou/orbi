@@ -173,7 +173,7 @@ export default function RatingScreen() {
   if (status === 'done') {
     return (
       <ScrollView style={styles.root} contentContainerStyle={styles.screen}>
-        <OrbiSurface tone="teal" style={styles.doneCard} elevated>
+        <OrbiSurface tone="teal" style={styles.doneCard}>
           <View style={styles.doneIcon}>
             <View style={styles.checkOuter}>
               <View style={styles.checkInner} />
@@ -184,19 +184,9 @@ export default function RatingScreen() {
             Votre evaluation a ete transmise.
             {ratingResult ? ` Note enregistree: ${ratingResult.rating.score}/5.` : ''}
           </Text>
-          {score >= 4 ? (
-            <Text style={styles.doneTip}>
-              Votre avis positif aide les bons chauffeurs a se distinguer dans le dispatch.
-            </Text>
-          ) : ratingResult?.qualityReview ? (
-            <Text style={styles.doneTip}>
-              {ratingResult.qualityReview.message} Dossier {ratingResult.qualityReview.ticketId.slice(0, 8)}.
-            </Text>
-          ) : (
-            <Text style={styles.doneTip}>
-              Votre retour aide les operations a maintenir un haut niveau de service.
-            </Text>
-          )}
+          <Text style={styles.doneTip}>
+            Merci pour votre retour.
+          </Text>
           <OrbiButton
             label="Retour a l'accueil"
             onPress={handleDone}
@@ -224,7 +214,7 @@ export default function RatingScreen() {
 
       <TripStageTracker status="COMPLETED" audience="rider" style={styles.stageTracker} />
 
-      <OrbiSurface style={styles.summaryCard} elevated>
+      <OrbiSurface style={styles.summaryCard}>
         <PersonBadge name={driverName} subtitle="Chauffeur Orbi certifié" size={56} />
         {fare !== null ? (
           <Text style={styles.summaryFare}>{formatRiderMoneyAmount(fare)}</Text>
@@ -307,27 +297,27 @@ export default function RatingScreen() {
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: theme.colors.riderBackground,
+    backgroundColor: '#FFFFFF',
   },
   screen: {
-    paddingTop: 72,
+    paddingTop: 56,
     paddingHorizontal: 24,
     paddingBottom: 48,
-    backgroundColor: theme.colors.riderBackground,
+    backgroundColor: '#FFFFFF',
     gap: 20,
   },
   header: {
     gap: 6,
   },
   title: {
-    color: theme.colors.text,
-    fontSize: 34,
-    fontWeight: '800',
+    color: '#111111',
+    fontSize: 32,
+    fontWeight: '900',
     fontFamily: 'Raleway_800ExtraBold',
     lineHeight: 36,
   },
   subtitle: {
-    color: theme.colors.muted,
+    color: '#525252',
     lineHeight: 20,
   },
   stageTracker: {
@@ -336,10 +326,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   summaryCard: {
     padding: 18,
     gap: 10,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E8E8E8',
   },
   summaryFare: {
-    color: theme.colors.teal,
-    fontWeight: '700',
+    color: '#111111',
+    fontWeight: '800',
     fontSize: 15,
   },
   ratingBlock: {
@@ -347,9 +340,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 14,
     paddingHorizontal: 16,
     paddingVertical: 18,
+    borderRadius: 4,
+    backgroundColor: '#F7F7F7',
+    borderColor: '#E8E8E8',
   },
   ratingQuestion: {
-    color: theme.colors.text,
+    color: '#111111',
     fontSize: 17,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
@@ -371,50 +367,49 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textAlign: 'center',
   },
   starGlyphFilled: {
-    color: theme.colors.amber,
-    // Halo lumineux sur les étoiles sélectionnées
-    textShadowColor: 'rgba(245, 158, 11, 0.55)',
-    textShadowOffset: { width: 0, height: 3 },
-    textShadowRadius: 8,
+    color: '#111111',
   },
   starGlyphEmpty: {
     color: '#D0D0D0',
   },
   ratingLabel: {
-    color: theme.colors.amber,
+    color: '#111111',
     fontWeight: '800',
     fontSize: 17,
     letterSpacing: 0,
   },
   ratingPlaceholder: {
-    color: theme.colors.muted,
+    color: '#6B6B6B',
     fontSize: 14,
   },
   commentBlock: {
     gap: 8,
     padding: 16,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E8E8E8',
   },
   commentLabel: {
-    color: theme.colors.textSoft,
+    color: '#525252',
     fontWeight: '700',
     fontSize: 13,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   commentInput: {
-    backgroundColor: theme.colors.panel,
+    backgroundColor: '#F3F3F3',
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 16,
+    borderColor: '#E8E8E8',
+    borderRadius: 4,
     padding: 14,
-    color: theme.colors.text,
+    color: '#111111',
     fontSize: 15,
     lineHeight: 22,
     textAlignVertical: 'top',
     minHeight: 90,
   },
   commentCounter: {
-    color: theme.colors.muted,
+    color: '#6B6B6B',
     fontSize: 11,
     textAlign: 'right',
   },
@@ -429,6 +424,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 18,
     paddingHorizontal: 20,
     paddingVertical: 32,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
   },
   doneIcon: {
     marginBottom: 8,
@@ -437,7 +434,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: theme.colors.teal,
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -451,19 +448,19 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     marginTop: -4,
   },
   doneTitle: {
-    color: theme.colors.text,
+    color: '#111111',
     fontSize: 36,
     fontWeight: '900',
     textAlign: 'center',
   },
   doneBody: {
-    color: theme.colors.textSoft,
+    color: '#525252',
     textAlign: 'center',
     lineHeight: 22,
     fontSize: 16,
   },
   doneTip: {
-    color: theme.colors.muted,
+    color: '#6B6B6B',
     textAlign: 'center',
     lineHeight: 20,
     fontSize: 13,
@@ -472,5 +469,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   doneButton: {
     marginTop: 8,
     alignSelf: 'stretch',
+    borderRadius: 4,
+    backgroundColor: '#111111',
   },
 });

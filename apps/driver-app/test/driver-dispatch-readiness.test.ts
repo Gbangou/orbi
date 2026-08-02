@@ -42,7 +42,7 @@ describe('driver-dispatch-readiness', () => {
     );
 
     expect(note).toBe(
-      'Dossier non approuve: les offres restent bloquees jusqu a validation.',
+      'Profil en attente de validation. Les offres reprendront apres approbation.',
     );
   });
 
@@ -54,12 +54,12 @@ describe('driver-dispatch-readiness', () => {
       }),
     );
 
-    expect(note).toBe('2 demandes compatibles, mais hors rayon actuel.');
+    expect(note).toBe('2 demandes disponibles, mais trop eloignees.');
   });
 
   it('confirms when the dispatch scan is really empty', () => {
     expect(buildDriverDispatchReadinessNote(createReadiness())).toBe(
-      'Aucune demande compatible ouverte pour votre vehicule dans le rayon actuel.',
+      'Aucune demande disponible pour votre vehicule pour le moment.',
     );
   });
 });

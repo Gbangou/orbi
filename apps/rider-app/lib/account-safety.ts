@@ -72,14 +72,14 @@ export function buildTrustedContactPayload(input: {
   if (notes.length > 120) {
     return {
       ok: false,
-      message: 'La note ops doit rester limitee a 120 caracteres.',
+      message: 'La note doit rester limitee a 120 caracteres.',
     };
   }
 
   if (hasUnsafeText(notes)) {
     return {
       ok: false,
-      message: 'La note ops contient des caracteres non autorises.',
+      message: 'La note contient des caracteres non autorises.',
     };
   }
 
@@ -132,7 +132,7 @@ export function buildSavedPlacePayload(
   if (!latitudeText || !longitudeText) {
     return {
       ok: false,
-      message: 'Les coordonnees sont obligatoires pour enregistrer un lieu.',
+      message: 'La position est obligatoire pour enregistrer un lieu.',
     };
   }
 
@@ -142,14 +142,14 @@ export function buildSavedPlacePayload(
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return {
       ok: false,
-      message: 'Les coordonnees doivent etre numeriques.',
+      message: 'La position doit etre valide.',
     };
   }
 
   if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
     return {
       ok: false,
-      message: 'Les coordonnees doivent rester dans des bornes GPS valides.',
+      message: 'La position doit rester dans une zone valide.',
     };
   }
 

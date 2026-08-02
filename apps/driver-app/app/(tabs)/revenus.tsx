@@ -203,194 +203,6 @@ const makeWeeklyStyles = (theme: OrbiTheme) => StyleSheet.create({
   dayLabelToday: { color: theme.colors.text, fontWeight: '800' },
 });
 
-const DRIVER_MILESTONES = [
-  { trips: 10, badge: 'Debutant', level: 'L1' },
-  { trips: 50, badge: 'Confirme', level: 'L2' },
-  { trips: 200, badge: 'Expert', level: 'L3' },
-] as const;
-
-// ── Incentives card — objectifs quotidiens Bolt-style ─────────────────────────
-
-type DailyQuest = {
-  questId: string;
-  title: string;
-  description: string;
-  targetTrips: number;
-  completedTrips: number;
-  bonusXof: number;
-  progressPercent: number;
-  isCompleted: boolean;
-};
-
-function DriverIncentivesCard({
-  quests,
-  streakDays,
-  streakBonusXof,
-}: {
-  quests: DailyQuest[];
-  streakDays: number;
-  streakBonusXof: number;
-}) {
-  const theme = useOrbiTheme();
-  const incentStyles = useMemo(() => makeIncentStyles(theme), [theme]);
-  return (
-    <View style={incentStyles.card}>
-      <View style={incentStyles.header}>
-        <Text style={incentStyles.title}>Objectifs du jour</Text>
-        {streakDays > 0 ? (
-          <View style={incentStyles.streakBadge}>
-            <Text style={incentStyles.streakText}>{streakDays} j</Text>
-          </View>
-        ) : null}
-      </View>
-      {quests.map((quest) => (
-        <View key={quest.questId} style={incentStyles.quest}>
-          <View style={incentStyles.questHeader}>
-            <Text style={[incentStyles.questTitle, quest.isCompleted && incentStyles.questTitleDone]}>
-              {quest.isCompleted ? 'Termine - ' : ''}{quest.title}
-            </Text>
-            <Text style={[incentStyles.questBonus, quest.isCompleted && { color: theme.colors.teal }]}>
-              +{formatDriverEarningsAmount(quest.bonusXof)}
-            </Text>
-          </View>
-          <View style={incentStyles.progressTrack}>
-            <View style={[
-              incentStyles.progressFill,
-              {
-                width: `${quest.progressPercent}%` as `${number}%`,
-                backgroundColor: quest.isCompleted ? theme.colors.teal : theme.colors.amber,
-              },
-            ]} />
-          </View>
-          <Text style={incentStyles.progressMeta}>
-            {quest.completedTrips}/{quest.targetTrips} courses
-          </Text>
-        </View>
-      ))}
-      {streakBonusXof > 0 ? (
-        <View style={incentStyles.streakBonus}>
-          <Text style={incentStyles.streakBonusText}>
-            Bonus régularité {streakDays} jours : +{formatDriverEarningsAmount(streakBonusXof)}
-          </Text>
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-const makeIncentStyles = (theme: OrbiTheme) => StyleSheet.create({
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 16,
-    gap: 12,
-  },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text },
-  streakBadge: { backgroundColor: theme.colors.backgroundAlt, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
-  streakText: { fontSize: 12, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.amber },
-  quest: { gap: 6 },
-  questHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  questTitle: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.text, flex: 1 },
-  questTitleDone: { color: theme.colors.teal },
-  questBonus: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.amber },
-  progressTrack: { height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.07)', overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 3 },
-  progressMeta: { fontSize: 11, color: theme.colors.textMuted, fontFamily: 'Inter_400Regular' },
-  streakBonus: { backgroundColor: 'rgba(0,201,167,0.08)', borderRadius: 10, padding: 10 },
-  streakBonusText: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: theme.colors.teal },
-});
-
-// ── Driver milestone (existing) ───────────────────────────────────────────────
-
-function DriverMilestoneCard({ completedTrips }: { completedTrips: number }) {
-  const theme = useOrbiTheme();
-  const milestoneStyles = useMemo(() => makeMilestoneStyles(theme), [theme]);
-  const earned = DRIVER_MILESTONES.filter((m) => completedTrips >= m.trips);
-  const next = DRIVER_MILESTONES.find((m) => completedTrips < m.trips);
-  const progress = next
-    ? Math.min(Math.round((completedTrips / next.trips) * 100), 100)
-    : 100;
-
-  return (
-    <View style={milestoneStyles.card}>
-      <View style={milestoneStyles.header}>
-        <Text style={milestoneStyles.eyebrow}>Niveau chauffeur</Text>
-        {earned.length > 0 ? (
-          <View style={milestoneStyles.badgeRow}>
-            {earned.map((m) => (
-              <View key={m.badge} style={milestoneStyles.earnedBadge}>
-                <Text style={milestoneStyles.earnedBadgeText}>{m.level} {m.badge}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-      </View>
-      {next ? (
-        <>
-          <Text style={milestoneStyles.nextLabel}>
-            {next.level} {next.badge} - encore {next.trips - completedTrips} course(s)
-          </Text>
-          <View style={milestoneStyles.progressTrack}>
-            <View style={[milestoneStyles.progressFill, { width: `${progress}%` as `${number}%` }]} />
-          </View>
-          <Text style={milestoneStyles.progressMeta}>{completedTrips} / {next.trips} courses</Text>
-        </>
-      ) : (
-        <Text style={milestoneStyles.nextLabel}>Niveau maximum - vous etes un Expert Orbi.</Text>
-      )}
-    </View>
-  );
-}
-
-const makeMilestoneStyles = (theme: OrbiTheme) => StyleSheet.create({
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 14,
-    padding: 16,
-    gap: 10,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0,
-    color: theme.colors.amber,
-  },
-  badgeRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  earnedBadge: {
-    backgroundColor: 'rgba(251,191,36,0.14)',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  earnedBadgeText: { fontSize: 12, fontWeight: '700', color: theme.colors.amber },
-  nextLabel: { fontSize: 13, color: theme.colors.text, fontWeight: '600' },
-  progressTrack: {
-    height: 6,
-    borderRadius: 99,
-    backgroundColor: 'rgba(251,191,36,0.12)',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 99,
-    backgroundColor: theme.colors.amber,
-  },
-  progressMeta: { fontSize: 11, color: theme.colors.muted, fontWeight: '600' },
-});
-
 function DriverOperatingCompassCard({
   earnings,
 }: {
@@ -536,11 +348,6 @@ export default function RevenusScreen() {
   const [earningsTransitionLabel, setEarningsTransitionLabel] = useState<string | null>(null);
   const [freshTripIds, setFreshTripIds] = useState<string[]>([]);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
-  const [incentives, setIncentives] = useState<{
-    dailyQuests: DailyQuest[];
-    streakDays: number;
-    streakBonusXof: number;
-  } | null>(null);
   const previousSummaryRef = useRef<DriverEarningsResponse['summary'] | null>(null);
   const previousTripIdsRef = useRef<string[] | null>(null);
 
@@ -558,18 +365,6 @@ export default function RevenusScreen() {
         fetchDriverProfile(authClient),
       ]);
       const normalizedProfile = normalizeDriverProfileResponse(profileResponse);
-      // Charger les incentives (best-effort, jamais bloquant)
-      void (async () => {
-        try {
-          if (typeof (authClient as { request?: unknown }).request === 'function') {
-            const data = await (authClient as { request: <T>(path: string) => Promise<T> })
-              .request<{ dailyQuests: DailyQuest[]; streakDays: number; streakBonusXof: number }>(
-              '/drivers/me/incentives',
-            );
-            setIncentives(data);
-          }
-        } catch { /* non bloquant — incentives sont optionnels */ }
-      })();
       setEarnings(earningsResponse);
       setHistory(historyResponse);
       setDriverProfileStatus(normalizedProfile.profile.status);
@@ -757,18 +552,6 @@ export default function RevenusScreen() {
 
         <DriverOperatingCompassCard earnings={earnings} />
 
-        {/* Incentives — objectifs quotidiens */}
-        {incentives && incentives.dailyQuests.length > 0 ? (
-          <DriverIncentivesCard
-            quests={incentives.dailyQuests}
-            streakDays={incentives.streakDays}
-            streakBonusXof={incentives.streakBonusXof}
-          />
-        ) : null}
-
-        {/* Milestone card */}
-        <DriverMilestoneCard completedTrips={earnings.summary.completedTrips} />
-
         {/* Settlement */}
         <OrbiSurface style={styles.settlementCard}>
           <Text style={styles.sectionTitle}>{td("payoutControl")}</Text>
@@ -817,7 +600,7 @@ export default function RevenusScreen() {
               <View>
                 <Text style={styles.sectionTitle}>Ajustements justes</Text>
                 <Text style={styles.adjustmentsMeta}>
-                  Indemnites annulation creditees par operations
+                  Indemnités d'annulation créditées
                 </Text>
               </View>
               <Text style={styles.adjustmentsAmount}>
@@ -900,7 +683,7 @@ export default function RevenusScreen() {
 }
 
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: theme.colors.driverBackground },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
 
   header: {
     flexDirection: 'row',
@@ -910,13 +693,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: '#E8E8E8',
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
-    color: theme.colors.text,
+    color: '#111111',
   },
 
   content: {
@@ -927,10 +710,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Hero
   heroCard: {
-    backgroundColor: '#071311',
+    backgroundColor: '#111111',
     borderWidth: 1.5,
-    borderColor: 'rgba(242,169,0,0.35)',
-    borderRadius: 16,
+    borderColor: '#111111',
+    borderRadius: 4,
     padding: 20,
     gap: 6,
   },
@@ -938,7 +721,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.amber,
+    color: '#FFFFFF',
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -951,19 +734,19 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   heroMeta: {
     fontSize: 13,
-    color: '#C9D8D3',
+    color: '#D8D8D8',
     fontFamily: 'Inter_400Regular',
   },
   heroStatusText: {
     fontSize: 12,
-    color: '#C9D8D3',
+    color: '#D8D8D8',
     fontFamily: 'Inter_400Regular',
     lineHeight: 17,
   },
   transitionBadge: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(0,122,255,0.10)',
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginTop: 4,
@@ -983,12 +766,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.colors.accentLight,
-    borderRadius: 12,
+    backgroundColor: '#F7F7F7',
+    borderRadius: 4,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: theme.colors.teal + '33',
+    borderColor: '#E8E8E8',
   },
   payoutDateLeft: {
     gap: 2,
@@ -998,7 +781,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.teal,
+    color: '#111111',
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
@@ -1006,12 +789,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: '#111111',
     textTransform: 'capitalize',
   },
   payoutDateBadge: {
-    backgroundColor: theme.colors.teal,
-    borderRadius: 999,
+    backgroundColor: '#111111',
+    borderRadius: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
@@ -1024,10 +807,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Settlement
   settlementCard: {
-    backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 16,
+    backgroundColor: '#F7F7F7',
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
     padding: 16,
     gap: 10,
   },
@@ -1035,7 +818,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: '#111111',
   },
   settlementRow: {
     flexDirection: 'row',
@@ -1043,31 +826,31 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: '#E8E8E8',
   },
   settlementKey: {
     fontSize: 13,
-    color: theme.colors.textSoft,
+    color: '#525252',
     fontFamily: 'Inter_400Regular',
   },
   settlementVal: {
     fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.text,
+    color: '#111111',
   },
   settlementNote: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     fontFamily: 'Inter_400Regular',
     lineHeight: 18,
   },
 
   adjustmentsCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(0,201,167,0.24)',
+    borderColor: '#E8E8E8',
     padding: 16,
     gap: 10,
   },

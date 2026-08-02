@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { resolveMobileAuthErrorMessage } from '@orbi/api';
 import type { OrbiTheme } from '@orbi/ui';
-import { OrbiAuthIcon, OrbiButton, OrbiStatusBanner, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
+import { OrbiAuthIcon, OrbiButton, OrbiStatusBanner, useOrbiTheme } from '@orbi/ui/native';
 import { signInDriverAccount, signUpDriverAccount } from '../lib/auth';
 import { OrbiLogo } from '../lib/orbi-logo';
 import { preventSensitiveScreenCapture, restoreSensitiveScreenCapture } from '../lib/privacy/screen-capture';
@@ -89,7 +89,7 @@ export default function DriverAuthScreen() {
       >
         {/* Logo */}
         <View style={styles.logoArea}>
-          <OrbiLogo size="lg" tint={theme.colors.amber} wordmarkColor={theme.colors.amber} />
+          <OrbiLogo size="sm" tint="#111111" wordmarkColor="#111111" />
           <Text style={styles.tagline} numberOfLines={1}>
             Espace chauffeur Orbi
           </Text>
@@ -126,7 +126,7 @@ export default function DriverAuthScreen() {
         </View>
 
         {/* Form */}
-        <OrbiSurface style={styles.form} elevated>
+        <View style={styles.form}>
           {mode === 'sign-up' && (
             <View style={styles.inputRow}>
               <OrbiAuthIcon name="user" color={theme.colors.textMuted} />
@@ -197,7 +197,7 @@ export default function DriverAuthScreen() {
             labelStyle={styles.primaryButtonLabel}
           />
 
-        </OrbiSurface>
+        </View>
 
         <Text style={styles.legalFooter} numberOfLines={3}>
           En continuant, vous acceptez les Conditions d&apos;utilisation et la
@@ -211,100 +211,103 @@ export default function DriverAuthScreen() {
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: theme.colors.driverBackground,
+    backgroundColor: '#FFFFFF',
   },
   screen: {
     flexGrow: 1,
-    paddingHorizontal: 22,
-    paddingTop: 34,
+    paddingHorizontal: 20,
+    paddingTop: 22,
     paddingBottom: 28,
-    gap: 18,
+    gap: 14,
   },
   logoArea: {
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
+    alignItems: 'flex-start',
+    gap: 5,
+    marginBottom: 0,
   },
   tagline: {
-    color: theme.colors.muted,
-    fontSize: 15,
-    textAlign: 'center',
+    color: '#525252',
+    fontSize: 14,
+    textAlign: 'left',
   },
   trustLine: {
-    color: '#B66A00',
-    fontSize: 12,
+    color: '#111111',
+    fontSize: 11.5,
     fontWeight: '800',
-    textAlign: 'center',
+    textAlign: 'left',
   },
   modeRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   modeChip: {
     flex: 1,
-    borderRadius: 14,
-    paddingVertical: 11,
-    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: 8,
+    paddingVertical: 9,
+    backgroundColor: '#F3F3F3',
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
     alignItems: 'center',
   },
   modeChipActive: {
-    backgroundColor: theme.colors.amber,
-    borderColor: theme.colors.amber,
+    backgroundColor: '#111111',
+    borderColor: '#111111',
   },
   modeChipLabel: {
-    color: theme.colors.muted,
+    color: '#6B6B6B',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
   },
   modeChipLabelActive: {
-    color: '#3b2205',
+    color: '#FFFFFF',
   },
   form: {
-    gap: 11,
-    padding: 12,
+    gap: 10,
+    padding: 0,
+    borderWidth: 0,
+    backgroundColor: '#FFFFFF',
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderRadius: 14,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.backgroundAlt,
-    paddingHorizontal: 14,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#F3F3F3',
+    paddingHorizontal: 13,
   },
   input: {
     flex: 1,
-    color: theme.colors.text,
-    paddingVertical: 13,
+    color: '#111111',
+    paddingVertical: 11,
     fontSize: 15,
   },
   eyeBtn: {
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingLeft: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryButton: {
-    marginTop: 4,
-    borderRadius: 12,
-    minHeight: 54,
+    marginTop: 2,
+    borderRadius: 6,
+    minHeight: 48,
+    backgroundColor: '#111111',
   },
   primaryButtonLabel: {
-    fontSize: 16,
+    fontSize: 15,
   },
   passwordHint: {
-    color: theme.colors.muted,
+    color: '#6B6B6B',
     fontSize: 11,
     lineHeight: 16,
     paddingHorizontal: 4,
   },
   legalFooter: {
-    color: theme.colors.muted,
-    fontSize: 11.5,
-    lineHeight: 17,
+    color: '#6B6B6B',
+    fontSize: 11,
+    lineHeight: 16,
     textAlign: 'center',
     paddingHorizontal: 12,
     marginTop: 2,

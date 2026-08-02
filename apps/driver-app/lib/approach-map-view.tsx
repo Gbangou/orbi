@@ -204,7 +204,7 @@ export function ApproachMapView({
         <View style={styles.statusPanel}>
           <Text style={styles.eyebrow}>Approche</Text>
           <Text style={styles.title}>
-            {hasDriver && hasPickup ? 'Points GPS disponibles' : 'Coordonnees en attente'}
+            {hasDriver && hasPickup ? 'Positions disponibles' : 'Position en attente'}
           </Text>
           <Text style={styles.meta} numberOfLines={2}>
             {pickupAddress || 'Prise en charge'} - itineraire reel requis avant guidage.
@@ -226,7 +226,7 @@ export function ApproachMapView({
             <Text style={styles.routeInfoEyebrow}>Vers le passager</Text>
             <Text style={styles.routeWarningTitle}>{routeUnavailableReason}</Text>
             <Text style={styles.routeWarningText}>
-              Ouvrez une navigation GPS. Aucun raccourci n est dessine.
+              Ouvrez la navigation. Aucun raccourci n est dessine.
             </Text>
           </View>
         </View>
@@ -370,7 +370,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: 'rgba(129,140,248,0.25)',
-    ...theme.shadows.card,
   },
   routeWarningPanel: {
     maxWidth: '86%',

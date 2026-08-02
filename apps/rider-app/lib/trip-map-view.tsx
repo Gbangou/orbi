@@ -417,7 +417,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
-    ...theme.shadows.card,
   },
   routeWarningPanel: {
     maxWidth: '86%',

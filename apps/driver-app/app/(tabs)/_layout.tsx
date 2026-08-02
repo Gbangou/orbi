@@ -8,7 +8,7 @@ import { useDriverOfferAutoOpen } from '../../lib/use-driver-offer-auto-open';
 
 type TabIconProps = { color: string; focused: boolean };
 
-function CockpitIcon({ color, focused }: TabIconProps) {
+function HomeIcon({ color, focused }: TabIconProps) {
   return (
     <View style={icon.wrap}>
       <View style={[icon.gaugeArc, { borderColor: color, opacity: focused ? 1 : 0.72 }]} />
@@ -75,9 +75,9 @@ export default function DriverTabsLayout() {
       <Tabs.Screen
         name="accueil"
         options={{
-          title: 'Cockpit',
+          title: 'Accueil',
           tabBarIcon: ({ color, focused }: TabIconProps) => (
-            <CockpitIcon color={color} focused={focused} />
+            <HomeIcon color={color} focused={focused} />
           ),
         }}
       />
@@ -115,17 +115,13 @@ export default function DriverTabsLayout() {
 const makeStyles = (theme: OrbiTheme) =>
   StyleSheet.create({
     tabBar: {
-      backgroundColor: theme.colors.surface,
-      borderTopColor: theme.colors.border,
+      backgroundColor: '#FFFFFF',
+      borderTopColor: '#E8E8E8',
       borderTopWidth: 1,
-      height: 82,
-      paddingBottom: 16,
-      paddingTop: 10,
+      height: 78,
+      paddingBottom: 14,
+      paddingTop: 9,
       elevation: 0,
-      shadowColor: theme.shadows.card.shadowColor,
-      shadowOpacity: 0.06,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: -2 },
     },
     tabLabel: {
       fontSize: 10,

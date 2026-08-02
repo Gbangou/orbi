@@ -728,7 +728,7 @@ export default function AccountScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* User card */}
-        <OrbiSurface style={styles.userCard} elevated>
+        <OrbiSurface style={styles.userCard}>
           <View style={styles.avatarCircle}>
             <Text style={styles.avatarInitials}>{initials}</Text>
           </View>
@@ -1063,7 +1063,7 @@ export default function AccountScreen() {
           onChangeText={(value) =>
             setTrustedContactForm((current) => ({ ...current, notes: value }))
           }
-          placeholder="Note ops courte, facultative"
+          placeholder="Note courte, facultative"
           placeholderTextColor={theme.colors.muted}
           maxLength={120}
           style={styles.input}
@@ -1224,11 +1224,11 @@ export default function AccountScreen() {
 
         <View style={styles.supportSummary}>
           <View style={styles.supportSummaryText}>
-            <Text style={styles.supportSummaryTitle}>Dossiers suivis</Text>
+            <Text style={styles.supportSummaryTitle}>Support</Text>
             <Text style={styles.meta}>
               {tickets.length > 0
-                ? `${tickets.length} dossier(s) ouvert(s) ou recemment mis a jour. Les details de course restent dans Activite.`
-                : 'Aucun dossier support actif sur ce compte.'}
+                ? `${tickets.length} demande(s) ouverte(s) ou recemment mise(s) a jour. Les details de course restent dans Activite.`
+                : 'Aucune demande support active sur ce compte.'}
             </Text>
           </View>
           {tickets.length > 0 ? (
@@ -1374,7 +1374,7 @@ const makeLangStyles = (theme: OrbiTheme) => StyleSheet.create({
 });
 
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: theme.colors.riderBackground },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
 
   // Header
   header: {
@@ -1385,22 +1385,22 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: '#E8E8E8',
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
-    color: theme.colors.text,
+    color: '#111111',
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   signOutBtn: {
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: theme.colors.backgroundAlt,
+    backgroundColor: '#F3F3F3',
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#E8E8E8',
   },
   signOutBtnLabel: {
     fontSize: 12,
@@ -1420,18 +1420,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(0,201,167,0.18)',
+    borderColor: '#E8E8E8',
     padding: 14,
-    ...theme.shadows.card,
   },
   avatarCircle: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: theme.colors.accentDark,
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1446,22 +1445,22 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: '#111111',
   },
   userEmail: {
     fontSize: 13,
-    color: theme.colors.textSoft,
+    color: '#525252',
     fontFamily: 'Inter_400Regular',
   },
   userPhone: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     fontFamily: 'Inter_400Regular',
   },
   privacyHint: {
     marginTop: 4,
     fontSize: 10,
-    color: theme.colors.teal,
+    color: '#111111',
     fontFamily: 'Inter_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0,
@@ -1471,7 +1470,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 8 },
   statCard: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 4,
   },
 
   // Flow banner
@@ -1479,17 +1478,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: 'rgba(0,201,167,0.06)',
+    backgroundColor: '#F7F7F7',
     borderWidth: 1,
-    borderColor: 'rgba(0,201,167,0.22)',
-    borderRadius: 12,
+    borderColor: '#E8E8E8',
+    borderRadius: 4,
     padding: 12,
   },
-  flowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.teal },
-  flowText: { flex: 1, fontSize: 13, fontWeight: '500', fontFamily: 'Inter_500Medium', color: theme.colors.text },
+  flowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#111111' },
+  flowText: { flex: 1, fontSize: 13, fontWeight: '600', fontFamily: 'Inter_500Medium', color: '#111111' },
   newTripBtn: {
-    borderRadius: 14,
+    borderRadius: 4,
     minHeight: 50,
+    backgroundColor: '#111111',
   },
   newTripBtnText: {
     fontSize: 16,
@@ -1505,29 +1505,29 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
+    color: '#111111',
   },
   cardMeta: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: '#6B6B6B',
     fontFamily: 'Inter_400Regular',
     lineHeight: 18,
   },
 
   // Status pill
   statusPill: {
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderWidth: 1,
   },
   statusPillReady: {
-    backgroundColor: 'rgba(0,201,167,0.08)',
-    borderColor: 'rgba(0,201,167,0.28)',
+    backgroundColor: '#F3F3F3',
+    borderColor: '#E8E8E8',
   },
   statusPillPending: {
-    backgroundColor: theme.colors.backgroundAlt,
-    borderColor: theme.colors.border,
+    backgroundColor: '#F3F3F3',
+    borderColor: '#E8E8E8',
   },
   statusPillText: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   statusPillTextReady: { color: theme.colors.teal },
@@ -1837,11 +1837,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     marginTop: 6,
   },
   primaryAction: {
-    borderRadius: 999,
+    borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 11,
     backgroundColor: theme.colors.text,
-    ...theme.shadows.button,
   },
   primaryActionLabel: {
     color: theme.colors.textInverse,
@@ -1849,7 +1848,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
   },
   secondaryAction: {
-    borderRadius: 999,
+    borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
     backgroundColor: theme.colors.backgroundAlt,

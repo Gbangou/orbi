@@ -10,9 +10,7 @@ import {
 } from "@orbi/ui/native";
 import type { DriverOffer } from "@orbi/api";
 import {
-  buildDriverOfferConfidenceExplainer,
   buildDriverOfferDecisionSummary,
-  buildDriverOfferDetailLines,
   formatDriverOfferDistance,
   formatDriverOfferMoney,
   formatDriverOfferMinutes,
@@ -27,73 +25,6 @@ function VehicleIcon({ category }: { category: DriverOffer["category"] }) {
   const tier = category === "motorcycle" ? "moto-standard" : "car-standard";
   return <VehicleIllustration tier={tier} width={64} height={46} />;
 }
-
-// ── Confidence bar ────────────────────────────────────────────────────────────
-
-function ConfidenceBar({
-  badge,
-  score,
-  barPercent,
-  explanation,
-  windowLabel,
-  tone,
-}: {
-  badge: string;
-  score: number;
-  barPercent: number;
-  explanation: string;
-  windowLabel: string;
-  tone: string;
-}) {
-  const theme = useOrbiTheme();
-  const confStyles = useMemo(() => makeConfStyles(theme), [theme]);
-  const color =
-    tone === "teal"
-      ? theme.colors.teal
-      : tone === "amber"
-        ? theme.colors.amber
-        : tone === "sky"
-          ? theme.colors.sky
-          : theme.colors.muted;
-
-  return (
-    <View style={[confStyles.wrap, { borderColor: color + "44" }]}>
-      <View style={confStyles.header}>
-        <View style={[confStyles.badge, { backgroundColor: color + "22", borderColor: color }]}>
-          <Text style={[confStyles.badgeLabel, { color }]}>{badge}</Text>
-        </View>
-        <Text style={[confStyles.score, { color }]}>{score}/100</Text>
-      </View>
-      <View style={confStyles.track}>
-        <View
-          style={[
-            confStyles.fill,
-            { width: `${barPercent}%` as `${number}%`, backgroundColor: color },
-          ]}
-        />
-      </View>
-      <Text style={confStyles.explanation}>{explanation}</Text>
-      <Text style={[confStyles.window, { color }]}>{windowLabel}</Text>
-    </View>
-  );
-}
-
-const makeConfStyles = (theme: OrbiTheme) => StyleSheet.create({
-  wrap: { borderRadius: 12, borderWidth: 1, padding: 12, gap: 6 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  badge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
-  badgeLabel: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold" },
-  score: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold" },
-  track: { height: 4, borderRadius: 4, backgroundColor: "rgba(0,0,0,0.07)", overflow: "hidden" },
-  fill: { height: "100%", borderRadius: 4 },
-  explanation: {
-    fontSize: 12,
-    color: theme.colors.textSoft,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 17,
-  },
-  window: { fontSize: 11, fontFamily: "Inter_400Regular" },
-});
 
 // ── Public interface ──────────────────────────────────────────────────────────
 
@@ -120,14 +51,12 @@ export const OfferCard = memo(function OfferCard({
 }: OfferCardProps) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const confidence = buildDriverOfferConfidenceExplainer(offer);
   const decision = buildDriverOfferDecisionSummary(offer);
-  const detailLines = buildDriverOfferDetailLines(offer);
   const isDisabled = isSubmitting || hasActiveTrip;
   const driverPayout = toFiniteOfferNumber(offer.driverPayout);
   const moneyDisplay = resolveDriverOfferMoneyDisplay(offer);
 
-  // Spring slide-in animation — staggered by index
+  // Professional staggered entry for new offers.
   const slideY = useRef(new Animated.Value(32)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -145,12 +74,12 @@ export const OfferCard = memo(function OfferCard({
           toValue: 0,
           tension: 60,
           friction: 8,
-          useNativeDriver: false,
+          useNativeDriver: true,
         }),
         Animated.timing(opacity, {
           toValue: 1,
           duration: 220,
-          useNativeDriver: false,
+          useNativeDriver: true,
         }),
       ]);
       animation.start();
@@ -253,29 +182,6 @@ export const OfferCard = memo(function OfferCard({
         </Text>
       ) : null}
 
-      {/* Confidence signal */}
-      {confidence ? (
-        <ConfidenceBar
-          badge={confidence.badge}
-          score={confidence.score}
-          barPercent={confidence.barPercent}
-          explanation={confidence.explanation}
-          windowLabel={confidence.windowLabel}
-          tone={confidence.tone}
-        />
-      ) : null}
-
-      {/* Detail lines — dispatch context, confidence, window, learning */}
-      {detailLines.length > 0 ? (
-        <View style={styles.detailLines}>
-          {detailLines.map((line, i) => (
-            <Text key={i} style={styles.detailLine} numberOfLines={2} ellipsizeMode="tail">
-              {line}
-            </Text>
-          ))}
-        </View>
-      ) : null}
-
       {/* Accept / decline */}
       <View style={styles.actions}>
         <OrbiButton
@@ -301,22 +207,21 @@ export const OfferCard = memo(function OfferCard({
 
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 14,
+    borderColor: "#E8E8E8",
+    padding: 13,
     gap: 10,
-    ...theme.shadows.card,
   },
   wrapFresh: {
-    borderColor: theme.colors.teal,
-    backgroundColor: "rgba(0,201,167,0.03)",
+    borderColor: "#111111",
+    backgroundColor: "#FFFFFF",
   },
   freshBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(0,201,167,0.12)",
-    borderRadius: 999,
+    backgroundColor: "#111111",
+    borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
@@ -324,7 +229,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.teal,
+    color: "#FFFFFF",
   },
   header: { flexDirection: "row", alignItems: "center", gap: 10 },
   personBadge: { flex: 1 },
@@ -333,72 +238,73 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.textMuted,
+    color: "#6B6B6B",
     textTransform: "uppercase",
   },
-  fare: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold", color: theme.colors.text },
+  fare: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold", color: "#111111" },
   metrics: {
     flexDirection: "row",
     padding: 8,
+    backgroundColor: "#F7F7F7",
+    borderColor: "#E8E8E8",
+    borderRadius: 8,
   },
   metric: { flex: 1, alignItems: "center", gap: 2 },
-  metricVal: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", color: theme.colors.text },
-  metricValNet: { color: theme.colors.text },
+  metricVal: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", color: "#111111" },
+  metricValNet: { color: "#111111" },
   metricLbl: {
     fontSize: 10,
-    color: theme.colors.textMuted,
+    color: "#6B6B6B",
     fontFamily: "Inter_400Regular",
     textTransform: "uppercase",
     letterSpacing: 0,
   },
-  sep: { width: 1, backgroundColor: theme.colors.border, alignSelf: "stretch" },
-  expiry: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: theme.colors.textMuted },
+  sep: { width: 1, backgroundColor: "#E8E8E8", alignSelf: "stretch" },
+  expiry: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: "#6B6B6B" },
   decisionPanel: {
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 3,
   },
   decisionPanelTeal: {
-    backgroundColor: theme.colors.backgroundAlt,
-    borderColor: theme.colors.border,
+    backgroundColor: "#F7F7F7",
+    borderColor: "#E8E8E8",
   },
   decisionPanelAmber: {
-    backgroundColor: theme.colors.backgroundAlt,
-    borderColor: theme.colors.border,
+    backgroundColor: "#F7F7F7",
+    borderColor: "#E8E8E8",
   },
   decisionPanelRose: {
-    backgroundColor: theme.colors.backgroundAlt,
-    borderColor: theme.colors.border,
+    backgroundColor: "#F7F7F7",
+    borderColor: "#E8E8E8",
   },
   decisionTitle: {
     fontSize: 13,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
-    color: theme.colors.text,
+    color: "#111111",
   },
   decisionSubtitle: {
     fontSize: 11,
     lineHeight: 15,
     fontFamily: "Inter_400Regular",
-    color: theme.colors.textSoft,
+    color: "#5F5F5F",
   },
   actions: { flexDirection: "row", gap: 10 },
   acceptBtn: {
     flex: 1,
+    backgroundColor: "#111111",
+    borderRadius: 6,
   },
   declineBtn: {
-    width: 136,
+    width: 126,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E8E8E8",
+    borderRadius: 6,
   },
   declineLabel: {
     fontSize: 12,
-  },
-  detailLines: { gap: 3, paddingTop: 2 },
-  detailLine: {
-    fontSize: 11,
-    color: theme.colors.textMuted,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 16,
   },
 });

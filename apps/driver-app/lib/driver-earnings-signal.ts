@@ -168,7 +168,7 @@ export function buildDriverEarningsTrustSummary(
     note: hasAnomaly
       ? 'Contrôle requis: une valeur finance semble incohérente ou hors devise attendue.'
       : compensationWeek > 0
-        ? `Les revenus incluent ${formatDriverEarningsAmount(compensationWeek)} d indemnites annulation validees par operations cette semaine.`
+        ? `Les revenus incluent ${formatDriverEarningsAmount(compensationWeek)} d indemnites annulation validees cette semaine.`
       : earnings.recentTrips.length > 0
         ? 'Les montants affiches sont des gains chauffeur nets issus des courses cloturees.'
         : 'Aucun payout recent a rapprocher pour le moment.',

@@ -37,13 +37,12 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
   const [presenceStatus, setPresenceStatus] =
     useState<DriverPresenceStatus>('idle');
   const [presenceNote, setPresenceNote] = useState(
-    'Presence GPS en attente.',
+    'Position en attente.',
   );
   const [latestPosition, setLatestPosition] =
     useState<DriverLivePosition | null>(null);
 
-  // Suivi arrière-plan : actif tant que le chauffeur est en ligne ou en course,
-  // pour que le dispatch reçoive la position même écran verrouillé.
+  // Suivi arrière-plan: actif tant que le chauffeur est en ligne ou en course.
   useEffect(() => {
     if (!enabled) {
       void stopBackgroundLocationTracking();
@@ -64,7 +63,7 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
   useEffect(() => {
     if (!enabled) {
       setPresenceStatus('idle');
-      setPresenceNote('Presence GPS en pause tant que le chauffeur est hors ligne.');
+      setPresenceNote('Position en pause tant que le chauffeur est hors ligne.');
       return;
     }
 
@@ -86,7 +85,7 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
         if (!permission.granted) {
           setPresenceStatus('permission-denied');
           setPresenceNote(
-            'Localisation refusee. Le dispatch reste actif mais sans priorisation GPS.',
+            'Localisation refusee. Les offres restent disponibles avec moins de precision.',
           );
           return;
         }
@@ -101,7 +100,7 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
         if (!locationServicesEnabled) {
           setPresenceStatus('unavailable');
           setPresenceNote(
-            'Le GPS du telephone est desactive. Le dispatch utilisera le mode degrade.',
+            'La localisation du telephone est desactivee. Activez-la pour plus de precision.',
           );
           return;
         }
@@ -110,7 +109,7 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
         setPresenceNote(
           activeTripId
             ? 'Synchronisation immediate de votre position mission...'
-            : 'Synchronisation de votre position avec le dispatch...',
+            : 'Synchronisation de votre position...',
         );
 
         const syncPosition = async (position: DriverPresencePosition) => {
@@ -160,7 +159,7 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
             setPresenceNote(
               resolveDisplayableApiErrorMessage(
                 error,
-                'Synchronisation GPS impossible pour le moment.',
+                'Synchronisation de la position impossible pour le moment.',
               ),
             );
           }

@@ -5,7 +5,7 @@
  * comme l'exige expo-task-manager. Démarrée/arrêtée par
  * startBackgroundLocationTracking / stopBackgroundLocationTracking lorsque
  * le chauffeur passe en ligne/hors ligne (voir use-driver-presence.ts).
- * Transmet la position GPS au backend même si le téléphone est verrouillé.
+ * Transmet la position utile au service même si le téléphone est verrouillé.
  */
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
@@ -124,7 +124,7 @@ export async function startBackgroundLocationTracking(): Promise<boolean> {
       showsBackgroundLocationIndicator: true,
       foregroundService: {
         notificationTitle: 'Orbi Chauffeur en ligne',
-        notificationBody: 'Votre position est partagée avec le dispatch.',
+        notificationBody: 'Votre position est partagee pendant le service.',
         notificationColor: '#00B894',
       },
     });

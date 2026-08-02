@@ -19,7 +19,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Orbi Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct.",
+          "locationWhenInUsePermission": "Orbi Chauffeur utilise votre position pour proposer les courses proches et guider vos trajets.",
           "locationAlwaysAndWhenInUsePermission": "Orbi Chauffeur utilise votre position en arrière-plan pour garder votre statut en ligne et suivre vos courses même écran verrouillé.",
           "isAndroidBackgroundLocationEnabled": true,
           "isIosBackgroundLocationEnabled": true
@@ -41,7 +41,7 @@
     ],
     "ios": {
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Orbi Chauffeur utilise votre position pour prioriser les offres proches et alimenter le dispatch en direct.",
+        "NSLocationWhenInUseUsageDescription": "Orbi Chauffeur utilise votre position pour proposer les courses proches et guider vos trajets.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Orbi Chauffeur utilise votre position en arrière-plan pour garder votre statut en ligne et suivre vos courses même écran verrouillé.",
         "UIBackgroundModes": ["location"],
         "NSAllowsArbitraryLoads": false
