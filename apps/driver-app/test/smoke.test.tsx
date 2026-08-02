@@ -1555,7 +1555,7 @@ describe('driver smoke flows', () => {
     await pressByText(renderer, 'Actualiser');
     expectText(
       renderer,
-      'Avant de terminer: Terminez seulement si le client est arrive; contactez le support ou utilisez SOS si necessaire.',
+      'Avant de terminer: Terminez seulement si le client est arrivé; contactez le support ou utilisez SOS si nécessaire.',
     );
     await pressByText(renderer, 'Terminer la course');
     const completeOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as

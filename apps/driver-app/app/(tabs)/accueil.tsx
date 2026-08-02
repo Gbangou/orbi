@@ -76,7 +76,7 @@ const fallbackFatigue: DriverFatigueStatus = {
   maxDrivingMinutes: 300,
   restMinutes: 30,
   restUntil: null,
-  reason: 'Aucun signal fatigue bloquant sur la fenetre recente.',
+  reason: 'Aucun signal fatigue bloquant sur la fenêtre récente.',
 };
 
 function buildInitials(name: string) {
@@ -98,7 +98,7 @@ function OfferChip({ offer }: { offer: DriverOffer }) {
   const isMoto = offer.category === 'motorcycle';
   const pickupDistance = formatDriverOfferDistance(
     offer.pickupDistanceKm,
-    formatDriverOfferMinutes(offer.etaToPickupMinutes, 'Approche a confirmer'),
+    formatDriverOfferMinutes(offer.etaToPickupMinutes, 'Approche à confirmer'),
   );
   return (
     <View style={chip.wrap}>
@@ -119,7 +119,7 @@ const makeChipStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     backgroundColor: theme.colors.surface,
-    borderRadius: 14,
+    borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderWidth: 1,
@@ -189,7 +189,7 @@ function TripRequestModal({
   const accent = theme.colors.text;
   const pickupDistanceLabel = formatDriverOfferDistance(
     offer.pickupDistanceKm,
-    formatDriverOfferMinutes(offer.etaToPickupMinutes, 'Approche a confirmer'),
+    formatDriverOfferMinutes(offer.etaToPickupMinutes, 'Approche à confirmer'),
   );
   const moneyDisplay = resolveDriverOfferMoneyDisplay(offer);
 
@@ -251,7 +251,7 @@ function TripRequestModal({
           <View style={modal.statsRow}>
             <View style={modal.stat}>
               <Text style={modal.statVal}>
-                {formatDriverOfferDistance(offer.distanceKm, 'A confirmer')}
+                {formatDriverOfferDistance(offer.distanceKm, 'À confirmer')}
               </Text>
               <Text style={modal.statKey}>Trajet</Text>
             </View>
@@ -263,9 +263,9 @@ function TripRequestModal({
             <View style={modal.statSep} />
             <View style={modal.stat}>
               <Text style={modal.statVal}>
-                {formatDriverOfferMinutes(offer.etaToPickupMinutes, 'A confirmer')}
+                {formatDriverOfferMinutes(offer.etaToPickupMinutes, 'À confirmer')}
               </Text>
-              <Text style={modal.statKey}>Arrivee</Text>
+              <Text style={modal.statKey}>Arrivée</Text>
             </View>
           </View>
 
@@ -273,7 +273,7 @@ function TripRequestModal({
           <View style={modal.fareBlock}>
             <View>
               <Text style={modal.fareLabel}>
-                {moneyDisplay.isNet ? 'Votre gain net estime' : 'Prix client'}
+                {moneyDisplay.isNet ? 'Votre gain net estimé' : 'Prix client'}
               </Text>
               <Text style={modal.fareSub}>{moneyDisplay.helper}</Text>
             </View>
@@ -326,7 +326,7 @@ export default function DriverHomeScreen() {
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [earnings, setEarnings] = useState<DriverEarningsResponse | null>(null);
-  const [statusNote, setStatusNote] = useState('Mise a jour en cours...');
+  const [statusNote, setStatusNote] = useState('Mise à jour en cours...');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
   const [freshOfferIds, setFreshOfferIds] = useState<string[]>([]);
@@ -527,7 +527,7 @@ export default function DriverHomeScreen() {
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
         surface: 'driver-availability',
-        fallback: "Votre disponibilite n'a pas pu etre mise a jour.",
+        fallback: "Votre disponibilité n'a pas pu être mise à jour.",
       });
       if (feedback.shouldClearSessionToken) setSessionToken(null);
       setStatusNote(feedback.message);
@@ -559,9 +559,8 @@ export default function DriverHomeScreen() {
   void isRealtimeSyncing; void recentlyExpiredCount;
 
   const isOnline = flow.availabilityStatus === 'ONLINE';
-  // Le statut brut passe a BUSY des qu'une mission est acceptee — sans ce cas
-  // a part, le badge retombe sur "Hors ligne" alors que le chauffeur est bien
-  // en ligne, juste occupe pendant une vraie mission active.
+  // Le statut brut passe à BUSY dès qu'une mission est acceptée. Ce cas garde
+  // le badge en service pendant une vraie mission active.
   const isOnDuty = isOnline || Boolean(activeTrip);
   const statusLabel = activeTrip
     ? 'En mission'
@@ -793,7 +792,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   earningsBadge: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
     paddingHorizontal: 14,
@@ -816,7 +815,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.borderSoft,
     paddingHorizontal: 13,
@@ -832,27 +831,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Acceptance rate badge
-  acceptanceBadge: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  acceptanceBadgeLow: { backgroundColor: theme.colors.surface },
-  acceptanceLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-    color: theme.colors.text,
-  },
-  acceptanceLabelLow: { color: theme.colors.text },
-
   // Navigation button
   navBtn: {
-    borderRadius: 8,
+    borderRadius: 4,
     minHeight: 46,
   },
 
@@ -865,7 +846,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
   },
   toggleBtn: {
-    borderRadius: 8,
+    borderRadius: 4,
     minWidth: 198,
     paddingHorizontal: 24,
     minHeight: 50,
@@ -880,8 +861,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
     borderWidth: 0,
     paddingHorizontal: 16,
     paddingBottom: 22,
@@ -901,7 +882,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
-    borderRadius: 8,
+    borderRadius: 4,
     padding: 13,
     gap: 12,
     borderWidth: 1,
@@ -971,7 +952,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   offlinePulse: {
     width: 44,
     height: 44,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: '#F3F3F3',
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -991,37 +972,6 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   offlineTitle: { fontSize: 16, fontWeight: '800', color: '#111111' },
   offlineSub: { fontSize: 13, color: theme.colors.textMuted, lineHeight: 18 },
-  offlineMetricRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F7F7F7',
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: theme.colors.borderSoft,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-  },
-  offlineMetric: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
-  },
-  offlineMetricValue: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#111111',
-  },
-  offlineMetricLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
-  },
-  offlineMetricDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: theme.colors.borderSoft,
-  },
-
   // Setup
   setupBtn: {
     alignSelf: 'flex-start',
@@ -1063,7 +1013,7 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    borderRadius: 4,
     overflow: 'hidden',
     borderWidth: 1,
   },
@@ -1209,7 +1159,7 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   fareBlock: {
     marginHorizontal: 16,
-    borderRadius: 10,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
     paddingVertical: 13,
@@ -1246,7 +1196,7 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   declineBtn: {
     flex: 1,
     backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 10,
+    borderRadius: 4,
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 1,
@@ -1260,7 +1210,7 @@ const makeModalStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   acceptBtn: {
     flex: 2,
-    borderRadius: 10,
+    borderRadius: 4,
     paddingVertical: 16,
     alignItems: 'center',
     backgroundColor: theme.colors.text,

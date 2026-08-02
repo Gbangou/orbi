@@ -47,7 +47,7 @@ describe('driver operational signal helpers', () => {
         lastPositionAt: null,
         latestPosition: null,
       }),
-    ).toEqual(['Route mission: Attention (A confirmer)', 'Dernière alerte: Long Stop']);
+    ).toEqual(['Route mission: Attention (À confirmer)', 'Dernière alerte: Long Stop']);
   });
 
   it('marks impossible route signals as operational review without trapping completion', () => {
@@ -81,7 +81,7 @@ describe('driver operational signal helpers', () => {
     );
     expect(brief.insights).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ label: 'Fraicheur', value: '13 min' }),
+        expect.objectContaining({ label: 'Fraîcheur', value: '13 min' }),
         expect.objectContaining({ label: 'Signal', value: '380 m' }),
         expect.objectContaining({ label: 'Vitesse', value: '128 km/h' }),
       ]),
@@ -135,9 +135,9 @@ describe('driver operational signal helpers', () => {
       expect.objectContaining({
         tone: 'amber',
         blocksCompletion: false,
-        title: 'Position en mise a jour',
+        title: 'Position en mise à jour',
         actionLabel:
-          'Gardez le telephone ouvert; la position sera vérifiée au moment de finaliser.',
+          'Gardez le téléphone ouvert; la position sera vérifiée au moment de finaliser.',
       }),
     );
   });
@@ -159,9 +159,9 @@ describe('driver operational signal helpers', () => {
       expect.objectContaining({
         tone: 'amber',
         blocksCompletion: false,
-        title: 'Premiere position attendue',
+        title: 'Première position attendue',
         actionLabel:
-          'Gardez la localisation active; la position recente sera verifiee avant de valider la fin.',
+          'Gardez la localisation active; la position récente sera vérifiée avant de valider la fin.',
       }),
     );
   });

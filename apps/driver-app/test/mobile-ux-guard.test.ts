@@ -73,6 +73,35 @@ describe('driver mobile UX guards', () => {
     expect(offerCardSource).toContain('Prise en charge');
   });
 
+  it('keeps driver home cockpit copy and surfaces production-ready', () => {
+    const source = readAppFile('app/(tabs)/accueil.tsx');
+    const mapSource = readAppFile('lib/driver-home-map-view.tsx');
+    const readinessSource = readAppFile('lib/driver-shift-readiness.ts');
+    const safetySource = readAppFile('lib/driver-operational-signal.ts');
+
+    expect(source).toContain('Mise à jour en cours...');
+    expect(source).toContain('Approche à confirmer');
+    expect(source).toContain('Votre gain net estimé');
+    expect(source).toContain('borderRadius: 4');
+    expect(source).not.toContain('A confirmer');
+    expect(source).not.toContain('Approche a confirmer');
+    expect(source).not.toContain('Votre disponibilite');
+    expect(source).not.toContain('acceptanceBadge');
+    expect(source).not.toContain('offlineMetricRow');
+    expect(mapSource).toContain('Prêt à recevoir des courses');
+    expect(mapSource).toContain('Carte centrée sur Ouagadougou.');
+    expect(mapSource).not.toContain('Pret a recevoir des courses');
+    expect(mapSource).not.toContain('Carte centree');
+    expect(readinessSource).toContain('État de service');
+    expect(readinessSource).toContain('Prêt à recevoir');
+    expect(readinessSource).not.toContain('Pret a recevoir');
+    expect(readinessSource).not.toContain('Bloquees');
+    expect(safetySource).toContain('Position en mise à jour');
+    expect(safetySource).toContain('Fraîcheur');
+    expect(safetySource).not.toContain('Position en mise a jour');
+    expect(safetySource).not.toContain('A confirmer');
+  });
+
   it('keeps profile support and onboarding copy production-ready', () => {
     const source = readAppFile('app/(tabs)/profil.tsx');
 

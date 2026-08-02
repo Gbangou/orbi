@@ -10,7 +10,7 @@ function formatOperationalCount(value: unknown) {
   const numeric = toFiniteOperationalNumber(value);
   return numeric !== null && numeric >= 0
     ? String(Math.floor(numeric))
-    : 'A confirmer';
+    : 'À confirmer';
 }
 
 function toFiniteOperationalNumber(value: unknown) {
@@ -70,16 +70,16 @@ export function buildDriverRouteSafetyBrief(input: {
   if (!routeMonitoring) {
     return {
       eyebrow: 'Sécurité trajet',
-      title: 'Position en mise a jour',
+      title: 'Position en mise à jour',
       description:
         'La course reste disponible pendant la mise à jour de la position.',
       tone: 'amber' as RouteTone,
       actionLabel:
-        'Gardez le telephone ouvert; la position sera vérifiée au moment de finaliser.',
+        'Gardez le téléphone ouvert; la position sera vérifiée au moment de finaliser.',
       blocksCompletion: false,
       insights: [
-        { label: 'Position', value: 'Mise a jour', tone: 'amber' as RouteTone },
-        { label: 'Etat', value: 'Controle', tone: 'amber' as RouteTone },
+        { label: 'Position', value: 'Mise à jour', tone: 'amber' as RouteTone },
+        { label: 'État', value: 'Contrôle', tone: 'amber' as RouteTone },
       ],
     };
   }
@@ -89,12 +89,12 @@ export function buildDriverRouteSafetyBrief(input: {
   if (!latestPosition || routeMonitoring.state === 'unknown') {
     return {
       eyebrow: 'Sécurité trajet',
-      title: 'Premiere position attendue',
+      title: 'Première position attendue',
       description:
         'La carte attend encore la première position de mission.',
       tone: 'amber' as RouteTone,
       actionLabel:
-        'Gardez la localisation active; la position recente sera verifiee avant de valider la fin.',
+        'Gardez la localisation active; la position récente sera vérifiée avant de valider la fin.',
       blocksCompletion: false,
       insights: [
         { label: 'Position', value: 'En attente', tone: 'amber' as RouteTone },
@@ -139,7 +139,7 @@ export function buildDriverRouteSafetyBrief(input: {
         'La position indique une anomalie possible. Terminez uniquement si la course est réellement arrivée.',
       tone: 'rose' as RouteTone,
       actionLabel:
-        'Terminez seulement si le client est arrive; contactez le support ou utilisez SOS si necessaire.',
+        'Terminez seulement si le client est arrivé; contactez le support ou utilisez SOS si nécessaire.',
       blocksCompletion: false,
       insights: buildRouteSafetyInsights({
         routeMonitoring,
@@ -159,7 +159,7 @@ export function buildDriverRouteSafetyBrief(input: {
         'La course peut continuer, mais la position récente mérite une vérification.',
       tone: 'amber' as RouteTone,
       actionLabel:
-        'Confirmez la route, gardez la localisation active et signalez un incident si le probleme persiste.',
+        'Confirmez la route, gardez la localisation active et signalez un incident si le problème persiste.',
       blocksCompletion: false,
       insights: buildRouteSafetyInsights({
         routeMonitoring,
@@ -175,7 +175,7 @@ export function buildDriverRouteSafetyBrief(input: {
     eyebrow: 'Sécurité trajet',
     title: 'Route cohérente',
     description:
-      'La position est exploitable et ne montre pas d anomalie.',
+      "La position est exploitable et ne montre pas d'anomalie.",
     tone: 'teal' as RouteTone,
     actionLabel: 'Continuez la mission normalement.',
     blocksCompletion: false,
@@ -198,11 +198,11 @@ function buildRouteSafetyInsights(input: {
 }) {
   return [
     {
-      label: 'Fraicheur',
+      label: 'Fraîcheur',
       value:
         typeof input.ageSeconds === 'number'
           ? formatSignalAge(input.ageSeconds)
-          : 'A confirmer',
+          : 'À confirmer',
       tone: input.tone,
     },
     {
@@ -210,7 +210,7 @@ function buildRouteSafetyInsights(input: {
       value:
         typeof input.accuracyMeters === 'number'
           ? `${Math.round(input.accuracyMeters)} m`
-          : 'A confirmer',
+          : 'À confirmer',
       tone:
         typeof input.accuracyMeters === 'number' && input.accuracyMeters > 100
           ? 'amber'
@@ -221,7 +221,7 @@ function buildRouteSafetyInsights(input: {
       value:
         typeof input.speedKph === 'number'
           ? `${Math.round(input.speedKph)} km/h`
-          : 'A confirmer',
+          : 'À confirmer',
       tone:
         typeof input.speedKph === 'number' && input.speedKph > 80
           ? 'rose'

@@ -171,9 +171,9 @@ export function DriverHomeMapView({
         <View style={styles.driverDot} />
         <View style={styles.statusPanel}>
           <Text style={styles.eyebrow}>Zone chauffeur</Text>
-          <Text style={styles.title}>Pret a recevoir des courses</Text>
+          <Text style={styles.title}>Prêt à recevoir des courses</Text>
           <Text style={styles.meta} numberOfLines={2}>
-            Carte centree sur Ouagadougou.
+            Carte centrée sur Ouagadougou.
           </Text>
         </View>
       </View>

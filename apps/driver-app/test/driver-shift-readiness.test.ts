@@ -11,7 +11,7 @@ const clearFatigue: DriverFatigueStatus = {
   maxDrivingMinutes: 300,
   restMinutes: 30,
   restUntil: null,
-  reason: 'Aucun signal fatigue bloquant sur la fenetre recente.',
+  reason: 'Aucun signal fatigue bloquant sur la fenêtre récente.',
 };
 
 function buildFlow(overrides: Partial<DriverActiveFlowSummary> = {}): DriverActiveFlowSummary {
@@ -41,7 +41,7 @@ describe('driver-shift-readiness', () => {
       earningsToday: 12500,
     });
 
-    expect(readiness.title).toBe('Pret a choisir');
+    expect(readiness.title).toBe('Prêt à choisir');
     expect(readiness.scoreLabel).toBe('94/100');
     expect(readiness.insights).toContainEqual({
       label: 'Jour',
@@ -105,7 +105,7 @@ describe('driver-shift-readiness', () => {
       fatigue: clearFatigue,
     });
 
-    expect(readiness.title).toBe('Reprise verrouillee');
+    expect(readiness.title).toBe('Reprise verrouillée');
     expect(readiness.tone).toBe('rose');
   });
 });
