@@ -175,7 +175,7 @@ export default function DriverAuthScreen() {
 
           {mode === 'sign-up' && (
             <Text style={styles.passwordHint} numberOfLines={2}>
-              Minimum 8 caractères · une majuscule · un chiffre · un caractère spécial (ex: !)
+              Minimum 8 caracteres · une majuscule · un chiffre · un caractere special
             </Text>
           )}
 

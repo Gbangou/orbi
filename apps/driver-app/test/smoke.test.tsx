@@ -914,17 +914,17 @@ describe('driver smoke flows', () => {
     await flushMicrotasks();
     await pressByText(renderer, 'Modifier');
 
-    await changeInputByPlaceholder(renderer, '+22670000000', '+22676000000');
-    await changeInputByPlaceholder(renderer, 'BF-12345', 'BF-99887');
+    await changeInputByPlaceholder(renderer, '70 00 00 00', '+22676000000');
+    await changeInputByPlaceholder(renderer, 'Numero du permis', 'BF-99887');
     await changeInputByPlaceholder(renderer, 'Plaque d immatriculation', '11 AB 2345');
     await changeInputByPlaceholder(renderer, 'Marque', 'Yamaha');
     await changeInputByPlaceholder(renderer, 'Modele', 'Crypton');
     await changeInputByPlaceholder(renderer, 'Couleur', 'Bleu');
-    await changeInputByPlaceholder(renderer, 'ex: carte-identite.pdf', 'carte-identite.pdf');
-    await changeInputByPlaceholder(renderer, 'ex: permis.pdf', 'permis.pdf');
-    await changeInputByPlaceholder(renderer, 'ex: carte-grise.pdf', 'carte-grise.pdf');
-    await changeInputByPlaceholder(renderer, 'ex: assurance.pdf', 'assurance.pdf');
-    await changeInputByPlaceholder(renderer, 'ex: selfie.jpg', 'selfie.jpg');
+    await changeInputByPlaceholder(renderer, 'piece-identite.pdf', 'carte-identite.pdf');
+    await changeInputByPlaceholder(renderer, 'permis.pdf', 'permis.pdf');
+    await changeInputByPlaceholder(renderer, 'carte-grise.pdf', 'carte-grise.pdf');
+    await changeInputByPlaceholder(renderer, 'assurance.pdf', 'assurance.pdf');
+    await changeInputByPlaceholder(renderer, 'selfie.jpg', 'selfie.jpg');
     await pressByText(renderer, 'Preparer les liens documentaires');
 
     expectText(

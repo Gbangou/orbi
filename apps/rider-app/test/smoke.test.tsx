@@ -607,7 +607,7 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<RiderAuthScreen />);
     await pressByText(renderer, 'Inscription');
-    await changeInputByPlaceholder(renderer, 'Ex : Aminata Traoré', ' Nouveau Passager ');
+    await changeInputByPlaceholder(renderer, 'Aminata Traore', ' Nouveau Passager ');
     await changeInputByPlaceholder(renderer, 'exemple@gmail.com', ' Fresh@Orbi.App ');
     await changeInputByPlaceholder(renderer, 'Min. 8 car. · Maj · Chiffre · Symbole', 'Orbi123!');
     await pressByText(renderer, 'Créer mon compte');
@@ -1236,7 +1236,7 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<AccountScreen />);
     await pressByLabel(renderer, 'account-refresh');
     await flushMicrotasks();
-    await changeInputByPlaceholder(renderer, '+22670000001', '+22670000001');
+    await changeInputByPlaceholder(renderer, 'Telephone du contact principal', '+22670000001');
     await pressByText(renderer, 'Tous trajets');
     await pressByText(renderer, 'Enregistrer le contact');
 
@@ -1325,7 +1325,7 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
     await changeInputByPlaceholder(renderer, 'Nom du contact', 'Tantie');
-    await changeInputByPlaceholder(renderer, '+22670000002', '+22670000003');
+    await changeInputByPlaceholder(renderer, 'Telephone du contact secondaire', '+22670000003');
     await pressByText(renderer, 'Priorite 3');
     await pressByText(renderer, 'Ajouter un contact');
 
@@ -1373,10 +1373,10 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
-    await changeInputByPlaceholder(renderer, 'Libelle du lieu', '  Marche  ');
-    await changeInputByPlaceholder(renderer, "Adresse (ex: Patte d'Oie, Ouagadougou)", ' Grand Marche, Ouagadougou ');
-    await changeInputByPlaceholder(renderer, 'Latitude', '12,365');
-    await changeInputByPlaceholder(renderer, 'Longitude', '-1,534');
+    await changeInputByPlaceholder(renderer, 'Nom du lieu', '  Marche  ');
+    await changeInputByPlaceholder(renderer, 'Adresse ou quartier', ' Grand Marche, Ouagadougou ');
+    await changeInputByPlaceholder(renderer, 'Position nord-sud', '12,365');
+    await changeInputByPlaceholder(renderer, 'Position est-ouest', '-1,534');
     await pressByText(renderer, 'Ajouter un lieu');
 
     expect(mockedCreateSavedPlaceWithApi).toHaveBeenCalledWith(
@@ -1398,10 +1398,10 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
-    await changeInputByPlaceholder(renderer, 'Libelle du lieu', '<script>');
-    await changeInputByPlaceholder(renderer, "Adresse (ex: Patte d'Oie, Ouagadougou)", 'Grand Marche, Ouagadougou');
-    await changeInputByPlaceholder(renderer, 'Latitude', '12.365');
-    await changeInputByPlaceholder(renderer, 'Longitude', '-1.534');
+    await changeInputByPlaceholder(renderer, 'Nom du lieu', '<script>');
+    await changeInputByPlaceholder(renderer, 'Adresse ou quartier', 'Grand Marche, Ouagadougou');
+    await changeInputByPlaceholder(renderer, 'Position nord-sud', '12.365');
+    await changeInputByPlaceholder(renderer, 'Position est-ouest', '-1.534');
     await pressByText(renderer, 'Ajouter un lieu');
 
     expect(mockedCreateSavedPlaceWithApi).not.toHaveBeenCalled();

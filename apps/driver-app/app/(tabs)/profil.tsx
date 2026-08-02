@@ -76,27 +76,27 @@ const documentDescriptors = [
   {
     type: 'IDENTITY_DOCUMENT',
     label: 'Piece d identite',
-    placeholder: 'ex: carte-identite.pdf',
+    placeholder: 'piece-identite.pdf',
   },
   {
     type: 'DRIVER_LICENSE',
     label: 'Permis de conduire',
-    placeholder: 'ex: permis.pdf',
+    placeholder: 'permis.pdf',
   },
   {
     type: 'VEHICLE_REGISTRATION',
     label: 'Carte grise',
-    placeholder: 'ex: carte-grise.pdf',
+    placeholder: 'carte-grise.pdf',
   },
   {
     type: 'INSURANCE_PROOF',
     label: 'Assurance',
-    placeholder: 'ex: assurance.pdf',
+    placeholder: 'assurance.pdf',
   },
   {
     type: 'SELFIE_VERIFICATION',
     label: 'Selfie de verification',
-    placeholder: 'ex: selfie.jpg',
+    placeholder: 'selfie.jpg',
   },
 ] as const;
 const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
@@ -876,15 +876,14 @@ export default function ProfilScreen() {
         {isOnboardingFormOpen ? (
         <>
         <Text style={styles.meta}>
-          Ce formulaire prepare les liens documentaires securises puis envoie le
-          profil complet pour validation.
+          Completez vos informations chauffeur pour validation.
         </Text>
 
         <Text style={styles.fieldLabel}>Telephone</Text>
         <TextInput
           value={form.phoneNumber}
           onChangeText={(value) => updateForm('phoneNumber', value)}
-          placeholder="+22670000000"
+          placeholder="70 00 00 00"
           placeholderTextColor={theme.colors.muted}
           keyboardType="phone-pad"
           style={styles.input}
@@ -894,7 +893,7 @@ export default function ProfilScreen() {
         <TextInput
           value={form.licenseNumber}
           onChangeText={(value) => updateForm('licenseNumber', value)}
-          placeholder="BF-12345"
+          placeholder="Numero du permis"
           placeholderTextColor={theme.colors.muted}
           style={styles.input}
         />
@@ -1208,7 +1207,7 @@ export default function ProfilScreen() {
       <OrbiSurface style={styles.card}>
         <Text style={styles.heading}>Support</Text>
         <Text style={styles.meta}>
-          Probleme de paiement, course litigieuse, vehicule ou compte ? Notre equipe repond sous 24h.
+          Paiement, course, vehicule ou compte : notre equipe vous repond sous 24h.
         </Text>
 
         <View style={styles.supportSummary}>
@@ -1231,7 +1230,7 @@ export default function ProfilScreen() {
           <>
             <TextInput
               style={styles.input}
-              placeholder="Sujet (ex: course non payee)"
+              placeholder="Course non payee"
               placeholderTextColor={theme.colors.muted}
               value={ticketForm.subject}
               onChangeText={(v) => setTicketForm((f) => ({ ...f, subject: v }))}
@@ -1240,7 +1239,7 @@ export default function ProfilScreen() {
             />
             <TextInput
               style={[styles.input, styles.ticketDescInput]}
-              placeholder="Decrivez votre probleme en detail..."
+              placeholder="Detaillez la situation"
               placeholderTextColor={theme.colors.muted}
               value={ticketForm.description}
               onChangeText={(v) => setTicketForm((f) => ({ ...f, description: v }))}

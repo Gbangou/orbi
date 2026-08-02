@@ -396,7 +396,7 @@ export default function AccountScreen() {
       );
       const data: Array<{ lat: string; lon: string; display_name: string }> = await response.json();
       if (!data.length) {
-        setStatus('Adresse introuvable. Essayez avec plus de détails (ex: quartier, ville).');
+        setStatus('Adresse introuvable. Essayez avec le quartier et la ville.');
         return;
       }
       const result = data[0];
@@ -982,7 +982,7 @@ export default function AccountScreen() {
             onChangeText={(value) =>
               setTrustedRosterForm((current) => ({ ...current, phoneNumber: value }))
             }
-            placeholder="+22670000002"
+            placeholder="Telephone du contact secondaire"
             placeholderTextColor={theme.colors.muted}
             keyboardType="phone-pad"
             style={styles.input}
@@ -1030,7 +1030,7 @@ export default function AccountScreen() {
           onChangeText={(value) =>
             setTrustedContactForm((current) => ({ ...current, phoneNumber: value }))
           }
-          placeholder="+22670000001"
+          placeholder="Telephone du contact principal"
           placeholderTextColor={theme.colors.muted}
           keyboardType="phone-pad"
           style={styles.input}
@@ -1100,14 +1100,14 @@ export default function AccountScreen() {
         <TextInput
           value={placeForm.label}
           onChangeText={(value) => setPlaceForm((current) => ({ ...current, label: value }))}
-          placeholder="Libelle du lieu"
+          placeholder="Nom du lieu"
           placeholderTextColor={theme.colors.muted}
           style={styles.input}
         />
         <TextInput
           value={placeForm.address}
           onChangeText={(value) => setPlaceForm((current) => ({ ...current, address: value, latitude: '', longitude: '' }))}
-          placeholder="Adresse (ex: Patte d'Oie, Ouagadougou)"
+          placeholder="Adresse ou quartier"
           placeholderTextColor={theme.colors.muted}
           style={styles.input}
         />
@@ -1134,7 +1134,7 @@ export default function AccountScreen() {
             onChangeText={(value) =>
               setPlaceForm((current) => ({ ...current, latitude: value }))
             }
-            placeholder="Latitude"
+            placeholder="Position nord-sud"
             placeholderTextColor={theme.colors.muted}
             keyboardType="decimal-pad"
             style={[styles.input, styles.coordinateInput]}
@@ -1144,7 +1144,7 @@ export default function AccountScreen() {
             onChangeText={(value) =>
               setPlaceForm((current) => ({ ...current, longitude: value }))
             }
-            placeholder="Longitude"
+            placeholder="Position est-ouest"
             placeholderTextColor={theme.colors.muted}
             keyboardType="decimal-pad"
             style={[styles.input, styles.coordinateInput]}
@@ -1219,7 +1219,7 @@ export default function AccountScreen() {
           <Text style={styles.cardTitle}>Support</Text>
         </View>
         <Text style={styles.cardMeta}>
-          Un probleme avec une course, un paiement ou votre compte ? Notre equipe repond en moins de 24h.
+          Course, paiement ou compte : notre equipe vous repond en moins de 24h.
         </Text>
 
         <View style={styles.supportSummary}>
@@ -1242,7 +1242,7 @@ export default function AccountScreen() {
           <>
             <TextInput
               style={styles.input}
-              placeholder="Sujet (ex: paiement debite deux fois)"
+              placeholder="Paiement debite deux fois"
               placeholderTextColor={theme.colors.muted}
               value={ticketForm.subject}
               onChangeText={(v) => setTicketForm((f) => ({ ...f, subject: v }))}
@@ -1251,7 +1251,7 @@ export default function AccountScreen() {
             />
             <TextInput
               style={[styles.input, styles.ticketDescInput]}
-              placeholder="Decrivez votre probleme en detail..."
+              placeholder="Detaillez la situation"
               placeholderTextColor={theme.colors.muted}
               value={ticketForm.description}
               onChangeText={(v) => setTicketForm((f) => ({ ...f, description: v }))}
