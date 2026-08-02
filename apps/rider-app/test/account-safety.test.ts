@@ -46,7 +46,7 @@ describe('rider account safety helpers', () => {
       }),
     ).toEqual({
       ok: false,
-      message: 'Ajoutez un numero Burkina avant d activer le partage automatique.',
+      message: "Ajoutez un numéro Burkina avant d'activer le partage automatique.",
     });
   });
 
@@ -79,7 +79,7 @@ describe('rider account safety helpers', () => {
       }),
     ).toEqual({
       ok: false,
-      message: 'Le lieu contient des caracteres non autorises.',
+      message: 'Le lieu contient des caractères non autorisés.',
     });
   });
 

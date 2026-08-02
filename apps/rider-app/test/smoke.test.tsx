@@ -1178,7 +1178,7 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'Support');
     expectText(
       renderer,
-      '1 demande(s) ouverte(s) ou recemment mise(s) a jour. Les details de course restent dans Activite.',
+      '1 demande active.',
     );
     expect(collectText(renderer.root)).not.toContain('Prix de course conteste');
   });
@@ -1211,7 +1211,7 @@ describe('rider smoke flows', () => {
 
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
-    await pressByText(renderer, 'Déco.');
+    await pressByText(renderer, 'Sortir');
 
     expect(mockedSignOutRiderAccount).toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith('/auth');
@@ -1237,9 +1237,9 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<AccountScreen />);
     await pressByLabel(renderer, 'account-refresh');
     await flushMicrotasks();
-    await changeInputByPlaceholder(renderer, 'Telephone du contact principal', '+22670000001');
-    await pressByText(renderer, 'Tous trajets');
-    await pressByText(renderer, 'Enregistrer le contact');
+    await changeInputByPlaceholder(renderer, 'Téléphone principal', '+22670000001');
+    await pressByText(renderer, 'Tous les trajets');
+    await pressByText(renderer, 'Enregistrer');
 
     expect(mockedUpdateTrustedContactWithApi).toHaveBeenCalledWith(
       { token: 'rider-auth-client' },
@@ -1248,7 +1248,7 @@ describe('rider smoke flows', () => {
         shareMode: 'ALL_TRIPS',
       }),
     );
-    expectText(renderer, 'Contact de confiance configure.');
+    expectText(renderer, 'Contact de confiance configuré.');
   });
 
   it('shows the rider trusted contacts list with masked phone numbers', async () => {
@@ -1326,8 +1326,8 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
     await changeInputByPlaceholder(renderer, 'Nom du contact', 'Tantie');
-    await changeInputByPlaceholder(renderer, 'Telephone du contact secondaire', '+22670000003');
-    await pressByText(renderer, 'Priorite 3');
+    await changeInputByPlaceholder(renderer, 'Téléphone du contact', '+22670000003');
+    await pressByText(renderer, 'Priorité 3');
     await pressByText(renderer, 'Ajouter un contact');
 
     expect(mockedCreateTrustedContactWithApi).toHaveBeenCalledWith(
@@ -1361,10 +1361,10 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<AccountScreen />);
     await flushMicrotasks();
     await pressByText(renderer, 'Nuit');
-    await pressByText(renderer, 'Enregistrer le contact');
+    await pressByText(renderer, 'Enregistrer');
 
     expect(mockedUpdateTrustedContactWithApi).not.toHaveBeenCalled();
-    expectText(renderer, 'Ajoutez un numero Burkina avant d activer le partage automatique.');
+    expectText(renderer, "Ajoutez un numéro Burkina avant d'activer le partage automatique.");
   });
 
   it('creates a saved rider place from account with normalized coordinates', async () => {
@@ -1389,7 +1389,7 @@ describe('rider smoke flows', () => {
         longitude: -1.534,
       },
     );
-    expectText(renderer, 'Lieu enregistre avec succes.');
+    expectText(renderer, 'Lieu enregistré.');
   });
 
   it('rejects unsafe saved place text from account before API mutation', async () => {
@@ -1406,7 +1406,7 @@ describe('rider smoke flows', () => {
     await pressByText(renderer, 'Ajouter un lieu');
 
     expect(mockedCreateSavedPlaceWithApi).not.toHaveBeenCalled();
-    expectText(renderer, 'Le lieu contient des caracteres non autorises.');
+    expectText(renderer, 'Le lieu contient des caractères non autorisés.');
   });
 
   it('keeps rider support follow-up discreet inside activity', async () => {

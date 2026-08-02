@@ -171,8 +171,8 @@ export default function AccountScreen() {
         setFreshPlaceIds(nextFreshPlaceIds);
         setAccountTransitionLabel(
           nextFreshPlaceIds.length > 1
-            ? `${nextFreshPlaceIds.length} nouveaux favoris sont a jour.`
-            : 'Un nouveau favori est a jour.',
+            ? `${nextFreshPlaceIds.length} nouveaux favoris sont prêts.`
+            : 'Un nouveau favori est prêt.',
         );
       } else if (removedPlaceIds.length > 0) {
         setAccountTransitionLabel(
@@ -184,8 +184,8 @@ export default function AccountScreen() {
         setFreshPlaceIds(updatedPlaces.map((place) => place.id));
         setAccountTransitionLabel(
           updatedPlaces.length > 1
-            ? `${updatedPlaces.length} favoris viennent d etre mis a jour.`
-            : 'Un favori vient d etre mis a jour.',
+            ? `${updatedPlaces.length} favoris sont à jour.`
+            : 'Un favori est à jour.',
         );
       }
     }
@@ -270,8 +270,8 @@ export default function AccountScreen() {
       }
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        network: 'Votre profil sera actualise des que la connexion revient.',
-        fallback: 'Votre profil sera actualise des que la connexion revient.',
+        network: 'Votre profil sera actualisé dès que la connexion revient.',
+        fallback: 'Votre profil sera actualisé dès que la connexion revient.',
       });
 
       if (!silent) {
@@ -312,8 +312,8 @@ export default function AccountScreen() {
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: 'payments',
-        network: 'Rechargement impossible: verifiez le reseau puis reessayez.',
-        fallback: 'Rechargement impossible pour le moment. Le support peut verifier le wallet.',
+        network: 'Rechargement impossible: vérifiez le réseau puis réessayez.',
+        fallback: 'Rechargement impossible pour le moment. Le support peut vérifier le paiement.',
       });
       setTopUpError(feedback.message);
     } finally {
@@ -323,14 +323,14 @@ export default function AccountScreen() {
 
   async function handleSignOut() {
     setIsSigningOut(true);
-    setStatus('Deconnexion du compte passager...');
+    setStatus('Déconnexion du compte...');
 
     try {
       await signOutRiderAccount();
       router.replace('/auth');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        fallback: "La deconnexion du compte passager a echoue.",
+        fallback: "La déconnexion n'a pas pu aboutir.",
       });
       setStatus(feedback.message);
     } finally {
@@ -341,15 +341,15 @@ export default function AccountScreen() {
   async function handleCreateTicket() {
     if (isSubmittingTicket) return;
     if (ticketForm.subject.trim().length < 5) {
-      setStatus('Le sujet doit faire au moins 5 caracteres.');
+      setStatus('Ajoutez un sujet plus précis.');
       return;
     }
     if (ticketForm.description.trim().length < 10) {
-      setStatus('La description doit faire au moins 10 caracteres.');
+      setStatus('Ajoutez quelques détails pour aider le support.');
       return;
     }
     setIsSubmittingTicket(true);
-    setStatus('Envoi de votre demande au support...');
+    setStatus('Envoi de votre demande...');
     try {
       const { authClient } = await restoreRiderSession();
       const result = await createSupportTicketWithApi(authClient, {
@@ -360,10 +360,10 @@ export default function AccountScreen() {
       setTickets((prev) => [result.ticket, ...prev]);
       setTicketForm({ subject: '', description: '', category: 'other' });
       setIsTicketFormOpen(false);
-      setStatus('Demande envoyee. Notre equipe vous repondra rapidement.');
+      setStatus('Demande envoyée. Notre équipe vous répondra rapidement.');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        fallback: "L'envoi de votre demande a echoue. Reessayez.",
+        fallback: "Votre demande n'a pas pu être envoyée. Réessayez.",
       });
       setStatus(feedback.message);
     } finally {
@@ -455,8 +455,8 @@ export default function AccountScreen() {
     setIsSavingPlace(true);
     setStatus(
       editingPlaceId
-        ? 'Mise a jour du lieu enregistre...'
-        : 'Creation du lieu enregistre...',
+        ? 'Mise à jour du lieu...'
+        : 'Ajout du lieu...',
     );
 
     try {
@@ -469,10 +469,10 @@ export default function AccountScreen() {
 
       resetPlaceForm();
       await loadProfile();
-      setStatus('Lieu enregistre avec succes.');
+      setStatus('Lieu enregistré.');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        fallback: "L'enregistrement du lieu a echoue.",
+        fallback: "Le lieu n'a pas pu être enregistré.",
       });
       setStatus(feedback.message);
     } finally {
@@ -495,8 +495,8 @@ export default function AccountScreen() {
     setIsSavingTrustedContact(true);
     setStatus(
       hasPhoneNumber
-        ? 'Mise a jour du contact de confiance...'
-        : 'Desactivation du contact de confiance...',
+        ? 'Mise à jour du contact...'
+        : 'Désactivation du contact...',
     );
 
     try {
@@ -505,12 +505,12 @@ export default function AccountScreen() {
       await loadProfile();
       setStatus(
         hasPhoneNumber
-          ? 'Contact de confiance configure.'
-          : 'Contact de confiance desactive.',
+          ? 'Contact de confiance configuré.'
+          : 'Contact de confiance désactivé.',
       );
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        fallback: "La mise a jour du contact de confiance a echoue.",
+        fallback: "Le contact de confiance n'a pas pu être mis à jour.",
       });
       setStatus(feedback.message);
     } finally {
@@ -526,21 +526,21 @@ export default function AccountScreen() {
     setTrustedContactForm({
       phoneNumber: '',
       shareMode: 'MANUAL',
-      notes: 'Desactivation demandee depuis le compte rider.',
+      notes: 'Désactivation demandée depuis le compte passager.',
     });
     setIsSavingTrustedContact(true);
-    setStatus('Desactivation du contact de confiance...');
+    setStatus('Désactivation du contact...');
 
     try {
       const { authClient } = await restoreRiderSession();
       await updateTrustedContactWithApi(authClient, {
-        notes: 'Desactivation demandee depuis le compte rider.',
+        notes: 'Désactivation demandée depuis le compte passager.',
       });
       await loadProfile();
-      setStatus('Contact de confiance desactive.');
+      setStatus('Contact de confiance désactivé.');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        fallback: "La desactivation du contact de confiance a echoue.",
+        fallback: "Le contact de confiance n'a pas pu être désactivé.",
       });
       setStatus(feedback.message);
     } finally {
@@ -557,7 +557,7 @@ export default function AccountScreen() {
     const label = trustedRosterForm.label.trim() || 'Contact de confiance';
 
     if (!/^\+226[0-9]{8}$/.test(phoneNumber)) {
-      setStatus('Le contact doit etre un numero Burkina au format +226XXXXXXXX.');
+      setStatus('Le contact doit être un numéro Burkina au format +226XXXXXXXX.');
       return;
     }
 
@@ -567,7 +567,7 @@ export default function AccountScreen() {
     }
 
     setIsSavingTrustedRoster(true);
-    setStatus('Ajout du contact de confiance...');
+    setStatus('Ajout du contact...');
 
     try {
       const { authClient } = await restoreRiderSession();
@@ -578,10 +578,10 @@ export default function AccountScreen() {
       });
       setTrustedRosterForm({ label: '', phoneNumber: '', priority: 2 });
       await loadProfile();
-      setStatus('Contact de confiance ajoute.');
+      setStatus('Contact de confiance ajouté.');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        fallback: "L'ajout du contact de confiance a echoue.",
+        fallback: "Le contact n'a pas pu être ajouté.",
       });
       setStatus(feedback.message);
     } finally {
@@ -597,7 +597,7 @@ export default function AccountScreen() {
     }
 
     setIsSavingTrustedRoster(true);
-    setStatus('Mise a jour de la priorite du contact...');
+    setStatus('Mise à jour du contact...');
 
     try {
       const { authClient } = await restoreRiderSession();
@@ -605,10 +605,10 @@ export default function AccountScreen() {
         priority: 1,
       });
       await loadProfile();
-      setStatus('Contact principal mis a jour.');
+      setStatus('Contact principal mis à jour.');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        fallback: 'La priorite du contact n a pas pu etre modifiee.',
+        fallback: "La priorité du contact n'a pas pu être modifiée.",
       });
       setStatus(feedback.message);
     } finally {
@@ -624,16 +624,16 @@ export default function AccountScreen() {
     }
 
     setIsSavingTrustedRoster(true);
-    setStatus('Retrait du contact de confiance...');
+    setStatus('Retrait du contact...');
 
     try {
       const { authClient } = await restoreRiderSession();
       await deleteTrustedContactWithApi(authClient, contact.id);
       await loadProfile();
-      setStatus('Contact de confiance retire.');
+      setStatus('Contact de confiance retiré.');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        fallback: 'Le retrait du contact de confiance a echoue.',
+        fallback: "Le contact n'a pas pu être retiré.",
       });
       setStatus(feedback.message);
     } finally {
@@ -647,7 +647,7 @@ export default function AccountScreen() {
     }
 
     setIsSavingPlace(true);
-    setStatus('Suppression du lieu enregistre...');
+    setStatus('Suppression du lieu...');
 
     try {
       const { authClient } = await restoreRiderSession();
@@ -656,10 +656,10 @@ export default function AccountScreen() {
         resetPlaceForm();
       }
       await loadProfile();
-      setStatus('Lieu supprime avec succes.');
+      setStatus('Lieu supprimé.');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        fallback: 'La suppression du lieu a echoue.',
+        fallback: "Le lieu n'a pas pu être supprimé.",
       });
       setStatus(feedback.message);
     } finally {
@@ -706,7 +706,7 @@ export default function AccountScreen() {
             style={styles.signOutBtn}
           >
             <Text style={styles.signOutBtnLabel}>
-              {isSigningOut ? '...' : 'Déco.'}
+              {isSigningOut ? '...' : 'Sortir'}
             </Text>
           </Pressable>
         </View>
@@ -789,11 +789,11 @@ export default function AccountScreen() {
           />
         )}
 
-        {/* ── Wallet Orbi ── */}
+        {/* ── Portefeuille ── */}
         <OrbiSurface tone="teal" style={walletStyles.card}>
           <View style={walletStyles.row}>
             <View>
-              <Text style={walletStyles.label}>Wallet Orbi</Text>
+              <Text style={walletStyles.label}>Portefeuille Orbi</Text>
               <Text style={walletStyles.balance}>
                 {walletBalance !== null
                   ? formatRiderMoneyAmount(walletBalance.balance, '— XOF')
@@ -811,8 +811,8 @@ export default function AccountScreen() {
           {walletBalance?.isLocked ? (
             <OrbiStatusBanner
               tone="amber"
-              title="Wallet temporairement verrouillé"
-              message="Une verification peut etre demandee pour proteger votre compte."
+              title="Portefeuille verrouillé"
+              message="Une vérification peut être demandée pour protéger votre compte."
             />
           ) : null}
         </OrbiSurface>
@@ -820,7 +820,7 @@ export default function AccountScreen() {
         {/* ── Top-up modal/sheet ── */}
         {showTopUp ? (
           <View style={walletStyles.topUpSheet}>
-            <Text style={walletStyles.topUpTitle}>Recharger le Wallet</Text>
+            <Text style={walletStyles.topUpTitle}>Recharger le portefeuille</Text>
 
             {/* Network selector */}
             <View style={walletStyles.networkRow}>
@@ -842,7 +842,7 @@ export default function AccountScreen() {
               style={walletStyles.input}
               value={topUpAmount}
               onChangeText={setTopUpAmount}
-              placeholder="Montant en XOF (min. 500)"
+              placeholder="Montant XOF"
               keyboardType="numeric"
               placeholderTextColor={theme.colors.textMuted}
             />
@@ -878,7 +878,7 @@ export default function AccountScreen() {
                 onPress={() => void handleTopUp()}
                 disabled={isTopUpSubmitting}
                 loading={isTopUpSubmitting}
-                label="Confirmer"
+                label="Valider"
                 tone="teal"
                 style={walletStyles.confirmBtn}
                 labelStyle={walletStyles.confirmBtnLabel}
@@ -958,11 +958,11 @@ export default function AccountScreen() {
             ))
           ) : (
             <Text style={styles.trustedContactsEmpty}>
-              Ajoutez un numero Burkina pour preparer le partage trajet.
+              Ajoutez un numéro Burkina pour préparer le partage trajet.
             </Text>
           )}
           <Text style={styles.trustedContactsHint}>
-            Le contact en priorite 1 recoit le partage automatique en premier.
+            Le contact principal reçoit le partage automatique en premier.
           </Text>
         </View>
         <View style={styles.trustedContactEditor}>
@@ -982,7 +982,7 @@ export default function AccountScreen() {
             onChangeText={(value) =>
               setTrustedRosterForm((current) => ({ ...current, phoneNumber: value }))
             }
-            placeholder="Telephone du contact secondaire"
+            placeholder="Téléphone du contact"
             placeholderTextColor={theme.colors.muted}
             keyboardType="phone-pad"
             style={styles.input}
@@ -1005,7 +1005,7 @@ export default function AccountScreen() {
                     trustedRosterForm.priority === priority ? styles.modeChipLabelActive : null,
                   ]}
                 >
-                  Priorite {priority}
+                  Priorité {priority}
                 </Text>
               </Pressable>
             ))}
@@ -1021,7 +1021,7 @@ export default function AccountScreen() {
             ]}
           >
             <Text style={styles.secondaryActionLabel}>
-              {isSavingTrustedRoster ? 'Mise a jour...' : 'Ajouter un contact'}
+              {isSavingTrustedRoster ? 'Mise à jour...' : 'Ajouter un contact'}
             </Text>
           </Pressable>
         </View>
@@ -1030,7 +1030,7 @@ export default function AccountScreen() {
           onChangeText={(value) =>
             setTrustedContactForm((current) => ({ ...current, phoneNumber: value }))
           }
-          placeholder="Telephone du contact principal"
+          placeholder="Téléphone principal"
           placeholderTextColor={theme.colors.muted}
           keyboardType="phone-pad"
           style={styles.input}
@@ -1053,7 +1053,7 @@ export default function AccountScreen() {
                   trustedContactForm.shareMode === mode ? styles.modeChipLabelActive : null,
                 ]}
               >
-                {mode === 'ALL_TRIPS' ? 'Tous trajets' : mode === 'NIGHT' ? 'Nuit' : 'Manuel'}
+                {mode === 'ALL_TRIPS' ? 'Tous les trajets' : mode === 'NIGHT' ? 'Nuit' : 'Manuel'}
               </Text>
             </Pressable>
           ))}
@@ -1075,7 +1075,7 @@ export default function AccountScreen() {
             style={[styles.primaryAction, isSavingTrustedContact ? styles.refreshButtonDisabled : null]}
           >
             <Text style={styles.primaryActionLabel}>
-              {isSavingTrustedContact ? 'Mise a jour...' : 'Enregistrer le contact'}
+              {isSavingTrustedContact ? 'Mise à jour...' : 'Enregistrer'}
             </Text>
           </Pressable>
           {profile.profile.trustedContact.status === 'READY' ? (
@@ -1084,7 +1084,7 @@ export default function AccountScreen() {
               disabled={isSavingTrustedContact}
               style={[styles.secondaryAction, isSavingTrustedContact ? styles.refreshButtonDisabled : null]}
             >
-              <Text style={styles.secondaryActionLabel}>Desactiver</Text>
+              <Text style={styles.secondaryActionLabel}>Désactiver</Text>
             </Pressable>
           ) : null}
         </View>
@@ -1120,7 +1120,7 @@ export default function AccountScreen() {
           ]}
         >
           <Text style={styles.geocodeButtonLabel}>
-            {isGeocodingPlace ? 'Localisation...' : placeForm.latitude ? 'Adresse relocalisée' : 'Localiser l\'adresse'}
+            {isGeocodingPlace ? 'Localisation...' : placeForm.latitude ? 'Adresse localisée' : 'Localiser'}
           </Text>
         </Pressable>
         {placeForm.latitude ? (
@@ -1157,7 +1157,7 @@ export default function AccountScreen() {
             style={[styles.primaryAction, isSavingPlace ? styles.refreshButtonDisabled : null]}
           >
             <Text style={styles.primaryActionLabel}>
-              {isSavingPlace ? 'Enregistrement...' : editingPlaceId ? 'Mettre a jour' : 'Ajouter un lieu'}
+              {isSavingPlace ? 'Enregistrement...' : editingPlaceId ? 'Mettre à jour' : 'Ajouter un lieu'}
             </Text>
           </Pressable>
           {editingPlaceId ? (
@@ -1190,7 +1190,7 @@ export default function AccountScreen() {
           >
             <Text style={styles.placeLabel}>{place.label}</Text>
             {freshPlaceIds.includes(place.id) ? (
-              <Text style={styles.placeTransitionBadge}>Favori a jour</Text>
+              <Text style={styles.placeTransitionBadge}>Favori à jour</Text>
             ) : null}
             <Text style={styles.meta}>{place.address}</Text>
             <View style={styles.actionsRow}>
@@ -1219,7 +1219,7 @@ export default function AccountScreen() {
           <Text style={styles.cardTitle}>Support</Text>
         </View>
         <Text style={styles.cardMeta}>
-          Course, paiement ou compte : notre equipe vous repond en moins de 24h.
+          Course, paiement ou compte : notre équipe vous répond rapidement.
         </Text>
 
         <View style={styles.supportSummary}>
@@ -1227,8 +1227,8 @@ export default function AccountScreen() {
             <Text style={styles.supportSummaryTitle}>Support</Text>
             <Text style={styles.meta}>
               {tickets.length > 0
-                ? `${tickets.length} demande(s) ouverte(s) ou recemment mise(s) a jour. Les details de course restent dans Activite.`
-                : 'Aucune demande support active sur ce compte.'}
+                ? `${tickets.length} demande active.`
+                : 'Aucune demande active.'}
             </Text>
           </View>
           {tickets.length > 0 ? (
@@ -1242,7 +1242,7 @@ export default function AccountScreen() {
           <>
             <TextInput
               style={styles.input}
-              placeholder="Paiement debite deux fois"
+              placeholder="Sujet de la demande"
               placeholderTextColor={theme.colors.muted}
               value={ticketForm.subject}
               onChangeText={(v) => setTicketForm((f) => ({ ...f, subject: v }))}
@@ -1251,7 +1251,7 @@ export default function AccountScreen() {
             />
             <TextInput
               style={[styles.input, styles.ticketDescInput]}
-              placeholder="Detaillez la situation"
+              placeholder="Expliquez la situation"
               placeholderTextColor={theme.colors.muted}
               value={ticketForm.description}
               onChangeText={(v) => setTicketForm((f) => ({ ...f, description: v }))}
@@ -1272,7 +1272,7 @@ export default function AccountScreen() {
                       : cat === 'trip' ? 'Course'
                       : cat === 'account' ? 'Compte'
                       : cat === 'driver' ? 'Chauffeur'
-                      : cat === 'safety' ? 'Securite'
+                      : cat === 'safety' ? 'Sécurité'
                       : 'Autre'}
                   </Text>
                 </Pressable>
@@ -1357,14 +1357,14 @@ function LanguageSelector() {
 const makeLangStyles = (theme: OrbiTheme) => StyleSheet.create({
   card: {
     backgroundColor: theme.colors.riderBackground,
-    borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border,
-    padding: 16, gap: 12, marginHorizontal: 16,
+    borderRadius: 4, borderWidth: 1, borderColor: theme.colors.border,
+    padding: 12, gap: 10, marginHorizontal: 16,
   },
   header: { flexDirection: 'row', alignItems: 'center' },
   title: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', color: theme.colors.text },
   chips: { flexDirection: 'row', gap: 8 },
   chip: {
-    flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center',
+    flex: 1, borderRadius: 4, paddingVertical: 9, alignItems: 'center',
     backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1, borderColor: theme.colors.border,
   },
@@ -1409,7 +1409,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.danger,
   },
 
-  content: { paddingHorizontal: 16, paddingTop: 12, gap: 12 },
+  content: { paddingHorizontal: 14, paddingTop: 10, gap: 10 },
   accountStatusBanner: {
     marginHorizontal: 16,
     marginTop: 8,
@@ -1581,10 +1581,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   card: {
     backgroundColor: theme.colors.panel,
-    borderRadius: 22,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: 18,
+    padding: 12,
     gap: 8,
   },
   cardHighlight: {
@@ -1602,11 +1602,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 10,
   },
   trustedContactsPanel: {
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.backgroundAlt,
-    padding: 12,
+    padding: 10,
     gap: 10,
   },
   trustedContactsPanelHeader: {
@@ -1637,9 +1637,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderTopColor: theme.colors.border,
   },
   trustedContactRank: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(20,184,166,0.14)',
@@ -1667,7 +1667,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   trustedContactBadge: {
     color: theme.colors.textInverse,
     backgroundColor: theme.colors.text,
-    borderRadius: 999,
+    borderRadius: 4,
     overflow: 'hidden',
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -1714,7 +1714,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     lineHeight: 16,
   },
   trustedContactEditor: {
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: 'rgba(56,189,248,0.06)',
@@ -1741,16 +1741,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   input: {
     minWidth: 0,
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.backgroundAlt,
     color: theme.colors.text,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   geocodeButton: {
-    borderRadius: 10,
+    borderRadius: 4,
     paddingHorizontal: 14,
     paddingVertical: 10,
     backgroundColor: 'rgba(56,189,248,0.12)',
@@ -1785,7 +1785,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 8,
   },
   modeChip: {
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
@@ -1812,7 +1812,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   placeRowFresh: {
     backgroundColor: 'rgba(56, 189, 248, 0.08)',
-    borderRadius: 14,
+    borderRadius: 4,
     paddingHorizontal: 10,
     paddingBottom: 10,
     borderTopWidth: 0,
@@ -1837,7 +1837,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     marginTop: 6,
   },
   primaryAction: {
-    borderRadius: 8,
+    borderRadius: 4,
     paddingHorizontal: 16,
     paddingVertical: 11,
     backgroundColor: theme.colors.text,
@@ -1848,7 +1848,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
   },
   secondaryAction: {
-    borderRadius: 8,
+    borderRadius: 4,
     paddingHorizontal: 14,
     paddingVertical: 10,
     backgroundColor: theme.colors.backgroundAlt,
@@ -1861,7 +1861,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
   },
   inlineAction: {
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
@@ -1874,7 +1874,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 12,
   },
   inlineDangerAction: {
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
@@ -1891,7 +1891,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.backgroundAlt,
@@ -1906,9 +1906,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 14,
   },
   supportSummaryBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0, 201, 167, 0.14)',
@@ -1929,10 +1929,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 const makeWalletStyles = (theme: OrbiTheme) => StyleSheet.create({
   card: {
     backgroundColor: 'rgba(0,201,167,0.05)',
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1.5,
     borderColor: 'rgba(0,201,167,0.20)',
-    padding: 16,
+    padding: 12,
     gap: 8,
     marginHorizontal: 16,
   },
@@ -1958,7 +1958,7 @@ const makeWalletStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   rechargeBtn: {
     backgroundColor: theme.colors.teal,
-    borderRadius: 10,
+    borderRadius: 4,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
@@ -1978,10 +1978,10 @@ const makeWalletStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Top-up form
   topUpSheet: {
     backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: 16,
+    padding: 12,
     marginHorizontal: 16,
     gap: 12,
   },
@@ -1995,7 +1995,7 @@ const makeWalletStyles = (theme: OrbiTheme) => StyleSheet.create({
   networkChip: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 4,
     borderWidth: 1.5,
     borderColor: theme.colors.border,
     alignItems: 'center',
@@ -2014,7 +2014,7 @@ const makeWalletStyles = (theme: OrbiTheme) => StyleSheet.create({
   networkLabelActive: { color: theme.colors.teal },
   input: {
     backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 10,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
     paddingHorizontal: 14,
@@ -2024,7 +2024,7 @@ const makeWalletStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   phoneRow: {
     flexDirection: 'row',
-    borderRadius: 10,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
@@ -2056,7 +2056,7 @@ const makeWalletStyles = (theme: OrbiTheme) => StyleSheet.create({
   cancelBtn: {
     flex: 1,
     paddingVertical: 13,
-    borderRadius: 12,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
     alignItems: 'center',
@@ -2069,7 +2069,7 @@ const makeWalletStyles = (theme: OrbiTheme) => StyleSheet.create({
   confirmBtn: {
     flex: 2,
     backgroundColor: theme.colors.teal,
-    borderRadius: 12,
+    borderRadius: 4,
     paddingVertical: 13,
     alignItems: 'center',
   },

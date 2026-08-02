@@ -108,6 +108,17 @@ describe('rider mobile UX guards', () => {
 
     expect(source).toContain("surface: 'payments'");
     expect(source).toContain('setTopUpError(feedback.message)');
+    expect(source).toContain('Portefeuille Orbi');
+    expect(source).toContain('Recharger le portefeuille');
+    expect(source).toContain('placeholder="Téléphone principal"');
+    expect(source).toContain('placeholder="Téléphone du contact"');
+    expect(source).toContain('placeholder="Sujet de la demande"');
+    expect(source).toContain('placeholder="Expliquez la situation"');
+    expect(source).not.toContain('Wallet Orbi');
+    expect(source).not.toContain('Recharger le Wallet');
+    expect(source).not.toContain('1 demande(s) ouverte(s)');
+    expect(source).not.toContain('borderRadius: 22');
+    expect(source).not.toContain('borderRadius: 16');
     expect(source).not.toContain("error instanceof Error ? error.message : 'Rechargement échoué'");
   });
 
