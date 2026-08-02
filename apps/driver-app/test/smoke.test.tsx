@@ -782,8 +782,8 @@ describe('driver smoke flows', () => {
     await flushMicrotasks();
 
     expectText(renderer, 'Profil local de secours affiche en attendant la connexion API.');
-    expectText(renderer, 'Identite');
-    expectText(renderer, 'Onboarding securise');
+    expectText(renderer, 'Identité');
+    expectText(renderer, 'Validation chauffeur');
   });
 
   it('keeps a newly created driver profile usable when onboarding blocks are not hydrated yet', async () => {
@@ -820,13 +820,13 @@ describe('driver smoke flows', () => {
     await flushMicrotasks();
 
     expectText(renderer, 'Nouveau Chauffeur');
-    expectText(renderer, 'Onboarding securise');
-    expectText(renderer, 'Profil 0/7 complete a 0%');
+    expectText(renderer, 'Validation chauffeur');
+    expectText(renderer, 'Profil 0/7 complété à 0%');
     expectText(renderer, 'Aucun véhicule enregistré pour le moment.');
     expectText(renderer, 'Support');
     expectText(
       renderer,
-      '1 demande(s) ouverte(s) ou recemment mise(s) a jour. Les details de mission restent dans Missions.',
+      '1 demande active.',
     );
     expect(collectText(renderer.root)).not.toContain('Annulation chauffeur a revoir');
   });
@@ -862,11 +862,11 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<ProfilScreen />);
     await flushMicrotasks();
     await pressByText(renderer, 'Modifier');
-    await pressByText(renderer, 'Soumettre le profil');
+    await pressByText(renderer, 'Envoyer le profil');
 
     expect(mockedRequestDriverDocumentUploadLinks).not.toHaveBeenCalled();
     expect(mockedUpsertDriverOnboarding).not.toHaveBeenCalled();
-    expectText(renderer, 'Le numero de telephone est requis avant la soumission.');
+    expectText(renderer, 'Le numéro de téléphone est requis.');
   });
 
   it('shows document upload constraints and submits driver-app integrity source', async () => {
@@ -913,32 +913,32 @@ describe('driver smoke flows', () => {
     await pressByText(renderer, 'Modifier');
 
     await changeInputByPlaceholder(renderer, '70 00 00 00', '+22676000000');
-    await changeInputByPlaceholder(renderer, 'Numero du permis', 'BF-99887');
-    await changeInputByPlaceholder(renderer, 'Plaque d immatriculation', '11 AB 2345');
+    await changeInputByPlaceholder(renderer, 'Numéro du permis', 'BF-99887');
+    await changeInputByPlaceholder(renderer, "Plaque d'immatriculation", '11 AB 2345');
     await changeInputByPlaceholder(renderer, 'Marque', 'Yamaha');
-    await changeInputByPlaceholder(renderer, 'Modele', 'Crypton');
+    await changeInputByPlaceholder(renderer, 'Modèle', 'Crypton');
     await changeInputByPlaceholder(renderer, 'Couleur', 'Bleu');
     await changeInputByPlaceholder(renderer, 'piece-identite.pdf', 'carte-identite.pdf');
     await changeInputByPlaceholder(renderer, 'permis.pdf', 'permis.pdf');
     await changeInputByPlaceholder(renderer, 'carte-grise.pdf', 'carte-grise.pdf');
     await changeInputByPlaceholder(renderer, 'assurance.pdf', 'assurance.pdf');
     await changeInputByPlaceholder(renderer, 'selfie.jpg', 'selfie.jpg');
-    await pressByText(renderer, 'Preparer les liens documentaires');
+    await pressByText(renderer, 'Préparer les justificatifs');
 
     expectText(
       renderer,
-      'Liens documentaires securises prets avec contraintes visibles.',
+      'Justificatifs prêts. Vous pouvez envoyer le profil.',
     );
     expectText(
       renderer,
-      'Lien securise pret jusqu au 02/05/2026 12:00:00. Limite: 5.0 MB, formats: pdf, jpg, jpeg, png',
+      "Lien prêt jusqu'au 02/05/2026 12:00:00. Limite: 5.0 MB, formats: pdf, jpg, jpeg, png",
     );
     expectText(
       renderer,
-      'Lien securise pret jusqu au 02/05/2026 12:00:00. Limite: 3.0 MB, formats: jpg, jpeg, png',
+      "Lien prêt jusqu'au 02/05/2026 12:00:00. Limite: 3.0 MB, formats: jpg, jpeg, png",
     );
 
-    await pressByText(renderer, 'Soumettre le profil');
+    await pressByText(renderer, 'Envoyer le profil');
 
     expect(mockedUpsertDriverOnboarding).toHaveBeenCalledWith(
       expect.anything(),
@@ -964,7 +964,7 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<ProfilScreen />);
     await flushMicrotasks();
-    await pressByText(renderer, 'Se deconnecter');
+    await pressByText(renderer, 'Se déconnecter');
 
     expect(mockedSignOutDriverAccount).toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith('/auth');

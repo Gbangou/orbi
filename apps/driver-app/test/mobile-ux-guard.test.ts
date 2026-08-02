@@ -14,7 +14,7 @@ describe('driver mobile UX guards', () => {
     expect(source).toContain('benefitTitle} numberOfLines={1}');
     expect(source).toContain('benefitDesc} numberOfLines={2} ellipsizeMode="tail"');
     expect(source).toContain('docDesc} numberOfLines={1}');
-    expect(source).toContain('label="Soumettre le profil"');
+    expect(source).toContain('label="Envoyer le profil"');
   });
 
   it('keeps auth first-screen copy bounded', () => {
@@ -52,5 +52,23 @@ describe('driver mobile UX guards', () => {
     expect(offerCardSource).not.toContain('>ETA</Text>');
     expect(realtimeWidgetSource).toContain('Arrivee');
     expect(realtimeWidgetSource).not.toContain('>ETA</Text>');
+  });
+
+  it('keeps profile support and onboarding copy production-ready', () => {
+    const source = readAppFile('app/(tabs)/profil.tsx');
+
+    expect(source).toContain('Validation chauffeur');
+    expect(source).toContain('label="Préparer les justificatifs"');
+    expect(source).toContain('placeholder="Expliquez la situation"');
+    expect(source).toContain('borderRadius: 4');
+    expect(source).not.toContain('Soumettre le profil');
+    expect(source).not.toContain('Preparer les liens documentaires');
+    expect(source).not.toContain('Onboarding securise');
+    expect(source).not.toContain('demande(s) ouverte(s)');
+    expect(source).not.toContain('borderRadius: 999');
+    expect(source).not.toContain('borderRadius: 22');
+    expect(source).not.toContain('borderRadius: 18');
+    expect(source).not.toContain('borderRadius: 16');
+    expect(source).not.toContain('borderRadius: 14');
   });
 });

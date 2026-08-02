@@ -217,9 +217,9 @@ export const orbiCopy = {
   adminHeadline: "Controlez les courses, les paiements et la confiance.",
   voiceHeadline: "Dites le lieu. Orbi prepare le trajet.",
   riderNetworkUnavailable:
-    "Connexion instable. Orbi garde votre ecran pret et relancera la mise a jour automatiquement.",
+    "Connexion instable. Orbi garde votre écran prêt et relancera la mise à jour automatiquement.",
   driverNetworkUnavailable:
-    "Connexion instable. Le cockpit reste pret et reprendra les offres des que le reseau revient.",
+    "Connexion instable. Le cockpit reste prêt et reprendra les offres dès que le réseau revient.",
   serviceUnavailable:
     "Service momentanement indisponible. Reessayez dans un instant.",
 } as const;

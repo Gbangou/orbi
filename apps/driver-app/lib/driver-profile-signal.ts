@@ -67,7 +67,7 @@ export function formatDriverProfileDistanceKm(value: unknown, fallback = 'A conf
   return numeric !== null && numeric >= 0 ? `${numeric} km` : fallback;
 }
 
-export function formatDriverProfileRating(value: unknown, fallback = 'Nouvelle activite') {
+export function formatDriverProfileRating(value: unknown, fallback = 'Nouvelle activité') {
   const numeric = toFiniteProfileNumber(value);
   return numeric !== null && numeric >= 0 ? `${numeric.toFixed(1)}/5` : fallback;
 }
@@ -96,8 +96,8 @@ export function formatDriverOnboardingProgress(input: {
   const readinessPercent = toFiniteProfileNumber(input.readinessPercent);
 
   if (completedItems === null || totalItems === null || readinessPercent === null) {
-    return 'Profil en cours de verification';
+    return 'Profil en cours de vérification';
   }
 
-  return `Profil ${formatDriverProfileCount(completedItems)}/${formatDriverProfileCount(totalItems)} complete a ${formatDriverProfilePercent(readinessPercent)}`;
+  return `Profil ${formatDriverProfileCount(completedItems)}/${formatDriverProfileCount(totalItems)} complété à ${formatDriverProfilePercent(readinessPercent)}`;
 }

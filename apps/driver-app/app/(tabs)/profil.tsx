@@ -75,7 +75,7 @@ const serviceTierOptions = {
 const documentDescriptors = [
   {
     type: 'IDENTITY_DOCUMENT',
-    label: 'Piece d identite',
+    label: "Pièce d'identité",
     placeholder: 'piece-identite.pdf',
   },
   {
@@ -95,7 +95,7 @@ const documentDescriptors = [
   },
   {
     type: 'SELFIE_VERIFICATION',
-    label: 'Selfie de verification',
+    label: 'Selfie de vérification',
     placeholder: 'selfie.jpg',
   },
 ] as const;
@@ -184,7 +184,7 @@ function buildInitialForm(profile: DriverProfileResponse): OnboardingFormState {
 }
 
 function formatDocumentLabel(type: DocumentType) {
-  return documentDescriptors.find((document) => document.type === type)?.label ?? type;
+  return documentDescriptors.find((document) => document.type === type)?.label ?? 'Justificatif';
 }
 
 function toApiTier(
@@ -371,11 +371,11 @@ export default function ProfilScreen() {
 
   function validateForm() {
     if (!form.phoneNumber.trim()) {
-      return 'Le numero de telephone est requis avant la soumission.';
+      return 'Le numéro de téléphone est requis.';
     }
 
     if (!form.licenseNumber.trim()) {
-      return 'Le numero de permis est requis.';
+      return 'Le numéro de permis est requis.';
     }
 
     if (!form.serviceRadiusKm.trim()) {
@@ -396,7 +396,7 @@ export default function ProfilScreen() {
       !form.vehicleModel.trim() ||
       !form.vehicleColor.trim()
     ) {
-      return 'Les informations du vehicule principal doivent etre completes.';
+      return 'Les informations du véhicule principal doivent être complètes.';
     }
 
     const missingDocument = documentDescriptors.find(
@@ -411,13 +411,13 @@ export default function ProfilScreen() {
       form.vehicleYear.trim() &&
       parseOptionalDriverVehicleYear(form.vehicleYear) === null
     ) {
-      return "L'annee du vehicule doit etre comprise entre 1990 et 2035.";
+      return "L'année du véhicule doit être comprise entre 1990 et 2035.";
     }
 
     const parsedVehicleSeats = parseOptionalPositiveInteger(form.vehicleSeats);
 
     if (form.vehicleSeats.trim() && parsedVehicleSeats === null) {
-      return 'Le nombre de places doit etre numerique.';
+      return 'Le nombre de places doit être numérique.';
     }
 
     if (
@@ -425,7 +425,7 @@ export default function ProfilScreen() {
       parsedVehicleSeats !== null &&
       parsedVehicleSeats > 2
     ) {
-      return 'Une moto ne peut pas declarer plus de 2 places.';
+      return 'Une moto ne peut pas déclarer plus de 2 places.';
     }
 
     return null;
@@ -440,7 +440,7 @@ export default function ProfilScreen() {
     }
 
     setIsPreparingDocuments(true);
-    setStatus('Preparation de vos documents securises...');
+    setStatus('Préparation des justificatifs...');
 
     try {
       const { authClient } = await withDriverClient();
@@ -461,13 +461,13 @@ export default function ProfilScreen() {
 
       setPreparedDocumentLinks(nextPrepared);
       setStatus(
-        'Liens documentaires securises prets avec contraintes visibles.',
+        'Justificatifs prêts. Vous pouvez envoyer le profil.',
       );
 
       return nextPrepared;
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
-        fallback: 'Impossible de preparer vos documents.',
+        fallback: 'Impossible de préparer vos justificatifs.',
       });
       setStatus(feedback.message);
       return null;
@@ -533,7 +533,7 @@ export default function ProfilScreen() {
     }
 
     setIsSubmitting(true);
-    setStatus('Envoi du profil chauffeur...');
+    setStatus('Envoi du profil...');
 
     const parsedServiceRadiusKm = parseOptionalPositiveInteger(
       form.serviceRadiusKm,
@@ -627,7 +627,7 @@ export default function ProfilScreen() {
       );
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
-        fallback: "La soumission de l'onboarding a echoue.",
+        fallback: "Le profil n'a pas pu être envoyé.",
       });
       setStatus(feedback.message);
     } finally {
@@ -638,15 +638,15 @@ export default function ProfilScreen() {
   async function handleCreateTicket() {
     if (isSubmittingTicket) return;
     if (ticketForm.subject.trim().length < 5) {
-      setStatus('Le sujet doit faire au moins 5 caracteres.');
+      setStatus('Ajoutez un sujet plus précis.');
       return;
     }
     if (ticketForm.description.trim().length < 10) {
-      setStatus('La description doit faire au moins 10 caracteres.');
+      setStatus('Ajoutez quelques détails pour aider le support.');
       return;
     }
     setIsSubmittingTicket(true);
-    setStatus('Envoi de votre demande au support...');
+    setStatus('Envoi de votre demande...');
     try {
       const { authClient } = await withDriverClient();
       const result = await createSupportTicketWithApi(authClient, {
@@ -657,10 +657,10 @@ export default function ProfilScreen() {
       setTickets((prev) => [result.ticket, ...prev]);
       setTicketForm({ subject: '', description: '', category: 'other' });
       setIsTicketFormOpen(false);
-      setStatus('Demande envoyee. Notre equipe vous repondra rapidement.');
+      setStatus('Demande envoyée. Notre équipe vous répondra rapidement.');
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
-        fallback: "L'envoi de votre demande a echoue. Reessayez.",
+        fallback: "La demande n'a pas pu être envoyée. Réessayez.",
       });
       setStatus(feedback.message);
     } finally {
@@ -670,14 +670,14 @@ export default function ProfilScreen() {
 
   async function handleSignOut() {
     setIsSigningOut(true);
-    setStatus('Deconnexion du compte chauffeur...');
+    setStatus('Déconnexion du compte chauffeur...');
 
     try {
       await signOutDriverAccount();
       router.replace('/auth');
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
-        fallback: "La deconnexion du compte chauffeur a echoue.",
+        fallback: "La déconnexion du compte chauffeur a échoué.",
       });
       setStatus(feedback.message);
     } finally {
@@ -714,7 +714,7 @@ export default function ProfilScreen() {
             disabled={isSigningOut || isRefreshing || isSubmitting}
             loading={isSigningOut}
             style={styles.signOutBtn}
-            label="Se deconnecter"
+            label="Se déconnecter"
             variant="danger"
             tone="danger"
             labelStyle={styles.signOutBtnLabel}
@@ -726,8 +726,7 @@ export default function ProfilScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Section label: Identite */}
-        <Text style={styles.sectionEyebrow}>Identite</Text>
+        <Text style={styles.sectionEyebrow}>Identité</Text>
 
         {/* User card */}
         <OrbiSurface style={styles.userCard}>
@@ -803,7 +802,7 @@ export default function ProfilScreen() {
           <OrbiStatusBanner
             tone="danger"
             title="Compte suspendu"
-            message="Votre compte doit etre reactive avant reprise."
+            message="Votre compte doit être réactivé avant reprise."
           />
         ) : null}
 
@@ -820,12 +819,12 @@ export default function ProfilScreen() {
         tone={profileTransitionLabel ? 'sky' : 'neutral'}
         style={styles.card}
       >
-        <Text style={styles.name}>Onboarding securise</Text>
+        <Text style={styles.name}>Validation chauffeur</Text>
         <Text style={styles.meta}>
           {formatDriverOnboardingProgress(profile.profile.onboarding)}
         </Text>
         <Text style={styles.meta}>
-          Ville: {profile.profile.onboarding.city ?? 'Non definie'}
+          Ville: {profile.profile.onboarding.city ?? 'Non définie'}
         </Text>
         <Text style={styles.meta}>{profile.profile.onboarding.notes}</Text>
         {profileTransitionLabel ? (
@@ -846,7 +845,7 @@ export default function ProfilScreen() {
                   : styles.checkValuePending,
               ]}
             >
-              {item.completed ? 'OK' : 'A fournir'}
+              {item.completed ? 'OK' : 'À fournir'}
             </Text>
           </View>
         ))}
@@ -863,7 +862,7 @@ export default function ProfilScreen() {
             </Text>
           </View>
           <Pressable
-            accessibilityLabel={isOnboardingFormOpen ? 'Reduire le formulaire du profil' : 'Modifier le profil et le vehicule'}
+            accessibilityLabel={isOnboardingFormOpen ? 'Réduire le formulaire du profil' : 'Modifier le profil et le véhicule'}
             accessibilityRole="button"
             hitSlop={touchHitSlop}
             onPress={() => setIsOnboardingFormOpen((open) => !open)}
@@ -876,10 +875,10 @@ export default function ProfilScreen() {
         {isOnboardingFormOpen ? (
         <>
         <Text style={styles.meta}>
-          Completez vos informations chauffeur pour validation.
+          Complétez uniquement les informations nécessaires à la validation.
         </Text>
 
-        <Text style={styles.fieldLabel}>Telephone</Text>
+        <Text style={styles.fieldLabel}>Téléphone</Text>
         <TextInput
           value={form.phoneNumber}
           onChangeText={(value) => updateForm('phoneNumber', value)}
@@ -889,11 +888,11 @@ export default function ProfilScreen() {
           style={styles.input}
         />
 
-        <Text style={styles.fieldLabel}>Numero de permis</Text>
+        <Text style={styles.fieldLabel}>Numéro de permis</Text>
         <TextInput
           value={form.licenseNumber}
           onChangeText={(value) => updateForm('licenseNumber', value)}
-          placeholder="Numero du permis"
+          placeholder="Numéro du permis"
           placeholderTextColor={theme.colors.muted}
           style={styles.input}
         />
@@ -941,7 +940,7 @@ export default function ProfilScreen() {
           {vehicleTypeOptions.map((type) => (
             <Pressable
               key={type}
-              accessibilityLabel={`Choisir le type de vehicule ${type === 'MOTORCYCLE' ? 'Moto' : 'Voiture'}`}
+              accessibilityLabel={`Choisir le type de véhicule ${type === 'MOTORCYCLE' ? 'Moto' : 'Voiture'}`}
               accessibilityRole="button"
               hitSlop={touchHitSlop}
               onPress={() => updateVehicleType(type)}
@@ -970,7 +969,7 @@ export default function ProfilScreen() {
         <TextInput
           value={form.vehiclePlateNumber}
           onChangeText={(value) => updateForm('vehiclePlateNumber', value)}
-          placeholder="Plaque d immatriculation"
+          placeholder="Plaque d'immatriculation"
           placeholderTextColor={theme.colors.muted}
           style={styles.input}
         />
@@ -984,7 +983,7 @@ export default function ProfilScreen() {
         <TextInput
           value={form.vehicleModel}
           onChangeText={(value) => updateForm('vehicleModel', value)}
-          placeholder="Modele"
+          placeholder="Modèle"
           placeholderTextColor={theme.colors.muted}
           style={styles.input}
         />
@@ -1000,7 +999,7 @@ export default function ProfilScreen() {
           <TextInput
             value={form.vehicleYear}
             onChangeText={(value) => updateForm('vehicleYear', value)}
-            placeholder="Annee"
+            placeholder="Année"
             placeholderTextColor={theme.colors.muted}
             keyboardType="number-pad"
             style={[styles.input, styles.inlineInput]}
@@ -1058,7 +1057,7 @@ export default function ProfilScreen() {
             />
             {preparedDocumentLinks[document.type] ? (
               <Text style={styles.documentHint}>
-                Lien securise pret jusqu au{' '}
+                Lien prêt jusqu'au{' '}
                 {formatDriverProfileDateTime(preparedDocumentLinks[document.type]?.expiresAt)}
                 . Limite:{' '}
                 {formatDriverProfileBytes(
@@ -1071,7 +1070,7 @@ export default function ProfilScreen() {
               </Text>
             ) : (
               <Text style={styles.documentHint}>
-                Renseignez un nom de fichier pour preparer le lien signe.
+                Renseignez le fichier à envoyer.
               </Text>
             )}
           </View>
@@ -1079,24 +1078,24 @@ export default function ProfilScreen() {
 
         <View style={styles.actionStack}>
           <OrbiButton
-            accessibilityLabel="Preparer les liens documentaires securises"
+            accessibilityLabel="Préparer les justificatifs"
             hitSlop={touchHitSlop}
             onPress={() => void prepareDocuments()}
             disabled={isPreparingDocuments || isSubmitting}
             loading={isPreparingDocuments}
-            label="Preparer les liens documentaires"
+            label="Préparer les justificatifs"
             variant="secondary"
             tone="amber"
             style={styles.button}
             labelStyle={styles.secondaryButtonLabel}
           />
           <OrbiButton
-            accessibilityLabel="Soumettre le profil chauffeur"
+            accessibilityLabel="Envoyer le profil chauffeur"
             hitSlop={touchHitSlop}
             onPress={() => void handleSubmitOnboarding()}
             disabled={isSubmitting || isPreparingDocuments}
             loading={isSubmitting}
-            label="Soumettre le profil"
+            label="Envoyer le profil"
             tone="amber"
             style={styles.button}
             labelStyle={styles.primaryButtonLabel}
@@ -1110,7 +1109,7 @@ export default function ProfilScreen() {
         <View style={styles.metricCard}>
           <Text style={styles.metricLabel}>Rayon</Text>
           <Text style={styles.metricValue}>
-            {formatDriverProfileDistanceKm(profile.profile.serviceRadiusKm, 'Non defini')}
+            {formatDriverProfileDistanceKm(profile.profile.serviceRadiusKm, 'Non défini')}
           </Text>
           <Text style={styles.meta}>zone de prise en charge</Text>
         </View>
@@ -1119,12 +1118,12 @@ export default function ProfilScreen() {
           <Text style={styles.metricValue}>
             {formatDriverProfileRating(profile.profile.averageRating)}
           </Text>
-          <Text style={styles.meta}>moyenne qualite</Text>
+          <Text style={styles.meta}>moyenne qualité</Text>
         </View>
       </View>
 
       <OrbiSurface style={styles.card}>
-        <Text style={styles.name}>Vehicules actifs</Text>
+        <Text style={styles.name}>Véhicules actifs</Text>
         {profile.profile.vehicles.length ? (
           profile.profile.vehicles.map((vehicle) => (
             <View key={vehicle.id} style={styles.vehicleRow}>
@@ -1133,19 +1132,19 @@ export default function ProfilScreen() {
                 {vehicle.make} {vehicle.model}
               </Text>
               <Text style={styles.meta}>
-                {vehicle.plateNumber} | {vehicle.color} | {formatOperationalStatus(vehicle.tier.replace(/-/g, '_'))}
+                {vehicle.plateNumber} · {vehicle.color} · {formatOperationalStatus(vehicle.tier.replace(/-/g, '_'))}
               </Text>
             </View>
           ))
         ) : (
           <Text style={styles.meta}>
-            Aucun vehicule ajoute pour le moment.
+            Aucun véhicule ajouté pour le moment.
           </Text>
         )}
       </OrbiSurface>
 
       <OrbiSurface style={styles.card}>
-        <Text style={styles.name}>Documents et revue</Text>
+        <Text style={styles.name}>Justificatifs et revue</Text>
         {profile.profile.onboarding.documents.map((document) => (
           <View
             key={document.type}
@@ -1159,7 +1158,7 @@ export default function ProfilScreen() {
                 {formatDocumentLabel(document.type)}
               </Text>
               {freshDocumentTypes.includes(document.type) ? (
-                <Text style={styles.documentTransitionBadge}>Statut mis a jour</Text>
+                <Text style={styles.documentTransitionBadge}>Statut mis à jour</Text>
               ) : null}
               <Text style={styles.meta}>
                 {document.fileName ?? 'Aucun fichier'}
@@ -1193,7 +1192,7 @@ export default function ProfilScreen() {
           >
             <Text style={styles.vehicleTitle}>{formatOperationalStatus(review.status)}</Text>
             <Text style={styles.meta}>
-              {review.actorName} |{' '}
+              {review.actorName} ·{' '}
               {formatDriverProfileDateTime(review.createdAt)}
             </Text>
             {review.decisionReason ? (
@@ -1207,7 +1206,7 @@ export default function ProfilScreen() {
       <OrbiSurface style={styles.card}>
         <Text style={styles.heading}>Support</Text>
         <Text style={styles.meta}>
-          Paiement, course, vehicule ou compte : notre equipe vous repond sous 24h.
+          Paiement, course, véhicule ou compte : notre équipe vous répond sous 24h.
         </Text>
 
         <View style={styles.supportSummary}>
@@ -1215,8 +1214,8 @@ export default function ProfilScreen() {
             <Text style={styles.supportSummaryTitle}>Support</Text>
             <Text style={styles.meta}>
               {tickets.length > 0
-                ? `${tickets.length} demande(s) ouverte(s) ou recemment mise(s) a jour. Les details de mission restent dans Missions.`
-                : 'Aucune demande support active sur ce profil.'}
+                ? `${tickets.length} demande${tickets.length > 1 ? 's' : ''} active${tickets.length > 1 ? 's' : ''}.`
+                : 'Aucune demande active.'}
             </Text>
           </View>
           {tickets.length > 0 ? (
@@ -1230,7 +1229,7 @@ export default function ProfilScreen() {
           <>
             <TextInput
               style={styles.input}
-              placeholder="Course non payee"
+              placeholder="Course non payée"
               placeholderTextColor={theme.colors.muted}
               value={ticketForm.subject}
               onChangeText={(v) => setTicketForm((f) => ({ ...f, subject: v }))}
@@ -1239,7 +1238,7 @@ export default function ProfilScreen() {
             />
             <TextInput
               style={[styles.input, styles.ticketDescInput]}
-              placeholder="Detaillez la situation"
+              placeholder="Expliquez la situation"
               placeholderTextColor={theme.colors.muted}
               value={ticketForm.description}
               onChangeText={(v) => setTicketForm((f) => ({ ...f, description: v }))}
@@ -1259,8 +1258,8 @@ export default function ProfilScreen() {
                     {cat === 'payment' ? 'Paiement'
                       : cat === 'trip' ? 'Course'
                       : cat === 'account' ? 'Compte'
-                      : cat === 'vehicle' ? 'Vehicule'
-                      : cat === 'safety' ? 'Securite'
+                      : cat === 'vehicle' ? 'Véhicule'
+                      : cat === 'safety' ? 'Sécurité'
                       : 'Autre'}
                   </Text>
                 </Pressable>
@@ -1475,7 +1474,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   signOutButton: {
     alignSelf: 'flex-start',
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 14,
     paddingVertical: 10,
     backgroundColor: theme.colors.backgroundAlt,
@@ -1488,7 +1487,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
   },
   card: {
-    borderRadius: 16,
+    borderRadius: 4,
     padding: 14,
     gap: 7,
   },
@@ -1503,8 +1502,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: theme.colors.backgroundAlt,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: 4,
+    padding: 14,
     gap: 6,
   },
   metricLabel: {
@@ -1533,7 +1532,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 2,
   },
   editToggleBtn: {
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 14,
     paddingVertical: 8,
     backgroundColor: theme.colors.backgroundAlt,
@@ -1567,13 +1566,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   input: {
     minWidth: 0,
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.backgroundAlt,
     color: theme.colors.text,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 11,
   },
   optionRow: {
     flexDirection: 'row',
@@ -1584,7 +1583,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
@@ -1629,16 +1628,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     marginTop: 10,
   },
   button: {
-    borderRadius: 18,
+    borderRadius: 4,
     paddingHorizontal: 16,
     minHeight: 50,
   },
   primaryButton: {
-    borderRadius: 12,
+    borderRadius: 4,
     minHeight: 44,
   },
   secondaryButton: {
-    borderRadius: 12,
+    borderRadius: 4,
     minHeight: 44,
   },
   primaryButtonLabel: {
@@ -1690,7 +1689,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   documentStatusRowFresh: {
     backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 14,
+    borderRadius: 4,
     paddingHorizontal: 10,
     paddingBottom: 10,
     borderTopWidth: 0,
@@ -1709,7 +1708,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   documentBadge: {
     alignSelf: 'flex-start',
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: 12,
@@ -1736,7 +1735,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   timelineRowFresh: {
     backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 14,
+    borderRadius: 4,
     paddingHorizontal: 10,
     paddingBottom: 10,
     borderTopWidth: 0,
@@ -1761,7 +1760,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 8,
   },
   chip: {
-    borderRadius: 999,
+    borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderWidth: 1,
@@ -1785,7 +1784,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.backgroundAlt,
@@ -1800,9 +1799,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 14,
   },
   supportSummaryBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(245, 158, 11, 0.14)',

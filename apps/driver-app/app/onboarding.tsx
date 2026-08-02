@@ -256,8 +256,8 @@ export default function DriverOnboardingScreen() {
     } catch (error) {
       setErrorMessage(
         error instanceof TypeError
-          ? 'Connexion impossible. Verifiez votre reseau.'
-          : resolveDisplayableApiErrorMessage(error, 'Impossible de soumettre le profil.'),
+          ? 'Connexion impossible. Vérifiez votre réseau.'
+          : resolveDisplayableApiErrorMessage(error, "Le profil n'a pas pu être envoyé."),
       );
     } finally {
       setIsSubmitting(false);
@@ -296,7 +296,7 @@ export default function DriverOnboardingScreen() {
                 subtitle="Le service de courses connecté du Burkina Faso. Fixez vos horaires, gardez le contrôle de vos revenus."
               >
                 {[
-                  { code: '82%', title: '82% du tarif pour vous', desc: 'Commission claire. Revenu estime avant acceptation.' },
+                  { code: '82%', title: '82% du tarif pour vous', desc: 'Commission claire. Revenu estimé avant acceptation.' },
                   { code: 'Libre', title: 'Votre emploi du temps', desc: 'Passez en ligne quand vous voulez, sans horaire imposé.' },
                   { code: 'MM', title: 'Paiement Mobile Money', desc: 'Orange Money et Moov Money avec historique clair.' },
                   { code: 'Safe', title: 'Protection chauffeur', desc: 'SOS, suivi de trajet et support 7j/7.' },
@@ -319,18 +319,18 @@ export default function DriverOnboardingScreen() {
                 <OrbiStatusBanner
                   tone="amber"
                   title="Documents requis"
-                  message="Permis, carte grise, assurance et piece d'identite nationale seront verifies avant activation."
+                  message="Permis, carte grise, assurance et pièce d'identité nationale seront vérifiés avant activation."
                 />
               </StepContainer>
             )}
 
             {/* ── Step 2: Véhicule ── */}
             {currentStep === 2 && (
-              <StepContainer title="Votre vehicule" subtitle="Ces informations sont verifiees avant activation.">
+              <StepContainer title="Votre véhicule" subtitle="Ces informations sont vérifiées avant activation.">
 
                 {/* Vehicle type */}
                 <View>
-                  <Text style={styles.fieldLabel}>Type de vehicule</Text>
+                  <Text style={styles.fieldLabel}>Type de véhicule</Text>
                   <View style={styles.typeRow}>
                     {(['MOTORCYCLE', 'CAR'] as const).map((type) => {
                       const isMoto = type === 'MOTORCYCLE';
@@ -347,7 +347,7 @@ export default function DriverOnboardingScreen() {
                             {isMoto ? 'Moto' : 'Voiture'}
                           </Text>
                           <Text style={styles.typeDesc} numberOfLines={1} ellipsizeMode="tail">
-                            {isMoto ? '1 passager · Urbain' : '4 places · Climatisee'}
+                            {isMoto ? '1 passager · Urbain' : '4 places · Climatisée'}
                           </Text>
                         </Pressable>
                       );
@@ -374,7 +374,7 @@ export default function DriverOnboardingScreen() {
                 {/* Model */}
                 {selectedMake !== '' && (
                   <View>
-                  <Text style={styles.fieldLabel}>Modele</Text>
+                  <Text style={styles.fieldLabel}>Modèle</Text>
                     <View style={styles.chipGrid}>
                       {models.map((model) => (
                         <Pressable
@@ -403,7 +403,7 @@ export default function DriverOnboardingScreen() {
 
                 {/* Plate */}
                 <View>
-                  <Text style={styles.fieldLabel}>Numero de plaque</Text>
+                  <Text style={styles.fieldLabel}>Numéro de plaque</Text>
                   <TextInput
                     value={plateNumber}
                     onChangeText={(v) => setPlateNumber(v.toUpperCase())}
@@ -437,10 +437,10 @@ export default function DriverOnboardingScreen() {
 
             {/* ── Step 3: Informations personnelles ── */}
             {currentStep === 3 && (
-              <StepContainer title="Vos informations" subtitle="Necessaires pour votre profil chauffeur et vos paiements.">
+              <StepContainer title="Vos informations" subtitle="Nécessaires pour votre profil chauffeur et vos paiements.">
 
                 <View>
-                  <Text style={styles.fieldLabel}>Telephone</Text>
+                  <Text style={styles.fieldLabel}>Téléphone</Text>
                   <TextInput
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
@@ -449,11 +449,11 @@ export default function DriverOnboardingScreen() {
                     keyboardType="phone-pad"
                     style={styles.input}
                   />
-                  <Text style={styles.fieldHint}>Ce numero sera utilise pour vos paiements Mobile Money.</Text>
+                  <Text style={styles.fieldHint}>Ce numéro sera utilisé pour vos paiements Mobile Money.</Text>
                 </View>
 
                 <View>
-                  <Text style={styles.fieldLabel}>Numero de permis de conduire</Text>
+                  <Text style={styles.fieldLabel}>Numéro de permis de conduire</Text>
                   <TextInput
                     value={licenseNumber}
                     onChangeText={(v) => setLicenseNumber(v.toUpperCase())}
@@ -483,7 +483,7 @@ export default function DriverOnboardingScreen() {
 
                 <View style={styles.infoBox}>
                   <Text style={styles.infoBoxText}>
-                    Votre profil sera examine par l'equipe Orbi sous 24-48h. Vous recevrez une notification des l'approbation.
+                    Votre profil sera examiné par l'équipe Orbi sous 24-48h. Vous recevrez une notification dès l'approbation.
                   </Text>
                 </View>
               </StepContainer>
@@ -562,7 +562,7 @@ export default function DriverOnboardingScreen() {
               onPress={() => void handleSubmit()}
               disabled={isSubmitting}
               loading={isSubmitting}
-              label="Soumettre le profil"
+              label="Envoyer le profil"
               tone="amber"
               style={styles.ctaBtn}
               labelStyle={styles.ctaBtnLabel}
@@ -605,7 +605,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Benefits (step 1)
   benefitCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 14,
-    borderRadius: 8,
+    borderRadius: 4,
     padding: 13,
     borderWidth: 1,
     borderColor: '#E8E8E8',
@@ -614,7 +614,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   benefitBadge: {
     minWidth: 42,
     height: 34,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: '#F3F3F3',
     alignItems: 'center',
     justifyContent: 'center',
@@ -634,7 +634,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   fieldHint: { fontSize: 11, color: '#6B6B6B', fontFamily: 'Inter_400Regular', marginTop: 4 },
   input: {
     backgroundColor: '#F3F3F3',
-    borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8',
+    borderRadius: 4, borderWidth: 1, borderColor: '#E8E8E8',
     paddingHorizontal: 14, paddingVertical: 13,
     fontSize: 16, fontFamily: 'Inter_400Regular', color: '#111111',
   },
@@ -644,7 +644,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   typeCard: {
     flex: 1, alignItems: 'center', gap: 6, padding: 14,
     backgroundColor: '#F3F3F3',
-    borderRadius: 8, borderWidth: 1.5, borderColor: '#E8E8E8',
+    borderRadius: 4, borderWidth: 1.5, borderColor: '#E8E8E8',
   },
   typeLabel: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111' },
   typeDesc: { fontSize: 11, color: '#6B6B6B', fontFamily: 'Inter_400Regular', textAlign: 'center' },
@@ -652,7 +652,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Chips
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 4, paddingHorizontal: 14, paddingVertical: 8,
     backgroundColor: '#F3F3F3',
     borderWidth: 1, borderColor: '#E8E8E8',
   },
@@ -669,7 +669,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Info box
   infoBox: {
     backgroundColor: '#F7F7F7',
-    borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8',
+    borderRadius: 4, borderWidth: 1, borderColor: '#E8E8E8',
     padding: 14,
   },
   infoBoxText: { fontSize: 13, color: '#525252', fontFamily: 'Inter_400Regular', lineHeight: 19 },
@@ -677,7 +677,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Documents
   docCard: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8',
+    borderRadius: 4, borderWidth: 1, borderColor: '#E8E8E8',
     padding: 13, backgroundColor: '#F3F3F3',
   },
   docCardChecked: { borderColor: '#111111', backgroundColor: '#FFFFFF' },
@@ -692,7 +692,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Summary
   summaryCard: {
-    borderRadius: 8,
+    borderRadius: 4,
     padding: 14, gap: 6,
     borderWidth: 1,
     borderColor: '#E8E8E8',
@@ -709,7 +709,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderTopWidth: 1, borderTopColor: '#E8E8E8',
   },
   ctaBtn: {
-    borderRadius: 6,
+    borderRadius: 4,
     minHeight: 54,
     backgroundColor: '#111111',
   },

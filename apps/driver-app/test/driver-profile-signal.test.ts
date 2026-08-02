@@ -30,7 +30,7 @@ describe('driver profile signal helpers', () => {
     expect(formatDriverProfileCount(Number.NaN)).toBe('A confirmer');
     expect(formatDriverProfilePercent(Number.NaN)).toBe('--');
     expect(formatDriverProfileDistanceKm(Number.NaN)).toBe('A confirmer');
-    expect(formatDriverProfileRating(Number.NaN)).toBe('Nouvelle activite');
+    expect(formatDriverProfileRating(Number.NaN)).toBe('Nouvelle activité');
     expect(formatDriverProfileBytes(Number.NaN)).toBe('Taille indisponible');
     expect(
       formatDriverOnboardingProgress({
@@ -38,7 +38,7 @@ describe('driver profile signal helpers', () => {
         totalItems: undefined,
         readinessPercent: Number.NaN,
       }),
-    ).toBe('Profil en cours de verification');
+    ).toBe('Profil en cours de vérification');
   });
 
   it('normalizes stringified profile metrics before display', () => {
