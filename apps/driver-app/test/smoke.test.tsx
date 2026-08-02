@@ -1076,7 +1076,7 @@ describe('driver smoke flows', () => {
 
     expectText(renderer, 'Statut mis a jour: Chauffeur en route.');
     expectText(renderer, 'Confirmez puis demarrez');
-    expectText(renderer, 'ETA');
+    expectText(renderer, 'Arrivee');
     expectText(renderer, 'Distance');
     expectText(renderer, '0.4 km restant');
     expectText(renderer, 'Agrandir');

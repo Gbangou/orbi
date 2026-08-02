@@ -27,11 +27,20 @@ describe('driver mobile UX guards', () => {
 
   it('keeps active mission maps and secondary actions balanced on compact screens', () => {
     const source = readAppFile('app/(tabs)/offres.tsx');
+    const offerCardSource = readAppFile('lib/offer-card.tsx');
+    const realtimeWidgetSource = readAppFile('lib/realtime-widgets.tsx');
 
-    expect(source).toContain('missionMap: { height: 340');
+    expect(source).toContain('missionMap: { height: 300');
     expect(source).toContain('numberOfLines={2}>{missionStageCopy.title}</Text>');
     expect(source).toContain('styles.missionPaymentValue} numberOfLines={1}');
     expect(source).toContain('minHeight: 44');
+    expect(source).toContain('Arrivee');
+    expect(source).not.toContain('>ETA</Text>');
+    expect(source).toContain('Course mise a jour');
+    expect(source).not.toContain('Trajet mis a jour');
+    expect(source).toContain('incomingPulse:');
+    expect(source).toContain('width: 38');
+    expect(source).toContain('minHeight: 54');
     expect(source).toContain('A confirmer');
     expect(source).toContain('headerTitle: { fontSize: 20');
     expect(source).toContain('emptyTitle:');
@@ -39,5 +48,9 @@ describe('driver mobile UX guards', () => {
     expect(source).toContain('width: 54');
     expect(source).not.toContain('formatDriverOfferDistance(incomingOffer.pickupDistanceKm, "-")');
     expect(source).not.toContain('formatDriverOfferDistance(incomingOffer.distanceKm, "-")');
+    expect(offerCardSource).toContain('Arrivée');
+    expect(offerCardSource).not.toContain('>ETA</Text>');
+    expect(realtimeWidgetSource).toContain('Arrivee');
+    expect(realtimeWidgetSource).not.toContain('>ETA</Text>');
   });
 });

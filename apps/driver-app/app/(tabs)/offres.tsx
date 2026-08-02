@@ -750,7 +750,7 @@ export default function OffersScreen() {
     nextStatus: "DRIVER_ARRIVING" | "IN_PROGRESS" | "COMPLETED",
   ) {
     return await runExclusiveDriverAction(async () => {
-      setStatus(`Mise a jour du trajet: ${formatOperationalStatus(nextStatus)}...`);
+      setStatus(`Mise a jour de la course: ${formatOperationalStatus(nextStatus)}...`);
 
       try {
         const { authClient } = await restoreDriverSession();
@@ -778,7 +778,7 @@ export default function OffersScreen() {
               : trip,
           ),
         }));
-        setStatus(`Trajet mis a jour: ${formatOperationalStatus(response.trip.status)}.`);
+        setStatus(`Course mise a jour: ${formatOperationalStatus(response.trip.status)}.`);
         const gross = toFiniteEarningsNumber(response.trip.actualFare);
         const net = toFiniteEarningsNumber(response.trip.driverPayout);
         if (nextStatus === "COMPLETED" && gross !== null && net !== null) {
@@ -1356,7 +1356,7 @@ export default function OffersScreen() {
               </Text>
               <View style={styles.missionMetricRow}>
                 <View style={styles.missionMetric}>
-                  <Text style={styles.missionMetricLabel}>ETA</Text>
+                  <Text style={styles.missionMetricLabel}>Arrivee</Text>
                   <Text style={styles.missionMetricValue}>
                     {driverRouteProgress?.etaLabel ?? "Calcul en cours"}
                   </Text>
@@ -1586,8 +1586,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E8E8E8',
-    padding: 14,
-    gap: 12,
+    padding: 12,
+    gap: 10,
   },
   incomingGrabber: {
     alignSelf: "center",
@@ -1602,8 +1602,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 12,
   },
   incomingPulse: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: 4,
     backgroundColor: '#F3F3F3',
     alignItems: "center",
@@ -1624,7 +1624,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textTransform: "uppercase",
   },
   incomingTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
     fontFamily: "Raleway_800ExtraBold",
     color: '#111111',
@@ -1642,7 +1642,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textTransform: "uppercase",
   },
   incomingFare: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
     color: '#111111',
@@ -1653,7 +1653,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8E8E8',
     backgroundColor: '#F7F7F7',
-    padding: 12,
+    padding: 10,
     gap: 4,
   },
   incomingRouteLabel: {
@@ -1676,17 +1676,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   incomingMetric: {
     flex: 1,
-    minHeight: 62,
+    minHeight: 54,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E8E8E8',
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingHorizontal: 9,
+    paddingVertical: 8,
     justifyContent: "center",
     gap: 2,
   },
   incomingMetricValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
     color: '#111111',
@@ -1755,7 +1755,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: '#525252',
   },
-  missionCard: { padding: 10, gap: 9, borderColor: '#E8E8E8', borderRadius: 8, backgroundColor: '#FFFFFF' },
+  missionCard: { padding: 9, gap: 8, borderColor: '#E8E8E8', borderRadius: 8, backgroundColor: '#FFFFFF' },
   stageTracker: { paddingHorizontal: 2 },
   missionStatusRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
@@ -1780,7 +1780,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderColor: '#E8E8E8',
     backgroundColor: '#F3F3F3',
   },
-  missionMap: { height: 340, borderRadius: 8, overflow: "hidden" },
+  missionMap: { height: 300, borderRadius: 8, overflow: "hidden" },
   navigationMapBadge: {
     position: "absolute",
     left: 12,
@@ -1798,13 +1798,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textTransform: "uppercase",
   },
   missionNavigationPanel: {
-    gap: 8,
+    gap: 7,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E8E8E8',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   missionStageEyebrow: {
     fontSize: 10,
@@ -1829,13 +1829,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   missionMetricRow: { flexDirection: "row", gap: 8 },
   missionMetric: {
     flex: 1,
-    minHeight: 58,
+    minHeight: 52,
     borderRadius: 8,
     backgroundColor: '#F7F7F7',
     borderWidth: 1,
     borderColor: '#E8E8E8',
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingHorizontal: 9,
+    paddingVertical: 8,
     gap: 3,
   },
   missionMetricLabel: {
@@ -1861,8 +1861,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderWidth: 1,
     borderColor: '#E8E8E8',
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingHorizontal: 9,
+    paddingVertical: 8,
   },
   missionPaymentLabel: {
     fontSize: 10,

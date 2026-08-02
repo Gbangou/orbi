@@ -122,7 +122,7 @@ export const OfferCard = memo(function OfferCard({
         </View>
       </View>
 
-      {/* Metrics: pickup distance · ETA · trip distance · net (if available) */}
+      {/* Metrics: pickup distance · arrival estimate · trip distance · net (if available) */}
       <OrbiSurface style={styles.metrics}>
         <View style={styles.metric}>
           <Text style={styles.metricVal}>
@@ -135,7 +135,7 @@ export const OfferCard = memo(function OfferCard({
           <Text style={styles.metricVal}>
             {formatDriverOfferMinutes(offer.etaToPickupMinutes, "–")}
           </Text>
-          <Text style={styles.metricLbl}>ETA</Text>
+          <Text style={styles.metricLbl}>Arrivée</Text>
         </View>
         <View style={styles.sep} />
         <View style={styles.metric}>

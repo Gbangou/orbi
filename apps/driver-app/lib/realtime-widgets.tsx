@@ -900,7 +900,7 @@ export function LiveRouteProgressCard({
         </View>
         {etaLabel ? (
           <View style={lrp.metric}>
-            <Text style={lrp.metricLabel}>ETA</Text>
+            <Text style={lrp.metricLabel}>Arrivee</Text>
             <Text style={lrp.metricValue}>{etaLabel}</Text>
           </View>
         ) : null}
