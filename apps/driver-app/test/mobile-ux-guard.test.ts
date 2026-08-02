@@ -36,12 +36,12 @@ describe('driver mobile UX guards', () => {
     expect(source).toContain('minHeight: 44');
     expect(source).toContain('Arrivee');
     expect(source).not.toContain('>ETA</Text>');
-    expect(source).toContain('Course mise a jour');
+    expect(source).toContain('Course mise à jour');
     expect(source).not.toContain('Trajet mis a jour');
     expect(source).toContain('incomingPulse:');
     expect(source).toContain('width: 38');
     expect(source).toContain('minHeight: 54');
-    expect(source).toContain('A confirmer');
+    expect(source).toContain('À confirmer');
     expect(source).toContain('headerTitle: { fontSize: 20');
     expect(source).toContain('emptyTitle:');
     expect(source).toContain('fontSize: 17');
@@ -52,6 +52,25 @@ describe('driver mobile UX guards', () => {
     expect(offerCardSource).not.toContain('>ETA</Text>');
     expect(realtimeWidgetSource).toContain('Arrivee');
     expect(realtimeWidgetSource).not.toContain('>ETA</Text>');
+  });
+
+  it('keeps driver mission actions clear and premium', () => {
+    const source = readAppFile('app/(tabs)/offres.tsx');
+    const flowSource = readAppFile('lib/driver-active-flow.ts');
+    const offerCardSource = readAppFile('lib/offer-card.tsx');
+
+    expect(source).toContain('Départ sécurisé');
+    expect(source).toContain('Passager à bord, prêt à partir');
+    expect(source).toContain('Démarrer la course');
+    expect(source).toContain('Espèces');
+    expect(source).not.toContain('Checklist depart');
+    expect(source).not.toContain('Demarrer la course');
+    expect(source).not.toContain('A confirmer');
+    expect(source).not.toContain('Pickup</Text>');
+    expect(flowSource).toContain('Prise en charge');
+    expect(flowSource).not.toContain('Pickup ~');
+    expect(flowSource).not.toContain('ETA en attente');
+    expect(offerCardSource).toContain('Prise en charge');
   });
 
   it('keeps profile support and onboarding copy production-ready', () => {

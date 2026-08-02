@@ -138,14 +138,14 @@ export function buildDriverDispatchStatusLabel(input: {
   }
 
   if (input.flow.operationalStatus === "SUSPENDED") {
-    return "Compte suspendu. Les offres reprendront apres reactivation du profil.";
+    return "Compte suspendu. Les offres reprendront après réactivation du profil.";
   }
 
   if (
     input.flow.availabilityStatus === "ONLINE" &&
     !input.flow.accountCanReceiveOffers
   ) {
-    return "Compte chauffeur en validation. Les offres sont bloquees jusqu a approbation.";
+    return "Compte chauffeur en validation. Les offres sont bloquées jusqu'à approbation.";
   }
 
   return `${input.flow.visibleOfferCount} offres disponibles. Statut ${formatOperationalStatus(input.flow.availabilityStatus)}.`;
@@ -153,32 +153,32 @@ export function buildDriverDispatchStatusLabel(input: {
 
 export function buildDriverNextActionHint(flow: DriverActiveFlowSummary) {
   if (flow.activeTrip?.status === "MATCHED") {
-    return "Rejoignez le point de depart et signalez votre arrivee uniquement sur place.";
+    return "Rejoignez le point de départ et signalez votre arrivée uniquement sur place.";
   }
 
   if (flow.activeTrip?.status === "DRIVER_ARRIVING") {
-    return "Demarrez seulement quand le passager est avec vous et pret a partir.";
+    return "Démarrez seulement quand le passager est avec vous et prêt à partir.";
   }
 
   if (flow.activeTrip?.status === "IN_PROGRESS") {
-    return "Terminez la course seulement apres depot au point confirme.";
+    return "Terminez la course seulement après dépôt au point confirmé.";
   }
 
   if (flow.operationalStatus === "SUSPENDED") {
-    return "Aucune action requise: attendez la reactivation du profil.";
+    return "Aucune action requise: attendez la réactivation du profil.";
   }
 
   if (flow.availabilityStatus === "ONLINE" && !flow.accountCanReceiveOffers) {
-    return "Finalisez votre profil pour debloquer les offres.";
+    return "Finalisez votre profil pour débloquer les offres.";
   }
 
   if (flow.availabilityStatus === "ONLINE") {
     return flow.visibleOfferCount > 0
-      ? "Traitez les offres reservees avant expiration."
-      : "Restez disponible et gardez l application ouverte.";
+      ? "Traitez les offres réservées avant expiration."
+      : "Restez disponible et gardez l'application ouverte.";
   }
 
-  return "Passez en ligne quand vous etes pret a recevoir des offres.";
+  return "Passez en ligne quand vous êtes prêt à recevoir des offres.";
 }
 
 export function buildDriverMissionSnapshot(input: {
@@ -212,30 +212,30 @@ export function buildDriverMissionSnapshot(input: {
     },
     {
       label: "Passager",
-      value: activeTrip.counterpartyName ?? detail?.riderName ?? "Assigne",
+      value: activeTrip.counterpartyName ?? detail?.riderName ?? "Assigné",
       helper:
         activeTrip.status === "DRIVER_ARRIVING"
-          ? "Confirmez oralement le nom et le point de depart"
-          : "Verifier le passager avant depart",
+          ? "Confirmez oralement le nom et le point de départ"
+          : "Vérifiez le passager avant départ",
     },
     {
-      label: activeTrip.status === "IN_PROGRESS" ? "Destination" : "Pickup",
+      label: activeTrip.status === "IN_PROGRESS" ? "Destination" : "Prise en charge",
       value: approachDistanceLabel,
       helper:
         hasApproachDistance
           ? latestPosition?.observedAt
-            ? `Position mise a jour ${formatTimeLabel(latestPosition.observedAt)}`
-            : "Position mission recue"
+            ? `Position mise à jour ${formatTimeLabel(latestPosition.observedAt)}`
+            : "Position mission reçue"
           : routeMonitoring
             ? routeMonitoring.alertCount > 0
               ? `${routeMonitoring.alertCount} alerte trajet`
-              : "Trajet coherent"
+              : "Trajet cohérent"
             : "Position attendue",
     },
     {
-      label: "Vehicule",
+      label: "Véhicule",
       value: activeTrip.vehicleLabel ?? detail?.vehicleLabel ?? "Actif",
-      helper: "Profil verrouille pendant la mission",
+      helper: "Profil verrouillé pendant la mission",
     },
     {
       label: "Gain chauffeur",
@@ -272,7 +272,7 @@ export function buildDriverLiveRouteProgress(input: {
   return {
     title: isHeadingToDestination
       ? "Vers destination"
-      : "Approche pickup",
+      : "Approche prise en charge",
     stateLabel: formatOperationalStatus(routeMonitoring.state),
     distanceLabel:
       remainingDistance !== null
@@ -285,7 +285,7 @@ export function buildDriverLiveRouteProgress(input: {
           ? 42
           : 18,
     freshnessLabel: `Position ${formatTimeLabel(latestPosition.observedAt)}`,
-    coordinateLabel: "Position actualisee",
+    coordinateLabel: "Position actualisée",
     accuracyLabel:
       accuracyMeters !== null
         ? `Signal ${Math.round(accuracyMeters)} m`
@@ -301,13 +301,13 @@ export function buildDriverLiveRouteProgress(input: {
             speedKph,
             isHeadingToDestination,
           })
-        : "ETA en attente",
+        : "Arrivée en attente",
     note:
       routeMonitoring.state === "unknown"
         ? "Position en attente."
         : routeMonitoring.state === "clear"
-          ? "Route coherente sur la derniere position."
-          : "Route a verifier avec attention.",
+          ? "Route cohérente sur la dernière position."
+          : "Route à vérifier avec attention.",
     tone:
       routeMonitoring.state === "critical"
         ? "rose"
@@ -379,8 +379,8 @@ function estimateArrivalLabel(input: {
   );
 
   return input.isHeadingToDestination
-    ? `Arrivee ~${etaMinutes} min`
-    : `Pickup ~${etaMinutes} min`;
+    ? `Arrivée ~${etaMinutes} min`
+    : `Prise en charge ~${etaMinutes} min`;
 }
 
 function buildInitials(name: string) {
@@ -470,7 +470,7 @@ export function buildDriverFlowTransitionLabel(
       previousFlowState !== nextFlowState &&
       nextStatus
     ) {
-      return `Mission mise a jour: ${formatOperationalStatus(nextStatus)}.`;
+      return `Mission mise à jour: ${formatOperationalStatus(nextStatus)}.`;
     }
 
     if (previousFlowState && !nextFlowState) {

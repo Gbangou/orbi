@@ -55,7 +55,7 @@ describe('driver-active-flow', () => {
     expect(flow.visibleOfferCount).toBe(0);
     expect(flow.availabilityLocked).toBe(true);
     expect(buildDriverNextActionHint(flow)).toBe(
-      'Demarrez seulement quand le passager est avec vous et pret a partir.',
+      'Démarrez seulement quand le passager est avec vous et prêt à partir.',
     );
   });
 
@@ -92,7 +92,7 @@ describe('driver-active-flow', () => {
       }),
     ).toBe('Compte suspendu. Contactez le support pour reprendre le service.');
     expect(buildDriverNextActionHint(flow)).toBe(
-      'Aucune action requise: attendez la reactivation du profil.',
+      'Aucune action requise: attendez la réactivation du profil.',
     );
   });
 
@@ -126,7 +126,7 @@ describe('driver-active-flow', () => {
       'Compte en attente de validation. Les offres seront disponibles apres approbation.',
     );
     expect(buildDriverNextActionHint(flow)).toBe(
-      'Finalisez votre profil pour debloquer les offres.',
+      'Finalisez votre profil pour débloquer les offres.',
     );
   });
 
@@ -225,7 +225,7 @@ describe('driver-active-flow', () => {
     });
 
     expect(buildDriverNextActionHint(flow)).toBe(
-      'Traitez les offres reservees avant expiration.',
+      'Traitez les offres réservées avant expiration.',
     );
   });
 
@@ -319,14 +319,14 @@ describe('driver-active-flow', () => {
         expect.objectContaining({
           label: 'Passager',
           value: 'Awa Ouedraogo',
-          helper: 'Confirmez oralement le nom et le point de depart',
+          helper: 'Confirmez oralement le nom et le point de départ',
         }),
         expect.objectContaining({
-          label: 'Pickup',
+          label: 'Prise en charge',
           value: '0.4 km',
         }),
         expect.objectContaining({
-          label: 'Vehicule',
+          label: 'Véhicule',
           value: 'Yamaha Crypton',
         }),
         expect.objectContaining({

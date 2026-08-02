@@ -128,7 +128,7 @@ export const OfferCard = memo(function OfferCard({
           <Text style={styles.metricVal}>
             {formatDriverOfferDistance(offer.pickupDistanceKm, "–")}
           </Text>
-          <Text style={styles.metricLbl}>Pickup</Text>
+          <Text style={styles.metricLbl}>Prise en charge</Text>
         </View>
         <View style={styles.sep} />
         <View style={styles.metric}>
@@ -208,7 +208,7 @@ export const OfferCard = memo(function OfferCard({
 const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   wrap: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: "#E8E8E8",
     padding: 13,
@@ -247,7 +247,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     padding: 8,
     backgroundColor: "#F7F7F7",
     borderColor: "#E8E8E8",
-    borderRadius: 8,
+    borderRadius: 4,
   },
   metric: { flex: 1, alignItems: "center", gap: 2 },
   metricVal: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", color: "#111111" },
@@ -262,7 +262,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   sep: { width: 1, backgroundColor: "#E8E8E8", alignSelf: "stretch" },
   expiry: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: "#6B6B6B" },
   decisionPanel: {
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,

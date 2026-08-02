@@ -1075,16 +1075,16 @@ describe('driver smoke flows', () => {
     await flushMicrotasks();
 
     expectText(renderer, 'Statut mis a jour: Chauffeur en route.');
-    expectText(renderer, 'Confirmez puis demarrez');
-    expectText(renderer, 'Arrivee');
+    expectText(renderer, 'Confirmez puis démarrez');
+    expectText(renderer, 'Arrivé');
     expectText(renderer, 'Distance');
     expectText(renderer, '0.4 km restant');
     expectText(renderer, 'Agrandir');
     expectText(renderer, 'Paiement');
-    expectText(renderer, 'Especes');
-    expectText(renderer, 'Checklist depart');
-    expectText(renderer, 'Passager a bord et pret a partir');
-    expectText(renderer, 'Prix et gain visibles, aucun supplement hors app');
+    expectText(renderer, 'Espèces');
+    expectText(renderer, 'Départ sécurisé');
+    expectText(renderer, 'Passager à bord, prêt à partir');
+    expectText(renderer, 'Prix et gain visibles, aucun supplément hors app');
     expectText(renderer, 'Journal de course');
     await pressByText(renderer, 'Journal de course');
     expectText(renderer, 'Chauffeur en approche');
@@ -1101,13 +1101,13 @@ describe('driver smoke flows', () => {
     await pressByText(renderer, 'Actualiser');
 
     expectText(renderer, 'Course active');
-    expectText(renderer, 'Confirmez puis demarrez');
+    expectText(renderer, 'Confirmez puis démarrez');
     expectText(renderer, 'Distance');
     expectText(
       renderer,
       'Suivi detaille en cours de reprise. La mission reste active.',
     );
-    expectText(renderer, 'Demarrer la course');
+    expectText(renderer, 'Démarrer la course');
   });
 
   it('lets the server gate trip completion when trip detail is temporarily unavailable', async () => {
@@ -1286,15 +1286,15 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser');
-    await pressByText(renderer, 'Je suis au point de depart');
+    await pressByText(renderer, 'Je suis au point de départ');
 
     expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
       { token: 'driver-auth-client' },
       'trip-driver-1',
       'DRIVER_ARRIVING',
     );
-    expectText(renderer, 'Confirmez puis demarrez');
-    expectText(renderer, 'Demarrer la course');
+    expectText(renderer, 'Confirmez puis démarrez');
+    expectText(renderer, 'Démarrer la course');
   });
 
   it('starts the trip from offers after the driver has met the passenger', async () => {
@@ -1325,8 +1325,8 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser');
     expectText(renderer, 'GO');
-    expectText(renderer, 'Passager a bord, pret a partir');
-    await pressByText(renderer, 'Demarrer la course');
+    expectText(renderer, 'Passager à bord, prêt à partir');
+    await pressByText(renderer, 'Démarrer la course');
 
     expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
       { token: 'driver-auth-client' },
@@ -1352,7 +1352,7 @@ describe('driver smoke flows', () => {
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser');
-    await pressByText(renderer, 'Demarrer la course');
+    await pressByText(renderer, 'Démarrer la course');
     await flushMicrotasks();
 
     expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
@@ -1360,7 +1360,7 @@ describe('driver smoke flows', () => {
       'trip-driver-1',
       'IN_PROGRESS',
     );
-    expectText(renderer, 'Course demarree. Statut confirme.');
+    expectText(renderer, 'Course démarrée. Statut confirmé.');
     expectText(renderer, 'Terminer la course');
   });
 
@@ -1374,13 +1374,13 @@ describe('driver smoke flows', () => {
     );
     mockedUpdateTripStatusWithApi.mockRejectedValue(new Error('network down'));
     mockedResolveDriverAppError.mockResolvedValue({
-      message: 'La mise a jour du trajet a echoue.',
+      message: 'La mise à jour du trajet a échoué.',
       shouldClearSessionToken: false,
     });
 
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser');
-    await pressByText(renderer, 'Demarrer la course');
+    await pressByText(renderer, 'Démarrer la course');
     await flushMicrotasks();
 
     expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
@@ -1388,9 +1388,9 @@ describe('driver smoke flows', () => {
       'trip-driver-1',
       'IN_PROGRESS',
     );
-    expectText(renderer, 'Depart non confirme');
-    expectText(renderer, 'Depart non confirme. Reessayez maintenant ou actualisez le trajet.');
-    expectText(renderer, 'Demarrer la course');
+    expectText(renderer, 'Départ non confirmé');
+    expectText(renderer, 'Départ non confirmé. Réessayez maintenant ou actualisez le trajet.');
+    expectText(renderer, 'Démarrer la course');
   });
 
   it('does not show pickup code entry in the standard start flow', async () => {
@@ -1405,7 +1405,7 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<OffersScreen />);
     await pressByText(renderer, 'Actualiser');
 
-    expectText(renderer, 'Demarrer la course');
+    expectText(renderer, 'Démarrer la course');
     expect(collectText(renderer.root)).not.toContain('Code a 4 chiffres');
     expect(collectText(renderer.root)).not.toContain('Verifier le code et demarrer');
     expect(mockedVerifyPickupCodeWithApi).not.toHaveBeenCalled();
@@ -1460,7 +1460,7 @@ describe('driver smoke flows', () => {
       { token: 'driver-auth-client' },
       'trip-driver-1',
       'CANCELLED',
-      'Demande expiree',
+      'Demande expirée',
     );
     expectText(
       renderer,
@@ -1514,10 +1514,10 @@ describe('driver smoke flows', () => {
     );
     expectText(renderer, 'Prix client : 3 500 F CFA');
     expectText(renderer, 'Votre gain : 3 150 F CFA');
-    expectText(renderer, 'Paiement : Especes');
+    expectText(renderer, 'Paiement : Espèces');
     expectText(
       renderer,
-      'Encaissez le montant exact, confirmez au passager et gardez la course visible dans l historique.',
+      "Encaissez le montant exact, confirmez avec le passager et gardez la course visible dans l'historique.",
     );
     expectText(renderer, 'Aucune offre active');
   });

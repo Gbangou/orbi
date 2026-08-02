@@ -144,17 +144,17 @@ function CloseGlyph() {
 function resolveMissionStageCopy(status: string) {
   if (status === "MATCHED") {
     return {
-      eyebrow: "Aller au point de depart",
+      eyebrow: "Aller au point de départ",
       title: "Rejoignez le passager",
-      primary: "Arrivee au pickup",
+      primary: "Arrivé au point",
     };
   }
 
   if (status === "DRIVER_ARRIVING") {
     return {
-      eyebrow: "Passager au point de depart",
-      title: "Confirmez puis demarrez",
-      primary: "Depart course",
+      eyebrow: "Passager au point de départ",
+      title: "Confirmez puis démarrez",
+      primary: "Départ course",
     };
   }
 
@@ -162,7 +162,7 @@ function resolveMissionStageCopy(status: string) {
     return {
       eyebrow: "Trajet en cours",
       title: "Conduisez vers la destination",
-      primary: "Arrivee destination",
+      primary: "Arrivée destination",
     };
   }
 
@@ -176,13 +176,13 @@ function resolveMissionStageCopy(status: string) {
 function formatPaymentMethodLabel(paymentMethod: string | null | undefined) {
   switch ((paymentMethod ?? "MOBILE_MONEY").toUpperCase()) {
     case "CASH":
-      return "Especes";
+      return "Espèces";
     case "WALLET":
       return "Wallet Orbi";
     case "MOBILE_MONEY":
       return "Mobile Money";
     default:
-      return "Paiement confirme";
+      return "Paiement confirmé";
   }
 }
 
@@ -199,22 +199,22 @@ function TripStartAction({
   const styles = useMemo(() => makeTripStartActionStyles(theme), [theme]);
   const isConfirming = state === "confirming";
   const label = isConfirming
-    ? "Demarrage..."
+    ? "Démarrage..."
     : state === "confirmed"
-      ? "Course demarree"
-      : "Demarrer la course";
+      ? "Course démarrée"
+      : "Démarrer la course";
   const hint = isConfirming
-    ? "Confirmation du depart"
+    ? "Confirmation du départ"
     : state === "confirmed"
       ? "Conduisez vers la destination"
-      : "Passager a bord, pret a partir";
+      : "Passager à bord, prêt à partir";
   const isDisabled = disabled || isConfirming || state === "confirmed";
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: isConfirming }}
-      accessibilityLabel="Demarrer la course"
+      accessibilityLabel="Démarrer la course"
       disabled={isDisabled}
       onPress={onPress}
       style={({ pressed }) => [
@@ -645,7 +645,7 @@ export default function OffersScreen() {
           ),
         }));
         setStartTripRecoveryNote(null);
-        setStatus("Course demarree. Statut confirme.");
+        setStatus("Course démarrée. Statut confirmé.");
         safeHaptics.notify("success");
         return true;
       }
@@ -656,7 +656,7 @@ export default function OffersScreen() {
 
       setHistory(latestHistory);
       setStartTripRecoveryNote(null);
-      setStatus("Course demarree. Statut confirme.");
+      setStatus("Course démarrée. Statut confirmé.");
       safeHaptics.notify("success");
       return true;
     } catch {
@@ -678,7 +678,7 @@ export default function OffersScreen() {
     }
 
     await runExclusiveDriverAction(async () => {
-      setStatus("Acceptation de l offre et creation du trajet...");
+      setStatus("Acceptation de l'offre...");
 
       try {
         const { authClient } = await restoreDriverSession();
@@ -686,12 +686,12 @@ export default function OffersScreen() {
           authClient,
           rideRequestId,
         );
-        setStatus("Offre acceptee. Le trajet est pret.");
+        setStatus("Offre acceptée. Le trajet est prêt.");
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
           surface: "booking",
-          fallback: "L'acceptation de l'offre a echoue.",
+          fallback: "L'acceptation de l'offre a échoué.",
         });
 
         if (feedback.shouldClearSessionToken) {
@@ -716,7 +716,7 @@ export default function OffersScreen() {
     }
 
     await runExclusiveDriverAction(async () => {
-      setStatus("Refus de l offre en cours...");
+      setStatus("Refus de l'offre...");
 
       try {
         const { authClient } = await restoreDriverSession();
@@ -724,12 +724,12 @@ export default function OffersScreen() {
           authClient,
           rideRequestId,
         );
-        setStatus("Offre refusee. Vous recevrez une autre proposition.");
+        setStatus("Offre refusée. Vous recevrez une autre proposition.");
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
           surface: "booking",
-          fallback: "Le refus explicite de l'offre a echoue.",
+          fallback: "Le refus de l'offre a échoué.",
         });
 
         if (feedback.shouldClearSessionToken) {
@@ -750,7 +750,7 @@ export default function OffersScreen() {
     nextStatus: "DRIVER_ARRIVING" | "IN_PROGRESS" | "COMPLETED",
   ) {
     return await runExclusiveDriverAction(async () => {
-      setStatus(`Mise a jour de la course: ${formatOperationalStatus(nextStatus)}...`);
+      setStatus(`Mise à jour de la course: ${formatOperationalStatus(nextStatus)}...`);
 
       try {
         const { authClient } = await restoreDriverSession();
@@ -778,7 +778,7 @@ export default function OffersScreen() {
               : trip,
           ),
         }));
-        setStatus(`Course mise a jour: ${formatOperationalStatus(response.trip.status)}.`);
+        setStatus(`Course mise à jour: ${formatOperationalStatus(response.trip.status)}.`);
         const gross = toFiniteEarningsNumber(response.trip.actualFare);
         const net = toFiniteEarningsNumber(response.trip.driverPayout);
         if (nextStatus === "COMPLETED" && gross !== null && net !== null) {
@@ -788,9 +788,9 @@ export default function OffersScreen() {
             netLabel: formatDriverEarningsAmount(net),
             paymentLabel,
             paymentInstruction:
-              paymentLabel === "Especes"
-                ? "Encaissez le montant exact, confirmez au passager et gardez la course visible dans l historique."
-                : "Le passager doit finaliser le paiement sur son telephone. Verifiez le statut avant de quitter la zone.",
+              paymentLabel === "Espèces"
+                ? "Encaissez le montant exact, confirmez avec le passager et gardez la course visible dans l'historique."
+                : "Le passager finalise le paiement sur son téléphone. Vérifiez le statut avant de quitter la zone.",
           });
         }
         await loadDriverData();
@@ -805,7 +805,7 @@ export default function OffersScreen() {
 
         const feedback = await resolveDriverAppError(error, {
           surface: "active-trip",
-          fallback: "La mise a jour du trajet a echoue.",
+          fallback: "La mise à jour du trajet a échoué.",
         });
 
         if (feedback.shouldClearSessionToken) {
@@ -814,14 +814,14 @@ export default function OffersScreen() {
 
         const nextMessage =
           nextStatus === "IN_PROGRESS"
-            ? "Depart non confirme. Reessayez maintenant ou actualisez le trajet."
+            ? "Départ non confirmé. Réessayez maintenant ou actualisez le trajet."
             : feedback.message;
         setStatus(nextMessage);
         if (nextStatus === "IN_PROGRESS") {
           setStartTripRecoveryNote(nextMessage);
         } else {
           Alert.alert(
-            nextStatus === "COMPLETED" ? "Course non terminee" : "Mise a jour echouee",
+            nextStatus === "COMPLETED" ? "Course non terminée" : "Mise à jour échouée",
             feedback.message,
           );
         }
@@ -836,7 +836,7 @@ export default function OffersScreen() {
     }
 
     if (activeTrip?.id === tripId && activeTrip.status === "IN_PROGRESS") {
-      setStatus("Course deja demarree. Continuez vers la destination.");
+      setStatus("Course déjà démarrée. Continuez vers la destination.");
       setStartTripRecoveryNote(null);
       return;
     }
@@ -844,7 +844,7 @@ export default function OffersScreen() {
     safeHaptics.impact("medium");
     setIsStartTripConfirming(true);
     setStartTripRecoveryNote(null);
-    setStatus("Demarrage de la course...");
+    setStatus("Démarrage de la course...");
     const started = await handleAdvanceTrip(tripId, "IN_PROGRESS");
 
     if (started) {
@@ -891,7 +891,7 @@ export default function OffersScreen() {
     const REASONS = [
       "Passager introuvable",
       "Zone inaccessible",
-      "Demande expiree",
+      "Demande expirée",
     ];
 
     Alert.alert(
@@ -926,7 +926,7 @@ export default function OffersScreen() {
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
           surface: "active-trip",
-          fallback: "L annulation de la course a echoue.",
+          fallback: "L'annulation de la course a échoué.",
         });
         if (feedback.shouldClearSessionToken) {
           setSessionToken(null);
@@ -952,7 +952,7 @@ export default function OffersScreen() {
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
           surface: "safety",
-          fallback: "Le signalement de l'incident a echoue.",
+          fallback: "Le signalement de l'incident a échoué.",
         });
 
         if (feedback.shouldClearSessionToken) {
@@ -1005,7 +1005,7 @@ export default function OffersScreen() {
         <>
           <FlowActionButton
             disabled={isSubmitting}
-            label="Je suis au point de depart"
+            label="Je suis au point de départ"
             onPress={() => handleAdvanceTrip(activeTrip.id, "DRIVER_ARRIVING")}
             tone="amber"
             emphasis="primary"
@@ -1027,25 +1027,25 @@ export default function OffersScreen() {
         <View style={styles.codeBlock}>
           <View style={styles.departureChecklist}>
             <View style={styles.departureChecklistHeader}>
-              <Text style={styles.departureChecklistTitle}>Checklist depart</Text>
+              <Text style={styles.departureChecklistTitle}>Départ sécurisé</Text>
               <Text style={styles.departureChecklistPill}>{activePaymentMethodLabel}</Text>
             </View>
             <View style={styles.departureChecklistRow}>
               <Text style={styles.departureChecklistDot}>1</Text>
               <Text style={styles.departureChecklistText}>
-                Passager a bord et pret a partir
+                Passager à bord, prêt à partir
               </Text>
             </View>
             <View style={styles.departureChecklistRow}>
               <Text style={styles.departureChecklistDot}>2</Text>
               <Text style={styles.departureChecklistText}>
-                Depart confirme au bon point de prise en charge
+                Départ confirmé au bon point de prise en charge
               </Text>
             </View>
             <View style={styles.departureChecklistRow}>
               <Text style={styles.departureChecklistDot}>3</Text>
               <Text style={styles.departureChecklistText}>
-                Prix et gain visibles, aucun supplement hors app
+                Prix et gain visibles, aucun supplément hors app
               </Text>
             </View>
           </View>
@@ -1057,14 +1057,14 @@ export default function OffersScreen() {
           {startTripRecoveryNote ? (
             <OrbiStatusBanner
               tone="amber"
-              title="Depart non confirme"
+              title="Départ non confirmé"
               message={startTripRecoveryNote}
             />
           ) : startTripToggleState === "confirming" ? (
             <OrbiStatusBanner
               tone="sky"
-              title="Depart en confirmation"
-              message="Gardez le passager a bord. Le depart sera confirme automatiquement si le reseau ralentit."
+              title="Départ en confirmation"
+              message="Gardez le passager à bord. Le départ sera confirmé automatiquement si le réseau ralentit."
             />
           ) : null}
           <FlowActionButton
@@ -1114,7 +1114,7 @@ export default function OffersScreen() {
       {incomingOffer && !activeTrip ? (
         <View style={styles.incomingBackdrop}>
           <Pressable
-            accessibilityLabel="Fermer l offre"
+            accessibilityLabel="Fermer l'offre"
             style={styles.incomingScrim}
             onPress={() => setIncomingOfferId(null)}
           />
@@ -1145,13 +1145,13 @@ export default function OffersScreen() {
               <View style={styles.incomingMetrics}>
                 <View style={styles.incomingMetric}>
                   <Text style={styles.incomingMetricValue}>
-                    {formatDriverOfferDistance(incomingOffer.pickupDistanceKm, "A confirmer")}
+                    {formatDriverOfferDistance(incomingOffer.pickupDistanceKm, "À confirmer")}
                   </Text>
-                  <Text style={styles.incomingMetricLabel}>Pickup</Text>
+                  <Text style={styles.incomingMetricLabel}>Prise en charge</Text>
                 </View>
                 <View style={styles.incomingMetric}>
                   <Text style={styles.incomingMetricValue}>
-                    {formatDriverOfferDistance(incomingOffer.distanceKm, "A confirmer")}
+                    {formatDriverOfferDistance(incomingOffer.distanceKm, "À confirmer")}
                   </Text>
                   <Text style={styles.incomingMetricLabel}>Trajet</Text>
                 </View>
@@ -1162,7 +1162,7 @@ export default function OffersScreen() {
                           incomingOffer.reservationExpiresAt,
                           reservationNow,
                         )
-                      : "A confirmer"}
+                      : "À confirmer"}
                   </Text>
                   <Text style={styles.incomingMetricLabel}>Temps</Text>
                 </View>
@@ -1479,7 +1479,7 @@ export default function OffersScreen() {
         {!activeTrip && flow.operationalStatus === "SUSPENDED" ? (
           <OrbiStatusBanner
             title="Compte suspendu"
-            message="Les offres restent fermees jusqu a reactivation du compte."
+            message="Les offres restent fermées jusqu'à réactivation du compte."
             tone="danger"
           />
         ) : !activeTrip && flow.availabilityStatus !== "ONLINE" ? (
@@ -1528,7 +1528,7 @@ export default function OffersScreen() {
                 <Text style={styles.emptyMeta} numberOfLines={2}>
                   {flow.canReceiveOffers
                     ? "Vous êtes disponible. Les courses apparaîtront ici."
-                    : "Passez en ligne depuis Accueil quand vous etes pret."}
+                    : "Passez en ligne depuis Accueil quand vous êtes prêt."}
                 </Text>
               </View>
               <View style={styles.emptyRadar}>
@@ -1582,7 +1582,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   incomingSheet: {
     margin: 12,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E8E8E8',
@@ -1612,7 +1612,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   incomingPulseDot: {
     width: 16,
     height: 16,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: '#111111',
   },
   incomingTitleCol: { flex: 1, gap: 3 },
@@ -1649,7 +1649,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textAlign: "right",
   },
   incomingRoute: {
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: '#E8E8E8',
     backgroundColor: '#F7F7F7',
@@ -1677,7 +1677,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   incomingMetric: {
     flex: 1,
     minHeight: 54,
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: '#E8E8E8',
     paddingHorizontal: 9,
@@ -1735,7 +1735,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: '#F3F3F3',
     borderWidth: 1,
     borderColor: '#E8E8E8',
@@ -1755,37 +1755,37 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: '#525252',
   },
-  missionCard: { padding: 9, gap: 8, borderColor: '#E8E8E8', borderRadius: 8, backgroundColor: '#FFFFFF' },
+  missionCard: { padding: 9, gap: 8, borderColor: '#E8E8E8', borderRadius: 4, backgroundColor: '#FFFFFF' },
   stageTracker: { paddingHorizontal: 2 },
   missionStatusRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 5 },
   missionStatusDot: { width: 7, height: 7, borderRadius: 4 },
   missionStatusLabel: { fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold" },
   missionTransition: { fontSize: 12, color: '#6B6B6B', fontFamily: "Inter_400Regular" },
-  missionRoute: { backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8', paddingHorizontal: 12, paddingVertical: 2 },
+  missionRoute: { backgroundColor: '#FFFFFF', borderRadius: 4, borderWidth: 1, borderColor: '#E8E8E8', paddingHorizontal: 12, paddingVertical: 2 },
   missionRouteRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 },
   missionRouteDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   missionRouteSep: { height: 1, backgroundColor: '#E8E8E8', marginLeft: 18 },
   missionRouteText: { flex: 1, fontSize: 13, fontWeight: "600", fontFamily: "Inter_500Medium", color: '#111111' },
-  riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8', padding: 10 },
+  riderCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: '#FFFFFF', borderRadius: 4, borderWidth: 1, borderColor: '#E8E8E8', padding: 10 },
   riderBadge: { flex: 1 },
   riderFareColumn: { alignItems: "flex-end", gap: 2 },
   riderFare: { fontSize: 16, fontWeight: "800", fontFamily: "Inter_700Bold", color: '#111111' },
   riderNetFare: { fontSize: 11, fontWeight: "700", fontFamily: "Inter_700Bold", color: '#6B6B6B' },
   navigationMapShell: {
     position: "relative",
-    borderRadius: 8,
+    borderRadius: 4,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: '#E8E8E8',
     backgroundColor: '#F3F3F3',
   },
-  missionMap: { height: 300, borderRadius: 8, overflow: "hidden" },
+  missionMap: { height: 300, borderRadius: 4, overflow: "hidden" },
   navigationMapBadge: {
     position: "absolute",
     left: 12,
     top: 12,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: "rgba(0,0,0,0.82)",
     paddingHorizontal: 11,
     paddingVertical: 6,
@@ -1799,7 +1799,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   missionNavigationPanel: {
     gap: 7,
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: '#E8E8E8',
     backgroundColor: '#FFFFFF',
@@ -1830,7 +1830,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   missionMetric: {
     flex: 1,
     minHeight: 52,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: '#F7F7F7',
     borderWidth: 1,
     borderColor: '#E8E8E8',
@@ -1857,7 +1857,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: '#F7F7F7',
     borderWidth: 1,
     borderColor: '#E8E8E8',
@@ -1886,7 +1886,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   supportTimelineWrap: { gap: 8 },
   supportTimelineToggle: {
     alignSelf: "flex-start",
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: '#E8E8E8',
     backgroundColor: '#F3F3F3',
@@ -1905,7 +1905,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8E8E8',
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    borderRadius: 4,
   },
   emptyHeader: {
     flexDirection: "row",
@@ -1921,7 +1921,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: '#F3F3F3',
     paddingHorizontal: 9,
     paddingVertical: 4,
@@ -2022,7 +2022,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: '#111111',
   },
   departureChecklistPill: {
-    borderRadius: 999,
+    borderRadius: 4,
     overflow: "hidden",
     backgroundColor: theme.colors.text,
     color: theme.colors.textInverse,
@@ -2040,7 +2040,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   departureChecklistDot: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: 4,
     overflow: "hidden",
     backgroundColor: theme.colors.text,
     color: theme.colors.textInverse,
@@ -2064,7 +2064,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   missionSectionLabel: { fontSize: 11, fontWeight: "800", fontFamily: "Inter_700Bold", color: '#111111', textTransform: "uppercase", letterSpacing: 0 },
   missionSignalsPanel: { gap: 7 },
   missionSignalGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  missionSignalTile: { width: "48%", minHeight: 44, borderRadius: 8, borderWidth: 1, borderColor: '#E8E8E8', backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
+  missionSignalTile: { width: "48%", minHeight: 44, borderRadius: 4, borderWidth: 1, borderColor: '#E8E8E8', backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
   missionSignalTileDanger: { borderColor: "#BDBDB7", backgroundColor: "#F7F7F4" },
   missionSignalLabel: { fontSize: 9, fontWeight: "800", fontFamily: "Inter_700Bold", color: '#6B6B6B', textTransform: "uppercase", letterSpacing: 0 },
   missionSignalValue: { fontSize: 11, fontWeight: "800", fontFamily: "Inter_700Bold", color: '#111111', lineHeight: 15 },
@@ -2089,7 +2089,7 @@ const makeIconStyles = (theme: OrbiTheme) => StyleSheet.create({
   refreshArc: {
     width: 15,
     height: 15,
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 2,
     borderColor: theme.colors.textSoft,
     borderLeftColor: "transparent",
@@ -2118,7 +2118,7 @@ const makeIconStyles = (theme: OrbiTheme) => StyleSheet.create({
     position: "absolute",
     width: 14,
     height: 2,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: theme.colors.textSoft,
   },
   closeLineA: {
@@ -2132,7 +2132,7 @@ const makeIconStyles = (theme: OrbiTheme) => StyleSheet.create({
 const makeTripStartActionStyles = (theme: OrbiTheme) => StyleSheet.create({
   button: {
     minHeight: 70,
-    borderRadius: 999,
+    borderRadius: 4,
     paddingVertical: 9,
     paddingHorizontal: 10,
     flexDirection: "row",
