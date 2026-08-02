@@ -20,7 +20,7 @@ export function isFiniteEarningsNumber(value: unknown): value is number {
 
 export function formatDriverEarningsAmount(value: unknown) {
   const numeric = toFiniteEarningsNumber(value);
-  return numeric !== null ? formatXof(numeric) : 'Montant a confirmer';
+  return numeric !== null ? formatXof(numeric) : 'Montant à confirmer';
 }
 
 export function formatDriverEarningsCompactAmount(value: unknown) {
@@ -36,7 +36,7 @@ export function formatDriverEarningsCompactAmount(value: unknown) {
 
 export function formatDriverEarningsCount(value: unknown) {
   const numeric = toFiniteEarningsNumber(value);
-  return numeric !== null && numeric >= 0 ? String(Math.floor(numeric)) : 'A confirmer';
+  return numeric !== null && numeric >= 0 ? String(Math.floor(numeric)) : 'À confirmer';
 }
 
 export function formatDriverEarningsRatioPercent(value: unknown, fallback = '--') {
@@ -75,18 +75,18 @@ export function buildDriverEarningsDeltaLabel(previousToday: unknown, nextToday:
     return null;
   }
 
-  return `Nouveau gain comptabilise: +${formatDriverEarningsAmount(next - previous)} sur le jour.`;
+  return `Nouveau gain comptabilisé: +${formatDriverEarningsAmount(next - previous)} aujourd'hui.`;
 }
 
 export function formatDriverTripCompletedAt(completedAt: unknown) {
   if (typeof completedAt !== 'string' || completedAt.trim().length === 0) {
-    return 'En attente de cloture';
+    return 'En attente de clôture';
   }
 
   const completedAtDate = new Date(completedAt);
 
   if (!Number.isFinite(completedAtDate.getTime())) {
-    return 'Date de cloture indisponible';
+    return 'Date de clôture indisponible';
   }
 
   return completedAtDate.toLocaleString('fr-FR', {
@@ -171,18 +171,18 @@ export function buildDriverEarningsTrustSummary(
       settlement.recentPlatformFee,
     ),
     settlementStateLabel: hasAnomaly
-      ? 'Verification requise'
+      ? 'Vérification requise'
       : earnings.recentTrips.length > 0
         ? 'Valide'
         : 'En attente',
     settlementTone: hasAnomaly ? ('amber' as const) : ('sky' as const),
     note: hasAnomaly
-      ? 'Verification requise: un montant doit etre confirme.'
+      ? 'Vérification requise: un montant doit être confirmé.'
       : compensationWeek > 0
-        ? `Les revenus incluent ${formatDriverEarningsAmount(compensationWeek)} d indemnites annulation validees cette semaine.`
+        ? `Les revenus incluent ${formatDriverEarningsAmount(compensationWeek)} d'indemnités d'annulation validées cette semaine.`
       : earnings.recentTrips.length > 0
-        ? 'Les montants affiches sont des gains chauffeur nets issus des courses cloturees.'
-        : 'Aucun paiement recent pour le moment.',
+        ? 'Les montants affichés sont les gains nets des courses clôturées.'
+        : 'Aucun paiement récent pour le moment.',
   };
 }
 
@@ -223,12 +223,12 @@ export function buildDriverDailyOperatingCompass(
   const payoutRateLabel = formatDriverEarningsRatioPercent(payoutRate);
   const primaryAction =
     remainingTrips <= 0
-      ? 'Objectif atteint: gardez une presence selective sur les offres tres proches.'
+      ? 'Objectif atteint: gardez une présence sélective sur les offres très proches.'
       : observedTrips === 0
-        ? 'Priorite: rester en ligne pres des zones de depart denses et accepter une premiere course courte.'
+        ? 'Priorité: rester en ligne près des zones de départ denses et accepter une première course courte.'
         : remainingTrips <= 2
-          ? 'Encore quelques courses courtes peuvent verrouiller une bonne journee.'
-          : 'Cherchez les pickups courts et les offres avec gain net clair avant les longs trajets.';
+          ? 'Encore quelques courses courtes peuvent verrouiller une bonne journée.'
+          : 'Cherchez les prises en charge courtes et les offres avec gain net clair avant les longs trajets.';
 
   return {
     targetAmountLabel: formatDriverEarningsAmount(targetAmount),
@@ -239,12 +239,12 @@ export function buildDriverDailyOperatingCompass(
     primaryAction,
     headline:
       progressPercent >= 100
-        ? 'Journee rentabilisee'
+        ? 'Journée rentabilisée'
         : progressPercent >= 60
           ? 'Bonne cadence'
           : observedTrips > 0
-            ? 'Cadence a renforcer'
-            : 'Premiere course a securiser',
+            ? 'Cadence à renforcer'
+            : 'Première course à sécuriser',
     indicators: [
       { label: 'Objectif', value: formatDriverEarningsAmount(targetAmount) },
       { label: 'Reste', value: formatDriverEarningsAmount(remainingAmount) },

@@ -608,7 +608,7 @@ describe('driver smoke flows', () => {
     const renderer = await renderScreen(<RevenusScreen />);
     await pressByText(renderer, 'Actualiser');
 
-    expectText(renderer, 'Revenus a jour. Course active: Chauffeur assigné.');
+    expectText(renderer, 'Revenus à jour. Course active: Chauffeur assigné.');
     expectText(renderer, 'Universite Joseph Ki-Zerbo vers Ouaga 2000');
     expectText(renderer, 'Cap du jour');
     expectText(renderer, 'Semaine');

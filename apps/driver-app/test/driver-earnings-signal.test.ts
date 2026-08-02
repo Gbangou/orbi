@@ -12,15 +12,15 @@ import {
 
 describe('driver earnings signal helpers', () => {
   it('keeps dirty numeric earnings fields out of driver-facing copy', () => {
-    expect(formatDriverEarningsAmount(Number.NaN)).toBe('Montant a confirmer');
+    expect(formatDriverEarningsAmount(Number.NaN)).toBe('Montant à confirmer');
     expect(formatDriverEarningsCompactAmount(Number.NaN)).toBe('Indisponible');
-    expect(formatDriverEarningsCount(Number.NaN)).toBe('A confirmer');
+    expect(formatDriverEarningsCount(Number.NaN)).toBe('À confirmer');
     expect(buildDriverEarningsDeltaLabel(1000, Number.NaN)).toBeNull();
   });
 
   it('builds a safe positive earnings delta label', () => {
     expect(buildDriverEarningsDeltaLabel(1000, 2500)).toBe(
-      `Nouveau gain comptabilise: +${formatDriverEarningsAmount(1500)} sur le jour.`,
+      `Nouveau gain comptabilisé: +${formatDriverEarningsAmount(1500)} aujourd'hui.`,
     );
   });
 
@@ -32,13 +32,13 @@ describe('driver earnings signal helpers', () => {
     expect(formatDriverEarningsCount('6,9')).toBe('6');
     expect(formatDriverEarningsRatioPercent('0,82')).toBe('82%');
     expect(buildDriverEarningsDeltaLabel('1000', '2500')).toBe(
-      `Nouveau gain comptabilise: +${formatDriverEarningsAmount(1500)} sur le jour.`,
+      `Nouveau gain comptabilisé: +${formatDriverEarningsAmount(1500)} aujourd'hui.`,
     );
   });
 
   it('formats dirty trip completion dates without leaking Invalid Date', () => {
-    expect(formatDriverTripCompletedAt(null)).toBe('En attente de cloture');
-    expect(formatDriverTripCompletedAt('not-a-date')).toBe('Date de cloture indisponible');
+    expect(formatDriverTripCompletedAt(null)).toBe('En attente de clôture');
+    expect(formatDriverTripCompletedAt('not-a-date')).toBe('Date de clôture indisponible');
   });
 
   it('builds a net payout trust summary for recent completed trips', () => {
@@ -175,7 +175,7 @@ describe('driver earnings signal helpers', () => {
       recentTrips: [],
     });
 
-    expect(summary.settlementStateLabel).toBe('Verification requise');
+    expect(summary.settlementStateLabel).toBe('Vérification requise');
     expect(summary.settlementTone).toBe('amber');
   });
 
@@ -235,6 +235,6 @@ describe('driver earnings signal helpers', () => {
       remainingTrips: 4,
       payoutRateLabel: '82%',
     });
-    expect(compass.primaryAction).toContain('pickups courts');
+    expect(compass.primaryAction).toContain('prises en charge courtes');
   });
 });

@@ -189,10 +189,10 @@ describe('driver-active-flow', () => {
     });
 
     expect(buildDriverEarningsStatusLabel({ flow: onlineFlow })).toBe(
-      'Revenus a jour. Vous etes en ligne pour recevoir des courses.',
+      'Revenus à jour. Vous êtes en ligne pour recevoir des courses.',
     );
     expect(buildDriverEarningsStatusLabel({ flow: offlineFlow })).toBe(
-      'Revenus a jour. Passez en ligne pour recevoir des courses.',
+      'Revenus à jour. Passez en ligne pour recevoir des courses.',
     );
     expect(buildDriverProfileStatusLabel({ flow: onlineFlow })).toBe(
       'Profil charge. Chauffeur en ligne.',
@@ -475,7 +475,7 @@ describe('driver-active-flow', () => {
     });
 
     expect(buildDriverEarningsStatusLabel({ flow })).toBe(
-      'Revenus a jour. Course active: En cours.',
+      'Revenus à jour. Course active: En cours.',
     );
   });
 });

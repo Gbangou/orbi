@@ -71,6 +71,12 @@ const fallbackEarnings: DriverEarningsResponse = {
   recentTrips: [],
 };
 
+function formatDriverTripCountLabel(value: unknown) {
+  const count = toFiniteEarningsNumber(value);
+  const label = formatDriverEarningsCount(value);
+  return `${label} ${count !== null && Math.floor(count) > 1 ? 'courses' : 'course'}`;
+}
+
 // ── Graphique hebdomadaire — gains par jour ───────────────────────────────────
 
 const DAY_LABELS_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -154,7 +160,7 @@ function WeeklyEarningsChart({
 const makeWeeklyStyles = (theme: OrbiTheme) => StyleSheet.create({
   card: {
     backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: 16,
@@ -255,7 +261,7 @@ function DriverOperatingCompassCard({
 const makeCompassStyles = (theme: OrbiTheme) => StyleSheet.create({
   card: {
     backgroundColor: '#071311',
-    borderRadius: 8,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: 'rgba(0,201,167,0.26)',
     padding: 14,
@@ -289,7 +295,7 @@ const makeCompassStyles = (theme: OrbiTheme) => StyleSheet.create({
   progressBadge: {
     minWidth: 48,
     flexShrink: 0,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: 'rgba(0,201,167,0.14)',
     paddingHorizontal: 8,
     paddingVertical: 5,
@@ -325,7 +331,7 @@ const makeCompassStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   indicator: {
     width: '48%',
-    borderRadius: 12,
+    borderRadius: 4,
     backgroundColor: 'rgba(255,255,255,0.07)',
     padding: 10,
     gap: 2,
@@ -386,8 +392,8 @@ export default function RevenusScreen() {
       setStatus(buildDriverEarningsStatusLabel({ flow }));
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
-        network: 'Vos revenus seront actualises des que la connexion revient.',
-        fallback: 'Vos revenus seront actualises des que la connexion revient.',
+        network: 'Vos revenus seront actualisés dès que la connexion revient.',
+        fallback: 'Vos revenus seront actualisés dès que la connexion revient.',
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -425,9 +431,9 @@ export default function RevenusScreen() {
       if (deltaLabel) {
         setEarningsTransitionLabel(deltaLabel);
       } else if (earnings.summary.completedTrips > previousSummary.completedTrips) {
-        setEarningsTransitionLabel('Une course supplementaire vient d etre cloturee.');
+        setEarningsTransitionLabel('Une course supplémentaire vient d’être clôturée.');
       } else if (earnings.summary.week !== previousSummary.week) {
-        setEarningsTransitionLabel('Le recap hebdomadaire est a jour.');
+        setEarningsTransitionLabel('Le récapitulatif hebdomadaire est à jour.');
       }
     }
 
@@ -510,7 +516,7 @@ export default function RevenusScreen() {
             {formatDriverEarningsAmount(earnings.summary.today)}
           </Text>
           <Text style={styles.heroMeta}>
-            {formatDriverEarningsCount(earnings.summary.completedTrips)} course(s)
+            {formatDriverTripCountLabel(earnings.summary.completedTrips)}
             {flow.primaryStatusLabel ? ` · ${flow.primaryStatusLabel}` : ''}
           </Text>
           {status && !status.includes('Chargement') ? (
@@ -538,7 +544,7 @@ export default function RevenusScreen() {
             tone="amber"
             label={td('earningsWeek')}
             value={formatDriverEarningsCompactAmount(earnings.summary.week)}
-            helper={`${formatDriverEarningsCount(earnings.summary.completedTrips)} courses`}
+            helper={formatDriverTripCountLabel(earnings.summary.completedTrips)}
           />
           <OrbiMetricTile
             style={styles.metricTile}
@@ -894,10 +900,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   tripsSection: { gap: 8 },
   emptyCard: {
     backgroundColor: theme.colors.backgroundAlt,
-    borderRadius: 14,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: 18,
+    padding: 16,
     gap: 4,
     alignItems: 'center',
   },
@@ -923,7 +929,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   tripRowFresh: {
     backgroundColor: theme.colors.accentLight,
-    borderRadius: 10,
+    borderRadius: 4,
     paddingHorizontal: 10,
     borderBottomWidth: 0,
     borderWidth: 1,

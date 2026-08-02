@@ -424,16 +424,16 @@ export function buildDriverEarningsStatusLabel(input: {
   flow: DriverActiveFlowSummary;
 }) {
   if (input.flow.activeTrip) {
-    return `Revenus a jour. Course active: ${input.flow.primaryStatusLabel}.`;
+    return `Revenus à jour. Course active: ${input.flow.primaryStatusLabel}.`;
   }
 
   if (input.flow.operationalStatus === "SUSPENDED") {
-    return "Revenus a jour. Compte suspendu, reprise en attente.";
+    return "Revenus à jour. Compte suspendu, reprise en attente.";
   }
 
   return input.flow.availabilityStatus === "ONLINE"
-    ? "Revenus a jour. Vous etes en ligne pour recevoir des courses."
-    : "Revenus a jour. Passez en ligne pour recevoir des courses.";
+    ? "Revenus à jour. Vous êtes en ligne pour recevoir des courses."
+    : "Revenus à jour. Passez en ligne pour recevoir des courses.";
 }
 
 export function buildDriverProfileStatusLabel(input: {

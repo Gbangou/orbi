@@ -71,4 +71,24 @@ describe('driver mobile UX guards', () => {
     expect(source).not.toContain('borderRadius: 16');
     expect(source).not.toContain('borderRadius: 14');
   });
+
+  it('keeps earnings finance surfaces concise and production-ready', () => {
+    const source = readAppFile('app/(tabs)/revenus.tsx');
+    const signalSource = readAppFile('lib/driver-earnings-signal.ts');
+    const flowSource = readAppFile('lib/driver-active-flow.ts');
+
+    expect(source).toContain('formatDriverTripCountLabel');
+    expect(source).not.toContain('course(s)');
+    expect(source).not.toContain('actualises des que');
+    expect(source).not.toContain('borderRadius: 16');
+    expect(source).not.toContain('borderRadius: 14');
+    expect(source).not.toContain('borderRadius: 12');
+    expect(source).not.toContain('borderRadius: 10');
+    expect(source).not.toContain('borderRadius: 8');
+    expect(signalSource).toContain('Montant à confirmer');
+    expect(signalSource).not.toContain('Montant a confirmer');
+    expect(signalSource).not.toContain('pickups courts');
+    expect(flowSource).toContain('Revenus à jour');
+    expect(flowSource).not.toContain('Revenus a jour');
+  });
 });
