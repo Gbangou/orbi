@@ -86,8 +86,13 @@ describe('rider mobile UX guards', () => {
     const activitySource = readAppFile('app/(tabs)/activity.tsx');
 
     expect(receiptSource).toContain('heroFare:');
-    expect(receiptSource).toContain('fontSize: 34');
+    expect(receiptSource).toContain('fontSize: 30');
     expect(receiptSource).toContain('width: 44');
+    expect(receiptSource).toContain('label="Partager le reçu"');
+    expect(receiptSource).toContain('"Payer maintenant"');
+    expect(receiptSource).toContain('label="Évaluer le trajet"');
+    expect(receiptSource).not.toContain('label="Envoyer le recu"');
+    expect(receiptSource).not.toContain('label="Finaliser le paiement"');
     expect(receiptSource).toContain('formatRiderReceiptStatus(receiptStatus)');
     expect(receiptSource).toContain('formatRiderPaymentMethodLabel(trip.paymentMethod)');
     expect(receiptSource).toContain('formatRiderReceiptProvider(paymentIntent.provider)');

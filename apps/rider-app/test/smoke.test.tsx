@@ -1855,10 +1855,10 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<ReceiptScreen />);
     await flushMicrotasks();
 
-    expectText(renderer, 'Paiement a finaliser');
-    expectText(renderer, 'Montant a payer: 2 500 F CFA. Finalisez le paiement pour terminer.');
-    expectText(renderer, 'Finaliser le paiement');
-    await pressByText(renderer, 'Finaliser le paiement');
+    expectText(renderer, 'Paiement à finaliser');
+    expectText(renderer, 'Montant à payer: 2 500 F CFA. Confirmez le paiement pour clôturer.');
+    expectText(renderer, 'Payer maintenant');
+    await pressByText(renderer, 'Payer maintenant');
     await flushMicrotasks();
 
     expect(mockedCreateCheckoutIntentWithApi).toHaveBeenCalledWith(
@@ -1871,8 +1871,8 @@ describe('rider smoke flows', () => {
       }),
       { idempotencyKey: 'receipt-ride-request-1-mobile-money' },
     );
-    expectText(renderer, 'Paiement initialise. Confirmez la demande sur votre telephone. Reference ORBI-PAYMENT.');
-    expectText(renderer, 'Evaluer ce trajet');
+    expectText(renderer, 'Paiement prêt. Confirmez la demande sur votre téléphone. Référence ORBI-PAYMENT.');
+    expectText(renderer, 'Évaluer le trajet');
   });
 
   it('reports a rider incident from activity', async () => {

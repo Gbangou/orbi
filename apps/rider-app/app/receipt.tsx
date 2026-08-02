@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -319,7 +318,7 @@ export default function ReceiptScreen() {
     try {
       await Share.share({
         message: [
-          'Recu de trajet Orbi',
+          'Reçu de trajet Orbi',
           `De : ${trip.pickupAddress}`,
           `Vers : ${trip.destinationAddress}`,
           `Montant : ${formatRiderMoneyAmount(trip.actualFare)}`,
@@ -335,7 +334,7 @@ export default function ReceiptScreen() {
 
     const trip = detail.trip;
     setPaymentSubmitting(true);
-    setPaymentMessage('Initialisation du paiement Mobile Money...');
+    setPaymentMessage('Préparation du paiement Mobile Money...');
 
     try {
       const { authClient } = await restoreRiderSession();
@@ -344,7 +343,7 @@ export default function ReceiptScreen() {
 
       if (!customerPhoneNumber) {
         setPaymentMessage(
-          'Ajoutez un numero Mobile Money dans votre profil avant de finaliser le paiement.',
+        'Ajoutez un numéro Mobile Money dans votre profil avant de finaliser le paiement.',
         );
         return;
       }
@@ -364,17 +363,17 @@ export default function ReceiptScreen() {
       );
 
       setPaymentMessage(
-        `${formatRiderReceiptProvider(paymentIntent.provider)} initialise. Confirmez la demande sur votre telephone. Reference ${formatRiderReceiptReference(paymentIntent.transactionRef)}.`,
+        `${formatRiderReceiptProvider(paymentIntent.provider)} prêt. Confirmez la demande sur votre téléphone. Référence ${formatRiderReceiptReference(paymentIntent.transactionRef)}.`,
       );
       const refreshed = await fetchTripDetail(authClient, trip.id);
       setDetail(refreshed);
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: 'payments',
-        fallback: "Le paiement n'a pas pu etre initialise.",
+        fallback: "Le paiement n'a pas pu être préparé.",
       });
       setPaymentMessage(feedback.message);
-      Alert.alert('Paiement non initialise', feedback.message);
+      Alert.alert('Paiement non préparé', feedback.message);
     } finally {
       setPaymentSubmitting(false);
     }
@@ -453,7 +452,7 @@ export default function ReceiptScreen() {
     return (
       <SafeAreaView style={styles.centered}>
         <ActivityIndicator size="large" color={theme.colors.teal} />
-        <Text style={styles.loadingText}>Chargement du reçu…</Text>
+        <Text style={styles.loadingText}>Chargement du reçu...</Text>
       </SafeAreaView>
     );
   }
@@ -539,11 +538,11 @@ export default function ReceiptScreen() {
         </OrbiSurface>
 
         <OrbiStatusBanner
-          title={paymentSettled ? "Recu disponible" : "Paiement a finaliser"}
+          title={paymentSettled ? "Reçu disponible" : "Paiement à finaliser"}
           message={
             paymentSettled
-              ? "Trajet, paiement et details chauffeur disponibles. Vous pouvez l envoyer par SMS, WhatsApp ou email."
-              : `Montant a payer: ${formatRiderMoneyAmount(trip.actualFare)}. Finalisez le paiement pour terminer.`
+              ? "Paiement confirmé. Vous pouvez partager le reçu à tout moment."
+              : `Montant à payer: ${formatRiderMoneyAmount(trip.actualFare)}. Confirmez le paiement pour clôturer.`
           }
           tone={paymentSettled ? "sky" : "amber"}
         />
@@ -551,7 +550,7 @@ export default function ReceiptScreen() {
           <OrbiStatusBanner
             title="Paiement"
             message={paymentMessage}
-            tone={paymentMessage.includes('initialise') ? 'teal' : 'amber'}
+            tone={paymentMessage.includes('prêt') ? 'teal' : 'amber'}
           />
         ) : null}
 
@@ -598,9 +597,9 @@ export default function ReceiptScreen() {
           <Row label="Mode de paiement" value={formatRiderPaymentMethodLabel(trip.paymentMethod)} />
           <Row
             label="Statut"
-            value={paymentSettled ? 'Regle' : receiptStatusLabel}
+            value={paymentSettled ? 'Réglé' : receiptStatusLabel}
           />
-          <Row label="Total facturé" value={formatRiderMoneyAmount(trip.actualFare)} bold />
+          <Row label="Total" value={formatRiderMoneyAmount(trip.actualFare)} bold />
           <View style={[row.wrap, { borderBottomWidth: 0 }]}>
             <Text style={[row.label, { color: theme.colors.textMuted, fontSize: 12 }]}>
               Référence
@@ -632,7 +631,7 @@ export default function ReceiptScreen() {
         {/* Actions */}
         <View style={styles.actions}>
           <OrbiButton
-            label="Envoyer le recu"
+            label="Partager le reçu"
             helper="SMS, WhatsApp ou email"
             onPress={() => void handleShare()}
             tone="teal"
@@ -640,7 +639,7 @@ export default function ReceiptScreen() {
 
           {canFinalizePayment ? (
             <OrbiButton
-              label={paymentSubmitting ? "Paiement..." : "Finaliser le paiement"}
+              label={paymentSubmitting ? "Paiement..." : "Payer maintenant"}
               helper={`${formatRiderMoneyAmount(trip.actualFare)} via Mobile Money`}
               onPress={() => void handleFinalizePayment()}
               tone="amber"
@@ -649,8 +648,8 @@ export default function ReceiptScreen() {
           ) : null}
 
           <OrbiButton
-            label="Evaluer ce trajet"
-            helper="Aide a maintenir la qualite chauffeur"
+            label="Évaluer le trajet"
+            helper="Votre retour aide à maintenir la qualité"
             onPress={handleRate}
             tone="teal"
           />
@@ -670,17 +669,8 @@ export default function ReceiptScreen() {
             tone="sky"
           />
 
-          {trip.driverPhoneNumber ? (
-            <OrbiButton
-              label="Rappeler le chauffeur"
-              variant="secondary"
-              onPress={() => void Linking.openURL(`tel:${trip.driverPhoneNumber}`)}
-              tone="teal"
-            />
-          ) : null}
-
           <OrbiButton
-            label="Signaler un probleme"
+            label="Signaler un problème"
             variant="danger"
             onPress={() => void handleReportProblem()}
             tone="danger"
@@ -735,10 +725,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
 
   scroll: {
-    paddingHorizontal: 14,
-    paddingTop: 14,
+    paddingHorizontal: 12,
+    paddingTop: 12,
     paddingBottom: 48,
-    gap: 10,
+    gap: 9,
   },
 
   // Loading / error
@@ -786,7 +776,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Hero
   hero: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 14,
     gap: 4,
   },
   heroCheck: {
@@ -799,7 +789,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     marginBottom: 4,
   },
   heroFare: {
-    fontSize: 34,
+    fontSize: 30,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     color: '#111111',
@@ -820,8 +810,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 4,
-    paddingHorizontal: 14,
-    paddingTop: 12,
+    paddingHorizontal: 12,
+    paddingTop: 10,
     paddingBottom: 4,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E8E8E8',
@@ -832,7 +822,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: '#6B6B6B',
     textTransform: 'uppercase',
     letterSpacing: 0,
-    marginBottom: 8,
+    marginBottom: 6,
   },
 
   // Route visual

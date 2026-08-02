@@ -129,17 +129,17 @@ export default function RatingScreen() {
   async function handleSubmit() {
     if (submissionLockRef.current || status !== 'idle') return;
     if (score === 0) {
-      setStatusMessage('Veuillez choisir une note avant de valider.');
+      setStatusMessage('Choisissez une note pour continuer.');
       return;
     }
     if (!tripId) {
-      setStatusMessage('Identifiant de course manquant.');
+      setStatusMessage('Cette course est temporairement indisponible.');
       return;
     }
 
     submissionLockRef.current = true;
     setStatus('submitting');
-    setStatusMessage('Envoi de votre evaluation...');
+    setStatusMessage('Envoi de votre évaluation...');
     Keyboard.dismiss();
 
     try {
@@ -150,10 +150,10 @@ export default function RatingScreen() {
       });
       setRatingResult(result);
       setStatus('done');
-      setStatusMessage('Merci pour votre evaluation !');
+      setStatusMessage('Merci pour votre retour.');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        fallback: "L'evaluation n'a pas pu etre enregistree.",
+        fallback: "L'évaluation n'a pas pu être envoyée.",
       });
       setStatus('error');
       setStatusMessage(feedback.message);
@@ -181,14 +181,14 @@ export default function RatingScreen() {
           </View>
           <Text style={styles.doneTitle}>Merci !</Text>
           <Text style={styles.doneBody}>
-            Votre evaluation a ete transmise.
-            {ratingResult ? ` Note enregistree: ${ratingResult.rating.score}/5.` : ''}
+            Votre avis a bien été pris en compte.
+            {ratingResult ? ` Note: ${ratingResult.rating.score}/5.` : ''}
           </Text>
           <Text style={styles.doneTip}>
             Merci pour votre retour.
           </Text>
           <OrbiButton
-            label="Retour a l'accueil"
+            label="Retour à l'accueil"
             onPress={handleDone}
             tone="teal"
             style={styles.doneButton}
@@ -206,7 +206,7 @@ export default function RatingScreen() {
     >
       <View style={styles.header}>
         <OrbiLogo size="sm" />
-        <Text style={styles.title}>Evaluer votre course</Text>
+        <Text style={styles.title}>Évaluer la course</Text>
         {destination ? (
           <Text style={styles.subtitle}>Vers {destination}</Text>
         ) : null}
@@ -223,7 +223,7 @@ export default function RatingScreen() {
 
       <OrbiSurface tone={score >= 4 ? 'teal' : score > 0 ? 'amber' : 'neutral'} style={styles.ratingBlock}>
         <Text style={styles.ratingQuestion} numberOfLines={2}>
-          Comment s est passe votre trajet ?
+          Comment s'est passé votre trajet ?
         </Text>
         <View style={styles.starsRow}>
           {[1, 2, 3, 4, 5].map((starScore) => (
@@ -239,7 +239,7 @@ export default function RatingScreen() {
         {score > 0 ? (
           <Text style={styles.ratingLabel}>{STAR_LABELS[score]}</Text>
         ) : (
-          <Text style={styles.ratingPlaceholder}>Appuyez sur une etoile</Text>
+          <Text style={styles.ratingPlaceholder}>Touchez une étoile</Text>
         )}
       </OrbiSurface>
 
@@ -253,8 +253,8 @@ export default function RatingScreen() {
             onChangeText={(text) => setComment(text.slice(0, MAX_COMMENT))}
             placeholder={
               score <= 2
-                ? "Qu est-ce qui s est mal passe ?"
-                : 'Un detail a partager ? (facultatif)'
+                ? "Qu'est-ce qui s'est mal passé ?"
+                : 'Un détail à partager ? (facultatif)'
             }
             placeholderTextColor={theme.colors.muted}
             multiline
@@ -270,7 +270,7 @@ export default function RatingScreen() {
 
       {statusMessage ? (
         <OrbiStatusBanner
-          title={status === 'error' ? 'Evaluation non envoyee' : 'Evaluation'}
+          title={status === 'error' ? 'Évaluation non envoyée' : 'Évaluation'}
           message={statusMessage}
           tone={status === 'error' ? 'danger' : 'sky'}
         />
@@ -278,7 +278,7 @@ export default function RatingScreen() {
 
       <View style={styles.actions}>
         <OrbiButton
-          label={status === 'submitting' ? 'Envoi en cours...' : 'Valider mon evaluation'}
+          label={status === 'submitting' ? 'Envoi...' : 'Envoyer l’évaluation'}
           onPress={handleSubmit}
           loading={status === 'submitting'}
           disabled={status === 'submitting' || score === 0}
@@ -302,21 +302,21 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   screen: {
-    paddingTop: 56,
-    paddingHorizontal: 24,
-    paddingBottom: 48,
+    paddingTop: 28,
+    paddingHorizontal: 14,
+    paddingBottom: 36,
     backgroundColor: '#FFFFFF',
-    gap: 20,
+    gap: 12,
   },
   header: {
     gap: 6,
   },
   title: {
     color: '#111111',
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '900',
     fontFamily: 'Raleway_800ExtraBold',
-    lineHeight: 36,
+    lineHeight: 29,
   },
   subtitle: {
     color: '#525252',
@@ -326,8 +326,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     marginTop: -4,
   },
   summaryCard: {
-    padding: 18,
-    gap: 10,
+    padding: 12,
+    gap: 8,
     borderRadius: 4,
     backgroundColor: '#FFFFFF',
     borderColor: '#E8E8E8',
@@ -339,16 +339,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   ratingBlock: {
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 18,
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 14,
     borderRadius: 4,
     backgroundColor: '#F7F7F7',
     borderColor: '#E8E8E8',
   },
   ratingQuestion: {
     color: '#111111',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     textAlign: 'center',
@@ -358,14 +358,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     gap: 4,
   },
   star: {
-    width: 42,
-    height: 42,
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
   starGlyph: {
-    fontSize: 34,
-    lineHeight: 40,
+    fontSize: 31,
+    lineHeight: 36,
     textAlign: 'center',
   },
   starGlyphFilled: {
@@ -386,7 +386,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   commentBlock: {
     gap: 8,
-    padding: 16,
+    padding: 12,
     borderRadius: 4,
     backgroundColor: '#FFFFFF',
     borderColor: '#E8E8E8',
@@ -403,12 +403,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8E8E8',
     borderRadius: 4,
-    padding: 14,
+    padding: 12,
     color: '#111111',
     fontSize: 15,
     lineHeight: 22,
     textAlignVertical: 'top',
-    minHeight: 90,
+    minHeight: 82,
   },
   commentCounter: {
     color: '#6B6B6B',
