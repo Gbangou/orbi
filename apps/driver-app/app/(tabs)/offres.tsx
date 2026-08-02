@@ -327,7 +327,7 @@ export default function OffersScreen() {
         } catch {
           setActiveTripDetail(null);
           setTripDetailStatus(
-            "Detail de mission indisponible: la course principale reste active.",
+            "Suivi detaille en cours de reprise. La mission reste active.",
           );
         }
       } else {
@@ -743,7 +743,7 @@ export default function OffersScreen() {
 
   // Route safety review is advisory only and surfaced in the
   // handleCompleteTrip confirmation below, never a client-side block. A driver
-  // must always be able to reach the server for a real completion decision;
+  // must always reach the authoritative trip system for a real completion decision;
   // a GPS/route warning is not proof of fraud.
   async function handleAdvanceTrip(
     tripId: string,
@@ -891,7 +891,7 @@ export default function OffersScreen() {
     const REASONS = [
       "Passager introuvable",
       "Zone inaccessible",
-      "Erreur d acceptation",
+      "Demande expiree",
     ];
 
     Alert.alert(
@@ -1543,7 +1543,7 @@ export default function OffersScreen() {
               </View>
               <View style={styles.emptyCheckItem}>
                 <Text style={styles.emptyCheckTitle}>Compte</Text>
-                <Text style={styles.emptyCheckMeta}>OK</Text>
+                <Text style={styles.emptyCheckMeta}>Valide</Text>
               </View>
               <View style={styles.emptyCheckItem}>
                 <Text style={styles.emptyCheckTitle}>Mission</Text>

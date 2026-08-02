@@ -27,12 +27,12 @@ describe('rider display format helpers', () => {
 
   it('degrades dirty rider display numbers without throwing', () => {
     expect(formatRiderRatingLabel(Number.NaN)).toBeNull();
-    expect(formatRiderRatingLabel('sale', { fallback: 'ND' })).toBe('ND');
+    expect(formatRiderRatingLabel('sale', { fallback: 'A confirmer' })).toBe('A confirmer');
     expect(formatRiderDistanceKm(undefined, 'Distance indisponible')).toBe(
       'Distance indisponible',
     );
     expect(estimateRiderPickupEtaMinutes('sale')).toBeNull();
-    expect(formatRiderMoneyAmount('sale')).toBe('Montant indisponible');
+    expect(formatRiderMoneyAmount('sale')).toBe('Montant a confirmer');
     expect(resolveRiderMoneyAmount(-1)).toBeNull();
   });
 

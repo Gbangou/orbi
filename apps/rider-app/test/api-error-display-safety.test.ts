@@ -59,7 +59,7 @@ describe('mobile display safety net for backend error messages', () => {
       'Code promo invalide ou inactif.',
       'Ce code promo a expire.',
       'Ce code promo n est pas encore actif.',
-      'Une erreur reseau ou serveur est survenue.',
+      'Connexion instable. Reessayez dans un instant.',
       'La course est deja annulee.',
       'La course est deja terminee.',
     ];

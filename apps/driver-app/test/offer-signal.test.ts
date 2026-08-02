@@ -49,7 +49,7 @@ describe('driver offer signal helpers', () => {
       },
     ]);
     expect(buildDriverOfferDetailLines(dirtyOffer)).toEqual([
-      'Moto - trajet ND km',
+      'Moto - trajet a confirmer',
     ]);
     expect(buildDriverOfferNote(dirtyOffer)).toBeNull();
     expect(formatDriverOfferFare(dirtyOffer)).toBe('Prix indisponible');

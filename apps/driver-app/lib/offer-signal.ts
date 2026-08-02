@@ -82,7 +82,7 @@ export function toFiniteOfferNumber(value: unknown) {
   return null;
 }
 
-function formatOfferNumber(value: unknown, fallback = 'ND') {
+function formatOfferNumber(value: unknown, fallback = 'A confirmer') {
   const numeric = toFiniteOfferNumber(value);
   return numeric !== null ? String(numeric) : fallback;
 }
@@ -190,8 +190,11 @@ export function buildDriverOfferDetailLines(offer: DriverOffer) {
   const fairnessScore = toFiniteOfferNumber(offer.fairnessScore);
   const reservationWindowSeconds = offer.reservationWindowSeconds;
   const reservationWindow = toFiniteOfferNumber(reservationWindowSeconds);
+  const tripDistanceKm = toFiniteOfferNumber(offer.distanceKm);
   const lines = [
-    `${offer.category === 'motorcycle' ? 'Moto' : 'Voiture'} - trajet ${formatOfferNumber(offer.distanceKm)} km`,
+    tripDistanceKm !== null
+      ? `${offer.category === 'motorcycle' ? 'Moto' : 'Voiture'} - trajet ${formatOfferNumber(tripDistanceKm)} km`
+      : `${offer.category === 'motorcycle' ? 'Moto' : 'Voiture'} - trajet a confirmer`,
     pickupDistanceKm !== null
       ? `Pickup a ${pickupDistanceKm} km`
       : null,

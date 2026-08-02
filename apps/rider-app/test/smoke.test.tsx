@@ -650,7 +650,7 @@ describe('rider smoke flows', () => {
     expect(router.replace).not.toHaveBeenCalled();
     expectText(
       renderer,
-      'Le serveur ne repond pas encore. Orbi continue de fonctionner sur reseau faible: reessayez dans un instant ou changez de reseau si besoin.',
+      'La connexion prend plus de temps que prevu. Orbi reste pret: reessayez dans un instant ou changez de reseau si besoin.',
     );
   });
 

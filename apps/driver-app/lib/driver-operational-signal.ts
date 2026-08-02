@@ -10,7 +10,7 @@ function formatOperationalCount(value: unknown) {
   const numeric = toFiniteOperationalNumber(value);
   return numeric !== null && numeric >= 0
     ? String(Math.floor(numeric))
-    : 'ND';
+    : 'A confirmer';
 }
 
 function toFiniteOperationalNumber(value: unknown) {
@@ -27,6 +27,14 @@ function toFiniteOperationalNumber(value: unknown) {
 }
 
 export function buildDriverFatigueMessage(fatigue: DriverFatigueStatus) {
+  const drivingMinutes = toFiniteOperationalNumber(fatigue.drivingMinutes);
+  const maxDrivingMinutes = toFiniteOperationalNumber(fatigue.maxDrivingMinutes);
+  const windowHours = toFiniteOperationalNumber(fatigue.windowHours);
+
+  if (drivingMinutes === null || maxDrivingMinutes === null || windowHours === null) {
+    return `${fatigue.reason} Temps de conduite en cours de confirmation.`;
+  }
+
   return `${fatigue.reason} ${formatOperationalCount(fatigue.drivingMinutes)}/${formatOperationalCount(fatigue.maxDrivingMinutes)} min sur ${formatOperationalCount(fatigue.windowHours)}h.`;
 }
 
@@ -194,7 +202,7 @@ function buildRouteSafetyInsights(input: {
       value:
         typeof input.ageSeconds === 'number'
           ? formatSignalAge(input.ageSeconds)
-          : 'ND',
+          : 'A confirmer',
       tone: input.tone,
     },
     {
@@ -202,7 +210,7 @@ function buildRouteSafetyInsights(input: {
       value:
         typeof input.accuracyMeters === 'number'
           ? `${Math.round(input.accuracyMeters)} m`
-          : 'ND',
+          : 'A confirmer',
       tone:
         typeof input.accuracyMeters === 'number' && input.accuracyMeters > 100
           ? 'amber'
@@ -213,7 +221,7 @@ function buildRouteSafetyInsights(input: {
       value:
         typeof input.speedKph === 'number'
           ? `${Math.round(input.speedKph)} km/h`
-          : 'ND',
+          : 'A confirmer',
       tone:
         typeof input.speedKph === 'number' && input.speedKph > 80
           ? 'rose'

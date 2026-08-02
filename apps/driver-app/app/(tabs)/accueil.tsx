@@ -98,7 +98,7 @@ function OfferChip({ offer }: { offer: DriverOffer }) {
   const isMoto = offer.category === 'motorcycle';
   const pickupDistance = formatDriverOfferDistance(
     offer.pickupDistanceKm,
-    formatDriverOfferMinutes(offer.etaToPickupMinutes, 'ETA indisponible'),
+    formatDriverOfferMinutes(offer.etaToPickupMinutes, 'Approche a confirmer'),
   );
   return (
     <View style={chip.wrap}>
@@ -189,7 +189,7 @@ function TripRequestModal({
   const accent = theme.colors.text;
   const pickupDistanceLabel = formatDriverOfferDistance(
     offer.pickupDistanceKm,
-    formatDriverOfferMinutes(offer.etaToPickupMinutes, 'Pickup indisponible'),
+    formatDriverOfferMinutes(offer.etaToPickupMinutes, 'Approche a confirmer'),
   );
   const moneyDisplay = resolveDriverOfferMoneyDisplay(offer);
 
@@ -251,7 +251,7 @@ function TripRequestModal({
           <View style={modal.statsRow}>
             <View style={modal.stat}>
               <Text style={modal.statVal}>
-                {formatDriverOfferDistance(offer.distanceKm, 'ND')}
+                {formatDriverOfferDistance(offer.distanceKm, 'A confirmer')}
               </Text>
               <Text style={modal.statKey}>Trajet</Text>
             </View>
@@ -263,9 +263,9 @@ function TripRequestModal({
             <View style={modal.statSep} />
             <View style={modal.stat}>
               <Text style={modal.statVal}>
-                {formatDriverOfferMinutes(offer.etaToPickupMinutes, 'ND')}
+                {formatDriverOfferMinutes(offer.etaToPickupMinutes, 'A confirmer')}
               </Text>
-              <Text style={modal.statKey}>ETA pickup</Text>
+              <Text style={modal.statKey}>Arrivee</Text>
             </View>
           </View>
 

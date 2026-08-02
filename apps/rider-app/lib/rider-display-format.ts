@@ -47,7 +47,7 @@ export function estimateRiderPickupEtaMinutes(distanceKm: unknown) {
 
 export function formatRiderMoneyAmount(
   value: unknown,
-  fallback = 'Montant indisponible',
+  fallback = 'Montant a confirmer',
 ) {
   const numeric = toFiniteRiderDisplayNumber(value);
 

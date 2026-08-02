@@ -221,7 +221,7 @@ export default function ActivityScreen() {
         } catch {
           setActiveTripDetail(null);
           setTripDetailStatus(
-            "Detail de course indisponible: le suivi principal reste actif.",
+            "Suivi detaille en cours de reprise. Votre trajet reste actif.",
           );
         }
       } else {
@@ -449,10 +449,10 @@ export default function ActivityScreen() {
     const referenceId = activeTripId ?? latestTrip?.id ?? pendingRequest?.id ?? "none";
     const receiptContext = latestTrip?.receipt
       ? [
-          `Paiement: ${latestTrip.receipt.status}`,
-          `Montant: ${latestTrip.receipt.amount} ${latestTrip.receipt.currency}`,
-          `Operateur: ${latestTrip.receipt.provider}`,
-          `Reference transaction: ${latestTrip.receipt.transactionRef ?? "absente"}`,
+          `Etat du paiement: ${latestTrip.receipt.status}`,
+          `Montant paye: ${latestTrip.receipt.amount} ${latestTrip.receipt.currency}`,
+          `Operateur mobile money: ${latestTrip.receipt.provider}`,
+          `Reference de paiement: ${latestTrip.receipt.transactionRef ?? "non renseignee"}`,
         ].join("\n")
       : null;
 

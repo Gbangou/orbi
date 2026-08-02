@@ -38,7 +38,7 @@ export function resolveMobileAuthErrorMessage(
     message.includes("aborted") ||
     message.includes("aborterror")
   ) {
-    return "Le serveur ne repond pas encore. Orbi continue de fonctionner sur reseau faible: reessayez dans un instant ou changez de reseau si besoin.";
+    return "La connexion prend plus de temps que prevu. Orbi reste pret: reessayez dans un instant ou changez de reseau si besoin.";
   }
 
   if (

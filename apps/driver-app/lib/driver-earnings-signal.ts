@@ -20,7 +20,7 @@ export function isFiniteEarningsNumber(value: unknown): value is number {
 
 export function formatDriverEarningsAmount(value: unknown) {
   const numeric = toFiniteEarningsNumber(value);
-  return numeric !== null ? formatXof(numeric) : 'Montant indisponible';
+  return numeric !== null ? formatXof(numeric) : 'Montant a confirmer';
 }
 
 export function formatDriverEarningsCompactAmount(value: unknown) {
@@ -36,7 +36,7 @@ export function formatDriverEarningsCompactAmount(value: unknown) {
 
 export function formatDriverEarningsCount(value: unknown) {
   const numeric = toFiniteEarningsNumber(value);
-  return numeric !== null && numeric >= 0 ? String(Math.floor(numeric)) : 'ND';
+  return numeric !== null && numeric >= 0 ? String(Math.floor(numeric)) : 'A confirmer';
 }
 
 export function formatDriverEarningsRatioPercent(value: unknown, fallback = '--') {
@@ -57,10 +57,10 @@ function formatDriverPayoutRateLabel(settlement: DriverEarningsResponse['settlem
     max >= 0 &&
     Math.round(min * 100) !== Math.round(max * 100)
   ) {
-    return `${formatDriverEarningsRatioPercent(min, 'ND%')}-${formatDriverEarningsRatioPercent(max, 'ND%')} chauffeur`;
+    return `${formatDriverEarningsRatioPercent(min)}-${formatDriverEarningsRatioPercent(max)} chauffeur`;
   }
 
-  return `${formatDriverEarningsRatioPercent(settlement.payoutRate, 'ND%')} chauffeur`;
+  return `${formatDriverEarningsRatioPercent(settlement.payoutRate)} chauffeur`;
 }
 
 export function buildDriverEarningsDeltaLabel(previousToday: unknown, nextToday: unknown) {
@@ -220,7 +220,7 @@ export function buildDriverDailyOperatingCompass(
   const gross = toFiniteEarningsNumber(earnings.settlement.recentGrossFare) ?? 0;
   const net = toFiniteEarningsNumber(earnings.settlement.recentNetPayout) ?? 0;
   const payoutRate = gross > 0 ? net / gross : toFiniteEarningsNumber(earnings.settlement.payoutRate);
-  const payoutRateLabel = formatDriverEarningsRatioPercent(payoutRate, 'ND%');
+  const payoutRateLabel = formatDriverEarningsRatioPercent(payoutRate);
   const primaryAction =
     remainingTrips <= 0
       ? 'Objectif atteint: gardez une presence selective sur les offres tres proches.'

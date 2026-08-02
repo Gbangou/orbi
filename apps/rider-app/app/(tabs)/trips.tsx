@@ -97,7 +97,7 @@ function TripCard({
             <Text style={styles.fareCurrency}>{trip.currency}</Text>
           </View>
         ) : (
-          <Text style={styles.metaText}>Montant indisponible</Text>
+          <Text style={styles.metaText}>Prix confirme au recu</Text>
         )}
         <OrbiButton
           label={trip.status === 'COMPLETED' ? 'Voir recu' : 'Voir suivi'}

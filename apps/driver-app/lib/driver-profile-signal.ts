@@ -25,7 +25,7 @@ function toFiniteProfileNumber(value: unknown) {
   return null;
 }
 
-export function formatDriverProfileCount(value: unknown, fallback = 'ND') {
+export function formatDriverProfileCount(value: unknown, fallback = 'A confirmer') {
   const numeric = toFiniteProfileNumber(value);
   return numeric !== null && numeric >= 0 ? String(Math.floor(numeric)) : fallback;
 }
@@ -34,7 +34,7 @@ export function formatDriverProfilePercent(value: unknown) {
   const numeric = toFiniteProfileNumber(value);
   return numeric !== null && numeric >= 0
     ? `${Math.min(100, Math.floor(numeric))}%`
-    : 'ND%';
+    : '--';
 }
 
 export function formatDriverProfileRatioPercent(value: unknown, fallback = '—') {
@@ -62,9 +62,9 @@ export function resolveDriverProfileRatioTone(value: unknown) {
   return 'danger' as const;
 }
 
-export function formatDriverProfileDistanceKm(value: unknown, fallback = 'ND') {
+export function formatDriverProfileDistanceKm(value: unknown, fallback = 'A confirmer') {
   const numeric = toFiniteProfileNumber(value);
-  return numeric !== null && numeric >= 0 ? `${numeric} km` : `${fallback} km`;
+  return numeric !== null && numeric >= 0 ? `${numeric} km` : fallback;
 }
 
 export function formatDriverProfileRating(value: unknown, fallback = 'Nouvelle activite') {
@@ -91,5 +91,13 @@ export function formatDriverOnboardingProgress(input: {
   totalItems: unknown;
   readinessPercent: unknown;
 }) {
-  return `Profil ${formatDriverProfileCount(input.completedItems)}/${formatDriverProfileCount(input.totalItems)} complete a ${formatDriverProfilePercent(input.readinessPercent)}`;
+  const completedItems = toFiniteProfileNumber(input.completedItems);
+  const totalItems = toFiniteProfileNumber(input.totalItems);
+  const readinessPercent = toFiniteProfileNumber(input.readinessPercent);
+
+  if (completedItems === null || totalItems === null || readinessPercent === null) {
+    return 'Profil en cours de verification';
+  }
+
+  return `Profil ${formatDriverProfileCount(completedItems)}/${formatDriverProfileCount(totalItems)} complete a ${formatDriverProfilePercent(readinessPercent)}`;
 }

@@ -32,7 +32,7 @@ export function isOrbiApiError(error: unknown): error is OrbiApiError {
 
 export function extractApiErrorMessage(
   error: unknown,
-  fallback = "Une erreur reseau ou serveur est survenue.",
+  fallback = "Connexion instable. Reessayez dans un instant.",
 ) {
   if (isOrbiApiError(error)) {
     return error.message;
@@ -62,7 +62,7 @@ export function looksLikeUnvettedEnglishMessage(message: string): boolean {
 
 export function resolveDisplayableApiErrorMessage(
   error: unknown,
-  fallback = "Une erreur reseau ou serveur est survenue.",
+  fallback = "Connexion instable. Reessayez dans un instant.",
 ) {
   const extracted = extractApiErrorMessage(error, fallback);
   return looksLikeUnvettedEnglishMessage(extracted) ? fallback : extracted;

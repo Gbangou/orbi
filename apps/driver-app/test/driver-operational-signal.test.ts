@@ -18,7 +18,7 @@ describe('driver operational signal helpers', () => {
         restUntil: null,
         reason: 'Pause conseillee.',
       } as never),
-    ).toBe('Pause conseillee. ND/ND min sur NDh.');
+    ).toBe('Pause conseillee. Temps de conduite en cours de confirmation.');
   });
 
   it('normalizes stringified fatigue numbers before driver-facing copy', () => {
@@ -47,7 +47,7 @@ describe('driver operational signal helpers', () => {
         lastPositionAt: null,
         latestPosition: null,
       }),
-    ).toEqual(['Route mission: Attention (ND)', 'Dernière alerte: Long Stop']);
+    ).toEqual(['Route mission: Attention (A confirmer)', 'Dernière alerte: Long Stop']);
   });
 
   it('marks impossible route signals as operational review without trapping completion', () => {

@@ -12,9 +12,9 @@ import {
 
 describe('driver earnings signal helpers', () => {
   it('keeps dirty numeric earnings fields out of driver-facing copy', () => {
-    expect(formatDriverEarningsAmount(Number.NaN)).toBe('Montant indisponible');
+    expect(formatDriverEarningsAmount(Number.NaN)).toBe('Montant a confirmer');
     expect(formatDriverEarningsCompactAmount(Number.NaN)).toBe('Indisponible');
-    expect(formatDriverEarningsCount(Number.NaN)).toBe('ND');
+    expect(formatDriverEarningsCount(Number.NaN)).toBe('A confirmer');
     expect(buildDriverEarningsDeltaLabel(1000, Number.NaN)).toBeNull();
   });
 

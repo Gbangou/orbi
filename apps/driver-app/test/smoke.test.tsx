@@ -503,7 +503,7 @@ describe('driver smoke flows', () => {
 
     expectText(
       renderer,
-      'Le serveur ne repond pas encore. Orbi continue de fonctionner sur reseau faible: reessayez dans un instant ou changez de reseau si besoin.',
+      'La connexion prend plus de temps que prevu. Orbi reste pret: reessayez dans un instant ou changez de reseau si besoin.',
     );
   });
 
@@ -1105,7 +1105,7 @@ describe('driver smoke flows', () => {
     expectText(renderer, 'Distance');
     expectText(
       renderer,
-      'Detail de mission indisponible: la course principale reste active.',
+      'Suivi detaille en cours de reprise. La mission reste active.',
     );
     expectText(renderer, 'Demarrer la course');
   });
@@ -1130,7 +1130,7 @@ describe('driver smoke flows', () => {
 
     expectText(
       renderer,
-      'Detail de mission indisponible: la course principale reste active.',
+      'Suivi detaille en cours de reprise. La mission reste active.',
     );
     await pressByText(renderer, 'Terminer la course');
     const completeOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
@@ -1460,7 +1460,7 @@ describe('driver smoke flows', () => {
       { token: 'driver-auth-client' },
       'trip-driver-1',
       'CANCELLED',
-      'Erreur d acceptation',
+      'Demande expiree',
     );
     expectText(
       renderer,

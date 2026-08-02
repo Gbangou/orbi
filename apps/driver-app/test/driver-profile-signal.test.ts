@@ -27,9 +27,9 @@ describe('driver profile signal helpers', () => {
   });
 
   it('keeps dirty profile metrics out of driver-facing copy', () => {
-    expect(formatDriverProfileCount(Number.NaN)).toBe('ND');
-    expect(formatDriverProfilePercent(Number.NaN)).toBe('ND%');
-    expect(formatDriverProfileDistanceKm(Number.NaN)).toBe('ND km');
+    expect(formatDriverProfileCount(Number.NaN)).toBe('A confirmer');
+    expect(formatDriverProfilePercent(Number.NaN)).toBe('--');
+    expect(formatDriverProfileDistanceKm(Number.NaN)).toBe('A confirmer');
     expect(formatDriverProfileRating(Number.NaN)).toBe('Nouvelle activite');
     expect(formatDriverProfileBytes(Number.NaN)).toBe('Taille indisponible');
     expect(
@@ -38,7 +38,7 @@ describe('driver profile signal helpers', () => {
         totalItems: undefined,
         readinessPercent: Number.NaN,
       }),
-    ).toBe('Profil ND/ND complete a ND%');
+    ).toBe('Profil en cours de verification');
   });
 
   it('normalizes stringified profile metrics before display', () => {
