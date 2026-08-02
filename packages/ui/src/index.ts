@@ -267,15 +267,15 @@ const realtimeLabelsByAudience: Record<
     "trip.updated": "La course chauffeur a avance d etape.",
     "trip.pickup-code-verified": "Le code de prise en charge a ete confirme.",
     "trip.incident-reported":
-      "Un incident de course a ete remonte aux operations.",
+      "Un incident de course a ete signale.",
     "ride-request.created": "Une nouvelle demande compatible est arrivee.",
     "ride-request.cancelled": "Une demande vient d etre retiree du flux.",
     "ride-request.reservation-assigned":
       "Une nouvelle offre est disponible.",
     "ride-request.reservation-released":
-      "Une reservation vous a ete retiree et remise au flux.",
+      "Cette reservation n est plus disponible.",
     "ride-request.reservation-expired":
-      "Une reservation a expire et le flux a ete resynchronise.",
+      "Une reservation a expire.",
   },
   rider: {
     "trip.created": "Votre demande a trouve un chauffeur.",
@@ -301,7 +301,7 @@ export function describeRealtimeEvent(
   return (
     realtimeLabelsByAudience[audience][eventType] ??
     (audience === "driver"
-      ? "Le direct chauffeur vient d etre mis a jour."
+      ? "Les missions viennent d etre mises a jour."
       : "Votre trajet vient d etre mis a jour en direct.")
   );
 }
@@ -311,14 +311,14 @@ const realtimeConnectionCopy: Record<
   Record<RealtimeConnectionState, string>
 > = {
   driver: {
-    active: "Flux chauffeur temps reel actif.",
-    connected: "Flux chauffeur connecte en temps reel.",
-    reconnecting: "Le flux chauffeur se reconnecte automatiquement.",
+    active: "Missions a jour.",
+    connected: "Missions a jour.",
+    reconnecting: "Mise a jour en cours.",
   },
   rider: {
-    active: "Flux passager temps reel actif.",
-    connected: "Flux passager connecte en temps reel.",
-    reconnecting: "Le flux passager se reconnecte automatiquement.",
+    active: "Trajet a jour.",
+    connected: "Trajet a jour.",
+    reconnecting: "Mise a jour en cours.",
   },
   "admin-live-ops": {
     active: "Flux live ops temps reel actif.",
@@ -358,7 +358,7 @@ export function formatRealtimeBadgeLabel(
   liveLabel: string,
   isRealtimeSyncing: boolean,
 ) {
-  return isRealtimeSyncing ? "Resync live" : liveLabel;
+  return isRealtimeSyncing ? "Mise a jour" : liveLabel;
 }
 
 const FRENCH_STATUS: Record<string, string> = {

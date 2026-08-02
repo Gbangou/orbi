@@ -36,6 +36,10 @@ function createDriverAuthClient() {
 }
 
 export async function restoreDriverSession() {
+  if (isDriverVisualQaSessionEnabled()) {
+    return buildVisualQaDriverContext();
+  }
+
   const context = await restorePersistedSession(
     createDriverPublicClient(),
     driverSessionStorage,
@@ -102,6 +106,10 @@ export async function signOutDriverAccount() {
 }
 
 export async function hasPersistedDriverSession() {
+  if (isDriverVisualQaSessionEnabled()) {
+    return true;
+  }
+
   const token = await driverSessionStorage.getItem(driverSessionStorageKey);
   return Boolean(token);
 }
@@ -139,6 +147,30 @@ function buildFastDriverAuthContext(
       session: session.session,
     },
   };
+}
+
+function isDriverVisualQaSessionEnabled() {
+  return process.env.EXPO_PUBLIC_ORBI_VISUAL_QA === 'true';
+}
+
+function buildVisualQaDriverContext(): AuthenticatedApiContext {
+  const client = createDriverPublicClient();
+  const session: AuthSessionResponse = {
+    message: 'Visual QA driver session ready.',
+    sessionToken: 'visual-qa-driver-session',
+    user: {
+      id: 'visual-qa-driver',
+      email: 'driver@orbi.app',
+      fullName: 'Issa Kaboré',
+      role: 'DRIVER',
+    },
+    session: {
+      id: 'visual-qa-driver-session-id',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    },
+  };
+
+  return buildFastDriverAuthContext(client, session);
 }
 
 function assertUsableDriverContext(context: AuthenticatedApiContext) {

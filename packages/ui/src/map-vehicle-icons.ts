@@ -1,9 +1,9 @@
 export const ORBI_MAP_VEHICLE_CSS = `
-@keyframes vehiclePulse{0%{box-shadow:0 0 0 0 rgba(0,0,0,.20)}70%{box-shadow:0 0 0 16px rgba(0,0,0,0)}100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}}
+@keyframes vehiclePulse{0%{box-shadow:0 0 0 0 rgba(0,0,0,.16)}70%{box-shadow:0 0 0 10px rgba(0,0,0,0)}100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}}
 .vehicle-wrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;transform:translateZ(0)}
-.vehicle-halo{position:absolute;left:50%;top:46%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:999px;background:rgba(0,0,0,.08);animation:vehiclePulse 1.8s ease-in-out infinite}
+.vehicle-halo{position:absolute;left:50%;top:46%;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:999px;background:rgba(0,0,0,.06);animation:vehiclePulse 1.8s ease-in-out infinite}
 .vehicle-body{position:relative;display:block;transform:rotate(var(--bearing,0deg));transform-origin:center center}
-.vehicle-svg{position:relative;display:block;filter:drop-shadow(0 8px 8px rgba(0,0,0,.22))}
+.vehicle-svg{position:relative;display:block;filter:drop-shadow(0 4px 5px rgba(0,0,0,.20))}
 `;
 
 const MOTO_SVG =
@@ -22,6 +22,6 @@ var VEHICLE_ICONS={
 'car-comfort':'${BLACK_CAR_SVG}',
 'car-xl':'${CAR_SVG}'
 };
-var VEHICLE_SIZES={'moto-standard':[82,94],'car-standard':[94,102],'car-comfort':[94,102],'car-xl':[98,104]};
-var VEHICLE_ANCHORS={'moto-standard':[41,42],'car-standard':[47,47],'car-comfort':[47,47],'car-xl':[49,48]};
+var VEHICLE_SIZES={'moto-standard':[34,58],'car-standard':[42,64],'car-comfort':[42,64],'car-xl':[46,66]};
+var VEHICLE_ANCHORS={'moto-standard':[17,29],'car-standard':[21,32],'car-comfort':[21,32],'car-xl':[23,33]};
 `;

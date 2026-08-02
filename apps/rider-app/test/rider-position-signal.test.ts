@@ -6,7 +6,7 @@ describe("rider-position-signal", () => {
       buildRiderPositionSyncedNote({
         accuracyMeters: 17.6,
       }),
-    ).toBe("Position passager synchronisee. Precision 18 m.");
+    ).toBe("Position passager a jour. Precision 18 m.");
   });
 
   it("summarizes backend destination progress during an active trip", () => {
@@ -26,7 +26,7 @@ describe("rider-position-signal", () => {
         },
       }),
     ).toBe(
-      "Position passager synchronisee. Destination 4.6 km. Precision 18 m.",
+      "Position passager a jour. Destination 4.6 km. Precision 18 m.",
     );
   });
 });

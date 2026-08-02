@@ -269,16 +269,16 @@ export function TripMapView({
           ) : null}
         </View>
         <View style={styles.fallbackPanel}>
-          <Text style={styles.fallbackEyebrow}>Carte web</Text>
+          <Text style={styles.fallbackEyebrow}>Trajet</Text>
           <Text style={styles.fallbackTitle}>
             {hasPickup && hasDestination ? 'Trajet pret' : 'Position en attente'}
           </Text>
           <Text style={styles.fallbackMeta} numberOfLines={2}>
             {hasDriver
-              ? 'Chauffeur localise. Suivi precis disponible sur mobile.'
+              ? 'Chauffeur localise.'
               : selectable
-                ? 'Touchez la carte native mobile pour ajuster le point.'
-                : 'Suivi carte complet disponible dans l app mobile.'}
+                ? 'Touchez la carte pour ajuster le point.'
+                : 'Suivi du trajet en cours.'}
           </Text>
         </View>
       </View>

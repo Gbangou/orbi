@@ -475,7 +475,7 @@ describe('driver-active-flow', () => {
     });
 
     expect(buildDriverEarningsStatusLabel({ flow })).toBe(
-      'Revenus synchronises. Course active: En cours.',
+      'Revenus a jour. Course active: En cours.',
     );
   });
 });

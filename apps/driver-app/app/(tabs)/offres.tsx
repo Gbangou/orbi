@@ -289,8 +289,7 @@ export default function OffersScreen() {
     try {
       const { authClient, session } = await restoreDriverSession();
       setSessionToken(session.sessionToken);
-      const onRetry = (attempt: number, max: number) =>
-        setStatus(`Reconnexion... (tentative ${attempt}/${max})`);
+      const onRetry = () => setStatus("Connexion en cours...");
       const [offersResponse, historyResponse, profileResponse] =
         await Promise.all([
           withNetworkRetry(() => fetchDriverOffers(authClient), { maxAttempts: 3, onRetry }),
@@ -319,8 +318,7 @@ export default function OffersScreen() {
             () => fetchTripDetail(authClient, activeTrip.id),
             {
               maxAttempts: 3,
-              onRetry: (attempt, max) =>
-                setStatus(`Reconnexion mission... (tentative ${attempt}/${max})`),
+              onRetry: () => setStatus("Mise a jour de la course..."),
             },
           );
           setActiveTripDetail(detail);
@@ -657,7 +655,7 @@ export default function OffersScreen() {
 
       setHistory(latestHistory);
       setStartTripRecoveryNote(null);
-      setStatus("Course demarree. Statut confirme apres resynchronisation.");
+      setStatus("Course demarree. Statut confirme.");
       safeHaptics.notify("success");
       return true;
     } catch {
@@ -954,7 +952,7 @@ export default function OffersScreen() {
           details: "Signalement rapide envoye depuis l ecran chauffeur.",
           priority: 3,
         });
-        setStatus("Incident signale. Le support live a ete notifie.");
+        setStatus("Incident signale. Le support est notifie.");
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
@@ -1486,7 +1484,7 @@ export default function OffersScreen() {
         {!activeTrip && flow.operationalStatus === "SUSPENDED" ? (
           <OrbiStatusBanner
             title="Compte suspendu"
-            message="Les offres restent fermées jusqu à réactivation par les opérations."
+            message="Les offres restent fermees jusqu a reactivation du compte."
             tone="danger"
           />
         ) : !activeTrip && flow.availabilityStatus !== "ONLINE" ? (
@@ -1528,7 +1526,7 @@ export default function OffersScreen() {
                     ]}
                   />
                 <Text style={styles.emptySignalText}>
-                    {flow.canReceiveOffers ? "Disponible" : "Diagnostic"}
+                    {flow.canReceiveOffers ? "Disponible" : "En attente"}
                 </Text>
                 </View>
                 <Text style={styles.emptyTitle}>Aucune offre active</Text>
@@ -1546,7 +1544,7 @@ export default function OffersScreen() {
             <View style={styles.emptyChecklist}>
               <View style={styles.emptyCheckItem}>
                 <Text style={styles.emptyCheckTitle}>Position</Text>
-                <Text style={styles.emptyCheckMeta}>Live</Text>
+                <Text style={styles.emptyCheckMeta}>Actif</Text>
               </View>
               <View style={styles.emptyCheckItem}>
                 <Text style={styles.emptyCheckTitle}>Compte</Text>
@@ -1562,7 +1560,7 @@ export default function OffersScreen() {
 
         {/* Refresh — accessible for tests + users */}
         <OrbiButton
-          label={isRefreshing ? "Actualisation..." : "Actualiser le direct"}
+          label={isRefreshing ? "Actualisation..." : "Actualiser"}
           onPress={() => void loadDriverData()}
           disabled={isRefreshing}
           style={styles.refreshBtn}

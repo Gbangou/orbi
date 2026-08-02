@@ -87,7 +87,7 @@ describe('driver earnings signal helpers', () => {
       payoutRateLabel: '82% chauffeur',
       recentNetPayoutLabel: formatDriverEarningsAmount(8000),
       estimatedPlatformFeeLabel: formatDriverEarningsAmount(1756),
-      settlementStateLabel: 'Lisible',
+      settlementStateLabel: 'Valide',
       settlementTone: 'sky',
     });
   });
@@ -172,7 +172,7 @@ describe('driver earnings signal helpers', () => {
       recentTrips: [],
     });
 
-    expect(summary.settlementStateLabel).toBe('Contrôle requis');
+    expect(summary.settlementStateLabel).toBe('Verification requise');
     expect(summary.settlementTone).toBe('amber');
   });
 

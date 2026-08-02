@@ -18,7 +18,7 @@ const DRIVER_STAGE_KEYS: TripStageKey[] = ['matched', 'arriving', 'in_progress',
 
 const RIDER_LABELS: Record<TripStageKey, string> = {
   search: 'Recherche',
-  matched: 'Chauffeur en route',
+  matched: 'En route',
   arriving: 'Arrivée',
   in_progress: 'En course',
   completed: 'Terminé',
@@ -147,7 +147,7 @@ const makeStyles = (theme: OrbiTheme) =>
     },
     label: {
       flex: 1,
-      fontSize: 9,
+      fontSize: 10,
       fontFamily: orbiTheme.typography.fontFamily.semibold,
       textAlign: 'center',
     },

@@ -171,8 +171,8 @@ export default function AccountScreen() {
         setFreshPlaceIds(nextFreshPlaceIds);
         setAccountTransitionLabel(
           nextFreshPlaceIds.length > 1
-            ? `${nextFreshPlaceIds.length} nouveaux favoris viennent d etre resynchronises.`
-            : 'Un nouveau favori vient d etre resynchronise.',
+            ? `${nextFreshPlaceIds.length} nouveaux favoris sont a jour.`
+            : 'Un nouveau favori est a jour.',
         );
       } else if (removedPlaceIds.length > 0) {
         setAccountTransitionLabel(
@@ -469,7 +469,7 @@ export default function AccountScreen() {
 
       resetPlaceForm();
       await loadProfile();
-      setStatus('Lieu enregistre synchronise avec succes.');
+      setStatus('Lieu enregistre avec succes.');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         fallback: "L'enregistrement du lieu a echoue.",
@@ -812,7 +812,7 @@ export default function AccountScreen() {
             <OrbiStatusBanner
               tone="amber"
               title="Wallet temporairement verrouillé"
-              message="Certaines opérations peuvent nécessiter une vérification support."
+              message="Une verification peut etre demandee pour proteger votre compte."
             />
           ) : null}
         </OrbiSurface>
@@ -1190,7 +1190,7 @@ export default function AccountScreen() {
           >
             <Text style={styles.placeLabel}>{place.label}</Text>
             {freshPlaceIds.includes(place.id) ? (
-              <Text style={styles.placeTransitionBadge}>Favori resynchronise</Text>
+              <Text style={styles.placeTransitionBadge}>Favori a jour</Text>
             ) : null}
             <Text style={styles.meta}>{place.address}</Text>
             <View style={styles.actionsRow}>

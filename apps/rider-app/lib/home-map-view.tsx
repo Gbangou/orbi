@@ -236,8 +236,16 @@ export function HomeMapView({
     const hasLocation = hasMapCoordinatePair({ latitude: riderLat, longitude: riderLng });
 
     return (
-      <View style={[styles.container, styles.webFallback, style]}>
-        <View style={styles.mapGrid} />
+        <View style={[styles.container, styles.webFallback, style]}>
+          <View style={styles.mapGrid} />
+        <View style={[styles.mapRoad, styles.mapRoadA]} />
+        <View style={[styles.mapRoad, styles.mapRoadB]} />
+        <View style={[styles.mapRoad, styles.mapRoadC]} />
+        <View style={[styles.mapRoadThin, styles.mapRoadD]} />
+        <View style={[styles.mapRoadThin, styles.mapRoadE]} />
+        <View style={[styles.mapRoadThin, styles.mapRoadF]} />
+        <View style={styles.mapDistrictA} />
+        <View style={styles.mapDistrictB} />
         <View style={styles.radar}>
           <View style={[styles.radarRing, styles.radarRingLarge]} />
           <View style={[styles.radarRing, styles.radarRingMedium]} />
@@ -272,8 +280,8 @@ export function HomeMapView({
           </Text>
           <Text style={styles.fallbackMeta} numberOfLines={2}>
             {hasLocation
-              ? 'Position rider active. Carte dynamique disponible sur mobile natif.'
-              : 'Ouagadougou charge par defaut pendant la localisation.'}
+              ? 'Position active.'
+              : 'Carte centree sur Ouagadougou pendant la localisation.'}
           </Text>
         </View>
       </View>
@@ -341,7 +349,77 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   mapGrid: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#F3F3F3',
+    backgroundColor: '#F1F2EF',
+  },
+  mapRoad: {
+    position: 'absolute',
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E1E1DC',
+  },
+  mapRoadThin: {
+    position: 'absolute',
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  mapRoadA: {
+    left: '0%',
+    right: '6%',
+    top: '28%',
+    transform: [{ rotate: '-12deg' }],
+  },
+  mapRoadB: {
+    left: '10%',
+    right: '0%',
+    top: '46%',
+    transform: [{ rotate: '8deg' }],
+  },
+  mapRoadC: {
+    left: '38%',
+    right: '35%',
+    top: '0%',
+    height: '72%',
+    width: 8,
+    transform: [{ rotate: '18deg' }],
+  },
+  mapRoadD: {
+    left: '4%',
+    right: '34%',
+    top: '18%',
+    transform: [{ rotate: '19deg' }],
+  },
+  mapRoadE: {
+    left: '32%',
+    right: '8%',
+    top: '62%',
+    transform: [{ rotate: '-16deg' }],
+  },
+  mapRoadF: {
+    left: '12%',
+    right: '26%',
+    top: '76%',
+    transform: [{ rotate: '5deg' }],
+  },
+  mapDistrictA: {
+    position: 'absolute',
+    left: '8%',
+    top: '34%',
+    width: '22%',
+    height: '12%',
+    borderRadius: 6,
+    backgroundColor: '#E8EFE7',
+  },
+  mapDistrictB: {
+    position: 'absolute',
+    right: '10%',
+    top: '18%',
+    width: '20%',
+    height: '11%',
+    borderRadius: 6,
+    backgroundColor: '#EDEAE2',
   },
   radar: {
     ...StyleSheet.absoluteFillObject,
@@ -350,10 +428,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   radarRing: {
     position: 'absolute',
-    borderRadius: 4,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#D9D9D9',
-    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(17,17,17,0.12)',
+    backgroundColor: 'transparent',
   },
   radarRingLarge: {
     width: '76%',
@@ -364,9 +442,9 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     aspectRatio: 1,
   },
   riderDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: '#111111',
     borderWidth: 3,
     borderColor: '#ffffff',

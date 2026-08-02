@@ -916,7 +916,7 @@ export default function BookingScreen() {
     bookingMutationInFlightRef.current = true;
     setIsSubmitting(true);
     setStatus(
-      `Creation authentifiee de la demande ${selectedValidatedOption.title}...`,
+      `Preparation de votre course ${selectedValidatedOption.title}...`,
     );
 
     try {
@@ -950,7 +950,7 @@ export default function BookingScreen() {
           pickupAreaType: selectedCity.zone,
           city: selectedCity.id,
           districtProfile: selectedCity.districtProfile,
-          notes: `Flow authentifie depuis l'app rider pour ${me.user.fullName}, ville ${selectedCity.label}, profil ${selectedCity.districtProfile}, option ${selectedValidatedOption.title}, paiement ${selectedPaymentMethod}`,
+          notes: `Reservation ${selectedValidatedOption.title} - ${selectedCity.label} - paiement ${selectedPaymentMethod}`,
           promoCode: promoValidation?.code,
         },
         {
@@ -1064,6 +1064,40 @@ export default function BookingScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ── Map preview ── */}
+        <View style={styles.mapPreviewWrap}>
+          <TripMapView
+            pickupLat={
+              pickupPlace.coordinates?.latitude ??
+              riderPosition.latestPosition?.latitude ??
+              selectedCity.pickup.coordinates.latitude
+            }
+            pickupLng={
+              pickupPlace.coordinates?.longitude ??
+              riderPosition.latestPosition?.longitude ??
+              selectedCity.pickup.coordinates.longitude
+            }
+            destLat={
+              destinationPlace.coordinates?.latitude ??
+              selectedCity.destination.coordinates.latitude
+            }
+            destLng={
+              destinationPlace.coordinates?.longitude ??
+              selectedCity.destination.coordinates.longitude
+            }
+            driverLat={null}
+            driverLng={null}
+            selectable
+            onSelectCoordinate={handleSelectDestinationOnMap}
+            style={styles.mapPreview}
+          />
+          <View style={styles.mapBadge}>
+            <Text style={styles.mapBadgeText}>
+              {tripEstimate.distanceKm} km · {tripEstimate.durationMinutes} min
+            </Text>
+          </View>
+        </View>
+
         {/* ── Route summary card ── */}
         <OrbiSurface style={styles.routeSummaryCard}>
           <View style={styles.routeSummaryRow}>
@@ -1124,40 +1158,6 @@ export default function BookingScreen() {
               cityHint={selectedCity.label}
               onSelectPlace={(place) => applyPlace('destination', place)}
             />
-          </View>
-        </View>
-
-        {/* ── Map preview ── */}
-        <View style={styles.mapPreviewWrap}>
-          <TripMapView
-            pickupLat={
-              pickupPlace.coordinates?.latitude ??
-              riderPosition.latestPosition?.latitude ??
-              selectedCity.pickup.coordinates.latitude
-            }
-            pickupLng={
-              pickupPlace.coordinates?.longitude ??
-              riderPosition.latestPosition?.longitude ??
-              selectedCity.pickup.coordinates.longitude
-            }
-            destLat={
-              destinationPlace.coordinates?.latitude ??
-              selectedCity.destination.coordinates.latitude
-            }
-            destLng={
-              destinationPlace.coordinates?.longitude ??
-              selectedCity.destination.coordinates.longitude
-            }
-            driverLat={null}
-            driverLng={null}
-            selectable
-            onSelectCoordinate={handleSelectDestinationOnMap}
-            style={styles.mapPreview}
-          />
-          <View style={styles.mapBadge}>
-            <Text style={styles.mapBadgeText}>
-              {tripEstimate.distanceKm} km · {tripEstimate.durationMinutes} min
-            </Text>
           </View>
         </View>
 
@@ -1552,7 +1552,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Map preview
   mapPreviewWrap: {
-    height: 220,
+    height: 252,
     borderRadius: 8,
     overflow: 'hidden',
     position: 'relative',
@@ -1562,10 +1562,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   mapPreview: { width: '100%', height: '100%' },
   mapBadge: {
     position: 'absolute',
-    bottom: 10,
+    top: 10,
     left: 10,
     backgroundColor: 'rgba(0,0,0,0.72)',
-    borderRadius: 999,
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 5,
   },

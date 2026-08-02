@@ -1016,7 +1016,7 @@ describe('rider smoke flows', () => {
       longitude: -1.533,
       accuracyMeters: 18,
     };
-    riderPositionState.positionNote = 'Position passager synchronisee. Precision 18 m.';
+    riderPositionState.positionNote = 'Position passager a jour. Precision 18 m.';
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
     mockedFetchRideOptionsPreview.mockResolvedValue({
       route: {
@@ -1388,7 +1388,7 @@ describe('rider smoke flows', () => {
         longitude: -1.534,
       },
     );
-    expectText(renderer, 'Lieu enregistre synchronise avec succes.');
+    expectText(renderer, 'Lieu enregistre avec succes.');
   });
 
   it('rejects unsafe saved place text from account before API mutation', async () => {
@@ -1857,7 +1857,7 @@ describe('rider smoke flows', () => {
     await flushMicrotasks();
 
     expectText(renderer, 'Paiement a finaliser');
-    expectText(renderer, 'Montant a payer: 2 500 F CFA. Finalisez le paiement avant de quitter le flux.');
+    expectText(renderer, 'Montant a payer: 2 500 F CFA. Finalisez le paiement pour terminer.');
     expectText(renderer, 'Finaliser le paiement');
     await pressByText(renderer, 'Finaliser le paiement');
     await flushMicrotasks();

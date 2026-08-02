@@ -91,7 +91,7 @@ jest.mock('../lib/use-driver-realtime-stream', () => ({
 
 jest.mock('../lib/use-driver-presence', () => ({
   useDriverPresence: jest.fn(() => ({
-    presenceNote: 'Presence chauffeur synchronisee.',
+    presenceNote: 'Presence chauffeur a jour.',
   })),
 }));
 
@@ -523,7 +523,7 @@ describe('driver smoke flows', () => {
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
 
     const renderer = await renderScreen(<DriverHomeScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     expectText(renderer, "Aujourd'hui");
     expect(collectText(renderer.root)).toContain('12 500');
@@ -560,7 +560,7 @@ describe('driver smoke flows', () => {
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
 
     const renderer = await renderScreen(<DriverHomeScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     expectText(renderer, '1 offre — Ouagadougou');
     expect(collectText(renderer.root)).toContain('1.2 km');
@@ -606,14 +606,12 @@ describe('driver smoke flows', () => {
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
 
     const renderer = await renderScreen(<RevenusScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
-    expectText(renderer, 'Revenus synchronises. Course active: Chauffeur assigné.');
+    expectText(renderer, 'Revenus a jour. Course active: Chauffeur assigné.');
     expectText(renderer, 'Universite Joseph Ki-Zerbo vers Ouaga 2000');
-    expectText(renderer, 'Contrôle payout');
-    expectText(renderer, '82% chauffeur');
-    expectText(renderer, 'Plateforme estimee');
-    expectText(renderer, 'Contrôle payout');
+    expectText(renderer, 'Cap du jour');
+    expectText(renderer, 'Semaine');
   });
 
   it('keeps driver earnings usable when profile blocks are partially hydrated', async () => {
@@ -647,7 +645,7 @@ describe('driver smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     await pressByText(renderer, 'Accepter cette offre');
     await flushMicrotasks();
@@ -691,7 +689,7 @@ describe('driver smoke flows', () => {
     );
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     const acceptButton = renderer.root.find(
       (node: ReactTestInstance) =>
@@ -739,7 +737,7 @@ describe('driver smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     await pressByText(renderer, 'Refuser cette offre');
     await flushMicrotasks();
@@ -763,11 +761,11 @@ describe('driver smoke flows', () => {
     mockedFetchDriverProfile.mockResolvedValue(buildDriverProfile() as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     expectText(renderer, 'Nouvelle course');
     expectText(renderer, 'Accepter cette offre');
-    expectText(renderer, '1 400 F CFA net - 193 XOF/km effort');
+    expectText(renderer, '1 400 F CFA net - 193 XOF/km approche');
     expectText(renderer, '84% du prix. Offre lisible avec gain et effort connus.');
     expectText(renderer, 'Refuser cette offre');
   });
@@ -1004,7 +1002,7 @@ describe('driver smoke flows', () => {
       .mockResolvedValueOnce(buildDriverProfile() as never);
 
     const renderer = await renderScreen(<DriverHomeScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     await invokeInAct(async () => {
       driverRealtimeState.eventHandler?.('ride-request.reservation-assigned');
@@ -1032,7 +1030,7 @@ describe('driver smoke flows', () => {
       .mockResolvedValueOnce(buildDriverProfile() as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     await invokeInAct(async () => {
       driverRealtimeState.eventHandler?.('ride-request.reservation-expired');
@@ -1069,7 +1067,7 @@ describe('driver smoke flows', () => {
       );
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     await invokeInAct(async () => {
       driverRealtimeState.eventHandler?.('trip.updated');
@@ -1100,7 +1098,7 @@ describe('driver smoke flows', () => {
     mockedFetchTripDetail.mockRejectedValue(new Error('Trip detail temporarily unavailable'));
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     expectText(renderer, 'Course active');
     expectText(renderer, 'Confirmez puis demarrez');
@@ -1128,7 +1126,7 @@ describe('driver smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     expectText(
       renderer,
@@ -1180,7 +1178,7 @@ describe('driver smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
     await pressByText(renderer, 'Annuler la course');
     const cancelOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
       | Array<{ text?: string; onPress?: () => void }>
@@ -1251,7 +1249,7 @@ describe('driver smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<DriverHomeScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
     await pressByText(renderer, 'Passer hors ligne');
 
     expect(mockedUpdateDriverAvailabilityWithApi).toHaveBeenCalledWith(
@@ -1287,7 +1285,7 @@ describe('driver smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
     await pressByText(renderer, 'Je suis au point de depart');
 
     expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
@@ -1325,7 +1323,7 @@ describe('driver smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
     expectText(renderer, 'GO');
     expectText(renderer, 'Passager a bord, pret a partir');
     await pressByText(renderer, 'Demarrer la course');
@@ -1353,7 +1351,7 @@ describe('driver smoke flows', () => {
     mockedUpdateTripStatusWithApi.mockRejectedValue(new Error('socket timeout after commit'));
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
     await pressByText(renderer, 'Demarrer la course');
     await flushMicrotasks();
 
@@ -1362,7 +1360,7 @@ describe('driver smoke flows', () => {
       'trip-driver-1',
       'IN_PROGRESS',
     );
-    expectText(renderer, 'Course demarree. Statut confirme apres resynchronisation.');
+    expectText(renderer, 'Course demarree. Statut confirme.');
     expectText(renderer, 'Terminer la course');
   });
 
@@ -1381,7 +1379,7 @@ describe('driver smoke flows', () => {
     });
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
     await pressByText(renderer, 'Demarrer la course');
     await flushMicrotasks();
 
@@ -1405,7 +1403,7 @@ describe('driver smoke flows', () => {
     );
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
 
     expectText(renderer, 'Demarrer la course');
     expect(collectText(renderer.root)).not.toContain('Code a 4 chiffres');
@@ -1448,7 +1446,7 @@ describe('driver smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
     await pressByText(renderer, 'Annuler la course');
     const cancelOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
       | Array<{ text: string; onPress?: () => void }>
@@ -1499,7 +1497,7 @@ describe('driver smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
     await pressByText(renderer, 'Terminer la course');
     const completeOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
       | Array<{ text?: string; onPress?: () => void }>
@@ -1554,7 +1552,7 @@ describe('driver smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
     expectText(
       renderer,
       'Avant de terminer: Terminez seulement si le client est arrive; contactez le support ou utilisez SOS si necessaire.',
@@ -1593,7 +1591,7 @@ describe('driver smoke flows', () => {
     } as never);
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
     await pressByText(renderer, 'Signaler un incident');
 
     expect(mockedReportTripIncidentWithApi).toHaveBeenCalledWith(
@@ -1625,7 +1623,7 @@ describe('driver smoke flows', () => {
     );
 
     const renderer = await renderScreen(<OffersScreen />);
-    await pressByText(renderer, 'Actualiser le direct');
+    await pressByText(renderer, 'Actualiser');
     await pressByText(renderer, 'SOS securite');
 
     expect(mockedTriggerTripSafetySosWithApi).toHaveBeenCalledWith(

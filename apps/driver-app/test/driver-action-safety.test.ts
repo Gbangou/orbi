@@ -37,7 +37,7 @@ describe('driver action safety helpers', () => {
       }),
     ).toEqual({
       ok: false,
-      message: 'Cette reservation a expire. Actualisez le direct avant toute action.',
+      message: 'Cette reservation a expire. Actualisez avant toute action.',
     });
   });
 
@@ -53,7 +53,7 @@ describe('driver action safety helpers', () => {
       }),
     ).toEqual({
       ok: false,
-      message: 'Cette reservation a expire. Actualisez le direct avant toute action.',
+      message: 'Cette reservation a expire. Actualisez avant toute action.',
     });
   });
 });

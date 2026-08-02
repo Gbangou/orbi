@@ -424,7 +424,7 @@ export function buildDriverEarningsStatusLabel(input: {
   flow: DriverActiveFlowSummary;
 }) {
   if (input.flow.activeTrip) {
-    return `Revenus synchronises. Course active: ${input.flow.primaryStatusLabel}.`;
+    return `Revenus a jour. Course active: ${input.flow.primaryStatusLabel}.`;
   }
 
   if (input.flow.operationalStatus === "SUSPENDED") {

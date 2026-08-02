@@ -41,6 +41,79 @@ import {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+function buildVisualQaReceipt(tripId: string): TripDetailResponse {
+  const completedAt = new Date('2026-08-02T10:24:00.000Z').toISOString();
+  return {
+    trip: {
+      id: tripId || 'visual-qa-trip',
+      rideRequestId: 'visual-qa-request',
+      status: 'COMPLETED',
+      pickupAddress: 'Universite Joseph Ki-Zerbo',
+      destinationAddress: 'Ouaga 2000',
+      riderName: 'Awa Ouedraogo',
+      driverName: 'Issa Kabore',
+      vehicleLabel: 'Toyota Corolla blanche',
+      driverVerification: {
+        verificationStatus: 'VERIFIED',
+        phoneVerified: true,
+        averageRating: 4.92,
+        completedTripsCount: 1248,
+        profilePhotoUrl: null,
+        vehicle: {
+          plateNumber: '11 AB 2345',
+          color: 'Blanc',
+          make: 'Toyota',
+          model: 'Corolla',
+          year: 2021,
+          seats: 4,
+          type: 'CAR',
+          tier: 'CAR_STANDARD',
+        },
+      },
+      routeMonitoring: {
+        state: 'clear',
+        alertCount: 0,
+        lastAlertType: null,
+        lastAlertAt: null,
+        lastPositionAt: completedAt,
+        latestPosition: null,
+      },
+      pickupCode: '5621',
+      driverPhoneNumber: '+22670000000',
+      riderPhoneNumber: '+22670123456',
+      paymentMethod: 'MOBILE_MONEY',
+      receipt: {
+        paymentAttemptId: 'visual-qa-payment',
+        status: 'SUCCEEDED',
+        provider: 'Orange Money',
+        channel: 'MOBILE_MONEY',
+        amount: 2500,
+        currency: 'XOF',
+        transactionRef: 'ORBI2500802',
+        updatedAt: completedAt,
+      },
+      actualFare: 2500,
+      driverPayout: 2100,
+      platformFee: 400,
+      commissionRate: 0.16,
+      currency: 'XOF',
+      pickupLatitude: 12.3714,
+      pickupLongitude: -1.5197,
+      destinationLatitude: 12.3049,
+      destinationLongitude: -1.5247,
+      startedAt: '2026-08-02T10:06:00.000Z',
+      completedAt,
+      createdAt: '2026-08-02T09:52:00.000Z',
+      timeline: [
+        { id: 'created', eventType: 'trip.created', label: 'Course demandee', createdAt: '2026-08-02T09:52:00.000Z' },
+        { id: 'matched', eventType: 'trip.matched', label: 'Chauffeur confirme', createdAt: '2026-08-02T09:55:00.000Z' },
+        { id: 'completed', eventType: 'trip.completed', label: 'Course terminee', createdAt: completedAt },
+      ],
+      promoCode: null,
+    },
+  };
+}
+
 function ReceiptGlyph() {
   const theme = useOrbiTheme();
   const glyphStyles = useMemo(() => makeGlyphStyles(theme), [theme]);
@@ -211,6 +284,12 @@ export default function ReceiptScreen() {
   useEffect(() => {
     if (!tripId) {
       setErrorMessage('Identifiant de course manquant.');
+      setLoading(false);
+      return;
+    }
+
+    if (process.env.EXPO_PUBLIC_ORBI_VISUAL_QA === 'true') {
+      setDetail(buildVisualQaReceipt(tripId));
       setLoading(false);
       return;
     }
@@ -462,11 +541,11 @@ export default function ReceiptScreen() {
         </OrbiSurface>
 
         <OrbiStatusBanner
-          title={paymentSettled ? "Recu professionnel" : "Paiement a finaliser"}
+          title={paymentSettled ? "Recu disponible" : "Paiement a finaliser"}
           message={
             paymentSettled
-              ? "Reference, paiement et details chauffeur disponibles. Vous pouvez l envoyer par SMS, WhatsApp ou email."
-              : `Montant a payer: ${formatRiderMoneyAmount(trip.actualFare)}. Finalisez le paiement avant de quitter le flux.`
+              ? "Trajet, paiement et details chauffeur disponibles. Vous pouvez l envoyer par SMS, WhatsApp ou email."
+              : `Montant a payer: ${formatRiderMoneyAmount(trip.actualFare)}. Finalisez le paiement pour terminer.`
           }
           tone={paymentSettled ? "sky" : "amber"}
         />

@@ -353,17 +353,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   starsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 6,
   },
   star: {
-    width: 52,
-    height: 52,
+    width: 46,
+    height: 46,
     alignItems: 'center',
     justifyContent: 'center',
   },
   starGlyph: {
-    fontSize: 42,
-    lineHeight: 50,
+    fontSize: 36,
+    lineHeight: 44,
     textAlign: 'center',
   },
   starGlyphFilled: {

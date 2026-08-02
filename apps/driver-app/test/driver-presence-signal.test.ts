@@ -55,12 +55,12 @@ describe("driver-presence-signal", () => {
         accuracyMeters: 18.2,
         activeTripId: "trip-1",
       }),
-    ).toBe("Position mission synchronisee. Precision 18 m.");
+    ).toBe("Position course a jour. Precision 18 m.");
     expect(
       buildDriverPresenceSyncedNote({
         accuracyMeters: 18.2,
       }),
-    ).toBe("Position synchronisee. Precision 18 m.");
+    ).toBe("Position a jour. Precision 18 m.");
   });
 
   it("summarizes backend route progress during an active mission", () => {
@@ -80,7 +80,7 @@ describe("driver-presence-signal", () => {
         },
       }),
     ).toBe(
-      "Position mission synchronisee. depart 240 m, destination 5.2 km. Precision 18 m.",
+      "Position course a jour. depart 240 m, destination 5.2 km. Precision 18 m.",
     );
   });
 });

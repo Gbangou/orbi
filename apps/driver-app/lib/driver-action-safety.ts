@@ -20,14 +20,14 @@ export function validateOfferAction(input: {
   if (!input.offer) {
     return {
       ok: false,
-      message: 'Cette offre n est plus disponible dans le flux chauffeur.',
+      message: 'Cette offre n est plus disponible.',
     };
   }
 
   if (!isOfferStillReserved(input.offer, input.now)) {
     return {
       ok: false,
-      message: 'Cette reservation a expire. Actualisez le direct avant toute action.',
+      message: 'Cette reservation a expire. Actualisez avant toute action.',
     };
   }
 

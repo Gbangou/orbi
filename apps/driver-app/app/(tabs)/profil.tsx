@@ -707,7 +707,7 @@ export default function ProfilScreen() {
         <Text style={styles.headerTitle}>{td('profile')}</Text>
         <View style={styles.headerRight}>
           {isRefreshing ? (
-            <Text style={styles.headerLiveText}>sync</Text>
+            <Text style={styles.headerLiveText}>jour</Text>
           ) : null}
           <OrbiButton
             onPress={() => void handleSignOut()}
@@ -803,7 +803,7 @@ export default function ProfilScreen() {
           <OrbiStatusBanner
             tone="danger"
             title="Compte suspendu"
-            message="Les opérations doivent lever le blocage avant reprise."
+            message="Votre compte doit etre reactive avant reprise."
           />
         ) : null}
 
@@ -1139,7 +1139,7 @@ export default function ProfilScreen() {
           ))
         ) : (
           <Text style={styles.meta}>
-            Aucun vehicule synchronise pour le moment.
+            Aucun vehicule ajoute pour le moment.
           </Text>
         )}
       </OrbiSurface>

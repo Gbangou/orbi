@@ -174,8 +174,7 @@ export default function ActivityScreen() {
         () => fetchMyTrips(authClient),
         {
           maxAttempts: 3,
-          onRetry: (attempt, max) =>
-            setStatus(`Reconnexion... (tentative ${attempt}/${max})`),
+          onRetry: () => setStatus("Connexion en cours..."),
         },
       );
       const normalizedHistory = normalizeRiderTripsResponse(response);
@@ -197,8 +196,7 @@ export default function ActivityScreen() {
             () => fetchTripDetail(authClient, activeTrip.id),
             {
               maxAttempts: 3,
-              onRetry: (attempt, max) =>
-                setStatus(`Reconnexion suivi... (tentative ${attempt}/${max})`),
+              onRetry: () => setStatus("Mise a jour du trajet..."),
             },
           );
           setActiveTripDetail(detail);
@@ -855,7 +853,7 @@ export default function ActivityScreen() {
               </Text>
             </View>
             {isRealtimeSyncing ? (
-              <Text style={styles.realtimeDot}>live</Text>
+              <Text style={styles.realtimeDot}>jour</Text>
             ) : null}
           </View>
 
@@ -1070,7 +1068,7 @@ export default function ActivityScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('activity.title', { defaultValue: 'Activité' })}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          {isRealtimeSyncing ? <Text style={styles.headerLiveText}>live</Text> : null}
+          {isRealtimeSyncing ? <Text style={styles.headerLiveText}>jour</Text> : null}
           <OrbiButton
             onPress={() => void loadHistory()}
             style={styles.refreshButton}

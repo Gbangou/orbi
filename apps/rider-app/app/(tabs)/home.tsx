@@ -136,58 +136,65 @@ const StatusDot = memo(function StatusDot({ active }: { active: boolean }) {
   );
 });
 
-// ── Skeleton row (shimmer loading placeholder) ────────────────────────────────
-
-const SkeletonServiceRow = memo(function SkeletonServiceRow() {
-  const theme = useOrbiTheme();
-  const skeletonStyles = useMemo(() => makeSkeletonStyles(theme), [theme]);
-  const shimmer = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmer, { toValue: 1, duration: 900, useNativeDriver: false }),
-        Animated.timing(shimmer, { toValue: 0, duration: 900, useNativeDriver: false }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [shimmer]);
-
-  const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.7] });
-
-  return (
-    <Animated.View style={[skeletonStyles.row, { opacity }]}>
-      <View style={skeletonStyles.icon} />
-      <View style={skeletonStyles.info}>
-        <View style={skeletonStyles.titleBar} />
-        <View style={skeletonStyles.metaBar} />
-      </View>
-      <View style={skeletonStyles.fareBar} />
-    </Animated.View>
-  );
-});
-
-const makeSkeletonStyles = (theme: OrbiTheme) => StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  icon: { width: 44, height: 44, borderRadius: 12, backgroundColor: theme.colors.backgroundDim },
-  info: { flex: 1, gap: 6 },
-  titleBar: { height: 13, width: '60%', borderRadius: 6, backgroundColor: theme.colors.backgroundDim },
-  metaBar: { height: 10, width: '40%', borderRadius: 5, backgroundColor: theme.colors.backgroundDim },
-  fareBar: { height: 13, width: 52, borderRadius: 6, backgroundColor: theme.colors.backgroundDim },
-});
-
 // ── Vehicle mini icon ─────────────────────────────────────────────────────────
 
 const ServiceVehicleIcon = memo(function ServiceVehicleIcon({ tier }: { tier: string }) {
   return <VehicleIllustration tier={tier} width={40} height={30} />;
+});
+
+const fallbackServices = [
+  {
+    id: 'fallback-moto',
+    title: 'Moto',
+    meta: 'Rapide pour trajets courts',
+    tier: 'moto-standard',
+  },
+  {
+    id: 'fallback-go',
+    title: 'Orbi Go',
+    meta: 'Voiture standard',
+    tier: 'car-standard',
+  },
+  {
+    id: 'fallback-comfort',
+    title: 'Confort',
+    meta: 'Plus d espace',
+    tier: 'car-comfort',
+  },
+] as const;
+
+const ServicePreviewRow = memo(function ServicePreviewRow({
+  service,
+  onPress,
+}: {
+  service: (typeof fallbackServices)[number];
+  onPress: () => void;
+}) {
+  const theme = useOrbiTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.servicePressable,
+        pressed && styles.serviceRowPressed,
+      ]}
+    >
+      <OrbiSurface style={styles.serviceRow}>
+        <View style={[styles.serviceIcon, { backgroundColor: theme.colors.backgroundAlt }]}>
+          <ServiceVehicleIcon tier={service.tier} />
+        </View>
+        <View style={styles.serviceInfo}>
+          <Text style={styles.serviceTitle}>{service.title}</Text>
+          <Text style={styles.serviceMeta} numberOfLines={1} ellipsizeMode="tail">
+            {service.meta}
+          </Text>
+        </View>
+        <Text style={styles.serviceFareHint}>Voir prix</Text>
+      </OrbiSurface>
+    </Pressable>
+  );
 });
 
 function buildServiceMeta(option: RideOption) {
@@ -586,8 +593,8 @@ export default function RiderHomeScreen() {
         <SafeAreaView style={styles.offlineSafe} pointerEvents="none">
           <View style={styles.offlineBanner}>
             <View style={styles.offlineDot} />
-            <Text style={styles.offlineText}>
-              Hors ligne — affichage du dernier état connu
+            <Text style={styles.offlineText} numberOfLines={1}>
+              Hors ligne · dernier état
             </Text>
           </View>
         </SafeAreaView>
@@ -755,10 +762,17 @@ export default function RiderHomeScreen() {
                 </View>
               </View>
             ) : (
-              <View style={styles.services}>
-                <SkeletonServiceRow />
-                <SkeletonServiceRow />
-                <SkeletonServiceRow />
+              <View style={styles.servicesBlock}>
+                <Text style={styles.servicesTitle}>Choisir une course</Text>
+                <View style={styles.services}>
+                  {fallbackServices.map((service) => (
+                    <ServicePreviewRow
+                      key={service.id}
+                      service={service}
+                      onPress={navigateToBook}
+                    />
+                  ))}
+                </View>
               </View>
             )}
           </ScrollView>
@@ -1038,6 +1052,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: theme.colors.text,
   },
+  serviceFareHint: {
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: '#111111',
+  },
   servicesPlaceholder: {
     paddingVertical: 16,
     alignItems: 'center',
@@ -1067,21 +1087,22 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // ── Offline banner ─────────────────────────────────────────────────────────
   offlineSafe: {
     position: 'absolute',
-    top: 0,
+    top: 54,
     left: 0,
     right: 0,
-    zIndex: 99,
+    zIndex: 45,
   },
   offlineBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     backgroundColor: 'rgba(17,17,17,0.88)',
-    marginHorizontal: 16,
-    marginTop: 8,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    marginLeft: 16,
+    marginRight: 84,
+    marginTop: 0,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
   offlineDot: {
     width: 7,
@@ -1090,6 +1111,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: theme.colors.text,
   },
   offlineText: {
+    flex: 1,
     fontSize: 12,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',

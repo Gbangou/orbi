@@ -39,7 +39,7 @@ export function buildDriverPresenceSyncedNote(input: {
   const precision = Math.round(toFiniteRouteNumber(input.accuracyMeters) ?? 0);
 
   if (!input.activeTripId) {
-    return `Position synchronisee. Precision ${precision} m.`;
+    return `Position a jour. Precision ${precision} m.`;
   }
 
   const pickupDistance = formatRouteDistance(
@@ -56,8 +56,8 @@ export function buildDriverPresenceSyncedNote(input: {
     .join(", ");
 
   return routeProgress
-    ? `Position mission synchronisee. ${routeProgress}. Precision ${precision} m.`
-    : `Position mission synchronisee. Precision ${precision} m.`;
+    ? `Position course a jour. ${routeProgress}. Precision ${precision} m.`
+    : `Position course a jour. Precision ${precision} m.`;
 }
 
 export function resolveDriverPresenceTrackingOptions(

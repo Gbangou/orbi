@@ -98,11 +98,11 @@ export function buildRiderNextActionHint(flow: RiderActiveFlowSummary) {
   }
 
   if (flow.activeTrip?.status === "IN_PROGRESS") {
-    return "Suivez le trajet live et utilisez SOS ou partage si la course devient sensible.";
+    return "Suivez le trajet et utilisez SOS ou partage si la course devient sensible.";
   }
 
   if (flow.activeTrip) {
-    return "Le flux actif est en transition, actualisez le suivi si besoin.";
+    return "Le trajet se met a jour. Actualisez le suivi si besoin.";
   }
 
   if (flow.activeRequest) {
@@ -255,7 +255,7 @@ export function buildRiderRouteSignalHealth(input: {
   if (Number.isNaN(observedAt.getTime()) || Number.isNaN(now.getTime())) {
     return {
       freshnessLabel: "Position recente",
-      note: "Position reçue, horodatage en cours de vérification.",
+      note: "Position recue, verification en cours.",
       tone: "amber" as const,
     };
   }

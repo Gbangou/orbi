@@ -326,7 +326,7 @@ export default function DriverHomeScreen() {
   const [offers, setOffers] = useState<DriverOffer[]>([]);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [earnings, setEarnings] = useState<DriverEarningsResponse | null>(null);
-  const [statusNote, setStatusNote] = useState('Synchronisation terrain en cours...');
+  const [statusNote, setStatusNote] = useState('Mise a jour en cours...');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRealtimeSyncing, setIsRealtimeSyncing] = useState(false);
   const [freshOfferIds, setFreshOfferIds] = useState<string[]>([]);
@@ -707,7 +707,7 @@ export default function DriverHomeScreen() {
               <View style={styles.offlineHeroCopy}>
                 <Text style={styles.offlineTitle}>Vous êtes hors ligne</Text>
                 <Text style={styles.offlineSub} numberOfLines={2}>
-                  Activez le direct pour recevoir des courses.
+                  Passez en ligne pour recevoir des courses.
                 </Text>
               </View>
             </View>
@@ -745,7 +745,7 @@ export default function DriverHomeScreen() {
         <OrbiButton
           onPress={() => void loadDriverHome(false)}
           loading={isRefreshing}
-          accessibilityLabel="Actualiser le direct"
+          accessibilityLabel="Actualiser"
           label={td('refresh')}
           variant="secondary"
           tone="teal"
@@ -865,10 +865,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
   },
   toggleBtn: {
-    borderRadius: 999,
-    minWidth: 226,
-    paddingHorizontal: 34,
-    minHeight: 58,
+    borderRadius: 8,
+    minWidth: 198,
+    paddingHorizontal: 24,
+    minHeight: 50,
     backgroundColor: '#111111',
   },
   toggleLabel: { fontSize: 16, fontWeight: '800', fontFamily: 'Inter_700Bold' },

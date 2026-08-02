@@ -8,7 +8,7 @@ export function buildRiderPositionSyncedNote(input: {
   const precision = Math.round(toFiniteRouteNumber(input.accuracyMeters) ?? 0);
 
   if (!input.activeTripId) {
-    return `Position passager synchronisee. Precision ${precision} m.`;
+    return `Position passager a jour. Precision ${precision} m.`;
   }
 
   const destinationDistance = formatRouteDistance(
@@ -16,8 +16,8 @@ export function buildRiderPositionSyncedNote(input: {
   );
 
   return destinationDistance
-    ? `Position passager synchronisee. Destination ${destinationDistance}. Precision ${precision} m.`
-    : `Position passager synchronisee. Precision ${precision} m.`;
+    ? `Position passager a jour. Destination ${destinationDistance}. Precision ${precision} m.`
+    : `Position passager a jour. Precision ${precision} m.`;
 }
 
 function toFiniteRouteNumber(value: unknown) {

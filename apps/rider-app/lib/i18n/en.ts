@@ -37,7 +37,7 @@ export const en = {
   home: {
     greeting: 'Hello, {{name}}',
     whereToGo: 'Where to?',
-    liveMap: 'Live map',
+    liveMap: 'Map',
     drivers: '{{count}} driver',
     drivers_plural: '{{count}} drivers',
     fareFrom: 'From {{fare}} · {{eta}} min',

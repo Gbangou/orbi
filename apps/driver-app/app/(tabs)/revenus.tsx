@@ -218,9 +218,11 @@ function DriverOperatingCompassCard({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.eyebrow}>Boussole économique</Text>
-          <Text style={styles.title}>{compass.headline}</Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.eyebrow} numberOfLines={1}>Revenus</Text>
+          <Text style={styles.title} numberOfLines={1}>
+            {compass.headline}
+          </Text>
         </View>
         <View style={styles.progressBadge}>
           <Text style={styles.progressText}>{compass.progressPercent}%</Text>
@@ -252,10 +254,10 @@ function DriverOperatingCompassCard({
 const makeCompassStyles = (theme: OrbiTheme) => StyleSheet.create({
   card: {
     backgroundColor: '#071311',
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(0,201,167,0.26)',
-    padding: 16,
+    padding: 14,
     gap: 12,
   },
   header: {
@@ -263,6 +265,10 @@ const makeCompassStyles = (theme: OrbiTheme) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: 12,
+  },
+  headerCopy: {
+    flex: 1,
+    minWidth: 0,
   },
   eyebrow: {
     fontSize: 11,
@@ -273,16 +279,17 @@ const makeCompassStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     color: '#FFFFFF',
   },
   progressBadge: {
-    minWidth: 54,
-    borderRadius: 999,
+    minWidth: 48,
+    flexShrink: 0,
+    borderRadius: 8,
     backgroundColor: 'rgba(0,201,167,0.14)',
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 5,
     alignItems: 'center',
   },
@@ -418,7 +425,7 @@ export default function RevenusScreen() {
       } else if (earnings.summary.completedTrips > previousSummary.completedTrips) {
         setEarningsTransitionLabel('Une course supplementaire vient d etre cloturee.');
       } else if (earnings.summary.week !== previousSummary.week) {
-        setEarningsTransitionLabel('Le recap hebdomadaire a ete resynchronise.');
+        setEarningsTransitionLabel('Le recap hebdomadaire est a jour.');
       }
     }
 
@@ -586,7 +593,7 @@ export default function RevenusScreen() {
             <Text style={styles.settlementVal}>{earningsTrustSummary.recentNetPayoutLabel}</Text>
           </View>
           <View style={styles.settlementRow}>
-            <Text style={styles.settlementKey}>Plateforme estimee</Text>
+            <Text style={styles.settlementKey}>Frais Orbi</Text>
             <Text style={styles.settlementVal}>{earningsTrustSummary.estimatedPlatformFeeLabel}</Text>
           </View>
           {earningsTrustSummary.note ? (
@@ -659,7 +666,7 @@ export default function RevenusScreen() {
               >
                 <View style={styles.tripLeft}>
                   {freshTripIds.includes(trip.id) ? (
-                    <Text style={styles.tripFreshBadge}>Nouveau payout</Text>
+                    <Text style={styles.tripFreshBadge}>Nouveau</Text>
                   ) : null}
                   <Text style={styles.tripRoute} numberOfLines={1}>
                     {trip.route}

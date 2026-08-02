@@ -264,7 +264,7 @@ export function buildDriverOfferDecisionSummary(offer: DriverOffer): {
 
   const title =
     payoutPerEffortKm !== null
-      ? `${formatDriverOfferMoney(driverPayout)} net - ${payoutPerEffortKm} XOF/km effort`
+      ? `${formatDriverOfferMoney(driverPayout)} net - ${payoutPerEffortKm} XOF/km approche`
       : `${formatDriverOfferMoney(driverPayout)} net estime`;
   const share =
     driverSharePercent !== null ? `${driverSharePercent}% du prix` : 'part chauffeur verifiee';

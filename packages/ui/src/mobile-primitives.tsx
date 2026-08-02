@@ -329,7 +329,7 @@ export function PersonBadge({
           ) : null}
         </View>
         {subtitle || plate ? (
-          <Text numberOfLines={1} style={[mobilePerson.subtitle, { fontFamily: orbiTheme.typography.fontFamily.regular, color: theme.colors.textMuted }]}>
+          <Text numberOfLines={2} style={[mobilePerson.subtitle, { fontFamily: orbiTheme.typography.fontFamily.regular, color: theme.colors.textMuted }]}>
             {[subtitle, plate].filter(Boolean).join(' · ')}
           </Text>
         ) : null}
@@ -354,6 +354,7 @@ const mobilePerson = StyleSheet.create({
   },
   copy: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   nameRow: {
@@ -376,12 +377,13 @@ const mobilePerson = StyleSheet.create({
   },
   subtitle: {
     fontSize: 12,
+    lineHeight: 16,
   },
 });
 
 const mobileSurface = StyleSheet.create({
   surface: {
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -416,7 +418,7 @@ const mobileScreen = StyleSheet.create({
 const mobileButton = StyleSheet.create({
   button: {
     minHeight: 50,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,

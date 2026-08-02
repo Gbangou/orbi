@@ -160,18 +160,18 @@ export function buildDriverEarningsTrustSummary(
       settlement.recentPlatformFee,
     ),
     settlementStateLabel: hasAnomaly
-      ? 'Contrôle requis'
+      ? 'Verification requise'
       : earnings.recentTrips.length > 0
-        ? 'Lisible'
+        ? 'Valide'
         : 'En attente',
     settlementTone: hasAnomaly ? ('amber' as const) : ('sky' as const),
     note: hasAnomaly
-      ? 'Contrôle requis: une valeur finance semble incohérente ou hors devise attendue.'
+      ? 'Verification requise: un montant doit etre confirme.'
       : compensationWeek > 0
         ? `Les revenus incluent ${formatDriverEarningsAmount(compensationWeek)} d indemnites annulation validees cette semaine.`
       : earnings.recentTrips.length > 0
         ? 'Les montants affiches sont des gains chauffeur nets issus des courses cloturees.'
-        : 'Aucun payout recent a rapprocher pour le moment.',
+        : 'Aucun paiement recent pour le moment.',
   };
 }
 

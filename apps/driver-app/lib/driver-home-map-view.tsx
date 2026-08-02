@@ -159,6 +159,13 @@ export function DriverHomeMapView({
     return (
       <View style={[styles.container, styles.webFallback, style]}>
         <View style={styles.gridSurface} />
+        <View style={[styles.mapRoad, styles.mapRoadA]} />
+        <View style={[styles.mapRoad, styles.mapRoadB]} />
+        <View style={[styles.mapRoad, styles.mapRoadC]} />
+        <View style={[styles.mapRoadThin, styles.mapRoadD]} />
+        <View style={[styles.mapRoadThin, styles.mapRoadE]} />
+        <View style={styles.mapDistrictA} />
+        <View style={styles.mapDistrictB} />
         <View style={styles.radarRingLarge} />
         <View style={styles.radarRingMedium} />
         <View style={styles.driverDot} />
@@ -166,7 +173,7 @@ export function DriverHomeMapView({
           <Text style={styles.eyebrow}>Zone chauffeur</Text>
           <Text style={styles.title}>Pret a recevoir des courses</Text>
           <Text style={styles.meta} numberOfLines={2}>
-            Position Ouagadougou active. La carte detaillee reste disponible sur mobile natif.
+            Carte centree sur Ouagadougou.
           </Text>
         </View>
       </View>
@@ -235,30 +242,93 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   gridSurface: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#F3F3F3',
+    backgroundColor: '#F1F2EF',
+  },
+  mapRoad: {
+    position: 'absolute',
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E1E1DC',
+  },
+  mapRoadThin: {
+    position: 'absolute',
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  mapRoadA: {
+    left: '0%',
+    right: '2%',
+    top: '30%',
+    transform: [{ rotate: '-10deg' }],
+  },
+  mapRoadB: {
+    left: '4%',
+    right: '0%',
+    top: '54%',
+    transform: [{ rotate: '8deg' }],
+  },
+  mapRoadC: {
+    left: '45%',
+    top: '0%',
+    width: 8,
+    height: '74%',
+    transform: [{ rotate: '16deg' }],
+  },
+  mapRoadD: {
+    left: '8%',
+    right: '34%',
+    top: '18%',
+    transform: [{ rotate: '18deg' }],
+  },
+  mapRoadE: {
+    left: '28%',
+    right: '10%',
+    top: '72%',
+    transform: [{ rotate: '-14deg' }],
+  },
+  mapDistrictA: {
+    position: 'absolute',
+    left: '10%',
+    top: '36%',
+    width: '22%',
+    height: '12%',
+    borderRadius: 6,
+    backgroundColor: '#E8EFE7',
+  },
+  mapDistrictB: {
+    position: 'absolute',
+    right: '11%',
+    top: '20%',
+    width: '20%',
+    height: '11%',
+    borderRadius: 6,
+    backgroundColor: '#EDEAE2',
   },
   radarRingLarge: {
     position: 'absolute',
     width: '72%',
     aspectRatio: 1,
-    borderRadius: 4,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#D9D9D9',
-    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(17,17,17,0.12)',
+    backgroundColor: 'transparent',
   },
   radarRingMedium: {
     position: 'absolute',
     width: '44%',
     aspectRatio: 1,
-    borderRadius: 4,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#D9D9D9',
-    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(17,17,17,0.12)',
+    backgroundColor: 'transparent',
   },
   driverDot: {
-    width: 26,
-    height: 26,
-    borderRadius: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#111111',
     borderWidth: 3,
     borderColor: '#ffffff',

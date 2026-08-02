@@ -37,7 +37,7 @@ export const fr = {
   home: {
     greeting: 'Bonjour, {{name}}',
     whereToGo: 'Où allez-vous ?',
-    liveMap: 'Carte live',
+    liveMap: 'Carte',
     drivers: '{{count}} chauffeur',
     drivers_plural: '{{count}} chauffeurs',
     fareFrom: 'À partir de {{fare}} · {{eta}} min',

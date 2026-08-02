@@ -53,7 +53,7 @@ export function buildDriverShiftReadiness(input: {
       eyebrow: 'Etat de service',
       title: 'Validation requise',
       description:
-        'Le direct peut rester visible, mais les offres attendent l approbation du profil chauffeur.',
+        'Les offres attendent l approbation du profil chauffeur.',
       scoreLabel: '45/100',
       tone: 'amber',
       note: 'Priorite: faire valider le profil et le vehicule.',
@@ -111,7 +111,7 @@ export function buildDriverShiftReadiness(input: {
       description:
         input.flow.visibleOfferCount > 0
           ? 'Des reservations sont disponibles. Comparez gain, distance et fenetre avant d accepter.'
-          : 'Le direct est ouvert. Vous etes disponible pour la prochaine demande.',
+          : 'Vous etes disponible pour la prochaine demande.',
       scoreLabel: `${score}/100`,
       tone: fatigue?.state === 'warning' ? 'amber' : 'teal',
       note:
@@ -120,7 +120,7 @@ export function buildDriverShiftReadiness(input: {
           : 'Position et disponibilite sont pretes pour recevoir une mission.',
       noteTone: fatigue?.state === 'warning' ? 'amber' : 'teal',
       insights: [
-        { label: 'Direct', value: 'Ouvert', tone: 'teal' },
+        { label: 'Service', value: 'Ouvert', tone: 'teal' },
         { label: 'Offres', value: String(input.flow.visibleOfferCount), tone: 'amber' },
         { label: 'Jour', value: formatCompactXof(earningsToday), tone: 'sky' },
       ],
@@ -131,7 +131,7 @@ export function buildDriverShiftReadiness(input: {
     eyebrow: 'Etat de service',
     title: 'Hors ligne, pret a reprendre',
     description:
-      'Le compte reste synchronise. Passez en ligne seulement quand vous etes vraiment disponible.',
+      'Passez en ligne seulement quand vous etes vraiment disponible.',
     scoreLabel: '72/100',
     tone: 'amber',
     note: 'Le mode hors ligne evite les refus inutiles et protege votre qualite de service.',

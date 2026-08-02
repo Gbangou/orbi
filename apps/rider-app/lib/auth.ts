@@ -36,6 +36,10 @@ function createRiderAuthClient() {
 }
 
 export async function restoreRiderSession() {
+  if (isRiderVisualQaSessionEnabled()) {
+    return buildVisualQaRiderContext();
+  }
+
   const context = await restorePersistedSession(
     createRiderPublicClient(),
     riderSessionStorage,
@@ -102,6 +106,10 @@ export async function signOutRiderAccount() {
 }
 
 export async function hasPersistedRiderSession() {
+  if (isRiderVisualQaSessionEnabled()) {
+    return true;
+  }
+
   const token = await riderSessionStorage.getItem(riderSessionStorageKey);
   return Boolean(token);
 }
@@ -139,6 +147,30 @@ function buildFastRiderAuthContext(
       session: session.session,
     },
   };
+}
+
+function isRiderVisualQaSessionEnabled() {
+  return process.env.EXPO_PUBLIC_ORBI_VISUAL_QA === 'true';
+}
+
+function buildVisualQaRiderContext(): AuthenticatedApiContext {
+  const client = createRiderPublicClient();
+  const session: AuthSessionResponse = {
+    message: 'Visual QA rider session ready.',
+    sessionToken: 'visual-qa-rider-session',
+    user: {
+      id: 'visual-qa-rider',
+      email: 'rider@orbi.app',
+      fullName: 'Awa Ouedraogo',
+      role: 'RIDER',
+    },
+    session: {
+      id: 'visual-qa-rider-session-id',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    },
+  };
+
+  return buildFastRiderAuthContext(client, session);
 }
 
 function assertUsableRiderContext(context: AuthenticatedApiContext) {

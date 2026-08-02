@@ -504,10 +504,14 @@ if ($AuthenticateDemoSessions) {
     @{ app = 'rider'; slug = 'rider-home'; url = "$RiderBaseUrl/home"; expectedPath = '/home' },
     @{ app = 'rider'; slug = 'rider-book'; url = "$RiderBaseUrl/book"; expectedPath = '/book' },
     @{ app = 'rider'; slug = 'rider-activity'; url = "$RiderBaseUrl/activity"; expectedPath = '/activity' },
+    @{ app = 'rider'; slug = 'rider-trips'; url = "$RiderBaseUrl/trips"; expectedPath = '/trips' },
     @{ app = 'rider'; slug = 'rider-account'; url = "$RiderBaseUrl/account"; expectedPath = '/account' },
+    @{ app = 'rider'; slug = 'rider-receipt'; url = "$RiderBaseUrl/receipt?tripId=visual-qa-trip"; expectedPath = '/receipt' },
+    @{ app = 'rider'; slug = 'rider-rating'; url = "$RiderBaseUrl/rating?tripId=visual-qa-trip&driverName=Issa%20Kabore&fare=2500&destination=Ouaga%202000"; expectedPath = '/rating' },
     @{ app = 'driver'; slug = 'driver-onboarding'; url = "$DriverBaseUrl/onboarding"; expectedPath = '/onboarding' },
     @{ app = 'driver'; slug = 'driver-home'; url = "$DriverBaseUrl/accueil"; expectedPath = '/accueil' },
     @{ app = 'driver'; slug = 'driver-offers'; url = "$DriverBaseUrl/offres"; expectedPath = '/offres' },
+    @{ app = 'driver'; slug = 'driver-earnings'; url = "$DriverBaseUrl/revenus"; expectedPath = '/revenus' },
     @{ app = 'driver'; slug = 'driver-profile'; url = "$DriverBaseUrl/profil"; expectedPath = '/profil' }
   )
 } else {
@@ -516,11 +520,15 @@ if ($AuthenticateDemoSessions) {
     @{ app = 'rider'; slug = 'rider-home'; url = "$RiderBaseUrl/home"; expectedPath = '/home' },
     @{ app = 'rider'; slug = 'rider-book'; url = "$RiderBaseUrl/book"; expectedPath = '/book' },
     @{ app = 'rider'; slug = 'rider-activity'; url = "$RiderBaseUrl/activity"; expectedPath = '/activity' },
+    @{ app = 'rider'; slug = 'rider-trips'; url = "$RiderBaseUrl/trips"; expectedPath = '/trips' },
     @{ app = 'rider'; slug = 'rider-account'; url = "$RiderBaseUrl/account"; expectedPath = '/account' },
+    @{ app = 'rider'; slug = 'rider-receipt'; url = "$RiderBaseUrl/receipt?tripId=visual-qa-trip"; expectedPath = '/receipt' },
+    @{ app = 'rider'; slug = 'rider-rating'; url = "$RiderBaseUrl/rating?tripId=visual-qa-trip&driverName=Issa%20Kabore&fare=2500&destination=Ouaga%202000"; expectedPath = '/rating' },
     @{ app = 'driver'; slug = 'driver-auth'; url = "$DriverBaseUrl/auth"; expectedPath = '/auth' },
     @{ app = 'driver'; slug = 'driver-onboarding'; url = "$DriverBaseUrl/onboarding"; expectedPath = '/onboarding' },
     @{ app = 'driver'; slug = 'driver-home'; url = "$DriverBaseUrl/accueil"; expectedPath = '/accueil' },
     @{ app = 'driver'; slug = 'driver-offers'; url = "$DriverBaseUrl/offres"; expectedPath = '/offres' },
+    @{ app = 'driver'; slug = 'driver-earnings'; url = "$DriverBaseUrl/revenus"; expectedPath = '/revenus' },
     @{ app = 'driver'; slug = 'driver-profile'; url = "$DriverBaseUrl/profil"; expectedPath = '/profil' }
   )
 }
@@ -588,7 +596,8 @@ try {
     EXPO_PUBLIC_ORBI_DEMO_RIDER_EMAIL: '$RiderDemoEmail',
     EXPO_PUBLIC_ORBI_DEMO_RIDER_PASSWORD: '$RiderDemoPassword',
     EXPO_PUBLIC_ORBI_DEMO_DRIVER_EMAIL: '$DriverDemoEmail',
-    EXPO_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD: '$DriverDemoPassword'
+    EXPO_PUBLIC_ORBI_DEMO_DRIVER_PASSWORD: '$DriverDemoPassword',
+    EXPO_PUBLIC_ORBI_VISUAL_QA: 'true'
   };
   globalThis.process = { ...(globalThis.process || {}), env };
 })()
@@ -676,6 +685,7 @@ try {
           url = $state.url
           expectedPath = $targetRoute.expectedPath
           routeMismatch = -not ([Uri]$state.url).AbsolutePath.Equals($targetRoute.expectedPath)
+          blockedByAuth = ([Uri]$state.url).AbsolutePath.Equals('/auth') -and -not $targetRoute.expectedPath.Equals('/auth')
           screenshot = $filePath
           hasExpoOverlay = $state.hasExpoOverlay
           isBlank = $state.isBlank
@@ -688,6 +698,19 @@ try {
           runtimeErrors = $state.runtimeErrors
           overflow = $state.overflow
           textSample = $state.textSample
+          visualGate = if ($state.isBlank) {
+            'blank'
+          } elseif ($state.hasExpoOverlay) {
+            'expo-overlay'
+          } elseif (([Uri]$state.url).AbsolutePath.Equals('/auth') -and -not $targetRoute.expectedPath.Equals('/auth')) {
+            'blocked-by-auth'
+          } elseif (-not ([Uri]$state.url).AbsolutePath.Equals($targetRoute.expectedPath)) {
+            'route-mismatch'
+          } elseif ($state.overflow.Count -gt 0) {
+            'overflow'
+          } else {
+            'pass'
+          }
         }) | Out-Null
       } catch {
         $report.Add([pscustomobject]@{
@@ -696,6 +719,7 @@ try {
           url = $targetRoute.url
           expectedPath = $targetRoute.expectedPath
           routeMismatch = $false
+          blockedByAuth = $false
           screenshot = ''
           hasExpoOverlay = $false
           isBlank = $true
@@ -708,6 +732,7 @@ try {
           runtimeErrors = @()
           overflow = @()
           textSample = ''
+          visualGate = 'capture-error'
         }) | Out-Null
         Write-Warning "Capture failed for $($viewport.slug) $($targetRoute.slug): $($_.Exception.Message)"
       }
@@ -716,11 +741,15 @@ try {
   }
 } finally {
   if ($socket.State -eq [System.Net.WebSockets.WebSocketState]::Open) {
-    $socket.CloseAsync(
-      [System.Net.WebSockets.WebSocketCloseStatus]::NormalClosure,
-      'done',
-      [System.Threading.CancellationToken]::None
-    ).GetAwaiter().GetResult() | Out-Null
+    try {
+      $socket.CloseOutputAsync(
+        [System.Net.WebSockets.WebSocketCloseStatus]::NormalClosure,
+        'done',
+        [System.Threading.CancellationToken]::None
+      ).GetAwaiter().GetResult() | Out-Null
+    } catch {
+      Write-Warning "Chrome DevTools websocket close warning: $($_.Exception.Message)"
+    }
   }
 
   $socket.Dispose()
