@@ -765,7 +765,7 @@ describe('driver smoke flows', () => {
 
     expectText(renderer, 'Nouvelle course');
     expectText(renderer, 'Accepter cette offre');
-    expectText(renderer, '1 400 F CFA net - 193 XOF/km approche');
+    expectText(renderer, '1 400 F CFA net - 193 F/km approche');
     expectText(renderer, '84% du prix. Offre lisible avec gain et effort connus.');
     expectText(renderer, 'Refuser cette offre');
   });

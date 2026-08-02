@@ -135,7 +135,7 @@ describe('driver operational signal helpers', () => {
       expect.objectContaining({
         tone: 'amber',
         blocksCompletion: false,
-        title: 'Position en synchronisation',
+        title: 'Position en mise a jour',
         actionLabel:
           'Gardez le telephone ouvert; la position sera vérifiée au moment de finaliser.',
       }),

@@ -1247,7 +1247,7 @@ describe('rider smoke flows', () => {
         shareMode: 'ALL_TRIPS',
       }),
     );
-    expectText(renderer, 'Contact de confiance configure et audite.');
+    expectText(renderer, 'Contact de confiance configure.');
   });
 
   it('shows the rider trusted contacts list with masked phone numbers', async () => {

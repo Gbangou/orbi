@@ -33,6 +33,7 @@ import {
 import {
   describeRealtimeEvent,
   describeRealtimeConnection,
+  formatOperationalStatus,
   orbiCopy,
   type OrbiTheme,
 } from "@orbi/ui";
@@ -644,7 +645,7 @@ export default function OffersScreen() {
           ),
         }));
         setStartTripRecoveryNote(null);
-        setStatus("Course demarree. Statut confirme par le serveur.");
+        setStatus("Course demarree. Statut confirme.");
         safeHaptics.notify("success");
         return true;
       }
@@ -681,13 +682,11 @@ export default function OffersScreen() {
 
       try {
         const { authClient } = await restoreDriverSession();
-        const response = await acceptRideRequestWithApi(
+        await acceptRideRequestWithApi(
           authClient,
           rideRequestId,
         );
-        setStatus(
-          `Trajet ${response.trip.id.slice(0, 8)} cree avec statut ${response.trip.status}.`,
-        );
+        setStatus("Offre acceptee. Le trajet est pret.");
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
@@ -721,13 +720,11 @@ export default function OffersScreen() {
 
       try {
         const { authClient } = await restoreDriverSession();
-        const response = await declineDriverOfferWithApi(
+        await declineDriverOfferWithApi(
           authClient,
           rideRequestId,
         );
-        setStatus(
-          `Offre ${response.offer.rideRequestId.slice(0, 8)} refusee. Votre prochaine proposition sera ajustee.`,
-        );
+        setStatus("Offre refusee. Vous recevrez une autre proposition.");
         await loadDriverData();
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
@@ -753,7 +750,7 @@ export default function OffersScreen() {
     nextStatus: "DRIVER_ARRIVING" | "IN_PROGRESS" | "COMPLETED",
   ) {
     return await runExclusiveDriverAction(async () => {
-      setStatus(`Mise a jour du trajet vers ${nextStatus}...`);
+      setStatus(`Mise a jour du trajet: ${formatOperationalStatus(nextStatus)}...`);
 
       try {
         const { authClient } = await restoreDriverSession();
@@ -781,9 +778,7 @@ export default function OffersScreen() {
               : trip,
           ),
         }));
-        setStatus(
-          `Trajet ${response.trip.id.slice(0, 8)} mis a jour: ${response.trip.status}.`,
-        );
+        setStatus(`Trajet mis a jour: ${formatOperationalStatus(response.trip.status)}.`);
         const gross = toFiniteEarningsNumber(response.trip.actualFare);
         const net = toFiniteEarningsNumber(response.trip.driverPayout);
         if (nextStatus === "COMPLETED" && gross !== null && net !== null) {

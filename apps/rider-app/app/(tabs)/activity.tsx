@@ -133,6 +133,23 @@ function formatRiderPaymentMethodLabel(paymentMethod: string | null | undefined)
   }
 }
 
+function formatRiderReceiptProvider(provider: string | null | undefined) {
+  switch ((provider ?? '').toUpperCase()) {
+    case 'ORANGE_MONEY':
+      return 'Orange Money';
+    case 'MOOV_MONEY':
+      return 'Moov Money';
+    case 'WALLET':
+      return 'Wallet Orbi';
+    case 'CASH':
+      return 'Cash';
+    case 'MOBILE_MONEY':
+      return 'Mobile Money';
+    default:
+      return provider ? formatOperationalStatus(provider) : 'Paiement';
+  }
+}
+
 export default function ActivityScreen() {
   const router = useRouter();
   const theme = useOrbiTheme();
@@ -218,8 +235,8 @@ export default function ActivityScreen() {
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         surface: "active-trip",
-        network: "Historique vide de secours en attendant la connexion API.",
-        fallback: "Historique vide de secours en attendant la connexion API.",
+        network: "Vos trajets seront affiches des que la connexion revient.",
+        fallback: "Vos trajets seront affiches des que la connexion revient.",
       });
 
       if (feedback.shouldClearSessionToken) {
@@ -432,11 +449,10 @@ export default function ActivityScreen() {
     const referenceId = activeTripId ?? latestTrip?.id ?? pendingRequest?.id ?? "none";
     const receiptContext = latestTrip?.receipt
       ? [
-          `PaymentAttempt: ${latestTrip.receipt.paymentAttemptId}`,
-          `PaymentStatus: ${latestTrip.receipt.status}`,
-          `PaymentAmount: ${latestTrip.receipt.amount} ${latestTrip.receipt.currency}`,
-          `PaymentProvider: ${latestTrip.receipt.provider}`,
-          `PaymentTransaction: ${latestTrip.receipt.transactionRef ?? "absente"}`,
+          `Paiement: ${latestTrip.receipt.status}`,
+          `Montant: ${latestTrip.receipt.amount} ${latestTrip.receipt.currency}`,
+          `Operateur: ${latestTrip.receipt.provider}`,
+          `Reference transaction: ${latestTrip.receipt.transactionRef ?? "absente"}`,
         ].join("\n")
       : null;
 
@@ -454,7 +470,7 @@ export default function ActivityScreen() {
           `Reference: ${referenceId}\n` +
           `Trajet: ${routeLabel}\n` +
           `${receiptContext ? `${receiptContext}\n` : ""}` +
-          `Statut ecran: ${status}`,
+          `Message visible: ${status}`,
       });
       await loadHistory(true);
       setStatus("Votre demande a été envoyée au support.");
@@ -606,7 +622,7 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus("Signalement de l incident a l equipe support...");
+    setStatus("Signalement de l incident en cours...");
 
     try {
       const { authClient } = await restoreRiderSession();
@@ -641,7 +657,7 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus("Declaration de preuve volontaire avec consentement...");
+    setStatus("Ajout de votre preuve securisee...");
 
     try {
       const { authClient } = await restoreRiderSession();
@@ -722,7 +738,7 @@ export default function ActivityScreen() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setStatus("Creation du lien de partage securise...");
+    setStatus("Preparation du partage securise...");
 
     try {
       const { authClient } = await restoreRiderSession();
@@ -1226,11 +1242,11 @@ export default function ActivityScreen() {
                               ? t('activity.driverArriving')
                               : trip.status === 'MATCHED'
                                 ? t('activity.matched')
-                                : trip.status}
+                                : formatOperationalStatus(trip.status)}
                     </Text>
                     {trip.receipt ? (
                       <Text style={styles.tripHistReceipt} numberOfLines={1}>
-                        Recu {trip.receipt.status} - {trip.receipt.provider}
+                        Recu {formatOperationalStatus(trip.receipt.status)} - {formatRiderReceiptProvider(trip.receipt.provider)}
                         {trip.receipt.transactionRef
                           ? ` - ${trip.receipt.transactionRef.slice(0, 12)}`
                           : ''}

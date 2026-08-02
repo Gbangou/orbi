@@ -270,8 +270,8 @@ export default function AccountScreen() {
       }
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
-        network: 'Profil local de secours affiche en attendant la connexion API.',
-        fallback: 'Profil local de secours affiche en attendant la connexion API.',
+        network: 'Votre profil sera actualise des que la connexion revient.',
+        fallback: 'Votre profil sera actualise des que la connexion revient.',
       });
 
       if (!silent) {
@@ -495,7 +495,7 @@ export default function AccountScreen() {
     setIsSavingTrustedContact(true);
     setStatus(
       hasPhoneNumber
-        ? 'Synchronisation du contact de confiance...'
+        ? 'Mise a jour du contact de confiance...'
         : 'Desactivation du contact de confiance...',
     );
 
@@ -505,7 +505,7 @@ export default function AccountScreen() {
       await loadProfile();
       setStatus(
         hasPhoneNumber
-          ? 'Contact de confiance configure et audite.'
+          ? 'Contact de confiance configure.'
           : 'Contact de confiance desactive.',
       );
     } catch (error) {
@@ -578,7 +578,7 @@ export default function AccountScreen() {
       });
       setTrustedRosterForm({ label: '', phoneNumber: '', priority: 2 });
       await loadProfile();
-      setStatus('Contact de confiance ajoute et audite.');
+      setStatus('Contact de confiance ajoute.');
     } catch (error) {
       const feedback = await resolveRiderAppError(error, {
         fallback: "L'ajout du contact de confiance a echoue.",
@@ -1021,7 +1021,7 @@ export default function AccountScreen() {
             ]}
           >
             <Text style={styles.secondaryActionLabel}>
-              {isSavingTrustedRoster ? 'Synchronisation...' : 'Ajouter un contact'}
+              {isSavingTrustedRoster ? 'Mise a jour...' : 'Ajouter un contact'}
             </Text>
           </Pressable>
         </View>
@@ -1075,7 +1075,7 @@ export default function AccountScreen() {
             style={[styles.primaryAction, isSavingTrustedContact ? styles.refreshButtonDisabled : null]}
           >
             <Text style={styles.primaryActionLabel}>
-              {isSavingTrustedContact ? 'Synchronisation...' : 'Enregistrer le contact'}
+              {isSavingTrustedContact ? 'Mise a jour...' : 'Enregistrer le contact'}
             </Text>
           </Pressable>
           {profile.profile.trustedContact.status === 'READY' ? (

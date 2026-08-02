@@ -85,7 +85,7 @@ export function useRiderPosition(input: {
         }
 
         setPositionStatus("syncing");
-        setPositionNote("Synchronisation de votre position...");
+        setPositionNote("Mise a jour de votre position...");
 
         const syncRiderPosition = async (position: Location.LocationObject) => {
           if (isDisposed) {
@@ -144,7 +144,7 @@ export function useRiderPosition(input: {
             setPositionNote(
               resolveDisplayableApiErrorMessage(
                 error,
-                "Synchronisation position passager impossible pour le moment.",
+                "Position indisponible pour le moment.",
               ),
             );
           }

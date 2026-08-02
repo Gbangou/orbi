@@ -146,7 +146,7 @@ describe('driver offer signal helpers', () => {
     expect(resolveDriverOfferMoneyDisplay(offer)).toEqual({
       amountLabel: expect.stringContaining('1 800'),
       label: 'Prix client',
-      helper: 'Gain chauffeur a confirmer',
+      helper: 'Gain estime apres confirmation',
       isNet: false,
     });
   });
@@ -205,7 +205,7 @@ describe('driver offer signal helpers', () => {
     } as never);
 
     expect(summary.title).toContain('1 500');
-    expect(summary.title).toContain('214 XOF/km approche');
+    expect(summary.title).toContain('214 F/km approche');
     expect(summary.subtitle).toContain('83% du prix');
     expect(summary.tone).toBe('teal');
   });

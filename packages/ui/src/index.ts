@@ -217,7 +217,7 @@ export const orbiCopy = {
   adminHeadline: "Controlez les courses, les paiements et la confiance.",
   voiceHeadline: "Dites le lieu. Orbi prepare le trajet.",
   riderNetworkUnavailable:
-    "Connexion instable. Orbi garde votre ecran pret et relancera la synchronisation automatiquement.",
+    "Connexion instable. Orbi garde votre ecran pret et relancera la mise a jour automatiquement.",
   driverNetworkUnavailable:
     "Connexion instable. Le cockpit reste pret et reprendra les offres des que le reseau revient.",
   serviceUnavailable:
@@ -263,13 +263,13 @@ const realtimeLabelsByAudience: Record<
   Record<string, string>
 > = {
   driver: {
-    "trip.created": "Une reservation est devenue une course en direct.",
+    "trip.created": "Une reservation est devenue une course active.",
     "trip.updated": "La course chauffeur a avance d etape.",
     "trip.pickup-code-verified": "Le code de prise en charge a ete confirme.",
     "trip.incident-reported":
       "Un incident de course a ete signale.",
     "ride-request.created": "Une nouvelle demande compatible est arrivee.",
-    "ride-request.cancelled": "Une demande vient d etre retiree du flux.",
+    "ride-request.cancelled": "Une demande vient d etre annulee.",
     "ride-request.reservation-assigned":
       "Une nouvelle offre est disponible.",
     "ride-request.reservation-released":
@@ -302,7 +302,7 @@ export function describeRealtimeEvent(
     realtimeLabelsByAudience[audience][eventType] ??
     (audience === "driver"
       ? "Les missions viennent d etre mises a jour."
-      : "Votre trajet vient d etre mis a jour en direct.")
+      : "Votre trajet vient d etre mis a jour.")
   );
 }
 

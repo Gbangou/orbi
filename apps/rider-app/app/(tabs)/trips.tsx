@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { fetchMyTrips, type MyTripsResponse } from '@orbi/api';
-import { type OrbiTheme } from '@orbi/ui';
+import { formatOperationalStatus, type OrbiTheme } from '@orbi/ui';
 import { OrbiButton, OrbiMetricTile, OrbiSurface, useOrbiTheme } from '@orbi/ui/native';
 import { restoreRiderSession } from '../../lib/auth';
 import { resolveRiderAppError } from '../../lib/session-feedback';
@@ -39,7 +39,7 @@ function StatusBadge({ status }: { status: string }) {
     REQUESTED: { label: 'Recherche en cours', bg: '#F1F1F1', color: '#111111' },
     EXPIRED: { label: 'Expiree', bg: '#F3F3F3', color: '#6B6B6B' },
   };
-  const c = cfg[status] ?? { label: status, bg: 'rgba(148,163,184,0.1)', color: theme.colors.muted };
+  const c = cfg[status] ?? { label: formatOperationalStatus(status), bg: 'rgba(148,163,184,0.1)', color: theme.colors.muted };
   return (
     <View style={[styles.badge, { backgroundColor: c.bg }]}>
       <Text style={[styles.badgeText, { color: c.color }]}>{c.label}</Text>

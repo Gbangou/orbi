@@ -62,7 +62,7 @@ export function buildDriverRouteSafetyBrief(input: {
   if (!routeMonitoring) {
     return {
       eyebrow: 'Sécurité trajet',
-      title: 'Position en synchronisation',
+      title: 'Position en mise a jour',
       description:
         'La course reste disponible pendant la mise à jour de la position.',
       tone: 'amber' as RouteTone,
@@ -70,8 +70,8 @@ export function buildDriverRouteSafetyBrief(input: {
         'Gardez le telephone ouvert; la position sera vérifiée au moment de finaliser.',
       blocksCompletion: false,
       insights: [
-        { label: 'Position', value: 'Synchronisation', tone: 'amber' as RouteTone },
-        { label: 'Etat', value: 'Verification', tone: 'amber' as RouteTone },
+        { label: 'Position', value: 'Mise a jour', tone: 'amber' as RouteTone },
+        { label: 'Etat', value: 'Controle', tone: 'amber' as RouteTone },
       ],
     };
   }

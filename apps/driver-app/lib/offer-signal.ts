@@ -152,7 +152,7 @@ export function resolveDriverOfferMoneyDisplay(offer: DriverOffer): {
   return {
     amountLabel: formatDriverOfferFare(offer),
     label: 'Prix client',
-    helper: 'Gain chauffeur a confirmer',
+    helper: 'Gain estime apres confirmation',
     isNet: false,
   };
 }
@@ -254,7 +254,7 @@ export function buildDriverOfferDecisionSummary(offer: DriverOffer): {
 
   if (driverPayout === null) {
     return {
-      title: 'Gain a confirmer',
+      title: 'Gain estime indisponible',
       subtitle: 'Actualisez les offres avant de prendre une decision.',
       tone: 'amber',
       driverSharePercent,
@@ -264,7 +264,7 @@ export function buildDriverOfferDecisionSummary(offer: DriverOffer): {
 
   const title =
     payoutPerEffortKm !== null
-      ? `${formatDriverOfferMoney(driverPayout)} net - ${payoutPerEffortKm} XOF/km approche`
+      ? `${formatDriverOfferMoney(driverPayout)} net - ${payoutPerEffortKm} F/km approche`
       : `${formatDriverOfferMoney(driverPayout)} net estime`;
   const share =
     driverSharePercent !== null ? `${driverSharePercent}% du prix` : 'part chauffeur verifiee';

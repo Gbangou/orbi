@@ -617,7 +617,7 @@ export default function BookingScreen() {
     sessionToken,
     () => {
       setIsRealtimeSyncing(true);
-      setStatus('Reservation mise a jour en direct.');
+      setStatus('Reservation mise a jour.');
       void loadBookingContext();
     },
     {

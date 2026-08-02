@@ -440,7 +440,7 @@ export default function ProfilScreen() {
     }
 
     setIsPreparingDocuments(true);
-    setStatus('Preparation des liens documentaires securises...');
+    setStatus('Preparation de vos documents securises...');
 
     try {
       const { authClient } = await withDriverClient();
@@ -467,7 +467,7 @@ export default function ProfilScreen() {
       return nextPrepared;
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
-        fallback: 'Impossible de preparer les liens documentaires.',
+        fallback: 'Impossible de preparer vos documents.',
       });
       setStatus(feedback.message);
       return null;

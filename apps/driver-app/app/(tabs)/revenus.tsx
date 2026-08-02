@@ -384,8 +384,8 @@ export default function RevenusScreen() {
       setStatus(buildDriverEarningsStatusLabel({ flow }));
     } catch (error) {
       const feedback = await resolveDriverAppError(error, {
-        network: 'Vue locale vide en attendant la connexion API.',
-        fallback: 'Vue locale vide en attendant la connexion API.',
+        network: 'Vos revenus seront actualises des que la connexion revient.',
+        fallback: 'Vos revenus seront actualises des que la connexion revient.',
       });
 
       if (feedback.shouldClearSessionToken) {

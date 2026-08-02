@@ -108,8 +108,8 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
         setPresenceStatus('syncing');
         setPresenceNote(
           activeTripId
-            ? 'Synchronisation immediate de votre position mission...'
-            : 'Synchronisation de votre position...',
+            ? 'Mise a jour immediate de votre position mission...'
+            : 'Mise a jour de votre position...',
         );
 
         const syncPosition = async (position: DriverPresencePosition) => {
@@ -159,7 +159,7 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
             setPresenceNote(
               resolveDisplayableApiErrorMessage(
                 error,
-                'Synchronisation de la position impossible pour le moment.',
+                'Position indisponible pour le moment.',
               ),
             );
           }
