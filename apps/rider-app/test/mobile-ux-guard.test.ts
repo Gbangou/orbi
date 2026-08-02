@@ -124,4 +124,14 @@ describe('rider mobile UX guards', () => {
       expect(source).toContain('[\\\\/]\\.chrome-(cdp|headless)');
     }
   });
+
+  it('keeps the visual QA matrix strict across compact and tall Android screens', () => {
+    const source = readWorkspaceFile('scripts/testing/mobile-visual-capture.ps1');
+
+    expect(source).toContain("slug = 'compact-android'; width = 320; height = 680");
+    expect(source).toContain("slug = 'small-android'; width = 360; height = 740");
+    expect(source).toContain("slug = 'standard-android'; width = 390; height = 844");
+    expect(source).toContain("slug = 'tall-android'; width = 412; height = 915");
+    expect(source).toContain("slug = 'mobile-web'; width = 430; height = 932");
+  });
 });

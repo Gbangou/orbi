@@ -534,8 +534,10 @@ if ($AuthenticateDemoSessions) {
 }
 
 $viewports = @(
+  @{ slug = 'compact-android'; width = 320; height = 680; scale = 3 },
   @{ slug = 'small-android'; width = 360; height = 740; scale = 3 },
   @{ slug = 'standard-android'; width = 390; height = 844; scale = 3 },
+  @{ slug = 'tall-android'; width = 412; height = 915; scale = 3 },
   @{ slug = 'mobile-web'; width = 430; height = 932; scale = 3 }
 )
 

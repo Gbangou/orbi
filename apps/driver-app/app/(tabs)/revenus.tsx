@@ -27,6 +27,7 @@ import {
   buildDriverEarningsTrustSummary,
   buildDriverDailyOperatingCompass,
   buildDriverEarningsDeltaLabel,
+  formatDriverEarningsCompactAmount,
   formatDriverEarningsAmount,
   formatDriverEarningsCount,
   formatDriverTripCompletedAt,
@@ -220,7 +221,7 @@ function DriverOperatingCompassCard({
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={styles.eyebrow} numberOfLines={1}>Revenus</Text>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={styles.title} numberOfLines={2}>
             {compass.headline}
           </Text>
         </View>
@@ -279,7 +280,8 @@ const makeCompassStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   title: {
-    fontSize: 16,
+    fontSize: 15,
+    lineHeight: 18,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     color: '#FFFFFF',
@@ -535,21 +537,21 @@ export default function RevenusScreen() {
             style={styles.metricTile}
             tone="amber"
             label={td('earningsWeek')}
-            value={formatDriverEarningsAmount(earnings.summary.week)}
+            value={formatDriverEarningsCompactAmount(earnings.summary.week)}
             helper={`${formatDriverEarningsCount(earnings.summary.completedTrips)} courses`}
           />
           <OrbiMetricTile
             style={styles.metricTile}
             tone="amber"
             label={td('earningsMonth')}
-            value={formatDriverEarningsAmount(earnings.summary.month)}
+            value={formatDriverEarningsCompactAmount(earnings.summary.month)}
             helper="vision long terme"
           />
           <OrbiMetricTile
             style={styles.metricTile}
             tone="amber"
             label={td('earningsAverage')}
-            value={formatDriverEarningsAmount(earnings.summary.averagePayout)}
+            value={formatDriverEarningsCompactAmount(earnings.summary.averagePayout)}
             helper="par course"
           />
         </View>

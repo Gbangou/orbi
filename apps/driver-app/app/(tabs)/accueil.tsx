@@ -561,7 +561,7 @@ export default function DriverHomeScreen() {
   const isOnline = flow.availabilityStatus === 'ONLINE';
   // Le statut brut passe a BUSY des qu'une mission est acceptee — sans ce cas
   // a part, le badge retombe sur "Hors ligne" alors que le chauffeur est bien
-  // en ligne, juste occupe (constate en direct avec une vraie mission active).
+  // en ligne, juste occupe pendant une vraie mission active.
   const isOnDuty = isOnline || Boolean(activeTrip);
   const statusLabel = activeTrip
     ? 'En mission'

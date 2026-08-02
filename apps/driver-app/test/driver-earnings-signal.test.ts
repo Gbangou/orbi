@@ -3,6 +3,7 @@ import {
   buildDriverDailyOperatingCompass,
   buildDriverEarningsDeltaLabel,
   formatDriverEarningsAmount,
+  formatDriverEarningsCompactAmount,
   formatDriverEarningsCount,
   formatDriverEarningsRatioPercent,
   formatDriverTripCompletedAt,
@@ -12,6 +13,7 @@ import {
 describe('driver earnings signal helpers', () => {
   it('keeps dirty numeric earnings fields out of driver-facing copy', () => {
     expect(formatDriverEarningsAmount(Number.NaN)).toBe('Montant indisponible');
+    expect(formatDriverEarningsCompactAmount(Number.NaN)).toBe('Indisponible');
     expect(formatDriverEarningsCount(Number.NaN)).toBe('ND');
     expect(buildDriverEarningsDeltaLabel(1000, Number.NaN)).toBeNull();
   });
@@ -26,6 +28,7 @@ describe('driver earnings signal helpers', () => {
     expect(toFiniteEarningsNumber('12500')).toBe(12500);
     expect(toFiniteEarningsNumber('0,82')).toBe(0.82);
     expect(formatDriverEarningsAmount('12500')).toContain('12 500');
+    expect(formatDriverEarningsCompactAmount('12500')).toBe('12 500 F');
     expect(formatDriverEarningsCount('6,9')).toBe('6');
     expect(formatDriverEarningsRatioPercent('0,82')).toBe('82%');
     expect(buildDriverEarningsDeltaLabel('1000', '2500')).toBe(

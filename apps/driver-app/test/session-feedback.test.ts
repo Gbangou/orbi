@@ -91,4 +91,17 @@ describe('resolveDriverAppError', () => {
     });
     expect(mockedEnqueueDriverMobileErrorReport).not.toHaveBeenCalled();
   });
+
+  it('keeps technical server details out of driver-facing errors', async () => {
+    const feedback = await resolveDriverAppError(
+      new OrbiApiError('server exception token trace', 500),
+      {
+        surface: 'driver-availability',
+        fallback: "Votre disponibilite n'a pas pu etre mise a jour.",
+      },
+    );
+
+    expect(feedback.message).toBe("Votre disponibilite n'a pas pu etre mise a jour.");
+    expect(feedback.message).not.toMatch(/server|token|trace/i);
+  });
 });

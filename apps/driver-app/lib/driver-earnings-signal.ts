@@ -23,6 +23,17 @@ export function formatDriverEarningsAmount(value: unknown) {
   return numeric !== null ? formatXof(numeric) : 'Montant indisponible';
 }
 
+export function formatDriverEarningsCompactAmount(value: unknown) {
+  const numeric = toFiniteEarningsNumber(value);
+  if (numeric === null) {
+    return 'Indisponible';
+  }
+
+  return `${new Intl.NumberFormat('fr-BF', {
+    maximumFractionDigits: 0,
+  }).format(numeric)} F`;
+}
+
 export function formatDriverEarningsCount(value: unknown) {
   const numeric = toFiniteEarningsNumber(value);
   return numeric !== null && numeric >= 0 ? String(Math.floor(numeric)) : 'ND';

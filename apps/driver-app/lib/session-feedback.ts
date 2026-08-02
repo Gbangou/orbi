@@ -26,10 +26,27 @@ export type DriverAppErrorFeedback = {
 
 const defaultDriverErrorCopy: DriverErrorCopy = {
   expiredSession:
-    'Votre session chauffeur a expire. Reconnectez-vous pour reprendre le direct.',
+    'Votre session chauffeur a expire. Reconnectez-vous pour reprendre vos missions.',
   network: orbiCopy.driverNetworkUnavailable,
   fallback: orbiCopy.serviceUnavailable,
 };
+
+function toPremiumDriverMessage(message: string, fallback: string) {
+  const trimmed = message.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+
+  if (/\b(api|backend|server|serveur|stack|exception|token|json|sql|prisma|debug|trace)\b/i.test(trimmed)) {
+    return fallback;
+  }
+
+  return trimmed
+    .replace(/\bconnexion live\b/gi, 'connexion')
+    .replace(/\ble direct\b/gi, 'les missions')
+    .replace(/\ben direct\b/gi, 'a jour')
+    .slice(0, 180);
+}
 
 export async function resolveDriverAppError(
   error: unknown,
@@ -75,7 +92,7 @@ export async function resolveDriverAppError(
   }
 
   return {
-    message: classification.userMessage,
+    message: toPremiumDriverMessage(classification.userMessage, messages.fallback),
     code: classification.code,
     surface: classification.surface,
     severity: classification.severity,

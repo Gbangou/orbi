@@ -91,4 +91,17 @@ describe('resolveRiderAppError', () => {
     });
     expect(mockedEnqueueRiderMobileErrorReport).not.toHaveBeenCalled();
   });
+
+  it('keeps technical server details out of rider-facing errors', async () => {
+    const feedback = await resolveRiderAppError(
+      new OrbiApiError('Prisma backend stack trace: token failed', 500),
+      {
+        surface: 'profile',
+        fallback: 'Votre profil sera actualise des que la connexion revient.',
+      },
+    );
+
+    expect(feedback.message).toBe('Votre profil sera actualise des que la connexion revient.');
+    expect(feedback.message).not.toMatch(/backend|Prisma|token|stack/i);
+  });
 });

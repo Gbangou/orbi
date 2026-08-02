@@ -222,7 +222,9 @@ export default function RatingScreen() {
       </OrbiSurface>
 
       <OrbiSurface tone={score >= 4 ? 'teal' : score > 0 ? 'amber' : 'neutral'} style={styles.ratingBlock}>
-        <Text style={styles.ratingQuestion}>Comment s est passe votre trajet ?</Text>
+        <Text style={styles.ratingQuestion} numberOfLines={2}>
+          Comment s est passe votre trajet ?
+        </Text>
         <View style={styles.starsRow}>
           {[1, 2, 3, 4, 5].map((starScore) => (
             <StarIcon
@@ -337,8 +339,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   ratingBlock: {
     alignItems: 'center',
-    gap: 14,
-    paddingHorizontal: 16,
+    gap: 12,
+    paddingHorizontal: 12,
     paddingVertical: 18,
     borderRadius: 4,
     backgroundColor: '#F7F7F7',
@@ -353,17 +355,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   starsRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 4,
   },
   star: {
-    width: 46,
-    height: 46,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
   },
   starGlyph: {
-    fontSize: 36,
-    lineHeight: 44,
+    fontSize: 34,
+    lineHeight: 40,
     textAlign: 'center',
   },
   starGlyphFilled: {

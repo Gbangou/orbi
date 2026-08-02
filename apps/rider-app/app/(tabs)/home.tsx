@@ -146,7 +146,7 @@ const fallbackServices = [
   {
     id: 'fallback-moto',
     title: 'Moto',
-    meta: 'Rapide pour trajets courts',
+    meta: 'Trajets courts',
     tier: 'moto-standard',
   },
   {
@@ -1037,7 +1037,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: theme.colors.text,
   },
   serviceMeta: {
-    fontSize: 13,
+    fontSize: 12,
     color: theme.colors.textMuted,
     fontFamily: 'Inter_400Regular',
   },

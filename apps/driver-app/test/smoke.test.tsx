@@ -1389,7 +1389,7 @@ describe('driver smoke flows', () => {
       'IN_PROGRESS',
     );
     expectText(renderer, 'Depart non confirme');
-    expectText(renderer, 'Depart non confirme. Reessayez maintenant ou actualisez le direct.');
+    expectText(renderer, 'Depart non confirme. Reessayez maintenant ou actualisez le trajet.');
     expectText(renderer, 'Demarrer la course');
   });
 

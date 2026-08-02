@@ -31,6 +31,22 @@ const defaultRiderErrorCopy: RiderErrorCopy = {
   fallback: orbiCopy.serviceUnavailable,
 };
 
+function toPremiumRiderMessage(message: string, fallback: string) {
+  const trimmed = message.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+
+  if (/\b(api|backend|server|serveur|stack|exception|token|json|sql|prisma|debug|trace)\b/i.test(trimmed)) {
+    return fallback;
+  }
+
+  return trimmed
+    .replace(/\bconnexion live\b/gi, 'connexion')
+    .replace(/\ben direct\b/gi, 'a jour')
+    .slice(0, 180);
+}
+
 export async function resolveRiderAppError(
   error: unknown,
   copy?: Partial<RiderErrorCopy> & { surface?: OrbiClientErrorSurface },
@@ -75,7 +91,7 @@ export async function resolveRiderAppError(
   }
 
   return {
-    message: classification.userMessage,
+    message: toPremiumRiderMessage(classification.userMessage, messages.fallback),
     code: classification.code,
     surface: classification.surface,
     severity: classification.severity,

@@ -204,7 +204,7 @@ function TripStartAction({
       ? "Course demarree"
       : "Demarrer la course";
   const hint = isConfirming
-    ? "Validation serveur en cours"
+    ? "Confirmation du depart"
     : state === "confirmed"
       ? "Conduisez vers la destination"
       : "Passager a bord, pret a partir";
@@ -814,7 +814,7 @@ export default function OffersScreen() {
 
         const nextMessage =
           nextStatus === "IN_PROGRESS"
-            ? "Depart non confirme. Reessayez maintenant ou actualisez le direct."
+            ? "Depart non confirme. Reessayez maintenant ou actualisez le trajet."
             : feedback.message;
         setStatus(nextMessage);
         if (nextStatus === "IN_PROGRESS") {
