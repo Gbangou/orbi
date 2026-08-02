@@ -32,6 +32,47 @@ describe('rider mobile UX guards', () => {
     expect(source).toContain('ctaSignalMeta} numberOfLines={1}');
   });
 
+  it('keeps active rider trip actions compact and driver identity bounded', () => {
+    const source = readAppFile('app/(tabs)/activity.tsx');
+
+    expect(source).toContain('styles.driverName} numberOfLines={1}');
+    expect(source).toContain('styles.driverMeta} numberOfLines={1}');
+    expect(source).toContain('styles.driverPlate} numberOfLines={1}');
+    expect(source).toContain("maxHeight: '68%'");
+    expect(source).toContain("minHeight: 44");
+    expect(source).toContain('label="Annuler"');
+    expect(source).toContain('label="Terminer ici"');
+  });
+
+  it('keeps rider activity overview dense on compact Android screens', () => {
+    const source = readAppFile('app/(tabs)/activity.tsx');
+
+    expect(source).toContain('label="Actualiser"');
+    expect(source).not.toContain('label="Actualiser le suivi"');
+    expect(source).not.toContain('OrbiMetricTile');
+    expect(source).toContain('styles.statValue} numberOfLines={1} adjustsFontSizeToFit');
+    expect(source).toContain('supportActionButton:');
+    expect(source).toContain('minHeight: 38');
+    expect(source).toContain('width: 46');
+  });
+
+  it('formats rider receipt and payment labels before display', () => {
+    const receiptSource = readAppFile('app/receipt.tsx');
+    const activitySource = readAppFile('app/(tabs)/activity.tsx');
+
+    expect(receiptSource).toContain('heroFare:');
+    expect(receiptSource).toContain('fontSize: 34');
+    expect(receiptSource).toContain('width: 44');
+    expect(receiptSource).toContain('formatRiderReceiptStatus(receiptStatus)');
+    expect(receiptSource).toContain('formatRiderPaymentMethodLabel(trip.paymentMethod)');
+    expect(receiptSource).toContain('formatRiderReceiptProvider(paymentIntent.provider)');
+    expect(receiptSource).toContain('formatRiderReceiptReference(paymentIntent.transactionRef)');
+    expect(activitySource).toContain('formatRiderReceiptStatus(trip.receipt.status)');
+    expect(activitySource).toContain('formatRiderReceiptReference(trip.receipt.transactionRef)');
+    expect(receiptSource).not.toContain('paymentIntent.transactionRef.slice(0, 12)');
+    expect(activitySource).not.toContain('formatOperationalStatus(trip.receipt.status)');
+  });
+
   it('keeps wallet top-up failures behind mobile-safe feedback', () => {
     const source = readAppFile('app/(tabs)/account.tsx');
 

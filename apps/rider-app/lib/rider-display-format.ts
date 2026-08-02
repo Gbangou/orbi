@@ -58,6 +58,59 @@ export function formatRiderMoneyAmount(
   return formatXof(roundXofForCashOperations(numeric).amount);
 }
 
+export function formatRiderPaymentMethodLabel(method: string | null | undefined) {
+  switch ((method ?? 'MOBILE_MONEY').toUpperCase()) {
+    case 'CASH':
+      return 'Especes';
+    case 'WALLET':
+      return 'Portefeuille Orbi';
+    case 'MOBILE_MONEY':
+    default:
+      return 'Mobile Money';
+  }
+}
+
+export function formatRiderReceiptProvider(provider: string | null | undefined) {
+  switch ((provider ?? '').toUpperCase()) {
+    case 'ORANGE_MONEY':
+      return 'Orange Money';
+    case 'MOOV_MONEY':
+      return 'Moov Money';
+    case 'WALLET':
+      return 'Portefeuille Orbi';
+    case 'CASH':
+      return 'Especes';
+    case 'MOBILE_MONEY':
+      return 'Mobile Money';
+    default:
+      return 'Paiement';
+  }
+}
+
+export function formatRiderReceiptStatus(status: string | null | undefined) {
+  switch ((status ?? '').toUpperCase()) {
+    case 'SUCCEEDED':
+    case 'COMPLETED':
+    case 'PAID':
+      return 'Regle';
+    case 'PENDING':
+    case 'PROCESSING':
+      return 'En verification';
+    case 'FAILED':
+    case 'CANCELLED':
+      return 'A reprendre';
+    case 'REFUNDED':
+      return 'Rembourse';
+    default:
+      return 'A finaliser';
+  }
+}
+
+export function formatRiderReceiptReference(reference: string | null | undefined) {
+  const normalized = typeof reference === 'string' ? reference.trim() : '';
+  return normalized ? normalized.slice(0, 12).toUpperCase() : 'Reference a confirmer';
+}
+
 export function resolveRiderMoneyAmount(value: unknown) {
   const numeric = toFiniteRiderDisplayNumber(value);
 

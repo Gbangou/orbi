@@ -1145,13 +1145,13 @@ export default function OffersScreen() {
               <View style={styles.incomingMetrics}>
                 <View style={styles.incomingMetric}>
                   <Text style={styles.incomingMetricValue}>
-                    {formatDriverOfferDistance(incomingOffer.pickupDistanceKm, "-")}
+                    {formatDriverOfferDistance(incomingOffer.pickupDistanceKm, "A confirmer")}
                   </Text>
                   <Text style={styles.incomingMetricLabel}>Pickup</Text>
                 </View>
                 <View style={styles.incomingMetric}>
                   <Text style={styles.incomingMetricValue}>
-                    {formatDriverOfferDistance(incomingOffer.distanceKm, "-")}
+                    {formatDriverOfferDistance(incomingOffer.distanceKm, "A confirmer")}
                   </Text>
                   <Text style={styles.incomingMetricLabel}>Trajet</Text>
                 </View>
@@ -1162,7 +1162,7 @@ export default function OffersScreen() {
                           incomingOffer.reservationExpiresAt,
                           reservationNow,
                         )
-                      : "-"}
+                      : "A confirmer"}
                   </Text>
                   <Text style={styles.incomingMetricLabel}>Temps</Text>
                 </View>
@@ -1350,7 +1350,7 @@ export default function OffersScreen() {
 
             <View style={styles.missionNavigationPanel}>
               <Text style={styles.missionStageEyebrow}>{missionStageCopy.eyebrow}</Text>
-              <Text style={styles.missionStageTitle}>{missionStageCopy.title}</Text>
+                <Text style={styles.missionStageTitle} numberOfLines={2}>{missionStageCopy.title}</Text>
               <Text style={styles.missionStageHint} numberOfLines={2}>
                 {driverNextActionHint}
               </Text>
@@ -1370,13 +1370,13 @@ export default function OffersScreen() {
               </View>
               <View style={styles.missionPaymentNotice}>
                 <Text style={styles.missionPaymentLabel}>Gain chauffeur</Text>
-                <Text style={styles.missionPaymentValue}>
+                <Text style={styles.missionPaymentValue} numberOfLines={1}>
                   {riderTrustSnapshot?.driverPayoutLabel ?? formatDriverEarningsAmount(activeTrip.amount)}
                 </Text>
               </View>
               <View style={styles.missionPaymentNotice}>
                 <Text style={styles.missionPaymentLabel}>Paiement</Text>
-                <Text style={styles.missionPaymentValue}>{activePaymentMethodLabel}</Text>
+                <Text style={styles.missionPaymentValue} numberOfLines={1}>{activePaymentMethodLabel}</Text>
               </View>
               {driverRouteSafetyBrief.tone !== "teal" ? (
                 <Text style={styles.routeSafetyBlockNote}>
@@ -1586,8 +1586,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E8E8E8',
-    padding: 16,
-    gap: 14,
+    padding: 14,
+    gap: 12,
   },
   incomingGrabber: {
     alignSelf: "center",
@@ -1703,10 +1703,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   incomingAction: { flex: 1 },
   header: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10,
     borderBottomWidth: 1, borderBottomColor: '#E8E8E8',
   },
-  headerTitle: { fontSize: 22, fontWeight: "900", fontFamily: "Raleway_800ExtraBold", color: '#111111' },
+  headerTitle: { fontSize: 20, fontWeight: "900", fontFamily: "Raleway_800ExtraBold", color: '#111111' },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   onlineDot: { width: 9, height: 9, borderRadius: 5 },
   headerRefreshBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F3F3', alignItems: "center", justifyContent: "center" },
@@ -1755,7 +1755,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: '#525252',
   },
-  missionCard: { padding: 10, gap: 10, borderColor: '#E8E8E8', borderRadius: 8, backgroundColor: '#FFFFFF' },
+  missionCard: { padding: 10, gap: 9, borderColor: '#E8E8E8', borderRadius: 8, backgroundColor: '#FFFFFF' },
   stageTracker: { paddingHorizontal: 2 },
   missionStatusRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   missionStatusPill: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
@@ -1780,7 +1780,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderColor: '#E8E8E8',
     backgroundColor: '#F3F3F3',
   },
-  missionMap: { height: 430, borderRadius: 8, overflow: "hidden" },
+  missionMap: { height: 340, borderRadius: 8, overflow: "hidden" },
   navigationMapBadge: {
     position: "absolute",
     left: 12,
@@ -1814,7 +1814,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textTransform: "uppercase",
   },
   missionStageTitle: {
-    fontSize: 18,
+    fontSize: 17,
+    lineHeight: 21,
     fontWeight: "800",
     fontFamily: "Raleway_800ExtraBold",
     color: '#111111',
@@ -1871,15 +1872,16 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textTransform: "uppercase",
   },
   missionPaymentValue: {
-    flexShrink: 0,
+    flexShrink: 1,
     fontSize: 13,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
     color: '#111111',
+    textAlign: "right",
   },
   missionActions: { gap: 7 },
   secondaryActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  secondaryBtn: { flexGrow: 1, flexBasis: "47%", minHeight: 48 },
+  secondaryBtn: { flexGrow: 1, flexBasis: "47%", minHeight: 44, borderRadius: 4 },
   tripDetailStatus: { fontSize: 12, color: '#6B6B6B', fontFamily: "Inter_400Regular" },
   supportTimelineWrap: { gap: 8 },
   supportTimelineToggle: {
@@ -1898,8 +1900,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: '#525252',
   },
   emptyState: {
-    padding: 13,
-    gap: 11,
+    padding: 12,
+    gap: 10,
     borderWidth: 1,
     borderColor: '#E8E8E8',
     backgroundColor: '#FFFFFF',
@@ -1908,11 +1910,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   emptyHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   emptyCopy: {
     flex: 1,
-    gap: 7,
+    gap: 5,
   },
   emptySignal: {
     alignSelf: "flex-start",
@@ -1933,10 +1935,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textTransform: "uppercase",
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
     color: '#111111',
+    lineHeight: 21,
   },
   emptyMeta: {
     fontSize: 12,
@@ -1945,8 +1948,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     lineHeight: 17,
   },
   emptyRadar: {
-    width: 72,
-    height: 72,
+    width: 54,
+    height: 54,
     borderRadius: 4,
     backgroundColor: '#F3F3F3',
     alignItems: "center",
@@ -1955,40 +1958,40 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   emptyRadarRing: {
     position: "absolute",
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     borderWidth: 1,
     borderColor: '#D8D8D8',
   },
   emptyRadarDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: '#111111',
     borderWidth: 3,
     borderColor: "#FFFFFF",
   },
-  emptyChecklist: { flexDirection: "row", gap: 7 },
+  emptyChecklist: { flexDirection: "row", gap: 6 },
   emptyCheckItem: {
     flex: 1,
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#E8E8E8',
     backgroundColor: '#F7F7F7',
-    paddingHorizontal: 9,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
     gap: 2,
   },
   emptyCheckTitle: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
     color: '#6B6B6B',
     textTransform: "uppercase",
   },
   emptyCheckMeta: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     fontFamily: "Inter_700Bold",
     color: '#111111',

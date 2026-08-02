@@ -24,4 +24,20 @@ describe('driver mobile UX guards', () => {
     expect(source).toContain('styles.legalFooter} numberOfLines={3}');
     expect(source).toContain('styles.passwordHint} numberOfLines={2}');
   });
+
+  it('keeps active mission maps and secondary actions balanced on compact screens', () => {
+    const source = readAppFile('app/(tabs)/offres.tsx');
+
+    expect(source).toContain('missionMap: { height: 340');
+    expect(source).toContain('numberOfLines={2}>{missionStageCopy.title}</Text>');
+    expect(source).toContain('styles.missionPaymentValue} numberOfLines={1}');
+    expect(source).toContain('minHeight: 44');
+    expect(source).toContain('A confirmer');
+    expect(source).toContain('headerTitle: { fontSize: 20');
+    expect(source).toContain('emptyTitle:');
+    expect(source).toContain('fontSize: 17');
+    expect(source).toContain('width: 54');
+    expect(source).not.toContain('formatDriverOfferDistance(incomingOffer.pickupDistanceKm, "-")');
+    expect(source).not.toContain('formatDriverOfferDistance(incomingOffer.distanceKm, "-")');
+  });
 });

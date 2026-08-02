@@ -7,7 +7,11 @@ import {
   formatRiderDistanceKm,
   formatRiderHistoryDate,
   formatRiderMoneyAmount,
+  formatRiderPaymentMethodLabel,
   formatRiderRatingLabel,
+  formatRiderReceiptProvider,
+  formatRiderReceiptReference,
+  formatRiderReceiptStatus,
   formatRiderShortDate,
   formatRiderTimelineTime,
   resolveRiderMoneyAmount,
@@ -34,6 +38,20 @@ describe('rider display format helpers', () => {
     expect(estimateRiderPickupEtaMinutes('sale')).toBeNull();
     expect(formatRiderMoneyAmount('sale')).toBe('Montant a confirmer');
     expect(resolveRiderMoneyAmount(-1)).toBeNull();
+  });
+
+  it('keeps payment and receipt backend statuses out of rider-facing copy', () => {
+    expect(formatRiderPaymentMethodLabel('CASH')).toBe('Especes');
+    expect(formatRiderPaymentMethodLabel('WALLET')).toBe('Portefeuille Orbi');
+    expect(formatRiderPaymentMethodLabel('MOBILE_MONEY')).toBe('Mobile Money');
+    expect(formatRiderReceiptStatus('SUCCEEDED')).toBe('Regle');
+    expect(formatRiderReceiptStatus('PROCESSING')).toBe('En verification');
+    expect(formatRiderReceiptStatus('FAILED')).toBe('A reprendre');
+    expect(formatRiderReceiptStatus('UNKNOWN_BACKEND_STATUS')).toBe('A finaliser');
+    expect(formatRiderReceiptProvider('ORANGE_MONEY')).toBe('Orange Money');
+    expect(formatRiderReceiptProvider('RAW_GATEWAY')).toBe('Paiement');
+    expect(formatRiderReceiptReference('abc123456789xyz')).toBe('ABC123456789');
+    expect(formatRiderReceiptReference(null)).toBe('Reference a confirmer');
   });
 
   it('calculates rider promo money without trusting dirty API values', () => {

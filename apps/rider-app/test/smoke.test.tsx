@@ -1771,7 +1771,7 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<ActivityScreen />);
     await pressByLabel(renderer, 'activity-refresh');
     await flushMicrotasks();
-    await pressByText(renderer, 'Arreter la course');
+    await pressByText(renderer, 'Terminer ici');
     const stopOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
       | Array<{ text: string; onPress?: () => void }>
       | undefined;
@@ -1872,7 +1872,7 @@ describe('rider smoke flows', () => {
       }),
       { idempotencyKey: 'receipt-ride-request-1-mobile-money' },
     );
-    expectText(renderer, 'Paiement PAWAPAY initialise. Confirmez la demande sur votre telephone. Ref orbi-payment.');
+    expectText(renderer, 'Paiement initialise. Confirmez la demande sur votre telephone. Reference ORBI-PAYMENT.');
     expectText(renderer, 'Evaluer ce trajet');
   });
 

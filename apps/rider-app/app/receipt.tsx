@@ -37,6 +37,10 @@ import {
   calculateRiderTripDurationMinutes,
   formatRiderDateTime,
   formatRiderMoneyAmount,
+  formatRiderPaymentMethodLabel,
+  formatRiderReceiptProvider,
+  formatRiderReceiptReference,
+  formatRiderReceiptStatus,
 } from '../lib/rider-display-format';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -157,13 +161,6 @@ const makeGlyphStyles = (theme: OrbiTheme) => StyleSheet.create({
     width: '65%',
   },
 });
-
-function formatPaymentMethod(method: string | null | undefined) {
-  if (!method) return 'Espèces';
-  if (method === 'MOBILE_MONEY') return 'Mobile Money';
-  if (method === 'WALLET') return 'Portefeuille Orbi';
-  return 'Espèces';
-}
 
 function CloseGlyph() {
   const theme = useOrbiTheme();
@@ -367,7 +364,7 @@ export default function ReceiptScreen() {
       );
 
       setPaymentMessage(
-        `Paiement ${paymentIntent.provider} initialise. Confirmez la demande sur votre telephone. Ref ${paymentIntent.transactionRef.slice(0, 12)}.`,
+        `${formatRiderReceiptProvider(paymentIntent.provider)} initialise. Confirmez la demande sur votre telephone. Reference ${formatRiderReceiptReference(paymentIntent.transactionRef)}.`,
       );
       const refreshed = await fetchTripDetail(authClient, trip.id);
       setDetail(refreshed);
@@ -495,6 +492,7 @@ export default function ReceiptScreen() {
       })
     : null;
   const receiptStatus = trip.receipt?.status?.toUpperCase() ?? null;
+  const receiptStatusLabel = formatRiderReceiptStatus(receiptStatus);
   const paymentMethod = (trip.paymentMethod ?? 'MOBILE_MONEY').toUpperCase();
   const paymentSettled =
     paymentMethod === 'CASH' ||
@@ -597,10 +595,10 @@ export default function ReceiptScreen() {
               accent={theme.colors.teal}
             />
           ) : null}
-          <Row label="Mode de paiement" value={formatPaymentMethod(trip.paymentMethod)} />
+          <Row label="Mode de paiement" value={formatRiderPaymentMethodLabel(trip.paymentMethod)} />
           <Row
             label="Statut"
-            value={paymentSettled ? 'Regle' : receiptStatus ?? 'A finaliser'}
+            value={paymentSettled ? 'Regle' : receiptStatusLabel}
           />
           <Row label="Total facturé" value={formatRiderMoneyAmount(trip.actualFare)} bold />
           <View style={[row.wrap, { borderBottomWidth: 0 }]}>
@@ -737,10 +735,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
 
   scroll: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingHorizontal: 14,
+    paddingTop: 14,
     paddingBottom: 48,
-    gap: 12,
+    gap: 10,
   },
 
   // Loading / error
@@ -788,32 +786,32 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Hero
   hero: {
     alignItems: 'center',
-    paddingVertical: 24,
-    gap: 6,
+    paddingVertical: 16,
+    gap: 4,
   },
   heroCheck: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   heroFare: {
-    fontSize: 44,
+    fontSize: 34,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     color: '#111111',
     letterSpacing: 0,
   },
   heroLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#525252',
   },
   heroDate: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B6B6B',
     textAlign: 'center',
   },
@@ -822,8 +820,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 4,
-    paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingHorizontal: 14,
+    paddingTop: 12,
     paddingBottom: 4,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E8E8E8',

@@ -42,7 +42,6 @@ import {
 } from "@orbi/ui";
 import {
   OrbiButton,
-  OrbiMetricTile,
   OrbiStatusBanner,
   OrbiSurface,
   safeHaptics,
@@ -53,7 +52,11 @@ import {
   estimateRiderPickupEtaMinutes,
   formatRiderDistanceKm,
   formatRiderMoneyAmount,
+  formatRiderPaymentMethodLabel,
   formatRiderRatingLabel,
+  formatRiderReceiptProvider,
+  formatRiderReceiptReference,
+  formatRiderReceiptStatus,
   formatRiderShortDate,
   resolveRiderMoneyAmount,
 } from "../../lib/rider-display-format";
@@ -120,35 +123,6 @@ const QUICK_SUPPORT_ACTIONS = [
     description: string;
   }
 >;
-
-function formatRiderPaymentMethodLabel(paymentMethod: string | null | undefined) {
-  switch ((paymentMethod ?? "MOBILE_MONEY").toUpperCase()) {
-    case "CASH":
-      return "Cash";
-    case "WALLET":
-      return "Wallet Orbi";
-    case "MOBILE_MONEY":
-    default:
-      return "Mobile Money";
-  }
-}
-
-function formatRiderReceiptProvider(provider: string | null | undefined) {
-  switch ((provider ?? '').toUpperCase()) {
-    case 'ORANGE_MONEY':
-      return 'Orange Money';
-    case 'MOOV_MONEY':
-      return 'Moov Money';
-    case 'WALLET':
-      return 'Wallet Orbi';
-    case 'CASH':
-      return 'Cash';
-    case 'MOBILE_MONEY':
-      return 'Mobile Money';
-    default:
-      return provider ? formatOperationalStatus(provider) : 'Paiement';
-  }
-}
 
 export default function ActivityScreen() {
   const router = useRouter();
@@ -449,10 +423,10 @@ export default function ActivityScreen() {
     const referenceId = activeTripId ?? latestTrip?.id ?? pendingRequest?.id ?? "none";
     const receiptContext = latestTrip?.receipt
       ? [
-          `Etat du paiement: ${latestTrip.receipt.status}`,
+          `Etat du paiement: ${formatRiderReceiptStatus(latestTrip.receipt.status)}`,
           `Montant paye: ${latestTrip.receipt.amount} ${latestTrip.receipt.currency}`,
-          `Operateur mobile money: ${latestTrip.receipt.provider}`,
-          `Reference de paiement: ${latestTrip.receipt.transactionRef ?? "non renseignee"}`,
+          `Operateur mobile money: ${formatRiderReceiptProvider(latestTrip.receipt.provider)}`,
+          `Reference de paiement: ${formatRiderReceiptReference(latestTrip.receipt.transactionRef)}`,
         ].join("\n")
       : null;
 
@@ -948,16 +922,16 @@ export default function ActivityScreen() {
                 )}
               </View>
               <View style={styles.driverInfo}>
-                <Text style={styles.driverName}>
+                <Text style={styles.driverName} numberOfLines={1}>
                   {driverTrustSnapshot?.driverName ?? activeTrip.counterpartyName ?? 'Chauffeur assigné'}
                 </Text>
-                <Text style={styles.driverMeta}>
+                <Text style={styles.driverMeta} numberOfLines={1}>
                   {driverTrustSnapshot
                     ? `${driverTrustSnapshot.ratingLabel} · ${driverTrustSnapshot.vehicleLabel}`
                     : 'En route vers vous'}
                 </Text>
                 {driverTrustSnapshot?.plateLabel ? (
-                  <Text style={styles.driverPlate}>{driverTrustSnapshot.plateLabel}</Text>
+                  <Text style={styles.driverPlate} numberOfLines={1}>{driverTrustSnapshot.plateLabel}</Text>
                 ) : null}
               </View>
               {activeTripDetail?.trip.driverPhoneNumber ? (
@@ -1053,7 +1027,7 @@ export default function ActivityScreen() {
                 onPress={() => handleCancelActiveTrip(activeTrip.id)}
                 disabled={isSubmitting}
                 style={styles.actionBtn}
-                label="Annuler avant depart"
+                label="Annuler"
                 variant="danger"
                 tone="danger"
                 labelStyle={styles.actionBtnLabel}
@@ -1064,7 +1038,7 @@ export default function ActivityScreen() {
                 onPress={() => handleStopInProgressTrip(activeTrip.id)}
                 disabled={isSubmitting}
                 style={styles.actionBtn}
-                label="Arreter la course"
+                label="Terminer ici"
                 variant="danger"
                 tone="danger"
                 labelStyle={styles.actionBtnLabel}
@@ -1090,7 +1064,7 @@ export default function ActivityScreen() {
             style={styles.refreshButton}
             loading={isRefreshing}
             accessibilityLabel="activity-refresh"
-            label="Actualiser le suivi"
+            label="Actualiser"
             variant="secondary"
             tone="teal"
             labelStyle={styles.refreshButtonLabel}
@@ -1121,16 +1095,18 @@ export default function ActivityScreen() {
       >
         {/* Stats */}
         <View style={styles.statsRow}>
-          <OrbiMetricTile
-            label="Courses"
-            value={String(history.stats.completedTrips)}
-            style={styles.statCard}
-          />
-          <OrbiMetricTile
-            label="Dépensé"
-            value={formatRiderMoneyAmount(history.stats.totalAmount)}
-            style={styles.statCard}
-          />
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel} numberOfLines={1}>Courses</Text>
+            <Text style={styles.statValue} numberOfLines={1}>
+              {String(history.stats.completedTrips)}
+            </Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel} numberOfLines={1}>Dépensé</Text>
+            <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>
+              {formatRiderMoneyAmount(history.stats.totalAmount)}
+            </Text>
+          </View>
         </View>
 
         <OrbiSurface style={styles.supportCard}>
@@ -1246,9 +1222,9 @@ export default function ActivityScreen() {
                     </Text>
                     {trip.receipt ? (
                       <Text style={styles.tripHistReceipt} numberOfLines={1}>
-                        Recu {formatOperationalStatus(trip.receipt.status)} - {formatRiderReceiptProvider(trip.receipt.provider)}
+                        Recu {formatRiderReceiptStatus(trip.receipt.status)} - {formatRiderReceiptProvider(trip.receipt.provider)}
                         {trip.receipt.transactionRef
-                          ? ` - ${trip.receipt.transactionRef.slice(0, 12)}`
+                          ? ` - ${formatRiderReceiptReference(trip.receipt.transactionRef)}`
                           : ''}
                       </Text>
                     ) : null}
@@ -1310,12 +1286,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    maxHeight: '70%',
+    maxHeight: '68%',
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 18,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
     paddingTop: 8,
     borderTopWidth: 1,
     borderColor: "#E8E8E8",
@@ -1324,8 +1300,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexGrow: 0,
   },
   tripSheetContent: {
-    gap: 14,
-    paddingBottom: 128,
+    gap: 11,
+    paddingBottom: 118,
   },
   sheetHandle: {
     width: 38,
@@ -1360,12 +1336,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textTransform: 'uppercase',
   },
   tripFocusPanel: {
-    gap: 12,
+    gap: 10,
     borderRadius: 4,
     backgroundColor: "#F7F7F7",
     borderColor: "#E8E8E8",
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
   },
   tripFocusCopy: {
     gap: 4,
@@ -1418,8 +1394,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Driver card
   driverCard: {
     borderRadius: 4,
-    padding: 12,
-    gap: 10,
+    padding: 11,
+    gap: 9,
     backgroundColor: "#FFFFFF",
     borderColor: "#E8E8E8",
   },
@@ -1563,8 +1539,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   actionBtn: {
     flexGrow: 1,
     flexBasis: '47%',
-    minHeight: 48,
-    paddingHorizontal: 6,
+    minHeight: 44,
+    paddingHorizontal: 8,
     borderRadius: 4,
   },
   actionBtnLabel: {
@@ -1628,23 +1604,23 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 10,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: "#E8E8E8",
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     color: "#111111",
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: 14,
+    paddingTop: 10,
     paddingBottom: 110,
-    gap: 12,
+    gap: 10,
   },
   headerLiveText: {
     fontSize: 11,
@@ -1667,7 +1643,25 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flex: 1,
     borderRadius: 4,
     backgroundColor: "#FFFFFF",
+    borderWidth: 1,
     borderColor: "#E8E8E8",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 2,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: "#6B6B6B",
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    fontFamily: 'Raleway_800ExtraBold',
+    color: "#111111",
   },
 
   // Sections
@@ -1682,8 +1676,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Support
   supportCard: {
-    padding: 14,
-    gap: 12,
+    padding: 12,
+    gap: 10,
     borderRadius: 4,
     backgroundColor: "#FFFFFF",
     borderColor: "#E8E8E8",
@@ -1703,7 +1697,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   supportTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     fontFamily: 'Raleway_800ExtraBold',
     color: "#111111",
@@ -1731,12 +1725,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   supportActionButton: {
     width: '48%',
-    minHeight: 42,
+    minHeight: 38,
     borderRadius: 4,
     paddingHorizontal: 8,
   },
   supportActionLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
   },
@@ -1852,17 +1846,17 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   emptyState: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     backgroundColor: "#FFFFFF",
     borderRadius: 4,
     borderWidth: 1,
     borderColor: "#E8E8E8",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   emptyOrbit: {
-    width: 58,
-    height: 58,
+    width: 46,
+    height: 46,
     borderRadius: 4,
     backgroundColor: "#F7F7F7",
     alignItems: 'center',
@@ -1872,15 +1866,15 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   emptyOrbitRing: {
     position: 'absolute',
-    width: 44,
-    height: 44,
+    width: 34,
+    height: 34,
     borderRadius: 4,
     borderWidth: 1,
     borderColor: "#E8E8E8",
   },
   emptyOrbitDot: {
-    width: 12,
-    height: 12,
+    width: 10,
+    height: 10,
     borderRadius: 4,
     backgroundColor: "#111111",
     borderWidth: 3,
@@ -1899,20 +1893,20 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   emptyTitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     color: "#111111",
   },
   emptyMeta: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6B6B6B",
     fontFamily: 'Inter_400Regular',
     lineHeight: 17,
   },
   emptyAction: {
-    minHeight: 42,
-    paddingHorizontal: 14,
+    minHeight: 38,
+    paddingHorizontal: 12,
     borderRadius: 4,
     flexShrink: 0,
   },
@@ -1926,11 +1920,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   syncMeta: { color: "#6B6B6B", fontSize: 12 },
   refreshButton: {
     borderRadius: 4,
-    minHeight: 38,
-    paddingHorizontal: 14,
+    minHeight: 34,
+    paddingHorizontal: 10,
     alignSelf: 'flex-start',
   },
-  refreshButtonLabel: { fontSize: 13 },
+  refreshButtonLabel: { fontSize: 12 },
   snapshotTitle: { fontSize: 13, fontWeight: '700', color: "#111111" },
   snapshotStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   trustCard: {
