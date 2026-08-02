@@ -97,7 +97,7 @@ describe('rider-active-flow', () => {
         'TRIP:DRIVER_ARRIVING',
         'activity',
       ),
-    ).toBe('Changement critique: Chauffeur en route.');
+    ).toBe('Course mise à jour: Chauffeur en route.');
 
     expect(
       buildRiderFlowTransitionLabel(
@@ -351,7 +351,7 @@ describe('rider-active-flow', () => {
         title: 'Chauffeur en approche',
         distanceLabel: '0.4 km restant',
         progressPercent: 78,
-        etaLabel: 'Pickup ~1 min',
+        etaLabel: 'Arrivée chauffeur ~1 min',
         freshnessLabel: 'Position maintenant',
       }),
     );

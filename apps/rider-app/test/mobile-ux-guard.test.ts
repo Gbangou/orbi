@@ -57,10 +57,16 @@ describe('rider mobile UX guards', () => {
     expect(source).toContain('styles.driverName} numberOfLines={1}');
     expect(source).toContain('styles.driverMeta} numberOfLines={1}');
     expect(source).toContain('styles.driverPlate} numberOfLines={1}');
-    expect(source).toContain("maxHeight: '68%'");
+    expect(source).toContain("maxHeight: '64%'");
     expect(source).toContain("minHeight: 44");
+    expect(source).toContain('primaryActionsRow:');
+    expect(source).toContain('secondaryActionsRow:');
+    expect(source).toContain('label="Partager le trajet"');
+    expect(source).toContain('label="Aide"');
+    expect(source).not.toContain('label="Signal"');
     expect(source).toContain('label="Annuler"');
     expect(source).toContain('label="Terminer ici"');
+    expect(source).not.toContain('ETA banner');
   });
 
   it('keeps rider activity overview dense on compact Android screens', () => {

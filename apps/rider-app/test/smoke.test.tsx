@@ -1527,13 +1527,11 @@ describe('rider smoke flows', () => {
     expectText(renderer, '11 AA 1234');
     expectText(renderer, 'Vehicule');
     expectText(renderer, 'rouge Yamaha Crypton');
-    expectText(renderer, 'Telephone');
-    expectText(renderer, 'Verifie');
     expectText(renderer, 'Paiement');
     expectText(renderer, 'Mobile Money');
     expectText(
       renderer,
-      'Comparez les lignes Nom, Plaque, Vehicule et Paiement ci-dessus. Montez seulement si tout correspond.',
+      'Vérifiez le nom, la plaque et le véhicule. Montez seulement si tout correspond.',
     );
   });
 

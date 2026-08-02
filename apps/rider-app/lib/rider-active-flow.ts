@@ -210,11 +210,11 @@ export function buildRiderLiveRouteProgress(input: {
           speedKph,
           isHeadingToDestination,
         })
-      : "ETA en attente";
+      : "Arrivée en attente";
 
   return {
     title: isHeadingToDestination
-      ? "Trajet vers destination"
+      ? "Vers votre destination"
       : "Chauffeur en approche",
     stateLabel: formatOperationalStatus(routeMonitoring.state),
     distanceLabel:
@@ -403,8 +403,8 @@ function estimateArrivalLabel(input: {
   );
 
   return input.isHeadingToDestination
-    ? `Arrivee ~${etaMinutes} min`
-    : `Pickup ~${etaMinutes} min`;
+    ? `Arrivée ~${etaMinutes} min`
+    : `Arrivée chauffeur ~${etaMinutes} min`;
 }
 
 function formatApproxCoordinateLabel(
@@ -516,7 +516,7 @@ export function buildRiderFlowTransitionLabel(
     previousFlowState !== nextFlowState &&
     nextStatus
   ) {
-    return `Changement critique: ${formatOperationalStatus(nextStatus)}.`;
+    return `Course mise à jour: ${formatOperationalStatus(nextStatus)}.`;
   }
 
   return null;

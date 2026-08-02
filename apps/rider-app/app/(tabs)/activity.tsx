@@ -795,11 +795,11 @@ export default function ActivityScreen() {
 
     return (
       <View style={styles.tripRoot}>
-        {/* Status feedback — visible in active trip view for operational signals */}
+        {/* Status feedback */}
         {status && !status.includes('Chargement') ? (
           <OrbiStatusBanner
             tone="amber"
-            title="Information trajet"
+            title="Suivi de course"
             message={status}
             style={styles.tripStatusOverlay}
           />
@@ -831,7 +831,7 @@ export default function ActivityScreen() {
             showsVerticalScrollIndicator={false}
           >
 
-          {/* Étapes de la course */}
+          {/* Etapes de la course */}
           <TripStageTracker status={activeTrip.status} audience="rider" style={styles.stageTracker} />
 
           {/* Status pill */}
@@ -868,7 +868,7 @@ export default function ActivityScreen() {
             </View>
           </OrbiSurface>
 
-          {/* ETA banner — live distance & ETA when driver is approaching */}
+          {/* Approche chauffeur */}
           {(activeTrip.status === 'MATCHED' || activeTrip.status === 'DRIVER_ARRIVING') ? (() => {
             const distKm = activeTripDetail?.trip.routeMonitoring.latestPosition?.distanceToPickupKm ?? null;
             const etaMins = estimateRiderPickupEtaMinutes(distKm);
@@ -880,12 +880,12 @@ export default function ActivityScreen() {
                     {activeTrip.status === 'MATCHED' ? 'Chauffeur en route' : 'Chauffeur proche'}
                   </Text>
                   <Text style={styles.etaValue}>
-                    {etaMins != null ? `Dans ~${etaMins} min` : 'En route vers vous'}
+                    {etaMins != null ? `Dans ${etaMins} min` : 'En route vers vous'}
                   </Text>
                 </View>
                 {distanceLabel ? (
                   <View style={styles.etaDistBadge}>
-                    <Text style={styles.etaDistText}>{distanceLabel}</Text>
+                    <Text style={styles.etaDistText} numberOfLines={1}>{distanceLabel}</Text>
                   </View>
                 ) : null}
               </OrbiSurface>
@@ -948,7 +948,10 @@ export default function ActivityScreen() {
             </View>
             {driverTrustSnapshot ? (
               <View style={styles.boardingChecklist}>
-                {driverTrustSnapshot.boardingChecklist.map((item) => (
+                {driverTrustSnapshot.boardingChecklist
+                  .filter((item) => item.label !== 'Téléphone' && item.label !== 'Telephone')
+                  .slice(0, 4)
+                  .map((item) => (
                   <View
                     key={item.label}
                     style={[
@@ -970,7 +973,7 @@ export default function ActivityScreen() {
             <OrbiSurface tone="teal" style={styles.pickupCheckCard}>
               <Text style={styles.pickupCheckEyebrow}>Chauffeur arrive</Text>
               <Text style={styles.pickupCheckHint}>
-                Comparez les lignes Nom, Plaque, Vehicule et Paiement ci-dessus. Montez seulement si tout correspond.
+                Vérifiez le nom, la plaque et le véhicule. Montez seulement si tout correspond.
               </Text>
             </OrbiSurface>
           ) : null}
@@ -993,55 +996,57 @@ export default function ActivityScreen() {
           </OrbiSurface>
 
           {/* Actions */}
-          <View style={styles.actionsRow}>
+          <View style={styles.primaryActionsRow}>
             <OrbiButton
               onPress={() => void handleShareTrip(activeTrip.id)}
               disabled={isSubmitting}
-              style={styles.actionBtn}
-              label="Partager"
+              style={styles.primaryActionBtn}
+              label="Partager le trajet"
               variant="secondary"
               tone="teal"
               labelStyle={styles.actionBtnLabel}
             />
             <OrbiButton
-              onPress={() => void handleReportIncident(activeTrip.id)}
-              disabled={isSubmitting}
-              style={styles.actionBtn}
-              accessibilityLabel="report-incident"
-              label="Signal"
-              variant="secondary"
-              tone="amber"
-              labelStyle={styles.actionBtnLabel}
-            />
-            <OrbiButton
               onPress={() => void handleTriggerSos(activeTrip.id)}
               disabled={isSubmitting}
-              style={styles.actionBtn}
+              style={styles.primaryActionBtn}
               label="SOS"
               variant="danger"
               tone="danger"
               labelStyle={styles.actionBtnLabel}
             />
+          </View>
+          <View style={styles.secondaryActionsRow}>
+            <OrbiButton
+              onPress={() => void handleReportIncident(activeTrip.id)}
+              disabled={isSubmitting}
+              style={styles.secondaryActionBtn}
+              accessibilityLabel="report-incident"
+              label="Aide"
+              variant="secondary"
+              tone="amber"
+              labelStyle={styles.secondaryActionBtnLabel}
+            />
             {canCancel ? (
               <OrbiButton
                 onPress={() => handleCancelActiveTrip(activeTrip.id)}
                 disabled={isSubmitting}
-                style={styles.actionBtn}
+                style={styles.secondaryActionBtn}
                 label="Annuler"
                 variant="danger"
                 tone="danger"
-                labelStyle={styles.actionBtnLabel}
+                labelStyle={styles.secondaryActionBtnLabel}
               />
             ) : null}
             {canStop ? (
               <OrbiButton
                 onPress={() => handleStopInProgressTrip(activeTrip.id)}
                 disabled={isSubmitting}
-                style={styles.actionBtn}
+                style={styles.secondaryActionBtn}
                 label="Terminer ici"
                 variant="danger"
                 tone="danger"
-                labelStyle={styles.actionBtnLabel}
+                labelStyle={styles.secondaryActionBtnLabel}
               />
             ) : null}
           </View>
@@ -1286,13 +1291,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    maxHeight: '68%',
+    maxHeight: '64%',
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-    paddingTop: 8,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    paddingTop: 7,
     borderTopWidth: 1,
     borderColor: "#E8E8E8",
   },
@@ -1300,8 +1305,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexGrow: 0,
   },
   tripSheetContent: {
-    gap: 11,
-    paddingBottom: 118,
+    gap: 9,
+    paddingBottom: 104,
   },
   sheetHandle: {
     width: 38,
@@ -1336,12 +1341,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textTransform: 'uppercase',
   },
   tripFocusPanel: {
-    gap: 10,
+    gap: 8,
     borderRadius: 4,
     backgroundColor: "#F7F7F7",
     borderColor: "#E8E8E8",
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
   },
   tripFocusCopy: {
     gap: 4,
@@ -1355,8 +1360,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   tripFocusTitle: {
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     color: "#111111",
@@ -1367,13 +1372,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   tripFocusMetric: {
     flex: 1,
-    minHeight: 52,
+    minHeight: 48,
     borderRadius: 4,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E8E8E8",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
     justifyContent: 'center',
   },
   tripFocusMetricLabel: {
@@ -1394,26 +1399,26 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Driver card
   driverCard: {
     borderRadius: 4,
-    padding: 11,
-    gap: 9,
+    padding: 10,
+    gap: 8,
     backgroundColor: "#FFFFFF",
     borderColor: "#E8E8E8",
   },
   driverCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   driverAvatar: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 4,
     backgroundColor: "#111111",
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  driverAvatarImg: { width: 48, height: 48, borderRadius: 4 },
+  driverAvatarImg: { width: 44, height: 44, borderRadius: 4 },
   driverAvatarInitials: {
     fontSize: 18,
     fontWeight: '700',
@@ -1422,18 +1427,18 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   driverInfo: { flex: 1, gap: 2 },
   driverName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     color: "#111111",
   },
   driverMeta: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#5F5F5F",
     fontFamily: 'Inter_400Regular',
   },
   driverPlate: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     color: "#111111",
@@ -1447,11 +1452,11 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   boardingCheckItem: {
     width: '48%',
-    minHeight: 48,
+    minHeight: 42,
     borderRadius: 4,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
     justifyContent: 'center',
     gap: 2,
   },
@@ -1480,7 +1485,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   // Pickup verification
   pickupCheckCard: {
     borderRadius: 4,
-    padding: 14,
+    padding: 10,
     alignItems: 'center',
     gap: 4,
     backgroundColor: "#F7F7F7",
@@ -1505,8 +1510,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   routeCard: {
     gap: 0,
     borderRadius: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 2,
     backgroundColor: "#FFFFFF",
     borderColor: "#E8E8E8",
   },
@@ -1514,7 +1519,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   routeDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   routeText: {
@@ -1531,14 +1536,12 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
 
   // Actions row
-  actionsRow: {
+  primaryActionsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
-  actionBtn: {
-    flexGrow: 1,
-    flexBasis: '47%',
+  primaryActionBtn: {
+    flex: 1,
     minHeight: 44,
     paddingHorizontal: 8,
     borderRadius: 4,
@@ -1546,15 +1549,30 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   actionBtnLabel: {
     fontSize: 12,
   },
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  secondaryActionBtn: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    minHeight: 36,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  secondaryActionBtnLabel: {
+    fontSize: 11,
+  },
 
-  // ETA banner
+  // Arrival banner
   etaBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     borderRadius: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     backgroundColor: "#F7F7F7",
     borderColor: "#E8E8E8",
   },
@@ -1568,23 +1586,23 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     marginBottom: 2,
   },
   etaValue: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     color: "#111111",
   },
   etaDistBadge: {
-    maxWidth: '42%',
+    maxWidth: '40%',
     flexShrink: 1,
     backgroundColor: "#FFFFFF",
     borderRadius: 4,
     borderWidth: 1,
     borderColor: "#E8E8E8",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   etaDistText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     color: "#111111",
@@ -1592,8 +1610,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Call driver button (inside driver card)
   callDriverBtn: {
-    minHeight: 40,
-    paddingHorizontal: 10,
+    minHeight: 38,
+    paddingHorizontal: 9,
     flexShrink: 0,
   },
   callDriverLabel: { fontSize: 12 },
