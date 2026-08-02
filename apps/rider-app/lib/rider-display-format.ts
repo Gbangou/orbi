@@ -59,7 +59,7 @@ export function formatRiderMoneyAmount(
 }
 
 export function formatRiderPaymentMethodLabel(method: string | null | undefined) {
-  switch ((method ?? 'MOBILE_MONEY').toUpperCase()) {
+  switch ((method ?? 'MOBILE_MONEY').toUpperCase().replace(/-/g, '_')) {
     case 'CASH':
       return 'Especes';
     case 'WALLET':

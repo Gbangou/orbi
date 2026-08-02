@@ -25,11 +25,30 @@ describe('rider mobile UX guards', () => {
 
   it('keeps booking bottom CTA compact', () => {
     const source = readAppFile('app/book.tsx');
+    const vehicleSource = readAppFile('lib/booking/vehicle-selector.tsx');
+    const paymentSource = readAppFile('lib/booking/payment-methods-manager.tsx');
+    const scheduleSource = readAppFile('lib/booking/scheduled-ride-picker.tsx');
 
     expect(source).toContain('labelStyle={styles.ctaBtnLabel}');
     expect(source).toContain('ctaBtnLabel');
     expect(source).toContain('ctaSignalTitle} numberOfLines={1}');
     expect(source).toContain('ctaSignalMeta} numberOfLines={1}');
+    expect(source).toContain('buildBookingSummaryLabel');
+    expect(source).toContain('Ajoutez votre destination');
+    expect(source).toContain('const hasDestination = Boolean(destinationPlace.coordinates)');
+    expect(source).toContain('!hasOpenFlow &&\n    hasDestination &&\n    scheduleMode');
+    expect(source).toContain("'Destination requise'");
+    expect(source).toContain("'Indiquez où vous allez'");
+    expect(source).toContain("label: 'Où allez-vous ?'");
+    expect(source).not.toContain('Destination a renseigner');
+    expect(source).toContain('formatRiderPaymentMethodLabel(selectedPaymentMethod)');
+    expect(source).toContain('height: 210');
+    expect(source).toContain('minHeight: 48');
+    expect(source).not.toContain("selectedOption ? formatRiderMoneyAmount(selectedOption.fare) : '--'");
+    expect(vehicleSource).toContain('VehicleIllustration tier={tier} width={48} height={34}');
+    expect(vehicleSource).toContain('minHeight: 60');
+    expect(paymentSource).toContain('width: 34');
+    expect(scheduleSource).toContain('toggleBtn: { flex: 1, paddingVertical: 7');
   });
 
   it('keeps active rider trip actions compact and driver identity bounded', () => {
@@ -124,6 +143,8 @@ describe('rider mobile UX guards', () => {
     expect(sharedSource).toContain('moto-standard');
     expect(sharedSource).toContain('vehiclePulse');
     expect(riderMapSource).toContain('${ORBI_MAP_VEHICLE_SCRIPT}');
+    expect(riderMapSource).toContain('Trajet prêt');
+    expect(riderMapSource).not.toContain('Trajet pret');
     expect(driverMapSource).toContain('${ORBI_MAP_VEHICLE_SCRIPT}');
     expect(riderMapSource).not.toContain("width=\"26\" height=\"58\"");
     expect(driverMapSource).not.toContain("width=\"26\" height=\"58\"");

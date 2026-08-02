@@ -44,6 +44,7 @@ describe('rider display format helpers', () => {
     expect(formatRiderPaymentMethodLabel('CASH')).toBe('Especes');
     expect(formatRiderPaymentMethodLabel('WALLET')).toBe('Portefeuille Orbi');
     expect(formatRiderPaymentMethodLabel('MOBILE_MONEY')).toBe('Mobile Money');
+    expect(formatRiderPaymentMethodLabel('mobile-money')).toBe('Mobile Money');
     expect(formatRiderReceiptStatus('SUCCEEDED')).toBe('Regle');
     expect(formatRiderReceiptStatus('PROCESSING')).toBe('En verification');
     expect(formatRiderReceiptStatus('FAILED')).toBe('A reprendre');

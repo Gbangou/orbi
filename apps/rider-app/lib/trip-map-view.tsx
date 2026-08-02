@@ -271,7 +271,7 @@ export function TripMapView({
         <View style={styles.fallbackPanel}>
           <Text style={styles.fallbackEyebrow}>Trajet</Text>
           <Text style={styles.fallbackTitle}>
-            {hasPickup && hasDestination ? 'Trajet pret' : 'Position en attente'}
+            {hasPickup && hasDestination ? 'Trajet prêt' : 'Position en attente'}
           </Text>
           <Text style={styles.fallbackMeta} numberOfLines={2}>
             {hasDriver

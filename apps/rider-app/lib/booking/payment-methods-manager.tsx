@@ -312,7 +312,7 @@ export const PaymentMethodsManager = memo(function PaymentMethodsManager({
 });
 
 const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
-  root: { gap: 8 },
+  root: { gap: 7 },
 
   sectionTitle: {
     fontSize: 13,
@@ -332,8 +332,8 @@ const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#E8E8E8',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   cardSelected: {
     borderColor: '#111111',
@@ -342,8 +342,8 @@ const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
   cardPressed: { opacity: 0.82 },
 
   iconWrap: {
-    width: 40,
-    height: 38,
+    width: 34,
+    height: 34,
     borderRadius: 4,
     backgroundColor: '#F3F3F3',
     alignItems: 'center',
@@ -362,7 +362,7 @@ const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
   info: { flex: 1, gap: 2 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     color: '#111111',
@@ -418,8 +418,8 @@ const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
   // Mobile Money expanded panel
   mobileMoneyPanel: {
     borderRadius: 4,
-    padding: 12,
-    gap: 7,
+    padding: 10,
+    gap: 6,
     marginTop: -4,
     backgroundColor: '#F7F7F7',
     borderColor: '#E8E8E8',
@@ -484,8 +484,8 @@ const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
   phoneInputError: { borderColor: '#000000' },
   phonePrefix: {
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
+    paddingVertical: 8,
+    fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
     color: '#111111',
@@ -496,8 +496,8 @@ const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
   phoneInput: {
     flex: 1,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
+    paddingVertical: 8,
+    fontSize: 14,
     fontWeight: '500',
     fontFamily: 'Inter_500Medium',
     color: '#111111',

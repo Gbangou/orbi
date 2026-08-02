@@ -1004,7 +1004,8 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<BookingScreen />);
     await flushMicrotasks();
 
-    expectText(renderer, 'Aucun chauffeur proche');
+    expectText(renderer, 'Destination requise');
+    expectText(renderer, 'Indiquez où vous allez');
     await pressByLabel(renderer, 'booking-cta');
 
     expect(mockedCreateRideRequestWithApi).not.toHaveBeenCalled();

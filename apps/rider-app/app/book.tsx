@@ -49,7 +49,10 @@ import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, use
 import { orbiRuntimeConfig } from '@orbi/config';
 import { createRiderPublicClient, restoreRiderSession } from '../lib/auth';
 import { resolveRiderAppError } from '../lib/session-feedback';
-import { formatRiderMoneyAmount } from '../lib/rider-display-format';
+import {
+  formatRiderMoneyAmount,
+  formatRiderPaymentMethodLabel,
+} from '../lib/rider-display-format';
 import { buildSavedPlacePayload } from '../lib/account-safety';
 import {
   areBookingPlacesEquivalent,
@@ -76,7 +79,7 @@ const cityPresets = burkinaPricingCityPresets;
 const fieldDispatchRadiusKm = 8;
 const emptyDestinationPlace: Place = {
   id: 'destination-manual',
-  label: 'Destination a renseigner',
+  label: 'Où allez-vous ?',
   address: '',
   coordinates: undefined,
 };
@@ -186,6 +189,23 @@ function PriceConfidenceCard({
     </OrbiSurface>
   );
 
+}
+
+function buildBookingSummaryLabel(input: {
+  selectedOption: RideOption | null;
+  hasDestination: boolean;
+  distanceKm: number;
+  durationMinutes: number;
+}) {
+  if (!input.hasDestination) {
+    return 'Ajoutez votre destination';
+  }
+
+  if (!input.selectedOption) {
+    return 'Choisissez un service';
+  }
+
+  return `${formatRiderMoneyAmount(input.selectedOption.fare)} · ${input.distanceKm} km · ${input.durationMinutes} min`;
 }
 
 function BackGlyph() {
@@ -747,12 +767,15 @@ export default function BookingScreen() {
     hasOpenFlow,
     primaryStatusLabel,
   } = flow;
+  const hasDestination = Boolean(destinationPlace.coordinates);
   const immediateBookingSupplyUnknown =
     !hasOpenFlow &&
+    hasDestination &&
     scheduleMode === 'now' &&
     nearbyCompatibleDriverCount === null;
   const immediateBookingUnavailable =
     !hasOpenFlow &&
+    hasDestination &&
     scheduleMode === 'now' &&
     nearbyCompatibleDriverCount !== null &&
     nearbyCompatibleDriverCount <= 0;
@@ -760,7 +783,7 @@ export default function BookingScreen() {
     isSubmitting ||
     (!hasOpenFlow &&
       (!selectedOption ||
-        !destinationPlace.coordinates ||
+        !hasDestination ||
         immediateBookingSupplyUnknown ||
         immediateBookingUnavailable));
   const bookingCtaLabel = isSubmitting
@@ -771,9 +794,18 @@ export default function BookingScreen() {
         ? 'Aucun chauffeur proche'
       : immediateBookingSupplyUnknown
         ? 'Recherche de chauffeurs...'
-      : selectedOption && destinationPlace.coordinates
+      : !hasDestination
+        ? 'Ajoutez une destination'
+      : selectedOption
         ? tb('confirm').replace('{{fare}}', formatRiderMoneyAmount(selectedOption.fare))
         : tb('noServiceSelected');
+  const bookingSummaryLabel = buildBookingSummaryLabel({
+    selectedOption,
+    hasDestination,
+    distanceKm: tripEstimate.distanceKm,
+    durationMinutes: tripEstimate.durationMinutes,
+  });
+  const paymentMethodLabel = formatRiderPaymentMethodLabel(selectedPaymentMethod);
 
   useEffect(() => {
     const previousFlowState = previousFlowStateRef.current;
@@ -1134,7 +1166,7 @@ export default function BookingScreen() {
           </View>
           <View style={styles.tripDecisionRow}>
             <Text style={styles.tripDecisionValue} numberOfLines={1}>
-              {selectedOption ? formatRiderMoneyAmount(selectedOption.fare) : '--'} · {tripEstimate.distanceKm} km · {tripEstimate.durationMinutes} min
+              {bookingSummaryLabel}
             </Text>
           </View>
         </OrbiSurface>
@@ -1323,9 +1355,11 @@ export default function BookingScreen() {
                   ? 'Aucun chauffeur autour du départ'
                 : immediateBookingSupplyUnknown
                   ? 'Recherche chauffeur'
-                  : selectedOption && destinationPlace.coordinates
+                  : selectedOption && hasDestination
                     ? `${formatRiderMoneyAmount(selectedOption.fare)} · ${selectedOption.title}`
-                    : 'Choisissez votre course'}
+                    : !hasDestination
+                      ? 'Destination requise'
+                      : 'Choisissez votre course'}
             </Text>
             <Text style={styles.ctaSignalMeta} numberOfLines={1}>
               {hasOpenFlow
@@ -1334,9 +1368,11 @@ export default function BookingScreen() {
                   ? `Essayez plus tard ou programmez la course`
                   : immediateBookingSupplyUnknown
                     ? "Disponibilité en cours"
-                    : selectedOption && destinationPlace.coordinates
-                      ? `${tripEstimate.distanceKm} km · ${tripEstimate.durationMinutes} min · ${selectedPaymentMethod === 'cash' ? 'Espèces' : selectedPaymentMethod}`
-                      : 'Départ, destination et disponibilité requis'}
+                    : selectedOption && hasDestination
+                      ? `${tripEstimate.distanceKm} km · ${tripEstimate.durationMinutes} min · ${paymentMethodLabel}`
+                      : !hasDestination
+                        ? 'Indiquez où vous allez'
+                        : 'Départ et disponibilité requis'}
             </Text>
           </View>
           <View
@@ -1376,10 +1412,10 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
   scroll: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingTop: 8,
     paddingBottom: 40,
-    gap: 10,
+    gap: 9,
   },
 
   // Header
@@ -1415,14 +1451,14 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E8E8E8',
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 2,
   },
   routeSummaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    gap: 10,
+    paddingVertical: 7,
+    gap: 9,
   },
   routeDotGreen: {
     width: 10,
@@ -1449,7 +1485,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     marginBottom: 2,
   },
   routeSummaryValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
     color: '#111111',
@@ -1469,13 +1505,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: '#F3F3F3',
     borderWidth: 1,
     borderColor: '#E8E8E8',
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 5,
   },
   tripDecisionValue: {
     fontSize: 12,
@@ -1552,7 +1588,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // Map preview
   mapPreviewWrap: {
-    height: 252,
+    height: 210,
     borderRadius: 8,
     overflow: 'hidden',
     position: 'relative',
@@ -1657,8 +1693,8 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontFamily: 'Inter_400Regular',
   },
   priceConfidenceCard: {
-    padding: 14,
-    gap: 10,
+    padding: 12,
+    gap: 8,
     borderColor: theme.colors.border,
   },
   priceConfidenceTop: {
@@ -1680,7 +1716,7 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   priceConfidenceFare: {
-    fontSize: 24,
+    fontSize: 21,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     color: theme.colors.text,
@@ -1912,15 +1948,15 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
 
   // CTA
   ctaWrap: {
-    paddingHorizontal: 16,
-    paddingBottom: 22,
-    paddingTop: 10,
+    paddingHorizontal: 14,
+    paddingBottom: 18,
+    paddingTop: 9,
     backgroundColor: theme.colors.surface,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
   ctaBtn: {
-    minHeight: 50,
+    minHeight: 48,
   },
   ctaBtnLabel: {
     fontSize: 15,

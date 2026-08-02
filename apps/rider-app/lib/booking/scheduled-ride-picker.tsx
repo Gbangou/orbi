@@ -199,19 +199,19 @@ export const ScheduledRidePicker = memo(function ScheduledRidePicker({
 });
 
 const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
-  container: { gap: 9 },
+  container: { gap: 8 },
   toggle: {
     flexDirection: 'row',
     backgroundColor: '#F3F3F3',
     borderRadius: 4, padding: 3, gap: 2,
   },
-  toggleBtn: { flex: 1, paddingVertical: 8, borderRadius: 4, alignItems: 'center' },
+  toggleBtn: { flex: 1, paddingVertical: 7, borderRadius: 4, alignItems: 'center' },
   toggleBtnActive: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8E8E8' },
-  toggleLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: '#6B6B6B' },
+  toggleLabel: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: '#6B6B6B' },
   toggleLabelActive: { color: '#111111' },
 
-  pickers: { gap: 11 },
-  pickerSection: { gap: 7 },
+  pickers: { gap: 9 },
+  pickerSection: { gap: 6 },
   pickerLabel: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold', color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: 0 },
 
   dateChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
@@ -225,7 +225,7 @@ const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: '#F7F7F7', borderRadius: 4,
     borderWidth: 1, borderColor: '#E8E8E8', paddingHorizontal: 13, paddingVertical: 10,
   },
-  timeValue: { fontSize: 16, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: '#111111' },
+  timeValue: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', color: '#111111' },
 
   timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   timeSlot: {

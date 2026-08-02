@@ -33,7 +33,7 @@ function VehicleAvatar({
       !isSelected && { borderColor: '#E8E8E8' },
     ]}>
       <View style={styles.svgWrap}>
-        <VehicleIllustration tier={tier} width={54} height={38} />
+        <VehicleIllustration tier={tier} width={48} height={34} />
       </View>
       {isSelected ? (
         <View style={styles.checkBadge}>
@@ -123,17 +123,17 @@ export const VehicleSelector = memo(function VehicleSelector({
 });
 
 const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
-  section: { gap: 8 },
+  section: { gap: 7 },
   sectionTitle: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111', paddingHorizontal: 2 },
   list: { gap: 6 },
   card: {
-    minHeight: 68,
+    minHeight: 60,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E8E8E8',
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingHorizontal: 9,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -143,8 +143,8 @@ const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   vehicleAvatar: {
-    width: 58,
-    height: 42,
+    width: 52,
+    height: 38,
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
@@ -167,11 +167,11 @@ const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
     left: 7, top: 8, transform: [{ rotate: '-45deg' }],
   },
   copy: { flex: 1, gap: 2, minWidth: 0 },
-  name: { fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111' },
-  eta: { fontSize: 12, color: '#6B6B6B', fontFamily: 'Inter_400Regular' },
-  fare: { fontSize: 13, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111', textAlign: 'right', maxWidth: 92 },
+  name: { fontSize: 13, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111' },
+  eta: { fontSize: 11, color: '#6B6B6B', fontFamily: 'Inter_400Regular' },
+  fare: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111', textAlign: 'right', maxWidth: 86 },
   fareSelected: { color: '#111111' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
   loadingText: { fontSize: 14, color: '#6B6B6B', fontFamily: 'Inter_400Regular' },
-  svgWrap: { width: 54, height: 38, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  svgWrap: { width: 48, height: 34, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 });
