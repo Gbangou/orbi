@@ -16,6 +16,8 @@ apps/backend/dist/
 apps/admin-web/.next/
 apps/rider-app/.expo/
 apps/driver-app/.expo/
+apps/rider-app/dist-ci/
+apps/driver-app/dist-ci/
 apps/rider-app/android/
 apps/driver-app/android/
 apps/rider-app/ios/

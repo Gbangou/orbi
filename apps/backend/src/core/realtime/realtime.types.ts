@@ -20,6 +20,7 @@ export type RealtimeEventFilter = {
   actorId?: string | null;
   riderId?: string | null;
   driverId?: string | null;
+  authToken?: string | null;
   sessionExpiresAt?: Date | null;
 };
 
@@ -51,6 +52,14 @@ const maxRealtimeTypeLength = 128;
 const maxRealtimeEntityIdLength = 256;
 const maxRealtimeActorRoleLength = 64;
 const maxRealtimePrincipalIdLength = 256;
+const maxRealtimeAuthTokenLength = 4096;
+const allowedSubscriptionRoles = new Set([
+  'RIDER',
+  'DRIVER',
+  'ADMIN',
+  'OPS',
+  'SUPPORT',
+]);
 
 export function parseRealtimeEvent(value: unknown): RealtimeEvent | null {
   if (!isRecord(value)) {
@@ -120,6 +129,36 @@ export function canReceiveRealtimeEvent(
   return false;
 }
 
+export function parseRealtimeSubscriptionMessage(
+  message: Record<string, unknown>,
+  connectionAuthToken?: string | null,
+): RealtimeEventFilter | null {
+  const role = stringValue(message.role)?.toUpperCase() ?? null;
+  const authToken =
+    stringValue(message.authToken) ?? stringValue(connectionAuthToken);
+
+  if (
+    !role ||
+    !allowedSubscriptionRoles.has(role) ||
+    !authToken ||
+    authToken.length > maxRealtimeAuthTokenLength
+  ) {
+    return null;
+  }
+
+  const actorId = optionalPrincipal(message.actorId);
+  const riderId = optionalPrincipal(message.riderId);
+  const driverId = optionalPrincipal(message.driverId);
+
+  return {
+    role,
+    actorId,
+    riderId,
+    driverId,
+    authToken,
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -145,6 +184,19 @@ function isOptionalRecord(
   value: unknown,
 ): value is Record<string, unknown> | undefined {
   return value === undefined || isRecord(value);
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function optionalPrincipal(value: unknown) {
+  const next = stringValue(value);
+  if (!next) {
+    return null;
+  }
+
+  return next.length <= maxRealtimePrincipalIdLength ? next : null;
 }
 
 function isValidIsoDate(value: unknown): value is string {

@@ -9,14 +9,20 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
+import type { IncomingMessage } from 'node:http';
 import { Server, WebSocket } from 'ws';
 import { RealtimeService } from './realtime.service';
-import { parseRealtimeEvent, type RealtimeEventFilter } from './realtime.types';
+import {
+  parseRealtimeEvent,
+  parseRealtimeSubscriptionMessage,
+  type RealtimeEventFilter,
+} from './realtime.types';
 
 type AuthenticatedSocket = WebSocket & {
   isAlive: boolean;
   subscriptionId: string | null;
   filterOptions: RealtimeEventFilter | null;
+  authToken: string | null;
 };
 
 /**
@@ -77,10 +83,11 @@ export class RealtimeGateway
     });
   }
 
-  handleConnection(client: AuthenticatedSocket) {
+  handleConnection(client: AuthenticatedSocket, request?: IncomingMessage) {
     client.isAlive = true;
     client.subscriptionId = null;
     client.filterOptions = null;
+    client.authToken = this.extractConnectionAuthToken(request);
     this.connectionCount++;
     this.logger.debug(`WS connected — total: ${this.connectionCount}`);
 
@@ -133,12 +140,15 @@ export class RealtimeGateway
     client: AuthenticatedSocket,
     message: Record<string, unknown>,
   ) {
-    const filterOptions: RealtimeEventFilter = {
-      role: String(message['role'] ?? 'rider'),
-      actorId: message['actorId'] ? String(message['actorId']) : null,
-      riderId: message['riderId'] ? String(message['riderId']) : null,
-      driverId: message['driverId'] ? String(message['driverId']) : null,
-    };
+    const filterOptions = parseRealtimeSubscriptionMessage(
+      message,
+      client.authToken,
+    );
+
+    if (!filterOptions) {
+      this.sendError(client, 'invalid_subscription');
+      return;
+    }
 
     client.filterOptions = filterOptions;
     client.subscriptionId = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -157,11 +167,13 @@ export class RealtimeGateway
           client.send(
             JSON.stringify({
               type: 'event',
+              id: realtimeEvent.id,
               eventType: realtimeEvent.type,
               channel: realtimeEvent.channel,
               entityId: realtimeEvent.entityId,
               actorRole: realtimeEvent.actorRole ?? null,
               payload: realtimeEvent.payload ?? {},
+              createdAt: realtimeEvent.createdAt,
             }),
           );
         } else {
@@ -195,6 +207,20 @@ export class RealtimeGateway
   private sendError(client: AuthenticatedSocket, code: string) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify({ type: 'error', code }));
+    }
+  }
+
+  private extractConnectionAuthToken(request?: IncomingMessage) {
+    if (!request?.url) {
+      return null;
+    }
+
+    try {
+      const url = new URL(request.url, 'http://localhost');
+      const token = url.searchParams.get('token')?.trim();
+      return token || null;
+    } catch {
+      return null;
     }
   }
 

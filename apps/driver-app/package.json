@@ -12,6 +12,7 @@
     "test:smoke": "jest --config ./jest.config.cjs --runInBand",
     "typecheck": "tsc --noEmit",
     "build": "echo driver app build handled by Expo application services",
+    "build:ci": "expo export --platform web --output-dir dist-ci",
     "build:android:preview": "eas build --platform android --profile preview",
     "build:android:mvp": "eas build --platform android --profile mvp",
     "build:android:production": "eas build --platform android --profile production",

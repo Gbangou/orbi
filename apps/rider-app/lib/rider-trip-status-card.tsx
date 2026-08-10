@@ -9,7 +9,6 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   canRiderCancelTrip,
-  canRiderStopTrip,
   type MyTripsResponse,
 } from '@orbi/api';
 import { type OrbiTheme } from '@orbi/ui';
@@ -64,7 +63,6 @@ export function RiderTripStatusCard({
   onShare,
   onSos,
   onCancel,
-  onStop,
 }: RiderTripStatusCardProps) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -81,7 +79,6 @@ export function RiderTripStatusCard({
   const canCancel =
     Boolean(activeRequest) ||
     (activeTrip ? canRiderCancelTrip(activeTrip.status) : false);
-  const canStop = activeTrip ? canRiderStopTrip(activeTrip.status) : false;
 
   return (
     <View style={styles.card}>
@@ -172,19 +169,6 @@ export function RiderTripStatusCard({
               ]}
             >
               <Text style={[styles.quickActionLabel, styles.quickActionDangerLabel]}>Annuler</Text>
-            </Pressable>
-          ) : null}
-          {canStop ? (
-            <Pressable
-              accessibilityLabel="home-stop-trip"
-              onPress={onStop}
-              style={({ pressed }) => [
-                styles.quickAction,
-                styles.quickActionDanger,
-                pressed ? styles.quickActionPressed : null,
-              ]}
-            >
-              <Text style={[styles.quickActionLabel, styles.quickActionDangerLabel]}>Arreter</Text>
             </Pressable>
           ) : null}
         </View>

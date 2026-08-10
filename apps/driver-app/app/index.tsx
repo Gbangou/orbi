@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import type { OrbiTheme } from '@orbi/ui';
 import { useOrbiTheme } from '@orbi/ui/native';
-import { hasPersistedDriverSession } from '../lib/auth';
+import { resolveDriverNavigationSession } from '../lib/driver-navigation';
 import { OrbiLogo } from '../lib/orbi-logo';
 
 export default function IndexScreen() {
@@ -30,12 +30,13 @@ export default function IndexScreen() {
     let isMounted = true;
 
     async function handoff() {
-      let hasSession = false;
+      let targetPath = '/auth';
 
       try {
-        hasSession = await hasPersistedDriverSession();
+        const decision = await resolveDriverNavigationSession('/');
+        targetPath = decision.targetPath ?? '/accueil';
       } catch {
-        hasSession = false;
+        targetPath = '/auth';
       }
 
       if (!isMounted) {
@@ -43,7 +44,7 @@ export default function IndexScreen() {
       }
 
       setTimeout(() => {
-        router.replace(hasSession ? '/accueil' : '/auth');
+        router.replace(targetPath);
       }, 340);
     }
 

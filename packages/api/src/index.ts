@@ -147,6 +147,7 @@ export type {
 export {
   signInWithApi,
   signUpWithApi,
+  refreshSessionWithApi,
   fetchCurrentUser,
   authenticateAndFetchCurrentUser,
   restoreOrAuthenticateSession,
@@ -348,6 +349,7 @@ export {
   recordTripRoutePositionWithApi,
   fetchSharedTripWithApi,
   acceptRideRequestWithApi,
+  completeTripWithApi,
   updateTripStatusWithApi,
   verifyPickupCodeWithApi,
   reportTripIncidentWithApi,

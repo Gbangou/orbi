@@ -21,6 +21,10 @@ import { RateTripDto } from '../modules/trips/dto/rate-trip.dto';
 import { UpdateTripStatusDto } from '../modules/trips/dto/update-trip-status.dto';
 import { VoiceLocationIntentDto } from '../modules/voice/dto/voice-location-intent.dto';
 import { RegisterPushTokenDto } from '../modules/users/dto/register-push-token.dto';
+import {
+  CancelScheduledRideDto,
+  CreateScheduledRideDto,
+} from '../modules/scheduled-rides/dto/create-scheduled-ride.dto';
 import { TripStatus } from '@prisma/client';
 
 async function validateDto<T extends object>(
@@ -679,5 +683,61 @@ describe('dirty input validation', () => {
 
     expect(validRefundWebhook).toEqual([]);
     expect(dirtyRefundWebhook.length).toBeGreaterThan(0);
+  });
+
+  it('rejects dirty scheduled ride creation payloads at the DTO boundary', async () => {
+    const validScheduledRide = await validateDto(CreateScheduledRideDto, {
+      pickupAddress: 'Zone du Bois, Ouagadougou',
+      pickupLatitude: 12.371,
+      pickupLongitude: -1.519,
+      destinationAddress: "Clinique de l'Amitie",
+      destinationLatitude: 12.355,
+      destinationLongitude: -1.533,
+      scheduledFor: '2026-08-15T08:30:00.000Z',
+      vehicleType: 'CAR',
+      paymentMethod: 'MOBILE_MONEY',
+      city: 'OUAGADOUGOU',
+      notes: 'Venir devant le portail bleu.',
+      promoCode: 'ORBIBETA',
+    });
+    const dirtyScheduledRide = await validateDto(CreateScheduledRideDto, {
+      pickupAddress: '<script>alert(1)</script>',
+      pickupLatitude: 999,
+      pickupLongitude: -999,
+      destinationAddress: 'x'.repeat(10_000),
+      destinationLatitude: Number.POSITIVE_INFINITY,
+      destinationLongitude: Number.NaN,
+      scheduledFor: '2026-02-31 08:30',
+      vehicleType: 'TRUCK',
+      paymentMethod: "CASH'; DROP TABLE users; --",
+      city: 'OUAGA<script>',
+      notes: '😎'.repeat(600),
+      promoCode: "ORBI';DROP",
+      status: 'APPROVED',
+      riderId: 'user-admin',
+    });
+    const nullScheduledRide = await validateDto(CreateScheduledRideDto, {
+      pickupAddress: null,
+      destinationAddress: null,
+      scheduledFor: null,
+      vehicleType: null,
+    });
+
+    expect(validScheduledRide).toEqual([]);
+    expect(dirtyScheduledRide.length).toBeGreaterThan(0);
+    expect(nullScheduledRide.length).toBeGreaterThan(0);
+  });
+
+  it('rejects dirty scheduled ride cancellation payloads and unknown fields', async () => {
+    const validCancellation = await validateDto(CancelScheduledRideDto, {
+      reason: 'Je dois reporter le rendez-vous.',
+    });
+    const dirtyCancellation = await validateDto(CancelScheduledRideDto, {
+      reason: '<img src=x onerror=alert(1)>'.repeat(20),
+      refundOverride: true,
+    });
+
+    expect(validCancellation).toEqual([]);
+    expect(dirtyCancellation.length).toBeGreaterThan(0);
   });
 });

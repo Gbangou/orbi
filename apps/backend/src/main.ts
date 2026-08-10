@@ -13,6 +13,7 @@ import {
   type Response,
 } from 'express';
 import { AppModule } from './app.module';
+import { StableHttpExceptionFilter } from './common/errors/stable-http-exception.filter';
 import { applyApiSecurityHeaders } from './common/security/security-headers';
 import { PrismaService } from './core/prisma/prisma.service';
 import { AppLifecycleService } from './core/runtime/app-lifecycle.service';
@@ -126,6 +127,7 @@ async function bootstrap() {
       forbidUnknownValues: true,
     }),
   );
+  app.useGlobalFilters(new StableHttpExceptionFilter());
   prismaService.enableShutdownHooks(app);
 
   if (enableSwagger) {

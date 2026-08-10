@@ -386,6 +386,34 @@ describe('RideRequestsService', () => {
     expect(realtimeService.publish).not.toHaveBeenCalled();
   });
 
+  it('maps a concurrent active-flow unique constraint to a double-request rejection', async () => {
+    const { prisma, service } = createService();
+    const uniqueConstraint = new Prisma.PrismaClientKnownRequestError(
+      'Unique constraint failed on active rider flow.',
+      {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: { target: ['riderId', 'status'] },
+      },
+    );
+
+    prisma.$transaction.mockRejectedValueOnce(uniqueConstraint);
+
+    await expect(
+      service.create({
+        riderId: 'rider-1',
+        pickupAddress: 'Universite Joseph Ki-Zerbo',
+        destinationAddress: 'Ouaga 2000',
+        requestedVehicleType: 'MOTORCYCLE',
+        requestedServiceTier: 'MOTO_STANDARD',
+        estimatedDistanceKm: 5.8,
+        estimatedDurationMinutes: 16,
+        paymentMethod: 'MOBILE_MONEY',
+        pickupAreaType: 'URBAN_CORE',
+      }),
+    ).rejects.toThrow('The rider already has an active ride request or trip.');
+  });
+
   it('does not treat a changed payment method as a duplicate booking retry', async () => {
     const { prisma, pricingService, service } = createService();
 

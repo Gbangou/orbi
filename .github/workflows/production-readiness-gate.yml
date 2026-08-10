@@ -62,5 +62,11 @@ jobs:
       - name: Apply database migrations
         run: pnpm --filter backend exec prisma migrate deploy
 
+      - name: Check migration status
+        run: pnpm --filter backend exec prisma migrate status
+
+      - name: Source risk gates
+        run: pnpm quality:source
+
       - name: Run production readiness gate
         run: pnpm test:production:gate

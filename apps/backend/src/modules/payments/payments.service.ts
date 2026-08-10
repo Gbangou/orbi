@@ -193,13 +193,33 @@ export class PaymentsService {
     // persisting the attempt. Flutterwave/CinetPay work via redirect, so they
     // do not require an outbound API call at this stage.
     if (providerKey === 'pawapay') {
-      await this.dispatchPawaPayDeposit(
-        transactionRef,
-        amount,
-        rideRequest.currency || currency,
-        payload,
-        payload.rideRequestId,
-      );
+      try {
+        await this.dispatchPawaPayDeposit(
+          transactionRef,
+          amount,
+          rideRequest.currency || currency,
+          payload,
+          payload.rideRequestId,
+        );
+        await this.markExternalPaymentAttemptPending(
+          transactionRef,
+          'provider_dispatch_accepted',
+        );
+      } catch (error) {
+        await this.markExternalPaymentAttemptPending(
+          transactionRef,
+          'provider_dispatch_unconfirmed',
+        );
+        await this.enqueuePaymentAttemptReconciliationSweep(
+          transactionRef,
+          error,
+        );
+        this.logger.error(
+          `PawaPay deposit dispatch is unconfirmed for ${transactionRef}: ${this.errorMessage(
+            error,
+          )}`,
+        );
+      }
     }
 
     return checkoutIntent;
@@ -533,6 +553,7 @@ export class PaymentsService {
       | 'persisted_wallet_top_up_replay'
       | 'ignored_amount_mismatch'
       | 'ignored_conflicting_provider_reference'
+      | 'ignored_out_of_order'
       | 'ignored_unknown_reference'
       | 'ignored_missing_reference' = transactionRef
       ? 'ignored_unknown_reference'
@@ -589,6 +610,7 @@ export class PaymentsService {
             userId: true,
             amount: true,
             currency: true,
+            status: true,
           },
         });
 
@@ -628,6 +650,43 @@ export class PaymentsService {
 
       if (existingProviderAttempt) {
         const nextStatus = this.resolveWebhookStatus(event);
+
+        if (
+          this.isOutOfOrderPaymentStatus(
+            existingProviderAttempt.status,
+            nextStatus,
+          )
+        ) {
+          paymentAttemptId = existingProviderAttempt.id;
+          userId = existingProviderAttempt.userId;
+          nextAction = 'ignored_out_of_order';
+
+          const result = {
+            received: true,
+            event,
+            transactionRef,
+            provider: providerContext.providerKey,
+            providerReference,
+            reconciledAttemptCount,
+            nextAction,
+          };
+
+          await this.persistWebhookEvent({
+            provider,
+            event,
+            transactionRef,
+            providerReference,
+            nextAction,
+            reconciledAttemptCount,
+            signatureVerified,
+            payload,
+            signatureContext,
+            paymentAttemptId,
+            userId,
+          });
+
+          return result;
+        }
 
         if (
           this.hasWebhookPaymentAmountMismatch(
@@ -705,11 +764,19 @@ export class PaymentsService {
           userId: true,
           amount: true,
           currency: true,
+          status: true,
         },
       });
       const nextStatus = this.resolveWebhookStatus(event);
 
       if (
+        targetAttempt &&
+        this.isOutOfOrderPaymentStatus(targetAttempt.status, nextStatus)
+      ) {
+        paymentAttemptId = targetAttempt.id;
+        userId = targetAttempt.userId;
+        nextAction = 'ignored_out_of_order';
+      } else if (
         targetAttempt &&
         this.hasWebhookPaymentAmountMismatch(payload, targetAttempt, nextStatus)
       ) {
@@ -737,6 +804,8 @@ export class PaymentsService {
         nextAction =
           reconciledAttemptCount > 0
             ? 'persisted_and_reconciled'
+            : targetAttempt && targetAttempt.status === nextStatus
+              ? 'persisted_idempotent_replay'
             : 'ignored_unknown_reference';
         if (reconciledAttemptCount > 0) {
           await this.recordSuccessfulPaymentLedgerIfNeeded(
@@ -1000,6 +1069,53 @@ export class PaymentsService {
       redirectUrl: payload.redirectUrl,
       providerMetadata,
     };
+  }
+
+  private async markExternalPaymentAttemptPending(
+    transactionRef: string,
+    dispatchState: 'provider_dispatch_accepted' | 'provider_dispatch_unconfirmed',
+  ) {
+    await this.prisma.paymentAttempt.updateMany({
+      where: {
+        transactionRef,
+        status: 'INITIATED',
+      },
+      data: {
+        status: 'PENDING',
+        failureReason:
+          dispatchState === 'provider_dispatch_unconfirmed'
+            ? dispatchState
+            : null,
+      },
+    });
+  }
+
+  private async enqueuePaymentAttemptReconciliationSweep(
+    transactionRef: string,
+    error: unknown,
+  ) {
+    try {
+      await this.jobQueueService?.enqueue({
+        kind: 'PAYMENT_ATTEMPT_RECONCILIATION_SWEEP',
+        dedupeKey: `payment-attempt-reconciliation:${transactionRef}`,
+        entityType: 'payment_attempt',
+        entityId: transactionRef,
+        maxAttempts: 6,
+        nextRunAt: new Date(Date.now() + 60_000),
+        resetSucceededOnDedupe: true,
+        payload: {
+          transactionRef,
+          reason: 'provider_dispatch_unconfirmed',
+          error: this.errorMessage(error),
+        },
+      });
+    } catch (queueError) {
+      this.logger.error(
+        `Failed to enqueue payment reconciliation for ${transactionRef}: ${this.errorMessage(
+          queueError,
+        )}`,
+      );
+    }
   }
 
   // Le canal WALLET n'est pas un agrégateur externe : le débit est appliqué
@@ -2124,6 +2240,32 @@ export class PaymentsService {
     return 'PENDING' as const;
   }
 
+  private isOutOfOrderPaymentStatus(
+    currentStatus: PaymentAttemptStatus,
+    nextStatus: PaymentAttemptStatus,
+  ) {
+    if (currentStatus === nextStatus) {
+      return false;
+    }
+
+    if (currentStatus === 'SUCCEEDED') {
+      return ['PENDING', 'FAILED', 'CANCELLED'].includes(nextStatus);
+    }
+
+    if (currentStatus === 'FAILED' || currentStatus === 'CANCELLED') {
+      return nextStatus === 'PENDING';
+    }
+
+    if (
+      currentStatus === 'REFUND_PENDING' ||
+      currentStatus === 'REFUNDED'
+    ) {
+      return nextStatus !== 'REFUNDED';
+    }
+
+    return false;
+  }
+
   private isRefundWebhookEvent(event: string, payload: PaymentWebhookPayload) {
     const normalizedEvent = event.toLowerCase();
 
@@ -2192,12 +2334,20 @@ export class PaymentsService {
   }
 
   private extractWebhookProviderReference(payload: PaymentWebhookPayload) {
-    if (typeof payload.data?.providerReference === 'string') {
-      return payload.data.providerReference;
+    const data = this.asRecord(payload.data);
+
+    const dataProviderReference = this.stringValue(data.providerReference);
+    if (dataProviderReference) {
+      return dataProviderReference;
     }
 
     if (typeof payload.providerReference === 'string') {
       return payload.providerReference;
+    }
+
+    const flutterwaveReference = this.stringValue(data.flw_ref);
+    if (flutterwaveReference) {
+      return flutterwaveReference;
     }
 
     if (typeof payload.signature === 'string') {

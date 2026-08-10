@@ -82,7 +82,7 @@ describe('domain and Prisma contracts', () => {
     expect(canRiderCancelTrip(TripStatus.MATCHED)).toBe(true);
     expect(canRiderCancelTrip(TripStatus.DRIVER_ARRIVING)).toBe(true);
     expect(canRiderCancelTrip(TripStatus.IN_PROGRESS)).toBe(false);
-    expect(canRiderStopTrip(TripStatus.IN_PROGRESS)).toBe(true);
+    expect(canRiderStopTrip(TripStatus.IN_PROGRESS)).toBe(false);
     expect(canRiderStopTrip(TripStatus.COMPLETED)).toBe(false);
 
     expect(canDriverMarkArrived(TripStatus.MATCHED)).toBe(true);
@@ -136,9 +136,9 @@ describe('domain and Prisma contracts', () => {
         actorRole: 'RIDER',
       }),
     ).toEqual({
-      allowed: true,
-      eventType: 'TRIP_COMPLETED',
-      reason: null,
+      allowed: false,
+      eventType: null,
+      reason: 'ACTOR_NOT_ALLOWED',
     });
 
     expect(

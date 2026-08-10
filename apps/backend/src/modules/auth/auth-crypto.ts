@@ -41,6 +41,10 @@ export function generateSessionToken() {
   return randomBytes(48).toString('base64url');
 }
 
+export function generateRefreshToken() {
+  return randomBytes(64).toString('base64url');
+}
+
 export function hashSessionToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }

@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useNetworkStatus } from './use-network-status';
+import { useOrbiTheme } from './theme-context';
 
 export function OfflineBanner() {
   const status = useNetworkStatus();
+  const theme = useOrbiTheme();
   const translateY = useRef(new Animated.Value(-56)).current;
   const visible = status === 'offline';
 
@@ -23,9 +25,11 @@ export function OfflineBanner() {
       pointerEvents="none"
       accessibilityLiveRegion="polite"
     >
-      <View style={styles.inner}>
-        <Text style={styles.dot}>●</Text>
-        <Text style={styles.label}>Hors ligne — les données affichées peuvent être obsolètes</Text>
+      <View style={[styles.inner, { backgroundColor: theme.colors.text }]}>
+        <Text style={[styles.dot, { color: theme.colors.warning }]}>●</Text>
+        <Text style={[styles.label, { color: theme.colors.textInverse }]}>
+          Hors ligne - les donnees affichees peuvent dater un peu
+        </Text>
       </View>
     </Animated.View>
   );
@@ -42,18 +46,15 @@ const styles = StyleSheet.create({
   inner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 8,
   },
   dot: {
     fontSize: 8,
-    color: '#000000',
   },
   label: {
     fontSize: 12,
-    color: '#FFFFFF',
     fontFamily: 'Inter_500Medium',
     fontWeight: '500',
     flex: 1,

@@ -38,7 +38,11 @@ import {
   evaluateRideRequestAcceptanceDecision,
   selectCompatibleVehicle,
 } from './trip-acceptance.policy';
-import { extractPickupCode, toAmount } from './trips.utils';
+import {
+  generatePickupCode,
+  resolvePickupCodeChallenge,
+  toAmount,
+} from './trips.utils';
 import {
   driverFatigueWindowHours,
   evaluateDriverFatigue,
@@ -58,6 +62,9 @@ const routeDeviationKmThreshold = 0.75;
 const routeMinimumProgressKm = 0.2;
 const gpsAnomalyMaxImpliedSpeedKph = 500;
 const gpsAnomalyMinDistanceKm = 0.5;
+const pickupCodeTtlMinutes = 10;
+const pickupCodeMaxAttempts = 5;
+const pickupCodeRetryDelaySeconds = 3;
 const gpsAnomalyMaxGapMinutes = 30;
 const pickupMismatchGraceMinutes = 7;
 const pickupMismatchDistanceKmThreshold = 0.8;
@@ -527,9 +534,10 @@ export class TripsService {
       accuracyMeters?: number;
       speedKph?: number;
       distanceToDestinationKm?: number;
+      observedAt?: string;
     },
   ) {
-    const observedAt = new Date();
+    const observedAt = payload.observedAt ? new Date(payload.observedAt) : new Date();
     const position = {
       latitude: payload.latitude,
       longitude: payload.longitude,
@@ -797,9 +805,7 @@ export class TripsService {
 
       if (!acceptanceDecision.allowed) {
         throw new BadRequestException(
-          acceptanceDecision.reason === 'RESERVED_FOR_OTHER_DRIVER'
-            ? 'This ride request is currently reserved for another driver.'
-            : 'This ride request is no longer available.',
+          'Cette course n est plus disponible. Une autre proposition arrive des que possible.',
         );
       }
 
@@ -820,19 +826,10 @@ export class TripsService {
           status: {
             in: ['REQUESTED', 'MATCHED'],
           },
-          OR: [
-            {
-              assignedDriverId: null,
-            },
-            {
-              assignedDriverId: driverProfileId,
-            },
-            {
-              assignmentExpiresAt: {
-                lt: now,
-              },
-            },
-          ],
+          assignedDriverId: driverProfileId,
+          assignmentExpiresAt: {
+            gt: now,
+          },
         },
         data: {
           status: 'MATCHED',
@@ -843,7 +840,7 @@ export class TripsService {
 
       if (claimResult.count === 0) {
         throw new BadRequestException(
-          'This ride request is no longer available.',
+          'Cette course n est plus disponible. Une autre proposition arrive des que possible.',
         );
       }
 
@@ -1087,20 +1084,122 @@ export class TripsService {
       );
     }
 
-    const expectedPickupCode = extractPickupCode(trip.events);
+    const pickupChallenge = resolvePickupCodeChallenge(trip.events);
+    const latestFailedAttemptAt =
+      pickupChallenge.latestFailedAttemptAt?.getTime() ?? null;
+    const retryDelayActive =
+      latestFailedAttemptAt !== null &&
+      Date.now() - latestFailedAttemptAt < pickupCodeRetryDelaySeconds * 1000;
+    const isExpired =
+      pickupChallenge.expiresAt !== null &&
+      pickupChallenge.expiresAt.getTime() < Date.now();
+    const attemptLimitReached =
+      pickupChallenge.maxAttempts !== null &&
+      pickupChallenge.failedAttempts >= pickupChallenge.maxAttempts;
 
-    if (!expectedPickupCode || expectedPickupCode !== pickupCode) {
+    if (!pickupChallenge.pickupCode || isExpired || attemptLimitReached) {
+      throw new BadRequestException(
+        isExpired
+          ? 'Code de prise en charge expire. Demandez au passager de rafraichir le suivi.'
+          : attemptLimitReached
+            ? 'Trop de tentatives. Contactez le support Orbi avant de demarrer.'
+            : 'Code de prise en charge indisponible.',
+      );
+    }
+
+    if (retryDelayActive) {
+      throw new BadRequestException(
+        'Patientez quelques secondes avant de reessayer le code.',
+      );
+    }
+
+    if (pickupChallenge.pickupCode !== pickupCode) {
+      const attemptNumber = pickupChallenge.failedAttempts + 1;
+      const maxAttempts = pickupChallenge.maxAttempts ?? pickupCodeMaxAttempts;
+      const shouldOpenSupportTicket = attemptNumber >= maxAttempts;
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.trip.update({
+          where: {
+            id: tripId,
+          },
+          data: {
+            events: {
+              create: {
+                eventType: 'PICKUP_CODE_VERIFICATION_FAILED',
+                payload: {
+                  failedByRole: auth.user.role,
+                  failedByUserId: auth.user.id,
+                  attemptNumber,
+                  maxAttempts,
+                  retryAfterSeconds: pickupCodeRetryDelaySeconds,
+                  reason: 'MISMATCH',
+                },
+              },
+            },
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            userId: auth.user.id,
+            action: shouldOpenSupportTicket
+              ? 'TRIP_PICKUP_CODE_ATTEMPTS_EXHAUSTED'
+              : 'TRIP_PICKUP_CODE_VERIFICATION_FAILED',
+            entityType: 'TRIP',
+            entityId: tripId,
+            metadata: {
+              driverId: trip.driverId,
+              rideRequestId: trip.rideRequestId,
+              attemptNumber,
+              maxAttempts,
+              retryAfterSeconds: pickupCodeRetryDelaySeconds,
+            } as Prisma.InputJsonValue,
+          },
+        });
+
+        if (shouldOpenSupportTicket) {
+          await tx.supportTicket.create({
+            data: {
+              userId: auth.user.id,
+              subject: `Blocage code depart trajet ${tripId}`,
+              description:
+                `Le chauffeur a atteint ${attemptNumber}/${maxAttempts} tentatives de code de depart. ` +
+                `Verifier le passager, la course ${tripId} et accompagner le demarrage sans exposer le code.`,
+              priority: 2,
+            },
+          });
+        }
+      });
+
       throw new BadRequestException('Code de prise en charge invalide.');
     }
 
     const updatedTrip = await this.prisma.$transaction(async (tx) => {
+      const startClaim = await tx.trip.updateMany({
+        where: {
+          id: tripId,
+          driverId: trip.driverId,
+          status: 'DRIVER_ARRIVING',
+          startedAt: null,
+        },
+        data: {
+          status: 'IN_PROGRESS',
+          startedAt: new Date(),
+        },
+      });
+
+      if (startClaim.count === 0) {
+        throw new BadRequestException(
+          'La course est deja demarree ou ne peut plus etre demarree.',
+        );
+      }
+
       const nextTrip = await tx.trip.update({
         where: {
           id: tripId,
         },
         data: {
-          status: 'IN_PROGRESS',
-          startedAt: trip.startedAt ?? new Date(),
           events: {
             create: {
               eventType: 'PICKUP_CODE_VERIFIED',
@@ -1610,11 +1709,27 @@ export class TripsService {
 
       if (
         auth.user.role === UserRole.RIDER &&
+        trip.status === 'IN_PROGRESS' &&
+        nextStatus === 'COMPLETED'
+      ) {
+        throw new BadRequestException(
+          'La fin de course doit etre confirmee par Orbi. Le passager peut suivre le trajet, signaler un probleme ou contacter le support.',
+        );
+      }
+
+      if (auth.user.role === UserRole.DRIVER && nextStatus === 'IN_PROGRESS') {
+        throw new BadRequestException(
+          'Le trajet doit demarrer apres verification serveur du code passager.',
+        );
+      }
+
+      if (
+        auth.user.role === UserRole.RIDER &&
         nextStatus !== 'CANCELLED' &&
         !isRiderEarlyStop
       ) {
         throw new BadRequestException(
-          'Riders can only cancel before departure or stop an in-progress trip.',
+          'Riders can only cancel before departure.',
         );
       }
 
@@ -1742,6 +1857,23 @@ export class TripsService {
             }
           : {}),
       };
+      const issuedPickupCode =
+        nextStatus === 'DRIVER_ARRIVING' ? generatePickupCode() : null;
+      const pickupCodeEvent =
+        issuedPickupCode !== null
+          ? {
+              eventType: 'PICKUP_CODE_ISSUED' as const,
+              payload: {
+                pickupCode: issuedPickupCode,
+                issuedForStatus: 'DRIVER_ARRIVING',
+                expiresAt: new Date(
+                  Date.now() + pickupCodeTtlMinutes * 60 * 1000,
+                ).toISOString(),
+                ttlMinutes: pickupCodeTtlMinutes,
+                maxAttempts: pickupCodeMaxAttempts,
+              },
+            }
+          : null;
       const lifecycleEventsCreate = isDriverImplicitPickupStart
         ? [
             {
@@ -1758,22 +1890,61 @@ export class TripsService {
               payload: lifecycleEventPayload,
             },
           ]
-        : {
-            eventType: transitionDecision.eventType,
-            payload: lifecycleEventPayload,
-          };
+        : pickupCodeEvent
+          ? [
+              {
+                eventType: transitionDecision.eventType,
+                payload: lifecycleEventPayload,
+              },
+              pickupCodeEvent,
+            ]
+          : {
+              eventType: transitionDecision.eventType,
+              payload: lifecycleEventPayload,
+            };
 
-      const updatedTrip = await tx.trip.update({
-        where: {
-          id: tripId,
-        },
-        data: {
-          ...updateData,
-          events: {
-            create: lifecycleEventsCreate,
+      let updatedTrip;
+
+      if (nextStatus === 'COMPLETED' && auth.user.role === UserRole.DRIVER) {
+        const completionResult = await tx.trip.updateMany({
+          where: {
+            id: tripId,
+            driverId: auth.user.driverProfile?.id,
+            status: 'IN_PROGRESS',
+            completedAt: null,
           },
-        },
-      });
+          data: updateData,
+        });
+
+        if (completionResult.count !== 1) {
+          throw new BadRequestException(
+            'La course ne peut pas etre terminee dans son etat actuel.',
+          );
+        }
+
+        updatedTrip = await tx.trip.update({
+          where: {
+            id: tripId,
+          },
+          data: {
+            events: {
+              create: lifecycleEventsCreate,
+            },
+          },
+        });
+      } else {
+        updatedTrip = await tx.trip.update({
+          where: {
+            id: tripId,
+          },
+          data: {
+            ...updateData,
+            events: {
+              create: lifecycleEventsCreate,
+            },
+          },
+        });
+      }
 
       if (nextStatus === 'DRIVER_ARRIVING' || isDriverImplicitPickupStart) {
         await tx.rideRequest.update({

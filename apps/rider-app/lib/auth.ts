@@ -64,6 +64,7 @@ export async function signInRiderAccount(payload: {
     riderSessionStorage,
     riderSessionStorageKey,
     session.sessionToken,
+    session.refreshToken,
   );
 
   const context = buildFastRiderAuthContext(client, session);
@@ -87,6 +88,7 @@ export async function signUpRiderAccount(payload: {
     riderSessionStorage,
     riderSessionStorageKey,
     session.sessionToken,
+    session.refreshToken,
   );
 
   const context = buildFastRiderAuthContext(client, session);

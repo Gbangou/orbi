@@ -21,27 +21,13 @@ import { ScheduledRideStatus } from '@prisma/client';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { JobQueueService } from '../../common/job-queue/job-queue.service';
 import type { RequestAuthContext } from '../auth/auth.types';
+import type { CreateScheduledRideDto } from './dto/create-scheduled-ride.dto';
 
 const MIN_ADVANCE_MINUTES = 30;
 const MAX_ADVANCE_DAYS = 7;
 const FREE_CANCEL_BUFFER_MINUTES = 10;
 const isoUtcDateTimePattern =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/;
-
-export type CreateScheduledRideDto = {
-  pickupAddress: string;
-  pickupLatitude?: number;
-  pickupLongitude?: number;
-  destinationAddress: string;
-  destinationLatitude?: number;
-  destinationLongitude?: number;
-  scheduledFor: string; // ISO 8601
-  vehicleType?: 'MOTORCYCLE' | 'CAR';
-  paymentMethod?: 'MOBILE_MONEY' | 'CASH' | 'WALLET';
-  city?: string;
-  notes?: string;
-  promoCode?: string;
-};
 
 /** Fenêtre de dispatch: 15 min avant l'heure prévue */
 const DISPATCH_LEAD_MINUTES = 15;

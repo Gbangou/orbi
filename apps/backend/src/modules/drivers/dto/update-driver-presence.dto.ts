@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsLatitude, IsLongitude } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsISO8601, IsLatitude, IsLongitude, IsNumber, IsOptional, Max, Min } from 'class-validator';
 
 export class UpdateDriverPresenceDto {
   @ApiProperty({
@@ -13,4 +14,15 @@ export class UpdateDriverPresenceDto {
   })
   @IsLongitude()
   longitude!: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(1500)
+  accuracyMeters?: number;
+
+  @IsOptional()
+  @IsISO8601()
+  observedAt?: string;
 }

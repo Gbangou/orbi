@@ -22,6 +22,7 @@ import { SignOutDto } from './dto/sign-out.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 import { SendPhoneOtpDto } from './dto/send-phone-otp.dto';
 import { VerifyPhoneOtpDto } from './dto/verify-phone-otp.dto';
+import { RefreshSessionDto } from './dto/refresh-session.dto';
 import { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
 import { SessionAuthGuard } from './session-auth.guard';
 import type { RequestAuthContext } from './auth.types';
@@ -55,17 +56,41 @@ export class AuthController {
   @Post('send-phone-otp')
   @Version('1')
   @UseGuards(RateLimitGuard)
-  @RateLimit({ limit: 3, windowMs: 60_000 })
-  sendPhoneOtp(@Body() payload: SendPhoneOtpDto) {
-    return this.authService.sendPhoneOtp(payload);
+  @RateLimit({
+    limit: 3,
+    windowMs: 60_000,
+    scopes: ['ip', 'body', 'device'],
+    bodyField: 'phoneNumber',
+  })
+  sendPhoneOtp(@Body() payload: SendPhoneOtpDto, @Req() request: Request) {
+    return this.authService.sendPhoneOtp(
+      payload,
+      extractAuthRequestMetadata(request),
+    );
   }
 
   @Post('verify-phone-otp')
   @Version('1')
   @UseGuards(RateLimitGuard)
-  @RateLimit({ limit: 8, windowMs: 60_000 })
+  @RateLimit({
+    limit: 8,
+    windowMs: 60_000,
+    scopes: ['ip', 'body', 'device'],
+    bodyField: 'phoneNumber',
+  })
   verifyPhoneOtp(@Body() payload: VerifyPhoneOtpDto, @Req() request: Request) {
     return this.authService.verifyPhoneOtp(
+      payload,
+      extractAuthRequestMetadata(request),
+    );
+  }
+
+  @Post('refresh')
+  @Version('1')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000, scopes: ['ip', 'device'] })
+  refresh(@Body() payload: RefreshSessionDto, @Req() request: Request) {
+    return this.authService.refreshSession(
       payload,
       extractAuthRequestMetadata(request),
     );

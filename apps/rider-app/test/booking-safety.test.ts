@@ -3,6 +3,7 @@ import {
   buildCheckoutIdempotencyKey,
   buildRideRequestIdempotencyKey,
   resolveCheckoutChannel,
+  validateBookingQuote,
   validateBookingSelection,
 } from '../lib/booking-safety';
 
@@ -147,6 +148,86 @@ describe('rider booking safety helpers', () => {
         rideRequestId: 'ride-request-12345678',
       }),
     ).toBe('checkout-ride-request-12345678-mobile-money');
+  });
+});
+
+describe('validateBookingQuote', () => {
+  it('accepts a fresh backend-confirmed quote', () => {
+    expect(
+      validateBookingQuote({
+        confirmedOption: option,
+        nowMs: 1_000,
+        quoteExpiresAt: 90_000,
+        selectedOption: option,
+        selectedPaymentMethod: 'cash',
+      }),
+    ).toEqual({
+      ok: true,
+      option,
+    });
+  });
+
+  it('rejects an expired quote', () => {
+    expect(
+      validateBookingQuote({
+        confirmedOption: option,
+        nowMs: 91_000,
+        quoteExpiresAt: 90_000,
+        selectedOption: option,
+        selectedPaymentMethod: 'cash',
+      }),
+    ).toEqual({
+      ok: false,
+      reason: 'expired',
+      message: 'Le devis a expiré. Actualisez le prix avant de confirmer.',
+    });
+  });
+
+  it('rejects a quote whose amount changed after the client displayed it', () => {
+    expect(
+      validateBookingQuote({
+        confirmedOption: { ...option, fare: 1300 },
+        nowMs: 1_000,
+        quoteExpiresAt: 90_000,
+        selectedOption: option,
+        selectedPaymentMethod: 'cash',
+      }),
+    ).toEqual({
+      ok: false,
+      reason: 'changed',
+      message: 'Le prix ou le délai a changé. Vérifiez le nouveau devis avant de confirmer.',
+    });
+  });
+
+  it('rejects a quote when no category is available', () => {
+    expect(
+      validateBookingQuote({
+        confirmedOption: null,
+        nowMs: 1_000,
+        quoteExpiresAt: null,
+        selectedOption: option,
+        selectedPaymentMethod: 'cash',
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: 'missing',
+    });
+  });
+
+  it('rejects a payment method that became unavailable', () => {
+    expect(
+      validateBookingQuote({
+        confirmedOption: { ...option, paymentMethods: ['mobile-money'] },
+        nowMs: 1_000,
+        quoteExpiresAt: 90_000,
+        selectedOption: { ...option, paymentMethods: ['mobile-money'] },
+        selectedPaymentMethod: 'cash',
+      }),
+    ).toEqual({
+      ok: false,
+      reason: 'payment',
+      message: 'Ce moyen de paiement n est plus disponible pour ce service.',
+    });
   });
 });
 

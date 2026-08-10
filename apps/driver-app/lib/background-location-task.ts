@@ -11,6 +11,9 @@ import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 import * as SecureStore from 'expo-secure-store';
 import {
+  buildDriverRoutePositionPayload,
+} from './driver-presence-signal';
+import {
   recordTripRoutePositionWithApi,
   updateDriverPresenceWithApi,
 } from '@orbi/api';
@@ -44,23 +47,22 @@ TaskManager.defineTask(
     const latest = locations[locations.length - 1];
     if (!latest) return;
 
-    const { latitude, longitude, accuracy } = latest.coords;
+    const payload = buildDriverRoutePositionPayload(latest);
+    if (!payload) return;
 
     try {
       const { authClient } = await restoreDriverSession();
 
       await updateDriverPresenceWithApi(authClient, {
-        latitude,
-        longitude,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        accuracyMeters: payload.accuracyMeters,
+        observedAt: payload.observedAt,
       });
 
       const activeTripId = await getStoredActiveTripId();
       if (activeTripId) {
-        await recordTripRoutePositionWithApi(authClient, activeTripId, {
-          latitude,
-          longitude,
-          accuracyMeters: accuracy ?? undefined,
-        });
+        await recordTripRoutePositionWithApi(authClient, activeTripId, payload);
       }
     } catch {
       // Erreur réseau silencieuse — la tâche sera retentée automatiquement

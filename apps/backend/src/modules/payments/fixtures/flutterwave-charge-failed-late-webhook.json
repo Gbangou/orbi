@@ -1,0 +1,16 @@
+{
+  "event": "charge.failed",
+  "transactionRef": "orbi_fw_demo_charge_001",
+  "data": {
+    "id": 285959876,
+    "tx_ref": "orbi_fw_demo_charge_001",
+    "flw_ref": "FLW-MOCK-REF-CHARGE-001-LATE-FAILED",
+    "providerReference": "FLW-MOCK-REF-CHARGE-001-LATE-FAILED",
+    "amount": 2400,
+    "currency": "XOF",
+    "status": "failed",
+    "processor_response": "Late failed callback after success",
+    "payment_type": "mobilemoneybf",
+    "created_at": "2026-05-23T08:12:00.000Z"
+  }
+}

@@ -475,6 +475,7 @@ export class DispatchCoordinator {
             request.assignmentExpiresAt
               ? request.assignmentExpiresAt.toISOString()
               : null,
+          paymentMethod: request.paymentMethod ?? null,
           reservationWindowSeconds,
           availabilityScore: operatingContext.availabilityScore,
           supplyPressureLevel: operatingContext.supplyPressureLevel,

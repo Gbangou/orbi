@@ -743,6 +743,11 @@ export class DriversService {
       today > week ? 'today_exceeds_week' : null,
       week > month ? 'week_exceeds_month' : null,
     ].filter((item): item is string => Boolean(item));
+    const adjustmentTotal = compensationMonth;
+    const refundTotal = 0;
+    const pendingPayout = month + adjustmentTotal - refundTotal;
+    const availablePayout = 0;
+    const paidPayout = 0;
 
     return {
       summary: {
@@ -755,6 +760,17 @@ export class DriversService {
           ? Math.round(totalPayout / payouts.length)
           : 0,
       },
+      balances: {
+        currency: 'XOF',
+        gross: payouts.reduce((sum, trip) => sum + trip.grossFare, 0),
+        commission: payouts.reduce((sum, trip) => sum + trip.platformFee, 0),
+        net: totalPayout,
+        available: availablePayout,
+        pending: pendingPayout,
+        paid: paidPayout,
+        adjustments: adjustmentTotal,
+        refunds: refundTotal,
+      },
       settlement: {
         currency: 'XOF',
         source: 'COMPLETED_TRIPS',
@@ -766,6 +782,11 @@ export class DriversService {
         recentGrossFare,
         recentNetPayout,
         recentPlatformFee,
+        availablePayout,
+        pendingPayout,
+        paidPayout,
+        adjustmentTotal,
+        refundTotal,
         state: settlementAnomalies.length ? 'REVIEW_REQUIRED' : 'RECONCILED',
         anomalies: settlementAnomalies,
         calculatedAt: new Date(now).toISOString(),
@@ -790,6 +811,11 @@ export class DriversService {
         payout: trip.payout,
         grossFare: trip.grossFare,
         platformFee: trip.platformFee,
+        available: 0,
+        pending: trip.payout,
+        paid: 0,
+        adjustment: 0,
+        refund: 0,
         commissionRate: trip.commissionRate,
         payoutRate: trip.payoutRate,
         status: trip.status,
@@ -1043,7 +1069,12 @@ export class DriversService {
 
   async updatePresence(
     auth: RequestAuthContext,
-    payload: { latitude: number; longitude: number },
+    payload: {
+      latitude: number;
+      longitude: number;
+      accuracyMeters?: number;
+      observedAt?: string;
+    },
   ) {
     const driverProfileId = auth.user.driverProfile?.id;
 
@@ -1060,11 +1091,34 @@ export class DriversService {
       select: {
         id: true,
         status: true,
+        currentLatitude: true,
+        currentLongitude: true,
+        currentLocationUpdatedAt: true,
       },
     });
 
     if (!profile) {
       throw new NotFoundException('Driver profile could not be loaded.');
+    }
+
+    const observedAt = payload.observedAt
+      ? new Date(payload.observedAt)
+      : new Date();
+
+    if (
+      profile.currentLocationUpdatedAt &&
+      observedAt.getTime() < profile.currentLocationUpdatedAt.getTime()
+    ) {
+      return {
+        presence: {
+          driverId: profile.id,
+          status: profile.status,
+          latitude: toNumber(profile.currentLatitude),
+          longitude: toNumber(profile.currentLongitude),
+          ignored: true,
+          reason: 'STALE_POSITION',
+        },
+      };
     }
 
     const updatedProfile = await this.prisma.driverProfile.update({
@@ -1074,7 +1128,7 @@ export class DriversService {
       data: {
         currentLatitude: payload.latitude,
         currentLongitude: payload.longitude,
-        currentLocationUpdatedAt: new Date(),
+        currentLocationUpdatedAt: observedAt,
       },
     });
 
@@ -1087,6 +1141,8 @@ export class DriversService {
         metadata: {
           latitude: payload.latitude,
           longitude: payload.longitude,
+          accuracyMeters: payload.accuracyMeters ?? null,
+          observedAt: observedAt.toISOString(),
           status: profile.status,
         } as Prisma.InputJsonValue,
       },
@@ -1098,6 +1154,7 @@ export class DriversService {
         status: updatedProfile.status,
         latitude: toNumber(updatedProfile.currentLatitude),
         longitude: toNumber(updatedProfile.currentLongitude),
+        ignored: false,
       },
     };
   }
@@ -1129,6 +1186,12 @@ export class DriversService {
 
     if (!profile) {
       throw new NotFoundException('Driver profile could not be loaded.');
+    }
+
+    if (auth.user.isActive === false) {
+      throw new BadRequestException(
+        'Compte chauffeur inactif: contactez le support avant de reprendre le service.',
+      );
     }
 
     if (profile.status === DriverStatus.SUSPENDED) {
@@ -1254,6 +1317,12 @@ export class DriversService {
     if (nextStatus === DriverStatus.OFFLINE && activeTrip) {
       throw new BadRequestException(
         'The driver cannot go offline during an active trip.',
+      );
+    }
+
+    if (nextStatus === DriverStatus.ONLINE && activeTrip) {
+      throw new BadRequestException(
+        'Une course active doit etre terminee avant de modifier la disponibilite.',
       );
     }
 

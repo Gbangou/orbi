@@ -89,7 +89,7 @@ export function buildDriverShiftReadiness(input: {
       eyebrow: 'État de service',
       title: 'Mission en exécution',
       description:
-        'Le meilleur prochain geste est de garder la route, le code passager et le support visibles.',
+        'Le meilleur prochain geste est de garder la route, le passager et le support visibles.',
       scoreLabel: '88/100',
       tone: 'sky',
       note: 'Les nouvelles offres sont mises en attente pendant la course active.',

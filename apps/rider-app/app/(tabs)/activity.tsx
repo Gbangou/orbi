@@ -18,7 +18,6 @@ import {
 import {
   cancelRideRequestWithApi,
   canRiderCancelTrip,
-  canRiderStopTrip,
   createSupportTicketWithApi,
   createTripShareLinkWithApi,
   fetchMyTrips,
@@ -35,7 +34,6 @@ import {
   updateTripStatusWithApi,
 } from "@orbi/api";
 import {
-  describeRealtimeEvent,
   describeRealtimeConnection,
   formatOperationalStatus,
   type OrbiTheme,
@@ -67,6 +65,8 @@ import {
   buildRiderDriverTrustSnapshot,
   buildRiderLiveRouteProgress,
   buildRiderNextActionHint,
+  buildRiderNoDriverAvailableStep,
+  buildRiderPostConfirmationStep,
   resolveRiderActiveFlow,
 } from "../../lib/rider-active-flow";
 import { useLiveRefresh } from "../../lib/use-live-refresh";
@@ -233,9 +233,9 @@ export default function ActivityScreen() {
   useLiveRefresh(() => loadHistory(true), 25000);
   useRiderRealtimeStream(
     sessionToken,
-    (eventType) => {
+    () => {
       setIsRealtimeSyncing(true);
-      setStatus(describeRealtimeEvent("rider", eventType));
+      setStatus("Suivi mis à jour. Nous synchronisons avec Orbi.");
       void loadHistory(true);
     },
     {
@@ -254,7 +254,9 @@ export default function ActivityScreen() {
   );
 
   const flow = resolveRiderActiveFlow(history);
-  const { activeTrip, primaryStatusLabel } = flow;
+  const { activeTrip } = flow;
+  const postConfirmationStep = buildRiderPostConfirmationStep(flow);
+  const noDriverStep = buildRiderNoDriverAvailableStep();
   const riderPosition = useRiderPosition({
     enabled: Boolean(activeTrip),
     activeTripId: activeTrip?.id,
@@ -484,69 +486,6 @@ export default function ActivityScreen() {
         { text: "Ne pas annuler", style: "cancel" as const },
       ],
     );
-  }
-
-  function handleStopInProgressTrip(tripId: string) {
-    safeHaptics.impact('medium');
-    const fareLabel = formatRiderMoneyAmount(
-      activeTripDetail?.trip.actualFare ?? activeTrip?.amount,
-    );
-    Alert.alert(
-      "Terminer ma course maintenant",
-      `Confirmez seulement si vous descendez ici. Orbi cloture la course, calcule le montant du trajet deja effectue, puis ouvre le recu pour payer. Estimation actuelle: ${fareLabel}.`,
-      [
-        {
-          text: "Arreter et voir le montant",
-          style: "destructive" as const,
-          onPress: () =>
-            void doStopInProgressTrip(tripId, "Arret demande par le passager"),
-        },
-        { text: "Continuer", style: "cancel" as const },
-      ],
-    );
-  }
-
-  async function doStopInProgressTrip(tripId: string, reason: string) {
-    if (submissionLockRef.current) {
-      return;
-    }
-
-    submissionLockRef.current = true;
-    setIsSubmitting(true);
-    setStatus("Cloture de la course et calcul du montant...");
-
-    try {
-      const { authClient } = await restoreRiderSession();
-      const response = await updateTripStatusWithApi(
-        authClient,
-        tripId,
-        "COMPLETED",
-        reason,
-      );
-      await loadHistory();
-      setStatus(
-        `Course terminee. Montant a payer: ${formatRiderMoneyAmount(response.trip.actualFare)}.`,
-      );
-      router.replace({
-        pathname: "/receipt",
-        params: { tripId: response.trip.id },
-      });
-    } catch (error) {
-      const feedback = await resolveRiderAppError(error, {
-        surface: "active-trip",
-        fallback: "L'arret de la course a echoue.",
-      });
-
-      if (feedback.shouldClearSessionToken) {
-        setSessionToken(null);
-      }
-
-      setStatus(feedback.message);
-      Alert.alert("Arret non pris en compte", feedback.message);
-    } finally {
-      submissionLockRef.current = false;
-      setIsSubmitting(false);
-    }
   }
 
   async function doCancelActiveTrip(tripId: string, reason: string) {
@@ -785,13 +724,16 @@ export default function ActivityScreen() {
     const driverVehicleTier =
       activeTripDetail?.trip.driverVerification.vehicle.tier ?? null;
     const canCancel = canRiderCancelTrip(activeTrip.status);
-    const canStop = canRiderStopTrip(activeTrip.status);
     const activeFareLabel = formatRiderMoneyAmount(
       activeTripDetail?.trip.actualFare ?? activeTrip.amount,
     );
     const activePaymentLabel = formatRiderPaymentMethodLabel(
       activeTripDetail?.trip.paymentMethod,
     );
+    const securePickupCode =
+      activeTrip.status === "DRIVER_ARRIVING"
+        ? activeTripDetail?.trip.pickupCode ?? null
+        : null;
 
     return (
       <View style={styles.tripRoot}>
@@ -839,7 +781,7 @@ export default function ActivityScreen() {
             <View style={[styles.statusPill, { backgroundColor: getStatusBg(activeTrip.status) }]}>
               <View style={[styles.statusDot, { backgroundColor: getStatusColor(activeTrip.status) }]} />
               <Text style={[styles.statusLabel, { color: getStatusColor(activeTrip.status) }]}>
-                {primaryStatusLabel}
+                {postConfirmationStep.title}
               </Text>
             </View>
             {isRealtimeSyncing ? (
@@ -849,11 +791,9 @@ export default function ActivityScreen() {
 
           <OrbiSurface tone={activeTrip.status === 'IN_PROGRESS' ? 'teal' : 'sky'} style={styles.tripFocusPanel}>
             <View style={styles.tripFocusCopy}>
-              <Text style={styles.tripFocusEyebrow}>
-                {activeTrip.status === 'IN_PROGRESS' ? 'Trajet en cours' : 'Avant de monter'}
-              </Text>
+              <Text style={styles.tripFocusEyebrow}>{postConfirmationStep.progressLabel}</Text>
               <Text style={styles.tripFocusTitle} numberOfLines={2}>
-                {riderNextActionHint}
+                {postConfirmationStep.subtitle}
               </Text>
             </View>
             <View style={styles.tripFocusMetrics}>
@@ -877,7 +817,7 @@ export default function ActivityScreen() {
               <OrbiSurface tone="sky" style={styles.etaBanner}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.etaEyebrow}>
-                    {activeTrip.status === 'MATCHED' ? 'Chauffeur en route' : 'Chauffeur proche'}
+                    {activeTrip.status === 'MATCHED' ? 'Chauffeur trouvé' : 'Chauffeur en approche'}
                   </Text>
                   <Text style={styles.etaValue}>
                     {etaMins != null ? `Dans ${etaMins} min` : 'En route vers vous'}
@@ -901,6 +841,18 @@ export default function ActivityScreen() {
               <View style={styles.etaDistBadge}>
                 <Text style={styles.etaDistText} numberOfLines={1}>
                   {riderRouteProgress.distanceLabel}
+                </Text>
+              </View>
+            </OrbiSurface>
+          ) : null}
+
+          {activeTrip.status === 'IN_PROGRESS' && !riderRouteProgress ? (
+            <OrbiSurface tone="amber" style={styles.etaBanner}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.etaEyebrow}>Progression</Text>
+                <Text style={styles.etaValue}>Position en attente</Text>
+                <Text style={styles.progressFallbackText}>
+                  La course reste suivie par Orbi. Le GPS peut arriver avec retard.
                 </Text>
               </View>
             </OrbiSurface>
@@ -971,22 +923,39 @@ export default function ActivityScreen() {
 
           {activeTrip.status === 'DRIVER_ARRIVING' && canCancel ? (
             <OrbiSurface tone="teal" style={styles.pickupCheckCard}>
-              <Text style={styles.pickupCheckEyebrow}>Chauffeur arrive</Text>
+              <Text style={styles.pickupCheckEyebrow}>Code sécurisé</Text>
+              {securePickupCode ? (
+                <Text
+                  style={styles.pickupSecureCode}
+                  accessibilityLabel="pickup-secure-code"
+                >
+                  {securePickupCode}
+                </Text>
+              ) : (
+                <Text style={styles.pickupCodePending}>
+                  Code en cours de préparation
+                </Text>
+              )}
               <Text style={styles.pickupCheckHint}>
-                Vérifiez le nom, la plaque et le véhicule. Montez seulement si tout correspond.
+                Donnez ce code uniquement après avoir vérifié le nom, la plaque
+                et le véhicule. Montez seulement si tout correspond.
               </Text>
             </OrbiSurface>
           ) : null}
 
-          {/* Route */}
+          {/* Destination */}
           <OrbiSurface style={styles.routeCard}>
-            <View style={styles.routeRow}>
-              <View style={[styles.routeDot, { backgroundColor: "#111111" }]} />
-              <Text style={styles.routeText} numberOfLines={1}>
-                {activeTrip.pickupAddress}
-              </Text>
-            </View>
-            <View style={styles.routeLineSep} />
+            {activeTrip.status !== 'IN_PROGRESS' ? (
+              <>
+                <View style={styles.routeRow}>
+                  <View style={[styles.routeDot, { backgroundColor: "#111111" }]} />
+                  <Text style={styles.routeText} numberOfLines={1}>
+                    {activeTrip.pickupAddress}
+                  </Text>
+                </View>
+                <View style={styles.routeLineSep} />
+              </>
+            ) : null}
             <View style={styles.routeRow}>
               <View style={[styles.routeDot, { backgroundColor: "#111111" }]} />
               <Text style={styles.routeText} numberOfLines={1}>
@@ -1033,17 +1002,6 @@ export default function ActivityScreen() {
                 disabled={isSubmitting}
                 style={styles.secondaryActionBtn}
                 label="Annuler"
-                variant="danger"
-                tone="danger"
-                labelStyle={styles.secondaryActionBtnLabel}
-              />
-            ) : null}
-            {canStop ? (
-              <OrbiButton
-                onPress={() => handleStopInProgressTrip(activeTrip.id)}
-                disabled={isSubmitting}
-                style={styles.secondaryActionBtn}
-                label="Terminer ici"
                 variant="danger"
                 tone="danger"
                 labelStyle={styles.secondaryActionBtnLabel}
@@ -1161,19 +1119,33 @@ export default function ActivityScreen() {
           )}
         </OrbiSurface>
 
+        {recentlyClearedRequestCount > 0 ? (
+          <OrbiStatusBanner
+            tone={noDriverStep.tone}
+            title={noDriverStep.title}
+            message={noDriverStep.subtitle}
+          />
+        ) : null}
+
         {/* Pending requests */}
         {history.pendingRequests.length > 0 ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('activity.pendingRequests')}</Text>
+            <Text style={styles.sectionTitle}>Après confirmation</Text>
             {history.pendingRequests.map((req) => (
               <View key={req.id} style={styles.requestCard}>
                 <View style={styles.requestDot} />
                 <View style={styles.requestInfo}>
+                  <Text style={styles.requestStatusLabel}>
+                    {postConfirmationStep.progressLabel}
+                  </Text>
                   <Text style={styles.requestTitle} numberOfLines={1}>
-                    {req.pickupAddress}
+                    {postConfirmationStep.title}
                   </Text>
                   <Text style={styles.requestSub} numberOfLines={1}>
-                    → {req.destinationAddress}
+                    {req.pickupAddress} → {req.destinationAddress}
+                  </Text>
+                  <Text style={styles.requestFeeHint} numberOfLines={2}>
+                    {formatRiderMoneyAmount(req.estimatedFare)} estimés. Annulation gratuite tant qu'aucun chauffeur n'est affecté.
                   </Text>
                 </View>
                 <OrbiButton
@@ -1499,6 +1471,20 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
+  pickupSecureCode: {
+    fontSize: 28,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: "#111111",
+    letterSpacing: 0,
+    paddingVertical: 2,
+  },
+  pickupCodePending: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: "#111111",
+  },
   pickupCheckHint: {
     fontSize: 12,
     color: "#6B6B6B",
@@ -1590,6 +1576,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     color: "#111111",
+  },
+  progressFallbackText: {
+    marginTop: 3,
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#5F5F5F",
+    fontFamily: 'Inter_400Regular',
   },
   etaDistBadge: {
     maxWidth: '40%',
@@ -1790,6 +1783,15 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexShrink: 0,
   },
   requestInfo: { flex: 1 },
+  requestStatusLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: "#6B6B6B",
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+    marginBottom: 2,
+  },
   requestTitle: {
     fontSize: 13,
     fontWeight: '600',
@@ -1798,6 +1800,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   },
   requestSub: {
     fontSize: 12,
+    color: "#5F5F5F",
+    fontFamily: 'Inter_400Regular',
+  },
+  requestFeeHint: {
+    marginTop: 3,
+    fontSize: 11,
+    lineHeight: 15,
     color: "#5F5F5F",
     fontFamily: 'Inter_400Regular',
   },

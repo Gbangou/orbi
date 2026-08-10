@@ -63,6 +63,16 @@ describe('WalletTopUpService', () => {
         create: jest.fn(),
         update: jest.fn(),
       },
+      walletTransaction: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({
+          id: 'wallet-transaction-1',
+          walletId: 'wallet-1',
+          type: 'CREDIT',
+          amount: new Prisma.Decimal(2500),
+          reference: 'deposit-1',
+        }),
+      },
       walletTopUp: {
         findUnique: jest.fn(
           async ({ where }: { where: { depositId: string } }) =>
@@ -88,8 +98,20 @@ describe('WalletTopUpService', () => {
             return storedTopUp;
           },
         ),
+        updateMany: jest.fn(async () => {
+          if (!storedTopUp || ['COMPLETED', 'FAILED'].includes(storedTopUp.status)) {
+            return { count: 0 };
+          }
+
+          storedTopUp = {
+            ...storedTopUp,
+            status: 'COMPLETED',
+          };
+
+          return { count: 1 };
+        }),
       },
-      $transaction: jest.fn(),
+      $transaction: jest.fn(async (callback) => callback(prisma)),
     };
     const pawaPayService = {
       isConfigured: jest
@@ -153,6 +175,21 @@ describe('WalletTopUpService', () => {
     expect(prisma.walletTopUp.create).not.toHaveBeenCalled();
   });
 
+  it('rejects non-integer top-up amounts before touching the provider', async () => {
+    const { prisma, pawaPayService, service } = createService();
+
+    await expect(
+      service.initiateTopUp(
+        authContext(),
+        { ...payload, amountXof: 2500.5 },
+        'wallet-topup-002b',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.walletTopUp.create).not.toHaveBeenCalled();
+    expect(pawaPayService.initiateDeposit).not.toHaveBeenCalled();
+  });
+
   it('keeps a top-up pending without calling PawaPay when no sandbox token is configured', async () => {
     const { pawaPayService, service } = createService({
       pawaPayConfigured: false,
@@ -167,5 +204,72 @@ describe('WalletTopUpService', () => {
     expect(result.status).toBe('PENDING');
     expect(result.awaitingPhoneConfirmation).toBe(true);
     expect(pawaPayService.initiateDeposit).not.toHaveBeenCalled();
+  });
+
+  it('credits the wallet through an immutable ledger entry when a top-up completes', async () => {
+    const { prisma, service } = createService();
+
+    const topUp = await service.initiateTopUp(
+      authContext(),
+      payload,
+      'wallet-topup-004',
+    );
+
+    const result = await service.handlePawaPayTopUpWebhook(
+      topUp.depositId,
+      'COMPLETED',
+    );
+
+    expect(result).toMatchObject({
+      handled: true,
+      action: 'wallet_credited',
+      amount: 2500,
+    });
+    expect(prisma.walletTransaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        walletId: 'wallet-1',
+        type: 'CREDIT',
+        amount: new Prisma.Decimal(2500),
+        metadata: expect.objectContaining({
+          direction: 'CREDIT',
+          source: 'wallet_top_up_webhook',
+          status: 'COMPLETED',
+        }),
+      }),
+    });
+    expect(prisma.wallet.update).toHaveBeenCalledWith({
+      where: { id: 'wallet-1' },
+      data: { balance: { increment: new Prisma.Decimal(2500) } },
+    });
+  });
+
+  it('does not increment the wallet when a replay finds the existing ledger entry', async () => {
+    const { prisma, service } = createService();
+
+    const topUp = await service.initiateTopUp(
+      authContext(),
+      payload,
+      'wallet-topup-005',
+    );
+    prisma.walletTransaction.findUnique.mockResolvedValue({
+      id: 'wallet-transaction-1',
+      walletId: 'wallet-1',
+      type: 'CREDIT',
+      amount: new Prisma.Decimal(2500),
+      reference: 'existing-reference',
+    });
+
+    const result = await service.handlePawaPayTopUpWebhook(
+      topUp.depositId,
+      'COMPLETED',
+    );
+
+    expect(result).toMatchObject({
+      handled: true,
+      action: 'already_credited',
+      amount: 2500,
+    });
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.wallet.update).not.toHaveBeenCalled();
   });
 });

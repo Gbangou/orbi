@@ -125,7 +125,7 @@ function updateDriver(lat,lng){
 }
 
 function isCoord(v){return typeof v==='number'&&isFinite(v)}
-function onMsg(e){try{var m=JSON.parse(e.data);if(m.type==='UPDATE_DRIVER'&&isCoord(m.lat)&&isCoord(m.lng)){updateDriver(m.lat,m.lng)}}catch(x){}}
+function onMsg(e){if(!e||typeof e.data!=='string')return;var m=null;try{m=JSON.parse(e.data)}catch(x){return}if(m.type==='UPDATE_DRIVER'&&isCoord(m.lat)&&isCoord(m.lng)){updateDriver(m.lat,m.lng)}}
 document.addEventListener('message',onMsg);
 window.addEventListener('message',onMsg);
 

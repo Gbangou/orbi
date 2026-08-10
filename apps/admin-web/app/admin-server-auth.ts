@@ -3,6 +3,7 @@ import 'server-only';
 import {
   createOrbiApiClient,
   fetchCurrentUser,
+  refreshSessionWithApi,
   signInWithApi,
   type OrbiApiClient,
 } from '@orbi/api';
@@ -15,7 +16,10 @@ import { createNoStoreAdminHeaders } from './admin-server-security';
 
 const legacyAdminSessionCookieName = 'orbi_admin_session';
 const hardenedAdminSessionCookieName = '__Host-orbi_admin_session';
+const legacyAdminRefreshCookieName = 'orbi_admin_refresh';
+const hardenedAdminRefreshCookieName = '__Host-orbi_admin_refresh';
 const adminSessionMaxAgeSeconds = 60 * 60 * 8;
+const adminRefreshMaxAgeSeconds = 60 * 60 * 24 * 30;
 const adminRoles = new Set(['ADMIN', 'OPS', 'SUPPORT']);
 
 export class AdminServerAuthRequiredError extends Error {
@@ -35,6 +39,12 @@ export function getAdminSessionCookieName() {
     : legacyAdminSessionCookieName;
 }
 
+export function getAdminRefreshCookieName() {
+  return isProductionRuntime()
+    ? hardenedAdminRefreshCookieName
+    : legacyAdminRefreshCookieName;
+}
+
 export function buildAdminSessionCookieOptions() {
   return {
     httpOnly: true,
@@ -43,6 +53,13 @@ export function buildAdminSessionCookieOptions() {
     path: '/',
     maxAge: adminSessionMaxAgeSeconds,
     priority: 'high' as const,
+  };
+}
+
+export function buildAdminRefreshCookieOptions() {
+  return {
+    ...buildAdminSessionCookieOptions(),
+    maxAge: adminRefreshMaxAgeSeconds,
   };
 }
 
@@ -115,9 +132,13 @@ export async function getAdminServerAuthSession() {
   const cookieStore = await cookies();
   const baseClient = createAdminBaseClient();
   const activeCookieName = getAdminSessionCookieName();
+  const activeRefreshCookieName = getAdminRefreshCookieName();
   const legacyToken = cookieStore.get(legacyAdminSessionCookieName)?.value;
+  const legacyRefreshToken = cookieStore.get(legacyAdminRefreshCookieName)?.value;
   const existingToken =
     cookieStore.get(activeCookieName)?.value ?? legacyToken;
+  const existingRefreshToken =
+    cookieStore.get(activeRefreshCookieName)?.value ?? legacyRefreshToken;
 
   if (existingToken) {
     const authClient = baseClient.withAuthToken(existingToken);
@@ -140,6 +161,42 @@ export async function getAdminServerAuthSession() {
     tryPersistCookieWrite(() =>
       cookieStore.delete(legacyAdminSessionCookieName),
     );
+  }
+
+  if (existingRefreshToken) {
+    try {
+      const refreshed = await refreshSessionWithApi(baseClient, existingRefreshToken);
+      const authClient = baseClient.withAuthToken(refreshed.sessionToken);
+      const me = await fetchCurrentUser(authClient);
+
+      if (isAdminRole(me.user.role)) {
+        tryPersistCookieWrite(() =>
+          cookieStore.set(
+            getAdminSessionCookieName(),
+            refreshed.sessionToken,
+            buildAdminSessionCookieOptions(),
+          ),
+        );
+        const nextRefreshToken = refreshed.refreshToken;
+        if (nextRefreshToken) {
+          tryPersistCookieWrite(() =>
+            cookieStore.set(
+              getAdminRefreshCookieName(),
+              nextRefreshToken,
+              buildAdminRefreshCookieOptions(),
+            ),
+          );
+        }
+
+        return {
+          authClient,
+          sessionToken: refreshed.sessionToken,
+        };
+      }
+    } catch {
+      tryPersistCookieWrite(() => cookieStore.delete(activeRefreshCookieName));
+      tryPersistCookieWrite(() => cookieStore.delete(legacyAdminRefreshCookieName));
+    }
   }
 
   throw new AdminServerAuthRequiredError();
@@ -171,6 +228,13 @@ export async function createAdminServerSessionFromCredentials(payload: {
     session.sessionToken,
     buildAdminSessionCookieOptions(),
   );
+  if (session.refreshToken) {
+    cookieStore.set(
+      getAdminRefreshCookieName(),
+      session.refreshToken,
+      buildAdminRefreshCookieOptions(),
+    );
+  }
 
   return {
     authClient,
@@ -183,7 +247,9 @@ export async function clearAdminServerSession() {
   const cookieStore = await cookies();
 
   cookieStore.delete(getAdminSessionCookieName());
+  cookieStore.delete(getAdminRefreshCookieName());
   cookieStore.delete(legacyAdminSessionCookieName);
+  cookieStore.delete(legacyAdminRefreshCookieName);
 }
 
 export async function getAdminServerAuthClient() {

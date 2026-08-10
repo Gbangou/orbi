@@ -46,6 +46,17 @@ const fallbackEarnings: DriverEarningsResponse = {
     completedTrips: 0,
     averagePayout: 0,
   },
+  balances: {
+    currency: 'XOF',
+    gross: 0,
+    commission: 0,
+    net: 0,
+    available: 0,
+    pending: 0,
+    paid: 0,
+    adjustments: 0,
+    refunds: 0,
+  },
   settlement: {
     currency: 'XOF',
     source: 'COMPLETED_TRIPS',
@@ -57,6 +68,11 @@ const fallbackEarnings: DriverEarningsResponse = {
     recentGrossFare: 0,
     recentNetPayout: 0,
     recentPlatformFee: 0,
+    availablePayout: 0,
+    pendingPayout: 0,
+    paidPayout: 0,
+    adjustmentTotal: 0,
+    refundTotal: 0,
     state: 'RECONCILED',
     anomalies: [],
     calculatedAt: new Date('2026-04-19T00:00:00.000Z').toISOString(),
@@ -75,6 +91,25 @@ function formatDriverTripCountLabel(value: unknown) {
   const count = toFiniteEarningsNumber(value);
   const label = formatDriverEarningsCount(value);
   return `${label} ${count !== null && Math.floor(count) > 1 ? 'courses' : 'course'}`;
+}
+
+function resolveEarningsBalances(earnings: DriverEarningsResponse) {
+  return {
+    gross: earnings.balances?.gross ?? earnings.settlement.recentGrossFare,
+    commission: earnings.balances?.commission ?? earnings.settlement.recentPlatformFee,
+    net: earnings.balances?.net ?? earnings.settlement.recentNetPayout,
+    available:
+      earnings.balances?.available ?? earnings.settlement.availablePayout ?? 0,
+    pending:
+      earnings.balances?.pending ?? earnings.settlement.pendingPayout ?? 0,
+    paid: earnings.balances?.paid ?? earnings.settlement.paidPayout ?? 0,
+    adjustments:
+      earnings.balances?.adjustments ??
+      earnings.settlement.adjustmentTotal ??
+      earnings.adjustments?.cancellationCompensationMonth ??
+      0,
+    refunds: earnings.balances?.refunds ?? earnings.settlement.refundTotal ?? 0,
+  };
 }
 
 // ── Graphique hebdomadaire — gains par jour ───────────────────────────────────
@@ -486,6 +521,7 @@ export default function RevenusScreen() {
     driverProfileStatus,
   });
   const earningsTrustSummary = buildDriverEarningsTrustSummary(earnings);
+  const earningsBalances = resolveEarningsBalances(earnings);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -603,6 +639,25 @@ export default function RevenusScreen() {
           <View style={styles.settlementRow}>
             <Text style={styles.settlementKey}>Frais Orbi</Text>
             <Text style={styles.settlementVal}>{earningsTrustSummary.estimatedPlatformFeeLabel}</Text>
+          </View>
+          <View style={styles.balanceGrid}>
+            {[
+              ['Montant brut', earningsBalances.gross],
+              ['Commission', earningsBalances.commission],
+              ['Montant net', earningsBalances.net],
+              ['Disponible', earningsBalances.available],
+              ['En attente', earningsBalances.pending],
+              ['Payé', earningsBalances.paid],
+              ['Ajustements', earningsBalances.adjustments],
+              ['Remboursements', earningsBalances.refunds],
+            ].map(([label, value]) => (
+              <View key={String(label)} style={styles.balanceItem}>
+                <Text style={styles.balanceLabel}>{String(label)}</Text>
+                <Text style={styles.balanceValue}>
+                  {formatDriverEarningsAmount(value)}
+                </Text>
+              </View>
+            ))}
           </View>
           {earningsTrustSummary.note ? (
             <Text style={styles.settlementNote}>{earningsTrustSummary.note}</Text>
@@ -852,6 +907,33 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
+    color: '#111111',
+  },
+  balanceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingTop: 4,
+  },
+  balanceItem: {
+    width: '48%',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    gap: 2,
+  },
+  balanceLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: '#6B6B6B',
+  },
+  balanceValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
     color: '#111111',
   },
   settlementNote: {

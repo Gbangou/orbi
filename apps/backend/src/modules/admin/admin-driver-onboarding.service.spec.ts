@@ -126,7 +126,12 @@ function createService() {
   const notificationsService = {
     enqueue: jest.fn(),
   };
-  const documentLinksService = {};
+  const documentLinksService = {
+    createViewLink: jest.fn(() => ({
+      expiresAt: '2026-07-10T08:15:00.000Z',
+      signedUrl: 'https://storage.orbi.local/view/signed',
+    })),
+  };
   const documentObjectStorageService = {};
   const service = new AdminDriverOnboardingService(
     prisma as never,
@@ -136,7 +141,7 @@ function createService() {
     documentObjectStorageService as never,
   );
 
-  return { prisma, realtimeService, service };
+  return { prisma, realtimeService, documentLinksService, service };
 }
 
 describe('AdminDriverOnboardingService', () => {
@@ -260,5 +265,27 @@ describe('AdminDriverOnboardingService', () => {
       'Document DRIVER_LICENSE expires within 30 days and must be renewed.',
     );
     expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects horizontal document access when the document belongs to another driver', async () => {
+    const { prisma, documentLinksService, service } = createService();
+
+    prisma.driverDocument.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.getDriverDocumentViewLink(
+        'driver-1',
+        'document-from-driver-2',
+        authContext(),
+      ),
+    ).rejects.toThrow('Driver document not found.');
+
+    expect(prisma.driverDocument.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'document-from-driver-2',
+        driverProfileId: 'driver-1',
+      },
+    });
+    expect(documentLinksService.createViewLink).not.toHaveBeenCalled();
   });
 });

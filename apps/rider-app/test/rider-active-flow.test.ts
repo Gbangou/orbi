@@ -6,6 +6,8 @@ import {
   buildRiderLiveRouteProgress,
   buildRiderMissionSnapshot,
   buildRiderNextActionHint,
+  buildRiderNoDriverAvailableStep,
+  buildRiderPostConfirmationStep,
   buildRiderRouteSignalHealth,
   resolveRiderActiveFlow,
 } from '../lib/rider-active-flow';
@@ -156,6 +158,75 @@ describe('rider-active-flow', () => {
 
     expect(buildRiderNextActionHint(flow)).toBe(
       'Restez joignable: nous cherchons un chauffeur pour vous.',
+    );
+    expect(buildRiderPostConfirmationStep(flow)).toEqual({
+      title: 'Demande envoyée',
+      subtitle: 'Nous cherchons un chauffeur compatible autour du départ.',
+      progressLabel: "Recherche d'un chauffeur",
+      tone: 'sky',
+      canCancel: true,
+    });
+  });
+
+  it('builds simple rider post-confirmation labels for matched and approaching trips', () => {
+    const matchedFlow = resolveRiderActiveFlow({
+      role: 'RIDER',
+      stats: {
+        activeTrips: 1,
+        completedTrips: 1,
+        cancelledTrips: 0,
+        totalAmount: 2500,
+        currency: 'XOF',
+      },
+      pendingRequests: [],
+      recentTrips: [
+        {
+          id: 'trip-matched',
+          pickupAddress: 'Patte d Oie',
+          destinationAddress: 'Ouaga 2000',
+          status: 'MATCHED',
+          amount: 2200,
+          currency: 'XOF',
+          counterpartyName: 'Issa Driver',
+          vehicleLabel: 'Yamaha Crypton',
+          createdAt: '2026-04-19T09:00:00.000Z',
+        },
+      ],
+    });
+    const arrivingFlow = resolveRiderActiveFlow({
+      ...{
+        role: 'RIDER',
+        stats: {
+          activeTrips: 1,
+          completedTrips: 1,
+          cancelledTrips: 0,
+          totalAmount: 2500,
+          currency: 'XOF',
+        },
+        pendingRequests: [],
+        recentTrips: [
+          {
+            id: 'trip-arriving',
+            pickupAddress: 'Patte d Oie',
+            destinationAddress: 'Ouaga 2000',
+            status: 'DRIVER_ARRIVING',
+            amount: 2200,
+            currency: 'XOF',
+            counterpartyName: 'Issa Driver',
+            vehicleLabel: 'Yamaha Crypton',
+            createdAt: '2026-04-19T09:00:00.000Z',
+          },
+        ],
+      },
+    });
+
+    expect(buildRiderPostConfirmationStep(matchedFlow).title).toBe('Chauffeur trouvé');
+    expect(buildRiderPostConfirmationStep(arrivingFlow).title).toBe('Chauffeur en approche');
+    expect(buildRiderNoDriverAvailableStep()).toEqual(
+      expect.objectContaining({
+        title: 'Aucun chauffeur disponible',
+        progressLabel: 'Recherche terminée',
+      }),
     );
   });
 

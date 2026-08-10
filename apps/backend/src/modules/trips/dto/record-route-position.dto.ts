@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { IsISO8601, IsNumber, IsOptional, Max, Min } from 'class-validator';
 
 export class RecordRoutePositionDto {
   @Type(() => Number)
@@ -34,4 +34,8 @@ export class RecordRoutePositionDto {
   @Min(0)
   @Max(1000)
   distanceToDestinationKm?: number;
+
+  @IsOptional()
+  @IsISO8601()
+  observedAt?: string;
 }

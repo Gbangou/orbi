@@ -985,8 +985,8 @@ async function loadAdminData(): Promise<{
           : []
       ),
     };
-  } catch (error) {
-    console.error("[admin-web] loadAdminData fell back to degraded mode:", error);
+  } catch {
+    console.error("[admin-web] loadAdminData fell back to degraded mode.");
     return {
       backendConnection: {
         state: "fallback",

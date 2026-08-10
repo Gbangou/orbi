@@ -19,6 +19,7 @@ export const apiRoutes = {
   auth: {
     signUp: "/auth/sign-up",
     signIn: "/auth/sign-in",
+    refresh: "/auth/refresh",
     me: "/auth/me",
     sessions: "/auth/sessions",
     signOut: "/auth/sign-out",
@@ -279,6 +280,7 @@ export const driverOffers: DriverOffer[] = [
     pickupDistanceKm: 1.2,
     pickupDistanceSource: "DRIVER_AND_PICKUP_COORDINATES",
     reservationExpiresAt: createPreviewReservationExpiry(45),
+    paymentMethod: "mobile-money",
     serviceRadiusKm: 8,
     dispatchScore: 86,
     businessPriorityScore: 89,
@@ -316,6 +318,7 @@ export const driverOffers: DriverOffer[] = [
     pickupDistanceKm: 2.8,
     pickupDistanceSource: "DRIVER_AND_PICKUP_COORDINATES",
     reservationExpiresAt: createPreviewReservationExpiry(35),
+    paymentMethod: "cash",
     serviceRadiusKm: 8,
     dispatchScore: 71,
     businessPriorityScore: 63,

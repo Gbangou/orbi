@@ -113,7 +113,7 @@ export class AdminController {
   @Version('1')
   @ApiBearerAuth('session-token')
   @UseGuards(SessionAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
   financeDashboard() {
     return this.adminService.financeDashboard();
   }
@@ -356,7 +356,7 @@ export class AdminController {
   @Version('1')
   @ApiBearerAuth('session-token')
   @UseGuards(SessionAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
   driverWallets(@Query() query: PageQueryDto) {
     return this.adminDriverPayoutsService.driverWallets(query);
   }
@@ -471,7 +471,7 @@ export class AdminController {
   @Version('1')
   @ApiBearerAuth('session-token')
   @UseGuards(SessionAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
   paymentWebhookEvents(@Query() query: PaymentWebhookEventsQueryDto) {
     return this.adminPaymentWebhooksService.paymentWebhookEvents(query);
   }
@@ -480,7 +480,7 @@ export class AdminController {
   @Version('1')
   @ApiBearerAuth('session-token')
   @UseGuards(SessionAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
   paymentWebhookEventDetail(
     @Param('eventId', new OpaqueIdPipe('eventId')) eventId: string,
   ) {
@@ -491,7 +491,7 @@ export class AdminController {
   @Version('1')
   @ApiBearerAuth('session-token')
   @UseGuards(SessionAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.OPS, UserRole.SUPPORT)
+  @Roles(UserRole.ADMIN, UserRole.OPS)
   startPaymentWebhookInvestigation(
     @Param('eventId', new OpaqueIdPipe('eventId')) eventId: string,
     @CurrentAuth() auth: RequestAuthContext,

@@ -26,11 +26,11 @@ describe('trip-acceptance.policy', () => {
 
     expect(decision).toEqual({
       allowed: false,
-      reason: 'RESERVED_FOR_OTHER_DRIVER',
+      reason: 'OFFER_NOT_RESERVED_FOR_DRIVER',
     });
   });
 
-  it('allows reclaiming a reservation once it has expired', () => {
+  it('rejects an expired reservation instead of reclaiming it during accept', () => {
     const decision = evaluateRideRequestAcceptanceDecision({
       driverProfileId: 'driver-1',
       now: new Date('2026-04-25T08:00:00.000Z'),
@@ -42,8 +42,25 @@ describe('trip-acceptance.policy', () => {
     });
 
     expect(decision).toEqual({
+      allowed: false,
+      reason: 'OFFER_NOT_RESERVED_FOR_DRIVER',
+    });
+  });
+
+  it('accepts only a non-expired offer reserved for the driver', () => {
+    const decision = evaluateRideRequestAcceptanceDecision({
+      driverProfileId: 'driver-1',
+      now: new Date('2026-04-25T08:00:00.000Z'),
+      rideRequest: {
+        status: 'MATCHED',
+        assignedDriverId: 'driver-1',
+        assignmentExpiresAt: new Date('2026-04-25T08:00:30.000Z'),
+      },
+    });
+
+    expect(decision).toEqual({
       allowed: true,
-      reservationState: 'RESERVATION_EXPIRED',
+      reservationState: 'RESERVED_FOR_DRIVER',
     });
   });
 

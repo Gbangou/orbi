@@ -391,6 +391,7 @@ function mergePlaces(primary: Place[], secondary: Place[], limit = 6) {
 }
 
 function createTimeoutSignal(timeoutMs: number): {
+  controller: AbortController;
   signal: AbortSignal;
   clear: () => void;
 } {
@@ -398,6 +399,7 @@ function createTimeoutSignal(timeoutMs: number): {
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   return {
+    controller,
     signal: controller.signal,
     clear: () => clearTimeout(timeout),
   };
@@ -419,6 +421,7 @@ export interface PlaceSearchProps {
   suggestions?: Place[];
   suggestionLabel?: string;
   cityHint?: string;
+  allowManualEntry?: boolean;
 }
 
 export function PlaceSearch({
@@ -428,6 +431,7 @@ export function PlaceSearch({
   suggestions = [],
   suggestionLabel = 'Suggestions',
   cityHint = 'Burkina Faso',
+  allowManualEntry = true,
 }: PlaceSearchProps) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -436,6 +440,7 @@ export function PlaceSearch({
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const safeSuggestions = useMemo(
     () =>
       suggestions
@@ -461,6 +466,7 @@ export function PlaceSearch({
 
   const search = useCallback(async (q: string) => {
     const localResults = searchLocalPlaces(q, cityHint, safeSuggestions);
+    abortRef.current?.abort();
 
     if (q.trim().length < MIN_LOCAL_QUERY_LENGTH) {
       setResults([]);
@@ -475,9 +481,15 @@ export function PlaceSearch({
       return;
     }
 
+    if (localResults.length >= 4) {
+      setError(null);
+      return;
+    }
+
     setIsSearching(true);
     setError(null);
     const timeout = createTimeoutSignal(8000);
+    abortRef.current = timeout.controller;
     try {
       const normalizedCityHint = cityHint.trim();
       const cityKey = normalizedCityHint.toUpperCase().replace(/\s+/g, '_');
@@ -507,17 +519,26 @@ export function PlaceSearch({
       const remoteResults = data
         .map(toPlace)
         .filter((place): place is Place => place !== null);
+      if (abortRef.current !== timeout.controller) {
+        return;
+      }
       setResults(mergePlaces(localResults, remoteResults));
     } catch {
+      if (timeout.signal.aborted && abortRef.current !== timeout.controller) {
+        return;
+      }
       setError(
         localResults.length > 0
           ? null
-          : 'Recherche indisponible. Verifiez la connexion.',
+          : 'Connexion lente. Vous pouvez saisir le lieu manuellement.',
       );
       setResults(localResults);
     } finally {
       timeout.clear();
-      setIsSearching(false);
+      if (abortRef.current === timeout.controller) {
+        abortRef.current = null;
+        setIsSearching(false);
+      }
     }
   }, [cityHint, safeSuggestions]);
 
@@ -542,9 +563,24 @@ export function PlaceSearch({
     [onSelectPlace],
   );
 
+  const handleManualSelect = useCallback(() => {
+    const value = query.trim();
+    if (!value) {
+      return;
+    }
+
+    handleSelect({
+      id: `manual-${normalizeSearchToken(value).slice(0, 48) || 'place'}`,
+      label: value,
+      address: value,
+      coordinates: undefined,
+    });
+  }, [handleSelect, query]);
+
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
     };
   }, []);
 
@@ -634,6 +670,24 @@ export function PlaceSearch({
           ))}
         </View>
       ) : null}
+
+      {allowManualEntry && query.trim().length >= 2 && results.length === 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Utiliser la saisie manuelle"
+          onPress={handleManualSelect}
+          style={({ pressed }) => [
+            styles.manualEntry,
+            { borderColor: accentColor + '66' },
+            pressed ? styles.resultItemPressed : null,
+          ]}
+        >
+          <Text style={styles.manualEntryTitle}>Utiliser cette adresse</Text>
+          <Text style={styles.manualEntryText} numberOfLines={1}>
+            {query.trim()}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -714,6 +768,23 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8E8E8',
     overflow: 'hidden',
+  },
+  manualEntry: {
+    borderRadius: 4,
+    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 2,
+  },
+  manualEntryTitle: {
+    color: '#111111',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  manualEntryText: {
+    color: '#6B6B6B',
+    fontSize: 11,
   },
   resultItem: {
     flexDirection: 'row',

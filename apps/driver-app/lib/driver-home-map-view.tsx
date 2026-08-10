@@ -107,10 +107,12 @@ function updateDriver(lat,lng){
 }
 
 function onMsg(e){
+  if(!e||typeof e.data!=='string')return;
+  var m=null;
   try{
-    var m=JSON.parse(e.data);
-    if(m.type==='UPDATE_DRIVER'&&typeof m.lat==='number'&&isFinite(m.lat)&&typeof m.lng==='number'&&isFinite(m.lng)){updateDriver(m.lat,m.lng)}
-  }catch(x){}
+    m=JSON.parse(e.data);
+  }catch(x){return}
+  if(m.type==='UPDATE_DRIVER'&&typeof m.lat==='number'&&isFinite(m.lat)&&typeof m.lng==='number'&&isFinite(m.lng)){updateDriver(m.lat,m.lng)}
 }
 document.addEventListener('message',onMsg);
 window.addEventListener('message',onMsg);

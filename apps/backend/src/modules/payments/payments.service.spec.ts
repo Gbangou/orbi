@@ -72,7 +72,7 @@ describe('PaymentsService', () => {
       .digest('hex');
   }
 
-  function createService(provider = 'flutterwave') {
+  function createService(provider = 'flutterwave', pawaPayService?: unknown) {
     const configService = {
       get: jest.fn((key: string) => {
         const values: Record<string, string | undefined> = {
@@ -176,6 +176,7 @@ describe('PaymentsService', () => {
         prisma as never,
         featureFlagsService as never,
         jobQueueService as never,
+        pawaPayService as never,
       ),
     };
   }
@@ -813,6 +814,65 @@ describe('PaymentsService', () => {
     expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         action: 'ignored_amount_mismatch',
+        paymentAttemptId: 'payment-1',
+        userId: 'user-1',
+      }),
+    });
+  });
+
+  it('ignores successful webhooks when provider currency does not match the attempt', async () => {
+    const { service, prisma } = createService();
+    prisma.paymentAttempt.findUnique.mockResolvedValue({
+      id: 'payment-1',
+      userId: 'user-1',
+      amount: { toString: () => '2400', valueOf: () => 2400 },
+      currency: 'XOF',
+      status: 'PENDING',
+    });
+
+    const result = await service.handleWebhook('secret_123', {
+      event: 'payment.completed',
+      transactionRef: 'orbi_123_ride-request-1',
+      data: {
+        providerReference: 'fw_ref_123',
+        amount: 2400,
+        currency: 'USD',
+      },
+    });
+
+    expect(result.nextAction).toBe('ignored_amount_mismatch');
+    expect(result.reconciledAttemptCount).toBe(0);
+    expect(prisma.paymentAttempt.updateMany).not.toHaveBeenCalled();
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+  });
+
+  it('persists but ignores out-of-order failed webhooks after a payment was already confirmed', async () => {
+    const { service, prisma } = createService();
+    prisma.paymentAttempt.findUnique.mockResolvedValue({
+      id: 'payment-1',
+      userId: 'user-1',
+      amount: { toString: () => '2400', valueOf: () => 2400 },
+      currency: 'XOF',
+      status: 'SUCCEEDED',
+    });
+
+    const result = await service.handleWebhook('secret_123', {
+      event: 'payment.failed',
+      transactionRef: 'orbi_123_ride-request-1',
+      data: {
+        providerReference: 'fw_ref_123',
+        amount: 2400,
+        currency: 'XOF',
+      },
+    });
+
+    expect(result.nextAction).toBe('ignored_out_of_order');
+    expect(result.reconciledAttemptCount).toBe(0);
+    expect(prisma.paymentAttempt.updateMany).not.toHaveBeenCalled();
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'ignored_out_of_order',
         paymentAttemptId: 'payment-1',
         userId: 'user-1',
       }),
@@ -1537,13 +1597,13 @@ describe('PaymentsService', () => {
 
   it('summarizes payment fixture readiness before production pilot', () => {
     expect(resolvePaymentFixtureProductionReadiness()).toEqual({
-      total: 7,
+      total: 10,
       sandboxCaptures: 0,
-      schemaCompliantFixtures: 5,
+      schemaCompliantFixtures: 8,
       localPolicyFixtures: 2,
       isPilotReady: false,
       summary:
-        'Aucune fixture paiement sandbox capturee: 5 fixture(s) schema_compliant couvrent la structure provider mais ne remplacent pas les preuves sandbox reelles avant le pilote.',
+        'Aucune fixture paiement sandbox capturee: 8 fixture(s) schema_compliant couvrent la structure provider mais ne remplacent pas les preuves sandbox reelles avant le pilote.',
     });
   });
 
@@ -1706,6 +1766,100 @@ describe('PaymentsService', () => {
         action: 'ignored_unknown_reference',
       }),
     });
+  });
+
+  it('keeps PawaPay pending payment fixture pending without moving money', async () => {
+    const { service, prisma } = createService('pawapay');
+    const fixture = fixtureById('pawapay-payment-pending-schema-compliant');
+    const webhookPayload = loadWebhookFixture(fixture.fileName);
+
+    prisma.walletTopUp.findUnique.mockResolvedValue(null);
+    prisma.paymentAttempt.findFirst.mockResolvedValue(null);
+    prisma.paymentAttempt.findUnique.mockResolvedValue({
+      id: 'payment-1',
+      userId: 'user-1',
+      amount: { toString: () => '2400', valueOf: () => 2400 },
+      currency: 'XOF',
+      status: 'INITIATED',
+    });
+    prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await service.handlePawaPayWebhook(
+      JSON.stringify(webhookPayload),
+      undefined,
+      webhookPayload,
+    );
+
+    expect(result.nextAction).toBe(fixture.expected.nextAction);
+    expect(fixture.expected.paymentAttemptStatus).toBe('PENDING');
+    expect(fixture.expected.moneyMovement).toBe('none');
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'persisted_and_reconciled',
+        transactionRef: '7f344d0b-476e-4f94-8c99-f1e9d09d7c66',
+      }),
+    });
+  });
+
+  it('keeps duplicate success fixture idempotent without a second ledger movement', async () => {
+    const { service, prisma } = createService('flutterwave');
+    const fixture = fixtureById(
+      'flutterwave-charge-completed-duplicate-schema-compliant',
+    );
+    const webhookPayload = loadWebhookFixture(fixture.fileName);
+
+    prisma.paymentAttempt.findFirst.mockImplementation((args) =>
+      args?.where?.providerReference === 'FLW-MOCK-REF-CHARGE-001'
+        ? Promise.resolve({
+            id: 'payment-1',
+            transactionRef: 'orbi_fw_demo_charge_001',
+            userId: 'user-1',
+            amount: { toString: () => '2400', valueOf: () => 2400 },
+            currency: 'XOF',
+            status: 'SUCCEEDED',
+          })
+        : Promise.resolve(null),
+    );
+    prisma.paymentAttempt.findUnique.mockResolvedValue({
+      id: 'payment-1',
+      transactionRef: 'orbi_fw_demo_charge_001',
+      userId: 'user-1',
+      amount: { toString: () => '2400', valueOf: () => 2400 },
+      currency: 'XOF',
+      status: 'SUCCEEDED',
+    });
+    prisma.paymentAttempt.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await service.handleWebhook('secret_123', webhookPayload);
+
+    expect(result.nextAction).toBe(fixture.expected.nextAction);
+    expect(result.reconciledAttemptCount).toBe(0);
+    expect(fixture.expected.moneyMovement).toBe('none');
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps late failed fixture from downgrading a confirmed payment', async () => {
+    const { service, prisma } = createService('flutterwave');
+    const fixture = fixtureById('flutterwave-charge-failed-late-schema-compliant');
+    const webhookPayload = loadWebhookFixture(fixture.fileName);
+
+    prisma.paymentAttempt.findFirst.mockResolvedValue(null);
+    prisma.paymentAttempt.findUnique.mockResolvedValue({
+      id: 'payment-1',
+      userId: 'user-1',
+      amount: { toString: () => '2400', valueOf: () => 2400 },
+      currency: 'XOF',
+      status: 'SUCCEEDED',
+    });
+
+    const result = await service.handleWebhook('secret_123', webhookPayload);
+
+    expect(result.nextAction).toBe(fixture.expected.nextAction);
+    expect(fixture.expected.paymentAttemptStatus).toBe('SUCCEEDED');
+    expect(fixture.expected.moneyMovement).toBe('none');
+    expect(prisma.paymentAttempt.updateMany).not.toHaveBeenCalled();
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
   });
 
   it('reconciles CinetPay payment.completed schema-compliant fixture with known cpm_trans_id', async () => {
@@ -2097,6 +2251,179 @@ describe('PaymentsService', () => {
       ),
     ).rejects.toThrow('Idempotency key must be 8 to 128 URL-safe characters.');
     expect(prisma.paymentAttempt.create).not.toHaveBeenCalled();
+  });
+
+  it('marks a PawaPay checkout attempt pending after provider dispatch is accepted', async () => {
+    const pawaPayService = {
+      isConfigured: jest.fn().mockReturnValue(true),
+      initiateDeposit: jest.fn().mockResolvedValue({
+        depositId: 'f4401bd2-1568-4140-bf2d-eb77d2b2b639',
+        status: 'ACCEPTED',
+      }),
+    };
+    const { service, prisma, jobQueueService } = createService(
+      'pawapay',
+      pawaPayService,
+    );
+
+    const result = await service.createCheckoutIntent(
+      {
+        user: {
+          id: 'user-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      {
+        rideRequestId: 'ride-request-1',
+        channel: 'MOBILE_MONEY',
+        amount: 2400,
+        mobileMoneyNetwork: 'ORANGE_MONEY',
+        customerPhoneNumber: '+22670112233',
+      },
+      'pawapay-key-001',
+    );
+
+    expect(result.provider).toBe('PAWAPAY');
+    expect(pawaPayService.initiateDeposit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: '2400',
+        currency: 'XOF',
+        clientReferenceId: 'ride-request-1',
+      }),
+    );
+    expect(prisma.paymentAttempt.updateMany).toHaveBeenCalledWith({
+      where: {
+        transactionRef: result.transactionRef,
+        status: 'INITIATED',
+      },
+      data: {
+        status: 'PENDING',
+        failureReason: null,
+      },
+    });
+    expect(jobQueueService.enqueue).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'PAYMENT_ATTEMPT_RECONCILIATION_SWEEP',
+      }),
+    );
+  });
+
+  it('returns a persisted PawaPay checkout intent and queues reconciliation when provider dispatch times out', async () => {
+    const pawaPayService = {
+      isConfigured: jest.fn().mockReturnValue(true),
+      initiateDeposit: jest.fn().mockRejectedValue(new Error('provider timeout')),
+    };
+    const { service, prisma, jobQueueService } = createService(
+      'pawapay',
+      pawaPayService,
+    );
+
+    const result = await service.createCheckoutIntent(
+      {
+        user: {
+          id: 'user-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      {
+        rideRequestId: 'ride-request-1',
+        channel: 'MOBILE_MONEY',
+        amount: 2400,
+        mobileMoneyNetwork: 'ORANGE_MONEY',
+        customerPhoneNumber: '+22670112233',
+      },
+      'pawapay-key-002',
+    );
+
+    expect(result.provider).toBe('PAWAPAY');
+    expect(prisma.paymentAttempt.create).toHaveBeenCalled();
+    expect(prisma.paymentAttempt.updateMany).toHaveBeenCalledWith({
+      where: {
+        transactionRef: result.transactionRef,
+        status: 'INITIATED',
+      },
+      data: {
+        status: 'PENDING',
+        failureReason: 'provider_dispatch_unconfirmed',
+      },
+    });
+    expect(jobQueueService.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'PAYMENT_ATTEMPT_RECONCILIATION_SWEEP',
+        dedupeKey: `payment-attempt-reconciliation:${result.transactionRef}`,
+        entityType: 'payment_attempt',
+        entityId: result.transactionRef,
+        resetSucceededOnDedupe: true,
+      }),
+    );
+  });
+
+  it('does not dispatch PawaPay again when an idempotent checkout intent already exists', async () => {
+    const pawaPayService = {
+      isConfigured: jest.fn().mockReturnValue(true),
+      initiateDeposit: jest.fn(),
+    };
+    const { service, prisma } = createService('pawapay', pawaPayService);
+    const payload = {
+      rideRequestId: 'ride-request-1',
+      channel: 'MOBILE_MONEY' as const,
+      amount: 2400,
+      mobileMoneyNetwork: 'ORANGE_MONEY' as const,
+      customerPhoneNumber: '+22670112233',
+    };
+    const idempotencyHash = createHash('sha256')
+      .update(
+        JSON.stringify({
+          userId: 'user-1',
+          rideRequestId: payload.rideRequestId,
+          channel: payload.channel,
+          amount: 2400,
+          provider: 'PAWAPAY',
+          currency: 'XOF',
+          mobileMoneyNetwork: payload.mobileMoneyNetwork,
+          customerPhoneNumber: payload.customerPhoneNumber,
+          redirectUrl: null,
+        }),
+      )
+      .digest('hex');
+
+    prisma.paymentAttempt.findUnique.mockResolvedValue({
+      provider: 'PAWAPAY',
+      transactionRef: 'f4401bd2-1568-4140-bf2d-eb77d2b2b639',
+      amount: { toString: () => '2400', valueOf: () => 2400 },
+      currency: 'XOF',
+      channel: 'MOBILE_MONEY',
+      providerMetadata: {
+        awaitingPhoneConfirmation: true,
+        notifyUrl: 'https://payments.orbi.bf/webhooks/pawapay',
+      },
+      idempotencyHash,
+    });
+
+    const result = await service.createCheckoutIntent(
+      {
+        user: {
+          id: 'user-1',
+          role: 'RIDER',
+          riderProfile: {
+            id: 'rider-1',
+          },
+        },
+      } as never,
+      payload,
+      'pawapay-key-003',
+    );
+
+    expect(result.transactionRef).toBe(
+      'f4401bd2-1568-4140-bf2d-eb77d2b2b639',
+    );
+    expect(pawaPayService.initiateDeposit).not.toHaveBeenCalled();
   });
 
   it('rejects webhook calls with an invalid secret', async () => {

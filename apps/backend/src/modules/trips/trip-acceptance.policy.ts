@@ -15,14 +15,14 @@ export type RideRequestAcceptanceSnapshot = {
 export type RideRequestAcceptanceDecision =
   | {
       allowed: true;
-      reservationState:
-        | 'UNRESERVED'
-        | 'RESERVED_FOR_DRIVER'
-        | 'RESERVATION_EXPIRED';
+      reservationState: 'RESERVED_FOR_DRIVER';
     }
   | {
       allowed: false;
-      reason: 'RIDE_REQUEST_UNAVAILABLE' | 'RESERVED_FOR_OTHER_DRIVER';
+      reason:
+        | 'RIDE_REQUEST_UNAVAILABLE'
+        | 'OFFER_NOT_RESERVED_FOR_DRIVER'
+        | 'OFFER_EXPIRED';
     };
 
 export function isAcceptableRideRequestStatus(status: string) {
@@ -43,31 +43,31 @@ export function evaluateRideRequestAcceptanceDecision(input: {
 
   if (!input.rideRequest.assignedDriverId) {
     return {
-      allowed: true,
-      reservationState: 'UNRESERVED',
+      allowed: false,
+      reason: 'OFFER_NOT_RESERVED_FOR_DRIVER',
     };
   }
 
   if (input.rideRequest.assignedDriverId === input.driverProfileId) {
+    if (
+      !input.rideRequest.assignmentExpiresAt ||
+      input.rideRequest.assignmentExpiresAt.getTime() <= input.now.getTime()
+    ) {
+      return {
+        allowed: false,
+        reason: 'OFFER_EXPIRED',
+      };
+    }
+
     return {
       allowed: true,
       reservationState: 'RESERVED_FOR_DRIVER',
     };
   }
 
-  if (
-    input.rideRequest.assignmentExpiresAt &&
-    input.rideRequest.assignmentExpiresAt.getTime() <= input.now.getTime()
-  ) {
-    return {
-      allowed: true,
-      reservationState: 'RESERVATION_EXPIRED',
-    };
-  }
-
   return {
     allowed: false,
-    reason: 'RESERVED_FOR_OTHER_DRIVER',
+    reason: 'OFFER_NOT_RESERVED_FOR_DRIVER',
   };
 }
 

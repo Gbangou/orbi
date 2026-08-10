@@ -53,3 +53,19 @@ export const t = i18n.t.bind(i18n);
 export const changeLanguage = (lang: SupportedLanguage) =>
   i18n.changeLanguage(lang);
 export const useTranslation = () => useI18nTranslation();
+
+export {
+  formatOrbiDate,
+  formatOrbiDateTime,
+  formatOrbiFcfa,
+  formatOrbiPlural,
+  formatOrbiStatusLabel,
+  formatOrbiTime,
+  isDeveloperFacingContent,
+  sanitizeVisibleContent,
+  translateOrbiVisibleError,
+  type OrbiVisibleError,
+  type OrbiVisibleErrorAction,
+  type OrbiVisibleErrorInput,
+  type OrbiVisibleErrorSeverity,
+} from './content';

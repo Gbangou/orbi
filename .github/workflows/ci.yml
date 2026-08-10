@@ -64,7 +64,10 @@ jobs:
         run: pnpm audit --audit-level high
 
       - name: Whitespace diff check
-        run: git diff --check
+        run: pnpm format:check
+
+      - name: Lint check
+        run: pnpm lint:check
 
       - name: Production secret hygiene gate
         run: >-
@@ -77,6 +80,9 @@ jobs:
           --skip-mobile-smoke
           --skip-typecheck
 
+      - name: Source risk gates
+        run: pnpm quality:source
+
       - name: Generate Prisma client
         run: pnpm prisma:generate
 
@@ -85,6 +91,9 @@ jobs:
 
       - name: Apply database migrations
         run: pnpm --filter backend exec prisma migrate deploy
+
+      - name: Check migration status
+        run: pnpm --filter backend exec prisma migrate status
 
       - name: Backend tests
         run: pnpm --filter backend exec jest --runInBand --ci --forceExit
@@ -97,6 +106,18 @@ jobs:
 
       - name: Typecheck and builds
         run: pnpm typecheck
+
+      - name: Backend production build
+        run: pnpm build:backend
+
+      - name: Admin production build
+        run: pnpm build:admin
+
+      - name: Rider Expo bundle build
+        run: pnpm build:rider:ci
+
+      - name: Driver Expo bundle build
+        run: pnpm build:driver:ci
 
       - name: Seed local API smoke data
         run: pnpm prisma:seed

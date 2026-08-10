@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsIn,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -23,6 +24,7 @@ export class CreateCheckoutIntentDto {
   @ApiPropertyOptional({ example: 2400 })
   @IsOptional()
   @IsNumber()
+  @IsInt()
   @Min(100)
   amount?: number;
 

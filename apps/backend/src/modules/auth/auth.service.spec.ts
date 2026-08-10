@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
-import { hashPassword, hashOtpCode } from './auth-crypto';
+import { hashPassword, hashOtpCode, hashSessionToken } from './auth-crypto';
 import { SignUpRole } from './dto/sign-up.dto';
 import { AuthService } from './auth.service';
 
@@ -49,6 +49,7 @@ describe('AuthService', () => {
       },
       userSession: {
         create: jest.fn(),
+        findUnique: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn(),
         update: jest.fn(),
@@ -58,6 +59,7 @@ describe('AuthService', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       phoneOtp: {
+        count: jest.fn().mockResolvedValue(0),
         create: jest.fn().mockResolvedValue(undefined),
         findFirst: jest.fn(),
         update: jest.fn().mockResolvedValue(undefined),
@@ -500,6 +502,32 @@ describe('AuthService', () => {
     expect(prisma.userSession.update).toHaveBeenCalled();
   });
 
+  it('revokes all active sessions on all-devices sign-out', async () => {
+    const { prisma, service } = createService();
+
+    const result = await service.signOut(
+      {
+        user: { id: 'user-1' },
+        session: {
+          id: 'session-current',
+          ipAddress: '127.0.0.1',
+          userAgent: 'jest',
+        },
+      } as never,
+      { allDevices: true },
+    );
+
+    expect(result.revokedSessionId).toBe('session-current');
+    expect(prisma.userSession.updateMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1', revokedAt: null },
+      data: {
+        revokedAt: expect.any(Date),
+        refreshRevokedAt: expect.any(Date),
+      },
+    });
+    expect(prisma.userSession.update).not.toHaveBeenCalled();
+  });
+
   it('clears online driver presence on current driver sign-out when no trip is active', async () => {
     const { prisma, service } = createService();
 
@@ -595,6 +623,19 @@ describe('AuthService', () => {
       const { codeHash } = prisma.phoneOtp.create.mock.calls[0][0].data;
       expect(codeHash).not.toMatch(/^\d{6}$/);
     });
+
+    it('rate-limits active OTP creation per phone without revealing account state', async () => {
+      const { prisma, service } = createService();
+      prisma.phoneOtp.count.mockResolvedValue(3);
+
+      const result = await service.sendPhoneOtp({
+        phoneNumber: '+22670000000',
+        role: SignUpRole.RIDER,
+      });
+
+      expect(result.message).toBe('A verification code has been sent by SMS.');
+      expect(prisma.phoneOtp.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('verifyPhoneOtp', () => {
@@ -658,6 +699,21 @@ describe('AuthService', () => {
           role: SignUpRole.RIDER,
         }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('rejects a reused OTP after it has been consumed', async () => {
+      const { prisma, service } = createService();
+      prisma.phoneOtp.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.verifyPhoneOtp({
+          phoneNumber: '+22670000000',
+          code: '111111',
+          role: SignUpRole.RIDER,
+        }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(prisma.phoneOtp.update).not.toHaveBeenCalled();
     });
 
     it('requires fullName to create a new account on first verification', async () => {
@@ -761,6 +817,94 @@ describe('AuthService', () => {
           data: expect.objectContaining({ action: 'SIGN_IN_ROLE_MISMATCH' }),
         }),
       );
+    });
+  });
+
+  describe('refreshSession', () => {
+    function refreshSession(overrides: Record<string, unknown> = {}) {
+      const now = new Date();
+      return {
+        ...SESSION_STUB,
+        id: 'refresh-session-1',
+        userId: 'user-1',
+        refreshTokenHash: hashSessionToken('refresh-token-1'),
+        refreshTokenExpiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60_000),
+        refreshRevokedAt: null,
+        refreshReusedAt: null,
+        user: makeUser({ role: UserRole.RIDER, riderProfile: { id: 'rider-1' }, driverProfile: null }),
+        ...overrides,
+      };
+    }
+
+    it('rotates refresh tokens and revokes the previous session', async () => {
+      const { prisma, service } = createService();
+      const oldSession = refreshSession();
+      const nextSession = { ...SESSION_STUB, id: 'refresh-session-2' };
+      prisma.userSession.findUnique.mockResolvedValue(oldSession);
+      prisma.$transaction.mockResolvedValue([nextSession, oldSession]);
+
+      const result = await service.refreshSession({
+        refreshToken: 'refresh-token-1',
+      });
+
+      expect(result.sessionToken).toBeTruthy();
+      expect(result.refreshToken).toBeTruthy();
+      expect(result.refreshToken).not.toBe('refresh-token-1');
+      expect(prisma.userSession.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'user-1',
+          tokenHash: expect.any(String),
+          refreshTokenHash: expect.any(String),
+          refreshTokenExpiresAt: expect.any(Date),
+        }),
+      });
+      expect(prisma.userSession.update).toHaveBeenCalledWith({
+        where: { id: 'refresh-session-1' },
+        data: expect.objectContaining({
+          revokedAt: expect.any(Date),
+          refreshRevokedAt: expect.any(Date),
+        }),
+      });
+    });
+
+    it('detects refresh token reuse and revokes every active session', async () => {
+      const { prisma, service } = createService();
+      prisma.userSession.findUnique.mockResolvedValue(
+        refreshSession({ refreshRevokedAt: new Date() }),
+      );
+
+      await expect(
+        service.refreshSession({ refreshToken: 'refresh-token-1' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(prisma.userSession.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'refresh-session-1' },
+          data: { refreshReusedAt: expect.any(Date) },
+        }),
+      );
+      expect(prisma.userSession.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user-1', revokedAt: null },
+          data: expect.objectContaining({
+            revokedAt: expect.any(Date),
+            refreshRevokedAt: expect.any(Date),
+          }),
+        }),
+      );
+    });
+
+    it('rejects expired refresh tokens', async () => {
+      const { prisma, service } = createService();
+      prisma.userSession.findUnique.mockResolvedValue(
+        refreshSession({
+          refreshTokenExpiresAt: new Date(Date.now() - 1000),
+        }),
+      );
+
+      await expect(
+        service.refreshSession({ refreshToken: 'refresh-token-1' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
 });

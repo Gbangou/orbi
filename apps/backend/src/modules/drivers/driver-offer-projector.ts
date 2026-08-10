@@ -24,6 +24,7 @@ export type DriverOfferViewModel = {
   pickupDistanceKm: number | null;
   pickupDistanceSource: 'DISPATCH_FALLBACK' | 'DRIVER_AND_PICKUP_COORDINATES';
   reservationExpiresAt: string | null;
+  paymentMethod: string | null;
   serviceRadiusKm: number | null;
   dispatchScore: number;
   businessPriorityScore: number;
@@ -61,6 +62,7 @@ export type DriverOfferProjectionInput = {
   offerConfidenceScore: number;
   offerConfidenceLabel: 'LOW' | 'MEDIUM' | 'HIGH' | 'PRIORITY';
   reservationExpiresAt: string | null;
+  paymentMethod?: string | null;
   reservationWindowSeconds: number;
   availabilityScore: number;
   supplyPressureLevel: 'LOW' | 'BALANCED' | 'TIGHT' | 'CRITICAL';
@@ -121,6 +123,7 @@ export class DriverOfferProjector {
           ? 'DISPATCH_FALLBACK'
           : 'DRIVER_AND_PICKUP_COORDINATES',
       reservationExpiresAt: input.reservationExpiresAt,
+      paymentMethod: input.paymentMethod ?? null,
       serviceRadiusKm: input.serviceRadiusKm,
       dispatchScore: input.dispatchScore,
       businessPriorityScore: businessPriority.score,

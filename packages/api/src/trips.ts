@@ -509,6 +509,7 @@ export async function recordTripRoutePositionWithApi(
     accuracyMeters?: number;
     speedKph?: number;
     distanceToDestinationKm?: number;
+    observedAt?: string;
   },
 ) {
   return client.request<TripRoutePositionResponse>(
@@ -560,6 +561,13 @@ export async function updateTripStatusWithApi(
     },
     { maxAttempts: 2 },
   );
+}
+
+export async function completeTripWithApi(
+  client: OrbiApiClient,
+  tripId: string,
+) {
+  return updateTripStatusWithApi(client, tripId, "COMPLETED");
 }
 
 export async function verifyPickupCodeWithApi(

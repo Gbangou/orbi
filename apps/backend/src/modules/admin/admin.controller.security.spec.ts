@@ -35,7 +35,7 @@ import { AdminUsersService } from './admin-users.service';
  * 1. RIDER et DRIVER sont refusés (403) sur tous les endpoints admin.
  * 2. Les requêtes non authentifiées (sans contexte auth) sont refusées (403).
  * 3. Le rôle SUPPORT est refusé sur les endpoints d'écriture (virements, remboursements,
- *    replay, paramètres dispatch) — accès en lecture seule uniquement.
+ *    replay, paramètres dispatch) et sur les surfaces finance/paiement.
  * 4. Le rôle OPS est refusé sur les endpoints réservés ADMIN (approbation de virement,
  *    ajustement de récupération de portefeuille).
  * 5. Le rôle ADMIN est accepté (2xx) sur tous les endpoints testés.
@@ -79,6 +79,7 @@ async function buildApp(role: string | null): Promise<INestApplication<App>> {
     previewOverview: jest.fn().mockResolvedValue({}),
     overview: jest.fn().mockResolvedValue({}),
     liveOps: jest.fn().mockResolvedValue({}),
+    financeDashboard: jest.fn().mockResolvedValue({}),
     launchReadiness: jest.fn().mockResolvedValue({}),
     acknowledgeLaunchReadinessAction: jest.fn().mockResolvedValue({}),
     supportTickets: jest.fn().mockResolvedValue({ tickets: [] }),
@@ -208,10 +209,17 @@ const readEndpoints = [
   ['GET', '/api/v1/admin/drivers'],
   ['GET', '/api/v1/admin/riders'],
   ['GET', '/api/v1/admin/driver-onboarding-queue'],
-  ['GET', '/api/v1/admin/driver-wallets'],
-  ['GET', '/api/v1/admin/payment-webhook-events'],
   ['GET', '/api/v1/admin/trips/audit'],
   ['GET', '/api/v1/admin/job-queue'],
+] as const;
+
+// ── Finance/payment reads restricted to ADMIN / OPS ──────────────────────────
+
+const financialReadEndpoints = [
+  ['GET', '/api/v1/admin/finance-dashboard'],
+  ['GET', '/api/v1/admin/driver-wallets'],
+  ['GET', '/api/v1/admin/payment-webhook-events'],
+  ['GET', '/api/v1/admin/payment-webhook-events/evt-abc'],
 ] as const;
 
 // ── WRITE endpoints restricted to ADMIN/OPS only ─────────────────────────────
@@ -264,6 +272,18 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
       expect((res as unknown as { status: number }).status).toBe(403);
     });
 
+    it.each(financialReadEndpoints)('%s %s → 403', async (method, path) => {
+      const res = await Promise.resolve(
+        (
+          request(app.getHttpServer()) as unknown as Record<
+            string,
+            (p: string) => { expect: (s: number) => unknown }
+          >
+        )[method.toLowerCase()](path),
+      );
+      expect((res as unknown as { status: number }).status).toBe(403);
+    });
+
     it.each(adminOpsWriteEndpoints)('%s %s → 403', async (method, path) => {
       const res = await (
         request(app.getHttpServer()) as unknown as Record<
@@ -288,6 +308,16 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
     });
 
     it.each(readEndpoints)('%s %s → 403', async (method, path) => {
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
+      expect(res.status).toBe(403);
+    });
+
+    it.each(financialReadEndpoints)('%s %s → 403', async (method, path) => {
       const res = await (
         request(app.getHttpServer()) as unknown as Record<
           string,
@@ -329,6 +359,16 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
       )[method.toLowerCase()](path);
       expect(res.status).toBe(403);
     });
+
+    it.each(financialReadEndpoints)('%s %s → 403', async (method, path) => {
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
+      expect(res.status).toBe(403);
+    });
   });
 
   // ── SUPPORT role is denied write endpoints ─────────────────────────────────
@@ -344,6 +384,16 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
     });
 
     it.each(adminOpsWriteEndpoints)('%s %s → 403', async (method, path) => {
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
+      expect(res.status).toBe(403);
+    });
+
+    it.each(financialReadEndpoints)('%s %s → 403', async (method, path) => {
       const res = await (
         request(app.getHttpServer()) as unknown as Record<
           string,
@@ -376,6 +426,7 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
       expect(res.status).toBeGreaterThanOrEqual(200);
       expect(res.status).toBeLessThan(300);
     });
+
   });
 
   // ── OPS role can access read and most write endpoints ─────────────────────
@@ -400,6 +451,18 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
       expect(res.status).toBeGreaterThanOrEqual(200);
       expect(res.status).toBeLessThan(300);
     });
+
+    it.each(financialReadEndpoints)('%s %s → 2xx', async (method, path) => {
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
+      expect(res.status).toBeGreaterThanOrEqual(200);
+      expect(res.status).toBeLessThan(300);
+    });
+
   });
 
   // ── ADMIN role can access read endpoints ──────────────────────────────────
@@ -415,6 +478,17 @@ describe('AdminController — OWASP API5 function-level authorization', () => {
     });
 
     it.each(readEndpoints)('%s %s → 2xx', async (method, path) => {
+      const res = await (
+        request(app.getHttpServer()) as unknown as Record<
+          string,
+          (p: string) => Promise<{ status: number }>
+        >
+      )[method.toLowerCase()](path);
+      expect(res.status).toBeGreaterThanOrEqual(200);
+      expect(res.status).toBeLessThan(300);
+    });
+
+    it.each(financialReadEndpoints)('%s %s → 2xx', async (method, path) => {
       const res = await (
         request(app.getHttpServer()) as unknown as Record<
           string,

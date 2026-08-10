@@ -39,6 +39,14 @@ export type RiderActiveFlowSummary = {
   primaryRouteLabel: string | null;
 };
 
+export type RiderPostConfirmationStep = {
+  title: string;
+  subtitle: string;
+  progressLabel: string;
+  tone: "sky" | "teal" | "amber";
+  canCancel: boolean;
+};
+
 export function resolveRiderActiveFlow(
   history: MyTripsResponse | null | undefined,
 ): RiderActiveFlowSummary {
@@ -69,6 +77,78 @@ export function resolveRiderActiveFlow(
       : activeRequest
         ? `${activeRequest.pickupAddress} vers ${activeRequest.destinationAddress}`
         : null,
+  };
+}
+
+export function buildRiderPostConfirmationStep(
+  flow: RiderActiveFlowSummary,
+): RiderPostConfirmationStep {
+  if (flow.activeTrip?.status === "MATCHED") {
+    return {
+      title: "Chauffeur trouvé",
+      subtitle: "Vérifiez le nom, le véhicule et la plaque avant de monter.",
+      progressLabel: "Chauffeur en route",
+      tone: "teal",
+      canCancel: true,
+    };
+  }
+
+  if (flow.activeTrip?.status === "DRIVER_ARRIVING") {
+    return {
+      title: "Chauffeur en approche",
+      subtitle: "Préparez-vous au point de départ et vérifiez le véhicule.",
+      progressLabel: "Arrivée au départ",
+      tone: "teal",
+      canCancel: true,
+    };
+  }
+
+  if (flow.activeTrip?.status === "IN_PROGRESS") {
+    return {
+      title: "Trajet en cours",
+      subtitle: "Suivez le trajet. Le support reste disponible en cas de besoin.",
+      progressLabel: "Vers la destination",
+      tone: "teal",
+      canCancel: false,
+    };
+  }
+
+  if (flow.activeTrip) {
+    return {
+      title: "Course mise à jour",
+      subtitle: "Nous synchronisons le dernier état avec Orbi.",
+      progressLabel: "Synchronisation",
+      tone: "sky",
+      canCancel: false,
+    };
+  }
+
+  if (flow.activeRequest) {
+    return {
+      title: "Demande envoyée",
+      subtitle: "Nous cherchons un chauffeur compatible autour du départ.",
+      progressLabel: "Recherche d'un chauffeur",
+      tone: "sky",
+      canCancel: true,
+    };
+  }
+
+  return {
+    title: "Aucune course active",
+    subtitle: "Vous pouvez réserver un nouveau trajet.",
+    progressLabel: "Disponible",
+    tone: "amber",
+    canCancel: false,
+  };
+}
+
+export function buildRiderNoDriverAvailableStep(): RiderPostConfirmationStep {
+  return {
+    title: "Aucun chauffeur disponible",
+    subtitle: "Aucun chauffeur compatible n'a confirmé. Vous pouvez réessayer ou modifier le trajet.",
+    progressLabel: "Recherche terminée",
+    tone: "amber",
+    canCancel: false,
   };
 }
 

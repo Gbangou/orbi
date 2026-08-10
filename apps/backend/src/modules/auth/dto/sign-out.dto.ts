@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class SignOutDto {
   @ApiPropertyOptional({
@@ -9,4 +9,12 @@ export class SignOutDto {
   @IsOptional()
   @IsString()
   sessionId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, all active sessions for the current user are revoked.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  allDevices?: boolean;
 }

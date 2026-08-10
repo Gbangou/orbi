@@ -10,12 +10,11 @@ import {
   type DriverFatigueStatus,
   type DriverEarningsResponse,
   type DriverOffer,
+  type DriverProfileResponse,
   type MyTripsResponse,
   updateDriverAvailabilityWithApi,
 } from '@orbi/api';
 import {
-  describeRealtimeEvent,
-  describeRealtimeConnection,
   orbiCopy,
   type OrbiTheme,
 } from '@orbi/ui';
@@ -57,6 +56,19 @@ import {
 import { normalizeDriverProfileResponse } from '../../lib/driver-profile-normalizer';
 
 const touchHitSlop = { top: 8, right: 8, bottom: 8, left: 8 };
+type DriverHomeAlertTone = 'teal' | 'amber' | 'danger' | 'sky';
+
+type DriverHomeAccountSnapshot = {
+  label: string;
+  message: string;
+  tone: DriverHomeAlertTone;
+  importantAlert: {
+    title: string;
+    message: string;
+    tone: DriverHomeAlertTone;
+  } | null;
+  documentAlert: string | null;
+};
 
 function ForwardGlyph() {
   return (
@@ -88,6 +100,93 @@ function buildInitials(name: string) {
       .map((part) => part.charAt(0).toUpperCase())
       .join('') || 'OR'
   );
+}
+
+function buildDriverHomeAccountSnapshot(
+  profile: DriverProfileResponse['profile'] | null,
+): DriverHomeAccountSnapshot {
+  if (!profile) {
+    return {
+      label: 'Compte en vérification',
+      message: 'Nous récupérons votre état de service.',
+      tone: 'sky',
+      importantAlert: null,
+      documentAlert: null,
+    };
+  }
+
+  const expiredDocument = profile.onboarding.documents.find(
+    (document) => document.status === 'EXPIRED',
+  );
+  const expiringDocument = profile.onboarding.documents.find((document) => {
+    if (!document.expiresAt || document.status === 'EXPIRED') return false;
+    const expiresAt = new Date(document.expiresAt).getTime();
+    return Number.isFinite(expiresAt) && expiresAt - Date.now() <= 30 * 24 * 60 * 60 * 1000;
+  });
+
+  if (profile.status === 'SUSPENDED') {
+    return {
+      label: 'Compte suspendu',
+      message: 'Le support doit réactiver votre compte avant la reprise.',
+      tone: 'danger',
+      importantAlert: {
+        title: 'Reprise bloquée',
+        message: 'Contactez le support Orbi avant de tenter de passer en ligne.',
+        tone: 'danger',
+      },
+      documentAlert: expiredDocument ? 'Un document doit être renouvelé.' : null,
+    };
+  }
+
+  if (expiredDocument) {
+    return {
+      label: 'Document expiré',
+      message: 'Renouvelez le document demandé avant de reprendre le service.',
+      tone: 'danger',
+      importantAlert: {
+        title: 'Document à renouveler',
+        message: 'La mise en ligne reste bloquée jusqu’à validation du renouvellement.',
+        tone: 'danger',
+      },
+      documentAlert: 'Un document chauffeur est expiré.',
+    };
+  }
+
+  if (profile.verificationStatus !== 'APPROVED') {
+    return {
+      label: 'Validation en attente',
+      message: 'Votre dossier est visible, mais les courses attendent l’approbation.',
+      tone: 'amber',
+      importantAlert: {
+        title: 'Compte en revue',
+        message: 'Vous pourrez passer en ligne après validation du profil.',
+        tone: 'amber',
+      },
+      documentAlert: null,
+    };
+  }
+
+  if (profile.vehicles.length === 0) {
+    return {
+      label: 'Véhicule à compléter',
+      message: 'Ajoutez un véhicule valide avant de recevoir des courses.',
+      tone: 'amber',
+      importantAlert: {
+        title: 'Véhicule requis',
+        message: 'Un véhicule actif est nécessaire pour passer en ligne.',
+        tone: 'amber',
+      },
+      documentAlert: null,
+    };
+  }
+
+  return {
+    label: 'Compte approuvé',
+    message: 'Votre profil est prêt pour le service.',
+    tone: 'teal',
+    importantAlert: null,
+    documentAlert: expiringDocument ? 'Un document arrive bientôt à expiration.' : null,
+  };
 }
 
 // Mini offer preview — used inside the offer cards
@@ -337,6 +436,9 @@ export default function DriverHomeScreen() {
   const [driverVerificationStatus, setDriverVerificationStatus] =
     useState<string>('PENDING');
   const [driverFatigue, setDriverFatigue] = useState<DriverFatigueStatus>(fallbackFatigue);
+  const [accountSnapshot, setAccountSnapshot] = useState<DriverHomeAccountSnapshot>(
+    buildDriverHomeAccountSnapshot(null),
+  );
   const [isTogglingAvailability, setIsTogglingAvailability] = useState(false);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [vehicleCount, setVehicleCount] = useState<number | null>(null);
@@ -371,6 +473,7 @@ export default function DriverHomeScreen() {
       setDriverVerificationStatus(normalizedProfile.profile.verificationStatus);
       setDriverFatigue(normalizedProfile.profile.fatigue);
       setVehicleCount(normalizedProfile.profile.vehicles.length);
+      setAccountSnapshot(buildDriverHomeAccountSnapshot(normalizedProfile.profile));
       const flow = resolveDriverActiveFlow({
         history: historyResponse,
         offers: offersResponse,
@@ -398,6 +501,17 @@ export default function DriverHomeScreen() {
       setDriverProfileStatus('OFFLINE');
       setDriverVerificationStatus('PENDING');
       setVehicleCount(null);
+      setAccountSnapshot({
+        label: 'Service indisponible',
+        message: 'Impossible de confirmer votre état de service pour le moment.',
+        tone: 'amber',
+        importantAlert: {
+          title: 'Connexion à reprendre',
+          message: feedback.message,
+          tone: 'amber',
+        },
+        documentAlert: null,
+      });
       if (!silent) setStatusNote(feedback.message);
     } finally {
       if (silent) setIsRealtimeSyncing(false);
@@ -411,14 +525,15 @@ export default function DriverHomeScreen() {
     sessionToken,
     driverProfileId,
     (eventType) => {
+      void eventType;
       setIsRealtimeSyncing(true);
-      setStatusNote(describeRealtimeEvent('driver', eventType));
+      setStatusNote('Mise à jour du service...');
       void loadDriverHome(true);
     },
     {
-      onHeartbeat: () => setStatusNote(describeRealtimeConnection('driver', 'active')),
-      onOpen: () => { setIsRealtimeSyncing(false); setStatusNote(describeRealtimeConnection('driver', 'connected')); },
-      onError: () => { setIsRealtimeSyncing(false); setStatusNote(describeRealtimeConnection('driver', 'reconnecting')); },
+      onHeartbeat: () => setStatusNote('Service à jour.'),
+      onOpen: () => { setIsRealtimeSyncing(false); setStatusNote('Service connecté.'); },
+      onError: () => { setIsRealtimeSyncing(false); setStatusNote('Réseau faible. Nouvelle tentative en cours.'); },
     },
   );
 
@@ -434,7 +549,11 @@ export default function DriverHomeScreen() {
 
   const shiftReadiness = buildDriverShiftReadiness({ flow, fatigue: driverFatigue, earningsToday: earnings?.summary.today });
 
-  const { latestPosition: driverPosition } = useDriverPresence(
+  const {
+    latestPosition: driverPosition,
+    presenceStatus,
+    presenceNote,
+  } = useDriverPresence(
     flow.availabilityStatus === 'ONLINE' || Boolean(activeTrip),
     activeTrip?.id ?? null,
   );
@@ -569,7 +688,41 @@ export default function DriverHomeScreen() {
       : isOnline
         ? 'En ligne'
         : 'Hors ligne';
-  const sheetH = activeTrip ? 256 : isOnline ? 266 : 246;
+  const sheetH = activeTrip ? 348 : isOnline ? 374 : 354;
+  const locationAlert =
+    presenceStatus === 'permission-denied'
+      ? {
+          title: 'Localisation refusée',
+          message: 'Activez la localisation pour recevoir des courses plus proches.',
+          tone: 'amber' as const,
+        }
+      : presenceStatus === 'unavailable'
+        ? {
+            title: 'GPS désactivé',
+            message: 'Activez la localisation du téléphone avant de passer en ligne.',
+            tone: 'amber' as const,
+          }
+        : driverPosition?.accuracyMeters !== null &&
+            driverPosition?.accuracyMeters !== undefined &&
+            driverPosition.accuracyMeters > 80
+          ? {
+              title: 'Position imprécise',
+              message: 'Déplacez-vous dans une zone dégagée pour améliorer les offres.',
+              tone: 'amber' as const,
+            }
+          : null;
+  const primaryAlert =
+    accountSnapshot.importantAlert ??
+    (driverFatigue.state !== 'clear'
+      ? {
+          title: driverFatigue.state === 'blocked' ? 'Pause obligatoire' : 'Pause conseillée',
+          message:
+            driverFatigue.state === 'blocked' && driverFatigue.restUntil
+              ? `${shiftReadiness.note} Reprise après ${formatDriverRestUntilTime(driverFatigue.restUntil, 'heure indisponible')}.`
+              : shiftReadiness.note,
+          tone: driverFatigue.state === 'blocked' ? ('danger' as const) : ('amber' as const),
+        }
+      : locationAlert);
 
   return (
     <View style={styles.root}>
@@ -620,6 +773,43 @@ export default function DriverHomeScreen() {
       {/* Bottom sheet */}
       <View style={[styles.sheet, { height: sheetH }]}>
         <View style={styles.handle} />
+        <View style={styles.serviceHeader}>
+          <View style={styles.serviceHeaderCopy}>
+            <Text style={styles.serviceEyebrow}>État du compte</Text>
+            <Text style={styles.serviceTitle}>{accountSnapshot.label}</Text>
+            <Text style={styles.serviceMessage} numberOfLines={2}>
+              {accountSnapshot.message}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.serviceBadge,
+              accountSnapshot.tone === 'danger'
+                ? styles.serviceBadgeDanger
+                : accountSnapshot.tone === 'amber'
+                  ? styles.serviceBadgeAmber
+                  : styles.serviceBadgeReady,
+            ]}
+          >
+            <Text style={styles.serviceBadgeText}>
+              {accountSnapshot.tone === 'teal' ? 'OK' : 'À vérifier'}
+            </Text>
+          </View>
+        </View>
+
+        {primaryAlert ? (
+          <OrbiStatusBanner
+            tone={primaryAlert.tone === 'danger' ? 'danger' : 'amber'}
+            title={primaryAlert.title}
+            message={primaryAlert.message}
+          />
+        ) : accountSnapshot.documentAlert ? (
+          <OrbiStatusBanner
+            tone="amber"
+            title="Documents"
+            message={accountSnapshot.documentAlert}
+          />
+        ) : null}
 
         {activeTrip ? (
           <View style={{ gap: 8 }}>
@@ -722,22 +912,11 @@ export default function DriverHomeScreen() {
           </View>
         )}
 
-        {/* Fatigue warning banner */}
-        {driverFatigue.state !== 'clear' ? (
-          <OrbiStatusBanner
-            tone={driverFatigue.state === 'blocked' ? 'danger' : 'amber'}
-            title={driverFatigue.state === 'blocked' ? 'Pause obligatoire' : 'Pause conseillée'}
-            message={
-              driverFatigue.state === 'blocked' && driverFatigue.restUntil
-                ? `${shiftReadiness.note} Reprise recommandée après ${formatDriverRestUntilTime(driverFatigue.restUntil, 'heure indisponible')}.`
-                : shiftReadiness.note
-            }
-          />
-        ) : null}
-
         {/* Status note (operational feedback) */}
         {statusNote ? (
           <Text style={styles.statusNoteText} numberOfLines={2}>{statusNote}</Text>
+        ) : presenceNote && (isOnline || activeTrip) ? (
+          <Text style={styles.statusNoteText} numberOfLines={2}>{presenceNote}</Text>
         ) : null}
 
         {/* Refresh — accessible for tests */}
@@ -875,6 +1054,67 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     backgroundColor: '#D8D8D8',
     alignSelf: 'center',
     marginBottom: 12,
+  },
+  serviceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#F8F8F8',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  serviceHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  serviceEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#6B6B6B',
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  serviceTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#111111',
+  },
+  serviceMessage: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 17,
+  },
+  serviceBadge: {
+    minWidth: 72,
+    minHeight: 34,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    borderWidth: 1,
+  },
+  serviceBadgeReady: {
+    backgroundColor: '#EAF7F3',
+    borderColor: theme.colors.teal,
+  },
+  serviceBadgeAmber: {
+    backgroundColor: '#FFF7E8',
+    borderColor: theme.colors.amber,
+  },
+  serviceBadgeDanger: {
+    backgroundColor: '#FFF0F0',
+    borderColor: theme.colors.danger,
+  },
+  serviceBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#111111',
+    textAlign: 'center',
   },
 
   // Active trip

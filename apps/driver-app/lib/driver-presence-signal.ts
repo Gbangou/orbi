@@ -10,6 +10,7 @@ export type DriverPresencePosition = {
     accuracy?: number | null;
     speed?: number | null;
   };
+  timestamp?: number;
 };
 
 export type DriverRoutePositionPayload = Parameters<
@@ -18,7 +19,11 @@ export type DriverRoutePositionPayload = Parameters<
 
 export function buildDriverRoutePositionPayload(
   position: DriverPresencePosition,
-): DriverRoutePositionPayload {
+): DriverRoutePositionPayload | null {
+  if (!isUsableDriverPosition(position)) {
+    return null;
+  }
+
   return {
     latitude: position.coords.latitude,
     longitude: position.coords.longitude,
@@ -28,7 +33,48 @@ export function buildDriverRoutePositionPayload(
       Number.isFinite(position.coords.speed)
         ? Math.max(0, position.coords.speed * 3.6)
         : undefined,
+    observedAt:
+      typeof position.timestamp === "number" &&
+      Number.isFinite(position.timestamp)
+        ? new Date(position.timestamp).toISOString()
+        : undefined,
   };
+}
+
+export function isUsableDriverPosition(
+  position: DriverPresencePosition,
+  now = Date.now(),
+) {
+  const { latitude, longitude, accuracy } = position.coords;
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return false;
+  }
+
+  if (
+    typeof position.timestamp === "number" &&
+    Number.isFinite(position.timestamp) &&
+    now - position.timestamp > 120_000
+  ) {
+    return false;
+  }
+
+  if (
+    typeof accuracy === "number" &&
+    Number.isFinite(accuracy) &&
+    accuracy > 1500
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 export function buildDriverPresenceSyncedNote(input: {

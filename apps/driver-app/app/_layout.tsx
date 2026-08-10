@@ -20,7 +20,7 @@ import * as Notifications from 'expo-notifications';
 import { orbiTheme } from '@orbi/ui';
 import { ErrorBoundary, OrbiThemeProvider } from '@orbi/ui/native';
 import { initDriverI18n } from '../lib/i18n';
-import { hasPersistedDriverSession } from '../lib/auth';
+import { resolveDriverNavigationSession } from '../lib/driver-navigation';
 import { reportDriverRenderCrash } from '../lib/mobile-error-reporting';
 
 const TypedStack = Stack as any;
@@ -74,7 +74,16 @@ export default function RootLayout() {
         const type = data?.type;
 
         if (type === 'new_offer') {
-          router.push('/(tabs)/offres');
+          void resolveDriverNavigationSession('/offres')
+            .then((decision) => {
+              if (decision.targetPath) {
+                router.replace(decision.targetPath);
+                return;
+              }
+
+              router.push('/offres');
+            })
+            .catch(() => undefined);
         }
       },
     );
@@ -91,21 +100,13 @@ export default function RootLayout() {
 
     async function resolveSession() {
       try {
-        const hasSession = await hasPersistedDriverSession();
+        const decision = await resolveDriverNavigationSession(pathname);
 
         if (!isMounted) return;
 
-        let targetPath: '/auth' | '/accueil' | null = null;
-
-        if (!hasSession && pathname !== '/auth') {
-          targetPath = '/auth';
-        }
-
-        if (hasSession && pathname === '/auth') {
-          targetPath = '/accueil';
-        }
-
         setIsResolved(true);
+
+        const targetPath = decision.targetPath;
 
         if (targetPath) {
           setTimeout(() => {

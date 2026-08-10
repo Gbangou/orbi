@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import {
@@ -16,6 +17,7 @@ import {
   canDriverCompleteTrip,
   canDriverMarkArrived,
   canDriverStartTrip,
+  completeTripWithApi,
   declineDriverOfferWithApi,
   fetchDriverOffers,
   fetchDriverProfile,
@@ -24,6 +26,7 @@ import {
   reportTripIncidentWithApi,
   triggerTripSafetySosWithApi,
   withNetworkRetry,
+  verifyPickupCodeWithApi,
   type DriverFatigueStatus,
   type DriverOffer,
   type MyTripsResponse,
@@ -31,8 +34,6 @@ import {
   updateTripStatusWithApi,
 } from "@orbi/api";
 import {
-  describeRealtimeEvent,
-  describeRealtimeConnection,
   formatOperationalStatus,
   orbiCopy,
   type OrbiTheme,
@@ -174,7 +175,7 @@ function resolveMissionStageCopy(status: string) {
 }
 
 function formatPaymentMethodLabel(paymentMethod: string | null | undefined) {
-  switch ((paymentMethod ?? "MOBILE_MONEY").toUpperCase()) {
+  switch ((paymentMethod ?? "MOBILE_MONEY").toUpperCase().replace(/-/g, "_")) {
     case "CASH":
       return "Espèces";
     case "WALLET":
@@ -184,6 +185,10 @@ function formatPaymentMethodLabel(paymentMethod: string | null | undefined) {
     default:
       return "Paiement confirmé";
   }
+}
+
+function formatOfferVehicleTypeLabel(category: DriverOffer["category"]) {
+  return category === "motorcycle" ? "Moto" : "Voiture";
 }
 
 function TripStartAction({
@@ -270,6 +275,7 @@ export default function OffersScreen() {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [completionFlash, setCompletionFlash] = useState<{
     fareLabel: string;
+    commissionLabel: string;
     netLabel: string;
     paymentLabel: string;
     paymentInstruction: string;
@@ -277,6 +283,7 @@ export default function OffersScreen() {
   const [showMissionTimeline, setShowMissionTimeline] = useState(false);
   const [isStartTripConfirming, setIsStartTripConfirming] = useState(false);
   const [startTripRecoveryNote, setStartTripRecoveryNote] = useState<string | null>(null);
+  const [pickupCodeInput, setPickupCodeInput] = useState("");
   const previousVisibleOfferIdsRef = useRef<string[] | null>(null);
   const previousFlowStateRef = useRef<string | null>(null);
   const previousTimelineEventIdsRef = useRef<string[] | null>(null);
@@ -376,22 +383,22 @@ export default function OffersScreen() {
   useDriverRealtimeStream(
     sessionToken,
     driverProfileId,
-    (eventType) => {
+    (_eventType) => {
       setIsRealtimeSyncing(true);
-      setStatus(describeRealtimeEvent("driver", eventType));
+      setStatus("Mise à jour des offres...");
       void loadDriverData(true);
     },
     {
       onHeartbeat: () => {
-        setStatus(describeRealtimeConnection("driver", "active"));
+        setStatus("Offres à jour.");
       },
       onOpen: () => {
         setIsRealtimeSyncing(false);
-        setStatus(describeRealtimeConnection("driver", "connected"));
+        setStatus("Connexion rétablie.");
       },
       onError: () => {
         setIsRealtimeSyncing(false);
-        setStatus(describeRealtimeConnection("driver", "reconnecting"));
+        setStatus("Réseau faible. Nouvelle tentative en cours.");
       },
     },
   );
@@ -474,12 +481,19 @@ export default function OffersScreen() {
   useEffect(() => {
     setShowMissionTimeline(false);
     setIsStartTripConfirming(false);
+    setPickupCodeInput("");
   }, [activeTrip?.id]);
 
   useEffect(() => {
     if (activeTrip?.status !== "DRIVER_ARRIVING") {
       setIsStartTripConfirming(false);
       setStartTripRecoveryNote(null);
+    }
+  }, [activeTrip?.status]);
+
+  useEffect(() => {
+    if (activeTrip?.status !== "DRIVER_ARRIVING") {
+      setPickupCodeInput("");
     }
   }, [activeTrip?.status]);
 
@@ -754,11 +768,10 @@ export default function OffersScreen() {
 
       try {
         const { authClient } = await restoreDriverSession();
-        const response = await updateTripStatusWithApi(
-          authClient,
-          tripId,
-          nextStatus,
-        );
+        const response =
+          nextStatus === "COMPLETED"
+            ? await completeTripWithApi(authClient, tripId)
+            : await updateTripStatusWithApi(authClient, tripId, nextStatus);
         setHistory((current) => ({
           ...current,
           recentTrips: current.recentTrips.map((trip) =>
@@ -781,10 +794,12 @@ export default function OffersScreen() {
         setStatus(`Course mise à jour: ${formatOperationalStatus(response.trip.status)}.`);
         const gross = toFiniteEarningsNumber(response.trip.actualFare);
         const net = toFiniteEarningsNumber(response.trip.driverPayout);
+        const commission = toFiniteEarningsNumber(response.trip.platformFee);
         if (nextStatus === "COMPLETED" && gross !== null && net !== null) {
           const paymentLabel = formatPaymentMethodLabel(response.trip.paymentMethod);
           setCompletionFlash({
             fareLabel: formatDriverEarningsAmount(gross),
+            commissionLabel: formatDriverEarningsAmount(commission ?? 0),
             netLabel: formatDriverEarningsAmount(net),
             paymentLabel,
             paymentInstruction:
@@ -793,7 +808,7 @@ export default function OffersScreen() {
                 : "Le passager finalise le paiement sur son téléphone. Vérifiez le statut avant de quitter la zone.",
           });
         }
-        await loadDriverData();
+        await loadDriverData(true);
         return true;
       } catch (error) {
         if (
@@ -841,11 +856,49 @@ export default function OffersScreen() {
       return;
     }
 
+    const normalizedPickupCode = pickupCodeInput.replace(/\D/g, "").slice(0, 4);
+    setPickupCodeInput(normalizedPickupCode);
+
+    if (normalizedPickupCode.length !== 4) {
+      setStatus("Demandez au passager son code à 4 chiffres avant de partir.");
+      setStartTripRecoveryNote("Saisissez le code à 4 chiffres affiché au passager.");
+      return;
+    }
+
     safeHaptics.impact("medium");
     setIsStartTripConfirming(true);
     setStartTripRecoveryNote(null);
-    setStatus("Démarrage de la course...");
-    const started = await handleAdvanceTrip(tripId, "IN_PROGRESS");
+    setStatus("Vérification du code...");
+
+    const started = await runExclusiveDriverAction(async () => {
+      try {
+        const { authClient } = await restoreDriverSession();
+        await verifyPickupCodeWithApi(authClient, tripId, normalizedPickupCode);
+        setPickupCodeInput("");
+        await loadDriverData();
+        setStatus("Course démarrée. Statut confirmé.");
+        setStartTripRecoveryNote(null);
+        return true;
+      } catch (error) {
+        if (await recoverStartedTripAfterFailedUpdate(tripId)) {
+          setPickupCodeInput("");
+          return true;
+        }
+
+        const feedback = await resolveDriverAppError(error, {
+          surface: "active-trip",
+          fallback: "Code non confirmé. Vérifiez avec le passager puis réessayez.",
+        });
+
+        if (feedback.shouldClearSessionToken) {
+          setSessionToken(null);
+        }
+
+        setStatus(feedback.message);
+        setStartTripRecoveryNote(feedback.message);
+        return false;
+      }
+    });
 
     if (started) {
       setIsStartTripConfirming(false);
@@ -921,7 +974,7 @@ export default function OffersScreen() {
         const cancellationMessage =
           response.trip.cancellationPolicy?.message ??
           "Course annulee. Vous repassez disponible.";
-        await loadDriverData();
+        await loadDriverData(true);
         setStatus(cancellationMessage);
       } catch (error) {
         const feedback = await resolveDriverAppError(error, {
@@ -1054,6 +1107,28 @@ export default function OffersScreen() {
             disabled={isSubmitting}
             onPress={() => void handleStartTripToggle(activeTrip.id)}
           />
+          <View style={styles.pickupCodeEntry}>
+            <Text style={styles.pickupCodeLabel}>Code passager</Text>
+            <TextInput
+              accessibilityLabel="Code passager"
+              placeholder="Code à 4 chiffres"
+              value={pickupCodeInput}
+              onChangeText={(value) =>
+                setPickupCodeInput(value.replace(/\D/g, "").slice(0, 4))
+              }
+              keyboardType="number-pad"
+              maxLength={4}
+              secureTextEntry
+              style={styles.pickupCodeInput}
+            />
+            <OrbiButton
+              label="Vérifier le code et démarrer"
+              onPress={() => void handleStartTripToggle(activeTrip.id)}
+              disabled={isSubmitting || isStartTripConfirming || pickupCodeInput.length !== 4}
+              tone="teal"
+              style={styles.pickupCodeButton}
+            />
+          </View>
           {startTripRecoveryNote ? (
             <OrbiStatusBanner
               tone="amber"
@@ -1137,10 +1212,28 @@ export default function OffersScreen() {
                 </View>
               </View>
               <View style={styles.incomingRoute}>
+                <Text style={styles.incomingRouteLabel}>Départ</Text>
+                <Text style={styles.incomingRouteText} numberOfLines={2}>
+                  {incomingOffer.pickup}
+                </Text>
                 <Text style={styles.incomingRouteLabel}>Destination</Text>
                 <Text style={styles.incomingRouteText} numberOfLines={2}>
                   {incomingOffer.destination}
                 </Text>
+              </View>
+              <View style={styles.incomingMetaRow}>
+                <View style={styles.incomingMetaItem}>
+                  <Text style={styles.incomingMetricLabel}>Véhicule</Text>
+                  <Text style={styles.incomingMetricValue}>
+                    {formatOfferVehicleTypeLabel(incomingOffer.category)}
+                  </Text>
+                </View>
+                <View style={styles.incomingMetaItem}>
+                  <Text style={styles.incomingMetricLabel}>Paiement</Text>
+                  <Text style={styles.incomingMetricValue}>
+                    {formatPaymentMethodLabel(incomingOffer.paymentMethod)}
+                  </Text>
+                </View>
               </View>
               <View style={styles.incomingMetrics}>
                 <View style={styles.incomingMetric}>
@@ -1164,7 +1257,7 @@ export default function OffersScreen() {
                         )
                       : "À confirmer"}
                   </Text>
-                  <Text style={styles.incomingMetricLabel}>Temps</Text>
+                  <Text style={styles.incomingMetricLabel}>Temps restant</Text>
                 </View>
               </View>
               <View style={styles.incomingActions}>
@@ -1238,6 +1331,7 @@ export default function OffersScreen() {
             <View style={styles.completionCopy}>
               <Text style={styles.completionTitle}>Course terminée !</Text>
               <Text style={styles.completionFare}>Prix client : {completionFlash.fareLabel}</Text>
+              <Text style={styles.completionFare}>Commission : {completionFlash.commissionLabel}</Text>
               <Text style={styles.completionNet}>Votre gain : {completionFlash.netLabel}</Text>
               <Text style={styles.completionPayment}>Paiement : {completionFlash.paymentLabel}</Text>
               <Text style={styles.completionInstruction}>
@@ -1674,6 +1768,22 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
+  incomingMetaRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  incomingMetaItem: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#F7F7F7',
+    paddingHorizontal: 9,
+    paddingVertical: 8,
+    justifyContent: "center",
+    gap: 2,
+  },
   incomingMetric: {
     flex: 1,
     minHeight: 54,
@@ -2058,6 +2168,37 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontWeight: "600",
     fontFamily: "Inter_600SemiBold",
     color: '#525252',
+  },
+  pickupCodeEntry: {
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    gap: 8,
+  },
+  pickupCodeLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: '#111111',
+  },
+  pickupCodeInput: {
+    minHeight: 48,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#D8D8D8',
+    backgroundColor: '#F7F7F7',
+    paddingHorizontal: 12,
+    fontSize: 18,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: '#111111',
+    letterSpacing: 0,
+  },
+  pickupCodeButton: {
+    borderRadius: 4,
   },
   routeSafetyBlockNote: { fontSize: 12, color: '#525252', fontFamily: "Inter_400Regular", lineHeight: 17 },
   // Mission labels

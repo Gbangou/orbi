@@ -470,6 +470,69 @@ describe('DriversService', () => {
     expect(result.availability.fatigue.state).toBe('clear');
   });
 
+  it('blocks going online when the driver account is inactive', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'OFFLINE',
+      verificationStatus: 'APPROVED',
+      vehicles: [
+        {
+          id: 'vehicle-1',
+          isActive: true,
+        },
+      ],
+    });
+
+    await expect(
+      service.updateAvailability(
+        {
+          user: {
+            id: 'user-1',
+            isActive: false,
+            driverProfile: { id: 'driver-1' },
+          },
+        } as never,
+        'ONLINE',
+      ),
+    ).rejects.toThrow('Compte chauffeur inactif');
+    expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+  });
+
+  it('blocks going online when an incompatible active trip still exists', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'OFFLINE',
+      verificationStatus: 'APPROVED',
+      vehicles: [
+        {
+          id: 'vehicle-1',
+          isActive: true,
+        },
+      ],
+    });
+    prisma.driverDocument.count.mockResolvedValue(0);
+    prisma.trip.findFirst.mockResolvedValue({ id: 'trip-active-1' });
+
+    await expect(
+      service.updateAvailability(
+        {
+          user: {
+            id: 'user-1',
+            driverProfile: { id: 'driver-1' },
+          },
+        } as never,
+        'ONLINE',
+      ),
+    ).rejects.toThrow(
+      'Une course active doit etre terminee avant de modifier la disponibilite.',
+    );
+    expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+  });
+
   it('immediately scans and reserves open requests when a driver comes online', async () => {
     const { dispatchCoordinator, prisma, service } = createService();
     jest.spyOn(dispatchCoordinator, 'getOffers').mockResolvedValue([
@@ -800,6 +863,44 @@ describe('DriversService', () => {
       status: 'ONLINE',
       latitude: 12.365,
       longitude: -1.533,
+      ignored: false,
+    });
+  });
+
+  it('ignores stale driver presence updates that arrive after a newer GPS point', async () => {
+    const { prisma, service } = createService();
+
+    prisma.driverProfile.findUnique.mockResolvedValue({
+      id: 'driver-1',
+      status: 'ONLINE',
+      currentLatitude: 12.365,
+      currentLongitude: -1.533,
+      currentLocationUpdatedAt: new Date('2026-05-01T10:05:00.000Z'),
+    });
+
+    const result = await service.updatePresence(
+      {
+        user: {
+          id: 'user-1',
+          driverProfile: { id: 'driver-1' },
+        },
+      } as never,
+      {
+        latitude: 12.4,
+        longitude: -1.6,
+        observedAt: '2026-05-01T10:04:59.000Z',
+      },
+    );
+
+    expect(prisma.driverProfile.update).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
+    expect(result.presence).toEqual({
+      driverId: 'driver-1',
+      status: 'ONLINE',
+      latitude: 12.365,
+      longitude: -1.533,
+      ignored: true,
+      reason: 'STALE_POSITION',
     });
   });
 
@@ -1391,14 +1492,35 @@ describe('DriversService', () => {
       recentGrossFare: 8500,
       recentNetPayout: 7480,
       recentPlatformFee: 1020,
+      availablePayout: 0,
+      pendingPayout: 7480,
+      paidPayout: 0,
+      adjustmentTotal: 0,
+      refundTotal: 0,
       state: 'RECONCILED',
       anomalies: [],
+    });
+    expect(result.balances).toMatchObject({
+      currency: 'XOF',
+      gross: 8500,
+      commission: 1020,
+      net: 7480,
+      available: 0,
+      pending: 7480,
+      paid: 0,
+      adjustments: 0,
+      refunds: 0,
     });
     expect(result.recentTrips[0]).toMatchObject({
       id: 'trip-1',
       payout: 4400,
       grossFare: 5000,
       platformFee: 600,
+      available: 0,
+      pending: 4400,
+      paid: 0,
+      adjustment: 0,
+      refund: 0,
     });
   });
 

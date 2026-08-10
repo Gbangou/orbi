@@ -1,4 +1,8 @@
-import { canReceiveRealtimeEvent, parseRealtimeEvent } from './realtime.types';
+import {
+  canReceiveRealtimeEvent,
+  parseRealtimeEvent,
+  parseRealtimeSubscriptionMessage,
+} from './realtime.types';
 import type { RealtimeEvent, RealtimeEventFilter } from './realtime.types';
 
 /**
@@ -239,6 +243,82 @@ describe('canReceiveRealtimeEvent — unknown role is denied by default', () => 
       canReceiveRealtimeEvent(
         makeEvent({ channel: 'trip' }),
         makeFilter({ role: 'UNKNOWN_ROLE' }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('parseRealtimeSubscriptionMessage — WebSocket subscription guard', () => {
+  it('rejects subscriptions without an auth token', () => {
+    expect(
+      parseRealtimeSubscriptionMessage({
+        type: 'subscribe',
+        role: 'driver',
+        driverId: 'driver-1',
+      }),
+    ).toBeNull();
+  });
+
+  it('rejects unknown subscription roles', () => {
+    expect(
+      parseRealtimeSubscriptionMessage(
+        {
+          type: 'subscribe',
+          role: 'super-listener',
+          actorId: 'user-1',
+        },
+        'session-token-123',
+      ),
+    ).toBeNull();
+  });
+
+  it('keeps a valid driver subscription scoped to its declared profile', () => {
+    expect(
+      parseRealtimeSubscriptionMessage(
+        {
+          type: 'subscribe',
+          role: 'driver',
+          actorId: 'user-driver-1',
+          driverId: 'driver-1',
+        },
+        'session-token-123',
+      ),
+    ).toEqual({
+      role: 'DRIVER',
+      actorId: 'user-driver-1',
+      riderId: null,
+      driverId: 'driver-1',
+      authToken: 'session-token-123',
+    });
+  });
+
+  it('accepts token-only mobile subscriptions without widening event visibility', () => {
+    expect(
+      parseRealtimeSubscriptionMessage(
+        {
+          type: 'subscribe',
+          role: 'rider',
+        },
+        'session-token-123',
+      ),
+    ).toEqual({
+      role: 'RIDER',
+      actorId: null,
+      riderId: null,
+      driverId: null,
+      authToken: 'session-token-123',
+    });
+
+    expect(
+      canReceiveRealtimeEvent(
+        makeEvent({ channel: 'trip', riderId: 'rider-1' }),
+        {
+          role: 'RIDER',
+          actorId: null,
+          riderId: null,
+          driverId: null,
+          authToken: 'session-token-123',
+        },
       ),
     ).toBe(false);
   });

@@ -26,6 +26,25 @@ function VehicleIcon({ category }: { category: DriverOffer["category"] }) {
   return <VehicleIllustration tier={tier} width={64} height={46} />;
 }
 
+function formatOfferVehicleType(category: DriverOffer["category"]) {
+  return category === "motorcycle" ? "Moto" : "Voiture";
+}
+
+function formatOfferPaymentMethod(paymentMethod: DriverOffer["paymentMethod"]) {
+  const normalized = String(paymentMethod ?? "mobile-money").toUpperCase().replace(/-/g, "_");
+
+  switch (normalized) {
+    case "CASH":
+      return "Espèces";
+    case "WALLET":
+      return "Wallet Orbi";
+    case "MOBILE_MONEY":
+      return "Mobile Money";
+    default:
+      return "Paiement confirmé";
+  }
+}
+
 // ── Public interface ──────────────────────────────────────────────────────────
 
 export interface OfferCardProps {
@@ -55,6 +74,11 @@ export const OfferCard = memo(function OfferCard({
   const isDisabled = isSubmitting || hasActiveTrip;
   const driverPayout = toFiniteOfferNumber(offer.driverPayout);
   const moneyDisplay = resolveDriverOfferMoneyDisplay(offer);
+  const vehicleTypeLabel = formatOfferVehicleType(offer.category);
+  const paymentMethodLabel = formatOfferPaymentMethod(offer.paymentMethod);
+  const remainingTimeLabel = offer.reservationExpiresAt
+    ? formatReservationCountdown(offer.reservationExpiresAt, reservationNow)
+    : "À confirmer";
 
   // Professional staggered entry for new offers.
   const slideY = useRef(new Animated.Value(32)).current;
@@ -118,7 +142,23 @@ export const OfferCard = memo(function OfferCard({
         <View style={styles.fareCol}>
           <Text style={styles.fareLabel}>{moneyDisplay.label}</Text>
           <Text style={styles.fare}>{moneyDisplay.amountLabel}</Text>
+          <Text style={styles.vehicleLabel}>{vehicleTypeLabel}</Text>
           <VehicleIcon category={offer.category} />
+        </View>
+      </View>
+
+      <View style={styles.routePanel}>
+        <View style={styles.routePoint}>
+          <Text style={styles.routeLabel}>Départ</Text>
+          <Text style={styles.routeText} numberOfLines={2}>
+            {offer.pickup}
+          </Text>
+        </View>
+        <View style={styles.routePoint}>
+          <Text style={styles.routeLabel}>Destination</Text>
+          <Text style={styles.routeText} numberOfLines={2}>
+            {offer.destination}
+          </Text>
         </View>
       </View>
 
@@ -157,6 +197,21 @@ export const OfferCard = memo(function OfferCard({
         ) : null}
       </OrbiSurface>
 
+      <View style={styles.infoGrid}>
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>Véhicule</Text>
+          <Text style={styles.infoValue}>{vehicleTypeLabel}</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>Paiement</Text>
+          <Text style={styles.infoValue}>{paymentMethodLabel}</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>Temps restant</Text>
+          <Text style={styles.infoValue}>{remainingTimeLabel}</Text>
+        </View>
+      </View>
+
       <View
         style={[
           styles.decisionPanel,
@@ -178,21 +233,21 @@ export const OfferCard = memo(function OfferCard({
       {/* Reservation expiry */}
       {offer.reservationExpiresAt ? (
         <Text style={styles.expiry}>
-          Expire {formatReservationCountdown(offer.reservationExpiresAt, reservationNow)}
+          Temps restant : {remainingTimeLabel}
         </Text>
       ) : null}
 
       {/* Accept / decline */}
       <View style={styles.actions}>
         <OrbiButton
-          label={hasActiveTrip ? "Course active" : "Accepter cette offre"}
+          label={hasActiveTrip ? "Course active" : "Accepter"}
           onPress={() => onAccept(offer.id)}
           disabled={isDisabled}
           tone="teal"
           style={styles.acceptBtn}
         />
         <OrbiButton
-          label="Refuser cette offre"
+          label="Refuser"
           onPress={() => onDecline(offer.id)}
           disabled={isDisabled}
           variant="secondary"
@@ -242,6 +297,36 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     textTransform: "uppercase",
   },
   fare: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold", color: "#111111" },
+  vehicleLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: "#111111",
+  },
+  routePanel: {
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 7,
+  },
+  routePoint: { gap: 2 },
+  routeLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: "#6B6B6B",
+    textTransform: "uppercase",
+  },
+  routeText: {
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
+    color: "#111111",
+  },
   metrics: {
     flexDirection: "row",
     padding: 8,
@@ -260,6 +345,32 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     letterSpacing: 0,
   },
   sep: { width: 1, backgroundColor: "#E8E8E8", alignSelf: "stretch" },
+  infoGrid: { flexDirection: "row", gap: 7 },
+  infoItem: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
+    backgroundColor: "#F7F7F7",
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    gap: 2,
+    justifyContent: "center",
+  },
+  infoLabel: {
+    fontSize: 9,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: "#6B6B6B",
+    textTransform: "uppercase",
+  },
+  infoValue: {
+    fontSize: 12,
+    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
+    color: "#111111",
+  },
   expiry: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold", color: "#6B6B6B" },
   decisionPanel: {
     borderRadius: 4,

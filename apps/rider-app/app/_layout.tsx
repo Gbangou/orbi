@@ -1,12 +1,13 @@
 import '../lib/polyfills';
 import {
   Stack,
+  useLocalSearchParams,
   usePathname,
   useRootNavigationState,
   useRouter,
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import {
   useFonts,
@@ -22,8 +23,16 @@ import {
 import * as Notifications from 'expo-notifications';
 import { orbiTheme } from '@orbi/ui';
 import { ErrorBoundary, OrbiThemeProvider } from '@orbi/ui/native';
-import { hasPersistedRiderSession } from '../lib/auth';
+import { fetchMyTrips } from '@orbi/api';
+import { hasPersistedRiderSession, restoreRiderSession } from '../lib/auth';
 import { reportRiderRenderCrash } from '../lib/mobile-error-reporting';
+import { resolveRiderAppError } from '../lib/session-feedback';
+import {
+  resolveRiderBackendNavigationState,
+  resolveRiderNavigationDecision,
+  resolveRiderNotificationTarget,
+  type RiderNavigationBackendState,
+} from '../lib/rider-navigation';
 
 const TypedStack = Stack as any;
 
@@ -40,12 +49,22 @@ Notifications.setNotificationHandler({
 export default function RootLayout() {
   const router = useRouter();
   const pathname = usePathname();
+  const params = useLocalSearchParams();
+  const normalizedParams = useMemo(
+    () => normalizeRootSearchParams(params),
+    [params],
+  );
+  const normalizedParamsKey = useMemo(
+    () => JSON.stringify(normalizedParams),
+    [normalizedParams],
+  );
   const rootNavigationState = useRootNavigationState();
   const theme = orbiTheme;
   const appBackground = theme.colors.riderBackground as string;
 
   const [isNavigationMounted, setIsNavigationMounted] = useState(false);
   const [isResolved, setIsResolved] = useState(false);
+  const [hasResolvedSession, setHasResolvedSession] = useState(false);
 
   const [fontsLoaded, fontError] = useFonts({
     Raleway_700Bold,
@@ -69,16 +88,17 @@ export default function RootLayout() {
           | undefined;
         const type = data?.type;
         const tripId = data?.tripId;
+        const target = resolveRiderNotificationTarget({
+          type,
+          tripId,
+          hasSession: hasResolvedSession,
+        });
 
-        if (type === 'trip_matched' || type === 'driver_arriving') {
-          router.push('/(tabs)/activity');
-        } else if (type === 'trip_completed' && tripId) {
-          router.push(`/receipt?tripId=${tripId}`);
-        }
+        router.push(target);
       },
     );
     return () => subscription.remove();
-  }, [router]);
+  }, [hasResolvedSession, router]);
 
   useEffect(() => {
     if (!isNavigationMounted || !rootNavigationState?.key) return;
@@ -87,6 +107,7 @@ export default function RootLayout() {
 
     async function resolveSession() {
       let hasSession = false;
+      let backendState: RiderNavigationBackendState = { status: 'unknown' };
 
       try {
         hasSession = await hasPersistedRiderSession();
@@ -94,24 +115,46 @@ export default function RootLayout() {
         hasSession = false;
       }
 
+      if (hasSession) {
+        try {
+          const { authClient } = await restoreRiderSession();
+          const history = await fetchMyTrips(authClient);
+          backendState = resolveRiderBackendNavigationState(history);
+        } catch (error) {
+          const feedback = await resolveRiderAppError(error, { surface: 'auth' });
+          hasSession = !feedback.shouldClearSessionToken;
+          backendState = { status: 'unavailable' };
+        }
+      }
+
       if (!isMounted) return;
 
-      let targetPath: '/auth' | '/home' | null = null;
-      if (!hasSession && pathname !== '/auth') targetPath = '/auth';
-      if (hasSession && pathname === '/auth') targetPath = '/home';
+      const decision = resolveRiderNavigationDecision({
+        pathname,
+        hasSession,
+        backendState,
+        params: normalizedParams,
+      });
 
+      setHasResolvedSession(hasSession);
       setIsResolved(true);
 
-      if (targetPath) {
+      if (decision.action === 'replace' && decision.targetPath) {
         setTimeout(() => {
-          if (isMounted) router.replace(targetPath);
+          if (isMounted) router.replace(decision.targetPath!);
         }, 0);
       }
     }
 
     void resolveSession();
     return () => { isMounted = false; };
-  }, [isNavigationMounted, pathname, rootNavigationState?.key, router]);
+  }, [
+    isNavigationMounted,
+    normalizedParamsKey,
+    pathname,
+    rootNavigationState?.key,
+    router,
+  ]);
 
   const canRenderApp = fontsLoaded || Boolean(fontError);
   const showSplash = !isResolved || !canRenderApp;
@@ -131,7 +174,21 @@ export default function RootLayout() {
                 headerShown: false,
                 contentStyle: { backgroundColor: appBackground },
               }}
-            />
+            >
+              <TypedStack.Screen name="index" options={{ gestureEnabled: false }} />
+              <TypedStack.Screen name="auth" options={{ gestureEnabled: false }} />
+              <TypedStack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+              <TypedStack.Screen name="book" options={{ gestureEnabled: true }} />
+              <TypedStack.Screen
+                name="receipt"
+                options={{ presentation: 'modal', gestureEnabled: false }}
+              />
+              <TypedStack.Screen
+                name="rating"
+                options={{ presentation: 'modal', gestureEnabled: false }}
+              />
+              <TypedStack.Screen name="+not-found" options={{ gestureEnabled: false }} />
+            </TypedStack>
           ) : null}
           {showSplash ? (
             <View style={styles.splash}>
@@ -186,3 +243,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 });
+
+function normalizeRootSearchParams(
+  params: Record<string, string | string[] | undefined>,
+) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => {
+      if (Array.isArray(value)) {
+        return value.every((entry) => typeof entry === 'string');
+      }
+
+      return typeof value === 'string' || value === undefined;
+    }),
+  ) as Record<string, string | string[] | undefined>;
+}

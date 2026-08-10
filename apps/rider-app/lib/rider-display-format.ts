@@ -47,7 +47,7 @@ export function estimateRiderPickupEtaMinutes(distanceKm: unknown) {
 
 export function formatRiderMoneyAmount(
   value: unknown,
-  fallback = 'Montant a confirmer',
+  fallback = 'Montant à confirmer',
 ) {
   const numeric = toFiniteRiderDisplayNumber(value);
 
@@ -61,7 +61,7 @@ export function formatRiderMoneyAmount(
 export function formatRiderPaymentMethodLabel(method: string | null | undefined) {
   switch ((method ?? 'MOBILE_MONEY').toUpperCase().replace(/-/g, '_')) {
     case 'CASH':
-      return 'Especes';
+      return 'Espèces';
     case 'WALLET':
       return 'Portefeuille Orbi';
     case 'MOBILE_MONEY':
@@ -79,7 +79,7 @@ export function formatRiderReceiptProvider(provider: string | null | undefined) 
     case 'WALLET':
       return 'Portefeuille Orbi';
     case 'CASH':
-      return 'Especes';
+      return 'Espèces';
     case 'MOBILE_MONEY':
       return 'Mobile Money';
     default:
@@ -92,23 +92,23 @@ export function formatRiderReceiptStatus(status: string | null | undefined) {
     case 'SUCCEEDED':
     case 'COMPLETED':
     case 'PAID':
-      return 'Regle';
+      return 'Réglé';
     case 'PENDING':
     case 'PROCESSING':
-      return 'En verification';
+      return 'En vérification';
     case 'FAILED':
     case 'CANCELLED':
-      return 'A reprendre';
+      return 'À reprendre';
     case 'REFUNDED':
-      return 'Rembourse';
+      return 'Remboursé';
     default:
-      return 'A finaliser';
+      return 'À finaliser';
   }
 }
 
 export function formatRiderReceiptReference(reference: string | null | undefined) {
   const normalized = typeof reference === 'string' ? reference.trim() : '';
-  return normalized ? normalized.slice(0, 12).toUpperCase() : 'Reference a confirmer';
+  return normalized ? normalized.slice(0, 12).toUpperCase() : 'Référence à confirmer';
 }
 
 export function resolveRiderMoneyAmount(value: unknown) {

@@ -59,6 +59,7 @@ import {
   buildCheckoutIdempotencyKey,
   buildRideRequestIdempotencyKey,
   resolveCheckoutChannel,
+  validateBookingQuote,
   validateBookingSelection,
 } from '../lib/booking-safety';
 import { useRiderRealtimeStream } from '../lib/use-rider-realtime-stream';
@@ -77,12 +78,15 @@ import { normalizeRiderTripsResponse } from '../lib/rider-trips-normalizer';
 
 const cityPresets = burkinaPricingCityPresets;
 const fieldDispatchRadiusKm = 8;
+const bookingQuoteValidityMs = 90_000;
 const emptyDestinationPlace: Place = {
   id: 'destination-manual',
   label: 'Où allez-vous ?',
   address: '',
   coordinates: undefined,
 };
+
+type RoutePointTarget = 'pickup' | 'destination';
 
 function toFiniteCoordinate(value: unknown) {
   if (typeof value === 'number') {
@@ -145,6 +149,81 @@ function buildCurrentPositionPlace(position: {
   };
 }
 
+function toSavedPlaceSuggestion(
+  place: RiderProfileResponse['profile']['savedPlaces'][number],
+): Place | null {
+  const latitude = toFiniteCoordinate(place.latitude);
+  const longitude = toFiniteCoordinate(place.longitude);
+
+  return {
+    id: place.id,
+    label: sanitizePlaceText(place.label, 'Favori'),
+    address: sanitizePlaceText(place.address, 'Adresse enregistrée'),
+    coordinates:
+      latitude !== null && longitude !== null
+        ? { latitude, longitude }
+        : undefined,
+  };
+}
+
+function uniquePlaceSuggestions(...groups: Place[][]) {
+  const seen = new Set<string>();
+  const result: Place[] = [];
+
+  for (const place of groups.flat()) {
+    const key = normalizePlaceText(`${place.label}|${place.address}`);
+    if (!key || seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    result.push(place);
+
+    if (result.length >= 8) {
+      break;
+    }
+  }
+
+  return result;
+}
+
+function buildSavedPlaceSuggestions(profile: RiderProfileResponse) {
+  return profile.profile.savedPlaces
+    .map(toSavedPlaceSuggestion)
+    .filter((place): place is Place => place !== null);
+}
+
+function buildRecentDestinationSuggestions(history: MyTripsResponse | null) {
+  const normalized = normalizeRiderTripsResponse(history);
+  const seen = new Set<string>();
+  const suggestions: Place[] = [];
+
+  for (const trip of normalized.recentTrips) {
+    const address = sanitizePlaceText(trip.destinationAddress, '');
+    if (!address || seen.has(normalizePlaceText(address))) {
+      continue;
+    }
+
+    seen.add(normalizePlaceText(address));
+    suggestions.push({
+      id: `recent-${trip.id}`,
+      label: address.split(',')[0]?.trim() || 'Destination récente',
+      address,
+      coordinates: undefined,
+    });
+
+    if (suggestions.length >= 4) {
+      break;
+    }
+  }
+
+  return suggestions;
+}
+
+function buildLandmarkSuggestions(city: (typeof cityPresets)[number]) {
+  return uniquePlaceSuggestions([city.pickup, city.destination]);
+}
+
 function findCityPresetForPlace(place: Place) {
   return resolveBurkinaPricingPresetForPlace(place);
 }
@@ -153,45 +232,64 @@ function PriceConfidenceCard({
   option,
   distanceKm,
   durationMinutes,
+  isRefreshing,
+  quoteExpiresAt,
+  quoteIssuedAt,
 }: {
   option: RideOption | null;
   distanceKm: number;
   durationMinutes: number;
+  isRefreshing: boolean;
+  quoteExpiresAt: number | null;
+  quoteIssuedAt: number | null;
 }) {
   const theme = useOrbiTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   if (!option) return null;
+  const quoteExpired = Boolean(quoteExpiresAt && Date.now() > quoteExpiresAt);
+  const validitySeconds =
+    quoteExpiresAt && quoteIssuedAt
+      ? Math.max(0, Math.round((quoteExpiresAt - Date.now()) / 1000))
+      : null;
 
   return (
     <OrbiSurface style={styles.priceConfidenceCard}>
       <View style={styles.priceConfidenceTop}>
         <View style={styles.priceConfidenceCopy}>
-          <Text style={styles.priceConfidenceLabel}>Prix estime</Text>
+          <Text style={styles.priceConfidenceLabel}>Devis estimé</Text>
           <Text style={styles.priceConfidenceFare}>
             {formatRiderMoneyAmount(option.fare)}
           </Text>
         </View>
         <View style={styles.priceConfidenceBadge}>
           <Text style={styles.priceConfidenceBadgeText}>
-            {option.category === 'motorcycle' ? 'Moto' : 'Voiture'}
+            {quoteExpired ? 'Expiré' : isRefreshing ? 'Actualisation' : 'Backend'}
           </Text>
         </View>
       </View>
       <View style={styles.priceSignalRow}>
         <Text style={styles.priceSignalText} numberOfLines={1}>
-          {distanceKm} km · {durationMinutes} min
+          {distanceKm} km · {durationMinutes} min · {option.title}
         </Text>
         <Text style={styles.priceSignalPill} numberOfLines={1}>
-          {option.etaMinutes} min
+          Arrivée {option.etaMinutes} min
         </Text>
       </View>
+      <Text style={styles.quoteHint}>
+        {quoteExpired
+          ? 'Ce devis doit être actualisé avant confirmation.'
+          : validitySeconds !== null
+            ? `Valable environ ${Math.max(1, Math.ceil(validitySeconds / 60))} min. Le prix peut changer si le trajet, la disponibilité ou le paiement change.`
+            : 'Prix confirmé par Orbi avant envoi. Il peut changer si le trajet ou la disponibilité change.'}
+      </Text>
     </OrbiSurface>
   );
 
 }
 
 function buildBookingSummaryLabel(input: {
+  quoteExpiresAt: number | null;
   selectedOption: RideOption | null;
   hasDestination: boolean;
   distanceKm: number;
@@ -203,6 +301,10 @@ function buildBookingSummaryLabel(input: {
 
   if (!input.selectedOption) {
     return 'Choisissez un service';
+  }
+
+  if (input.quoteExpiresAt && Date.now() > input.quoteExpiresAt) {
+    return 'Devis expiré';
   }
 
   return `${formatRiderMoneyAmount(input.selectedOption.fare)} · ${input.distanceKm} km · ${input.durationMinutes} min`;
@@ -336,6 +438,12 @@ export default function BookingScreen() {
   const { t } = useTranslation();
   const tb = (key: string) => t(`booking.${key}`);
   const [options, setOptions] = useState<RideOption[]>([]);
+  const [quoteIssuedAt, setQuoteIssuedAt] = useState<number | null>(null);
+  const [quoteExpiresAt, setQuoteExpiresAt] = useState<number | null>(null);
+  const [backendRouteEstimate, setBackendRouteEstimate] = useState<{
+    distanceKm: number;
+    durationMinutes: number;
+  } | null>(null);
   const [history, setHistory] = useState<MyTripsResponse | null>(null);
   const [profile, setProfile] =
     useState<RiderProfileResponse>(fallbackRiderProfile);
@@ -383,6 +491,7 @@ export default function BookingScreen() {
     useState<number | null>(null);
   const [autoAppliedRiderPosition, setAutoAppliedRiderPosition] =
     useState(false);
+  const [mapTarget, setMapTarget] = useState<RoutePointTarget>('destination');
   const [showPromo, setShowPromo] = useState(false);
   const previousFlowStateRef = useRef<string | null>(null);
   const bookingMutationInFlightRef = useRef(false);
@@ -400,6 +509,31 @@ export default function BookingScreen() {
   );
   const selectedCity =
     cityPresets.find((city) => city.id === selectedCityId) ?? cityPresets[0];
+  const savedPlaceSuggestions = useMemo(
+    () => buildSavedPlaceSuggestions(profile),
+    [profile],
+  );
+  const recentDestinationSuggestions = useMemo(
+    () => buildRecentDestinationSuggestions(history),
+    [history],
+  );
+  const landmarkSuggestions = useMemo(
+    () => buildLandmarkSuggestions(selectedCity),
+    [selectedCity],
+  );
+  const pickupSuggestions = useMemo(
+    () => uniquePlaceSuggestions(savedPlaceSuggestions, landmarkSuggestions),
+    [landmarkSuggestions, savedPlaceSuggestions],
+  );
+  const destinationSuggestions = useMemo(
+    () =>
+      uniquePlaceSuggestions(
+        recentDestinationSuggestions,
+        savedPlaceSuggestions,
+        landmarkSuggestions,
+      ),
+    [landmarkSuggestions, recentDestinationSuggestions, savedPlaceSuggestions],
+  );
   const tripEstimate = useMemo(() => {
     if (!pickupPlace.coordinates || !destinationPlace.coordinates) {
       return {
@@ -428,6 +562,34 @@ export default function BookingScreen() {
     selectedCity.estimatedDurationMinutes,
     selectedCity.zone,
   ]);
+  const displayedRouteEstimate = backendRouteEstimate ?? {
+    distanceKm: tripEstimate.distanceKm,
+    durationMinutes: tripEstimate.durationMinutes,
+  };
+
+  function clearQuotePreview() {
+    setQuoteIssuedAt(null);
+    setQuoteExpiresAt(null);
+    setBackendRouteEstimate(null);
+    setOptions([]);
+    setSelectedOptionId('');
+  }
+
+  async function fetchBackendBookingQuote(client: ReturnType<typeof createRiderPublicClient>) {
+    return fetchRideOptionsPreview(client, {
+      distanceKm: tripEstimate.distanceKm,
+      durationMinutes: tripEstimate.durationMinutes,
+      vehicleType: 'MOTORCYCLE',
+      paymentMethod: toApiPaymentMethod(selectedPaymentMethod),
+      zone: selectedCity.zone,
+      city: selectedCity.id,
+      districtProfile: selectedCity.districtProfile,
+      pickupLatitude: pickupPlace.coordinates?.latitude,
+      pickupLongitude: pickupPlace.coordinates?.longitude,
+      destinationLatitude: destinationPlace.coordinates?.latitude,
+      destinationLongitude: destinationPlace.coordinates?.longitude,
+    });
+  }
   useEffect(() => {
     void loadBookingContext();
   }, [pickupPlace, destinationPlace, selectedCityId, selectedPaymentMethod]);
@@ -560,25 +722,27 @@ export default function BookingScreen() {
       const normalizedHistory = normalizeRiderTripsResponse(historyResponse);
       setNearbyCompatibleDriverCount(compatibleDriverCount);
 
-      const response = await fetchRideOptionsPreview(client, {
-        distanceKm: tripEstimate.distanceKm,
-        durationMinutes: tripEstimate.durationMinutes,
-        vehicleType: 'MOTORCYCLE',
-        paymentMethod: toApiPaymentMethod(selectedPaymentMethod),
-        zone: selectedCity.zone,
-        city: selectedCity.id,
-        districtProfile: selectedCity.districtProfile,
-        pickupLatitude: pickupPlace.coordinates?.latitude,
-        pickupLongitude: pickupPlace.coordinates?.longitude,
-        destinationLatitude: destinationPlace.coordinates?.latitude,
-        destinationLongitude: destinationPlace.coordinates?.longitude,
-      });
+      const response = await fetchBackendBookingQuote(client);
       const safeOptions =
         response && typeof response === 'object' && Array.isArray(response.options)
           ? response.options
           : [];
+      const nowMs = Date.now();
+      const safeRoute =
+        response &&
+        typeof response === 'object' &&
+        response.route &&
+        typeof response.route.distanceKm === 'number' &&
+        typeof response.route.durationMinutes === 'number'
+          ? response.route
+          : null;
 
       setOptions(safeOptions);
+      setQuoteIssuedAt(safeOptions.length > 0 ? nowMs : null);
+      setQuoteExpiresAt(
+        safeOptions.length > 0 ? nowMs + bookingQuoteValidityMs : null,
+      );
+      setBackendRouteEstimate(safeRoute);
       setHistory(normalizedHistory);
       setProfile(normalizeRiderProfileResponse(profileResponse));
       if (options.resetPaymentPreview ?? true) {
@@ -604,6 +768,8 @@ export default function BookingScreen() {
       setStatus(
         flow.hasOpenFlow
           ? "Vous avez déjà une course en cours."
+          : safeOptions.length === 0
+            ? "Aucun service disponible pour ce trajet pour le moment."
           : compatibleDriverCount === null
             ? "Nous vérifions la disponibilité autour du départ."
             : compatibleDriverCount > 0
@@ -623,6 +789,9 @@ export default function BookingScreen() {
 
       setStatus(feedback.message);
       setOptions([]);
+      setQuoteIssuedAt(null);
+      setQuoteExpiresAt(null);
+      setBackendRouteEstimate(null);
       setHistory(null);
       setPaymentPreview(null);
       setProfile(fallbackRiderProfile);
@@ -657,6 +826,7 @@ export default function BookingScreen() {
 
   function applyPlace(target: 'pickup' | 'destination', place: Place) {
     const inferredCity = findCityPresetForPlace(place);
+    clearQuotePreview();
 
     if (inferredCity) {
       setSelectedCityId(inferredCity.id);
@@ -671,27 +841,50 @@ export default function BookingScreen() {
   }
 
   function handleUseCurrentPositionAsPickup() {
-    if (!riderPosition.latestPosition) {
+    const latitude = toFiniteCoordinate(riderPosition.latestPosition?.latitude);
+    const longitude = toFiniteCoordinate(riderPosition.latestPosition?.longitude);
+
+    if (latitude === null || longitude === null) {
       setStatus('Position actuelle pas encore disponible.');
       return;
     }
 
-    setPickupPlace(buildCurrentPositionPlace(riderPosition.latestPosition));
+    setPickupPlace(buildCurrentPositionPlace({ latitude, longitude }));
     setAutoAppliedRiderPosition(true);
     setStatus('Depart mis a jour avec votre position actuelle.');
   }
 
-  function handleSelectDestinationOnMap(coordinates: {
+  function handleSelectCoordinateOnMap(coordinates: {
     latitude: number;
     longitude: number;
   }) {
-    setDestinationPlace({
-      id: `map-${coordinates.latitude.toFixed(5)}-${coordinates.longitude.toFixed(5)}`,
-      label: 'Point choisi sur la carte',
-      address: `${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}`,
-      coordinates,
-    });
-    setStatus('Destination mise a jour depuis la carte.');
+    const latitude = toFiniteCoordinate(coordinates.latitude);
+    const longitude = toFiniteCoordinate(coordinates.longitude);
+
+    if (latitude === null || longitude === null) {
+      setStatus('Ce point de carte ne peut pas etre utilise.');
+      return;
+    }
+
+    const place: Place = {
+      id: `map-${mapTarget}`,
+      label:
+        mapTarget === 'pickup'
+          ? 'Départ choisi sur la carte'
+          : 'Destination choisie sur la carte',
+      address:
+        mapTarget === 'pickup'
+          ? 'Point de départ choisi sur la carte'
+          : 'Point de destination choisi sur la carte',
+      coordinates: { latitude, longitude },
+    };
+
+    applyPlace(mapTarget, place);
+    setStatus(
+      mapTarget === 'pickup'
+        ? 'Depart mis a jour depuis la carte.'
+        : 'Destination mise a jour depuis la carte.',
+    );
   }
 
   async function handleSaveCurrentPlace(target: 'pickup' | 'destination') {
@@ -768,6 +961,10 @@ export default function BookingScreen() {
     primaryStatusLabel,
   } = flow;
   const hasDestination = Boolean(destinationPlace.coordinates);
+  const isQuoteExpired =
+    Boolean(hasDestination && quoteExpiresAt && Date.now() > quoteExpiresAt);
+  const hasNoAvailableService =
+    hasDestination && !isRefreshing && options.length === 0;
   const immediateBookingSupplyUnknown =
     !hasOpenFlow &&
     hasDestination &&
@@ -784,12 +981,17 @@ export default function BookingScreen() {
     (!hasOpenFlow &&
       (!selectedOption ||
         !hasDestination ||
+        hasNoAvailableService ||
         immediateBookingSupplyUnknown ||
         immediateBookingUnavailable));
   const bookingCtaLabel = isSubmitting
     ? tb('confirmLoading')
       : hasOpenFlow
         ? tb('activeFlow')
+      : isQuoteExpired
+        ? 'Actualisez le devis'
+      : hasNoAvailableService
+        ? 'Aucun service disponible'
       : immediateBookingUnavailable
         ? 'Aucun chauffeur proche'
       : immediateBookingSupplyUnknown
@@ -800,10 +1002,11 @@ export default function BookingScreen() {
         ? tb('confirm').replace('{{fare}}', formatRiderMoneyAmount(selectedOption.fare))
         : tb('noServiceSelected');
   const bookingSummaryLabel = buildBookingSummaryLabel({
+    quoteExpiresAt,
     selectedOption,
     hasDestination,
-    distanceKm: tripEstimate.distanceKm,
-    durationMinutes: tripEstimate.durationMinutes,
+    distanceKm: displayedRouteEstimate.distanceKm,
+    durationMinutes: displayedRouteEstimate.durationMinutes,
   });
   const paymentMethodLabel = formatRiderPaymentMethodLabel(selectedPaymentMethod);
 
@@ -931,6 +1134,13 @@ export default function BookingScreen() {
       return;
     }
 
+    if (quoteExpiresAt && Date.now() > quoteExpiresAt) {
+      setStatus('Le devis a expiré. Actualisez le prix avant de confirmer.');
+      await loadBookingContext();
+      setStatus('Le devis a expiré. Vérifiez le nouveau prix avant de confirmer.');
+      return;
+    }
+
     if (selectedPaymentMethod === 'mobile-money') {
       const mobileMoneyPhone = resolveMobileMoneyPhoneNumber(
         paymentSelection,
@@ -947,11 +1157,53 @@ export default function BookingScreen() {
 
     bookingMutationInFlightRef.current = true;
     setIsSubmitting(true);
-    setStatus(
-      `Preparation de votre course ${selectedValidatedOption.title}...`,
-    );
+    setStatus('Vérification du devis...');
 
     try {
+      const quoteResponse = await fetchBackendBookingQuote(createRiderPublicClient());
+      const confirmedOptions =
+        quoteResponse &&
+        typeof quoteResponse === 'object' &&
+        Array.isArray(quoteResponse.options)
+          ? quoteResponse.options
+          : [];
+      const confirmedRoute =
+        quoteResponse &&
+        typeof quoteResponse === 'object' &&
+        quoteResponse.route &&
+        typeof quoteResponse.route.distanceKm === 'number' &&
+        typeof quoteResponse.route.durationMinutes === 'number'
+          ? quoteResponse.route
+          : displayedRouteEstimate;
+      const nowMs = Date.now();
+      const refreshedQuoteExpiresAt =
+        confirmedOptions.length > 0 ? nowMs + bookingQuoteValidityMs : null;
+      const confirmedOption =
+        confirmedOptions.find((option) => option.id === selectedValidatedOption.id) ??
+        null;
+      setOptions(confirmedOptions);
+      setQuoteIssuedAt(confirmedOptions.length > 0 ? nowMs : null);
+      setQuoteExpiresAt(refreshedQuoteExpiresAt);
+      setBackendRouteEstimate(confirmedRoute);
+
+      const quoteValidation = validateBookingQuote({
+        confirmedOption,
+        nowMs,
+        quoteExpiresAt: refreshedQuoteExpiresAt,
+        selectedOption: selectedValidatedOption,
+        selectedPaymentMethod,
+      });
+
+      if (!quoteValidation.ok) {
+        setStatus(quoteValidation.message);
+        return;
+      }
+
+      const confirmedValidatedOption = quoteValidation.option;
+      setStatus(
+        `Préparation de votre course ${confirmedValidatedOption.title}...`,
+      );
+
       const { authClient, me } = await restoreRiderSession();
       const bookingIdempotencyKey = buildRideRequestIdempotencyKey({
         destinationAddress: destinationPlace.address,
@@ -959,7 +1211,7 @@ export default function BookingScreen() {
         pickupAddress: pickupPlace.address,
         riderId: me.user.id,
         selectedCityId: selectedCity.id,
-        selectedOptionId: selectedValidatedOption.id,
+        selectedOptionId: confirmedValidatedOption.id,
       });
       const createdRequest = await createRideRequestWithApi(
         authClient,
@@ -974,15 +1226,15 @@ export default function BookingScreen() {
           destinationAddress: destinationPlace.address,
           destinationLatitude: destinationPlace.coordinates?.latitude,
           destinationLongitude: destinationPlace.coordinates?.longitude,
-          requestedVehicleType: toApiVehicleType(selectedValidatedOption.category),
-          requestedServiceTier: toApiServiceTier(selectedValidatedOption.tier),
-          estimatedDistanceKm: tripEstimate.distanceKm,
-          estimatedDurationMinutes: tripEstimate.durationMinutes,
+          requestedVehicleType: toApiVehicleType(confirmedValidatedOption.category),
+          requestedServiceTier: toApiServiceTier(confirmedValidatedOption.tier),
+          estimatedDistanceKm: confirmedRoute.distanceKm,
+          estimatedDurationMinutes: confirmedRoute.durationMinutes,
           paymentMethod: toApiPaymentMethod(selectedPaymentMethod),
           pickupAreaType: selectedCity.zone,
           city: selectedCity.id,
           districtProfile: selectedCity.districtProfile,
-          notes: `Reservation ${selectedValidatedOption.title} - ${selectedCity.label} - paiement ${selectedPaymentMethod}`,
+          notes: `Reservation ${confirmedValidatedOption.title} - ${selectedCity.label} - paiement ${selectedPaymentMethod}`,
           promoCode: promoValidation?.code,
         },
         {
@@ -1120,13 +1372,53 @@ export default function BookingScreen() {
             driverLat={null}
             driverLng={null}
             selectable
-            onSelectCoordinate={handleSelectDestinationOnMap}
+            onSelectCoordinate={handleSelectCoordinateOnMap}
             style={styles.mapPreview}
           />
           <View style={styles.mapBadge}>
             <Text style={styles.mapBadgeText}>
               {tripEstimate.distanceKm} km · {tripEstimate.durationMinutes} min
             </Text>
+          </View>
+          <View style={styles.mapTargetControls}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Corriger le départ sur la carte"
+              onPress={() => setMapTarget('pickup')}
+              style={[
+                styles.mapTargetButton,
+                mapTarget === 'pickup' ? styles.mapTargetButtonActive : null,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.mapTargetButtonText,
+                  mapTarget === 'pickup' ? styles.mapTargetButtonTextActive : null,
+                ]}
+              >
+                Départ
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Corriger la destination sur la carte"
+              onPress={() => setMapTarget('destination')}
+              style={[
+                styles.mapTargetButton,
+                mapTarget === 'destination' ? styles.mapTargetButtonActive : null,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.mapTargetButtonText,
+                  mapTarget === 'destination'
+                    ? styles.mapTargetButtonTextActive
+                    : null,
+                ]}
+              >
+                Destination
+              </Text>
+            </Pressable>
           </View>
         </View>
 
@@ -1141,11 +1433,14 @@ export default function BookingScreen() {
               </Text>
             </View>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Utiliser ma position actuelle comme départ"
               onPress={handleUseCurrentPositionAsPickup}
               style={styles.gpsBtn}
               hitSlop={8}
             >
               <TargetGlyph />
+              <Text style={styles.gpsBtnText}>Position actuelle</Text>
             </Pressable>
           </View>
           <View style={styles.routeSummarySep} />
@@ -1179,6 +1474,8 @@ export default function BookingScreen() {
               placeholder="Quartier, monument, adresse…"
               tone="teal"
               cityHint={selectedCity.label}
+              suggestions={pickupSuggestions}
+              suggestionLabel="Favoris et repères"
               onSelectPlace={(place) => applyPlace('pickup', place)}
             />
           </View>
@@ -1188,6 +1485,8 @@ export default function BookingScreen() {
               placeholder="Où allez-vous ?"
               tone="amber"
               cityHint={selectedCity.label}
+              suggestions={destinationSuggestions}
+              suggestionLabel="Récents, favoris et repères"
               onSelectPlace={(place) => applyPlace('destination', place)}
             />
           </View>
@@ -1224,6 +1523,21 @@ export default function BookingScreen() {
           />
         ) : null}
 
+        {status ? (
+          <OrbiStatusBanner
+            tone={
+              status.includes('expiré') ||
+              status.includes('changé') ||
+              status.includes('réseau') ||
+              status.includes('disponible')
+                ? 'amber'
+                : 'sky'
+            }
+            title="Réservation"
+            message={status}
+          />
+        ) : null}
+
         {/* ── Scheduled ride picker ── */}
         <ScheduledRidePicker
           mode={scheduleMode}
@@ -1238,15 +1552,25 @@ export default function BookingScreen() {
         <VehicleSelector
           options={options}
           selectedOptionId={selectedOptionId}
-          promoValidation={promoValidation}
           isRefreshing={isRefreshing}
           onSelect={setSelectedOptionId}
         />
 
+        {hasNoAvailableService ? (
+          <OrbiStatusBanner
+            tone="amber"
+            title="Aucun service disponible"
+            message="Essayez un autre départ, une autre destination ou réessayez dans quelques instants."
+          />
+        ) : null}
+
         <PriceConfidenceCard
           option={selectedOption}
-          distanceKm={tripEstimate.distanceKm}
-          durationMinutes={tripEstimate.durationMinutes}
+          distanceKm={displayedRouteEstimate.distanceKm}
+          durationMinutes={displayedRouteEstimate.durationMinutes}
+          isRefreshing={isRefreshing}
+          quoteExpiresAt={quoteExpiresAt}
+          quoteIssuedAt={quoteIssuedAt}
         />
 
         {/* ── Payment method ── */}
@@ -1267,7 +1591,7 @@ export default function BookingScreen() {
                   {promoValidation.code}
                 </Text>
                 <Text style={promoStyles.successMeta}>
-                  Réduction de {promoValidation.discountBps / 100}%
+                  Le prix final est confirmé par Orbi avant l'envoi.
                 </Text>
               </View>
               <OrbiButton
@@ -1351,6 +1675,10 @@ export default function BookingScreen() {
             <Text style={styles.ctaSignalTitle} numberOfLines={1}>
               {hasOpenFlow
                 ? 'Course en cours'
+                : isQuoteExpired
+                  ? 'Devis expiré'
+                : hasNoAvailableService
+                  ? 'Aucun service disponible'
                 : immediateBookingUnavailable
                   ? 'Aucun chauffeur autour du départ'
                 : immediateBookingSupplyUnknown
@@ -1364,13 +1692,17 @@ export default function BookingScreen() {
             <Text style={styles.ctaSignalMeta} numberOfLines={1}>
               {hasOpenFlow
                 ? 'Suivez le statut dans Activité'
+                : isQuoteExpired
+                  ? 'Actualisez avant de confirmer'
+                : hasNoAvailableService
+                  ? 'Essayez un autre trajet ou plus tard'
                 : immediateBookingUnavailable
                   ? `Essayez plus tard ou programmez la course`
-                  : immediateBookingSupplyUnknown
-                    ? "Disponibilité en cours"
-                    : selectedOption && hasDestination
-                      ? `${tripEstimate.distanceKm} km · ${tripEstimate.durationMinutes} min · ${paymentMethodLabel}`
-                      : !hasDestination
+                : immediateBookingSupplyUnknown
+                  ? "Disponibilité en cours"
+                : selectedOption && hasDestination
+                  ? `${displayedRouteEstimate.distanceKm} km · ${displayedRouteEstimate.durationMinutes} min · ${paymentMethodLabel}`
+                  : !hasDestination
                         ? 'Indiquez où vous allez'
                         : 'Départ et disponibilité requis'}
             </Text>
@@ -1538,13 +1870,23 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     color: '#525252',
   },
   gpsBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    minHeight: 36,
+    maxWidth: 138,
+    borderRadius: 18,
     backgroundColor: '#F3F3F3',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
     flexShrink: 0,
+  },
+  gpsBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: '#111111',
+    flexShrink: 1,
   },
 
   // Search section
@@ -1609,6 +1951,37 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
+  },
+  mapTargetControls: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    flexDirection: 'row',
+    gap: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 4,
+  },
+  mapTargetButton: {
+    minHeight: 34,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapTargetButtonActive: {
+    backgroundColor: '#111111',
+  },
+  mapTargetButtonText: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    color: '#525252',
+  },
+  mapTargetButtonTextActive: {
     color: '#FFFFFF',
   },
   // Active flow banner
@@ -1903,6 +2276,13 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
+  },
+  quoteHint: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    color: theme.colors.textSoft,
   },
   priceRoundingText: {
     fontSize: 11,

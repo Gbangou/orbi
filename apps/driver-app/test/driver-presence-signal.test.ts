@@ -1,6 +1,7 @@
 import {
   buildDriverPresenceSyncedNote,
   buildDriverRoutePositionPayload,
+  isUsableDriverPosition,
   resolveDriverPresenceTrackingOptions,
 } from "../lib/driver-presence-signal";
 
@@ -36,6 +37,28 @@ describe("driver-presence-signal", () => {
       accuracyMeters: undefined,
       speedKph: 0,
     });
+  });
+
+  it("rejects stale, inaccurate, and out-of-range GPS points before sync", () => {
+    expect(
+      isUsableDriverPosition(
+        {
+          coords: { latitude: 12.371, longitude: -1.519 },
+          timestamp: Date.now() - 180_000,
+        },
+        Date.now(),
+      ),
+    ).toBe(false);
+    expect(
+      buildDriverRoutePositionPayload({
+        coords: { latitude: 12.371, longitude: -1.519, accuracy: 2500 },
+      }),
+    ).toBeNull();
+    expect(
+      buildDriverRoutePositionPayload({
+        coords: { latitude: 120, longitude: -1.519 },
+      }),
+    ).toBeNull();
   });
 
   it("uses tighter GPS tracking while a trip is active", () => {

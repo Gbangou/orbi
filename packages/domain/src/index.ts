@@ -207,7 +207,9 @@ export const activeTripLifecycleStatuses = [
 export type ActiveTripLifecycleStatus =
   (typeof activeTripLifecycleStatuses)[number];
 
-export const pickupCodeVisibleTripLifecycleStatuses = [] as const;
+export const pickupCodeVisibleTripLifecycleStatuses = [
+  'DRIVER_ARRIVING',
+] as const;
 
 export const allowedTripLifecycleTransitions: Record<
   TripLifecycleStatus,
@@ -262,7 +264,7 @@ const tripLifecycleActorPolicy: Record<
   RIDER: {
     MATCHED: ['CANCELLED'],
     DRIVER_ARRIVING: ['CANCELLED'],
-    IN_PROGRESS: ['COMPLETED'],
+    IN_PROGRESS: [],
     COMPLETED: [],
     CANCELLED: [],
   },
@@ -606,6 +608,7 @@ export type DriverOffer = {
     | 'DRIVER_AND_PICKUP_COORDINATES'
     | 'DISPATCH_FALLBACK';
   reservationExpiresAt?: string | null;
+  paymentMethod?: PaymentMethod | ApiPaymentMethod | string | null;
   serviceRadiusKm?: number | null;
   dispatchScore?: number;
   businessPriorityScore?: number;
@@ -843,7 +846,7 @@ export function canRiderCancelTrip(status: string) {
 }
 
 export function canRiderStopTrip(status: string) {
-  return status === 'IN_PROGRESS';
+  return false;
 }
 
 export function canDriverMarkArrived(status: string) {

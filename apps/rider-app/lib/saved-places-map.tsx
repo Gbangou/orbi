@@ -98,7 +98,8 @@ if(PINS.length===0){
 PINS.forEach(function(p){
   var m=L.marker([p.latitude,p.longitude],{icon:pinIcon(p.label)}).addTo(map);
   m.on('click',function(){
-    try{window.ReactNativeWebView.postMessage(JSON.stringify({placeId:p.id}))}catch(e){}
+    if(!window.ReactNativeWebView)return;
+    try{window.ReactNativeWebView.postMessage(JSON.stringify({placeId:p.id}))}catch(e){return}
   });
 });
 </script>

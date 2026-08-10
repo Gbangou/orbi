@@ -146,7 +146,7 @@ describe('Orbi runtime config', () => {
       expect(source).not.toContain('orbiRuntimeConfig.apiBaseUrl');
     }
 
-    for (const file of ['app/(tabs)/home.tsx', 'app/book.tsx']) {
+    for (const file of ['app/book.tsx', 'lib/home-map-view.tsx']) {
       const source = readFileSync(join(process.cwd(), file), 'utf8');
 
       expect(source).toContain('createRiderPublicClient');

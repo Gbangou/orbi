@@ -65,7 +65,7 @@ describe('rider mobile UX guards', () => {
     expect(source).toContain('label="Aide"');
     expect(source).not.toContain('label="Signal"');
     expect(source).toContain('label="Annuler"');
-    expect(source).toContain('label="Terminer ici"');
+    expect(source).not.toContain('label="Terminer ici"');
     expect(source).not.toContain('ETA banner');
   });
 
@@ -126,10 +126,25 @@ describe('rider mobile UX guards', () => {
     const source = readAppFile('app/book.tsx');
 
     expect(source).toContain('function PriceConfidenceCard');
-    expect(source).toContain('Prix estime');
+    expect(source).toContain('Devis estimé');
     expect(source).toContain('durationMinutes');
+    expect(source).toContain('validateBookingQuote');
     expect(source).not.toContain('Equilibre course');
     expect(source).not.toContain('Prix transparent');
+  });
+
+  it('keeps rider place search private, cancellable and tolerant of imperfect addresses', () => {
+    const source = readAppFile('lib/place-search.tsx');
+
+    expect(source).toContain('const DEBOUNCE_MS = 600');
+    expect(source).toContain('AbortController');
+    expect(source).toContain('abortRef.current?.abort()');
+    expect(source).toContain('localResults.length >= 4');
+    expect(source).toContain('Utiliser cette adresse');
+    expect(source).toContain('Connexion lente. Vous pouvez saisir le lieu manuellement.');
+    expect(source).not.toContain('console.log');
+    expect(source).not.toContain('console.info');
+    expect(source).not.toContain('console.warn');
   });
 
   it('keeps crash debug details gated to an explicit field debug flag', () => {

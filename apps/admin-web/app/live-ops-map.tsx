@@ -123,7 +123,10 @@ function updateMarkers(markers){
 }
 
 function onMsg(e){
-  try{var m=JSON.parse(e.data);if(m.type==='UPDATE'&&m.markers)updateMarkers(m.markers);}catch(x){}
+  if(!e||typeof e.data!=='string')return;
+  var m=null;
+  try{m=JSON.parse(e.data)}catch(x){return}
+  if(m.type==='UPDATE'&&m.markers)updateMarkers(m.markers);
 }
 window.addEventListener('message',onMsg);
 initMarkers(MARKERS);

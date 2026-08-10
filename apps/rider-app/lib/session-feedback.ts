@@ -1,7 +1,12 @@
 import {
   classifyOrbiClientError,
+  isOrbiApiError,
   type OrbiClientErrorSurface,
 } from '@orbi/api';
+import {
+  translateOrbiVisibleError,
+  type OrbiVisibleErrorAction,
+} from '@orbi/i18n';
 import { orbiCopy } from '@orbi/ui';
 import { router } from 'expo-router';
 import { clearRiderPersistedSession } from './auth';
@@ -20,6 +25,9 @@ export type RiderAppErrorFeedback = {
   severity?: string;
   owner?: string;
   retryPolicy?: string;
+  action?: OrbiVisibleErrorAction;
+  actionLabel?: string;
+  logCode?: string;
   shouldClearSessionToken: boolean;
   reportable?: boolean;
 };
@@ -30,22 +38,6 @@ const defaultRiderErrorCopy: RiderErrorCopy = {
   network: orbiCopy.riderNetworkUnavailable,
   fallback: orbiCopy.serviceUnavailable,
 };
-
-function toPremiumRiderMessage(message: string, fallback: string) {
-  const trimmed = message.trim();
-  if (!trimmed) {
-    return fallback;
-  }
-
-  if (/\b(api|backend|server|serveur|stack|exception|token|json|sql|prisma|debug|trace)\b/i.test(trimmed)) {
-    return fallback;
-  }
-
-  return trimmed
-    .replace(/\bconnexion live\b/gi, 'connexion')
-    .replace(/\ben direct\b/gi, 'a jour')
-    .slice(0, 180);
-}
 
 export async function resolveRiderAppError(
   error: unknown,
@@ -59,6 +51,20 @@ export async function resolveRiderAppError(
     surface: copy?.surface,
     fallbackMessage: messages.fallback,
   });
+  const fallbackMessage =
+    classification.shouldClearSessionToken
+      ? messages.expiredSession
+      : classification.code === 'MOB-NETWORK-OFFLINE'
+        ? messages.network
+        : copy?.fallback;
+  const visibleError = translateOrbiVisibleError({
+    code: classification.code,
+    message: error instanceof Error ? error.message : classification.userMessage,
+    status: isOrbiApiError(error) ? error.status : undefined,
+    surface: classification.surface,
+    retryPolicy: classification.retryPolicy,
+    fallbackMessage,
+  });
   await safelyQueueRiderErrorReport(error, classification);
 
   if (classification.shouldClearSessionToken) {
@@ -66,12 +72,15 @@ export async function resolveRiderAppError(
     router.replace('/auth');
 
     return {
-      message: messages.expiredSession,
+      message: visibleError.message,
       code: classification.code,
       surface: classification.surface,
       severity: classification.severity,
       owner: classification.owner,
       retryPolicy: classification.retryPolicy,
+      action: visibleError.action,
+      actionLabel: visibleError.actionLabel,
+      logCode: visibleError.logCode,
       shouldClearSessionToken: true,
       reportable: classification.reportable,
     };
@@ -79,24 +88,30 @@ export async function resolveRiderAppError(
 
   if (classification.code === 'MOB-NETWORK-OFFLINE') {
     return {
-      message: messages.network,
+      message: visibleError.message,
       code: classification.code,
       surface: classification.surface,
       severity: classification.severity,
       owner: classification.owner,
       retryPolicy: classification.retryPolicy,
+      action: visibleError.action,
+      actionLabel: visibleError.actionLabel,
+      logCode: visibleError.logCode,
       shouldClearSessionToken: false,
       reportable: classification.reportable,
     };
   }
 
   return {
-    message: toPremiumRiderMessage(classification.userMessage, messages.fallback),
+    message: visibleError.message,
     code: classification.code,
     surface: classification.surface,
     severity: classification.severity,
     owner: classification.owner,
     retryPolicy: classification.retryPolicy,
+    action: visibleError.action,
+    actionLabel: visibleError.actionLabel,
+    logCode: visibleError.logCode,
     shouldClearSessionToken: false,
     reportable: classification.reportable,
   };

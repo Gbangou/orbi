@@ -149,6 +149,8 @@ export type DriverPresenceResponse = {
     status: string;
     latitude: number | null;
     longitude: number | null;
+    ignored?: boolean;
+    reason?: "STALE_POSITION";
   };
 };
 
@@ -165,6 +167,17 @@ export type DriverEarningsResponse = {
     completedTrips: number;
     averagePayout: number;
   };
+  balances?: {
+    currency: string;
+    gross: number;
+    commission: number;
+    net: number;
+    available: number;
+    pending: number;
+    paid: number;
+    adjustments: number;
+    refunds: number;
+  };
   settlement: {
     currency: string;
     source: "COMPLETED_TRIPS";
@@ -176,6 +189,11 @@ export type DriverEarningsResponse = {
     recentGrossFare: number;
     recentNetPayout: number;
     recentPlatformFee: number;
+    availablePayout?: number;
+    pendingPayout?: number;
+    paidPayout?: number;
+    adjustmentTotal?: number;
+    refundTotal?: number;
     state: "RECONCILED" | "REVIEW_REQUIRED";
     anomalies: string[];
     calculatedAt: string;
@@ -200,6 +218,11 @@ export type DriverEarningsResponse = {
     payout: number;
     grossFare: number;
     platformFee: number;
+    available: number;
+    pending: number;
+    paid: number;
+    adjustment: number;
+    refund: number;
     commissionRate?: number;
     payoutRate?: number;
     status: string;
@@ -381,6 +404,8 @@ export async function updateDriverPresenceWithApi(
   payload: {
     latitude: number;
     longitude: number;
+    accuracyMeters?: number;
+    observedAt?: string;
   },
 ) {
   return client.request<DriverPresenceResponse>(apiRoutes.drivers.presence, {

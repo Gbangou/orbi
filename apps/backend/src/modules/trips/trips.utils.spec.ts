@@ -3,6 +3,7 @@ import {
   formatTripEventLabel,
   formatVehicleLabel,
   generatePickupCode,
+  resolvePickupCodeChallenge,
   toAmount,
 } from './trips.utils';
 
@@ -55,6 +56,21 @@ describe('extractPickupCode', () => {
     expect(extractPickupCode(events)).toBe('4821');
   });
 
+  it('extracts the latest issued code when a code has been rotated', () => {
+    const events = [
+      {
+        eventType: 'PICKUP_CODE_ISSUED',
+        payload: { pickupCode: '4821' },
+      },
+      {
+        eventType: 'PICKUP_CODE_ISSUED',
+        payload: { pickupCode: '7394' },
+      },
+    ];
+
+    expect(extractPickupCode(events)).toBe('7394');
+  });
+
   it('returns null when no PICKUP_CODE_ISSUED event is present', () => {
     const events = [{ eventType: 'TRIP_STARTED', payload: {} }];
 
@@ -71,6 +87,37 @@ describe('extractPickupCode', () => {
     const events = [{ eventType: 'PICKUP_CODE_ISSUED' }];
 
     expect(extractPickupCode(events)).toBeNull();
+  });
+});
+
+describe('resolvePickupCodeChallenge', () => {
+  it('returns expiry and failed attempt metadata without exposing submitted codes', () => {
+    const issuedAt = new Date('2026-05-01T09:00:00.000Z');
+    const events = [
+      {
+        eventType: 'PICKUP_CODE_ISSUED',
+        payload: {
+          pickupCode: '4821',
+          expiresAt: '2026-05-01T09:10:00.000Z',
+          maxAttempts: 5,
+        },
+        createdAt: issuedAt,
+      },
+      {
+        eventType: 'PICKUP_CODE_VERIFICATION_FAILED',
+        payload: { reason: 'MISMATCH' },
+        createdAt: new Date('2026-05-01T09:02:00.000Z'),
+      },
+    ];
+
+    expect(resolvePickupCodeChallenge(events)).toEqual({
+      pickupCode: '4821',
+      issuedAt,
+      expiresAt: new Date('2026-05-01T09:10:00.000Z'),
+      maxAttempts: 5,
+      failedAttempts: 1,
+      latestFailedAttemptAt: new Date('2026-05-01T09:02:00.000Z'),
+    });
   });
 });
 

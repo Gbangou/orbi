@@ -12,7 +12,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { upsertDriverOnboarding, resolveDisplayableApiErrorMessage } from '@orbi/api';
+import {
+  requestDriverDocumentUploadLinks,
+  resolveDisplayableApiErrorMessage,
+  upsertDriverOnboarding,
+  type DriverDocumentUploadLinksResponse,
+} from '@orbi/api';
+import type { ApiPricingCity } from '@orbi/domain';
 import type { OrbiTheme } from '@orbi/ui';
 import { OrbiButton, OrbiScreen, OrbiStatusBanner, OrbiSurface, safeHaptics, useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
 import { restoreDriverSession } from '../lib/auth';
@@ -54,7 +60,58 @@ const CITIES = [
   { id: 'KOUDOUGOU', label: 'Koudougou' },
   { id: 'BANFORA', label: 'Banfora' },
   { id: 'OUAHIGOUYA', label: 'Ouahigouya' },
-];
+] satisfies Array<{ id: ApiPricingCity; label: string }>;
+
+const documentDescriptors = [
+  {
+    key: 'identity',
+    type: 'IDENTITY_DOCUMENT',
+    label: "Pièce d'identité nationale",
+    desc: 'CNI ou passeport valide',
+    placeholder: 'piece-identite.pdf',
+  },
+  {
+    key: 'license',
+    type: 'DRIVER_LICENSE',
+    label: 'Permis de conduire',
+    desc: 'Catégorie A ou B selon le véhicule',
+    placeholder: 'permis.pdf',
+  },
+  {
+    key: 'registration',
+    type: 'VEHICLE_REGISTRATION',
+    label: 'Carte grise',
+    desc: 'Document du véhicule',
+    placeholder: 'carte-grise.pdf',
+  },
+  {
+    key: 'insurance',
+    type: 'INSURANCE_PROOF',
+    label: "Attestation d'assurance",
+    desc: 'En cours de validité',
+    placeholder: 'assurance.pdf',
+  },
+  {
+    key: 'selfie',
+    type: 'SELFIE_VERIFICATION',
+    label: 'Photo de vérification',
+    desc: 'Selfie clair du chauffeur',
+    placeholder: 'selfie.jpg',
+  },
+] as const;
+
+type DocumentType = (typeof documentDescriptors)[number]['type'];
+type DriverDocumentLink = DriverDocumentUploadLinksResponse['links'][number];
+
+function inferMimeType(fileName: string) {
+  const normalized = fileName.trim().toLowerCase();
+
+  if (normalized.endsWith('.pdf')) return 'application/pdf';
+  if (normalized.endsWith('.png')) return 'image/png';
+  if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg')) return 'image/jpeg';
+
+  return 'application/octet-stream';
+}
 
 // ── Progress bar ───────────────────────────────────────────────────────────────
 
@@ -157,17 +214,24 @@ export default function DriverOnboardingScreen() {
   // Step 3: Personal info
   const [phoneNumber, setPhoneNumber] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
-  const [selectedCity, setSelectedCity] = useState('OUAGADOUGOU');
+  const [selectedCity, setSelectedCity] = useState<ApiPricingCity>('OUAGADOUGOU');
 
-  // Step 4: Documents checklist
-  const [docs, setDocs] = useState({
-    identity: false,
-    license: false,
-    registration: false,
-    insurance: false,
+  // Step 4: Documents
+  const [documentFileNames, setDocumentFileNames] = useState<
+    Record<DocumentType, string>
+  >({
+    IDENTITY_DOCUMENT: '',
+    DRIVER_LICENSE: '',
+    VEHICLE_REGISTRATION: '',
+    INSURANCE_PROOF: '',
+    SELFIE_VERIFICATION: '',
   });
+  const [preparedDocumentLinks, setPreparedDocumentLinks] = useState<
+    Partial<Record<DocumentType, DriverDocumentLink>>
+  >({});
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreparingDocuments, setIsPreparingDocuments] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -216,6 +280,65 @@ export default function DriverOnboardingScreen() {
     setCurrentStep((s) => s - 1);
   }
 
+  function updateDocumentFileName(type: DocumentType, fileName: string) {
+    setDocumentFileNames((current) => ({
+      ...current,
+      [type]: fileName,
+    }));
+    setPreparedDocumentLinks({});
+  }
+
+  function validateDocuments() {
+    const missingDocument = documentDescriptors.find(
+      (document) => !documentFileNames[document.type].trim(),
+    );
+
+    if (missingDocument) {
+      return `Le justificatif ${missingDocument.label.toLowerCase()} est requis.`;
+    }
+
+    return null;
+  }
+
+  async function prepareDocuments(authClient: Awaited<ReturnType<typeof restoreDriverSession>>['authClient']) {
+    const validationError = validateDocuments();
+
+    if (validationError) {
+      setErrorMessage(validationError);
+      return null;
+    }
+
+    setIsPreparingDocuments(true);
+
+    try {
+      const response = await requestDriverDocumentUploadLinks(authClient, {
+        documents: documentDescriptors.map((document) => ({
+          type: document.type,
+          fileName: documentFileNames[document.type].trim(),
+          mimeType: inferMimeType(documentFileNames[document.type]),
+        })),
+      });
+      const links = Object.fromEntries(
+        documentDescriptors.map((document, index) => [
+          document.type,
+          response.links[index],
+        ]),
+      ) as Partial<Record<DocumentType, DriverDocumentLink>>;
+
+      setPreparedDocumentLinks(links);
+      return links;
+    } catch (error) {
+      setErrorMessage(
+        error instanceof TypeError
+          ? 'Connexion impossible. Vérifiez votre réseau.'
+          : resolveDisplayableApiErrorMessage(error, 'Les justificatifs ne peuvent pas être préparés.'),
+      );
+      return null;
+    } finally {
+      setIsPreparingDocuments(false);
+    }
+  }
+
   async function handleSubmit() {
     setErrorMessage('');
     setIsSubmitting(true);
@@ -224,19 +347,35 @@ export default function DriverOnboardingScreen() {
     try {
       const { authClient } = await restoreDriverSession();
       const isMoto = vehicleType === 'MOTORCYCLE';
+      const preparedLinks =
+        Object.keys(preparedDocumentLinks).length === documentDescriptors.length
+          ? preparedDocumentLinks
+          : await prepareDocuments(authClient);
+
+      if (!preparedLinks) {
+        return;
+      }
 
       await upsertDriverOnboarding(authClient, {
         licenseNumber: licenseNumber.trim().toUpperCase(),
         phoneNumber: phoneNumber.trim(),
-        city: selectedCity as any,
+        city: selectedCity,
         serviceRadiusKm: 15,
         documents: {
-          identityDocumentProvided: docs.identity,
-          driverLicenseProvided: docs.license,
-          vehicleRegistrationProvided: docs.registration,
-          insuranceProofProvided: docs.insurance,
-          selfieMatchProvided: false,
+          identityDocumentProvided: Boolean(documentFileNames.IDENTITY_DOCUMENT.trim()),
+          driverLicenseProvided: Boolean(documentFileNames.DRIVER_LICENSE.trim()),
+          vehicleRegistrationProvided: Boolean(documentFileNames.VEHICLE_REGISTRATION.trim()),
+          insuranceProofProvided: Boolean(documentFileNames.INSURANCE_PROOF.trim()),
+          selfieMatchProvided: Boolean(documentFileNames.SELFIE_VERIFICATION.trim()),
         },
+        documentArtifacts: documentDescriptors.map((document) => ({
+          type: document.type,
+          fileName: documentFileNames[document.type].trim(),
+          storageKey: preparedLinks[document.type]?.storageKey ?? '',
+          mimeType: inferMimeType(documentFileNames[document.type]),
+          expiresAt: preparedLinks[document.type]?.expiresAt,
+          uploadSource: 'driver-app-onboarding',
+        })),
         vehicles: [
           {
             plateNumber: plateNumber.trim().toUpperCase(),
@@ -493,37 +632,45 @@ export default function DriverOnboardingScreen() {
             {currentStep === 4 && (
               <StepContainer title="Documents requis" subtitle="Confirmez les documents disponibles. Ils seront vérifiés avant activation.">
 
-                {([
-                  { key: 'identity' as const, label: "Pièce d'identité nationale", desc: "CNI ou passeport valide" },
-                  { key: 'license' as const, label: "Permis de conduire", desc: "Catégorie A (moto) ou B (voiture)" },
-                  { key: 'registration' as const, label: "Carte grise", desc: "Document de propriété du véhicule" },
-                  { key: 'insurance' as const, label: "Attestation d'assurance", desc: "En cours de validité" },
-                ]).map((doc) => (
-                  <Pressable
-                    key={doc.key}
-                    onPress={() => {
-                      safeHaptics.impact('light');
-                      setDocs((prev) => ({ ...prev, [doc.key]: !prev[doc.key] }));
-                    }}
-                    style={[styles.docCard, docs[doc.key] && styles.docCardChecked]}
-                  >
-                    <View style={[styles.docCheck, docs[doc.key] && styles.docCheckFilled]}>
-                      {docs[doc.key] ? <CheckGlyph /> : null}
+                {documentDescriptors.map((doc) => {
+                  const isPrepared = Boolean(preparedDocumentLinks[doc.type]);
+
+                  return (
+                    <View
+                      key={doc.type}
+                      style={[styles.docCard, isPrepared && styles.docCardChecked]}
+                    >
+                      <View style={[styles.docCheck, isPrepared && styles.docCheckFilled]}>
+                        {isPrepared ? <CheckGlyph /> : null}
+                      </View>
+                      <View style={{ flex: 1, gap: 6 }}>
+                        <Text
+                          style={[styles.docLabel, isPrepared && { color: theme.colors.teal }]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {doc.label}
+                        </Text>
+                        <Text style={styles.docDesc} numberOfLines={1} ellipsizeMode="tail">
+                          {doc.desc}
+                        </Text>
+                        <TextInput
+                          value={documentFileNames[doc.type]}
+                          onChangeText={(value) => updateDocumentFileName(doc.type, value)}
+                          placeholder={doc.placeholder}
+                          placeholderTextColor={theme.colors.textMuted}
+                          style={styles.documentInput}
+                          autoCapitalize="none"
+                        />
+                        <Text style={styles.documentHint} numberOfLines={2}>
+                          {doc.type === 'SELFIE_VERIFICATION'
+                            ? 'JPG ou PNG, 3 MB maximum. Lien privé signé avant envoi.'
+                            : 'PDF, JPG ou PNG, 5 MB maximum. Lien privé signé avant envoi.'}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[styles.docLabel, docs[doc.key] && { color: theme.colors.teal }]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {doc.label}
-                      </Text>
-                      <Text style={styles.docDesc} numberOfLines={1} ellipsizeMode="tail">
-                        {doc.desc}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))}
+                  );
+                })}
 
                 {/* Summary card */}
                 <OrbiSurface style={styles.summaryCard}>
@@ -560,8 +707,8 @@ export default function DriverOnboardingScreen() {
           ) : (
             <OrbiButton
               onPress={() => void handleSubmit()}
-              disabled={isSubmitting}
-              loading={isSubmitting}
+              disabled={isSubmitting || isPreparingDocuments}
+              loading={isSubmitting || isPreparingDocuments}
               label="Envoyer le profil"
               tone="amber"
               style={styles.ctaBtn}
@@ -689,6 +836,23 @@ const makeStyles = (theme: OrbiTheme) => StyleSheet.create({
   docCheckFilled: { backgroundColor: '#111111', borderColor: '#111111' },
   docLabel: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_600SemiBold', color: '#111111' },
   docDesc: { fontSize: 12, color: '#6B6B6B', fontFamily: 'Inter_400Regular', marginTop: 2 },
+  documentInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    color: '#111111',
+  },
+  documentHint: {
+    fontSize: 11,
+    color: '#6B6B6B',
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 16,
+  },
 
   // Summary
   summaryCard: {

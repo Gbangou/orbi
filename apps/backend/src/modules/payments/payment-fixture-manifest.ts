@@ -16,6 +16,7 @@ export type PaymentFixtureExpectation = {
     | 'persisted_idempotent_replay'
     | 'ignored_unknown_reference'
     | 'ignored_amount_mismatch'
+    | 'ignored_out_of_order'
     | 'ignored_missing_reference';
   moneyMovement: PaymentFixtureMoneyMovement;
   paymentAttemptStatus:
@@ -29,11 +30,17 @@ export type PaymentFixtureExpectation = {
 
 export type PaymentWebhookFixtureManifestEntry = {
   id: string;
-  provider: 'FLUTTERWAVE' | 'CINETPAY';
+  provider: 'FLUTTERWAVE' | 'CINETPAY' | 'PAWAPAY';
   fileName: string;
   sourceKind: PaymentFixtureSourceKind;
   capturedAt: string | null;
-  eventFamily: 'charge' | 'refund' | 'unknown_reference';
+  eventFamily:
+    | 'charge'
+    | 'refund'
+    | 'pending'
+    | 'duplicate'
+    | 'late_event'
+    | 'unknown_reference';
   expected: PaymentFixtureExpectation;
   notes: string;
 };
@@ -99,6 +106,51 @@ export const paymentWebhookFixtureManifest: PaymentWebhookFixtureManifestEntry[]
       },
       notes:
         'Schema-compliant Flutterwave charge.failed webhook that marks an attempt as FAILED without moving any money. Replace with a sandbox_capture once sandbox credentials are available.',
+    },
+    {
+      id: 'pawapay-payment-pending-schema-compliant',
+      provider: 'PAWAPAY',
+      fileName: 'pawapay-payment-pending-webhook.json',
+      sourceKind: 'schema_compliant',
+      capturedAt: null,
+      eventFamily: 'pending',
+      expected: {
+        nextAction: 'persisted_and_reconciled',
+        moneyMovement: 'none',
+        paymentAttemptStatus: 'PENDING',
+      },
+      notes:
+        'Schema-compliant PawaPay pending deposit webhook. It must preserve the payment attempt as PENDING and never move wallet money.',
+    },
+    {
+      id: 'flutterwave-charge-completed-duplicate-schema-compliant',
+      provider: 'FLUTTERWAVE',
+      fileName: 'flutterwave-charge-completed-duplicate-webhook.json',
+      sourceKind: 'schema_compliant',
+      capturedAt: null,
+      eventFamily: 'duplicate',
+      expected: {
+        nextAction: 'persisted_idempotent_replay',
+        moneyMovement: 'none',
+        paymentAttemptStatus: 'SUCCEEDED',
+      },
+      notes:
+        'Schema-compliant duplicate Flutterwave success webhook using the same transaction and provider references as the successful fixture. Must be persisted but must not create a second ledger entry.',
+    },
+    {
+      id: 'flutterwave-charge-failed-late-schema-compliant',
+      provider: 'FLUTTERWAVE',
+      fileName: 'flutterwave-charge-failed-late-webhook.json',
+      sourceKind: 'schema_compliant',
+      capturedAt: null,
+      eventFamily: 'late_event',
+      expected: {
+        nextAction: 'ignored_out_of_order',
+        moneyMovement: 'none',
+        paymentAttemptStatus: 'SUCCEEDED',
+      },
+      notes:
+        'Schema-compliant late failed callback after a successful payment. It must be journaled as out-of-order and must never downgrade a confirmed attempt.',
     },
     {
       id: 'flutterwave-unknown-reference-schema-compliant',

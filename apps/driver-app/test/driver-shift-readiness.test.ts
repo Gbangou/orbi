@@ -108,4 +108,35 @@ describe('driver-shift-readiness', () => {
     expect(readiness.title).toBe('Reprise verrouillée');
     expect(readiness.tone).toBe('rose');
   });
+
+  it('does not suggest that a passenger pickup code is visible to the driver', () => {
+    const readiness = buildDriverShiftReadiness({
+      flow: buildFlow({
+        activeTrip: {
+          id: 'trip-1',
+          pickupAddress: 'Université Joseph Ki-Zerbo',
+          destinationAddress: 'Ouaga 2000',
+          status: 'DRIVER_ARRIVING',
+          amount: 2500,
+          currency: 'XOF',
+          counterpartyName: 'Awa Rider',
+          vehicleLabel: 'Yamaha Crypton',
+          pickupCode: '1234',
+          completedAt: null,
+          createdAt: '2026-04-19T08:00:00.000Z',
+        },
+        activeFlowState: 'TRIP:DRIVER_ARRIVING',
+        primaryStatusLabel: 'Chauffeur arrivé',
+        operationalStatus: 'BUSY',
+        availabilityLocked: true,
+      }),
+      fatigue: clearFatigue,
+    });
+
+    expect(readiness.description).toBe(
+      'Le meilleur prochain geste est de garder la route, le passager et le support visibles.',
+    );
+    expect(readiness.description).not.toContain('code');
+    expect(JSON.stringify(readiness)).not.toContain('1234');
+  });
 });

@@ -37,6 +37,10 @@ function createMobileJestConfig(rootDir) {
         __dirname,
         '../../../packages/domain/src/index.ts',
       ),
+      '^@orbi/i18n$': path.resolve(
+        __dirname,
+        '../../../packages/i18n/src/index.ts',
+      ),
       // Resolve .js imports to .ts files — needed since packages/api uses ESM-style imports
       '^(\\.{1,2}/.*)\\.js$': '$1',
     },

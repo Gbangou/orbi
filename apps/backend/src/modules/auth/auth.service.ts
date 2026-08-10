@@ -10,13 +10,16 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
   DEFAULT_WALLET_CURRENCY,
+  ACCESS_TOKEN_TTL_IN_MINUTES,
   PHONE_OTP_MAX_VERIFY_ATTEMPTS,
+  PHONE_OTP_MAX_ACTIVE_CODES_PER_PHONE,
   PHONE_OTP_TTL_IN_MINUTES,
-  SESSION_TTL_IN_DAYS,
+  REFRESH_TOKEN_TTL_IN_DAYS,
 } from './auth.constants';
 import {
   hashPassword,
   verifyPassword,
+  generateRefreshToken,
   generateSessionToken,
   hashSessionToken,
   generateOtpCode,
@@ -29,6 +32,7 @@ import { SignOutDto } from './dto/sign-out.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 import type { SendPhoneOtpDto } from './dto/send-phone-otp.dto';
 import type { VerifyPhoneOtpDto } from './dto/verify-phone-otp.dto';
+import type { RefreshSessionDto } from './dto/refresh-session.dto';
 import type { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
 import { serializeAuthenticatedUser, serializeSession } from './auth.presenter';
 import type { RequestAuthContext } from './auth.types';
@@ -100,6 +104,7 @@ export class AuthService {
     return {
       message: 'Account created successfully.',
       sessionToken: session.token,
+      refreshToken: session.refreshToken,
       user: serializeAuthenticatedUser(user),
       session: serializeSession(currentSession, true),
     };
@@ -178,7 +183,9 @@ export class AuthService {
         data: {
           userId: user.id,
           tokenHash: sessionSeed.tokenHash,
+          refreshTokenHash: sessionSeed.refreshTokenHash,
           expiresAt: sessionSeed.expiresAt,
+          refreshTokenExpiresAt: sessionSeed.refreshTokenExpiresAt,
           userAgent: sessionSeed.userAgent,
           ipAddress: sessionSeed.ipAddress,
         },
@@ -208,20 +215,42 @@ export class AuthService {
     return {
       message: 'Signed in successfully.',
       sessionToken: sessionSeed.token,
+      refreshToken: sessionSeed.refreshToken,
       user: serializeAuthenticatedUser({ ...user, lastLoginAt: now }),
       session: serializeSession(session, true),
       isNewDevice,
     };
   }
 
-  async sendPhoneOtp(payload: SendPhoneOtpDto) {
+  async sendPhoneOtp(
+    payload: SendPhoneOtpDto,
+    metadata: AuthRequestMetadata = {},
+  ) {
     const phoneNumber = this.normalizePhoneNumber(payload.phoneNumber);
     const code = generateOtpCode();
+    const role = payload.role as UserRole;
+    const now = new Date();
+
+    const activeOtpCount = await this.prisma.phoneOtp.count({
+      where: {
+        phoneNumber,
+        role,
+        consumedAt: null,
+        expiresAt: { gt: now },
+      },
+    });
+
+    if (activeOtpCount >= PHONE_OTP_MAX_ACTIVE_CODES_PER_PHONE) {
+      return {
+        message: 'A verification code has been sent by SMS.',
+        expiresInMinutes: PHONE_OTP_TTL_IN_MINUTES,
+      };
+    }
 
     await this.prisma.phoneOtp.create({
       data: {
         phoneNumber,
-        role: payload.role as UserRole,
+        role,
         codeHash: hashOtpCode(code),
         expiresAt: new Date(Date.now() + PHONE_OTP_TTL_IN_MINUTES * 60_000),
       },
@@ -305,7 +334,9 @@ export class AuthService {
           sessions: {
             create: {
               tokenHash: sessionSeed.tokenHash,
+              refreshTokenHash: sessionSeed.refreshTokenHash,
               expiresAt: sessionSeed.expiresAt,
+              refreshTokenExpiresAt: sessionSeed.refreshTokenExpiresAt,
               userAgent: sessionSeed.userAgent,
               ipAddress: sessionSeed.ipAddress,
             },
@@ -323,6 +354,7 @@ export class AuthService {
       return {
         message: 'Account created successfully.',
         sessionToken: sessionSeed.token,
+        refreshToken: sessionSeed.refreshToken,
         user: serializeAuthenticatedUser(user),
         session: serializeSession(user.sessions[0], true),
       };
@@ -348,7 +380,9 @@ export class AuthService {
         data: {
           userId: existingUser.id,
           tokenHash: sessionSeed.tokenHash,
+          refreshTokenHash: sessionSeed.refreshTokenHash,
           expiresAt: sessionSeed.expiresAt,
+          refreshTokenExpiresAt: sessionSeed.refreshTokenExpiresAt,
           userAgent: sessionSeed.userAgent,
           ipAddress: sessionSeed.ipAddress,
         },
@@ -373,6 +407,7 @@ export class AuthService {
     return {
       message: 'Signed in successfully.',
       sessionToken: sessionSeed.token,
+      refreshToken: sessionSeed.refreshToken,
       user: serializeAuthenticatedUser({
         ...existingUser,
         isPhoneVerified: true,
@@ -411,6 +446,24 @@ export class AuthService {
   }
 
   async signOut(auth: RequestAuthContext, payload: SignOutDto = {}) {
+    if (payload.allDevices) {
+      const now = new Date();
+      await this.prisma.userSession.updateMany({
+        where: { userId: auth.user.id, revokedAt: null },
+        data: { revokedAt: now, refreshRevokedAt: now },
+      });
+
+      await this.logAuthEvent(auth.user.id, 'SIGN_OUT_ALL', {
+        ipAddress: auth.session.ipAddress ?? undefined,
+        userAgent: auth.session.userAgent ?? undefined,
+      });
+
+      return {
+        message: 'All sessions revoked successfully.',
+        revokedSessionId: auth.session.id,
+      };
+    }
+
     const targetSessionId = payload.sessionId ?? auth.session.id;
 
     const session = await this.prisma.userSession.findFirst({
@@ -429,7 +482,7 @@ export class AuthService {
 
     await this.prisma.userSession.update({
       where: { id: session.id },
-      data: { revokedAt: new Date() },
+      data: { revokedAt: new Date(), refreshRevokedAt: new Date() },
     });
 
     const isCurrentDriverSession =
@@ -468,6 +521,81 @@ export class AuthService {
     return {
       message: 'Session revoked successfully.',
       revokedSessionId: session.id,
+    };
+  }
+
+  async refreshSession(
+    payload: RefreshSessionDto,
+    metadata: AuthRequestMetadata = {},
+  ) {
+    const refreshTokenHash = hashSessionToken(payload.refreshToken);
+    const session = await this.prisma.userSession.findUnique({
+      where: { refreshTokenHash },
+      include: {
+        user: {
+          include: {
+            riderProfile: true,
+            driverProfile: true,
+          },
+        },
+      },
+    });
+    const now = new Date();
+
+    if (!session) {
+      throw new UnauthorizedException('Your session is invalid or has expired.');
+    }
+
+    if (
+      session.revokedAt ||
+      session.refreshRevokedAt ||
+      session.refreshReusedAt ||
+      !session.refreshTokenExpiresAt ||
+      session.refreshTokenExpiresAt <= now
+    ) {
+      await this.prisma.userSession.update({
+        where: { id: session.id },
+        data: { refreshReusedAt: now },
+      });
+      await this.prisma.userSession.updateMany({
+        where: { userId: session.userId, revokedAt: null },
+        data: { revokedAt: now, refreshRevokedAt: now },
+      });
+      await this.logAuthEvent(session.userId, 'REFRESH_REUSE_DETECTED', metadata);
+      throw new UnauthorizedException('Your session is invalid or has expired.');
+    }
+
+    if (!session.user.isActive) {
+      throw new UnauthorizedException('This account is currently inactive.');
+    }
+
+    const nextSeed = this.createSessionSeed(metadata);
+    const [nextSession] = await this.prisma.$transaction([
+      this.prisma.userSession.create({
+        data: {
+          userId: session.userId,
+          tokenHash: nextSeed.tokenHash,
+          refreshTokenHash: nextSeed.refreshTokenHash,
+          expiresAt: nextSeed.expiresAt,
+          refreshTokenExpiresAt: nextSeed.refreshTokenExpiresAt,
+          userAgent: nextSeed.userAgent,
+          ipAddress: nextSeed.ipAddress,
+        },
+      }),
+      this.prisma.userSession.update({
+        where: { id: session.id },
+        data: { revokedAt: now, refreshRevokedAt: now },
+      }),
+    ]);
+
+    await this.logAuthEvent(session.userId, 'SESSION_REFRESHED', metadata);
+
+    return {
+      message: 'Session refreshed successfully.',
+      sessionToken: nextSeed.token,
+      refreshToken: nextSeed.refreshToken,
+      user: serializeAuthenticatedUser(session.user),
+      session: serializeSession(nextSession, true),
     };
   }
 
@@ -997,6 +1125,9 @@ export class AuthService {
       | 'SIGN_IN_ROLE_MISMATCH'
       | 'SIGN_UP'
       | 'SIGN_OUT'
+      | 'SIGN_OUT_ALL'
+      | 'SESSION_REFRESHED'
+      | 'REFRESH_REUSE_DETECTED'
       | 'NEW_DEVICE_SIGN_IN'
       | 'DATA_EXPORT',
     metadata: AuthRequestMetadata = {},
@@ -1042,9 +1173,16 @@ export class AuthService {
     });
   }
 
-  private createSessionExpiryDate() {
+  private createAccessTokenExpiryDate() {
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + SESSION_TTL_IN_DAYS);
+    expiresAt.setMinutes(expiresAt.getMinutes() + ACCESS_TOKEN_TTL_IN_MINUTES);
+
+    return expiresAt;
+  }
+
+  private createRefreshTokenExpiryDate() {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_IN_DAYS);
 
     return expiresAt;
   }
@@ -1072,7 +1210,7 @@ export class AuthService {
       // Aucune passerelle SMS configurée (pilote) : le code est journalisé
       // pour permettre une vérification manuelle en attendant l'intégration.
       this.logger.warn(
-        `[OTP] No SMS gateway configured — code for ${phoneNumber}: ${code}`,
+        `[OTP] No SMS gateway configured for ${phoneNumber}. Code generated but not logged.`,
       );
       return;
     }
@@ -1099,11 +1237,15 @@ export class AuthService {
 
   private createSessionSeed(metadata: AuthRequestMetadata) {
     const token = generateSessionToken();
+    const refreshToken = generateRefreshToken();
 
     return {
       token,
+      refreshToken,
       tokenHash: hashSessionToken(token),
-      expiresAt: this.createSessionExpiryDate(),
+      refreshTokenHash: hashSessionToken(refreshToken),
+      expiresAt: this.createAccessTokenExpiryDate(),
+      refreshTokenExpiresAt: this.createRefreshTokenExpiryDate(),
       userAgent: metadata.userAgent,
       ipAddress: metadata.ipAddress,
     };
@@ -1168,7 +1310,9 @@ export class AuthService {
       sessions: {
         create: {
           tokenHash: session.tokenHash,
+          refreshTokenHash: session.refreshTokenHash,
           expiresAt: session.expiresAt,
+          refreshTokenExpiresAt: session.refreshTokenExpiresAt,
           userAgent: session.userAgent,
           ipAddress: session.ipAddress,
         },

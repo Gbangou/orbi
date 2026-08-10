@@ -1,14 +1,12 @@
-import { router } from 'expo-router';
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import type { OrbiTheme } from '@orbi/ui';
 import { useOrbiTheme } from '@orbi/ui/native';
-import { hasPersistedRiderSession } from '../lib/auth';
 import { OrbiLogo } from '../lib/orbi-logo';
 
 /**
- * Splash screen propre — redirige vers /home ou /auth selon la session.
- * Visible ~400ms maximum. Logo animé, aucun widget développeur.
+ * Splash screen propre. La redirection est centralisee dans le root layout
+ * pour eviter deux decisions de navigation concurrentes.
  */
 export default function IndexScreen() {
   const theme = useOrbiTheme();
@@ -17,33 +15,10 @@ export default function IndexScreen() {
   const scale = useRef(new Animated.Value(0.88)).current;
 
   useEffect(() => {
-    // Animation d'entrée du logo
     Animated.parallel([
       Animated.timing(fadeIn, { toValue: 1, duration: 350, useNativeDriver: false }),
       Animated.spring(scale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: false }),
     ]).start();
-
-    let isMounted = true;
-
-    async function handoff() {
-      let hasSession = false;
-
-      try {
-        hasSession = await hasPersistedRiderSession();
-      } catch {
-        hasSession = false;
-      }
-
-      if (!isMounted) return;
-      // Transition fluide — laisse l'animation se terminer
-      setTimeout(() => {
-        router.replace(hasSession ? '/home' : '/auth');
-      }, 380);
-    }
-
-    void handoff();
-
-    return () => { isMounted = false; };
   }, []);
 
   return (

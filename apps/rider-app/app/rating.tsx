@@ -31,6 +31,11 @@ const STAR_LABELS = ['', 'Mauvais', 'Passable', 'Correct', 'Bien', 'Excellent'];
 
 const STAR_A11Y = ['', '1 étoile', '2 étoiles', '3 étoiles', '4 étoiles', '5 étoiles'];
 
+const ratingStarEasing =
+  typeof Easing?.out === 'function' && typeof Easing?.ease === 'function'
+    ? Easing.out(Easing.ease)
+    : undefined;
+
 function StarIcon({
   filled,
   index,
@@ -111,7 +116,7 @@ export default function RatingScreen() {
       Animated.timing(anim, {
         toValue: 1,
         duration: 280,
-        easing: Easing.out(Easing.back(2)),
+        easing: ratingStarEasing,
         useNativeDriver: false,
       }).start();
     },
@@ -140,7 +145,7 @@ export default function RatingScreen() {
     submissionLockRef.current = true;
     setStatus('submitting');
     setStatusMessage('Envoi de votre évaluation...');
-    Keyboard.dismiss();
+    Keyboard?.dismiss?.();
 
     try {
       const { authClient } = await restoreRiderSession();

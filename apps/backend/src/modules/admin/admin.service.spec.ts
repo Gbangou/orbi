@@ -497,6 +497,7 @@ describe('AdminService', () => {
           {
             id: 'event-2',
             eventType: 'PICKUP_CODE_ISSUED',
+            payload: { pickupCode: '4821' },
             createdAt: new Date('2026-04-17T08:02:00.000Z'),
           },
           {
@@ -585,6 +586,7 @@ describe('AdminService', () => {
       }),
     );
     expect(result.trips[0].lastEvent?.label).toBe('Position route recue');
+    expect(JSON.stringify(result.trips[0])).not.toContain('4821');
     expect(result.summary.payments.refunded).toBe(1);
     expect(result.summary.payments.refundPending).toBe(1);
     expect(result.summary.payments.reconciled).toBe(3);

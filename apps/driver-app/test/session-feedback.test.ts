@@ -53,6 +53,8 @@ describe('resolveDriverAppError', () => {
 
     expect(feedback).toMatchObject({
       code: 'MOB-AUTH-SESSION',
+      action: 'reconnect',
+      actionLabel: 'Se reconnecter',
       shouldClearSessionToken: true,
       reportable: true,
     });
@@ -73,6 +75,8 @@ describe('resolveDriverAppError', () => {
 
     expect(feedback).toMatchObject({
       code: 'MOB-NETWORK-OFFLINE',
+      action: 'retry',
+      actionLabel: 'Reessayer',
       reportable: false,
       shouldClearSessionToken: false,
     });
@@ -103,5 +107,23 @@ describe('resolveDriverAppError', () => {
 
     expect(feedback.message).toBe("Votre disponibilite n'a pas pu etre mise a jour.");
     expect(feedback.message).not.toMatch(/server|token|trace/i);
+    expect(feedback.logCode).toBe('MOB-GENERIC-API');
+  });
+
+  it('translates denied location permission into a clear correction action', async () => {
+    const feedback = await resolveDriverAppError(
+      new Error('location denied permission enum=LOCATION_DENIED'),
+      { surface: 'driver-availability' },
+    );
+
+    expect(feedback).toMatchObject({
+      action: 'edit',
+      actionLabel: 'Modifier',
+      logCode: 'MOB-GENERIC-API',
+    });
+    expect(feedback.message).toBe(
+      "Localisation necessaire. Autorisez-la ou saisissez l'adresse manuellement.",
+    );
+    expect(feedback.message).not.toMatch(/enum|LOCATION_DENIED|permission/i);
   });
 });

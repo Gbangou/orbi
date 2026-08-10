@@ -31,28 +31,28 @@ describe('rider display format helpers', () => {
 
   it('degrades dirty rider display numbers without throwing', () => {
     expect(formatRiderRatingLabel(Number.NaN)).toBeNull();
-    expect(formatRiderRatingLabel('sale', { fallback: 'A confirmer' })).toBe('A confirmer');
+    expect(formatRiderRatingLabel('sale', { fallback: 'À confirmer' })).toBe('À confirmer');
     expect(formatRiderDistanceKm(undefined, 'Distance indisponible')).toBe(
       'Distance indisponible',
     );
     expect(estimateRiderPickupEtaMinutes('sale')).toBeNull();
-    expect(formatRiderMoneyAmount('sale')).toBe('Montant a confirmer');
+    expect(formatRiderMoneyAmount('sale')).toBe('Montant à confirmer');
     expect(resolveRiderMoneyAmount(-1)).toBeNull();
   });
 
   it('keeps payment and receipt backend statuses out of rider-facing copy', () => {
-    expect(formatRiderPaymentMethodLabel('CASH')).toBe('Especes');
+    expect(formatRiderPaymentMethodLabel('CASH')).toBe('Espèces');
     expect(formatRiderPaymentMethodLabel('WALLET')).toBe('Portefeuille Orbi');
     expect(formatRiderPaymentMethodLabel('MOBILE_MONEY')).toBe('Mobile Money');
     expect(formatRiderPaymentMethodLabel('mobile-money')).toBe('Mobile Money');
-    expect(formatRiderReceiptStatus('SUCCEEDED')).toBe('Regle');
-    expect(formatRiderReceiptStatus('PROCESSING')).toBe('En verification');
-    expect(formatRiderReceiptStatus('FAILED')).toBe('A reprendre');
-    expect(formatRiderReceiptStatus('UNKNOWN_BACKEND_STATUS')).toBe('A finaliser');
+    expect(formatRiderReceiptStatus('SUCCEEDED')).toBe('Réglé');
+    expect(formatRiderReceiptStatus('PROCESSING')).toBe('En vérification');
+    expect(formatRiderReceiptStatus('FAILED')).toBe('À reprendre');
+    expect(formatRiderReceiptStatus('UNKNOWN_BACKEND_STATUS')).toBe('À finaliser');
     expect(formatRiderReceiptProvider('ORANGE_MONEY')).toBe('Orange Money');
     expect(formatRiderReceiptProvider('RAW_GATEWAY')).toBe('Paiement');
     expect(formatRiderReceiptReference('abc123456789xyz')).toBe('ABC123456789');
-    expect(formatRiderReceiptReference(null)).toBe('Reference a confirmer');
+    expect(formatRiderReceiptReference(null)).toBe('Référence à confirmer');
   });
 
   it('calculates rider promo money without trusting dirty API values', () => {

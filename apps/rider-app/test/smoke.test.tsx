@@ -22,6 +22,7 @@ import {
   recordTripRoutePositionWithApi,
   reportTripIncidentWithApi,
   riderRideOptions,
+  rateTripWithApi,
   triggerTripSafetySosWithApi,
   updateTrustedContactEntryWithApi,
   updateSavedPlaceWithApi,
@@ -42,8 +43,10 @@ import RiderAuthScreen from '../app/auth';
 import RiderHomeScreen from '../app/(tabs)/home';
 import BookingScreen from '../app/book';
 import ReceiptScreen from '../app/receipt';
+import RatingScreen from '../app/rating';
 import TripsScreen from '../app/(tabs)/trips';
 import { PlaceSearch } from '../lib/place-search';
+import { TripMapView } from '../lib/trip-map-view';
 import {
   collectText,
   expectText,
@@ -155,6 +158,7 @@ jest.mock('@orbi/api', () => {
     fetchTripDetail: jest.fn(),
     recordTripRoutePositionWithApi: jest.fn(),
     reportTripIncidentWithApi: jest.fn(),
+    rateTripWithApi: jest.fn(),
     triggerTripSafetySosWithApi: jest.fn(),
     createRideRequestWithApi: jest.fn(),
     createSupportTicketWithApi: jest.fn(),
@@ -189,6 +193,7 @@ const mockedFetchTripDetail = jest.mocked(fetchTripDetail);
 const mockedGetMySupportTicketsWithApi = jest.mocked(getMySupportTicketsWithApi);
 const mockedRecordTripRoutePositionWithApi = jest.mocked(recordTripRoutePositionWithApi);
 const mockedReportTripIncidentWithApi = jest.mocked(reportTripIncidentWithApi);
+const mockedRateTripWithApi = jest.mocked(rateTripWithApi);
 const mockedTriggerTripSafetySosWithApi = jest.mocked(triggerTripSafetySosWithApi);
 const mockedCreateRideRequestWithApi = jest.mocked(createRideRequestWithApi);
 const mockedCreateSupportTicketWithApi = jest.mocked(createSupportTicketWithApi);
@@ -872,6 +877,126 @@ describe('rider smoke flows', () => {
     expectNoText(renderer, 'Recherche indisponible. Verifiez la connexion.');
   });
 
+  it('shows recent destinations, favorites and landmarks in booking search', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue({
+      ...buildRiderTrips(),
+      recentTrips: [
+        {
+          id: 'recent-ouaga-2000',
+          pickupAddress: 'Tampuy',
+          destinationAddress: 'Ouaga 2000, Ouagadougou',
+          status: 'COMPLETED',
+          amount: 2300,
+          currency: 'XOF',
+          createdAt: '2026-04-19T08:00:00.000Z',
+        },
+      ],
+    } as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+
+    expectText(renderer, 'Favoris et repères');
+    expectText(renderer, 'Récents, favoris et repères');
+    expectText(renderer, 'Maison');
+    expectText(renderer, 'Ouaga 2000');
+  });
+
+  it('accepts a manual destination when addresses are imperfect', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+    await changeInputByPlaceholder(
+      renderer,
+      'Où allez-vous ?',
+      'Pharmacie nuit secteur 17',
+    );
+    await pressByText(renderer, 'Utiliser cette adresse');
+
+    expectText(renderer, 'Pharmacie nuit secteur 17');
+    expectNoText(renderer, 'Recherche indisponible');
+    expectNoText(renderer, '12.3');
+  });
+
+  it('uses current position for pickup without exposing raw coordinates', async () => {
+    riderPositionState.latestPosition = {
+      latitude: 12.365,
+      longitude: -1.533,
+      accuracyMeters: 18,
+    };
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+    await pressByLabel(renderer, 'Utiliser ma position actuelle comme départ');
+
+    expectText(renderer, 'Ma position');
+    expectNoText(renderer, '12.365');
+    expectNoText(renderer, '-1.533');
+  });
+
+  it('lets the rider correct pickup and destination from the map', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+
+    await pressByLabel(renderer, 'Corriger le départ sur la carte');
+    const map = renderer.root.findByType(TripMapView);
+    await invokeInAct(() => {
+      map.props.onSelectCoordinate({ latitude: 12.371, longitude: -1.522 });
+    });
+
+    expectText(renderer, 'Départ choisi sur la carte');
+    expectNoText(renderer, '12.371');
+
+    await pressByLabel(renderer, 'Corriger la destination sur la carte');
+    const updatedMap = renderer.root.findByType(TripMapView);
+    await invokeInAct(() => {
+      updatedMap.props.onSelectCoordinate({ latitude: 12.334, longitude: -1.537 });
+    });
+
+    expectText(renderer, 'Destination choisie sur la carte');
+    expectNoText(renderer, '-1.537');
+  });
+
   it('shows a compact upfront fare summary before booking confirmation', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
     mockedFetchRideOptionsPreview.mockResolvedValue({
@@ -887,10 +1012,128 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<BookingScreen />);
     await flushMicrotasks();
 
-    expectText(renderer, 'Prix estime');
+    expectText(renderer, 'Devis estimé');
     expectText(renderer, 'Moto');
     expectNoText(renderer, 'Prix transparent');
     expectNoText(renderer, 'Equilibre course');
+  });
+
+  it('blocks confirmation when the displayed quote has expired', async () => {
+    const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(1_000);
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+    await selectBookingDestination(renderer);
+    await flushMicrotasks();
+
+    dateSpy.mockReturnValue(92_000);
+    await pressByLabel(renderer, 'booking-cta');
+    await flushMicrotasks();
+
+    expect(mockedCreateRideRequestWithApi).not.toHaveBeenCalled();
+    expectText(renderer, 'Le devis a expiré. Vérifiez le nouveau prix avant de confirmer.');
+    dateSpy.mockRestore();
+  });
+
+  it('requires a new confirmation when the backend quote amount changes', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+    await selectBookingDestination(renderer);
+    await flushMicrotasks();
+
+    mockedFetchRideOptionsPreview.mockResolvedValueOnce({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: [
+        {
+          ...riderRideOptions[0],
+          fare: riderRideOptions[0].fare + 100,
+        },
+        riderRideOptions[1],
+      ],
+    } as never);
+
+    await pressByLabel(renderer, 'booking-cta');
+    await flushMicrotasks();
+
+    expect(mockedCreateRideRequestWithApi).not.toHaveBeenCalled();
+    expectText(renderer, 'Le prix ou le délai a changé. Vérifiez le nouveau devis avant de confirmer.');
+  });
+
+  it('shows when no vehicle category is available for the quote', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: [],
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+    await selectBookingDestination(renderer);
+    await flushMicrotasks();
+    await pressByLabel(renderer, 'booking-cta');
+
+    expectText(renderer, 'Aucun service disponible');
+    expect(mockedCreateRideRequestWithApi).not.toHaveBeenCalled();
+  });
+
+  it('keeps the booking pending when quote confirmation loses the network', async () => {
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    mockedFetchRideOptionsPreview.mockResolvedValue({
+      route: {
+        distanceKm: 5.8,
+        durationMinutes: 16,
+      },
+      options: riderRideOptions.slice(0, 2),
+    } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderTrips() as never);
+    mockedFetchRiderProfile.mockResolvedValue(buildRiderProfile() as never);
+    mockedResolveRiderAppError.mockResolvedValueOnce({
+      message: 'Connexion lente. Vérifiez le réseau puis réessayez.',
+      shouldClearSessionToken: false,
+    });
+
+    const renderer = await renderScreen(<BookingScreen />);
+    await flushMicrotasks();
+    await selectBookingDestination(renderer);
+    await flushMicrotasks();
+
+    mockedFetchRideOptionsPreview.mockRejectedValueOnce(
+      new TypeError('Network request failed'),
+    );
+    await pressByLabel(renderer, 'booking-cta');
+    await flushMicrotasks();
+
+    expect(mockedCreateRideRequestWithApi).not.toHaveBeenCalled();
+    expectText(renderer, 'Connexion lente. Vérifiez le réseau puis réessayez.');
   });
 
   it('uses the selected Mobile Money phone number when creating checkout', async () => {
@@ -1513,7 +1756,7 @@ describe('rider smoke flows', () => {
     await pressByLabel(renderer, 'activity-refresh');
     await flushMicrotasks();
 
-    expectText(renderer, 'Chauffeur assigné');
+    expectText(renderer, 'Chauffeur trouvé');
 
     await flushMicrotasks();
     await invokeInAct(async () => {
@@ -1522,6 +1765,7 @@ describe('rider smoke flows', () => {
     await flushMicrotasks();
 
     // After realtime update: trip detail should reflect new state
+    expectText(renderer, 'Chauffeur en approche');
     expectText(renderer, 'Issa Driver');
     expectText(renderer, 'Plaque');
     expectText(renderer, '11 AA 1234');
@@ -1529,9 +1773,11 @@ describe('rider smoke flows', () => {
     expectText(renderer, 'rouge Yamaha Crypton');
     expectText(renderer, 'Paiement');
     expectText(renderer, 'Mobile Money');
+    expectText(renderer, 'Code sécurisé');
+    expectText(renderer, '1234');
     expectText(
       renderer,
-      'Vérifiez le nom, la plaque et le véhicule. Montez seulement si tout correspond.',
+      'Donnez ce code uniquement après avoir vérifié le nom, la plaque et le véhicule. Montez seulement si tout correspond.',
     );
   });
 
@@ -1544,7 +1790,7 @@ describe('rider smoke flows', () => {
     await pressByLabel(renderer, 'activity-refresh');
     await flushMicrotasks();
 
-    expectText(renderer, 'Chauffeur en route');
+    expectText(renderer, 'Chauffeur en approche');
     expectText(renderer, 'Issa Driver');
   });
 
@@ -1649,6 +1895,13 @@ describe('rider smoke flows', () => {
     const renderer = await renderScreen(<ActivityScreen />);
     await pressByLabel(renderer, 'activity-refresh');
     await flushMicrotasks();
+    expectText(renderer, 'Après confirmation');
+    expectText(renderer, 'Demande envoyée');
+    expectText(renderer, "Recherche d'un chauffeur");
+    expectText(
+      renderer,
+      "2 200 F CFA estimés. Annulation gratuite tant qu'aucun chauffeur n'est affecté.",
+    );
     await pressByText(renderer, 'Annuler');
 
     expect(mockedCancelRideRequestWithApi).toHaveBeenCalledWith(
@@ -1721,35 +1974,9 @@ describe('rider smoke flows', () => {
     );
   });
 
-  it('stops an in-progress rider trip and opens the receipt with the adjusted fare', async () => {
+  it('does not let the rider finish an in-progress trip from the client', async () => {
     mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
-    mockedFetchMyTrips
-      .mockResolvedValueOnce(buildRiderRealtimeHistory('IN_PROGRESS') as never)
-      .mockResolvedValueOnce({
-        role: 'RIDER',
-        stats: {
-          activeTrips: 0,
-          completedTrips: 5,
-          cancelledTrips: 0,
-          totalAmount: 20500,
-          currency: 'XOF',
-        },
-        pendingRequests: [],
-        recentTrips: [
-          {
-            id: 'trip-rider-1',
-            pickupAddress: 'Universite Joseph Ki-Zerbo',
-            destinationAddress: 'Ouaga 2000',
-            status: 'COMPLETED',
-            amount: 2100,
-            currency: 'XOF',
-            counterpartyName: 'Issa Driver',
-            vehicleLabel: 'Yamaha Crypton',
-            completedAt: '2026-04-19T08:18:00.000Z',
-            createdAt: '2026-04-19T08:00:00.000Z',
-          },
-        ],
-      } as never);
+    mockedFetchMyTrips.mockResolvedValue(buildRiderRealtimeHistory('IN_PROGRESS') as never);
     mockedFetchTripDetail.mockResolvedValue(
       {
         ...buildTripDetail(['timeline-1'], ['Course demarree']),
@@ -1759,37 +1986,21 @@ describe('rider smoke flows', () => {
         },
       } as never,
     );
-    mockedUpdateTripStatusWithApi.mockResolvedValue({
-      trip: {
-        id: 'trip-rider-1',
-        status: 'COMPLETED',
-        actualFare: 2100,
-      },
-    } as never);
 
     const renderer = await renderScreen(<ActivityScreen />);
     await pressByLabel(renderer, 'activity-refresh');
     await flushMicrotasks();
-    await pressByText(renderer, 'Terminer ici');
-    const stopOptions = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] as
-      | Array<{ text: string; onPress?: () => void }>
-      | undefined;
-    await invokeInAct(async () => {
-      stopOptions?.find((option) => option.text === 'Arreter et voir le montant')?.onPress?.();
-      await flushMicrotasks();
-    });
 
-    expect(mockedUpdateTripStatusWithApi).toHaveBeenCalledWith(
-      { token: 'rider-auth-client' },
+    expectText(renderer, 'Trajet en cours');
+    expectText(renderer, 'Arrivée estimée');
+    expectNoText(renderer, 'Terminer ici');
+    expectNoText(renderer, 'Arreter et voir le montant');
+    expect(mockedUpdateTripStatusWithApi).not.toHaveBeenCalledWith(
+      expect.anything(),
       'trip-rider-1',
       'COMPLETED',
-      'Arret demande par le passager',
+      expect.anything(),
     );
-    expectText(renderer, 'Course terminee. Montant a payer: 2 100 F CFA.');
-    expect(router.replace).toHaveBeenCalledWith({
-      pathname: '/receipt',
-      params: { tripId: 'trip-rider-1' },
-    });
   });
 
   it('lets the rider finalize mobile money payment from receipt before rating', async () => {
@@ -1873,6 +2084,56 @@ describe('rider smoke flows', () => {
     );
     expectText(renderer, 'Paiement prêt. Confirmez la demande sur votre téléphone. Référence ORBI-PAYMENT.');
     expectText(renderer, 'Évaluer le trajet');
+  });
+
+  it('absorbs double taps while rating a completed trip', async () => {
+    const expoRouter = jest.requireMock('expo-router') as {
+      __setLocalSearchParams: (params: Record<string, unknown>) => void;
+    };
+    expoRouter.__setLocalSearchParams({
+      tripId: 'trip-rider-1',
+      driverName: 'Issa Driver',
+      fare: '2500',
+      destination: 'Ouaga 2000',
+    });
+
+    mockedRestoreRiderSession.mockResolvedValue(buildRiderSession() as never);
+    let resolveRating: (value: unknown) => void = () => {};
+    mockedRateTripWithApi.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRating = resolve;
+        }) as never,
+    );
+
+    const renderer = await renderScreen(<RatingScreen />);
+    await pressByLabel(renderer, '5 étoiles');
+    const submitButton = renderer.root.find(
+      (node: ReactTestInstance) =>
+        (node.type as unknown) === 'Pressable' &&
+        collectText(node).includes('Envoyer l’évaluation'),
+    );
+
+    await invokeInAct(() => {
+      submitButton.props.onPress?.();
+      submitButton.props.onPress?.();
+    });
+
+    expect(mockedRateTripWithApi).toHaveBeenCalledTimes(1);
+
+    resolveRating({
+      rating: {
+        id: 'rating-1',
+        tripId: 'trip-rider-1',
+        score: 5,
+        comment: null,
+        createdAt: '2026-04-19T08:45:00.000Z',
+      },
+      qualityReview: null,
+    });
+    await flushMicrotasks();
+
+    expectText(renderer, 'Merci !');
   });
 
   it('reports a rider incident from activity', async () => {

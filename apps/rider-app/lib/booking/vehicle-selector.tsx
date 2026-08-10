@@ -2,18 +2,14 @@
  * VehicleSelector — Sélecteur de service Orbi (Moto / Voiture / Confort)
  *
  * Composant pur extrait de book.tsx pour respecter le SRP.
- * Affiche les options de service en scroll horizontal avec icônes 3D,
- * surge badge, prix et ETA.
+ * Affiche les options de service avec icônes, prix backend et ETA.
  */
 import { memo, useMemo } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { type OrbiTheme } from '@orbi/ui';
 import { useOrbiTheme, VehicleIllustration } from '@orbi/ui/native';
-import type { RideOption, PromoValidationResponse } from '@orbi/api';
-import {
-  calculateRiderDiscountedFare,
-  formatRiderMoneyAmount,
-} from '../rider-display-format';
+import type { RideOption } from '@orbi/api';
+import { formatRiderMoneyAmount } from '../rider-display-format';
 
 function VehicleAvatar({
   isSelected, tier,
@@ -50,7 +46,6 @@ function VehicleAvatar({
 export interface VehicleSelectorProps {
   options: RideOption[];
   selectedOptionId: string;
-  promoValidation: PromoValidationResponse | null;
   isRefreshing: boolean;
   onSelect: (optionId: string) => void;
 }
@@ -58,7 +53,6 @@ export interface VehicleSelectorProps {
 export const VehicleSelector = memo(function VehicleSelector({
   options,
   selectedOptionId,
-  promoValidation,
   isRefreshing,
   onSelect,
 }: VehicleSelectorProps) {
@@ -87,15 +81,20 @@ export const VehicleSelector = memo(function VehicleSelector({
         {options.map((option) => {
           const { tone } = buildRideOptionVisual(option);
           const isSelected = option.id === (selectedOptionId || options[0]?.id);
-          const discountedFare = calculateRiderDiscountedFare({
-            fare: option.fare,
-            discountBps: promoValidation?.discountBps,
-          });
           const title = option.category === 'motorcycle' ? 'Moto' : option.title;
+          const availability =
+            option.marketplace?.availabilityLabel ??
+            (option.category === 'motorcycle' ? 'Moto proche si disponible' : 'Voiture proche si disponible');
+          const priceNote =
+            option.fareBreakdown?.priceWindow
+              ? 'Prix confirmé avant envoi'
+              : 'Peut changer si le trajet change';
 
           return (
             <Pressable
               key={option.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Choisir ${title}`}
               onPress={() => onSelect(option.id)}
               style={[styles.card, isSelected && styles.cardSelected]}
             >
@@ -108,12 +107,20 @@ export const VehicleSelector = memo(function VehicleSelector({
               <View style={styles.copy}>
                 <Text style={styles.name} numberOfLines={1}>{title}</Text>
                 <Text style={styles.eta} numberOfLines={1}>
-                  {option.etaMinutes} min{option.surgeActive ? ' · forte demande' : ''}
+                  Arrivée estimée: {option.etaMinutes} min
+                </Text>
+                <Text style={styles.availability} numberOfLines={1}>
+                  {option.surgeActive ? 'Forte demande incluse dans le devis' : availability}
                 </Text>
               </View>
-              <Text style={[styles.fare, isSelected && styles.fareSelected]} numberOfLines={1}>
-                {formatRiderMoneyAmount(discountedFare)}
-              </Text>
+              <View style={styles.priceColumn}>
+                <Text style={[styles.fare, isSelected && styles.fareSelected]} numberOfLines={1}>
+                  {formatRiderMoneyAmount(option.fare)}
+                </Text>
+                <Text style={styles.priceNote} numberOfLines={2}>
+                  {priceNote}
+                </Text>
+              </View>
             </Pressable>
           );
         })}
@@ -169,8 +176,11 @@ const makeStyles = (_theme: OrbiTheme) => StyleSheet.create({
   copy: { flex: 1, gap: 2, minWidth: 0 },
   name: { fontSize: 13, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111' },
   eta: { fontSize: 11, color: '#6B6B6B', fontFamily: 'Inter_400Regular' },
-  fare: { fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111', textAlign: 'right', maxWidth: 86 },
+  availability: { fontSize: 10, color: '#6B6B6B', fontFamily: 'Inter_400Regular' },
+  priceColumn: { width: 96, alignItems: 'flex-end', gap: 2 },
+  fare: { fontSize: 13, fontWeight: '800', fontFamily: 'Inter_700Bold', color: '#111111', textAlign: 'right', maxWidth: 96 },
   fareSelected: { color: '#111111' },
+  priceNote: { fontSize: 9, lineHeight: 11, color: '#6B6B6B', fontFamily: 'Inter_400Regular', textAlign: 'right' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 20 },
   loadingText: { fontSize: 14, color: '#6B6B6B', fontFamily: 'Inter_400Regular' },
   svgWrap: { width: 48, height: 34, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },

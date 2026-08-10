@@ -31,6 +31,7 @@ export type SignUpApiPayload = {
 export type AuthSessionResponse = {
   message: string;
   sessionToken: string;
+  refreshToken?: string;
   user: {
     id: string;
     email: string;
@@ -79,6 +80,11 @@ export type SessionStorageAdapter = {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;
   removeItem(key: string): Promise<void>;
+};
+
+type PersistedAuthTokens = {
+  sessionToken: string;
+  refreshToken?: string;
 };
 
 export type SignOutResponse = {
@@ -157,6 +163,51 @@ export async function fetchCurrentUser(client: OrbiApiClient) {
   return client.request<CurrentUserResponse>(apiRoutes.auth.me);
 }
 
+export async function refreshSessionWithApi(
+  client: OrbiApiClient,
+  refreshToken: string,
+) {
+  return client.request<AuthSessionResponse>(apiRoutes.auth.refresh, {
+    method: "POST",
+    body: { refreshToken },
+  });
+}
+
+function parsePersistedAuthTokens(value: string | null): PersistedAuthTokens | null {
+  if (!value) return null;
+
+  try {
+    const parsed = JSON.parse(value) as Partial<PersistedAuthTokens>;
+    if (typeof parsed.sessionToken === "string") {
+      return {
+        sessionToken: parsed.sessionToken,
+        refreshToken:
+          typeof parsed.refreshToken === "string"
+            ? parsed.refreshToken
+            : undefined,
+      };
+    }
+  } catch {
+    // Ancien format: la valeur stockée était directement le bearer token.
+  }
+
+  return { sessionToken: value };
+}
+
+async function persistAuthSession(
+  storage: SessionStorageAdapter,
+  storageKey: string,
+  session: Pick<AuthSessionResponse, "sessionToken" | "refreshToken">,
+) {
+  await storage.setItem(
+    storageKey,
+    JSON.stringify({
+      sessionToken: session.sessionToken,
+      refreshToken: session.refreshToken,
+    }),
+  );
+}
+
 export async function authenticateAndFetchCurrentUser(
   client: OrbiApiClient,
   payload: SignInPayload,
@@ -178,17 +229,18 @@ export async function restoreOrAuthenticateSession(
   storageKey: string,
   credentials: SignInPayload,
 ): Promise<AuthenticatedApiContext> {
-  const existingToken = await storage.getItem(storageKey);
+  const existingTokens = parsePersistedAuthTokens(await storage.getItem(storageKey));
 
-  if (existingToken) {
+  if (existingTokens) {
     try {
-      const authClient = client.withAuthToken(existingToken);
+      const authClient = client.withAuthToken(existingTokens.sessionToken);
       const me = await fetchCurrentUser(authClient);
 
       return {
         session: {
           message: "Restored existing session.",
-          sessionToken: existingToken,
+          sessionToken: existingTokens.sessionToken,
+          refreshToken: existingTokens.refreshToken,
           user: {
             id: me.user.id,
             email: me.user.email,
@@ -204,14 +256,25 @@ export async function restoreOrAuthenticateSession(
         me,
       };
     } catch (error) {
-      if (shouldForgetPersistedSession(error)) {
+      if (shouldForgetPersistedSession(error) && existingTokens.refreshToken) {
+        try {
+          const refreshed = await refreshSessionWithApi(client, existingTokens.refreshToken);
+          await persistAuthSession(storage, storageKey, refreshed);
+          const authClient = client.withAuthToken(refreshed.sessionToken);
+          const me = await fetchCurrentUser(authClient);
+
+          return { session: refreshed, authClient, me };
+        } catch {
+          await storage.removeItem(storageKey);
+        }
+      } else if (shouldForgetPersistedSession(error)) {
         await storage.removeItem(storageKey);
       }
     }
   }
 
   const context = await authenticateAndFetchCurrentUser(client, credentials);
-  await storage.setItem(storageKey, context.session.sessionToken);
+  await persistAuthSession(storage, storageKey, context.session);
 
   return context;
 }
@@ -221,20 +284,21 @@ export async function restorePersistedSession(
   storage: SessionStorageAdapter,
   storageKey: string,
 ): Promise<AuthenticatedApiContext> {
-  const existingToken = await storage.getItem(storageKey);
+  const existingTokens = parsePersistedAuthTokens(await storage.getItem(storageKey));
 
-  if (!existingToken) {
+  if (!existingTokens) {
     throw new Error("Aucune session enregistree sur cet appareil.");
   }
 
   try {
-    const authClient = client.withAuthToken(existingToken);
+    const authClient = client.withAuthToken(existingTokens.sessionToken);
     const me = await fetchCurrentUser(authClient);
 
     return {
       session: {
         message: "Restored existing session.",
-        sessionToken: existingToken,
+        sessionToken: existingTokens.sessionToken,
+        refreshToken: existingTokens.refreshToken,
         user: {
           id: me.user.id,
           email: me.user.email,
@@ -250,7 +314,18 @@ export async function restorePersistedSession(
       me,
     };
   } catch (error) {
-    if (shouldForgetPersistedSession(error)) {
+    if (shouldForgetPersistedSession(error) && existingTokens.refreshToken) {
+      try {
+        const refreshed = await refreshSessionWithApi(client, existingTokens.refreshToken);
+        await persistAuthSession(storage, storageKey, refreshed);
+        const authClient = client.withAuthToken(refreshed.sessionToken);
+        const me = await fetchCurrentUser(authClient);
+
+        return { session: refreshed, authClient, me };
+      } catch {
+        await storage.removeItem(storageKey);
+      }
+    } else if (shouldForgetPersistedSession(error)) {
       await storage.removeItem(storageKey);
     }
     throw error;
@@ -261,8 +336,9 @@ export async function persistSessionToken(
   storage: SessionStorageAdapter,
   storageKey: string,
   sessionToken: string,
+  refreshToken?: string,
 ) {
-  await storage.setItem(storageKey, sessionToken);
+  await persistAuthSession(storage, storageKey, { sessionToken, refreshToken });
 }
 
 export async function clearPersistedSession(
@@ -276,6 +352,7 @@ export async function signOutWithApi(
   client: OrbiApiClient,
   payload?: {
     sessionId?: string;
+    allDevices?: boolean;
   },
 ) {
   return client.request<SignOutResponse>(apiRoutes.auth.signOut, {

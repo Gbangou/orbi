@@ -15,10 +15,12 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import type { RequestAuthContext } from '../auth/auth.types';
+import { OpaqueIdPipe } from '../../common/pipes/opaque-id.pipe';
+import { ScheduledRidesService } from './scheduled-rides.service';
 import {
-  ScheduledRidesService,
-  type CreateScheduledRideDto,
-} from './scheduled-rides.service';
+  CancelScheduledRideDto,
+  CreateScheduledRideDto,
+} from './dto/create-scheduled-ride.dto';
 
 @Controller('scheduled-rides')
 @ApiBearerAuth('session-token')
@@ -46,9 +48,9 @@ export class ScheduledRidesController {
   @Version('1')
   cancel(
     @CurrentAuth() auth: RequestAuthContext,
-    @Param('id') id: string,
-    @Body('reason') reason?: string,
+    @Param('id', new OpaqueIdPipe('scheduledRideId')) id: string,
+    @Body() payload?: CancelScheduledRideDto,
   ) {
-    return this.service.cancelScheduledRide(auth, id, reason);
+    return this.service.cancelScheduledRide(auth, id, payload?.reason);
   }
 }

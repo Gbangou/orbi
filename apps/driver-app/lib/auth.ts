@@ -64,6 +64,7 @@ export async function signInDriverAccount(payload: {
     driverSessionStorage,
     driverSessionStorageKey,
     session.sessionToken,
+    session.refreshToken,
   );
 
   const context = buildFastDriverAuthContext(client, session);
@@ -87,6 +88,7 @@ export async function signUpDriverAccount(payload: {
     driverSessionStorage,
     driverSessionStorageKey,
     session.sessionToken,
+    session.refreshToken,
   );
 
   const context = buildFastDriverAuthContext(client, session);

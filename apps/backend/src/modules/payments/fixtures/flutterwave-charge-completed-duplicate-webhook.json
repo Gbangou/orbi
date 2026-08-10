@@ -1,0 +1,16 @@
+{
+  "event": "charge.completed",
+  "transactionRef": "orbi_fw_demo_charge_001",
+  "providerReference": "FLW-MOCK-REF-CHARGE-001",
+  "data": {
+    "id": 285959875,
+    "tx_ref": "orbi_fw_demo_charge_001",
+    "flw_ref": "FLW-MOCK-REF-CHARGE-001",
+    "providerReference": "FLW-MOCK-REF-CHARGE-001",
+    "amount": 2400,
+    "currency": "XOF",
+    "status": "successful",
+    "payment_type": "mobilemoneybf",
+    "created_at": "2026-05-23T08:00:05.000Z"
+  }
+}

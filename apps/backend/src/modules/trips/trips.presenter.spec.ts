@@ -174,6 +174,25 @@ describe('serializeTripDetail — privacy guards', () => {
     expect(trip.pickupCode).toBeNull();
   });
 
+  it('shows pickup code to the rider only when the driver has arrived', () => {
+    const { trip } = serializeTripDetail(
+      createBaseTrip({
+        status: 'DRIVER_ARRIVING',
+        events: [
+          {
+            id: 'e-1',
+            eventType: 'PICKUP_CODE_ISSUED',
+            payload: { pickupCode: '4821' },
+            createdAt: new Date(),
+          },
+        ],
+      }) as never,
+      { viewerRole: 'RIDER' },
+    );
+
+    expect(trip.pickupCode).toBe('4821');
+  });
+
   it('hides pickup code from driver detail even before departure', () => {
     const { trip } = serializeTripDetail(
       createBaseTrip({

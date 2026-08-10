@@ -44,6 +44,7 @@ export class WalletTopUpService {
 
     if (
       !Number.isFinite(amountXof) ||
+      !Number.isInteger(amountXof) ||
       amountXof < MIN_TOPUP_XOF ||
       amountXof > MAX_TOPUP_XOF
     ) {
@@ -211,42 +212,93 @@ export class WalletTopUpService {
       return { handled: false, reason: topUp ? 'already_final' : 'not_found' };
     }
 
+    const reference = topUp.depositId ?? topUp.id;
+
     if (status === 'COMPLETED') {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.walletTopUp.update({
-          where: { id: topUp.id },
+      const result = await this.prisma.$transaction(async (tx) => {
+        const existingTransaction = await tx.walletTransaction.findUnique({
+          where: {
+            walletId_reference: {
+              walletId: topUp.walletId,
+              reference,
+            },
+          },
+        });
+
+        if (existingTransaction) {
+          return 'already_credited' as const;
+        }
+
+        const finalizedTopUp = await tx.walletTopUp.updateMany({
+          where: {
+            id: topUp.id,
+            status: {
+              notIn: ['COMPLETED', 'FAILED'],
+            },
+          },
           data: { status: 'COMPLETED' },
         });
+
+        if (finalizedTopUp.count === 0) {
+          return 'already_final' as const;
+        }
+
+        try {
+          await tx.walletTransaction.create({
+            data: {
+              walletId: topUp.walletId,
+              type: 'CREDIT',
+              amount: topUp.amount,
+              reference,
+              description: `Recharge Mobile Money ${Number(topUp.amount).toLocaleString('fr-BF')} XOF`,
+              metadata: {
+                topUpId: topUp.id,
+                depositId: topUp.depositId,
+                source: 'wallet_top_up_webhook',
+                status: 'COMPLETED',
+                direction: 'CREDIT',
+                correlationId: reference,
+                idempotencyKey: reference,
+                reason: 'mobile_money_top_up_completed',
+              } satisfies Prisma.InputJsonObject,
+            },
+          });
+        } catch (error) {
+          if (isPrismaUniqueConstraintError(error)) {
+            return 'already_credited' as const;
+          }
+
+          throw error;
+        }
+
         await tx.wallet.update({
           where: { id: topUp.walletId },
           data: { balance: { increment: topUp.amount } },
         });
-        await tx.walletTransaction.create({
-          data: {
-            walletId: topUp.walletId,
-            type: 'CREDIT',
-            amount: topUp.amount,
-            reference: topUp.depositId ?? topUp.id,
-            description: `Recharge Mobile Money ${Number(topUp.amount).toLocaleString('fr-BF')} XOF`,
-            metadata: {
-              topUpId: topUp.id,
-              depositId: topUp.depositId,
-            } satisfies Prisma.InputJsonObject,
-          },
-        });
+
+        return 'wallet_credited' as const;
       });
 
       return {
         handled: true,
-        action: 'wallet_credited',
+        action: result,
         amount: Number(topUp.amount),
       };
     }
 
-    await this.prisma.walletTopUp.update({
-      where: { id: topUp.id },
+    const failedTopUp = await this.prisma.walletTopUp.updateMany({
+      where: {
+        id: topUp.id,
+        status: {
+          notIn: ['COMPLETED', 'FAILED'],
+        },
+      },
       data: { status: 'FAILED', failureReason: 'PawaPay deposit failed' },
     });
+
+    if (failedTopUp.count === 0) {
+      return { handled: false, reason: 'already_final' };
+    }
 
     return { handled: true, action: 'top_up_failed' };
   }

@@ -1,7 +1,12 @@
 import {
   classifyOrbiClientError,
+  isOrbiApiError,
   type OrbiClientErrorSurface,
 } from '@orbi/api';
+import {
+  translateOrbiVisibleError,
+  type OrbiVisibleErrorAction,
+} from '@orbi/i18n';
 import { orbiCopy } from '@orbi/ui';
 import { router } from 'expo-router';
 import { clearDriverPersistedSession } from './auth';
@@ -20,6 +25,9 @@ export type DriverAppErrorFeedback = {
   severity?: string;
   owner?: string;
   retryPolicy?: string;
+  action?: OrbiVisibleErrorAction;
+  actionLabel?: string;
+  logCode?: string;
   shouldClearSessionToken: boolean;
   reportable?: boolean;
 };
@@ -30,23 +38,6 @@ const defaultDriverErrorCopy: DriverErrorCopy = {
   network: orbiCopy.driverNetworkUnavailable,
   fallback: orbiCopy.serviceUnavailable,
 };
-
-function toPremiumDriverMessage(message: string, fallback: string) {
-  const trimmed = message.trim();
-  if (!trimmed) {
-    return fallback;
-  }
-
-  if (/\b(api|backend|server|serveur|stack|exception|token|json|sql|prisma|debug|trace)\b/i.test(trimmed)) {
-    return fallback;
-  }
-
-  return trimmed
-    .replace(/\bconnexion live\b/gi, 'connexion')
-    .replace(/\ble direct\b/gi, 'les missions')
-    .replace(/\ben direct\b/gi, 'a jour')
-    .slice(0, 180);
-}
 
 export async function resolveDriverAppError(
   error: unknown,
@@ -60,6 +51,20 @@ export async function resolveDriverAppError(
     surface: copy?.surface,
     fallbackMessage: messages.fallback,
   });
+  const fallbackMessage =
+    classification.shouldClearSessionToken
+      ? messages.expiredSession
+      : classification.code === 'MOB-NETWORK-OFFLINE'
+        ? messages.network
+        : copy?.fallback;
+  const visibleError = translateOrbiVisibleError({
+    code: classification.code,
+    message: error instanceof Error ? error.message : classification.userMessage,
+    status: isOrbiApiError(error) ? error.status : undefined,
+    surface: classification.surface,
+    retryPolicy: classification.retryPolicy,
+    fallbackMessage,
+  });
   await safelyQueueDriverErrorReport(error, classification);
 
   if (classification.shouldClearSessionToken) {
@@ -67,12 +72,15 @@ export async function resolveDriverAppError(
     router.replace('/auth');
 
     return {
-      message: messages.expiredSession,
+      message: visibleError.message,
       code: classification.code,
       surface: classification.surface,
       severity: classification.severity,
       owner: classification.owner,
       retryPolicy: classification.retryPolicy,
+      action: visibleError.action,
+      actionLabel: visibleError.actionLabel,
+      logCode: visibleError.logCode,
       shouldClearSessionToken: true,
       reportable: classification.reportable,
     };
@@ -80,24 +88,30 @@ export async function resolveDriverAppError(
 
   if (classification.code === 'MOB-NETWORK-OFFLINE') {
     return {
-      message: messages.network,
+      message: visibleError.message,
       code: classification.code,
       surface: classification.surface,
       severity: classification.severity,
       owner: classification.owner,
       retryPolicy: classification.retryPolicy,
+      action: visibleError.action,
+      actionLabel: visibleError.actionLabel,
+      logCode: visibleError.logCode,
       shouldClearSessionToken: false,
       reportable: classification.reportable,
     };
   }
 
   return {
-    message: toPremiumDriverMessage(classification.userMessage, messages.fallback),
+    message: visibleError.message,
     code: classification.code,
     surface: classification.surface,
     severity: classification.severity,
     owner: classification.owner,
     retryPolicy: classification.retryPolicy,
+    action: visibleError.action,
+    actionLabel: visibleError.actionLabel,
+    logCode: visibleError.logCode,
     shouldClearSessionToken: false,
     reportable: classification.reportable,
   };

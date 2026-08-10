@@ -30,10 +30,7 @@ import { DriverWalletRecoveryAdjustmentDto } from './dto/driver-wallet-recovery-
 import { DriverPayoutSettlementQueryDto } from './dto/driver-payout-settlement-query.dto';
 import { csvCell } from './admin-onboarding.helpers';
 
-function normalizePayoutNote(payload?: DriverPayoutApprovalDto) {
-  const note = payload?.notes?.trim();
-  return note ? note : null;
-}
+const HIGH_VALUE_RECOVERY_ADJUSTMENT_XOF = 50_000;
 
 function normalizeRequiredOpsNote(note: string | undefined) {
   const normalized = note?.trim();
@@ -283,7 +280,7 @@ export class AdminDriverPayoutsService {
     payload: DriverPayoutApprovalDto,
     auth: RequestAuthContext,
   ) {
-    const notes = normalizePayoutNote(payload);
+    const notes = normalizeRequiredOpsNote(payload.notes);
     const wallet = await this.prisma.wallet.findUnique({
       where: {
         id: walletId,
@@ -328,13 +325,32 @@ export class AdminDriverPayoutsService {
           entityType: 'DRIVER_PAYOUT',
           entityId: existingPreparedPayout.id,
           metadata: {
+            correlationId: existingPreparedPayout.reference,
+            actor: {
+              id: auth.user.id,
+              role: auth.user.role,
+              name: auth.user.fullName,
+            },
+            actedAt: new Date().toISOString(),
+            authorizedRoles: [UserRole.ADMIN, UserRole.OPS],
+            reason: notes,
             walletId: wallet.id,
             driverUserId: wallet.userId,
             amount: Number(existingPreparedPayout.amount),
             currency: existingPreparedPayout.currency,
             reference: existingPreparedPayout.reference,
             result: 'existing_prepared_payout',
-            notes,
+            oldValue: {
+              walletId: wallet.id,
+              walletBalance: balance,
+              preparedPayoutId: existingPreparedPayout.id,
+              status: existingPreparedPayout.status,
+            },
+            newValue: {
+              result: 'existing_prepared_payout',
+              payoutId: existingPreparedPayout.id,
+              status: existingPreparedPayout.status,
+            },
           } satisfies Prisma.InputJsonObject,
         },
       });
@@ -395,13 +411,32 @@ export class AdminDriverPayoutsService {
           entityType: 'DRIVER_PAYOUT',
           entityId: concurrentPayout.id,
           metadata: {
+            correlationId: concurrentPayout.reference,
+            actor: {
+              id: auth.user.id,
+              role: auth.user.role,
+              name: auth.user.fullName,
+            },
+            actedAt: new Date().toISOString(),
+            authorizedRoles: [UserRole.ADMIN, UserRole.OPS],
+            reason: notes,
             walletId: wallet.id,
             driverUserId: wallet.userId,
             amount: Number(concurrentPayout.amount),
             currency: concurrentPayout.currency,
             reference: concurrentPayout.reference,
             result: 'existing_prepared_payout',
-            notes,
+            oldValue: {
+              walletId: wallet.id,
+              walletBalance: balance,
+              preparedPayoutId: concurrentPayout.id,
+              status: concurrentPayout.status,
+            },
+            newValue: {
+              result: 'existing_prepared_payout',
+              payoutId: concurrentPayout.id,
+              status: concurrentPayout.status,
+            },
           } satisfies Prisma.InputJsonObject,
         },
       });
@@ -419,12 +454,32 @@ export class AdminDriverPayoutsService {
         entityType: 'DRIVER_PAYOUT',
         entityId: payout.id,
         metadata: {
+          correlationId: payout.reference,
+          actor: {
+            id: auth.user.id,
+            role: auth.user.role,
+            name: auth.user.fullName,
+          },
+          actedAt: new Date().toISOString(),
+          authorizedRoles: [UserRole.ADMIN, UserRole.OPS],
+          reason: notes,
           walletId: wallet.id,
           driverUserId: wallet.userId,
           amount: Number(payout.amount),
           currency: payout.currency,
           reference: payout.reference,
-          notes,
+          oldValue: {
+            walletId: wallet.id,
+            walletBalance: balance,
+            preparedPayoutId: null,
+          },
+          newValue: {
+            payoutId: payout.id,
+            status: payout.status,
+            amount: Number(payout.amount),
+            currency: payout.currency,
+            reference: payout.reference,
+          },
         } satisfies Prisma.InputJsonObject,
       },
     });
@@ -458,10 +513,21 @@ export class AdminDriverPayoutsService {
     const notes = normalizeRequiredOpsNote(payload.notes);
     const idempotencyKey = normalizeIdempotencyKey(payload.idempotencyKey);
     const amount = Number(payload.amount);
+    const secondaryApprovalReference =
+      payload.secondaryApprovalReference?.trim() || null;
 
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new BadRequestException(
         'Recovery adjustment amount must be positive.',
+      );
+    }
+
+    if (
+      amount >= HIGH_VALUE_RECOVERY_ADJUSTMENT_XOF &&
+      !secondaryApprovalReference
+    ) {
+      throw new BadRequestException(
+        'A secondary approval reference is required for high-value recovery adjustments.',
       );
     }
 
@@ -501,11 +567,14 @@ export class AdminDriverPayoutsService {
       });
 
       if (existingTransaction) {
+        const walletBalanceBefore = Number(wallet.balance);
         return {
           action: 'already_recorded' as const,
           wallet,
           transaction: existingTransaction,
           appliedAmount: Number(existingTransaction.amount),
+          walletBalanceBefore,
+          walletBalanceAfter: walletBalanceBefore,
         };
       }
 
@@ -525,6 +594,10 @@ export class AdminDriverPayoutsService {
             recordedByName: auth.user.fullName,
             notes,
             idempotencyKey,
+            secondaryApprovalRequired:
+              amount >= HIGH_VALUE_RECOVERY_ADJUSTMENT_XOF,
+            secondaryApprovalReference,
+            controlThresholdXof: HIGH_VALUE_RECOVERY_ADJUSTMENT_XOF,
           } satisfies Prisma.InputJsonObject,
         },
       });
@@ -548,6 +621,8 @@ export class AdminDriverPayoutsService {
         wallet: updatedWallet,
         transaction,
         appliedAmount,
+        walletBalanceBefore: currentBalance,
+        walletBalanceAfter: Number(updatedWallet.balance),
       };
     });
 
@@ -558,12 +633,33 @@ export class AdminDriverPayoutsService {
         entityType: 'WALLET',
         entityId: walletId,
         metadata: {
+          correlationId: reference,
+          actor: {
+            id: auth.user.id,
+            role: auth.user.role,
+            name: auth.user.fullName,
+          },
+          actedAt: new Date().toISOString(),
+          authorizedRoles: [UserRole.ADMIN, UserRole.OPS],
+          reason: notes,
           action: result.action,
           amount: result.appliedAmount,
           currency: result.wallet.currency,
           reference,
-          notes,
           idempotencyKey,
+          secondaryApprovalRequired:
+            amount >= HIGH_VALUE_RECOVERY_ADJUSTMENT_XOF,
+          secondaryApprovalReference,
+          controlThresholdXof: HIGH_VALUE_RECOVERY_ADJUSTMENT_XOF,
+          oldValue: {
+            walletId,
+            balance: result.walletBalanceBefore,
+          },
+          newValue: {
+            walletId,
+            balance: result.walletBalanceAfter,
+            appliedAmount: result.appliedAmount,
+          },
         } satisfies Prisma.InputJsonObject,
       },
     });
@@ -608,7 +704,7 @@ export class AdminDriverPayoutsService {
     auth: RequestAuthContext,
   ) {
     const paidAt = new Date();
-    const notes = normalizePayoutNote(payload);
+    const notes = normalizeRequiredOpsNote(payload.notes);
     const result = await this.prisma.$transaction(async (tx) => {
       const payout = await tx.driverPayout.findUnique({
         where: {
@@ -624,9 +720,13 @@ export class AdminDriverPayoutsService {
       }
 
       if (payout.status !== DriverPayoutStatus.PREPARED) {
+        const walletBalanceBefore = Number(payout.wallet.balance);
         return {
           payout,
           action: 'already_finalized' as const,
+          oldStatus: payout.status,
+          walletBalanceBefore,
+          walletBalanceAfter: walletBalanceBefore,
         };
       }
 
@@ -707,6 +807,11 @@ export class AdminDriverPayoutsService {
         payout: updatedPayout,
         action:
           existingTransaction || !createdTransaction ? 'already_paid' : 'paid',
+        oldStatus: payout.status,
+        walletBalanceBefore: walletBalance,
+        walletBalanceAfter: createdTransaction
+          ? walletBalance - payoutAmount
+          : walletBalance,
       };
     });
 
@@ -717,12 +822,31 @@ export class AdminDriverPayoutsService {
         entityType: 'DRIVER_PAYOUT',
         entityId: payoutId,
         metadata: {
+          correlationId: `driver-payout:${payoutId}:paid`,
+          actor: {
+            id: auth.user.id,
+            role: auth.user.role,
+            name: auth.user.fullName,
+          },
+          actedAt: paidAt.toISOString(),
+          authorizedRoles: [UserRole.ADMIN, UserRole.OPS],
+          reason: notes,
           walletId: result.payout.walletId,
           amount: Number(result.payout.amount),
           currency: result.payout.currency,
           reference: result.payout.reference,
           result: result.action,
-          notes,
+          oldValue: {
+            payoutId,
+            status: result.oldStatus,
+            walletBalance: result.walletBalanceBefore,
+          },
+          newValue: {
+            payoutId,
+            status: result.payout.status,
+            walletBalance: result.walletBalanceAfter,
+            result: result.action,
+          },
         } satisfies Prisma.InputJsonObject,
       },
     });

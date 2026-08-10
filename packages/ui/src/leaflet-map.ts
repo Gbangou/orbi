@@ -256,10 +256,12 @@ function __orbiFetchTripRoute(lat1,lng1,lat2,lng2){
 document.addEventListener('message',__orbiOnRouteMessage);
 window.addEventListener('message',__orbiOnRouteMessage);
 function __orbiOnRouteMessage(e){
+  if(!e||typeof e.data!=='string')return;
+  var m=null;
   try{
-    var m=JSON.parse(e.data);
-    if(m.type==='SELECT_ROUTE'&&typeof m.index==='number'){__orbiSelectRoute(m.index)}
-  }catch(x){}
+    m=JSON.parse(e.data);
+  }catch(x){return}
+  if(m.type==='SELECT_ROUTE'&&typeof m.index==='number'){__orbiSelectRoute(m.index)}
 }
 `.trim();
 }

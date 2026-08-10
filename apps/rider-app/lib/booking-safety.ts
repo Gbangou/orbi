@@ -12,8 +12,34 @@ export type BookingValidationResult =
   | { ok: true; option: RideOption }
   | { ok: false; message: string };
 
+export type BookingQuoteValidationInput = {
+  confirmedOption: RideOption | null;
+  quoteExpiresAt: number | null;
+  nowMs: number;
+  selectedOption: RideOption | null;
+  selectedPaymentMethod: PaymentMethod;
+};
+
+export type BookingQuoteValidationResult =
+  | { ok: true; option: RideOption }
+  | { ok: false; reason: 'missing' | 'expired' | 'changed' | 'payment'; message: string };
+
 function normalizePlaceText(value: string) {
   return value.trim().toLowerCase();
+}
+
+function isWholeFcfaAmount(value: unknown) {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+}
+
+function hasSameBackendQuote(left: RideOption, right: RideOption) {
+  return (
+    left.id === right.id &&
+    left.category === right.category &&
+    left.tier === right.tier &&
+    left.etaMinutes === right.etaMinutes &&
+    left.fare === right.fare
+  );
 }
 
 function toIdempotencySegment(value: string | null | undefined) {
@@ -74,6 +100,54 @@ export function validateBookingSelection(
   return {
     ok: true,
     option: input.selectedOption,
+  };
+}
+
+export function validateBookingQuote(
+  input: BookingQuoteValidationInput,
+): BookingQuoteValidationResult {
+  if (!input.selectedOption || !input.confirmedOption) {
+    return {
+      ok: false,
+      reason: 'missing',
+      message: 'Aucun service disponible pour ce trajet. Essayez un autre départ ou plus tard.',
+    };
+  }
+
+  if (!input.quoteExpiresAt || input.nowMs > input.quoteExpiresAt) {
+    return {
+      ok: false,
+      reason: 'expired',
+      message: 'Le devis a expiré. Actualisez le prix avant de confirmer.',
+    };
+  }
+
+  if (
+    !isWholeFcfaAmount(input.selectedOption.fare) ||
+    !isWholeFcfaAmount(input.confirmedOption.fare) ||
+    !hasSameBackendQuote(input.selectedOption, input.confirmedOption)
+  ) {
+    return {
+      ok: false,
+      reason: 'changed',
+      message: 'Le prix ou le délai a changé. Vérifiez le nouveau devis avant de confirmer.',
+    };
+  }
+
+  if (
+    input.confirmedOption.paymentMethods?.length &&
+    !input.confirmedOption.paymentMethods.includes(input.selectedPaymentMethod)
+  ) {
+    return {
+      ok: false,
+      reason: 'payment',
+      message: 'Ce moyen de paiement n est plus disponible pour ce service.',
+    };
+  }
+
+  return {
+    ok: true,
+    option: input.confirmedOption,
   };
 }
 

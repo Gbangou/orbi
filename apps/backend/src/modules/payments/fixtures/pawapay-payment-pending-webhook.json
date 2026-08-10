@@ -1,0 +1,26 @@
+{
+  "event": "deposit.pending",
+  "depositId": "7f344d0b-476e-4f94-8c99-f1e9d09d7c66",
+  "status": "PENDING",
+  "amount": "2400",
+  "currency": "XOF",
+  "correspondent": "ORANGE_BFA",
+  "payer": {
+    "type": "MSISDN",
+    "address": {
+      "value": "22670000003"
+    }
+  },
+  "statementDescription": "Orbi Course #demo",
+  "created": "2026-05-23T08:10:00.000Z",
+  "metadata": [
+    {
+      "fieldName": "rideRequestId",
+      "fieldValue": "ride-request-demo-pending"
+    },
+    {
+      "fieldName": "orbiTransactionRef",
+      "fieldValue": "7f344d0b-476e-4f94-8c99-f1e9d09d7c66"
+    }
+  ]
+}

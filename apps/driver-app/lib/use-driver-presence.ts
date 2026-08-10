@@ -119,6 +119,13 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
 
           try {
             const payload = buildDriverRoutePositionPayload(position);
+            if (!payload) {
+              setPresenceStatus('unavailable');
+              setPresenceNote(
+                'Position trop ancienne ou imprécise. Gardez le GPS actif quelques instants.',
+              );
+              return;
+            }
             setLatestPosition({
               latitude: payload.latitude,
               longitude: payload.longitude,
@@ -128,6 +135,8 @@ export function useDriverPresence(enabled: boolean, activeTripId?: string | null
             await updateDriverPresenceWithApi(authClient, {
               latitude: payload.latitude,
               longitude: payload.longitude,
+              accuracyMeters: payload.accuracyMeters,
+              observedAt: payload.observedAt,
             });
             const routePosition = activeTripId
               ? await recordTripRoutePositionWithApi(

@@ -8,6 +8,9 @@ export type RealtimeStatusCallbacks = {
 
 type RealtimeEvent = {
   type: string;
+  id?: string;
+  entityId?: string;
+  createdAt?: string;
   [key: string]: unknown;
 };
 
@@ -52,6 +55,8 @@ export function useWebSocketRealtimeStream(
   const subscribeDriverId = subscribePayload.driverId ?? null;
 
   const latestEventRef = useRef<string | null>(null);
+  const seenEventIdsRef = useRef<Set<string>>(new Set());
+  const latestEntityEventAtRef = useRef<Map<string, number>>(new Map());
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,6 +85,32 @@ export function useWebSocketRealtimeStream(
       }, coalesceWindowMs);
     }
 
+    function shouldAcceptRealtimeEvent(data: RealtimeEvent) {
+      const eventId = typeof data.id === 'string' ? data.id : null;
+      if (eventId) {
+        if (seenEventIdsRef.current.has(eventId)) return false;
+        seenEventIdsRef.current.add(eventId);
+        if (seenEventIdsRef.current.size > 250) {
+          const oldest = seenEventIdsRef.current.values().next().value;
+          if (oldest) seenEventIdsRef.current.delete(oldest);
+        }
+      }
+
+      const entityId =
+        typeof data.entityId === 'string' && data.entityId.trim()
+          ? data.entityId
+          : null;
+      const createdAt =
+        typeof data.createdAt === 'string' ? Date.parse(data.createdAt) : NaN;
+      if (entityId && Number.isFinite(createdAt)) {
+        const previous = latestEntityEventAtRef.current.get(entityId) ?? 0;
+        if (createdAt < previous) return false;
+        latestEntityEventAtRef.current.set(entityId, createdAt);
+      }
+
+      return true;
+    }
+
     function clearTimers() {
       if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
       if (heartbeatTimerRef.current) { clearInterval(heartbeatTimerRef.current); heartbeatTimerRef.current = null; }
@@ -106,6 +137,7 @@ export function useWebSocketRealtimeStream(
         ws.send(JSON.stringify({
           type: 'subscribe',
           role: subscribeRole,
+          authToken: sessionToken,
           actorId: subscribeActorId,
           riderId: subscribeRiderId,
           driverId: subscribeDriverId,
@@ -133,6 +165,10 @@ export function useWebSocketRealtimeStream(
         }
 
         if (data.type === 'event') {
+          if (!shouldAcceptRealtimeEvent(data)) {
+            return;
+          }
+
           const eventType = String(data['eventType'] ?? '');
           if (eventType && eventTypesRef.current.includes(eventType)) {
             scheduleUpdate(eventType);
@@ -187,6 +223,8 @@ export function useWebSocketRealtimeStream(
       isCleaningUp.current = true;
       clearTimers();
       latestEventRef.current = null;
+      seenEventIdsRef.current.clear();
+      latestEntityEventAtRef.current.clear();
       if (activeWsRef.current) {
         activeWsRef.current.close();
         activeWsRef.current = null;

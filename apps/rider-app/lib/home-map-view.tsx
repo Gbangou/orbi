@@ -146,11 +146,13 @@ function updateDrivers(drivers){
 
 function isCoord(v){return typeof v==='number'&&isFinite(v)}
 function onMsg(e){
+  if(!e||typeof e.data!=='string')return;
+  var m=null;
   try{
-    var m=JSON.parse(e.data);
-    if(m.type==='UPDATE_RIDER'&&isCoord(m.lat)&&isCoord(m.lng)){updateRider(m.lat,m.lng)}
-    if(m.type==='UPDATE_DRIVERS'&&Array.isArray(m.drivers)){updateDrivers(m.drivers.filter(function(d){return d&&isCoord(d.latitude)&&isCoord(d.longitude)}))}
-  }catch(x){}
+    m=JSON.parse(e.data);
+  }catch(x){return}
+  if(m.type==='UPDATE_RIDER'&&isCoord(m.lat)&&isCoord(m.lng)){updateRider(m.lat,m.lng)}
+  if(m.type==='UPDATE_DRIVERS'&&Array.isArray(m.drivers)){updateDrivers(m.drivers.filter(function(d){return d&&isCoord(d.latitude)&&isCoord(d.longitude)}))}
 }
 document.addEventListener('message',onMsg);
 window.addEventListener('message',onMsg);
